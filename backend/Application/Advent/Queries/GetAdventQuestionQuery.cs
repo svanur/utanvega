@@ -10,12 +10,12 @@ public sealed record GetAdventQuestionQuery(int Day) : IRequest<AdventQuestionDt
 /// unlocked per <see cref="AdventCalendar.IsDayUnlocked"/> — the endpoint turns that into a 400,
 /// the same shape <c>GetTrailBySlugQuery</c>-style null-means-not-found queries already use.
 /// </summary>
-public sealed class GetAdventQuestionQueryHandler(TimeProvider timeProvider)
+public sealed class GetAdventQuestionQueryHandler(TimeProvider timeProvider, AdventTestOverride testOverride)
     : IRequestHandler<GetAdventQuestionQuery, AdventQuestionDto?>
 {
     public Task<AdventQuestionDto?> Handle(GetAdventQuestionQuery request, CancellationToken cancellationToken)
     {
-        if (!AdventCalendar.IsDayUnlocked(request.Day, timeProvider))
+        if (!AdventCalendar.IsDayUnlocked(request.Day, timeProvider, testOverride.UnlockAllDoors))
             return Task.FromResult<AdventQuestionDto?>(null);
 
         var question = AdventQuestions.ForDay(request.Day);

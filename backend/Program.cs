@@ -390,6 +390,12 @@ if (string.IsNullOrWhiteSpace(ipHashSalt) && !builder.Environment.IsDevelopment(
 // an exact instant rather than racing the system clock.
 builder.Services.AddSingleton(TimeProvider.System);
 
+// Staging-only door-unlock override for the advent calendar (#1885) — lets testers on the
+// hlaupadagskra-staging Fly app see all 24 doors without the real clock reaching December.
+// See AdventTestOverride.FromConfiguration for the IsProduction() guard that keeps this inert
+// in production even if ADVENT_UNLOCK_ALL_DOORS is ever set there by mistake.
+builder.Services.AddSingleton(AdventTestOverride.FromConfiguration(builder.Configuration, builder.Environment));
+
 builder.Services.AddSingleton(new TrailViewRetentionOptions());
 builder.Services.AddHostedService<TrailViewRetentionService>();
 
