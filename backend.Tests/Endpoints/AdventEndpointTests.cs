@@ -1,4 +1,6 @@
 using System.Net;
+using System.Net.Http.Json;
+using Utanvega.Backend.Application.Advent.Queries;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Tests.WebHost;
 
@@ -55,5 +57,47 @@ public class AdventEndpointTests : IDisposable
         var body = await response.Content.ReadAsStringAsync();
         var lines = body.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         Assert.Equal(["a@example.com", "b@example.com"], lines);
+    }
+
+    // ── GET /api/v1/admin/advent/entries (#1887) ───────────────────────────────
+
+    [Fact]
+    public async Task EntrySummaries_Unauthenticated_ReturnsUnauthorized()
+    {
+        var client = _factory.CreateClient();
+        var response = await client.GetAsync("/api/v1/admin/advent/entries");
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task EntrySummaries_NonAdminRole_ReturnsForbidden()
+    {
+        var client = _factory.CreateAuthenticatedClient("some-user", role: "member");
+        var response = await client.GetAsync("/api/v1/admin/advent/entries");
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task EntrySummaries_Admin_ReturnsPerEmailTicketCounts()
+    {
+        using (var db = _factory.CreateDbContext())
+        {
+            db.AdventEntries.AddRange(
+                new AdventEntry { Id = Guid.NewGuid(), Email = "a@example.com", Day = 1, Source = AdventEntrySource.Answer, CreatedAt = DateTime.UtcNow },
+                new AdventEntry { Id = Guid.NewGuid(), Email = "a@example.com", Day = 2, Source = AdventEntrySource.Share, CreatedAt = DateTime.UtcNow },
+                new AdventEntry { Id = Guid.NewGuid(), Email = "b@example.com", Day = 3, Source = AdventEntrySource.Answer, CreatedAt = DateTime.UtcNow });
+            await db.SaveChangesAsync();
+        }
+
+        var client = _factory.CreateAuthenticatedClient("admin-user");
+        var response = await client.GetAsync("/api/v1/admin/advent/entries");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<GetAdventEntrySummariesResult>();
+        Assert.NotNull(result);
+        Assert.Equal(2, result!.Total);
+        // Default sort is TicketCount descending: a@example.com (2 tickets) ranks above b@example.com (1).
+        Assert.Equal("a@example.com", result.Items[0].Email);
+        Assert.Equal(2, result.Items[0].TicketCount);
     }
 }
