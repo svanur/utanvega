@@ -42,13 +42,16 @@ public class GetAdventEntrySummariesQueryHandler(UtanvegaDbContext db)
 
         var total = await grouped.CountAsync(cancellationToken);
 
+        // Email is a secondary sort key on every branch except "email" itself (already unique per
+        // group) — without it, ties on TicketCount/LastDay have no guaranteed stable order across
+        // separate page fetches, so a row can shift between pages and get duplicated or skipped.
         var desc = (request.SortDir ?? "desc").Equals("asc", StringComparison.OrdinalIgnoreCase) is false;
         grouped = (request.SortBy ?? "ticketCount") switch
         {
             "email"       => desc ? grouped.OrderByDescending(s => s.Email)       : grouped.OrderBy(s => s.Email),
-            "lastDay"     => desc ? grouped.OrderByDescending(s => s.LastDay)     : grouped.OrderBy(s => s.LastDay),
-            "ticketCount" => desc ? grouped.OrderByDescending(s => s.TicketCount) : grouped.OrderBy(s => s.TicketCount),
-            _             => desc ? grouped.OrderByDescending(s => s.TicketCount) : grouped.OrderBy(s => s.TicketCount),
+            "lastDay"     => desc ? grouped.OrderByDescending(s => s.LastDay).ThenBy(s => s.Email)     : grouped.OrderBy(s => s.LastDay).ThenBy(s => s.Email),
+            "ticketCount" => desc ? grouped.OrderByDescending(s => s.TicketCount).ThenBy(s => s.Email) : grouped.OrderBy(s => s.TicketCount).ThenBy(s => s.Email),
+            _             => desc ? grouped.OrderByDescending(s => s.TicketCount).ThenBy(s => s.Email) : grouped.OrderBy(s => s.TicketCount).ThenBy(s => s.Email),
         };
 
         var items = await grouped

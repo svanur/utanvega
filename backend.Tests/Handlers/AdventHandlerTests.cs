@@ -607,6 +607,38 @@ public class AdventHandlerTests : IDisposable
         Assert.Equal("b@example.com", page2.Items[0].Email);
     }
 
+    /// <summary>
+    /// #1888 review finding: TicketCount ties had no secondary sort key, so the DB/EF provider's
+    /// ordering among tied rows wasn't guaranteed stable across separate query executions — a row
+    /// could shift between pages and end up duplicated or skipped. Four emails tied at 1 ticket each,
+    /// paged two-at-a-time: every email must appear exactly once across all pages, in the same
+    /// Email-ascending tiebreak order every time.
+    /// </summary>
+    [Fact]
+    public async Task GetSummaries_TicketCountTie_IsStableAndNonOverlapping_AcrossPages()
+    {
+        using var db = _factory.CreateContext();
+        db.AdventEntries.AddRange(
+            new AdventEntry { Id = Guid.NewGuid(), Email = "d@example.com", Day = 1, Source = AdventEntrySource.Answer, CreatedAt = new DateTime(2026, 12, 1) },
+            new AdventEntry { Id = Guid.NewGuid(), Email = "c@example.com", Day = 1, Source = AdventEntrySource.Answer, CreatedAt = new DateTime(2026, 12, 1) },
+            new AdventEntry { Id = Guid.NewGuid(), Email = "b@example.com", Day = 1, Source = AdventEntrySource.Answer, CreatedAt = new DateTime(2026, 12, 1) },
+            new AdventEntry { Id = Guid.NewGuid(), Email = "a@example.com", Day = 1, Source = AdventEntrySource.Answer, CreatedAt = new DateTime(2026, 12, 1) });
+        await db.SaveChangesAsync();
+
+        var page1 = await new GetAdventEntrySummariesQueryHandler(_factory.CreateContext())
+            .Handle(new GetAdventEntrySummariesQuery(1, 2), CancellationToken.None);
+        var page2 = await new GetAdventEntrySummariesQueryHandler(_factory.CreateContext())
+            .Handle(new GetAdventEntrySummariesQuery(2, 2), CancellationToken.None);
+
+        // All four are tied on TicketCount (1) — the Email-ascending tiebreak must put them in a
+        // fixed order: a, b on page 1, c, d on page 2. No email duplicated or missing across pages.
+        Assert.Equal(["a@example.com", "b@example.com"], page1.Items.Select(i => i.Email));
+        Assert.Equal(["c@example.com", "d@example.com"], page2.Items.Select(i => i.Email));
+        var allEmails = page1.Items.Concat(page2.Items).Select(i => i.Email).ToList();
+        Assert.Equal(allEmails.Distinct().Count(), allEmails.Count); // no duplicates across pages
+        Assert.Equal(4, page1.Total);
+    }
+
     [Fact]
     public async Task GetSummaries_SortByEmail_Ascending()
     {
