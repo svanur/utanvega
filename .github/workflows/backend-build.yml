@@ -1,0 +1,49 @@
+name: Backend Build
+
+on:
+  workflow_call:
+    inputs:
+      dotnet-version:
+        type: string
+        required: false
+        default: "9.0.x"
+      project-path:
+        type: string
+        required: false
+        default: "backend/backend.csproj"
+      build-configuration:
+        type: string
+        required: false
+        default: "Release"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build backend
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ inputs.dotnet-version }}
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            **/*.props
+            **/*.targets
+
+      - name: Restore
+        run: dotnet restore "${{ inputs.project-path }}"
+
+      - name: Build
+        run: dotnet build "${{ inputs.project-path }}" --configuration "${{ inputs.build-configuration }}" --no-restore
