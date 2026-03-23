@@ -1,9 +1,24 @@
-/.idea/*
+# Backend
+backend/bin/
+backend/obj/
+**/bin/
+**/obj/
+*.user
+*.suo
+*.userosscache
+*.rsuser
 
-/**/bin/**/*
-/**/obj/**/*
-
-# Frontend build output
+# Frontend
+frontend/node_modules/
 frontend/dist/
 frontend/.vite/
-frontend/node_modules/
+frontend/tsconfig.tsbuildinfo
+
+# IDE / Rider / JetBrains
+.idea/
+*.iml
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
