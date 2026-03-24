@@ -5,13 +5,13 @@ export default function Header() {
         <Stack spacing={2}>
             <Box>
                 <Typography variant="overline" color="primary">
-                    Hlaupaleiðir
+                    🌄Utanvega🏃‍♂️🚴‍
                 </Typography>
                 <Typography variant="h4" component="h1" gutterBottom>
-                    Route planning made simple
+                    Sumir elska malbik, en allir elska Utanvega
                 </Typography>
                 <Typography variant="body1" color="text.secondary">
-                    A clean starting point for building the frontend with React, Vite, and MUI.
+                    Vefur til að finna skemmtilegar leiðir og deila með vinum. 
                 </Typography>
             </Box>
 

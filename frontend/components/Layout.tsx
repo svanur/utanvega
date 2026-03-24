@@ -17,7 +17,7 @@ export default function Layout({ children, mode, onToggleMode }: LayoutProps) {
             <AppBar position="sticky" elevation={0}>
                 <Toolbar sx={{ gap: 1 }}>
                     <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-                        Hlaupaleiðir
+                        🌄Utanvega🏃‍♂️🚴‍
                     </Typography>
 
                     <Tooltip title={mode === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}>

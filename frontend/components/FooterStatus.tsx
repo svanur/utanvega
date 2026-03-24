@@ -21,7 +21,7 @@ export default function FooterStatus() {
         >
             <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="space-between">
                 <Typography variant="body2" color="text.secondary">
-                    Hlaupaleiðir
+                    🌄Utanvega🏃‍♂️🚴‍
                 </Typography>
 
                 {loading ? (
