@@ -1,0 +1,7 @@
+@baseUrl = {{baseUrl}}
+
+### Public health
+GET {{baseUrl}}/api/v1/health
+
+### Admin health
+GET {{baseUrl}}/api/v1/admin/health
