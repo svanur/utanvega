@@ -13,8 +13,8 @@ builder.Services.AddAuthorization();
 if (builder.Environment.IsDevelopment())
 {
     builder.Services
-        .AddAuthentication("Dev")
-        .AddScheme<AuthenticationSchemeOptions, DevAuthenticationHandler>("Dev", _ => { });
+        .AddAuthentication("DevHeader")
+        .AddScheme<AuthenticationSchemeOptions, DevHeaderAuthenticationHandler>("DevHeader", _ => { });
 }
 
 var app = builder.Build();
@@ -29,9 +29,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseAuthorization();
 
-var api = app.MapGroup("/api/v1");
-
-api.MapGet("/health", () => Results.Ok(new
+app.MapGet("/api/v1/health", () => Results.Ok(new
 {
     status = "healthy",
     service = "backend",
@@ -40,10 +38,7 @@ api.MapGet("/health", () => Results.Ok(new
 }))
 .WithName("Health");
 
-var adminApi = api.MapGroup("/admin")
-    .RequireAuthorization();
-
-adminApi.MapGet("/health", () => Results.Ok(new
+app.MapGet("/api/v1/admin/health", [Authorize] () => Results.Ok(new
 {
     status = "healthy",
     service = "backend",
@@ -60,9 +55,12 @@ app.MapGet("/", () => new
 
 app.Run();
 
-sealed class DevAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
+sealed class DevHeaderAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
 {
-    public DevAuthenticationHandler(
+    private const string DevTokenHeaderName = "X-Dev-Token";
+    private const string DevTokenValue = "dev-admin-token";
+
+    public DevHeaderAuthenticationHandler(
         IOptionsMonitor<AuthenticationSchemeOptions> options,
         ILoggerFactory logger,
         UrlEncoder encoder)
@@ -72,6 +70,16 @@ sealed class DevAuthenticationHandler : AuthenticationHandler<AuthenticationSche
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
+        if (!Request.Headers.TryGetValue(DevTokenHeaderName, out var token))
+        {
+            return Task.FromResult(AuthenticateResult.NoResult());
+        }
+
+        if (!string.Equals(token.ToString(), DevTokenValue, StringComparison.Ordinal))
+        {
+            return Task.FromResult(AuthenticateResult.Fail("Invalid dev token."));
+        }
+
         var claims = new[]
         {
             new Claim(ClaimTypes.NameIdentifier, "dev-user"),

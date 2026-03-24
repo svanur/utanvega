@@ -5,3 +5,4 @@ GET {{baseUrl}}/api/v1/health
 
 ### Admin health
 GET {{baseUrl}}/api/v1/admin/health
+X-Dev-Token: {{devToken}}
