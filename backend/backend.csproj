@@ -1,9 +1,19 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
     <PropertyGroup>
         <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
-    </PropertyGroup>
+        <RootNamespace>Utanvega.Backend</RootNamespace>
+        <AssemblyName>Utanvega.Backend</AssemblyName>
+      <UserSecretsId>8d671d16-4005-4aae-a914-79cedf665408</UserSecretsId>
+  </PropertyGroup>
     <ItemGroup>
-        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.*"/>
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.*" />
+        <PackageReference Include="MediatR" Version="12.*" />
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.*" />
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL.NetTopologySuite" Version="9.*" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.*">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
     </ItemGroup>
 </Project>

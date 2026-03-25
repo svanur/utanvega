@@ -1,10 +1,31 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using Utanvega.Backend.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
 
+using Microsoft.EntityFrameworkCore;
+
+using Utanvega.Backend.Application.Trails.Commands.CreateTrailFromGpx;
+using MediatR;
+
 var builder = WebApplication.CreateBuilder(args);
+
+// Add Database with PostGIS
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
+    ?? builder.Configuration["DATABASE_URL"];
+
+if (builder.Environment.IsDevelopment())
+{
+    Console.WriteLine($"[DEBUG_LOG] Using ConnectionString starting with: {connectionString?.Substring(0, Math.Min(connectionString.Length, 15))}...");
+}
+
+builder.Services.AddDbContext<UtanvegaDbContext>(options =>
+    options.UseNpgsql(connectionString, o => o.UseNetTopologySuite()));
+
+// Add CQRS with MediatR
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -42,6 +63,14 @@ if (app.Environment.IsDevelopment())
 
 app.UseAuthorization();
 
+// Auto-migration on startup (optional, but helpful for initial setup)
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<UtanvegaDbContext>();
+    // We don't call Migrate() here yet because we need to generate migrations first
+    // but the setup is ready.
+}
+
 app.MapGet("/api/v1/health", () => Results.Ok(new
 {
     status = "healthy",
@@ -65,6 +94,21 @@ app.MapGet("/", () => new
 {
     message = "Backend API running!",
 });
+
+app.MapPost("/api/v1/admin/trails/upload-gpx", [Authorize] async (string name, IFormFile file, IMediator mediator) =>
+{
+    if (file == null || file.Length == 0) return Results.BadRequest("No file uploaded.");
+    
+    using var reader = new StreamReader(file.OpenReadStream());
+    var gpxXml = await reader.ReadToEndAsync();
+    
+    var command = new CreateTrailFromGpxCommand(name, gpxXml);
+    var trailId = await mediator.Send(command);
+    
+    return Results.Created($"/api/v1/admin/trails/{trailId}", new { id = trailId });
+})
+.WithName("UploadGpx")
+.DisableAntiforgery(); // Simple for dev, adjust for prod security
 
 app.Run();
 
