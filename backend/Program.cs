@@ -116,7 +116,23 @@ app.MapGet("/api/v1/admin/trails", [Authorize] async (IMediator mediator) =>
 
 app.MapGet("/api/v1/admin/trails/{id}", [Authorize] async (Guid id, UtanvegaDbContext context) =>
 {
-    var trail = await context.Trails.AsNoTracking().FirstOrDefaultAsync(t => t.Id == id);
+    var trail = await context.Trails
+        .AsNoTracking()
+        .Select(t => new
+        {
+            t.Id,
+            t.Name,
+            t.Slug,
+            t.Description,
+            t.ActivityTypeId,
+            t.Status,
+            t.Difficulty,
+            t.Visibility,
+            t.Length,
+            t.ElevationGain,
+            t.ElevationLoss
+        })
+        .FirstOrDefaultAsync(t => t.Id == id);
     return trail != null ? Results.Ok(trail) : Results.NotFound();
 })
 .WithName("GetTrailById");

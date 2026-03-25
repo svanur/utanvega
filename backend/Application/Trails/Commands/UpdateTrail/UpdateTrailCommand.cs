@@ -10,10 +10,10 @@ public record UpdateTrailCommand(
     string Name,
     string Slug,
     string? Description,
-    ActivityType ActivityType,
-    TrailStatus Status,
-    Difficulty Difficulty,
-    Visibility Visibility,
+    string ActivityType,
+    string Status,
+    string Difficulty,
+    string Visibility,
     string? UpdatedBy
 ) : IRequest<bool>;
 
@@ -34,10 +34,19 @@ public class UpdateTrailCommandHandler : IRequestHandler<UpdateTrailCommand, boo
         trail.Name = request.Name;
         trail.Slug = request.Slug;
         trail.Description = request.Description;
-        trail.ActivityTypeId = request.ActivityType;
-        trail.Status = request.Status;
-        trail.Difficulty = request.Difficulty;
-        trail.Visibility = request.Visibility;
+        
+        if (Enum.TryParse<ActivityType>(request.ActivityType, true, out var activityType))
+            trail.ActivityTypeId = activityType;
+            
+        if (Enum.TryParse<TrailStatus>(request.Status, true, out var status))
+            trail.Status = status;
+            
+        if (Enum.TryParse<Difficulty>(request.Difficulty, true, out var difficulty))
+            trail.Difficulty = difficulty;
+            
+        if (Enum.TryParse<Visibility>(request.Visibility, true, out var visibility))
+            trail.Visibility = visibility;
+            
         trail.UpdatedBy = request.UpdatedBy;
         trail.UpdatedAt = DateTime.UtcNow;
 

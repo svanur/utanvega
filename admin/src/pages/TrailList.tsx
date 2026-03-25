@@ -10,7 +10,7 @@ import { apiFetch } from '../hooks/api';
 import TrailMap from '../components/TrailMap';
 import TrailEditDialog from '../components/TrailEditDialog';
 
-export default function TrailList() {
+export default function TrailList({ onNotify }: { onNotify: (message: string, severity?: 'success' | 'error') => void }) {
   const { trails, loading, error, refresh } = useTrails();
   const [selectedTrailMap, setSelectedTrailMap] = useState<{ id: string, name: string } | null>(null);
   const [selectedTrailEdit, setSelectedTrailEdit] = useState<string | null>(null);
@@ -23,9 +23,10 @@ export default function TrailList() {
         setDeleting(true);
         await apiFetch(`/api/v1/admin/trails/${trailToDelete.id}`, { method: 'DELETE' });
         setTrailToDelete(null);
+        onNotify('Trail deleted successfully');
         refresh();
     } catch (err) {
-        alert('Failed to delete trail');
+        onNotify('Failed to delete trail', 'error');
     } finally {
         setDeleting(false);
     }
@@ -109,7 +110,10 @@ export default function TrailList() {
         open={Boolean(selectedTrailEdit)} 
         trailId={selectedTrailEdit} 
         onClose={() => setSelectedTrailEdit(null)} 
-        onSaveSuccess={refresh}
+        onSaveSuccess={() => {
+            onNotify('Trail updated successfully');
+            refresh();
+        }}
       />
 
       <Dialog open={Boolean(trailToDelete)} onClose={() => setTrailToDelete(null)}>

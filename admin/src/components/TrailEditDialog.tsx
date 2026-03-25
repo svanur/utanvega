@@ -80,6 +80,7 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
                     status: trail.status,
                     difficulty: trail.difficulty,
                     visibility: trail.visibility,
+                    updatedBy: 'admin' // Simple for now
                 }),
             });
             onSaveSuccess();

@@ -1,4 +1,4 @@
-import { Box, CssBaseline, ThemeProvider, createTheme, AppBar, Toolbar, Typography, Container, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Fab } from '@mui/material';
+import { Box, CssBaseline, ThemeProvider, createTheme, AppBar, Toolbar, Typography, Container, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Fab, Snackbar, Alert } from '@mui/material';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import { useState } from 'react';
@@ -23,8 +23,22 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState<'list' | 'upload'>('list');
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [snackbar, setSnackbar] = useState<{ open: boolean, message: string, severity: 'success' | 'error' }>({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
+
+  const notify = (message: string, severity: 'success' | 'error' = 'success') => {
+    setSnackbar({ open: true, message, severity });
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar({ ...snackbar, open: false });
+  };
 
   const handleUploadSuccess = () => {
+    notify('Trail uploaded successfully');
     setRefreshTrigger(prev => prev + 1);
     setCurrentPage('list');
   };
@@ -63,7 +77,7 @@ export default function App() {
         <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
           <Toolbar />
           <Container maxWidth="lg">
-            <TrailList key={refreshTrigger} />
+            <TrailList key={refreshTrigger} onNotify={notify} />
             <Fab 
                 color="primary" 
                 aria-label="add" 
@@ -78,6 +92,17 @@ export default function App() {
                 onClose={() => setIsUploadOpen(false)} 
                 onUploadSuccess={handleUploadSuccess}
             />
+
+            <Snackbar 
+                open={snackbar.open} 
+                autoHideDuration={6000} 
+                onClose={handleCloseSnackbar}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+                    {snackbar.message}
+                </Alert>
+            </Snackbar>
           </Container>
         </Box>
       </Box>
