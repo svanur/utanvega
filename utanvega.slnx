@@ -5,4 +5,5 @@
         <File Path=".github\workflows\frontend-build.yml"/>
     </Folder>
     <Project Path="backend/backend.csproj"/>
+    <Project Path="admin/admin.esproj"/>
 </Solution>

@@ -2,9 +2,10 @@
   "private": true,
   "name": "hlaupaleidir",
   "scripts": {
+    "dev:admin": "npm --prefix admin run dev",
     "dev:backend": "dotnet watch --project backend/backend.csproj run",
     "dev:frontend": "npm --prefix frontend run dev",
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\""
+    "dev": "concurrently \"npm run dev:admin\" \"npm run dev:backend\" \"npm run dev:frontend\""
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

@@ -1,3 +1,9 @@
+# Admin
+admin/node_modules/
+admin/dist/
+admin/.vite/
+admin/tsconfig.tsbuildinfo
+
 # Backend
 backend/bin/
 backend/obj/

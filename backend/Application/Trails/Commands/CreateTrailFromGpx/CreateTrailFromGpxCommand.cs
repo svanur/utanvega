@@ -22,14 +22,14 @@ public class CreateTrailFromGpxCommandHandler : IRequestHandler<CreateTrailFromG
     public async Task<Guid> Handle(CreateTrailFromGpxCommand request, CancellationToken cancellationToken)
     {
         var doc = XDocument.Parse(request.GpxXml);
-        XNamespace ns = "http://www.topografix.com/GPX/1/1";
+        XNamespace ns = doc.Root?.GetDefaultNamespace() ?? "http://www.topografix.com/GPX/1/1";
 
         var points = doc.Descendants(ns + "trkpt")
             .Select(p => new
             {
-                Lat = double.Parse(p.Attribute("lat")!.Value),
-                Lon = double.Parse(p.Attribute("lon")!.Value),
-                Ele = double.Parse(p.Element(ns + "ele")?.Value ?? "0")
+                Lat = double.Parse(p.Attribute("lat")?.Value ?? "0", System.Globalization.CultureInfo.InvariantCulture),
+                Lon = double.Parse(p.Attribute("lon")?.Value ?? "0", System.Globalization.CultureInfo.InvariantCulture),
+                Ele = double.Parse(p.Element(ns + "ele")?.Value ?? "0", System.Globalization.CultureInfo.InvariantCulture)
             })
             .ToList();
 
@@ -72,7 +72,12 @@ public class CreateTrailFromGpxCommandHandler : IRequestHandler<CreateTrailFromG
         };
 
         _context.Trails.Add(trail);
-        await _context.SaveChangesAsync(cancellationToken);
+        var result = await _context.SaveChangesAsync(cancellationToken);
+        
+        if (result == 0)
+        {
+            throw new Exception("No records were saved to the database.");
+        }
 
         return trail.Id;
     }

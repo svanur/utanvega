@@ -24,6 +24,16 @@ public class UtanvegaDbContext : DbContext
             
             // Map NetTopologySuite Geometry to PostGIS
             entity.Property(e => e.GpxData).HasColumnType("geometry");
+            
+            // Store Enums as Strings in Database
+            entity.Property(e => e.Status)
+                  .HasConversion<string>();
+            entity.Property(e => e.ActivityTypeId)
+                  .HasConversion<string>();
+            entity.Property(e => e.Difficulty)
+                  .HasConversion<string>();
+            entity.Property(e => e.Visibility)
+                  .HasConversion<string>();
         });
     }
 }

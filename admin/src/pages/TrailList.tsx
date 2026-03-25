@@ -1,0 +1,129 @@
+import { Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Chip, Button, CircularProgress, Alert, Box, Dialog, DialogTitle, DialogContent, IconButton, DialogActions } from '@mui/material';
+import MapIcon from '@mui/icons-material/Map';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import CloseIcon from '@mui/icons-material/Close';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import { useState } from 'react';
+import { useTrails } from '../hooks/useTrails';
+import { apiFetch } from '../hooks/api';
+import TrailMap from '../components/TrailMap';
+import TrailEditDialog from '../components/TrailEditDialog';
+
+export default function TrailList() {
+  const { trails, loading, error, refresh } = useTrails();
+  const [selectedTrailMap, setSelectedTrailMap] = useState<{ id: string, name: string } | null>(null);
+  const [selectedTrailEdit, setSelectedTrailEdit] = useState<string | null>(null);
+  const [trailToDelete, setTrailToDelete] = useState<{ id: string, name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!trailToDelete) return;
+    try {
+        setDeleting(true);
+        await apiFetch(`/api/v1/admin/trails/${trailToDelete.id}`, { method: 'DELETE' });
+        setTrailToDelete(null);
+        refresh();
+    } catch (err) {
+        alert('Failed to delete trail');
+    } finally {
+        setDeleting(false);
+    }
+  };
+
+  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>;
+  if (error) return <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>;
+
+  return (
+    <Box>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4">Trails</Typography>
+        <Box>
+          <Button startIcon={<RefreshIcon />} onClick={refresh} sx={{ mr: 1 }}>Refresh</Button>
+        </Box>
+      </Box>
+      <TableContainer component={Paper}>
+        <Table sx={{ minWidth: 650 }}>
+          <TableHead>
+            <TableRow>
+              <TableCell>Name</TableCell>
+              <TableCell align="right">Length (km)</TableCell>
+              <TableCell align="right">Gain (m)</TableCell>
+              <TableCell align="right">Loss (m)</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell align="right">Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {trails.map((trail) => (
+              <TableRow key={trail.id}>
+                <TableCell component="th" scope="row">{trail.name}</TableCell>
+                <TableCell align="right">{(trail.length / 1000).toFixed(2)}</TableCell>
+                <TableCell align="right">{Math.round(trail.elevationGain)}</TableCell>
+                <TableCell align="right">{Math.round(trail.elevationLoss)}</TableCell>
+                <TableCell>
+                  <Chip 
+                    label={trail.status} 
+                    color={trail.status === 'Published' ? 'success' : 'default'} 
+                    size="small" 
+                  />
+                </TableCell>
+                <TableCell align="right">
+                  <Button size="small" startIcon={<MapIcon />} onClick={() => setSelectedTrailMap({ id: trail.id, name: trail.name })}>Map</Button>
+                  <Button size="small" startIcon={<EditIcon />} onClick={() => setSelectedTrailEdit(trail.id)}>Edit</Button>
+                  <Button size="small" color="error" startIcon={<DeleteIcon />} onClick={() => setTrailToDelete({ id: trail.id, name: trail.name })}>Delete</Button>
+                </TableCell>
+              </TableRow>
+            ))}
+            {trails.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={6} align="center">No trails found. Upload a GPX to get started!</TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      <Dialog 
+        open={Boolean(selectedTrailMap)} 
+        onClose={() => setSelectedTrailMap(null)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+            {selectedTrailMap?.name} - Trail Map
+            <IconButton
+                aria-label="close"
+                onClick={() => setSelectedTrailMap(null)}
+                sx={{ position: 'absolute', right: 8, top: 8 }}
+            >
+                <CloseIcon />
+            </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+            {selectedTrailMap && <TrailMap trailId={selectedTrailMap.id} trailName={selectedTrailMap.name} />}
+        </DialogContent>
+      </Dialog>
+
+      <TrailEditDialog 
+        open={Boolean(selectedTrailEdit)} 
+        trailId={selectedTrailEdit} 
+        onClose={() => setSelectedTrailEdit(null)} 
+        onSaveSuccess={refresh}
+      />
+
+      <Dialog open={Boolean(trailToDelete)} onClose={() => setTrailToDelete(null)}>
+        <DialogTitle>Delete Trail?</DialogTitle>
+        <DialogContent>
+            Are you sure you want to delete <strong>{trailToDelete?.name}</strong>? This action cannot be undone.
+        </DialogContent>
+        <DialogActions>
+            <Button onClick={() => setTrailToDelete(null)} disabled={deleting}>Cancel</Button>
+            <Button onClick={handleDelete} color="error" variant="contained" disabled={deleting}>
+                {deleting ? 'Deleting...' : 'Delete'}
+            </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
+}

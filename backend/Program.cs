@@ -8,6 +8,10 @@ using Microsoft.Extensions.Options;
 using Microsoft.EntityFrameworkCore;
 
 using Utanvega.Backend.Application.Trails.Commands.CreateTrailFromGpx;
+using Utanvega.Backend.Application.Trails.Commands.UpdateTrail;
+using Utanvega.Backend.Application.Trails.Commands.DeleteTrail;
+using Utanvega.Backend.Application.Trails.Queries.GetTrails;
+using Utanvega.Backend.Application.Trails.Queries.GetTrailGeometry;
 using MediatR;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -30,6 +34,15 @@ builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Progr
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddAuthorization();
+
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+});
+builder.Services.Configure<Microsoft.AspNetCore.Mvc.JsonOptions>(options =>
+{
+    options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+});
 
 builder.Services.AddCors(options =>
 {
@@ -67,8 +80,7 @@ app.UseAuthorization();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<UtanvegaDbContext>();
-    // We don't call Migrate() here yet because we need to generate migrations first
-    // but the setup is ready.
+    db.Database.Migrate();
 }
 
 app.MapGet("/api/v1/health", () => Results.Ok(new
@@ -95,6 +107,42 @@ app.MapGet("/", () => new
     message = "Backend API running!",
 });
 
+app.MapGet("/api/v1/admin/trails", [Authorize] async (IMediator mediator) =>
+{
+    var trails = await mediator.Send(new GetTrailsQuery());
+    return Results.Ok(trails);
+})
+.WithName("GetTrails");
+
+app.MapGet("/api/v1/admin/trails/{id}", [Authorize] async (Guid id, UtanvegaDbContext context) =>
+{
+    var trail = await context.Trails.AsNoTracking().FirstOrDefaultAsync(t => t.Id == id);
+    return trail != null ? Results.Ok(trail) : Results.NotFound();
+})
+.WithName("GetTrailById");
+
+app.MapPut("/api/v1/admin/trails/{id}", [Authorize] async (Guid id, UpdateTrailCommand command, IMediator mediator) =>
+{
+    if (id != command.Id) return Results.BadRequest("ID mismatch");
+    var success = await mediator.Send(command);
+    return success ? Results.NoContent() : Results.NotFound();
+})
+.WithName("UpdateTrail");
+
+app.MapDelete("/api/v1/admin/trails/{id}", [Authorize] async (Guid id, IMediator mediator) =>
+{
+    var success = await mediator.Send(new DeleteTrailCommand(id));
+    return success ? Results.NoContent() : Results.NotFound();
+})
+.WithName("DeleteTrail");
+
+app.MapGet("/api/v1/admin/trails/{id}/geometry", [Authorize] async (Guid id, IMediator mediator) =>
+{
+    var geoJson = await mediator.Send(new GetTrailGeometryQuery(id));
+    return geoJson != null ? Results.Content(geoJson, "application/json") : Results.NotFound();
+})
+.WithName("GetTrailGeometry");
+
 app.MapPost("/api/v1/admin/trails/upload-gpx", [Authorize] async (string name, IFormFile file, IMediator mediator) =>
 {
     if (file == null || file.Length == 0) return Results.BadRequest("No file uploaded.");
@@ -102,10 +150,16 @@ app.MapPost("/api/v1/admin/trails/upload-gpx", [Authorize] async (string name, I
     using var reader = new StreamReader(file.OpenReadStream());
     var gpxXml = await reader.ReadToEndAsync();
     
-    var command = new CreateTrailFromGpxCommand(name, gpxXml);
-    var trailId = await mediator.Send(command);
-    
-    return Results.Created($"/api/v1/admin/trails/{trailId}", new { id = trailId });
+    try 
+    {
+        var command = new CreateTrailFromGpxCommand(name, gpxXml);
+        var trailId = await mediator.Send(command);
+        return Results.Created($"/api/v1/admin/trails/{trailId}", new { id = trailId });
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(ex.Message);
+    }
 })
 .WithName("UploadGpx")
 .DisableAntiforgery(); // Simple for dev, adjust for prod security
