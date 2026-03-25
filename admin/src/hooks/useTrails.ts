@@ -8,11 +8,11 @@ export type Trail = {
     length: number;
     elevationGain: number;
     elevationLoss: number;
-    status: 'Draft' | 'Published' | 'Flagged' | 'Archived';
+    status: 'Draft' | 'Published' | 'Flagged' | 'Archived' | 'Deleted';
     activityType: 'Running' | 'Cycling' | 'Hiking' | 'Skiing';
 };
 
-export function useTrails() {
+export function useTrails(includeDeleted: boolean = false) {
     const [trails, setTrails] = useState<Trail[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -20,7 +20,7 @@ export function useTrails() {
     const fetchTrails = async () => {
         try {
             setLoading(true);
-            const data = await apiFetch<Trail[]>('/api/v1/admin/trails');
+            const data = await apiFetch<Trail[]>(`/api/v1/admin/trails?includeDeleted=${includeDeleted}`);
             setTrails(data);
             setError(null);
         } catch (err) {
@@ -32,7 +32,7 @@ export function useTrails() {
 
     useEffect(() => {
         fetchTrails();
-    }, []);
+    }, [includeDeleted]);
 
     return { trails, loading, error, refresh: fetchTrails };
 }

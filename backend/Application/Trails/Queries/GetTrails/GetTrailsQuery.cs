@@ -5,7 +5,7 @@ using Utanvega.Backend.Infrastructure.Persistence;
 
 namespace Utanvega.Backend.Application.Trails.Queries.GetTrails;
 
-public record GetTrailsQuery() : IRequest<List<TrailDto>>;
+public record GetTrailsQuery(bool IncludeDeleted = false) : IRequest<List<TrailDto>>;
 
 public record TrailDto(
     Guid Id,
@@ -29,7 +29,14 @@ public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailD
 
     public async Task<List<TrailDto>> Handle(GetTrailsQuery request, CancellationToken cancellationToken)
     {
-        return await _context.Trails
+        var query = _context.Trails.AsQueryable();
+
+        if (!request.IncludeDeleted)
+        {
+            query = query.Where(t => t.Status != TrailStatus.Deleted);
+        }
+
+        return await query
             .Select(t => new TrailDto(
                 t.Id,
                 t.Name,

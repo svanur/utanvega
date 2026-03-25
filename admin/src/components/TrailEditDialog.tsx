@@ -25,6 +25,7 @@ const trailStatuses = [
     { value: 'Published', label: 'Published' },
     { value: 'Flagged', label: 'Flagged' },
     { value: 'Archived', label: 'Archived' },
+    { value: 'Deleted', label: 'Deleted' },
 ];
 
 const difficulties = [

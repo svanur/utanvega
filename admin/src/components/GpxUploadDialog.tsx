@@ -11,6 +11,38 @@ export default function GpxUploadDialog({ open, onClose, onUploadSuccess }: { op
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const selectedFile = e.target.files?.[0] || null;
+        setFile(selectedFile);
+        
+        if (selectedFile) {
+            // Try to extract name from GPX
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const content = event.target?.result as string;
+                    const parser = new DOMParser();
+                    const xmlDoc = parser.parseFromString(content, "text/xml");
+                    
+                    // Try to find <name> in <metadata> or elsewhere
+                    const nameNode = xmlDoc.querySelector('metadata > name') || xmlDoc.querySelector('name');
+                    if (nameNode && nameNode.textContent) {
+                        setName(nameNode.textContent.trim());
+                    } else {
+                        // Fallback to filename without extension
+                        const fileName = selectedFile.name.replace(/\.[^/.]+$/, "");
+                        setName(fileName);
+                    }
+                } catch (err) {
+                    // Fallback to filename on error
+                    const fileName = selectedFile.name.replace(/\.[^/.]+$/, "");
+                    setName(fileName);
+                }
+            };
+            reader.readAsText(selectedFile);
+        }
+    };
+
     const handleUpload = async () => {
         if (!name || !file) {
             setError('Please provide a name and a GPX file.');
@@ -71,7 +103,7 @@ export default function GpxUploadDialog({ open, onClose, onUploadSuccess }: { op
                             type="file"
                             accept=".gpx"
                             hidden
-                            onChange={(e) => setFile(e.target.files?.[0] || null)}
+                            onChange={handleFileChange}
                         />
                     </Button>
                     {file && (

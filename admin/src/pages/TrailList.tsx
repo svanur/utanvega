@@ -1,9 +1,10 @@
-import { Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Chip, Button, CircularProgress, Alert, Box, Dialog, DialogTitle, DialogContent, IconButton, DialogActions } from '@mui/material';
+import { Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Chip, Button, CircularProgress, Alert, Box, Dialog, DialogTitle, DialogContent, IconButton, DialogActions, FormControlLabel, Switch } from '@mui/material';
 import MapIcon from '@mui/icons-material/Map';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import RestoreIcon from '@mui/icons-material/Restore';
 import { useState } from 'react';
 import { useTrails } from '../hooks/useTrails';
 import { apiFetch } from '../hooks/api';
@@ -11,7 +12,8 @@ import TrailMap from '../components/TrailMap';
 import TrailEditDialog from '../components/TrailEditDialog';
 
 export default function TrailList({ onNotify }: { onNotify: (message: string, severity?: 'success' | 'error') => void }) {
-  const { trails, loading, error, refresh } = useTrails();
+  const [includeDeleted, setIncludeDeleted] = useState(false);
+  const { trails, loading, error, refresh } = useTrails(includeDeleted);
   const [selectedTrailMap, setSelectedTrailMap] = useState<{ id: string, name: string } | null>(null);
   const [selectedTrailEdit, setSelectedTrailEdit] = useState<string | null>(null);
   const [trailToDelete, setTrailToDelete] = useState<{ id: string, name: string } | null>(null);
@@ -32,6 +34,24 @@ export default function TrailList({ onNotify }: { onNotify: (message: string, se
     }
   };
 
+  const handleRestore = async (trail: any) => {
+    try {
+        await apiFetch(`/api/v1/admin/trails/${trail.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ...trail,
+                status: 'Draft',
+                updatedBy: 'admin'
+            }),
+        });
+        onNotify('Trail restored to Draft');
+        refresh();
+    } catch (err) {
+        onNotify('Failed to restore trail', 'error');
+    }
+  };
+
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>;
   if (error) return <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>;
 
@@ -39,8 +59,12 @@ export default function TrailList({ onNotify }: { onNotify: (message: string, se
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4">Trails</Typography>
-        <Box>
-          <Button startIcon={<RefreshIcon />} onClick={refresh} sx={{ mr: 1 }}>Refresh</Button>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <FormControlLabel 
+            control={<Switch checked={includeDeleted} onChange={(e) => setIncludeDeleted(e.target.checked)} />} 
+            label="Show Deleted" 
+          />
+          <Button startIcon={<RefreshIcon />} onClick={refresh}>Refresh</Button>
         </Box>
       </Box>
       <TableContainer component={Paper}>
@@ -57,7 +81,7 @@ export default function TrailList({ onNotify }: { onNotify: (message: string, se
           </TableHead>
           <TableBody>
             {trails.map((trail) => (
-              <TableRow key={trail.id}>
+              <TableRow key={trail.id} sx={{ opacity: trail.status === 'Deleted' ? 0.6 : 1, bgcolor: trail.status === 'Deleted' ? 'action.hover' : 'inherit' }}>
                 <TableCell component="th" scope="row">{trail.name}</TableCell>
                 <TableCell align="right">{(trail.length / 1000).toFixed(2)}</TableCell>
                 <TableCell align="right">{Math.round(trail.elevationGain)}</TableCell>
@@ -65,14 +89,20 @@ export default function TrailList({ onNotify }: { onNotify: (message: string, se
                 <TableCell>
                   <Chip 
                     label={trail.status} 
-                    color={trail.status === 'Published' ? 'success' : 'default'} 
+                    color={trail.status === 'Published' ? 'success' : trail.status === 'Deleted' ? 'error' : 'default'} 
                     size="small" 
                   />
                 </TableCell>
                 <TableCell align="right">
                   <Button size="small" startIcon={<MapIcon />} onClick={() => setSelectedTrailMap({ id: trail.id, name: trail.name })}>Map</Button>
-                  <Button size="small" startIcon={<EditIcon />} onClick={() => setSelectedTrailEdit(trail.id)}>Edit</Button>
-                  <Button size="small" color="error" startIcon={<DeleteIcon />} onClick={() => setTrailToDelete({ id: trail.id, name: trail.name })}>Delete</Button>
+                  {trail.status === 'Deleted' ? (
+                    <Button size="small" color="success" startIcon={<RestoreIcon />} onClick={() => handleRestore(trail)}>Restore</Button>
+                  ) : (
+                    <>
+                      <Button size="small" startIcon={<EditIcon />} onClick={() => setSelectedTrailEdit(trail.id)}>Edit</Button>
+                      <Button size="small" color="error" startIcon={<DeleteIcon />} onClick={() => setTrailToDelete({ id: trail.id, name: trail.name })}>Delete</Button>
+                    </>
+                  )}
                 </TableCell>
               </TableRow>
             ))}

@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Infrastructure.Persistence;
 
 namespace Utanvega.Backend.Application.Trails.Commands.DeleteTrail;
@@ -20,7 +21,10 @@ public class DeleteTrailCommandHandler : IRequestHandler<DeleteTrailCommand, boo
         var trail = await _context.Trails.FirstOrDefaultAsync(t => t.Id == request.Id, cancellationToken);
         if (trail == null) return false;
 
-        _context.Trails.Remove(trail);
+        // Soft delete: Change status instead of removing
+        trail.Status = TrailStatus.Deleted;
+        trail.UpdatedAt = DateTime.UtcNow;
+
         await _context.SaveChangesAsync(cancellationToken);
         return true;
     }

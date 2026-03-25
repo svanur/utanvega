@@ -16,6 +16,7 @@ public enum TrailStatus
     Published,
     Flagged,
     Archived,
+    Deleted,
 }
 
 public enum Difficulty

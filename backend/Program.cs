@@ -107,9 +107,9 @@ app.MapGet("/", () => new
     message = "Backend API running!",
 });
 
-app.MapGet("/api/v1/admin/trails", [Authorize] async (IMediator mediator) =>
+app.MapGet("/api/v1/admin/trails", [Authorize] async (bool includeDeleted, IMediator mediator) =>
 {
-    var trails = await mediator.Send(new GetTrailsQuery());
+    var trails = await mediator.Send(new GetTrailsQuery(includeDeleted));
     return Results.Ok(trails);
 })
 .WithName("GetTrails");
