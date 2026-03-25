@@ -1,12 +1,21 @@
+import { supabase } from './supabase';
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
-const DEV_TOKEN = 'dev-admin-token';
 
 export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${API_URL}${endpoint}`;
-    const headers = {
-        'X-Dev-Token': DEV_TOKEN,
-        ...options.headers,
+    
+    // Get token from current supabase session
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+
+    const headers: Record<string, string> = {
+        ...options.headers as Record<string, string>,
     };
+
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
 
     const response = await fetch(url, { ...options, headers });
 

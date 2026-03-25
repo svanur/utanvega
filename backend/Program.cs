@@ -14,6 +14,10 @@ using Utanvega.Backend.Application.Trails.Queries.GetTrails;
 using Utanvega.Backend.Application.Trails.Queries.GetTrailGeometry;
 using MediatR;
 
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add Database with PostGIS
@@ -22,8 +26,48 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 
 if (builder.Environment.IsDevelopment())
 {
-    Console.WriteLine($"[DEBUG_LOG] Using ConnectionString starting with: {connectionString?.Substring(0, Math.Min(connectionString.Length, 15))}...");
+    Console.WriteLine($"[DEBUG_LOG] Using ConnectionString starting with: {connectionString?.Substring(0, Math.Min(connectionString?.Length ?? 0, 15))}...");
 }
+
+// Supabase Auth Configuration
+var supabaseUrl = builder.Configuration["SUPABASE_URL"] ?? "https://honsdscqmhvsoumrcnad.supabase.co";
+var jwtSecret = builder.Configuration["SUPABASE_JWT_SECRET"];
+
+if (string.IsNullOrEmpty(jwtSecret) && !builder.Environment.IsDevelopment())
+{
+    throw new Exception("SUPABASE_JWT_SECRET is required in production.");
+}
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.Authority = supabaseUrl + "/auth/v1";
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = supabaseUrl + "/auth/v1",
+            ValidateAudience = true,
+            ValidAudience = "authenticated",
+            ValidateLifetime = true,
+            IssuerSigningKey = !string.IsNullOrEmpty(jwtSecret) 
+                ? new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)) 
+                : null,
+            ValidateIssuerSigningKey = !string.IsNullOrEmpty(jwtSecret)
+        };
+        
+        // Supabase uses a single key for all tenants if you use the shared API.
+        // For development without a secret, we might need to be careful.
+    });
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminOnly", policy => 
+    {
+        policy.RequireAuthenticatedUser();
+        // You can add role checks here if you store roles in Supabase user metadata
+        // e.g., policy.RequireClaim("role", "admin");
+    });
+});
 
 builder.Services.AddDbContext<UtanvegaDbContext>(options =>
     options.UseNpgsql(connectionString, o => o.UseNetTopologySuite()));
@@ -33,16 +77,6 @@ builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Progr
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddAuthorization();
-
-builder.Services.ConfigureHttpJsonOptions(options =>
-{
-    options.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
-});
-builder.Services.Configure<Microsoft.AspNetCore.Mvc.JsonOptions>(options =>
-{
-    options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
-});
 
 builder.Services.AddCors(options =>
 {
@@ -55,12 +89,14 @@ builder.Services.AddCors(options =>
     });
 });
 
-if (builder.Environment.IsDevelopment())
+builder.Services.ConfigureHttpJsonOptions(options =>
 {
-    builder.Services
-        .AddAuthentication("DevHeader")
-        .AddScheme<AuthenticationSchemeOptions, DevHeaderAuthenticationHandler>("DevHeader", _ => { });
-}
+    options.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+});
+builder.Services.Configure<Microsoft.AspNetCore.Mvc.JsonOptions>(options =>
+{
+    options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+});
 
 var app = builder.Build();
 
@@ -69,11 +105,7 @@ app.UseSwaggerUI();
 
 app.UseCors("Frontend");
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseAuthentication();
-}
-
+app.UseAuthentication();
 app.UseAuthorization();
 
 // Auto-migration on startup (optional, but helpful for initial setup)
@@ -181,43 +213,3 @@ app.MapPost("/api/v1/admin/trails/upload-gpx", [Authorize] async (string name, I
 .DisableAntiforgery(); // Simple for dev, adjust for prod security
 
 app.Run();
-
-sealed class DevHeaderAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
-{
-    private const string DevTokenHeaderName = "X-Dev-Token";
-    private const string DevTokenValue = "dev-admin-token";
-
-    public DevHeaderAuthenticationHandler(
-        IOptionsMonitor<AuthenticationSchemeOptions> options,
-        ILoggerFactory logger,
-        UrlEncoder encoder)
-        : base(options, logger, encoder)
-    {
-    }
-
-    protected override Task<AuthenticateResult> HandleAuthenticateAsync()
-    {
-        if (!Request.Headers.TryGetValue(DevTokenHeaderName, out var token))
-        {
-            return Task.FromResult(AuthenticateResult.NoResult());
-        }
-
-        if (!string.Equals(token.ToString(), DevTokenValue, StringComparison.Ordinal))
-        {
-            return Task.FromResult(AuthenticateResult.Fail("Invalid dev token."));
-        }
-
-        var claims = new[]
-        {
-            new Claim(ClaimTypes.NameIdentifier, "dev-user"),
-            new Claim(ClaimTypes.Name, "Development User"),
-            new Claim(ClaimTypes.Role, "Admin"),
-        };
-
-        var identity = new ClaimsIdentity(claims, Scheme.Name);
-        var principal = new ClaimsPrincipal(identity);
-        var ticket = new AuthenticationTicket(principal, Scheme.Name);
-
-        return Task.FromResult(AuthenticateResult.Success(ticket));
-    }
-}

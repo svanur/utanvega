@@ -1,9 +1,12 @@
-import { Box, CssBaseline, ThemeProvider, createTheme, AppBar, Toolbar, Typography, Container, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Fab, Snackbar, Alert } from '@mui/material';
+import { Box, CssBaseline, ThemeProvider, createTheme, AppBar, Toolbar, Typography, Container, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Fab, Snackbar, Alert, Button, CircularProgress } from '@mui/material';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
+import LogoutIcon from '@mui/icons-material/Logout';
 import { useState } from 'react';
 import TrailList from './pages/TrailList';
 import GpxUploadDialog from './components/GpxUploadDialog';
+import LoginPage from './pages/LoginPage';
+import { AuthProvider, useAuth } from './hooks/useAuth';
 
 const theme = createTheme({
   palette: {
@@ -19,7 +22,8 @@ const theme = createTheme({
 
 const DRAWER_WIDTH = 240;
 
-export default function App() {
+function AdminContent() {
+  const { user, loading: authLoading, signOut } = useAuth();
   const [currentPage, setCurrentPage] = useState<'list' | 'upload'>('list');
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -43,69 +47,92 @@ export default function App() {
     setCurrentPage('list');
   };
 
+  if (authLoading) {
+    return (
+      <Box sx={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (!user) {
+    return <LoginPage />;
+  }
+
+  return (
+    <Box sx={{ display: 'flex' }}>
+      <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
+        <Toolbar>
+          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+            🌄 Utanvega Admin
+          </Typography>
+          <Button color="inherit" onClick={signOut} startIcon={<LogoutIcon />}>
+            Logout
+          </Button>
+        </Toolbar>
+      </AppBar>
+      <Drawer
+        variant="permanent"
+        sx={{
+          width: DRAWER_WIDTH,
+          flexShrink: 0,
+          [`& .MuiDrawer-paper`]: { width: DRAWER_WIDTH, boxSizing: 'border-box' },
+        }}
+      >
+        <Toolbar />
+        <Box sx={{ overflow: 'auto' }}>
+          <List>
+            <ListItem disablePadding>
+              <ListItemButton selected={currentPage === 'list'} onClick={() => setCurrentPage('list')}>
+                <ListItemIcon><DashboardIcon /></ListItemIcon>
+                <ListItemText primary="All Trails" />
+              </ListItemButton>
+            </ListItem>
+          </List>
+        </Box>
+      </Drawer>
+      <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
+        <Toolbar />
+        <Container maxWidth="lg">
+          <TrailList key={refreshTrigger} onNotify={notify} />
+          <Fab 
+              color="primary" 
+              aria-label="add" 
+              sx={{ position: 'fixed', bottom: 32, right: 32 }}
+              onClick={() => setIsUploadOpen(true)}
+          >
+              <AddCircleIcon />
+          </Fab>
+
+          <GpxUploadDialog 
+              open={isUploadOpen} 
+              onClose={() => setIsUploadOpen(false)} 
+              onUploadSuccess={handleUploadSuccess}
+          />
+
+          <Snackbar 
+              open={snackbar.open} 
+              autoHideDuration={6000} 
+              onClose={handleCloseSnackbar}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+          >
+              <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+                  {snackbar.message}
+              </Alert>
+          </Snackbar>
+        </Container>
+      </Box>
+    </Box>
+  );
+}
+
+export default function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Box sx={{ display: 'flex' }}>
-        <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
-          <Toolbar>
-            <Typography variant="h6" noWrap component="div">
-              🌄 Utanvega Admin
-            </Typography>
-          </Toolbar>
-        </AppBar>
-        <Drawer
-          variant="permanent"
-          sx={{
-            width: DRAWER_WIDTH,
-            flexShrink: 0,
-            [`& .MuiDrawer-paper`]: { width: DRAWER_WIDTH, boxSizing: 'border-box' },
-          }}
-        >
-          <Toolbar />
-          <Box sx={{ overflow: 'auto' }}>
-            <List>
-              <ListItem disablePadding>
-                <ListItemButton selected={currentPage === 'list'} onClick={() => setCurrentPage('list')}>
-                  <ListItemIcon><DashboardIcon /></ListItemIcon>
-                  <ListItemText primary="All Trails" />
-                </ListItemButton>
-              </ListItem>
-            </List>
-          </Box>
-        </Drawer>
-        <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
-          <Toolbar />
-          <Container maxWidth="lg">
-            <TrailList key={refreshTrigger} onNotify={notify} />
-            <Fab 
-                color="primary" 
-                aria-label="add" 
-                sx={{ position: 'fixed', bottom: 32, right: 32 }}
-                onClick={() => setIsUploadOpen(true)}
-            >
-                <AddCircleIcon />
-            </Fab>
-
-            <GpxUploadDialog 
-                open={isUploadOpen} 
-                onClose={() => setIsUploadOpen(false)} 
-                onUploadSuccess={handleUploadSuccess}
-            />
-
-            <Snackbar 
-                open={snackbar.open} 
-                autoHideDuration={6000} 
-                onClose={handleCloseSnackbar}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-            >
-                <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
-                    {snackbar.message}
-                </Alert>
-            </Snackbar>
-          </Container>
-        </Box>
-      </Box>
+      <AuthProvider>
+        <AdminContent />
+      </AuthProvider>
     </ThemeProvider>
   );
 }

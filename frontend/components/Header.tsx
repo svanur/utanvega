@@ -8,7 +8,7 @@ export default function Header() {
                     🌄Utanvega🏃‍♂️🚴‍
                 </Typography>
                 <Typography variant="h4" component="h1" gutterBottom>
-                    Sumir elska malbik, en allir elska utanvega.
+                    Sumir elska malbik, allir elska utanvega.
                 </Typography>
                 <Typography variant="body1" color="text.secondary">
                     Vefur til að finna skemmtilegar leiðir og deila með vinum. 

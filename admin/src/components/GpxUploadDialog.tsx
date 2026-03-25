@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Box, Typography, Alert, CircularProgress } from '@mui/material';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 
+import { supabase } from '../hooks/supabase';
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
-const DEV_TOKEN = 'dev-admin-token';
 
 export default function GpxUploadDialog({ open, onClose, onUploadSuccess }: { open: boolean, onClose: () => void, onUploadSuccess: () => void }) {
     const [name, setName] = useState('');
@@ -56,11 +57,17 @@ export default function GpxUploadDialog({ open, onClose, onUploadSuccess }: { op
         formData.append('file', file);
 
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+            
+            const headers: Record<string, string> = {};
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
             const response = await fetch(`${API_URL}/api/v1/admin/trails/upload-gpx?name=${encodeURIComponent(name)}`, {
                 method: 'POST',
-                headers: {
-                    'X-Dev-Token': DEV_TOKEN,
-                },
+                headers,
                 body: formData,
             });
 
