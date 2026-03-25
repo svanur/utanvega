@@ -10,4 +10,7 @@
     <!-- Folder where output of build is placed -->
     <BuildOutputFolder>$(MSBuildProjectDirectory)\dist</BuildOutputFolder>
   </PropertyGroup>
+  <ItemGroup>
+    <Script Include="tsconfig.json" />
+  </ItemGroup>
 </Project>
