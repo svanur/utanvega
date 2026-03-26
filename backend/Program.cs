@@ -27,27 +27,33 @@ var rawConnectionString = builder.Configuration.GetConnectionString("DefaultConn
 // Fly.io provides DATABASE_URL in the format: postgres://user:password@host:port/dbname
 // We need to convert it to Npgsql format for EF Core.
 var connectionString = rawConnectionString;
-if (!string.IsNullOrEmpty(rawConnectionString) && rawConnectionString.StartsWith("postgres://"))
+if (!string.IsNullOrEmpty(rawConnectionString) && rawConnectionString.Contains("://"))
 {
-    Console.WriteLine("[INFO] Converting postgres:// connection string to Npgsql format...");
+    Console.WriteLine($"[INFO] Found Connection String with scheme: {rawConnectionString.Split(':')[0]}");
     try 
     {
         var uri = new Uri(rawConnectionString);
         var userInfo = uri.UserInfo.Split(':');
         var user = userInfo[0];
-        // Uri.UserInfo might decode special chars, so we need to be careful.
-        // If there's an '@' in the password, it can break Uri parsing.
         var password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "";
         var host = uri.Host;
         var port = uri.Port > 0 ? uri.Port : 5432;
         var database = uri.AbsolutePath.TrimStart('/');
         
+        // Ensure no extra characters in database name (like trailing slashes)
+        database = database.Split('?')[0];
+
         connectionString = $"Host={host};Port={port};Database={database};Username={user};Password={password};Include Error Detail=true";
+        Console.WriteLine($"[INFO] Successfully parsed Connection String. Host={host}, Port={port}, Database={database}");
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"[CRITICAL] Failed to parse DATABASE_URL: {ex.Message}");
+        Console.WriteLine($"[CRITICAL] Failed to parse connection string: {ex.Message}");
     }
+}
+else if (!string.IsNullOrEmpty(rawConnectionString))
+{
+    Console.WriteLine("[INFO] Using raw Connection String (already in Npgsql format).");
 }
 
 if (builder.Environment.IsDevelopment())
