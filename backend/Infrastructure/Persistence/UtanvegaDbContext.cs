@@ -10,6 +10,8 @@ public class UtanvegaDbContext : DbContext
     }
 
     public DbSet<Trail> Trails => Set<Trail>();
+    public DbSet<Location> Locations => Set<Location>();
+    public DbSet<TrailLocation> TrailLocations => Set<TrailLocation>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -34,6 +36,39 @@ public class UtanvegaDbContext : DbContext
                   .HasConversion<string>();
             entity.Property(e => e.Visibility)
                   .HasConversion<string>();
+        });
+
+        modelBuilder.Entity<Location>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Slug).IsRequired().HasMaxLength(250);
+            entity.HasIndex(e => e.Slug).IsUnique();
+            
+            entity.Property(e => e.Center).HasColumnType("geometry(Point, 4326)"); // Using 4326 (WGS 84) for PostGIS
+            
+            entity.Property(e => e.Type).HasConversion<string>();
+
+            // Self-referencing relationship
+            entity.HasOne(e => e.Parent)
+                  .WithMany(e => e.Children)
+                  .HasForeignKey(e => e.ParentId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<TrailLocation>(entity =>
+        {
+            entity.HasKey(tl => new { tl.TrailId, tl.LocationId, tl.Role });
+
+            entity.Property(tl => tl.Role).HasConversion<string>();
+
+            entity.HasOne(tl => tl.Trail)
+                  .WithMany(t => t.TrailLocations)
+                  .HasForeignKey(tl => tl.TrailId);
+
+            entity.HasOne(tl => tl.Location)
+                  .WithMany(l => l.TrailLocations)
+                  .HasForeignKey(tl => tl.LocationId);
         });
     }
 }

@@ -10,6 +10,7 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
     const token = session?.access_token;
 
     const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
         ...options.headers as Record<string, string>,
     };
 

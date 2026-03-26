@@ -12,6 +12,10 @@ using Utanvega.Backend.Application.Trails.Commands.UpdateTrail;
 using Utanvega.Backend.Application.Trails.Commands.DeleteTrail;
 using Utanvega.Backend.Application.Trails.Queries.GetTrails;
 using Utanvega.Backend.Application.Trails.Queries.GetTrailGeometry;
+using Utanvega.Backend.Application.Locations.Queries.GetLocations;
+using Utanvega.Backend.Application.Locations.Commands.CreateLocation;
+using Utanvega.Backend.Application.Locations.Commands.UpdateLocation;
+using Utanvega.Backend.Application.Locations.Commands.DeleteLocation;
 using MediatR;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -129,8 +133,8 @@ builder.Services.AddDbContext<UtanvegaDbContext>(options =>
 // Add CQRS with MediatR
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+// builder.Services.AddEndpointsApiExplorer();
+// builder.Services.AddSwaggerGen();
 
 builder.Services.AddCors(options =>
 {
@@ -159,8 +163,8 @@ var app = builder.Build();
 
 Console.WriteLine("[INFO] Application built. Starting up...");
 
-app.UseSwagger();
-app.UseSwaggerUI();
+// app.UseSwagger();
+// app.UseSwaggerUI();
 
 app.UseCors("Frontend");
 
@@ -168,6 +172,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 // Auto-migration on startup (optional, but helpful for initial setup)
+/*
 using (var scope = app.Services.CreateScope())
 {
     try 
@@ -188,6 +193,7 @@ using (var scope = app.Services.CreateScope())
         // which helps in identifying if the issue is DB-related or App-related.
     }
 }
+*/
 
 app.MapGet("/api/v1/health", () => Results.Ok(new
 {
@@ -238,7 +244,12 @@ app.MapGet("/api/v1/admin/trails/{id}", [Authorize] async (Guid id, UtanvegaDbCo
             t.Visibility,
             t.Length,
             t.ElevationGain,
-            t.ElevationLoss
+            t.ElevationLoss,
+            Locations = t.TrailLocations.Select(tl => new
+            {
+                tl.LocationId,
+                Role = tl.Role.ToString()
+            }).ToList()
         })
         .FirstOrDefaultAsync(t => t.Id == id);
     return trail != null ? Results.Ok(trail) : Results.NotFound();
@@ -287,5 +298,42 @@ app.MapPost("/api/v1/admin/trails/upload-gpx", [Authorize] async (string name, I
 })
 .WithName("UploadGpx")
 .DisableAntiforgery(); // Simple for dev, adjust for prod security
+
+// Locations Admin API
+app.MapGet("/api/v1/admin/locations", [Authorize] async (Guid? parentId, string? search, IMediator mediator) =>
+{
+    var locations = await mediator.Send(new GetLocationsQuery(parentId, search));
+    return Results.Ok(locations);
+})
+.WithName("GetLocations");
+
+app.MapPost("/api/v1/admin/locations", [Authorize] async (CreateLocationCommand command, IMediator mediator) =>
+{
+    var id = await mediator.Send(command);
+    return Results.Created($"/api/v1/admin/locations/{id}", new { id });
+})
+.WithName("CreateLocation");
+
+app.MapPut("/api/v1/admin/locations/{id}", [Authorize] async (Guid id, UpdateLocationCommand command, IMediator mediator) =>
+{
+    if (id != command.Id) return Results.BadRequest("ID mismatch");
+    await mediator.Send(command);
+    return Results.NoContent();
+})
+.WithName("UpdateLocation");
+
+app.MapDelete("/api/v1/admin/locations/{id}", [Authorize] async (Guid id, IMediator mediator) =>
+{
+    try 
+    {
+        await mediator.Send(new DeleteLocationCommand(id));
+        return Results.NoContent();
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(ex.Message);
+    }
+})
+.WithName("DeleteLocation");
 
 app.Run();

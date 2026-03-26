@@ -5,6 +5,11 @@ using Utanvega.Backend.Infrastructure.Persistence;
 
 namespace Utanvega.Backend.Application.Trails.Commands.UpdateTrail;
 
+public record TrailLocationUpdateDto(
+    Guid LocationId,
+    string Role
+);
+
 public record UpdateTrailCommand(
     Guid Id,
     string Name,
@@ -14,7 +19,8 @@ public record UpdateTrailCommand(
     string Status,
     string Difficulty,
     string Visibility,
-    string? UpdatedBy
+    string? UpdatedBy,
+    List<TrailLocationUpdateDto>? Locations = null
 ) : IRequest<bool>;
 
 public class UpdateTrailCommandHandler : IRequestHandler<UpdateTrailCommand, bool>
@@ -28,7 +34,10 @@ public class UpdateTrailCommandHandler : IRequestHandler<UpdateTrailCommand, boo
 
     public async Task<bool> Handle(UpdateTrailCommand request, CancellationToken cancellationToken)
     {
-        var trail = await _context.Trails.FirstOrDefaultAsync(t => t.Id == request.Id, cancellationToken);
+        var trail = await _context.Trails
+            .Include(t => t.TrailLocations)
+            .FirstOrDefaultAsync(t => t.Id == request.Id, cancellationToken);
+        
         if (trail == null) return false;
 
         trail.Name = request.Name;
@@ -49,6 +58,25 @@ public class UpdateTrailCommandHandler : IRequestHandler<UpdateTrailCommand, boo
             
         trail.UpdatedBy = request.UpdatedBy;
         trail.UpdatedAt = DateTime.UtcNow;
+
+        // Sync Locations
+        if (request.Locations != null)
+        {
+            _context.TrailLocations.RemoveRange(trail.TrailLocations);
+            
+            foreach (var locDto in request.Locations)
+            {
+                if (Enum.TryParse<TrailLocationRole>(locDto.Role, true, out var role))
+                {
+                    trail.TrailLocations.Add(new TrailLocation
+                    {
+                        TrailId = trail.Id,
+                        LocationId = locDto.LocationId,
+                        Role = role
+                    });
+                }
+            }
+        }
 
         await _context.SaveChangesAsync(cancellationToken);
         return true;

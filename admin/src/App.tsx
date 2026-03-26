@@ -1,9 +1,11 @@
 import { Box, CssBaseline, ThemeProvider, createTheme, AppBar, Toolbar, Typography, Container, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Fab, Snackbar, Alert, Button, CircularProgress } from '@mui/material';
 import DashboardIcon from '@mui/icons-material/Dashboard';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { useState } from 'react';
 import TrailList from './pages/TrailList';
+import { LocationList } from './pages/LocationList';
 import GpxUploadDialog from './components/GpxUploadDialog';
 import LoginPage from './pages/LoginPage';
 import { AuthProvider, useAuth } from './hooks/useAuth';
@@ -24,7 +26,7 @@ const DRAWER_WIDTH = 240;
 
 function AdminContent() {
   const { user, loading: authLoading, signOut } = useAuth();
-  const [currentPage, setCurrentPage] = useState<'list' | 'upload'>('list');
+  const [currentPage, setCurrentPage] = useState<'trails' | 'locations'>('trails');
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [snackbar, setSnackbar] = useState<{ open: boolean, message: string, severity: 'success' | 'error' }>({
@@ -44,7 +46,7 @@ function AdminContent() {
   const handleUploadSuccess = () => {
     notify('Trail uploaded successfully');
     setRefreshTrigger(prev => prev + 1);
-    setCurrentPage('list');
+    setCurrentPage('trails');
   };
 
   if (authLoading) {
@@ -83,9 +85,15 @@ function AdminContent() {
         <Box sx={{ overflow: 'auto' }}>
           <List>
             <ListItem disablePadding>
-              <ListItemButton selected={currentPage === 'list'} onClick={() => setCurrentPage('list')}>
+              <ListItemButton selected={currentPage === 'trails'} onClick={() => setCurrentPage('trails')}>
                 <ListItemIcon><DashboardIcon /></ListItemIcon>
                 <ListItemText primary="All Trails" />
+              </ListItemButton>
+            </ListItem>
+            <ListItem disablePadding>
+              <ListItemButton selected={currentPage === 'locations'} onClick={() => setCurrentPage('locations')}>
+                <ListItemIcon><LocationOnIcon /></ListItemIcon>
+                <ListItemText primary="Locations" />
               </ListItemButton>
             </ListItem>
           </List>
@@ -94,15 +102,22 @@ function AdminContent() {
       <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
         <Toolbar />
         <Container maxWidth="lg">
-          <TrailList key={refreshTrigger} onNotify={notify} />
-          <Fab 
-              color="primary" 
-              aria-label="add" 
-              sx={{ position: 'fixed', bottom: 32, right: 32 }}
-              onClick={() => setIsUploadOpen(true)}
-          >
-              <AddCircleIcon />
-          </Fab>
+          {currentPage === 'trails' ? (
+            <TrailList key={refreshTrigger} onNotify={notify} />
+          ) : (
+            <LocationList onNotify={notify} />
+          )}
+          
+          {currentPage === 'trails' && (
+            <Fab 
+                color="primary" 
+                aria-label="add" 
+                sx={{ position: 'fixed', bottom: 32, right: 32 }}
+                onClick={() => setIsUploadOpen(true)}
+            >
+                <AddCircleIcon />
+            </Fab>
+          )}
 
           <GpxUploadDialog 
               open={isUploadOpen} 

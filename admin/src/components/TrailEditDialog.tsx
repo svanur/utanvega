@@ -1,6 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Box, Typography, Alert, CircularProgress, MenuItem } from '@mui/material';
+import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Box, Typography, Alert, CircularProgress, MenuItem, IconButton, Paper, Chip } from '@mui/material';
+import { Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
 import { apiFetch } from '../hooks/api';
+import { useLocations, LocationDto } from '../hooks/useLocations';
+
+type TrailLocationInfo = {
+    locationId: string;
+    role: 'Start' | 'End' | 'PassingThrough';
+};
 
 type TrailDetail = {
     id: string;
@@ -11,7 +18,10 @@ type TrailDetail = {
     status: string;
     difficulty: string;
     visibility: string;
+    locations: TrailLocationInfo[];
 };
+
+const roles = ['Start', 'End', 'PassingThrough'];
 
 const activityTypes = [
     { value: 'Running', label: 'Running' },
@@ -47,6 +57,10 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const { locations: allLocations } = useLocations();
+
+    const [newLocId, setNewLocId] = useState('');
+    const [newLocRole, setNewLocRole] = useState<'Start' | 'End' | 'PassingThrough'>('PassingThrough');
 
     useEffect(() => {
         if (open && trailId) {
@@ -81,7 +95,11 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
                     status: trail.status,
                     difficulty: trail.difficulty,
                     visibility: trail.visibility,
-                    updatedBy: 'admin' // Simple for now
+                    updatedBy: 'admin', // Simple for now
+                    locations: trail.locations.map(l => ({
+                        locationId: l.locationId,
+                        role: l.role
+                    }))
                 }),
             });
             onSaveSuccess();
@@ -99,6 +117,23 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
         if (field === 'name') {
             setTrail(prev => prev ? { ...prev, name: value, slug: value.toLowerCase().replace(/ /g, '-') } : null);
         }
+    };
+
+    const handleAddLocation = () => {
+        if (!trail || !newLocId) return;
+        if (trail.locations.some(l => l.locationId === newLocId)) {
+            setError('This location is already linked to this trail.');
+            return;
+        }
+        const updatedLocations = [...trail.locations, { locationId: newLocId, role: newLocRole }];
+        setTrail({ ...trail, locations: updatedLocations });
+        setNewLocId('');
+    };
+
+    const handleRemoveLocation = (locId: string) => {
+        if (!trail) return;
+        const updatedLocations = trail.locations.filter(l => l.locationId !== locId);
+        setTrail({ ...trail, locations: updatedLocations });
     };
 
     return (
@@ -126,6 +161,58 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
                                 {visibilities.map(opt => <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>)}
                             </TextField>
                         </Box>
+
+                        <Typography variant="subtitle1" sx={{ mt: 2 }}>Linked Locations</Typography>
+                        <Paper variant="outlined" sx={{ p: 2 }}>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                                {trail.locations.map(tl => {
+                                    const locName = allLocations.find(l => l.id === tl.locationId)?.name || 'Unknown';
+                                    return (
+                                        <Chip 
+                                            key={tl.locationId}
+                                            label={`${locName} (${tl.role})`}
+                                            onDelete={() => handleRemoveLocation(tl.locationId)}
+                                            color="primary"
+                                            variant="outlined"
+                                        />
+                                    );
+                                })}
+                                {trail.locations.length === 0 && <Typography variant="body2" color="text.secondary">No locations linked.</Typography>}
+                            </Box>
+                            
+                            <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+                                <TextField 
+                                    select 
+                                    label="Add Location" 
+                                    size="small"
+                                    value={newLocId} 
+                                    onChange={(e) => setNewLocId(e.target.value)}
+                                    sx={{ flexGrow: 1 }}
+                                >
+                                    {allLocations.map(loc => (
+                                        <MenuItem key={loc.id} value={loc.id}>{loc.name} ({loc.type})</MenuItem>
+                                    ))}
+                                </TextField>
+                                <TextField 
+                                    select 
+                                    label="Role" 
+                                    size="small"
+                                    value={newLocRole} 
+                                    onChange={(e) => setNewLocRole(e.target.value as any)}
+                                    sx={{ width: 150 }}
+                                >
+                                    {roles.map(r => <MenuItem key={r} value={r}>{r}</MenuItem>)}
+                                </TextField>
+                                <Button 
+                                    variant="outlined" 
+                                    startIcon={<AddIcon />}
+                                    onClick={handleAddLocation}
+                                    sx={{ mt: 0.5 }}
+                                >
+                                    Add
+                                </Button>
+                            </Box>
+                        </Paper>
                     </Box>
                 ) : <Typography>Trail not found.</Typography>}
             </DialogContent>
