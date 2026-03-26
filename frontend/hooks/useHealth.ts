@@ -21,7 +21,7 @@ export function useHealth() {
     });
 
     useEffect(() => {
-        const baseUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:5173';
+        const baseUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:8080';
         const controller = new AbortController();
 
         async function loadHealth() {
