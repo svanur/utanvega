@@ -21,12 +21,42 @@ using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add Database with PostGIS
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
+var rawConnectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
     ?? builder.Configuration["DATABASE_URL"];
+
+// Fly.io provides DATABASE_URL in the format: postgres://user:password@host:port/dbname
+// We need to convert it to Npgsql format for EF Core.
+var connectionString = rawConnectionString;
+if (!string.IsNullOrEmpty(rawConnectionString) && rawConnectionString.StartsWith("postgres://"))
+{
+    Console.WriteLine("[INFO] Converting postgres:// connection string to Npgsql format...");
+    try 
+    {
+        var uri = new Uri(rawConnectionString);
+        var userInfo = uri.UserInfo.Split(':');
+        var user = userInfo[0];
+        // Uri.UserInfo might decode special chars, so we need to be careful.
+        // If there's an '@' in the password, it can break Uri parsing.
+        var password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "";
+        var host = uri.Host;
+        var port = uri.Port > 0 ? uri.Port : 5432;
+        var database = uri.AbsolutePath.TrimStart('/');
+        
+        connectionString = $"Host={host};Port={port};Database={database};Username={user};Password={password};Include Error Detail=true";
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[CRITICAL] Failed to parse DATABASE_URL: {ex.Message}");
+    }
+}
 
 if (builder.Environment.IsDevelopment())
 {
     Console.WriteLine($"[DEBUG_LOG] Using ConnectionString starting with: {connectionString?.Substring(0, Math.Min(connectionString?.Length ?? 0, 15))}...");
+}
+else if (string.IsNullOrEmpty(connectionString))
+{
+    Console.WriteLine("[CRITICAL] No connection string found! Check DATABASE_URL or DefaultConnection secret.");
 }
 
 // Supabase Auth Configuration
@@ -36,7 +66,10 @@ var jwtSecret = builder.Configuration["SUPABASE_JWT_SECRET"];
 if (string.IsNullOrEmpty(jwtSecret) && !builder.Environment.IsDevelopment())
 {
     Console.WriteLine("[CRITICAL] SUPABASE_JWT_SECRET is missing in production. App will likely fail to validate Admin requests.");
-    // throw new Exception("SUPABASE_JWT_SECRET is required in production."); 
+}
+else if (!string.IsNullOrEmpty(jwtSecret))
+{
+    Console.WriteLine($"[INFO] SUPABASE_JWT_SECRET found (Length: {jwtSecret.Length})");
 }
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -83,7 +116,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
     {
-        var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? ["http://localhost:5173"];
+        var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? ["http://localhost:5173", "http://localhost:5174"];
+        
+        Console.WriteLine($"[INFO] Allowed Origins: {string.Join(", ", allowedOrigins)}");
+        
         policy.WithOrigins(allowedOrigins)
               .AllowAnyHeader()
               .AllowAnyMethod();
@@ -100,6 +136,8 @@ builder.Services.Configure<Microsoft.AspNetCore.Mvc.JsonOptions>(options =>
 });
 
 var app = builder.Build();
+
+Console.WriteLine("[INFO] Application built. Starting up...");
 
 app.UseSwagger();
 app.UseSwaggerUI();
@@ -122,6 +160,10 @@ using (var scope = app.Services.CreateScope())
     catch (Exception ex)
     {
         Console.WriteLine($"[ERROR] Database migration failed: {ex.Message}");
+        if (ex.InnerException != null)
+        {
+            Console.WriteLine($"[ERROR] Inner exception: {ex.InnerException.Message}");
+        }
         // We don't throw here to allow the app to start even if migrations fail, 
         // which helps in identifying if the issue is DB-related or App-related.
     }
@@ -149,6 +191,8 @@ app.MapGet("/api/v1/admin/health", [Authorize] () => Results.Ok(new
 app.MapGet("/", () => new
 {
     message = "Backend API running!",
+    time = DateTime.UtcNow,
+    connection = string.IsNullOrEmpty(connectionString) ? "Missing" : "Configured"
 });
 
 app.MapGet("/api/v1/admin/trails", [Authorize] async (bool includeDeleted, IMediator mediator) =>
