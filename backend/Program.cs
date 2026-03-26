@@ -32,16 +32,30 @@ if (!string.IsNullOrEmpty(rawConnectionString) && rawConnectionString.Contains("
     Console.WriteLine($"[INFO] Found Connection String with scheme: {rawConnectionString.Split(':')[0]}");
     try 
     {
-        var uri = new Uri(rawConnectionString);
-        var userInfo = uri.UserInfo.Split(':');
-        var user = userInfo[0];
-        var password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "";
-        var host = uri.Host;
-        var port = uri.Port > 0 ? uri.Port : 5432;
-        var database = uri.AbsolutePath.TrimStart('/');
+        // Using manual string splitting instead of Uri class to avoid issues with special characters in passwords
+        // Format: postgresql://user:password@host:port/database
         
-        // Ensure no extra characters in database name (like trailing slashes)
-        database = database.Split('?')[0];
+        string remaining = rawConnectionString.Split("://")[1];
+        
+        // Split user info from the rest
+        int atIndex = remaining.LastIndexOf('@');
+        string userInfo = remaining.Substring(0, atIndex);
+        string hostPortDb = remaining.Substring(atIndex + 1);
+        
+        // Split user and password
+        string[] userPass = userInfo.Split(':');
+        string user = userPass[0];
+        string password = userPass.Length > 1 ? Uri.UnescapeDataString(userPass[1]) : "";
+        
+        // Split host:port from database
+        string[] hostPortAndDb = hostPortDb.Split('/');
+        string hostPort = hostPortAndDb[0];
+        string database = hostPortAndDb.Length > 1 ? hostPortAndDb[1].Split('?')[0] : "postgres";
+        
+        // Split host and port
+        string[] hostAndPort = hostPort.Split(':');
+        string host = hostAndPort[0];
+        string port = hostAndPort.Length > 1 ? hostAndPort[1] : "5432";
 
         connectionString = $"Host={host};Port={port};Database={database};Username={user};Password={password};Include Error Detail=true";
         Console.WriteLine($"[INFO] Successfully parsed Connection String. Host={host}, Port={port}, Database={database}");
