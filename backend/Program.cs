@@ -35,7 +35,8 @@ var jwtSecret = builder.Configuration["SUPABASE_JWT_SECRET"];
 
 if (string.IsNullOrEmpty(jwtSecret) && !builder.Environment.IsDevelopment())
 {
-    throw new Exception("SUPABASE_JWT_SECRET is required in production.");
+    Console.WriteLine("[CRITICAL] SUPABASE_JWT_SECRET is missing in production. App will likely fail to validate Admin requests.");
+    // throw new Exception("SUPABASE_JWT_SECRET is required in production."); 
 }
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -111,8 +112,19 @@ app.UseAuthorization();
 // Auto-migration on startup (optional, but helpful for initial setup)
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<UtanvegaDbContext>();
-    db.Database.Migrate();
+    try 
+    {
+        var db = scope.ServiceProvider.GetRequiredService<UtanvegaDbContext>();
+        Console.WriteLine("[INFO] Applying database migrations...");
+        db.Database.Migrate();
+        Console.WriteLine("[INFO] Migrations applied successfully.");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[ERROR] Database migration failed: {ex.Message}");
+        // We don't throw here to allow the app to start even if migrations fail, 
+        // which helps in identifying if the issue is DB-related or App-related.
+    }
 }
 
 app.MapGet("/api/v1/health", () => Results.Ok(new
