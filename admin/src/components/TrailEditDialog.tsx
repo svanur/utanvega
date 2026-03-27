@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Box, Typography, Alert, CircularProgress, MenuItem, IconButton, Paper, Chip } from '@mui/material';
-import { Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
+import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Box, Typography, Alert, CircularProgress, MenuItem, IconButton, Paper, Chip, Tabs, Tab } from '@mui/material';
+import { Delete as DeleteIcon, Add as AddIcon, History as HistoryIcon } from '@mui/icons-material';
 import { apiFetch } from '../hooks/api';
 import { useLocations, LocationDto } from '../hooks/useLocations';
+import ChangeLogList from './ChangeLogList';
 
 type TrailLocationInfo = {
     locationId: string;
-    role: 'Start' | 'End' | 'PassingThrough';
+    role: 'Start' | 'End' | 'BelongsTo' | 'PassingThrough';
 };
 
 type TrailDetail = {
@@ -21,7 +22,7 @@ type TrailDetail = {
     locations: TrailLocationInfo[];
 };
 
-const roles = ['Start', 'End', 'PassingThrough'];
+const roles = ['Start', 'End', 'BelongsTo', 'PassingThrough'];
 
 const activityTypes = [
     { value: 'Running', label: 'Running' },
@@ -60,7 +61,8 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
     const { locations: allLocations } = useLocations();
 
     const [newLocId, setNewLocId] = useState('');
-    const [newLocRole, setNewLocRole] = useState<'Start' | 'End' | 'PassingThrough'>('PassingThrough');
+    const [newLocRole, setNewLocRole] = useState<'Start' | 'End' | 'BelongsTo' | 'PassingThrough'>('PassingThrough');
+    const [activeTab, setActiveTab] = useState(0);
 
     useEffect(() => {
         if (open && trailId) {
@@ -138,87 +140,101 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
 
     return (
         <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
-            <DialogTitle>Edit Trail</DialogTitle>
+            <DialogTitle>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="h6">Edit Trail</Typography>
+                    <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)}>
+                        <Tab label="General" />
+                        <Tab icon={<HistoryIcon />} label="History" />
+                    </Tabs>
+                </Box>
+            </DialogTitle>
             <DialogContent dividers>
-                {loading ? <CircularProgress /> : trail ? (
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-                        {error && <Alert severity="error">{error}</Alert>}
-                        <TextField label="Name" fullWidth value={trail.name} onChange={(e) => handleChange('name', e.target.value)} />
-                        <TextField label="Slug" fullWidth value={trail.slug} onChange={(e) => handleChange('slug', e.target.value)} />
-                        <TextField label="Description" multiline rows={4} fullWidth value={trail.description || ''} onChange={(e) => handleChange('description', e.target.value)} />
-                        
-                        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-                            <TextField select label="Activity" value={trail.activityTypeId} onChange={(e) => handleChange('activityTypeId', e.target.value)}>
-                                {activityTypes.map(opt => <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>)}
-                            </TextField>
-                            <TextField select label="Status" value={trail.status} onChange={(e) => handleChange('status', e.target.value)}>
-                                {trailStatuses.map(opt => <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>)}
-                            </TextField>
-                            <TextField select label="Difficulty" value={trail.difficulty} onChange={(e) => handleChange('difficulty', e.target.value)}>
-                                {difficulties.map(opt => <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>)}
-                            </TextField>
-                            <TextField select label="Visibility" value={trail.visibility} onChange={(e) => handleChange('visibility', e.target.value)}>
-                                {visibilities.map(opt => <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>)}
-                            </TextField>
-                        </Box>
-
-                        <Typography variant="subtitle1" sx={{ mt: 2 }}>Linked Locations</Typography>
-                        <Paper variant="outlined" sx={{ p: 2 }}>
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                                {trail.locations.map(tl => {
-                                    const locName = allLocations.find(l => l.id === tl.locationId)?.name || 'Unknown';
-                                    return (
-                                        <Chip 
-                                            key={tl.locationId}
-                                            label={`${locName} (${tl.role})`}
-                                            onDelete={() => handleRemoveLocation(tl.locationId)}
-                                            color="primary"
-                                            variant="outlined"
-                                        />
-                                    );
-                                })}
-                                {trail.locations.length === 0 && <Typography variant="body2" color="text.secondary">No locations linked.</Typography>}
-                            </Box>
+                {activeTab === 0 ? (
+                    loading ? <CircularProgress /> : trail ? (
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+                            {error && <Alert severity="error">{error}</Alert>}
+                            <TextField label="Name" fullWidth value={trail.name} onChange={(e) => handleChange('name', e.target.value)} />
+                            <TextField label="Slug" fullWidth value={trail.slug} onChange={(e) => handleChange('slug', e.target.value)} />
+                            <TextField label="Description" multiline rows={4} fullWidth value={trail.description || ''} onChange={(e) => handleChange('description', e.target.value)} />
                             
-                            <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-                                <TextField 
-                                    select 
-                                    label="Add Location" 
-                                    size="small"
-                                    value={newLocId} 
-                                    onChange={(e) => setNewLocId(e.target.value)}
-                                    sx={{ flexGrow: 1 }}
-                                >
-                                    {allLocations.map(loc => (
-                                        <MenuItem key={loc.id} value={loc.id}>{loc.name} ({loc.type})</MenuItem>
-                                    ))}
+                            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                                <TextField select label="Activity" value={trail.activityTypeId} onChange={(e) => handleChange('activityTypeId', e.target.value)}>
+                                    {activityTypes.map(opt => <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>)}
                                 </TextField>
-                                <TextField 
-                                    select 
-                                    label="Role" 
-                                    size="small"
-                                    value={newLocRole} 
-                                    onChange={(e) => setNewLocRole(e.target.value as any)}
-                                    sx={{ width: 150 }}
-                                >
-                                    {roles.map(r => <MenuItem key={r} value={r}>{r}</MenuItem>)}
+                                <TextField select label="Status" value={trail.status} onChange={(e) => handleChange('status', e.target.value)}>
+                                    {trailStatuses.map(opt => <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>)}
                                 </TextField>
-                                <Button 
-                                    variant="outlined" 
-                                    startIcon={<AddIcon />}
-                                    onClick={handleAddLocation}
-                                    sx={{ mt: 0.5 }}
-                                >
-                                    Add
-                                </Button>
+                                <TextField select label="Difficulty" value={trail.difficulty} onChange={(e) => handleChange('difficulty', e.target.value)}>
+                                    {difficulties.map(opt => <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>)}
+                                </TextField>
+                                <TextField select label="Visibility" value={trail.visibility} onChange={(e) => handleChange('visibility', e.target.value)}>
+                                    {visibilities.map(opt => <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>)}
+                                </TextField>
                             </Box>
-                        </Paper>
-                    </Box>
-                ) : <Typography>Trail not found.</Typography>}
+
+                            <Typography variant="subtitle1" sx={{ mt: 2 }}>Linked Locations</Typography>
+                            <Paper variant="outlined" sx={{ p: 2 }}>
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                                    {trail.locations.map(tl => {
+                                        const locName = allLocations.find(l => l.id === tl.locationId)?.name || 'Unknown';
+                                        return (
+                                            <Chip 
+                                                key={tl.locationId}
+                                                label={`${locName} (${tl.role})`}
+                                                onDelete={() => handleRemoveLocation(tl.locationId)}
+                                                color="primary"
+                                                variant="outlined"
+                                            />
+                                        );
+                                    })}
+                                    {trail.locations.length === 0 && <Typography variant="body2" color="text.secondary">No locations linked.</Typography>}
+                                </Box>
+                                
+                                <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+                                    <TextField 
+                                        select 
+                                        label="Add Location" 
+                                        size="small"
+                                        value={newLocId} 
+                                        onChange={(e) => setNewLocId(e.target.value)}
+                                        sx={{ flexGrow: 1 }}
+                                    >
+                                        {allLocations.map(loc => (
+                                            <MenuItem key={loc.id} value={loc.id}>{loc.name} ({loc.type})</MenuItem>
+                                        ))}
+                                    </TextField>
+                                    <TextField 
+                                        select 
+                                        label="Role" 
+                                        size="small"
+                                        value={newLocRole} 
+                                        onChange={(e) => setNewLocRole(e.target.value as any)}
+                                        sx={{ width: 150 }}
+                                    >
+                                        {roles.map(r => <MenuItem key={r} value={r}>{r}</MenuItem>)}
+                                    </TextField>
+                                    <Button 
+                                        variant="outlined" 
+                                        startIcon={<AddIcon />}
+                                        onClick={handleAddLocation}
+                                        sx={{ mt: 0.5 }}
+                                    >
+                                        Add
+                                    </Button>
+                                </Box>
+                            </Paper>
+                        </Box>
+                    ) : <Typography>Trail not found.</Typography>
+                ) : (
+                    <ChangeLogList entityName="Trail" entityId={trailId || undefined} title="Trail History" />
+                )}
             </DialogContent>
             <DialogActions>
                 <Button onClick={onClose} disabled={saving}>Cancel</Button>
-                <Button onClick={handleSave} variant="contained" disabled={saving || !trail}>{saving ? 'Saving...' : 'Save Changes'}</Button>
+                {activeTab === 0 && (
+                    <Button onClick={handleSave} variant="contained" disabled={saving || !trail}>{saving ? 'Saving...' : 'Save Changes'}</Button>
+                )}
             </DialogActions>
         </Dialog>
     );

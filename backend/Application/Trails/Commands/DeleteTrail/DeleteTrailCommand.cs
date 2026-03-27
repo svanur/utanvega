@@ -25,7 +25,7 @@ public class DeleteTrailCommandHandler : IRequestHandler<DeleteTrailCommand, boo
         trail.Status = TrailStatus.Deleted;
         trail.UpdatedAt = DateTime.UtcNow;
 
-        await _context.SaveChangesAsync(cancellationToken);
+        await _context.SaveChangesWithAuditAsync("system");
         return true;
     }
 }

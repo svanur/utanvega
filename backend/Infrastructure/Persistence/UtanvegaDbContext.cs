@@ -12,6 +12,7 @@ public class UtanvegaDbContext : DbContext
     public DbSet<Trail> Trails => Set<Trail>();
     public DbSet<Location> Locations => Set<Location>();
     public DbSet<TrailLocation> TrailLocations => Set<TrailLocation>();
+    public DbSet<ChangeLog> ChangeLogs => Set<ChangeLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -58,7 +59,7 @@ public class UtanvegaDbContext : DbContext
 
         modelBuilder.Entity<TrailLocation>(entity =>
         {
-            entity.HasKey(tl => new { tl.TrailId, tl.LocationId, tl.Role });
+            entity.HasKey(tl => tl.Id);
 
             entity.Property(tl => tl.Role).HasConversion<string>();
 
@@ -69,6 +70,17 @@ public class UtanvegaDbContext : DbContext
             entity.HasOne(tl => tl.Location)
                   .WithMany(l => l.TrailLocations)
                   .HasForeignKey(tl => tl.LocationId);
+        });
+
+        modelBuilder.Entity<ChangeLog>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.EntityName).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.EntityId).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Action).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.TimestampUtc).IsRequired();
+            entity.HasIndex(e => e.EntityId);
+            entity.HasIndex(e => e.EntityName);
         });
     }
 }

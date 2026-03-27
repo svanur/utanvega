@@ -72,13 +72,8 @@ public class CreateTrailFromGpxCommandHandler : IRequestHandler<CreateTrailFromG
         };
 
         _context.Trails.Add(trail);
-        var result = await _context.SaveChangesAsync(cancellationToken);
+        await _context.SaveChangesWithAuditAsync("system"); // Could pass user if available
         
-        if (result == 0)
-        {
-            throw new Exception("No records were saved to the database.");
-        }
-
         return trail.Id;
     }
 

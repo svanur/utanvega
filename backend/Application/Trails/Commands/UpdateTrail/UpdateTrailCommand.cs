@@ -39,7 +39,7 @@ public class UpdateTrailCommandHandler : IRequestHandler<UpdateTrailCommand, boo
             .FirstOrDefaultAsync(t => t.Id == request.Id, cancellationToken);
         
         if (trail == null) return false;
-
+        
         trail.Name = request.Name;
         trail.Slug = request.Slug;
         trail.Description = request.Description;
@@ -62,23 +62,39 @@ public class UpdateTrailCommandHandler : IRequestHandler<UpdateTrailCommand, boo
         // Sync Locations
         if (request.Locations != null)
         {
-            _context.TrailLocations.RemoveRange(trail.TrailLocations);
-            
-            foreach (var locDto in request.Locations)
+            var currentLocations = trail.TrailLocations.ToList();
+            var requestedLocations = request.Locations.ToList();
+
+            // Remove locations not in the request
+            foreach (var current in currentLocations)
             {
-                if (Enum.TryParse<TrailLocationRole>(locDto.Role, true, out var role))
+                var roleString = current.Role.ToString();
+                if (!requestedLocations.Any(r => r.LocationId == current.LocationId && string.Equals(r.Role, roleString, StringComparison.OrdinalIgnoreCase)))
                 {
-                    trail.TrailLocations.Add(new TrailLocation
+                    _context.TrailLocations.Remove(current);
+                }
+            }
+
+            // Add new locations
+            foreach (var requested in requestedLocations)
+            {
+                if (Enum.TryParse<TrailLocationRole>(requested.Role, true, out var role))
+                {
+                    if (!currentLocations.Any(c => c.LocationId == requested.LocationId && c.Role == role))
                     {
-                        TrailId = trail.Id,
-                        LocationId = locDto.LocationId,
-                        Role = role
-                    });
+                        var newTL = new TrailLocation
+                        {
+                            TrailId = trail.Id,
+                            LocationId = requested.LocationId,
+                            Role = role
+                        };
+                        _context.TrailLocations.Add(newTL);
+                    }
                 }
             }
         }
 
-        await _context.SaveChangesAsync(cancellationToken);
+        await _context.SaveChangesWithAuditAsync(request.UpdatedBy);
         return true;
     }
 }

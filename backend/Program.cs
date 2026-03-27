@@ -16,6 +16,7 @@ using Utanvega.Backend.Application.Locations.Queries.GetLocations;
 using Utanvega.Backend.Application.Locations.Commands.CreateLocation;
 using Utanvega.Backend.Application.Locations.Commands.UpdateLocation;
 using Utanvega.Backend.Application.Locations.Commands.DeleteLocation;
+using Utanvega.Backend.Application.History.Queries.GetChangeLogs;
 using MediatR;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -335,5 +336,13 @@ app.MapDelete("/api/v1/admin/locations/{id}", [Authorize] async (Guid id, IMedia
     }
 })
 .WithName("DeleteLocation");
+
+// History / Audit API
+app.MapGet("/api/v1/admin/history", [Authorize] async (string? entityName, string? entityId, int? limit, IMediator mediator) =>
+{
+    var logs = await mediator.Send(new GetChangeLogsQuery(entityName, entityId, limit ?? 50));
+    return Results.Ok(logs);
+})
+.WithName("GetHistory");
 
 app.Run();

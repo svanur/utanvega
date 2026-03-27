@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NetTopologySuite.Geometries;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -12,9 +13,11 @@ using Utanvega.Backend.Infrastructure.Persistence;
 namespace Utanvega.Backend.Migrations
 {
     [DbContext(typeof(UtanvegaDbContext))]
-    partial class UtanvegaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260326155315_FixLocationSrid")]
+    partial class FixLocationSrid
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -23,48 +26,6 @@ namespace Utanvega.Backend.Migrations
 
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "postgis");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.Entity("Utanvega.Backend.Core.Entities.ChangeLog", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Action")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("Changes")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("text");
-
-                    b.Property<string>("EntityId")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("EntityName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<DateTime>("TimestampUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("UserId")
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EntityId");
-
-                    b.HasIndex("EntityName");
-
-                    b.ToTable("ChangeLogs");
-                });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.Location", b =>
                 {
@@ -189,25 +150,18 @@ namespace Utanvega.Backend.Migrations
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.TrailLocation", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
+                    b.Property<Guid>("TrailId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("LocationId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("Role")
-                        .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<Guid>("TrailId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
+                    b.HasKey("TrailId", "LocationId", "Role");
 
                     b.HasIndex("LocationId");
-
-                    b.HasIndex("TrailId");
 
                     b.ToTable("TrailLocations");
                 });
