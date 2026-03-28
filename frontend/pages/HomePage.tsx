@@ -1,4 +1,3 @@
-import { Paper } from '@mui/material';
 import Header from '../components/Header';
 import Layout from '../components/Layout';
 import { TrailList } from '../components/TrailList';
@@ -12,9 +11,7 @@ type HomePageProps = {
 export default function HomePage({ mode, onToggleMode }: HomePageProps) {
     return (
         <Layout mode={mode} onToggleMode={onToggleMode}>
-            <Paper elevation={4} sx={{ p: { xs: 3, sm: 4 }, mb: 4 }}>
-                <Header />
-            </Paper>
+            <Header />
             <TrailList />
         </Layout>
     );
