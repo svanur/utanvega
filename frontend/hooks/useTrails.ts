@@ -79,6 +79,58 @@ export function useTrails() {
     return { trails: sortedTrails, loading, error, userLocation };
 }
 
+export function useTrail(id?: string) {
+    const [trail, setTrail] = useState<Trail | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!id) return;
+
+        fetch(`${API_URL}/api/v1/trails/${id}`)
+            .then(res => {
+                if (!res.ok) throw new Error('Failed to fetch trail');
+                return res.json();
+            })
+            .then(data => {
+                setTrail(data);
+                setLoading(false);
+            })
+            .catch(err => {
+                setError(err.message);
+                setLoading(false);
+            });
+    }, [id]);
+
+    return { trail, loading, error };
+}
+
+export function useTrailBySlug(slug?: string) {
+    const [trail, setTrail] = useState<Trail | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!slug) return;
+
+        fetch(`${API_URL}/api/v1/trails/${slug}`)
+            .then(res => {
+                if (!res.ok) throw new Error('Failed to fetch trail');
+                return res.json();
+            })
+            .then(data => {
+                setTrail(data);
+                setLoading(false);
+            })
+            .catch(err => {
+                setError(err.message);
+                setLoading(false);
+            });
+    }, [slug]);
+
+    return { trail, loading, error };
+}
+
 // Haversine formula to calculate distance between two points in km
 function calculateHaversineDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
     const R = 6371; // Earth's radius in km

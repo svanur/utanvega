@@ -49,7 +49,7 @@ export default function FooterStatus() {
                             size="small"
                         />
                         <Typography variant="caption" color="text.secondary">
-                            {data?.service ?? 'backend'}
+                            {data?.service ?? ''}
                         </Typography>
                     </Stack>
                 )}
