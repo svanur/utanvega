@@ -130,13 +130,13 @@ const ElevationChart: React.FC<ElevationChartProps> = ({ coordinates, onHover })
             dataKey="distance"
             type="number"
             domain={['dataMin', 'dataMax']}
-            tickFormatter={(value) => `${value.toFixed(1)} km`}
+            tickFormatter={(value: number) => `${value.toFixed(1)} km`}
             fontSize={12}
           />
           <YAxis
             dataKey="elevation"
             domain={['auto', 'auto']}
-            tickFormatter={(value) => `${value} m`}
+            tickFormatter={(value: number) => `${value} m`}
             fontSize={12}
           />
           <Tooltip content={<CustomTooltip />} />
