@@ -28,11 +28,11 @@ export interface FilterState {
 }
 
 const DEFAULT_FILTERS: FilterState = {
-    maxDistance: 100,
+    maxDistance: 1000,
     minElevationGain: 0,
-    maxElevationGain: 2000,
+    maxElevationGain: 5000,
     minElevationLoss: 0,
-    maxElevationLoss: 2000,
+    maxElevationLoss: 5000,
     trailType: 'All',
     location: 'All',
 };
@@ -82,7 +82,10 @@ export function useTrails() {
     // Calculate distance and sort
     const processedTrails = useMemo(() => {
         let result = trails.map(trail => {
-            if (!userLocation || trail.startLatitude === null || trail.startLongitude === null) {
+            if (!userLocation || 
+                trail.startLatitude === null || trail.startLongitude === null ||
+                (trail.startLatitude === 0 && trail.startLongitude === 0)
+            ) {
                 return { ...trail, distanceToUser: Infinity };
             }
 
@@ -109,7 +112,8 @@ export function useTrails() {
         result = result.filter(trail => {
             // Distance filter (only if user location is available and trail has distance)
             if (userLocation && trail.distanceToUser !== undefined && trail.distanceToUser !== Infinity) {
-                if (trail.distanceToUser > filters.maxDistance) return false;
+                // If maxDistance is 1000 (our max), we treat it as "no limit"
+                if (filters.maxDistance < 1000 && trail.distanceToUser > filters.maxDistance) return false;
             }
 
             // Elevation Gain

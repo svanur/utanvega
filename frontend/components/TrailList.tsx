@@ -144,7 +144,7 @@ export const TrailList: React.FC = () => {
                     <Grid container spacing={2}>
                         <Grid item xs={12}>
                             <Typography variant="caption" color="text.secondary">
-                                Max Distance: {filters.maxDistance} km
+                                Max Distance: {filters.maxDistance === 1000 ? 'Any' : `${filters.maxDistance} km`}
                             </Typography>
                             <Slider
                                 size="small"
@@ -152,7 +152,7 @@ export const TrailList: React.FC = () => {
                                 onChange={(_, v) => handleFilterChange('maxDistance', v)}
                                 valueLabelDisplay="auto"
                                 min={1}
-                                max={500}
+                                max={1000}
                                 disabled={!userLocation}
                             />
                         </Grid>
@@ -170,7 +170,7 @@ export const TrailList: React.FC = () => {
                                 }}
                                 valueLabelDisplay="auto"
                                 min={0}
-                                max={3000}
+                                max={5000}
                             />
                         </Grid>
 
@@ -187,7 +187,7 @@ export const TrailList: React.FC = () => {
                                 }}
                                 valueLabelDisplay="auto"
                                 min={0}
-                                max={3000}
+                                max={5000}
                             />
                         </Grid>
 
