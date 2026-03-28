@@ -8,8 +8,12 @@
 
 - Display map, pin for each trail
 
+## In progress
+
+
 
 ## Done
+- random quotes
 - Advanced search
 - Add simple search to trail list
 - Display TrailType

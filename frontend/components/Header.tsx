@@ -1,10 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Box, Button, Stack, Typography, Collapse, IconButton, FormControlLabel, Checkbox, Paper } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import { QuoteService } from '../services/QuoteService';
 
 export default function Header() {
     const [isVisible, setIsVisible] = useState(false);
     const [dontShowAgain, setDontShowAgain] = useState(false);
+
+    const quote = useMemo(() => QuoteService.getRandomQuote(), []);
 
     useEffect(() => {
         const hideSplash = localStorage.getItem('hideSplash');
@@ -36,10 +39,15 @@ export default function Header() {
                             🌄Utanvega🏃‍♂️🚴‍
                         </Typography>
                         <Typography variant="h4" component="h1" gutterBottom>
-                            Sumir elska malbik, allir elska utanvega.
+                            {quote.text}
                         </Typography>
+                        {quote.author && (
+                            <Typography variant="subtitle1" color="text.secondary" gutterBottom sx={{ fontStyle: 'italic', mt: -1, mb: 2 }}>
+                                — {quote.author}
+                            </Typography>
+                        )}
                         <Typography variant="body1" color="text.secondary">
-                            Vefur til að finna skemmtilegar leiðir og deila með vinum. 
+                            Utanvega - Vefur til að finna skemmtilegar leiðir og deila með vinum. 
                         </Typography>
                     </Box>
 
