@@ -26,7 +26,11 @@ public class UtanvegaDbContext : DbContext
             entity.HasIndex(e => e.Slug).IsUnique();
             
             // Map NetTopologySuite Geometry to PostGIS
-            entity.Property(e => e.GpxData).HasColumnType("geometry");
+            // Use geometry(LineStringZ, 4326) to ensure elevation (Z) is preserved
+            entity.Property(e => e.GpxData).HasColumnType("geometry(LineStringZ, 4326)");
+            
+            // Log for debugging (this will run on every context instantiation, maybe too much?)
+            // Console.WriteLine("[DEBUG_LOG] UtanvegaDbContext: GpxData configured as geometry(LineStringZ, 4326)");
             
             // Store Enums as Strings in Database
             entity.Property(e => e.Status)

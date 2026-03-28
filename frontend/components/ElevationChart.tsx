@@ -39,7 +39,7 @@ const ElevationChart: React.FC<ElevationChartProps> = ({ coordinates, onHover })
       const elevation = current.length > 2 ? current[2] : 0;
       
       // Log for debugging (remove in production if too noisy)
-      if (i % 100 === 0) console.log(`[DEBUG_LOG] Point ${i}: elevation=${elevation}, coordLength=${current.length}`, current);
+      if (i % 100 === 0 || i < 5) console.log(`[DEBUG_LOG] Point ${i}: elevation=${elevation}, coordLength=${current.length}, coords=[${current.join(',')}]`);
 
       if (i > 0) {
         const prev = coordinates[i - 1];

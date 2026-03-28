@@ -8,6 +8,7 @@
 
 - Display map, pin for each trail
 - Add Search to list
+- Display TrailType(when ready in admin)
 
 ## In Progress
 

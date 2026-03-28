@@ -24,7 +24,13 @@ public class GetTrailBySlugQueryHandler : IRequestHandler<GetTrailBySlugQuery, T
             .AsNoTracking()
             .FirstOrDefaultAsync(t => t.Slug == request.Slug && t.Status == TrailStatus.Published, cancellationToken);
 
-        if (trail == null) return null;
+        if (trail == null)
+        {
+            Console.WriteLine($"[DEBUG_LOG] Trail with slug '{request.Slug}' not found or not published.");
+            return null;
+        }
+
+        Console.WriteLine($"[DEBUG_LOG] Trail found: {trail.Name}. Gain: {trail.ElevationGain}, Length: {trail.Length}");
 
         return new TrailDto(
             trail.Id,

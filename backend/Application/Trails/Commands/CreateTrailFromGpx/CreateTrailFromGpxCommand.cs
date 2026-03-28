@@ -21,17 +21,45 @@ public class CreateTrailFromGpxCommandHandler : IRequestHandler<CreateTrailFromG
 
     public async Task<Guid> Handle(CreateTrailFromGpxCommand request, CancellationToken cancellationToken)
     {
-        var doc = XDocument.Parse(request.GpxXml);
+        XDocument doc;
+        try
+        {
+            doc = XDocument.Parse(request.GpxXml);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] Failed to parse GPX XML: {ex.Message}");
+            throw new Exception("Invalid GPX XML format", ex);
+        }
         XNamespace ns = doc.Root?.GetDefaultNamespace() ?? "http://www.topografix.com/GPX/1/1";
 
         var points = doc.Descendants(ns + "trkpt")
-            .Select(p => new
-            {
-                Lat = double.Parse(p.Attribute("lat")?.Value ?? "0", System.Globalization.CultureInfo.InvariantCulture),
-                Lon = double.Parse(p.Attribute("lon")?.Value ?? "0", System.Globalization.CultureInfo.InvariantCulture),
-                Ele = double.Parse(p.Element(ns + "ele")?.Value ?? "0", System.Globalization.CultureInfo.InvariantCulture)
+            .Select(p => {
+                var latStr = p.Attribute("lat")?.Value ?? "0";
+                var lonStr = p.Attribute("lon")?.Value ?? "0";
+                // Try getting ele with default namespace or any namespace
+                var eleElement = p.Element(ns + "ele") ?? p.Elements().FirstOrDefault(e => e.Name.LocalName == "ele");
+                var eleStr = eleElement?.Value ?? "0";
+                
+                if (!double.TryParse(latStr, System.Globalization.CultureInfo.InvariantCulture, out var lat)) lat = 0;
+                if (!double.TryParse(lonStr, System.Globalization.CultureInfo.InvariantCulture, out var lon)) lon = 0;
+                if (!double.TryParse(eleStr, System.Globalization.CultureInfo.InvariantCulture, out var ele)) ele = 0;
+
+                return new
+                {
+                    Lat = lat,
+                    Lon = lon,
+                    Ele = ele
+                };
             })
             .ToList();
+
+        // Check for any ele elements regardless of where they are in the tree
+        var totalEleInDoc = doc.Descendants().Count(e => e.Name.LocalName == "ele");
+        Console.WriteLine($"[DEBUG_LOG] GPX parsing. Found {points.Count} trkpt points. Total <ele> elements in doc: {totalEleInDoc}");
+        
+        var pointsWithEle = points.Count(p => p.Ele != 0);
+        Console.WriteLine($"[DEBUG_LOG] Points with non-zero elevation: {pointsWithEle}");
 
         if (points.Count == 0)
         {
@@ -39,14 +67,15 @@ public class CreateTrailFromGpxCommandHandler : IRequestHandler<CreateTrailFromG
         }
 
         var coordinates = points.Select(p => new CoordinateZ(p.Lon, p.Lat, p.Ele)).ToArray();
+        // Create LineString with Z dimension explicitly
         var lineString = _geometryFactory.CreateLineString(coordinates);
         
         // Log coordinates for verification
-        Console.WriteLine($"[DEBUG_LOG] Created LineString with {coordinates.Length} points.");
+        Console.WriteLine($"[DEBUG_LOG] Created LineString with {coordinates.Length} points. Geometry Dimension: {lineString.Dimension}, HasZ: {lineString.Coordinates.Any(c => !double.IsNaN(c.Z))}");
         if (coordinates.Length > 0)
         {
-            Console.WriteLine($"[DEBUG_LOG] First point: {coordinates[0].X}, {coordinates[0].Y}, {coordinates[0].Z}");
-            Console.WriteLine($"[DEBUG_LOG] Last point: {coordinates[^1].X}, {coordinates[^1].Y}, {coordinates[^1].Z}");
+            Console.WriteLine($"[DEBUG_LOG] First point: X={coordinates[0].X}, Y={coordinates[0].Y}, Z={coordinates[0].Z}");
+            Console.WriteLine($"[DEBUG_LOG] Last point: X={coordinates[^1].X}, Y={coordinates[^1].Y}, Z={coordinates[^1].Z}");
         }
         
         // Basic calculation for Length and Elevation
@@ -66,11 +95,36 @@ public class CreateTrailFromGpxCommandHandler : IRequestHandler<CreateTrailFromG
             if (diff > 0) gain += diff;
             else loss += Math.Abs(diff);
         }
+        
+        Console.WriteLine($"[DEBUG_LOG] Calculated stats: Length={length:F2}m, Gain={gain:F2}m, Loss={loss:F2}m");
+
+        // Force 3D if not already recognized by NTS as 3D
+        if (lineString.Dimension < Dimension.Surface && !lineString.Coordinates.Any(c => !double.IsNaN(c.Z)))
+        {
+            Console.WriteLine("[DEBUG_LOG] Warning: LineString does not seem to have Z coordinates despite being created with CoordinateZ.");
+        }
+
+        // Generate slug - simple version for now
+        string slug = request.Name.ToLower()
+            .Replace(" ", "-")
+            .Replace("á", "a")
+            .Replace("é", "e")
+            .Replace("í", "i")
+            .Replace("ó", "o")
+            .Replace("ú", "u")
+            .Replace("ý", "y")
+            .Replace("þ", "th")
+            .Replace("æ", "ae")
+            .Replace("ö", "o")
+            .Replace("ð", "d");
+        
+        // Remove other special characters
+        slug = new string(slug.Where(c => char.IsLetterOrDigit(c) || c == '-').ToArray());
 
         var trail = new Trail
         {
             Name = request.Name,
-            Slug = request.Name.ToLower().Replace(" ", "-"), // Basic slugification
+            Slug = slug,
             GpxData = lineString,
             Length = length,
             ElevationGain = gain,

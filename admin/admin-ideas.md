@@ -5,7 +5,9 @@
 [none yet]
 
 ## Backlog
-- Add trail_type: a-to-b, out-and-back, etc.
+- 'Harden' the slugify of trail names, turn spaces into dashes, remove special characters change icelandic to english etc
+- Add 'History' table containing the 'utanvega' website history of changes and features
+- Add TrailType: a-to-b, out-and-back, etc. + CRUD
 - On 'Upload GPX Trail': figure out in which location this trail is located.
 - On 'Upload GPX Trail': check if this, or a part of this, trail exists and display a message: This trail is a 50% match to 'Trail X'
 - Difficulty "calculator": Have a class 'DifficultyCalculator'(or some other name) and: Auto set the "Difficulty" status depending on the length and elevation of the trail

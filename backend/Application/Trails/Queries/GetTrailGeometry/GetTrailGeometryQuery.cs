@@ -38,19 +38,39 @@ public class GetTrailGeometryQueryHandler : IRequestHandler<GetTrailGeometryQuer
 
         if (geometry == null) return null;
 
-        // Using NetTopologySuite GeoJsonWriter
+        // NetTopologySuite's GeoJsonWriter needs to be explicitly told to include Z if it exists.
+        // We use the Write method that takes an IGeometry and provides options if available,
+        // or ensure the writer handles the dimension properly.
         var writer = new NetTopologySuite.IO.GeoJsonWriter();
-        
-        // Ensure the writer includes Z if any coordinate has it
-        // Note: NTS GeoJsonWriter should handle this automatically if geometry.HasZ is true,
-        // but it doesn't hurt to check if there's a setting in newer NTS.
         
         // Log if we have Z coordinates
         var pointsWithZ = geometry.Coordinates.Count(c => !double.IsNaN(c.Z));
-        Console.WriteLine($"[DEBUG_LOG] Geometry {request.Slug} has {geometry.Coordinates.Length} points. Points with Z: {pointsWithZ}");
         
-        // If we have points but none have Z, and we expect them to, this is where the issue lies.
+        // Use a serializer with a geometry factory that explicitly handles Z.
+        var factory = NetTopologySuite.NtsGeometryServices.Instance.CreateGeometryFactory(geometry.SRID);
+        var serializer = NetTopologySuite.IO.GeoJsonSerializer.Create(new Newtonsoft.Json.JsonSerializerSettings(), factory);
         
-        return writer.Write(geometry);
+        // Ensure the serializer includes the Z dimension.
+        serializer.Converters.Add(new NetTopologySuite.IO.Converters.GeometryConverter(factory, 3));
+        
+        using var stringWriter = new StringWriter();
+        serializer.Serialize(stringWriter, geometry);
+        var json = stringWriter.ToString();
+
+        Console.WriteLine($"[DEBUG_LOG] Geometry {request.Slug ?? request.Id.ToString()} has {geometry.Coordinates.Length} points. Points with Z: {pointsWithZ}");
+        
+        // Let's ensure the coordinates are actually treated as 3D if they have Z values.
+        // If some points have Z but others don't, or if they are all 0, it might be an issue.
+        if (pointsWithZ > 0)
+        {
+            Console.WriteLine($"[DEBUG_LOG] First 5 coordinates: {string.Join(", ", geometry.Coordinates.Take(5).Select(c => $"[{c.X}, {c.Y}, {c.Z}]"))}");
+        }
+        else
+        {
+             Console.WriteLine($"[DEBUG_LOG] No points with Z. Dimension: {geometry.Dimension}, GeometryType: {geometry.GeometryType}");
+        }
+
+        Console.WriteLine($"[DEBUG_LOG] GeoJSON output (first 200 chars): {json.Substring(0, Math.Min(200, json.Length))}");
+        return json;
     }
 }
