@@ -23,6 +23,7 @@ import Layout from '../components/Layout';
 import { useTrailBySlug } from '../hooks/useTrails';
 import TrailMap, { GeoJsonGeometry } from '../components/TrailMap';
 import ElevationChart from '../components/ElevationChart';
+import ShareButtons from '../components/ShareButtons';
 
 const getActivityIcon = (type: string) => {
     switch (type.toLowerCase()) {
@@ -91,12 +92,15 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                     <Typography variant="h4" component="h1" fontWeight="bold">
                         {trail.name}
                     </Typography>
-                    <Chip 
-                        icon={getActivityIcon(trail.activityType)} 
-                        label={trail.activityType} 
-                        color="primary" 
-                        variant="outlined" 
-                    />
+                    <Stack direction="row" spacing={1} alignItems="center">
+                        <Chip 
+                            icon={getActivityIcon(trail.activityType)} 
+                            label={trail.activityType} 
+                            color="primary" 
+                            variant="outlined" 
+                        />
+                        <ShareButtons title={trail.name} />
+                    </Stack>
                 </Box>
 
                 <Grid container spacing={3} sx={{ mb: 3 }}>

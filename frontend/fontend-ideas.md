@@ -6,7 +6,6 @@
 
 ## Backlog
 
-- Share trail
 - Open in Garmin connect
 - Display map, pin for each trail
 - Add Search to list
@@ -17,4 +16,5 @@
 
 ## Done
 
+- Share trail
 - Display simple Trail list
