@@ -8,13 +8,12 @@
 
 - Display map, pin for each trail
 - Add Search to list
-- Display TrailType(when ready in admin)
 
 ## In Progress
 
-- Display details trail page
-
 ## Done
+- Display TrailType
+- Display details trail page
 - Open in Garmin connect
 - Share trail
 - Display simple Trail list

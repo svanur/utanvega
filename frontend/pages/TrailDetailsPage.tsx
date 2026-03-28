@@ -19,6 +19,9 @@ import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
 import DirectionsBikeIcon from '@mui/icons-material/DirectionsBike';
 import TerrainIcon from '@mui/icons-material/Terrain';
+import LoopIcon from '@mui/icons-material/Loop';
+import SyncAltIcon from '@mui/icons-material/SyncAlt';
+import EastIcon from '@mui/icons-material/East';
 import Layout from '../components/Layout';
 import { useTrailBySlug } from '../hooks/useTrails';
 import TrailMap, { GeoJsonGeometry } from '../components/TrailMap';
@@ -32,6 +35,24 @@ const getActivityIcon = (type: string) => {
         case 'cycling': return <DirectionsBikeIcon />;
         case 'hiking': return <TerrainIcon />;
         default: return <RouteIcon />;
+    }
+};
+
+const getTrailTypeIcon = (type: string) => {
+    switch (type) {
+        case 'OutAndBack': return <SyncAltIcon color="action" />;
+        case 'Loop': return <LoopIcon color="action" />;
+        case 'PointToPoint': return <EastIcon color="action" />;
+        default: return <RouteIcon color="action" />;
+    }
+};
+
+const getTrailTypeLabel = (type: string) => {
+    switch (type) {
+        case 'OutAndBack': return 'Out and Back';
+        case 'Loop': return 'Loop';
+        case 'PointToPoint': return 'Point to Point';
+        default: return type;
     }
 };
 
@@ -106,25 +127,32 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                 </Box>
 
                 <Grid container spacing={3} sx={{ mb: 3 }}>
-                    <Grid item xs={12} sm={4}>
+                    <Grid item xs={12} sm={3}>
                         <Stack alignItems="center" spacing={1}>
                             <RouteIcon color="action" />
                             <Typography variant="body2" color="text.secondary">Distance</Typography>
                             <Typography variant="h6">{distanceKm} km</Typography>
                         </Stack>
                     </Grid>
-                    <Grid item xs={12} sm={4}>
+                    <Grid item xs={12} sm={3}>
                         <Stack alignItems="center" spacing={1}>
                             <TrendingUpIcon color="action" />
                             <Typography variant="body2" color="text.secondary">Elevation Gain</Typography>
                             <Typography variant="h6">+{Math.round(trail.elevationGain)} m</Typography>
                         </Stack>
                     </Grid>
-                    <Grid item xs={12} sm={4}>
+                    <Grid item xs={12} sm={3}>
                         <Stack alignItems="center" spacing={1}>
                             <TrendingDownIcon color="action" />
                             <Typography variant="body2" color="text.secondary">Elevation Loss</Typography>
                             <Typography variant="h6">-{Math.round(trail.elevationLoss)} m</Typography>
+                        </Stack>
+                    </Grid>
+                    <Grid item xs={12} sm={3}>
+                        <Stack alignItems="center" spacing={1}>
+                            {getTrailTypeIcon(trail.trailType)}
+                            <Typography variant="body2" color="text.secondary">Trail Type</Typography>
+                            <Typography variant="h6">{getTrailTypeLabel(trail.trailType)}</Typography>
                         </Stack>
                     </Grid>
                 </Grid>

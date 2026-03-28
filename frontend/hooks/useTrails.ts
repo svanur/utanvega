@@ -9,6 +9,7 @@ export interface Trail {
     elevationLoss: number;
     status: string;
     activityType: string;
+    trailType: string;
     startLatitude: number | null;
     startLongitude: number | null;
     distanceToUser?: number; // in kilometers
