@@ -1,11 +1,12 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using NetTopologySuite.Geometries;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Infrastructure.Persistence;
 
 namespace Utanvega.Backend.Application.Trails.Queries.GetTrails;
 
-public record GetTrailsQuery(bool IncludeDeleted = false) : IRequest<List<TrailDto>>;
+public record GetTrailsQuery(bool IncludeDeleted = false, bool PublishedOnly = false) : IRequest<List<TrailDto>>;
 
 public record TrailDto(
     Guid Id,
@@ -15,7 +16,9 @@ public record TrailDto(
     double ElevationGain,
     double ElevationLoss,
     string Status,
-    string ActivityType
+    string ActivityType,
+    double? StartLatitude,
+    double? StartLongitude
 );
 
 public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailDto>>
@@ -36,17 +39,26 @@ public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailD
             query = query.Where(t => t.Status != TrailStatus.Deleted);
         }
 
-        return await query
-            .Select(t => new TrailDto(
-                t.Id,
-                t.Name,
-                t.Slug,
-                t.Length,
-                t.ElevationGain,
-                t.ElevationLoss,
-                t.Status.ToString(),
-                t.ActivityTypeId.ToString()
-            ))
-            .ToListAsync(cancellationToken);
+        if (request.PublishedOnly)
+        {
+            query = query.Where(t => t.Status == TrailStatus.Published);
+        }
+
+        var trails = await query.ToListAsync(cancellationToken);
+
+        var result = trails.Select(t => new TrailDto(
+            t.Id,
+            t.Name,
+            t.Slug,
+            t.Length,
+            t.ElevationGain,
+            t.ElevationLoss,
+            t.Status.ToString(),
+            t.ActivityTypeId.ToString(),
+            (t.GpxData as LineString)?.StartPoint.Y,
+            (t.GpxData as LineString)?.StartPoint.X
+        )).ToList();
+
+        return result;
     }
 }

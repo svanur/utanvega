@@ -196,6 +196,13 @@ using (var scope = app.Services.CreateScope())
 }
 */
 
+app.MapGet("/api/v1/trails", async (IMediator mediator) =>
+{
+    var trails = await mediator.Send(new GetTrailsQuery(IncludeDeleted: false, PublishedOnly: true));
+    return Results.Ok(trails);
+})
+.WithName("GetPublicTrails");
+
 app.MapGet("/api/v1/health", () => Results.Ok(new
 {
     status = "healthy",
