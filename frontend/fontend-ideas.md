@@ -7,11 +7,13 @@
 ## Backlog
 
 - Display map, pin for each trail
-- Add Search to list
+
 
 ## In Progress
 
+
 ## Done
+- Add simple search to trail list
 - Display TrailType
 - Display details trail page
 - Open in Garmin connect

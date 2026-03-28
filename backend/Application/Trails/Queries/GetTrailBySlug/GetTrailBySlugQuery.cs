@@ -36,6 +36,7 @@ public class GetTrailBySlugQueryHandler : IRequestHandler<GetTrailBySlugQuery, T
             trail.Id,
             trail.Name,
             trail.Slug,
+            trail.Description,
             trail.Length,
             trail.ElevationGain,
             trail.ElevationLoss,

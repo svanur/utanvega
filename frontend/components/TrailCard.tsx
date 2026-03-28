@@ -58,6 +58,23 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail }) => {
                         />
                     </Box>
 
+                    {trail.description && (
+                        <Typography 
+                            variant="body2" 
+                            color="text.secondary" 
+                            sx={{ 
+                                mb: 2,
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                            }}
+                        >
+                            {trail.description}
+                        </Typography>
+                    )}
+
                     <Stack direction="row" spacing={2} color="text.secondary">
                         <Box display="flex" alignItems="center">
                             <RouteIcon sx={{ mr: 0.5, fontSize: 18 }} />

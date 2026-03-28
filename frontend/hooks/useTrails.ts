@@ -4,6 +4,7 @@ export interface Trail {
     id: string;
     name: string;
     slug: string;
+    description?: string;
     length: number;
     elevationGain: number;
     elevationLoss: number;
@@ -22,6 +23,7 @@ export function useTrails() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
         // Get user location
@@ -56,10 +58,21 @@ export function useTrails() {
     }, []);
 
     // Calculate distance and sort
-    const sortedTrails = useMemo(() => {
-        if (!userLocation) return trails;
+    const processedTrails = useMemo(() => {
+        let result = [...trails];
 
-        const trailsWithDistance = trails.map(trail => {
+        // Filter by search query
+        if (searchQuery.trim() !== '') {
+            const query = searchQuery.toLowerCase();
+            result = result.filter(trail => 
+                trail.name.toLowerCase().includes(query) || 
+                (trail.description && trail.description.toLowerCase().includes(query))
+            );
+        }
+
+        if (!userLocation) return result;
+
+        const trailsWithDistance = result.map(trail => {
             if (trail.startLatitude === null || trail.startLongitude === null) {
                 return { ...trail, distanceToUser: Infinity };
             }
@@ -75,9 +88,9 @@ export function useTrails() {
         });
 
         return [...trailsWithDistance].sort((a, b) => (a.distanceToUser || 0) - (b.distanceToUser || 0));
-    }, [trails, userLocation]);
+    }, [trails, userLocation, searchQuery]);
 
-    return { trails: sortedTrails, loading, error, userLocation };
+    return { trails: processedTrails, loading, error, userLocation, searchQuery, setSearchQuery };
 }
 
 export function useTrail(id?: string) {
