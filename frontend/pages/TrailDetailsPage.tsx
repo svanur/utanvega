@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
     Box, 
@@ -20,7 +21,8 @@ import DirectionsBikeIcon from '@mui/icons-material/DirectionsBike';
 import TerrainIcon from '@mui/icons-material/Terrain';
 import Layout from '../components/Layout';
 import { useTrailBySlug } from '../hooks/useTrails';
-import TrailMap from '../components/TrailMap';
+import TrailMap, { GeoJsonGeometry } from '../components/TrailMap';
+import ElevationChart from '../components/ElevationChart';
 
 const getActivityIcon = (type: string) => {
     switch (type.toLowerCase()) {
@@ -40,6 +42,8 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     const { slug } = useParams<{ slug: string }>();
     const navigate = useNavigate();
     const { trail, loading, error } = useTrailBySlug(slug);
+    const [geometry, setGeometry] = useState<GeoJsonGeometry | null>(null);
+    const [hoverPoint, setHoverPoint] = useState<{ lat: number; lng: number } | null>(null);
 
     if (loading) {
         return (
@@ -124,7 +128,18 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                 <Typography variant="h6" gutterBottom>
                     Route Map
                 </Typography>
-                <TrailMap slug={trail.slug} />
+                <TrailMap 
+                    slug={trail.slug} 
+                    onDataLoaded={setGeometry} 
+                    hoverPoint={hoverPoint}
+                />
+
+                {geometry && (
+                    <ElevationChart 
+                        coordinates={geometry.coordinates} 
+                        onHover={(point: any) => setHoverPoint(point ? { lat: point.lat, lng: point.lng } : null)} 
+                    />
+                )}
             </Paper>
         </Layout>
     );

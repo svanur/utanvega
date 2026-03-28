@@ -38,8 +38,19 @@ public class GetTrailGeometryQueryHandler : IRequestHandler<GetTrailGeometryQuer
 
         if (geometry == null) return null;
 
-        // Using NetTopologySuite GeoJsonWriter (Basic version for simplicity)
+        // Using NetTopologySuite GeoJsonWriter
         var writer = new NetTopologySuite.IO.GeoJsonWriter();
+        
+        // Ensure the writer includes Z if any coordinate has it
+        // Note: NTS GeoJsonWriter should handle this automatically if geometry.HasZ is true,
+        // but it doesn't hurt to check if there's a setting in newer NTS.
+        
+        // Log if we have Z coordinates
+        var pointsWithZ = geometry.Coordinates.Count(c => !double.IsNaN(c.Z));
+        Console.WriteLine($"[DEBUG_LOG] Geometry {request.Slug} has {geometry.Coordinates.Length} points. Points with Z: {pointsWithZ}");
+        
+        // If we have points but none have Z, and we expect them to, this is where the issue lies.
+        
         return writer.Write(geometry);
     }
 }
