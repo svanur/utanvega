@@ -24,6 +24,7 @@ import { useTrailBySlug } from '../hooks/useTrails';
 import TrailMap, { GeoJsonGeometry } from '../components/TrailMap';
 import ElevationChart from '../components/ElevationChart';
 import ShareButtons from '../components/ShareButtons';
+import QRCodeShare from '../components/QRCodeShare';
 
 const getActivityIcon = (type: string) => {
     switch (type.toLowerCase()) {
@@ -100,6 +101,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                             variant="outlined" 
                         />
                         <ShareButtons title={trail.name} />
+                        <QRCodeShare slug={trail.slug} trailName={trail.name} />
                     </Stack>
                 </Box>
 
