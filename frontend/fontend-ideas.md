@@ -9,10 +9,8 @@
 - Display map, pin for each trail
 
 
-## In Progress
-
-
 ## Done
+- Advanced search
 - Add simple search to trail list
 - Display TrailType
 - Display details trail page

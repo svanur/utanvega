@@ -13,8 +13,29 @@ export interface Trail {
     trailType: string;
     startLatitude: number | null;
     startLongitude: number | null;
+    locations: string[];
     distanceToUser?: number; // in kilometers
 }
+
+export interface FilterState {
+    maxDistance: number;
+    minElevationGain: number;
+    maxElevationGain: number;
+    minElevationLoss: number;
+    maxElevationLoss: number;
+    trailType: string;
+    location: string;
+}
+
+const DEFAULT_FILTERS: FilterState = {
+    maxDistance: 100,
+    minElevationGain: 0,
+    maxElevationGain: 2000,
+    minElevationLoss: 0,
+    maxElevationLoss: 2000,
+    trailType: 'All',
+    location: 'All',
+};
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
@@ -24,6 +45,7 @@ export function useTrails() {
     const [error, setError] = useState<string | null>(null);
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
 
     useEffect(() => {
         // Get user location
@@ -59,21 +81,8 @@ export function useTrails() {
 
     // Calculate distance and sort
     const processedTrails = useMemo(() => {
-        let result = [...trails];
-
-        // Filter by search query
-        if (searchQuery.trim() !== '') {
-            const query = searchQuery.toLowerCase();
-            result = result.filter(trail => 
-                trail.name.toLowerCase().includes(query) || 
-                (trail.description && trail.description.toLowerCase().includes(query))
-            );
-        }
-
-        if (!userLocation) return result;
-
-        const trailsWithDistance = result.map(trail => {
-            if (trail.startLatitude === null || trail.startLongitude === null) {
+        let result = trails.map(trail => {
+            if (!userLocation || trail.startLatitude === null || trail.startLongitude === null) {
                 return { ...trail, distanceToUser: Infinity };
             }
 
@@ -87,10 +96,60 @@ export function useTrails() {
             return { ...trail, distanceToUser: dist };
         });
 
-        return [...trailsWithDistance].sort((a, b) => (a.distanceToUser || 0) - (b.distanceToUser || 0));
-    }, [trails, userLocation, searchQuery]);
+        // Filter by search query
+        if (searchQuery.trim() !== '') {
+            const query = searchQuery.toLowerCase();
+            result = result.filter(trail => 
+                trail.name.toLowerCase().includes(query) || 
+                (trail.description && trail.description.toLowerCase().includes(query))
+            );
+        }
 
-    return { trails: processedTrails, loading, error, userLocation, searchQuery, setSearchQuery };
+        // Apply advanced filters
+        result = result.filter(trail => {
+            // Distance filter (only if user location is available and trail has distance)
+            if (userLocation && trail.distanceToUser !== undefined && trail.distanceToUser !== Infinity) {
+                if (trail.distanceToUser > filters.maxDistance) return false;
+            }
+
+            // Elevation Gain
+            if (trail.elevationGain < filters.minElevationGain || trail.elevationGain > filters.maxElevationGain) return false;
+
+            // Elevation Loss
+            if (trail.elevationLoss < filters.minElevationLoss || trail.elevationLoss > filters.maxElevationLoss) return false;
+
+            // Trail Type
+            if (filters.trailType !== 'All' && trail.trailType !== filters.trailType) return false;
+
+            // Location
+            if (filters.location !== 'All') {
+                if (!trail.locations || !trail.locations.some(l => l === filters.location)) return false;
+            }
+
+            return true;
+        });
+
+        // Sort by distance if user location is available
+        if (userLocation) {
+            result.sort((a, b) => (a.distanceToUser || 0) - (b.distanceToUser || 0));
+        }
+
+        return result;
+    }, [trails, userLocation, searchQuery, filters]);
+
+    const resetFilters = () => setFilters(DEFAULT_FILTERS);
+
+    return { 
+        trails: processedTrails, 
+        loading, 
+        error, 
+        userLocation, 
+        searchQuery, 
+        setSearchQuery,
+        filters,
+        setFilters,
+        resetFilters
+    };
 }
 
 export function useTrail(id?: string) {

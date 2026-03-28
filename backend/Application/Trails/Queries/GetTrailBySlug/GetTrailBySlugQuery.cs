@@ -21,6 +21,8 @@ public class GetTrailBySlugQueryHandler : IRequestHandler<GetTrailBySlugQuery, T
     public async Task<TrailDto?> Handle(GetTrailBySlugQuery request, CancellationToken cancellationToken)
     {
         var trail = await _context.Trails
+            .Include(t => t.TrailLocations)
+                .ThenInclude(tl => tl.Location)
             .AsNoTracking()
             .FirstOrDefaultAsync(t => t.Slug == request.Slug && t.Status == TrailStatus.Published, cancellationToken);
 
@@ -44,7 +46,8 @@ public class GetTrailBySlugQueryHandler : IRequestHandler<GetTrailBySlugQuery, T
             trail.ActivityTypeId.ToString(),
             trail.Type.ToString(),
             (trail.GpxData as LineString)?.StartPoint.Y,
-            (trail.GpxData as LineString)?.StartPoint.X
+            (trail.GpxData as LineString)?.StartPoint.X,
+            trail.TrailLocations.Select(tl => tl.Location.Name).ToList()
         );
     }
 }

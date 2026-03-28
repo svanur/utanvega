@@ -20,7 +20,8 @@ public record TrailDto(
     string ActivityType,
     string TrailType,
     double? StartLatitude,
-    double? StartLongitude
+    double? StartLongitude,
+    List<string> Locations
 );
 
 public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailDto>>
@@ -34,7 +35,10 @@ public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailD
 
     public async Task<List<TrailDto>> Handle(GetTrailsQuery request, CancellationToken cancellationToken)
     {
-        var query = _context.Trails.AsQueryable();
+        var query = _context.Trails
+            .Include(t => t.TrailLocations)
+                .ThenInclude(tl => tl.Location)
+            .AsQueryable();
 
         if (!request.IncludeDeleted)
         {
@@ -60,7 +64,8 @@ public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailD
             t.ActivityTypeId.ToString(),
             t.Type.ToString(),
             (t.GpxData as LineString)?.StartPoint.Y,
-            (t.GpxData as LineString)?.StartPoint.X
+            (t.GpxData as LineString)?.StartPoint.X,
+            t.TrailLocations.Select(tl => tl.Location.Name).ToList()
         )).ToList();
 
         return result;
