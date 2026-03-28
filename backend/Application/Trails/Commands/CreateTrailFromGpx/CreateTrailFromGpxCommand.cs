@@ -38,9 +38,17 @@ public class CreateTrailFromGpxCommandHandler : IRequestHandler<CreateTrailFromG
             throw new Exception("No points found in GPX");
         }
 
-        var coordinates = points.Select(p => new Coordinate(p.Lon, p.Lat)).ToArray();
+        var coordinates = points.Select(p => new CoordinateZ(p.Lon, p.Lat, p.Ele)).ToArray();
         var lineString = _geometryFactory.CreateLineString(coordinates);
-
+        
+        // Log coordinates for verification
+        Console.WriteLine($"[DEBUG_LOG] Created LineString with {coordinates.Length} points.");
+        if (coordinates.Length > 0)
+        {
+            Console.WriteLine($"[DEBUG_LOG] First point: {coordinates[0].X}, {coordinates[0].Y}, {coordinates[0].Z}");
+            Console.WriteLine($"[DEBUG_LOG] Last point: {coordinates[^1].X}, {coordinates[^1].Y}, {coordinates[^1].Z}");
+        }
+        
         // Basic calculation for Length and Elevation
         double length = 0;
         double gain = 0;

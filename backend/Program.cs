@@ -17,6 +17,7 @@ using Utanvega.Backend.Application.Locations.Commands.CreateLocation;
 using Utanvega.Backend.Application.Locations.Commands.UpdateLocation;
 using Utanvega.Backend.Application.Locations.Commands.DeleteLocation;
 using Utanvega.Backend.Application.History.Queries.GetChangeLogs;
+using Utanvega.Backend.Application.Trails.Queries.GetTrailBySlug;
 using MediatR;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -196,6 +197,27 @@ using (var scope = app.Services.CreateScope())
 }
 */
 
+app.MapGet("/api/v1/trails", async (IMediator mediator) =>
+{
+    var trails = await mediator.Send(new GetTrailsQuery(IncludeDeleted: false, PublishedOnly: true));
+    return Results.Ok(trails);
+})
+.WithName("GetPublicTrails");
+
+app.MapGet("/api/v1/trails/{slug}", async (string slug, IMediator mediator) =>
+{
+    var trail = await mediator.Send(new GetTrailBySlugQuery(slug));
+    return trail != null ? Results.Ok(trail) : Results.NotFound();
+})
+.WithName("GetPublicTrailBySlug");
+
+app.MapGet("/api/v1/trails/{slug}/geometry", async (string slug, IMediator mediator) =>
+{
+    var geoJson = await mediator.Send(new GetTrailGeometryQuery(Slug: slug));
+    return geoJson != null ? Results.Content(geoJson, "application/json") : Results.NotFound();
+})
+.WithName("GetPublicTrailGeometry");
+
 app.MapGet("/api/v1/health", () => Results.Ok(new
 {
     status = "healthy",
@@ -229,9 +251,10 @@ app.MapGet("/api/v1/admin/trails", [Authorize] async (bool includeDeleted, IMedi
 })
 .WithName("GetTrails");
 
-app.MapGet("/api/v1/admin/trails/{id}", [Authorize] async (Guid id, UtanvegaDbContext context) =>
+app.MapGet("/api/v1/admin/trails/{idOrSlug}", [Authorize] async (string idOrSlug, UtanvegaDbContext context) =>
 {
-    var trail = await context.Trails
+    var isGuid = Guid.TryParse(idOrSlug, out var id);
+    var query = context.Trails
         .AsNoTracking()
         .Select(t => new
         {
@@ -251,11 +274,15 @@ app.MapGet("/api/v1/admin/trails/{id}", [Authorize] async (Guid id, UtanvegaDbCo
                 tl.LocationId,
                 Role = tl.Role.ToString()
             }).ToList()
-        })
-        .FirstOrDefaultAsync(t => t.Id == id);
+        });
+
+    var trail = isGuid 
+        ? await query.FirstOrDefaultAsync(t => t.Id == id)
+        : await query.FirstOrDefaultAsync(t => t.Slug == idOrSlug);
+
     return trail != null ? Results.Ok(trail) : Results.NotFound();
 })
-.WithName("GetTrailById");
+.WithName("GetAdminTrail");
 
 app.MapPut("/api/v1/admin/trails/{id}", [Authorize] async (Guid id, UpdateTrailCommand command, IMediator mediator) =>
 {
@@ -272,9 +299,11 @@ app.MapDelete("/api/v1/admin/trails/{id}", [Authorize] async (Guid id, IMediator
 })
 .WithName("DeleteTrail");
 
-app.MapGet("/api/v1/admin/trails/{id}/geometry", [Authorize] async (Guid id, IMediator mediator) =>
+app.MapGet("/api/v1/admin/trails/{idOrSlug}/geometry", [Authorize] async (string idOrSlug, IMediator mediator) =>
 {
-    var geoJson = await mediator.Send(new GetTrailGeometryQuery(id));
+    var isGuid = Guid.TryParse(idOrSlug, out var id);
+    var query = isGuid ? new GetTrailGeometryQuery(Id: id) : new GetTrailGeometryQuery(Slug: idOrSlug);
+    var geoJson = await mediator.Send(query);
     return geoJson != null ? Results.Content(geoJson, "application/json") : Results.NotFound();
 })
 .WithName("GetTrailGeometry");
