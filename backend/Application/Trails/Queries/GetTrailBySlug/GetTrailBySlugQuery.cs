@@ -41,6 +41,7 @@ public class GetTrailBySlugQueryHandler : IRequestHandler<GetTrailBySlugQuery, T
             trail.ElevationLoss,
             trail.Status.ToString(),
             trail.ActivityTypeId.ToString(),
+            trail.Type.ToString(),
             (trail.GpxData as LineString)?.StartPoint.Y,
             (trail.GpxData as LineString)?.StartPoint.X
         );

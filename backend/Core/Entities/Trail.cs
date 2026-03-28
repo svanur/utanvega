@@ -35,6 +35,13 @@ public enum Visibility
     Private,
 }
 
+public enum TrailType
+{
+    OutAndBack,
+    Loop,
+    PointToPoint,
+}
+
 public class Trail
 {
     public Guid Id { get; set; } = Guid.NewGuid();
@@ -44,6 +51,7 @@ public class Trail
     
     public ActivityType ActivityTypeId { get; set; }
     public TrailStatus Status { get; set; } = TrailStatus.Draft;
+    public TrailType Type { get; set; } = TrailType.Loop;
     
     public double Length { get; set; } // in meters
     public double ElevationGain { get; set; } // in meters

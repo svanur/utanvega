@@ -17,6 +17,7 @@ public record TrailDto(
     double ElevationLoss,
     string Status,
     string ActivityType,
+    string TrailType,
     double? StartLatitude,
     double? StartLongitude
 );
@@ -55,6 +56,7 @@ public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailD
             t.ElevationLoss,
             t.Status.ToString(),
             t.ActivityTypeId.ToString(),
+            t.Type.ToString(),
             (t.GpxData as LineString)?.StartPoint.Y,
             (t.GpxData as LineString)?.StartPoint.X
         )).ToList();

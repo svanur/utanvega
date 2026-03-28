@@ -17,6 +17,7 @@ public record UpdateTrailCommand(
     string? Description,
     string ActivityType,
     string Status,
+    string Type,
     string Difficulty,
     string Visibility,
     string? UpdatedBy,
@@ -55,6 +56,9 @@ public class UpdateTrailCommandHandler : IRequestHandler<UpdateTrailCommand, boo
             
         if (Enum.TryParse<Visibility>(request.Visibility, true, out var visibility))
             trail.Visibility = visibility;
+            
+        if (Enum.TryParse<TrailType>(request.Type, true, out var trailType))
+            trail.Type = trailType;
             
         trail.UpdatedBy = request.UpdatedBy;
         trail.UpdatedAt = DateTime.UtcNow;

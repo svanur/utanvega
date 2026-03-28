@@ -15,8 +15,9 @@ type TrailDetail = {
     name: string;
     slug: string;
     description: string;
-    activityTypeId: string;
+    activityType: string;
     status: string;
+    type: string;
     difficulty: string;
     visibility: string;
     locations: TrailLocationInfo[];
@@ -45,6 +46,12 @@ const difficulties = [
     { value: 'Hard', label: 'Hard' },
     { value: 'Expert', label: 'Expert' },
     { value: 'Extreme', label: 'Extreme' },
+];
+
+const trailTypes = [
+    { value: 'OutAndBack', label: 'Out and Back' },
+    { value: 'Loop', label: 'Loop' },
+    { value: 'PointToPoint', label: 'Point to Point' },
 ];
 
 const visibilities = [
@@ -93,8 +100,9 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
                     name: trail.name,
                     slug: trail.slug,
                     description: trail.description,
-                    activityType: trail.activityTypeId,
+                    activityType: trail.activityType,
                     status: trail.status,
+                    type: trail.type,
                     difficulty: trail.difficulty,
                     visibility: trail.visibility,
                     updatedBy: 'admin', // Simple for now
@@ -159,17 +167,22 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
                             <TextField label="Description" multiline rows={4} fullWidth value={trail.description || ''} onChange={(e) => handleChange('description', e.target.value)} />
                             
                             <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-                                <TextField select label="Activity" value={trail.activityTypeId} onChange={(e) => handleChange('activityTypeId', e.target.value)}>
+                                <TextField select label="Activity" value={trail.activityType} onChange={(e) => handleChange('activityType', e.target.value)}>
                                     {activityTypes.map(opt => <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>)}
                                 </TextField>
                                 <TextField select label="Status" value={trail.status} onChange={(e) => handleChange('status', e.target.value)}>
                                     {trailStatuses.map(opt => <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>)}
                                 </TextField>
+                            </Box>
+                            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 2 }}>
                                 <TextField select label="Difficulty" value={trail.difficulty} onChange={(e) => handleChange('difficulty', e.target.value)}>
                                     {difficulties.map(opt => <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>)}
                                 </TextField>
                                 <TextField select label="Visibility" value={trail.visibility} onChange={(e) => handleChange('visibility', e.target.value)}>
                                     {visibilities.map(opt => <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>)}
+                                </TextField>
+                                <TextField select label="Trail Type" value={trail.type} onChange={(e) => handleChange('type', e.target.value)}>
+                                    {trailTypes.map(opt => <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>)}
                                 </TextField>
                             </Box>
 
