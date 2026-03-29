@@ -14,7 +14,11 @@ import DirectionsBikeIcon from '@mui/icons-material/DirectionsBike';
 import LandscapeIcon from '@mui/icons-material/Landscape';
 import RouteIcon from '@mui/icons-material/Route';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
+import LoopIcon from '@mui/icons-material/Loop';
+import SyncAltIcon from '@mui/icons-material/SyncAlt';
+import EastIcon from '@mui/icons-material/East';
 import { useNavigate } from 'react-router-dom';
 import { Trail } from '../hooks/useTrails';
 
@@ -29,6 +33,24 @@ const getActivityIcon = (type: string) => {
         case 'cycling': return <DirectionsBikeIcon fontSize="small" />;
         case 'hiking': return <HikingIcon fontSize="small" />;
         default: return <RouteIcon fontSize="small" />;
+    }
+};
+
+const getTrailTypeIcon = (type: string) => {
+    switch (type) {
+        case 'OutAndBack': return <SyncAltIcon sx={{ fontSize: 18 }} />;
+        case 'Loop': return <LoopIcon sx={{ fontSize: 18 }} />;
+        case 'PointToPoint': return <EastIcon sx={{ fontSize: 18 }} />;
+        default: return <RouteIcon sx={{ fontSize: 18 }} />;
+    }
+};
+
+const getTrailTypeLabel = (type: string) => {
+    switch (type) {
+        case 'OutAndBack': return 'Out and Back';
+        case 'Loop': return 'Loop';
+        case 'PointToPoint': return 'Point to Point';
+        default: return type;
     }
 };
 
@@ -77,7 +99,7 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail }) => {
                         </Typography>
                     )}
 
-                    <Stack direction="row" spacing={2} color="text.secondary">
+                    <Stack direction="row" spacing={1.5} color="text.secondary" flexWrap="wrap">
                         <Box display="flex" alignItems="center">
                             <RouteIcon sx={{ mr: 0.5, fontSize: 18 }} />
                             <Typography variant="body2">{distanceKm} km</Typography>
@@ -86,8 +108,16 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail }) => {
                             <TrendingUpIcon sx={{ mr: 0.5, fontSize: 18 }} />
                             <Typography variant="body2">+{Math.round(trail.elevationGain)} m</Typography>
                         </Box>
+                        <Box display="flex" alignItems="center">
+                            <TrendingDownIcon sx={{ mr: 0.5, fontSize: 18 }} />
+                            <Typography variant="body2">-{Math.round(trail.elevationLoss)} m</Typography>
+                        </Box>
+                        <Box display="flex" alignItems="center" sx={{ display: { xs: 'none', sm: 'flex' } }}>
+                            {getTrailTypeIcon(trail.trailType)}
+                            <Typography variant="body2" sx={{ ml: 0.5 }}>{getTrailTypeLabel(trail.trailType)}</Typography>
+                        </Box>
                         {userDist && (
-                            <Box display="flex" alignItems="center" ml="auto !important">
+                            <Box display="flex" alignItems="center">
                                 <LocationOnIcon sx={{ mr: 0.5, fontSize: 18, color: 'primary.main' }} />
                                 <Typography variant="body2" color="primary.main" fontWeight="medium">
                                     {userDist}

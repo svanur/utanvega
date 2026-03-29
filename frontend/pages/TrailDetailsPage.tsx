@@ -128,33 +128,33 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                     </Stack>
                 </Box>
 
-                <Grid container spacing={3} sx={{ mb: 3 }}>
-                    <Grid item xs={12} sm={3}>
-                        <Stack alignItems="center" spacing={1}>
+                <Grid container spacing={2} sx={{ mb: 3 }}>
+                    <Grid item xs={3} sm={3}>
+                        <Stack alignItems="center" spacing={0.5} justifyContent="center">
                             <RouteIcon color="action" />
-                            <Typography variant="body2" color="text.secondary">Distance</Typography>
-                            <Typography variant="h6">{distanceKm} km</Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>Distance</Typography>
+                            <Typography variant="h6" sx={{ fontSize: { xs: '0.9rem', sm: '1.25rem' } }}>{distanceKm} km</Typography>
                         </Stack>
                     </Grid>
-                    <Grid item xs={12} sm={3}>
-                        <Stack alignItems="center" spacing={1}>
+                    <Grid item xs={3} sm={3}>
+                        <Stack alignItems="center" spacing={0.5} justifyContent="center">
                             <TrendingUpIcon color="action" />
-                            <Typography variant="body2" color="text.secondary">Elevation Gain</Typography>
-                            <Typography variant="h6">+{Math.round(trail.elevationGain)} m</Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>Elevation Gain</Typography>
+                            <Typography variant="h6" sx={{ fontSize: { xs: '0.9rem', sm: '1.25rem' } }}>+{Math.round(trail.elevationGain)} m</Typography>
                         </Stack>
                     </Grid>
-                    <Grid item xs={12} sm={3}>
-                        <Stack alignItems="center" spacing={1}>
+                    <Grid item xs={3} sm={3}>
+                        <Stack alignItems="center" spacing={0.5} justifyContent="center">
                             <TrendingDownIcon color="action" />
-                            <Typography variant="body2" color="text.secondary">Elevation Loss</Typography>
-                            <Typography variant="h6">-{Math.round(trail.elevationLoss)} m</Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>Elevation Loss</Typography>
+                            <Typography variant="h6" sx={{ fontSize: { xs: '0.9rem', sm: '1.25rem' } }}>-{Math.round(trail.elevationLoss)} m</Typography>
                         </Stack>
                     </Grid>
-                    <Grid item xs={12} sm={3}>
-                        <Stack alignItems="center" spacing={1}>
+                    <Grid item xs={3} sm={3}>
+                        <Stack alignItems="center" spacing={0.5} justifyContent="center">
                             {getTrailTypeIcon(trail.trailType)}
-                            <Typography variant="body2" color="text.secondary">Trail Type</Typography>
-                            <Typography variant="h6">{getTrailTypeLabel(trail.trailType)}</Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>Trail Type</Typography>
+                            <Typography variant="h6" sx={{ fontSize: { xs: '0.8rem', sm: '1.25rem' }, textAlign: 'center', lineHeight: 1.1 }}>{getTrailTypeLabel(trail.trailType)}</Typography>
                         </Stack>
                     </Grid>
                 </Grid>
