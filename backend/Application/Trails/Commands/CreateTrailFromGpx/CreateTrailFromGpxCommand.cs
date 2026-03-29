@@ -6,7 +6,7 @@ using System.Xml.Linq;
 
 namespace Utanvega.Backend.Application.Trails.Commands.CreateTrailFromGpx;
 
-public record CreateTrailFromGpxCommand(string Name, string GpxXml) : IRequest<Guid>;
+public record CreateTrailFromGpxCommand(string? Name, string GpxXml) : IRequest<Guid>;
 
 public class CreateTrailFromGpxCommandHandler : IRequestHandler<CreateTrailFromGpxCommand, Guid>
 {
@@ -29,7 +29,7 @@ public class CreateTrailFromGpxCommandHandler : IRequestHandler<CreateTrailFromG
         return trail.Id;
     }
 
-    public Trail ProcessGpx(string name, string gpxXml)
+    public Trail ProcessGpx(string? name, string gpxXml)
     {
         XDocument doc;
         try
@@ -42,6 +42,19 @@ public class CreateTrailFromGpxCommandHandler : IRequestHandler<CreateTrailFromG
             throw new Exception("Invalid GPX XML format", ex);
         }
         XNamespace ns = doc.Root?.GetDefaultNamespace() ?? "http://www.topografix.com/GPX/1/1";
+
+        // Try to extract name if not provided
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            var nameElement = doc.Descendants(ns + "metadata").Elements(ns + "name").FirstOrDefault()
+                             ?? doc.Descendants(ns + "name").FirstOrDefault();
+            name = nameElement?.Value?.Trim();
+            
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                name = "Unnamed Trail";
+            }
+        }
 
         var points = doc.Descendants(ns + "trkpt")
             .Select(p => {

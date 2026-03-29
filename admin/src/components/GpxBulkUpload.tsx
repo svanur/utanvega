@@ -11,6 +11,7 @@ import {
   Button, 
   CircularProgress,
   Divider,
+  TextField,
   Alert
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -22,10 +23,42 @@ interface GpxBulkUploadProps {
   onNotify: (message: string, severity?: 'success' | 'error') => void;
 }
 
+interface GpxFile {
+  file: File;
+  name: string;
+}
+
 const GpxBulkUpload: React.FC<GpxBulkUploadProps> = ({ onUploadSuccess, onNotify }) => {
-  const [files, setFiles] = useState<File[]>([]);
+  const [files, setFiles] = useState<GpxFile[]>([]);
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+
+  const extractNameFromGpx = async (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const content = event.target?.result as string;
+          const parser = new DOMParser();
+          const xmlDoc = parser.parseFromString(content, "text/xml");
+          
+          // Try to find <name> in <metadata> or elsewhere
+          const nameNode = xmlDoc.querySelector('metadata > name') || xmlDoc.querySelector('name');
+          if (nameNode && nameNode.textContent) {
+            resolve(nameNode.textContent.trim());
+          } else {
+            // Fallback to filename without extension
+            resolve(file.name.replace(/\.[^/.]+$/, ""));
+          }
+        } catch (err) {
+          // Fallback to filename on error
+          resolve(file.name.replace(/\.[^/.]+$/, ""));
+        }
+      };
+      reader.onerror = () => resolve(file.name.replace(/\.[^/.]+$/, ""));
+      reader.readAsText(file);
+    });
+  };
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -37,23 +70,39 @@ const GpxBulkUpload: React.FC<GpxBulkUploadProps> = ({ onUploadSuccess, onNotify
     }
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const newFiles = Array.from(e.dataTransfer.files).filter(f => f.name.toLowerCase().endsWith('.gpx'));
-      if (newFiles.length === 0) {
+      const gpxFiles = Array.from(e.dataTransfer.files).filter(f => f.name.toLowerCase().endsWith('.gpx'));
+      if (gpxFiles.length === 0) {
         onNotify('Please drop only .gpx files', 'error');
         return;
       }
+      
+      const newFiles: GpxFile[] = await Promise.all(
+        gpxFiles.map(async (file) => ({
+          file,
+          name: await extractNameFromGpx(file)
+        }))
+      );
+      
       setFiles(prev => [...prev, ...newFiles]);
     }
   }, [onNotify]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      const newFiles = Array.from(e.target.files).filter(f => f.name.toLowerCase().endsWith('.gpx'));
+      const gpxFiles = Array.from(e.target.files).filter(f => f.name.toLowerCase().endsWith('.gpx'));
+      
+      const newFiles: GpxFile[] = await Promise.all(
+        gpxFiles.map(async (file) => ({
+          file,
+          name: await extractNameFromGpx(file)
+        }))
+      );
+      
       setFiles(prev => [...prev, ...newFiles]);
     }
   };
@@ -62,20 +111,28 @@ const GpxBulkUpload: React.FC<GpxBulkUploadProps> = ({ onUploadSuccess, onNotify
     setFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  const handleNameChange = (index: number, newName: string) => {
+    setFiles(prev => {
+      const next = [...prev];
+      next[index] = { ...next[index], name: newName };
+      return next;
+    });
+  };
+
   const handleSubmit = async () => {
     if (files.length === 0) return;
 
     setUploading(true);
     const formData = new FormData();
-    files.forEach(file => {
-      formData.append('files', file);
+    files.forEach((item) => {
+      formData.append('files', item.file);
+      formData.append('names', item.name);
     });
 
     try {
       await apiFetch('/api/v1/admin/trails/bulk-upload-gpx', {
         method: 'POST',
         body: formData,
-        // No Content-Type header so browser sets it with boundary
       });
       onNotify(`Successfully uploaded ${files.length} trails`, 'success');
       setFiles([]);
@@ -130,12 +187,22 @@ const GpxBulkUpload: React.FC<GpxBulkUploadProps> = ({ onUploadSuccess, onNotify
             Trails ready to be created ({files.length}):
           </Typography>
           <List dense sx={{ maxHeight: 300, overflow: 'auto', bgcolor: 'background.paper', borderRadius: 1, mb: 2 }}>
-            {files.map((file, index) => (
-              <React.Fragment key={`${file.name}-${index}`}>
+            {files.map((item, index) => (
+              <React.Fragment key={`${item.file.name}-${index}`}>
                 <ListItem>
                   <ListItemText 
-                    primary={file.name} 
-                    secondary={`${(file.size / 1024).toFixed(1)} KB`}
+                    primary={
+                      <TextField
+                        fullWidth
+                        variant="standard"
+                        value={item.name}
+                        onChange={(e) => handleNameChange(index, e.target.value)}
+                        disabled={uploading}
+                        size="small"
+                        sx={{ input: { fontWeight: 'bold' } }}
+                      />
+                    } 
+                    secondary={`${item.file.name} (${(item.file.size / 1024).toFixed(1)} KB)`}
                   />
                   <ListItemSecondaryAction>
                     <IconButton edge="end" aria-label="delete" onClick={() => removeFile(index)} disabled={uploading}>

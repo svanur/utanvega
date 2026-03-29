@@ -8,7 +8,7 @@ using Utanvega.Backend.Application.Trails.Commands.CreateTrailFromGpx;
 
 namespace Utanvega.Backend.Application.Trails.Commands.BulkCreateTrailsFromGpx;
 
-public record GpxFileInfo(string Name, string GpxXml);
+public record GpxFileInfo(string? Name, string GpxXml);
 
 public record BulkCreateTrailsFromGpxCommand(List<GpxFileInfo> Files) : IRequest<List<Guid>>;
 
@@ -45,7 +45,7 @@ public class BulkCreateTrailsFromGpxCommandHandler : IRequestHandler<BulkCreateT
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[ERROR] Failed to process GPX file '{file.Name}': {ex.Message}");
+                Console.WriteLine($"[ERROR] Failed to process GPX file '{file.Name ?? "Unnamed"}': {ex.Message}");
                 throw; 
             }
         }

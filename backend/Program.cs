@@ -346,17 +346,23 @@ app.MapPost("/api/v1/admin/trails/upload-gpx", [Authorize] async (string name, I
 .WithName("UploadGpx")
 .DisableAntiforgery(); // Simple for dev, adjust for prod security
 
-app.MapPost("/api/v1/admin/trails/bulk-upload-gpx", [Authorize] async (IFormFileCollection files, IMediator mediator) =>
+app.MapPost("/api/v1/admin/trails/bulk-upload-gpx", [Authorize] async (HttpContext context, IMediator mediator) =>
 {
+    var form = await context.Request.ReadFormAsync();
+    var files = form.Files.GetFiles("files");
+    var names = form.TryGetValue("names", out var namesList) ? namesList.ToList() : new List<string?>();
+
     if (files == null || files.Count == 0) return Results.BadRequest("No files uploaded.");
     
     var gpxFiles = new List<GpxFileInfo>();
-    foreach (var file in files)
+    for (int i = 0; i < files.Count; i++)
     {
+        var file = files[i];
+        var name = names.Count > i ? names[i] : null;
+
         using var reader = new StreamReader(file.OpenReadStream());
         var gpxXml = await reader.ReadToEndAsync();
-        // Use filename without extension as default name
-        var name = Path.GetFileNameWithoutExtension(file.FileName);
+        
         gpxFiles.Add(new GpxFileInfo(name, gpxXml));
     }
     
