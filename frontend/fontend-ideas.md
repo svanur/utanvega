@@ -4,7 +4,10 @@
 
 [none yet]
 
+In progress
+
 ## Done
+- Add location info
 - Display map, pin for each trail
 - random quotes
 - Advanced search

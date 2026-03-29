@@ -23,6 +23,7 @@ import LandscapeIcon from '@mui/icons-material/Landscape';
 import LoopIcon from '@mui/icons-material/Loop';
 import SyncAltIcon from '@mui/icons-material/SyncAlt';
 import EastIcon from '@mui/icons-material/East';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
 import Layout from '../components/Layout';
 import { useTrailBySlug } from '../hooks/useTrails';
 import TrailMap, { GeoJsonGeometry } from '../components/TrailMap';
@@ -116,13 +117,22 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                     <Typography variant="h4" component="h1" fontWeight="bold">
                         {trail.name}
                     </Typography>
-                    <Stack direction="row" spacing={1} alignItems="center">
+                    <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
                         <Chip 
                             icon={getActivityIcon(trail.activityType)} 
                             label={trail.activityType} 
                             color="primary" 
                             variant="outlined" 
                         />
+                        {trail.locations && trail.locations.length > 0 && trail.locations.map((loc) => (
+                            <Chip 
+                                key={loc}
+                                icon={<LocationOnIcon sx={{ fontSize: '1rem' }} />} 
+                                label={loc} 
+                                variant="outlined"
+                                color="secondary"
+                            />
+                        ))}
                         <ShareButtons title={trail.name} />
                         <QRCodeShare slug={trail.slug} trailName={trail.name} />
                     </Stack>
