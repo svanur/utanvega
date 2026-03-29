@@ -21,10 +21,20 @@ public class CreateTrailFromGpxCommandHandler : IRequestHandler<CreateTrailFromG
 
     public async Task<Guid> Handle(CreateTrailFromGpxCommand request, CancellationToken cancellationToken)
     {
+        var trail = ProcessGpx(request.Name, request.GpxXml);
+
+        _context.Trails.Add(trail);
+        await _context.SaveChangesWithAuditAsync("system"); // Could pass user if available
+        
+        return trail.Id;
+    }
+
+    public Trail ProcessGpx(string name, string gpxXml)
+    {
         XDocument doc;
         try
         {
-            doc = XDocument.Parse(request.GpxXml);
+            doc = XDocument.Parse(gpxXml);
         }
         catch (Exception ex)
         {
@@ -105,7 +115,7 @@ public class CreateTrailFromGpxCommandHandler : IRequestHandler<CreateTrailFromG
         }
 
         // Generate slug - simple version for now
-        string slug = request.Name.ToLower()
+        string slug = name.ToLower()
             .Replace(" ", "-")
             .Replace("á", "a")
             .Replace("é", "e")
@@ -121,9 +131,9 @@ public class CreateTrailFromGpxCommandHandler : IRequestHandler<CreateTrailFromG
         // Remove other special characters
         slug = new string(slug.Where(c => char.IsLetterOrDigit(c) || c == '-').ToArray());
 
-        var trail = new Trail
+        return new Trail
         {
-            Name = request.Name,
+            Name = name,
             Slug = slug,
             GpxData = lineString,
             Length = length,
@@ -132,11 +142,6 @@ public class CreateTrailFromGpxCommandHandler : IRequestHandler<CreateTrailFromG
             Status = TrailStatus.Draft,
             CreatedAt = DateTime.UtcNow
         };
-
-        _context.Trails.Add(trail);
-        await _context.SaveChangesWithAuditAsync("system"); // Could pass user if available
-        
-        return trail.Id;
     }
 
     private static double CalculateDistance(double lat1, double lon1, double lat2, double lon2)

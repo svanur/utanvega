@@ -1,6 +1,7 @@
 import { Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Chip, Button, CircularProgress, Alert, Box, Dialog, DialogTitle, DialogContent, IconButton, DialogActions, FormControlLabel, Switch } from '@mui/material';
 import MapIcon from '@mui/icons-material/Map';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -10,6 +11,7 @@ import { useTrails } from '../hooks/useTrails';
 import { apiFetch } from '../hooks/api';
 import TrailMap from '../components/TrailMap';
 import TrailEditDialog from '../components/TrailEditDialog';
+import GpxBulkUpload from '../components/GpxBulkUpload';
 
 export default function TrailList({ onNotify }: { onNotify: (message: string, severity?: 'success' | 'error') => void }) {
   const [includeDeleted, setIncludeDeleted] = useState(false);
@@ -18,6 +20,7 @@ export default function TrailList({ onNotify }: { onNotify: (message: string, se
   const [selectedTrailEdit, setSelectedTrailEdit] = useState<string | null>(null);
   const [trailToDelete, setTrailToDelete] = useState<{ id: string, name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
 
   const handleDelete = async () => {
     if (!trailToDelete) return;
@@ -60,6 +63,13 @@ export default function TrailList({ onNotify }: { onNotify: (message: string, se
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4">Trails</Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Button 
+            variant="contained" 
+            startIcon={<CloudUploadIcon />} 
+            onClick={() => setShowBulkUpload(true)}
+          >
+            Bulk Upload
+          </Button>
           <FormControlLabel 
             control={<Switch checked={includeDeleted} onChange={(e) => setIncludeDeleted(e.target.checked)} />} 
             label="Show Deleted" 
@@ -152,6 +162,13 @@ export default function TrailList({ onNotify }: { onNotify: (message: string, se
         }}
       />
 
+      <BulkUploadDialog 
+        open={showBulkUpload} 
+        onClose={() => setShowBulkUpload(false)} 
+        onUploadSuccess={refresh}
+        onNotify={onNotify}
+      />
+
       <Dialog open={Boolean(trailToDelete)} onClose={() => setTrailToDelete(null)}>
         <DialogTitle>Delete Trail?</DialogTitle>
         <DialogContent>
@@ -165,5 +182,42 @@ export default function TrailList({ onNotify }: { onNotify: (message: string, se
         </DialogActions>
       </Dialog>
     </Box>
+  );
+}
+
+function BulkUploadDialog({ open, onClose, onUploadSuccess, onNotify }: { 
+  open: boolean, 
+  onClose: () => void, 
+  onUploadSuccess: () => void, 
+  onNotify: (message: string, severity?: 'success' | 'error') => void 
+}) {
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle>
+        Bulk Upload GPX Files
+        <IconButton
+          aria-label="close"
+          onClick={onClose}
+          sx={{ position: 'absolute', right: 8, top: 8 }}
+        >
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
+      <DialogContent dividers>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Select or drag multiple GPX files. Each file will create a new trail with the filename as the trail name.
+        </Typography>
+        <GpxBulkUpload 
+          onUploadSuccess={() => {
+            onUploadSuccess();
+            onClose();
+          }} 
+          onNotify={onNotify} 
+        />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Close</Button>
+      </DialogActions>
+    </Dialog>
   );
 }

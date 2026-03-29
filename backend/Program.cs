@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.EntityFrameworkCore;
 
 using Utanvega.Backend.Application.Trails.Commands.CreateTrailFromGpx;
+using Utanvega.Backend.Application.Trails.Commands.BulkCreateTrailsFromGpx;
 using Utanvega.Backend.Application.Trails.Commands.UpdateTrail;
 using Utanvega.Backend.Application.Trails.Commands.DeleteTrail;
 using Utanvega.Backend.Application.Trails.Queries.GetTrails;
@@ -344,6 +345,34 @@ app.MapPost("/api/v1/admin/trails/upload-gpx", [Authorize] async (string name, I
 })
 .WithName("UploadGpx")
 .DisableAntiforgery(); // Simple for dev, adjust for prod security
+
+app.MapPost("/api/v1/admin/trails/bulk-upload-gpx", [Authorize] async (IFormFileCollection files, IMediator mediator) =>
+{
+    if (files == null || files.Count == 0) return Results.BadRequest("No files uploaded.");
+    
+    var gpxFiles = new List<GpxFileInfo>();
+    foreach (var file in files)
+    {
+        using var reader = new StreamReader(file.OpenReadStream());
+        var gpxXml = await reader.ReadToEndAsync();
+        // Use filename without extension as default name
+        var name = Path.GetFileNameWithoutExtension(file.FileName);
+        gpxFiles.Add(new GpxFileInfo(name, gpxXml));
+    }
+    
+    try 
+    {
+        var command = new BulkCreateTrailsFromGpxCommand(gpxFiles);
+        var trailIds = await mediator.Send(command);
+        return Results.Ok(new { count = trailIds.Count, ids = trailIds });
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(ex.Message);
+    }
+})
+.WithName("BulkUploadGpx")
+.DisableAntiforgery();
 
 // Locations Admin API
 app.MapGet("/api/v1/admin/locations", [Authorize] async (Guid? parentId, string? search, IMediator mediator) =>
