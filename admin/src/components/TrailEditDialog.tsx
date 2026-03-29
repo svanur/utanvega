@@ -26,10 +26,10 @@ type TrailDetail = {
 const roles = ['Start', 'End', 'BelongsTo', 'PassingThrough'];
 
 const activityTypes = [
+    { value: 'TrailRunning', label: 'Trail Running' },
     { value: 'Running', label: 'Running' },
     { value: 'Cycling', label: 'Cycling' },
     { value: 'Hiking', label: 'Hiking' },
-    { value: 'Skiing', label: 'Skiing' },
 ];
 
 const trailStatuses = [

@@ -4,10 +4,10 @@ using NetTopologySuite.Geometries;
 
 public enum ActivityType
 {
+    TrailRunning,
     Running,
     Cycling,
     Hiking,
-    Skiing,
 }
 
 public enum TrailStatus

@@ -9,8 +9,9 @@ import {
     CardActionArea
 } from '@mui/material';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
+import HikingIcon from '@mui/icons-material/Hiking';
 import DirectionsBikeIcon from '@mui/icons-material/DirectionsBike';
-import TerrainIcon from '@mui/icons-material/Terrain';
+import LandscapeIcon from '@mui/icons-material/Landscape';
 import RouteIcon from '@mui/icons-material/Route';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
@@ -23,9 +24,10 @@ interface TrailCardProps {
 
 const getActivityIcon = (type: string) => {
     switch (type.toLowerCase()) {
+        case 'trailrunning': return <LandscapeIcon fontSize="small" />;
         case 'running': return <DirectionsRunIcon fontSize="small" />;
         case 'cycling': return <DirectionsBikeIcon fontSize="small" />;
-        case 'hiking': return <TerrainIcon fontSize="small" />;
+        case 'hiking': return <HikingIcon fontSize="small" />;
         default: return <RouteIcon fontSize="small" />;
     }
 };

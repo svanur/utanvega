@@ -17,8 +17,9 @@ import RouteIcon from '@mui/icons-material/Route';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
+import HikingIcon from '@mui/icons-material/Hiking';
 import DirectionsBikeIcon from '@mui/icons-material/DirectionsBike';
-import TerrainIcon from '@mui/icons-material/Terrain';
+import LandscapeIcon from '@mui/icons-material/Landscape';
 import LoopIcon from '@mui/icons-material/Loop';
 import SyncAltIcon from '@mui/icons-material/SyncAlt';
 import EastIcon from '@mui/icons-material/East';
@@ -31,9 +32,10 @@ import QRCodeShare from '../components/QRCodeShare';
 
 const getActivityIcon = (type: string) => {
     switch (type.toLowerCase()) {
+        case 'trailrunning': return <LandscapeIcon />;
         case 'running': return <DirectionsRunIcon />;
         case 'cycling': return <DirectionsBikeIcon />;
-        case 'hiking': return <TerrainIcon />;
+        case 'hiking': return <HikingIcon />;
         default: return <RouteIcon />;
     }
 };

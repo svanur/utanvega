@@ -46,7 +46,18 @@ public class UpdateTrailCommandHandler : IRequestHandler<UpdateTrailCommand, boo
         trail.Description = request.Description;
         
         if (Enum.TryParse<ActivityType>(request.ActivityType, true, out var activityType))
+        {
             trail.ActivityTypeId = activityType;
+        }
+        else
+        {
+            Console.WriteLine($"[DEBUG_LOG] Failed to parse ActivityType: '{request.ActivityType}'");
+            // If the value is "TrailRunnin" or similar, we want to match it to TrailRunning
+            if (request.ActivityType.StartsWith("TrailRunnin", StringComparison.OrdinalIgnoreCase))
+            {
+                trail.ActivityTypeId = ActivityType.TrailRunning;
+            }
+        }
             
         if (Enum.TryParse<TrailStatus>(request.Status, true, out var status))
             trail.Status = status;
