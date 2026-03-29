@@ -7,6 +7,8 @@
 In progress
 
 ## Done
+- Use location slug for links on trail details page
+- Display all trails in location as pins on location details map
 - Add location page with all locations and trails
 - Add location info
 - Display map, pin for each trail

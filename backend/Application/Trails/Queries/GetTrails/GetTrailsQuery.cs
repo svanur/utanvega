@@ -8,6 +8,8 @@ namespace Utanvega.Backend.Application.Trails.Queries.GetTrails;
 
 public record GetTrailsQuery(bool IncludeDeleted = false, bool PublishedOnly = false) : IRequest<List<TrailDto>>;
 
+public record LocationInfoDto(string Name, string Slug);
+
 public record TrailDto(
     Guid Id,
     string Name,
@@ -21,7 +23,7 @@ public record TrailDto(
     string TrailType,
     double? StartLatitude,
     double? StartLongitude,
-    List<string> Locations
+    List<LocationInfoDto> Locations
 );
 
 public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailDto>>
@@ -65,7 +67,7 @@ public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailD
             t.Type.ToString(),
             (t.GpxData as LineString)?.StartPoint.Y,
             (t.GpxData as LineString)?.StartPoint.X,
-            t.TrailLocations.Select(tl => tl.Location.Name).ToList()
+            t.TrailLocations.Select(tl => new LocationInfoDto(tl.Location.Name, tl.Location.Slug)).ToList()
         )).ToList();
 
         return result;

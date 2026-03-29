@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { 
     Box, 
     Typography, 
@@ -29,6 +30,23 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
     const { slug } = useParams<{ slug: string }>();
     const navigate = useNavigate();
     const { location, trails, loading, error } = useLocationBySlug(slug);
+    const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+
+    useEffect(() => {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    setUserLocation({
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    });
+                },
+                (err) => {
+                    console.warn('Geolocation failed:', err.message);
+                }
+            );
+        }
+    }, []);
 
     if (loading) {
         return (
@@ -97,7 +115,7 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
                 {trails && trails.length > 0 ? (
                     <Box mt={2}>
                         <Box sx={{ mb: 4, height: '400px', borderRadius: '16px', overflow: 'hidden' }}>
-                           <TrailMapView trails={trails} />
+                           <TrailMapView trails={trails} userLocation={userLocation} />
                         </Box>
                         
                         <Divider sx={{ mb: 4 }} />

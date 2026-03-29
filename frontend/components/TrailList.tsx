@@ -52,7 +52,7 @@ export const TrailList: React.FC = () => {
     // Derived values for filters
     const locations = React.useMemo(() => {
         const locs = new Set<string>();
-        trails.forEach(t => t.locations?.forEach(l => locs.add(l)));
+        trails.forEach(t => t.locations?.forEach(l => locs.add(l.name)));
         return Array.from(locs).sort();
     }, [trails]);
 

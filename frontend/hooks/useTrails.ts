@@ -1,5 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 
+export interface LocationInfo {
+    name: string;
+    slug: string;
+}
+
 export interface Trail {
     id: string;
     name: string;
@@ -13,7 +18,7 @@ export interface Trail {
     trailType: string;
     startLatitude: number | null;
     startLongitude: number | null;
-    locations: string[];
+    locations: LocationInfo[];
     distanceToUser?: number; // in kilometers
 }
 
@@ -127,7 +132,7 @@ export function useTrails() {
 
             // Location
             if (filters.location !== 'All') {
-                if (!trail.locations || !trail.locations.some(l => l === filters.location)) return false;
+                if (!trail.locations || !trail.locations.some(l => l.name === filters.location)) return false;
             }
 
             return true;

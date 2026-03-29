@@ -62,7 +62,7 @@ export class QuoteService {
         { text: "Ekkert mál" },
         { text: "Sterkur og stór til fjalla fór" },
         { text: "skjótur varstu vinur og vaskur í för" },
-        { text: "Hello from the other side" },
+        { text: "Hello from the other side", author: "Adele" },
         { text: "Where you stumble, there lies your treasure" },
         { text: "Nothing worth doing, is easy" },
         { text: "If you want to go fast, go alone. If you want to go far, go together" },

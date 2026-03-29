@@ -127,13 +127,13 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                         />
                         {trail.locations && trail.locations.length > 0 && trail.locations.map((loc) => (
                             <Chip 
-                                key={loc}
+                                key={loc.slug}
                                 icon={<LocationOnIcon sx={{ fontSize: '1rem' }} />} 
-                                label={loc} 
+                                label={loc.name} 
                                 variant="outlined"
                                 color="secondary"
                                 component={RouterLink}
-                                to={`/locations/${loc.toLowerCase().replace(/\s+/g, '-')}`}
+                                to={`/locations/${loc.slug}`}
                                 clickable
                             />
                         ))}
