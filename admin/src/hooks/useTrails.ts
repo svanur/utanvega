@@ -10,6 +10,8 @@ export type Trail = {
     elevationLoss: number;
     status: 'Draft' | 'Published' | 'Flagged' | 'Archived' | 'Deleted';
     activityType: 'TrailRunning' | 'Running' | 'Cycling' | 'Hiking';
+    trailType: 'OutAndBack' | 'Loop' | 'PointToPoint';
+    locations: { name: string, slug: string }[];
 };
 
 export function useTrails(includeDeleted: boolean = false) {

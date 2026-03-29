@@ -75,6 +75,8 @@ export default function TrailList({ onNotify }: { onNotify: (message: string, se
               <TableCell align="right">Length (km)</TableCell>
               <TableCell align="right">Gain (m)</TableCell>
               <TableCell align="right">Loss (m)</TableCell>
+              <TableCell>Type</TableCell>
+              <TableCell>Location</TableCell>
               <TableCell>Status</TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
@@ -86,6 +88,10 @@ export default function TrailList({ onNotify }: { onNotify: (message: string, se
                 <TableCell align="right">{(trail.length / 1000).toFixed(2)}</TableCell>
                 <TableCell align="right">{Math.round(trail.elevationGain)}</TableCell>
                 <TableCell align="right">{Math.round(trail.elevationLoss)}</TableCell>
+                <TableCell>{trail.trailType}</TableCell>
+                <TableCell>
+                  {trail.locations?.map(l => l.name).join(', ') || 'N/A'}
+                </TableCell>
                 <TableCell>
                   <Chip 
                     label={trail.status} 
@@ -108,7 +114,7 @@ export default function TrailList({ onNotify }: { onNotify: (message: string, se
             ))}
             {trails.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} align="center">No trails found. Upload a GPX to get started!</TableCell>
+                <TableCell colSpan={8} align="center">No trails found. Upload a GPX to get started!</TableCell>
               </TableRow>
             )}
           </TableBody>

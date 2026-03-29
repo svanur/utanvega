@@ -37,6 +37,8 @@ public class UtanvegaDbContext : DbContext
                   .HasConversion<string>();
             entity.Property(e => e.ActivityTypeId)
                   .HasConversion<string>();
+            entity.Property(e => e.Type)
+                  .HasConversion<string>();
             entity.Property(e => e.Difficulty)
                   .HasConversion<string>();
             entity.Property(e => e.Visibility)
