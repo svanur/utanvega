@@ -16,17 +16,22 @@ import {
     Select,
     MenuItem,
     Grid,
-    Divider
+    Divider,
+    ToggleButton,
+    ToggleButtonGroup
 } from '@mui/material';
 import { 
     Search as SearchIcon, 
     Clear as ClearIcon, 
     FilterList as FilterIcon,
     ExpandMore as ExpandMoreIcon,
-    ExpandLess as ExpandLessIcon
+    ExpandLess as ExpandLessIcon,
+    List as ListIcon,
+    Map as MapIcon
 } from '@mui/icons-material';
 import { useTrails } from '../hooks/useTrails';
 import { TrailCard } from './TrailCard';
+import { TrailMapView } from './TrailMapView';
 
 export const TrailList: React.FC = () => {
     const { 
@@ -42,6 +47,7 @@ export const TrailList: React.FC = () => {
     } = useTrails();
 
     const [showAdvanced, setShowAdvanced] = React.useState(false);
+    const [viewMode, setViewMode] = React.useState<'list' | 'map'>('list');
 
     // Derived values for filters
     const locations = React.useMemo(() => {
@@ -77,7 +83,7 @@ export const TrailList: React.FC = () => {
     };
 
     return (
-        <Container maxWidth="sm" sx={{ py: 2 }}>
+        <Container maxWidth="md" sx={{ py: 2 }}>
             <Box mb={2}>
                 <TextField
                     fullWidth
@@ -234,25 +240,45 @@ export const TrailList: React.FC = () => {
 
             <Box mb={2} display="flex" justifyContent="space-between" alignItems="center">
                 <Typography variant="h5" fontWeight="bold">
-                    Nearby Trails
+                    {viewMode === 'list' ? 'Nearby Trails' : 'Trail Map'}
                 </Typography>
-                {!userLocation && (
-                    <Typography variant="caption" color="text.secondary">
-                        Enable location for distance sorting
-                    </Typography>
-                )}
+                <Box display="flex" alignItems="center" gap={1}>
+                    {!userLocation && viewMode === 'list' && (
+                        <Typography variant="caption" color="text.secondary">
+                            Enable location for distance sorting
+                        </Typography>
+                    )}
+                    <ToggleButtonGroup
+                        value={viewMode}
+                        exclusive
+                        onChange={(_, value) => value && setViewMode(value)}
+                        size="small"
+                        aria-label="view mode"
+                    >
+                        <ToggleButton value="list" aria-label="list view">
+                            <ListIcon fontSize="small" />
+                        </ToggleButton>
+                        <ToggleButton value="map" aria-label="map view">
+                            <MapIcon fontSize="small" />
+                        </ToggleButton>
+                    </ToggleButtonGroup>
+                </Box>
             </Box>
 
-            {trails.length === 0 ? (
-                <Typography color="text.secondary" textAlign="center" py={4}>
-                    {searchQuery || Object.values(filters).some(v => v !== 'All' && v !== 100 && v !== 0 && v !== 2000) 
-                        ? `No trails matching your search criteria` 
-                        : "No trails found."}
-                </Typography>
+            {viewMode === 'list' ? (
+                trails.length === 0 ? (
+                    <Typography color="text.secondary" textAlign="center" py={4}>
+                        {searchQuery || Object.values(filters).some(v => v !== 'All' && v !== 1000 && v !== 0 && v !== 5000) 
+                            ? `No trails matching your search criteria` 
+                            : "No trails found."}
+                    </Typography>
+                ) : (
+                    trails.map(trail => (
+                        <TrailCard key={trail.id} trail={trail} />
+                    ))
+                )
             ) : (
-                trails.map(trail => (
-                    <TrailCard key={trail.id} trail={trail} />
-                ))
+                <TrailMapView trails={trails} userLocation={userLocation} />
             )}
         </Container>
     );

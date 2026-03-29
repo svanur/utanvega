@@ -4,15 +4,8 @@
 
 [none yet]
 
-## Backlog
-
-- Display map, pin for each trail
-
-## In progress
-
-
-
 ## Done
+- Display map, pin for each trail
 - random quotes
 - Advanced search
 - Add simple search to trail list
