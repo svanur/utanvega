@@ -7,6 +7,7 @@
 In progress
 
 ## Done
+- Add location page with all locations and trails
 - Add location info
 - Display map, pin for each trail
 - random quotes

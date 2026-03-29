@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import { 
     Box, 
     Typography, 
@@ -10,7 +10,8 @@ import {
     Chip,
     Divider,
     Stack,
-    PaletteMode
+    PaletteMode,
+    Link
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import RouteIcon from '@mui/icons-material/Route';
@@ -131,6 +132,9 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                 label={loc} 
                                 variant="outlined"
                                 color="secondary"
+                                component={RouterLink}
+                                to={`/locations/${loc.toLowerCase().replace(/\s+/g, '-')}`}
+                                clickable
                             />
                         ))}
                         <ShareButtons title={trail.name} />
