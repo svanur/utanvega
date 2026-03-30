@@ -28,7 +28,7 @@ export default function QRCodeShare({ slug, trailName }: QRCodeShareProps) {
     // but usually users just want to open the page on their phone.
     // A more advanced version would point directly to a GPX export endpoint if available.
     const baseUrl = window.location.origin;
-    const trailUrl = `${baseUrl}/trail/${slug}`;
+    const trailUrl = `${baseUrl}/trails/${slug}`;
     
     // Garmin Connect "import" doesn't have a simple public URL-based deep link for generic GPX files
     // that works across all devices easily without a backend helper.
