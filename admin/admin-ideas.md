@@ -5,7 +5,6 @@
 [none yet]
 
 ## Backlog
-- Sort trail list by name, add sorting and filtering
 - 'Harden' the slugify of trail names, turn spaces into dashes, remove special characters change icelandic to english etc
 - Add 'History' table containing the 'utanvega' website history of changes and features
 - On 'Upload GPX Trail': figure out in which location this trail is located.
@@ -16,7 +15,8 @@
 - Add "Tags" to Trail - A Tag is some kind of a keyword, trail can have multiple tags
 
 ## In progress
-[none yet]
+
+- Client side: Sort trail list by name, add sorting and filtering & search ✓
 
 ## Done
 - Extend trail similarity check to 'Bulk Upload' for multiple GPX files.

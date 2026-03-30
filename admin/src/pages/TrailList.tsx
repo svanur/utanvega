@@ -1,4 +1,4 @@
-import { Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Chip, Button, CircularProgress, Alert, Box, Dialog, DialogTitle, DialogContent, IconButton, DialogActions, FormControlLabel, Switch, Checkbox } from '@mui/material';
+import { Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Chip, Button, CircularProgress, Alert, Box, Dialog, DialogTitle, DialogContent, IconButton, DialogActions, FormControlLabel, Switch, Checkbox, TextField, TableSortLabel, InputAdornment, MenuItem, Select, FormControl, InputLabel, Tooltip } from '@mui/material';
 import MapIcon from '@mui/icons-material/Map';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -6,7 +6,9 @@ import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import RestoreIcon from '@mui/icons-material/Restore';
-import { useState } from 'react';
+import SearchIcon from '@mui/icons-material/Search';
+import FilterAltOffIcon from '@mui/icons-material/FilterAltOff';
+import { useMemo, useState } from 'react';
 import { useTrails } from '../hooks/useTrails';
 import { apiFetch } from '../hooks/api';
 import TrailMap from '../components/TrailMap';
@@ -25,9 +27,54 @@ export default function TrailList({ onNotify }: { onNotify: (message: string, se
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkActioning, setBulkActioning] = useState(false);
 
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [orderBy, setOrderBy] = useState<string>('name');
+  const [order, setOrder] = useState<'asc' | 'desc'>('asc');
+
+  const filteredAndSortedTrails = useMemo(() => {
+    return trails
+      .filter((trail) => {
+        const matchesSearch = 
+          trail.name.toLowerCase().includes(search.toLowerCase()) || 
+          (trail.description?.toLowerCase().includes(search.toLowerCase()) ?? false);
+        const matchesStatus = statusFilter === 'all' || trail.status === statusFilter;
+        const matchesType = typeFilter === 'all' || trail.trailType === typeFilter;
+        return matchesSearch && matchesStatus && matchesType;
+      })
+      .sort((a, b) => {
+        const isAsc = order === 'asc';
+        let comparison = 0;
+        
+        const aValue = (a as any)[orderBy];
+        const bValue = (b as any)[orderBy];
+
+        if (aValue < bValue) comparison = -1;
+        if (aValue > bValue) comparison = 1;
+        
+        return isAsc ? comparison : -comparison;
+      });
+  }, [trails, search, statusFilter, typeFilter, orderBy, order]);
+
+  const handleRequestSort = (property: string) => {
+    const isAsc = orderBy === property && order === 'asc';
+    setOrder(isAsc ? 'desc' : 'asc');
+    setOrderBy(property);
+  };
+
+  const handleResetFilters = () => {
+    setSearch('');
+    setStatusFilter('all');
+    setTypeFilter('all');
+    setOrderBy('name');
+    setOrder('asc');
+    setIncludeDeleted(false);
+  };
+
   const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.checked) {
-      setSelectedIds(trails.map((t) => t.id));
+      setSelectedIds(filteredAndSortedTrails.map((t) => t.id));
     } else {
       setSelectedIds([]);
     }
@@ -163,29 +210,127 @@ export default function TrailList({ onNotify }: { onNotify: (message: string, se
           <Button startIcon={<RefreshIcon />} onClick={refresh}>Refresh</Button>
         </Box>
       </Box>
+
+      <Paper sx={{ mb: 3, p: 2, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+        <TextField
+          size="small"
+          placeholder="Search name or description..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          sx={{ minWidth: 300 }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          }}
+        />
+        <FormControl size="small" sx={{ minWidth: 150 }}>
+          <InputLabel>Status</InputLabel>
+          <Select
+            value={statusFilter}
+            label="Status"
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <MenuItem value="all">All Statuses</MenuItem>
+            <MenuItem value="Draft">Draft</MenuItem>
+            <MenuItem value="Published">Published</MenuItem>
+            <MenuItem value="Archived">Archived</MenuItem>
+            {includeDeleted && <MenuItem value="Deleted">Deleted</MenuItem>}
+          </Select>
+        </FormControl>
+        <FormControl size="small" sx={{ minWidth: 150 }}>
+          <InputLabel>Type</InputLabel>
+          <Select
+            value={typeFilter}
+            label="Type"
+            onChange={(e) => setTypeFilter(e.target.value)}
+          >
+            <MenuItem value="all">All Types</MenuItem>
+            <MenuItem value="Loop">Loop</MenuItem>
+            <MenuItem value="OutAndBack">Out and Back</MenuItem>
+            <MenuItem value="PointToPoint">Point to Point</MenuItem>
+          </Select>
+        </FormControl>
+        <Tooltip title="Reset all filters">
+          <IconButton onClick={handleResetFilters}>
+            <FilterAltOffIcon />
+          </IconButton>
+        </Tooltip>
+      </Paper>
+
       <TableContainer component={Paper}>
         <Table sx={{ minWidth: 650 }}>
           <TableHead>
             <TableRow>
               <TableCell padding="checkbox">
                 <Checkbox
-                  indeterminate={selectedIds.length > 0 && selectedIds.length < trails.length}
-                  checked={trails.length > 0 && selectedIds.length === trails.length}
+                  indeterminate={selectedIds.length > 0 && selectedIds.length < filteredAndSortedTrails.length}
+                  checked={filteredAndSortedTrails.length > 0 && selectedIds.length === filteredAndSortedTrails.length}
                   onChange={handleSelectAll}
                 />
               </TableCell>
-              <TableCell>Name</TableCell>
-              <TableCell align="right">Length (km)</TableCell>
-              <TableCell align="right">Gain (m)</TableCell>
-              <TableCell align="right">Loss (m)</TableCell>
-              <TableCell>Type</TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={orderBy === 'name'}
+                  direction={orderBy === 'name' ? order : 'asc'}
+                  onClick={() => handleRequestSort('name')}
+                >
+                  Name
+                </TableSortLabel>
+              </TableCell>
+              <TableCell align="right">
+                <TableSortLabel
+                  active={orderBy === 'length'}
+                  direction={orderBy === 'length' ? order : 'asc'}
+                  onClick={() => handleRequestSort('length')}
+                >
+                  Length (km)
+                </TableSortLabel>
+              </TableCell>
+              <TableCell align="right">
+                <TableSortLabel
+                  active={orderBy === 'elevationGain'}
+                  direction={orderBy === 'elevationGain' ? order : 'asc'}
+                  onClick={() => handleRequestSort('elevationGain')}
+                >
+                  Gain (m)
+                </TableSortLabel>
+              </TableCell>
+              <TableCell align="right">
+                <TableSortLabel
+                  active={orderBy === 'elevationLoss'}
+                  direction={orderBy === 'elevationLoss' ? order : 'asc'}
+                  onClick={() => handleRequestSort('elevationLoss')}
+                >
+                  Loss (m)
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={orderBy === 'trailType'}
+                  direction={orderBy === 'trailType' ? order : 'asc'}
+                  onClick={() => handleRequestSort('trailType')}
+                >
+                  Type
+                </TableSortLabel>
+              </TableCell>
               <TableCell>Location</TableCell>
-              <TableCell>Status</TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={orderBy === 'status'}
+                  direction={orderBy === 'status' ? order : 'asc'}
+                  onClick={() => handleRequestSort('status')}
+                >
+                  Status
+                </TableSortLabel>
+              </TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {trails.map((trail) => (
+            {filteredAndSortedTrails.map((trail) => (
               <TableRow 
                 key={trail.id} 
                 selected={selectedIds.includes(trail.id)}
@@ -197,7 +342,14 @@ export default function TrailList({ onNotify }: { onNotify: (message: string, se
                     onChange={() => handleSelectOne(trail.id)}
                   />
                 </TableCell>
-                <TableCell component="th" scope="row">{trail.name}</TableCell>
+                <TableCell component="th" scope="row">
+                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{trail.name}</Typography>
+                    {trail.description && (
+                        <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block', maxWidth: 300 }}>
+                            {trail.description}
+                        </Typography>
+                    )}
+                </TableCell>
                 <TableCell align="right">{(trail.length / 1000).toFixed(2)}</TableCell>
                 <TableCell align="right">{Math.round(trail.elevationGain)}</TableCell>
                 <TableCell align="right">{Math.round(trail.elevationLoss)}</TableCell>

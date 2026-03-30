@@ -4,6 +4,7 @@ import { apiFetch } from './api';
 export type Trail = {
     id: string;
     name: string;
+    description?: string;
     slug: string;
     length: number;
     elevationGain: number;
