@@ -2,11 +2,17 @@
 
 ## Need to explore and plan better
 
-[none yet]
+- Add 'Load more' button to trail list
 
-In progress
+## Backlog
+
+
+
+## In progress
+- Add total count of trails
 
 ## Done
+- Move Location chip to the top row next to ActivityType in trail list
 - Use location slug for links on trail details page
 - Display all trails in location as pins on location details map
 - Add location page with all locations and trails

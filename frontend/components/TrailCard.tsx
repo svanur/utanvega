@@ -73,13 +73,28 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail }) => {
                         <Typography variant="h6" component="div" fontWeight="bold">
                             {trail.name}
                         </Typography>
-                        <Chip 
-                            icon={getActivityIcon(trail.activityType)} 
-                            label={trail.activityType} 
-                            size="small" 
-                            variant="outlined" 
-                            color="primary"
-                        />
+                        <Stack direction="row" spacing={1} alignItems="center">
+                            <Chip 
+                                icon={getActivityIcon(trail.activityType)} 
+                                label={trail.activityType} 
+                                size="small" 
+                                variant="outlined" 
+                                color="primary"
+                            />
+                            {trail.locations?.map(loc => (
+                                <Chip
+                                    key={loc.slug}
+                                    label={loc.name}
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigate(`/locations/${loc.slug}`);
+                                    }}
+                                    sx={{ cursor: 'pointer' }}
+                                />
+                            ))}
+                        </Stack>
                     </Box>
 
                     {trail.description && (
