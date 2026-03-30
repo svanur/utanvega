@@ -23,6 +23,7 @@ using Utanvega.Backend.Application.Locations.Commands.DeleteLocation;
 using Utanvega.Backend.Application.History.Queries.GetChangeLogs;
 using Utanvega.Backend.Application.Trails.Queries.GetTrailBySlug;
 using Utanvega.Backend.Application.Locations.Queries.GetLocationBySlug;
+using Utanvega.Backend.Application.Trails.Queries.GetTrailGpx;
 using MediatR;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -223,6 +224,19 @@ app.MapGet("/api/v1/trails/{slug}/geometry", async (string slug, IMediator media
     return geoJson != null ? Results.Content(geoJson, "application/json") : Results.NotFound();
 })
 .WithName("GetPublicTrailGeometry");
+
+app.MapGet("/api/v1/trails/{slug}/gpx", async (string slug, IMediator mediator) =>
+{
+    var response = await mediator.Send(new GetTrailGpxQuery(slug));
+    if (response == null) return Results.NotFound();
+    
+    return Results.File(
+        Encoding.UTF8.GetBytes(response.Content), 
+        "application/gpx+xml", 
+        response.FileName
+    );
+})
+.WithName("GetPublicTrailGpx");
 
 app.MapGet("/api/v1/locations", async (IMediator mediator) =>
 {
