@@ -17,6 +17,8 @@
 
 ## In progress
 
+- Add 'bulk action' to Trail list: select multiple trails and perform an action on them
+
 ## Done
 - Bulk upload of GPX files: Create new Trail for each GPX file
 - Add columns to trail list: TrailType and Location

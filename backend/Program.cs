@@ -11,6 +11,7 @@ using Utanvega.Backend.Application.Trails.Commands.CreateTrailFromGpx;
 using Utanvega.Backend.Application.Trails.Commands.BulkCreateTrailsFromGpx;
 using Utanvega.Backend.Application.Trails.Commands.UpdateTrail;
 using Utanvega.Backend.Application.Trails.Commands.DeleteTrail;
+using Utanvega.Backend.Application.Trails.Commands.BulkTrailAction;
 using Utanvega.Backend.Application.Trails.Queries.GetTrails;
 using Utanvega.Backend.Application.Trails.Queries.GetTrailGeometry;
 using Utanvega.Backend.Application.Locations.Queries.GetLocations;
@@ -315,6 +316,13 @@ app.MapDelete("/api/v1/admin/trails/{id}", [Authorize] async (Guid id, IMediator
     return success ? Results.NoContent() : Results.NotFound();
 })
 .WithName("DeleteTrail");
+
+app.MapPost("/api/v1/admin/trails/bulk-action", [Authorize] async (BulkTrailActionCommand command, IMediator mediator) =>
+{
+    var count = await mediator.Send(command);
+    return Results.Ok(new { count });
+})
+.WithName("BulkTrailAction");
 
 app.MapGet("/api/v1/admin/trails/{idOrSlug}/geometry", [Authorize] async (string idOrSlug, IMediator mediator) =>
 {

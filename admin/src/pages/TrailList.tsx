@@ -1,4 +1,4 @@
-import { Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Chip, Button, CircularProgress, Alert, Box, Dialog, DialogTitle, DialogContent, IconButton, DialogActions, FormControlLabel, Switch } from '@mui/material';
+import { Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Chip, Button, CircularProgress, Alert, Box, Dialog, DialogTitle, DialogContent, IconButton, DialogActions, FormControlLabel, Switch, Checkbox } from '@mui/material';
 import MapIcon from '@mui/icons-material/Map';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -21,6 +21,53 @@ export default function TrailList({ onNotify }: { onNotify: (message: string, se
   const [trailToDelete, setTrailToDelete] = useState<{ id: string, name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
+
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkActioning, setBulkActioning] = useState(false);
+
+  const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.checked) {
+      setSelectedIds(trails.map((t) => t.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkAction = async (action: 'Delete' | 'UpdateStatus', value?: string) => {
+    if (selectedIds.length === 0) return;
+    
+    const confirmMessage = action === 'Delete' 
+        ? `Are you sure you want to delete ${selectedIds.length} trails?`
+        : `Are you sure you want to update status for ${selectedIds.length} trails?`;
+
+    if (!window.confirm(confirmMessage)) return;
+
+    try {
+        setBulkActioning(true);
+        await apiFetch('/api/v1/admin/trails/bulk-action', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ids: selectedIds,
+                action: action,
+                value: value
+            }),
+        });
+        onNotify(`Bulk action '${action}' completed successfully`);
+        setSelectedIds([]);
+        refresh();
+    } catch (err) {
+        onNotify(`Failed to perform bulk action: ${action}`, 'error');
+    } finally {
+        setBulkActioning(false);
+    }
+  };
 
   const handleDelete = async () => {
     if (!trailToDelete) return;
@@ -63,6 +110,45 @@ export default function TrailList({ onNotify }: { onNotify: (message: string, se
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4">Trails</Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          {selectedIds.length > 0 && (
+            <Box sx={{ bgcolor: 'action.selected', p: 1, borderRadius: 1, display: 'flex', gap: 1, alignItems: 'center' }}>
+              <Typography variant="body2" sx={{ mr: 1 }}>{selectedIds.length} selected</Typography>
+              <Button 
+                size="small" 
+                variant="outlined" 
+                color="error" 
+                startIcon={<DeleteIcon />}
+                onClick={() => handleBulkAction('Delete')}
+                disabled={bulkActioning}
+              >
+                Delete
+              </Button>
+              <Button 
+                size="small" 
+                variant="outlined" 
+                onClick={() => handleBulkAction('UpdateStatus', 'Published')}
+                disabled={bulkActioning}
+              >
+                Publish
+              </Button>
+              <Button 
+                size="small" 
+                variant="outlined" 
+                onClick={() => handleBulkAction('UpdateStatus', 'Draft')}
+                disabled={bulkActioning}
+              >
+                Draft
+              </Button>
+              <Button 
+                size="small" 
+                variant="outlined" 
+                onClick={() => handleBulkAction('UpdateStatus', 'Archived')}
+                disabled={bulkActioning}
+              >
+                Archive
+              </Button>
+            </Box>
+          )}
           <Button 
             variant="contained" 
             startIcon={<CloudUploadIcon />} 
@@ -81,6 +167,13 @@ export default function TrailList({ onNotify }: { onNotify: (message: string, se
         <Table sx={{ minWidth: 650 }}>
           <TableHead>
             <TableRow>
+              <TableCell padding="checkbox">
+                <Checkbox
+                  indeterminate={selectedIds.length > 0 && selectedIds.length < trails.length}
+                  checked={trails.length > 0 && selectedIds.length === trails.length}
+                  onChange={handleSelectAll}
+                />
+              </TableCell>
               <TableCell>Name</TableCell>
               <TableCell align="right">Length (km)</TableCell>
               <TableCell align="right">Gain (m)</TableCell>
@@ -93,7 +186,17 @@ export default function TrailList({ onNotify }: { onNotify: (message: string, se
           </TableHead>
           <TableBody>
             {trails.map((trail) => (
-              <TableRow key={trail.id} sx={{ opacity: trail.status === 'Deleted' ? 0.6 : 1, bgcolor: trail.status === 'Deleted' ? 'action.hover' : 'inherit' }}>
+              <TableRow 
+                key={trail.id} 
+                selected={selectedIds.includes(trail.id)}
+                sx={{ opacity: trail.status === 'Deleted' ? 0.6 : 1, bgcolor: trail.status === 'Deleted' ? 'action.hover' : 'inherit' }}
+              >
+                <TableCell padding="checkbox">
+                  <Checkbox
+                    checked={selectedIds.includes(trail.id)}
+                    onChange={() => handleSelectOne(trail.id)}
+                  />
+                </TableCell>
                 <TableCell component="th" scope="row">{trail.name}</TableCell>
                 <TableCell align="right">{(trail.length / 1000).toFixed(2)}</TableCell>
                 <TableCell align="right">{Math.round(trail.elevationGain)}</TableCell>
@@ -124,7 +227,7 @@ export default function TrailList({ onNotify }: { onNotify: (message: string, se
             ))}
             {trails.length === 0 && (
               <TableRow>
-                <TableCell colSpan={8} align="center">No trails found. Upload a GPX to get started!</TableCell>
+                <TableCell colSpan={9} align="center">No trails found. Upload a GPX to get started!</TableCell>
               </TableRow>
             )}
           </TableBody>
