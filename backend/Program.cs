@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.EntityFrameworkCore;
 
 using Utanvega.Backend.Application.Trails.Commands.CreateTrailFromGpx;
+using Utanvega.Backend.Application.Trails.Commands.CheckTrailSimilarity;
 using Utanvega.Backend.Application.Trails.Commands.BulkCreateTrailsFromGpx;
 using Utanvega.Backend.Application.Trails.Commands.UpdateTrail;
 using Utanvega.Backend.Application.Trails.Commands.DeleteTrail;
@@ -137,6 +138,7 @@ builder.Services.AddDbContext<UtanvegaDbContext>(options =>
 
 // Add CQRS with MediatR
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
+builder.Services.AddScoped<CreateTrailFromGpxCommandHandler>();
 
 // builder.Services.AddEndpointsApiExplorer();
 // builder.Services.AddSwaggerGen();
@@ -343,8 +345,20 @@ app.MapPost("/api/v1/admin/trails/upload-gpx", [Authorize] async (string name, I
     try 
     {
         var command = new CreateTrailFromGpxCommand(name, gpxXml);
-        var trailId = await mediator.Send(command);
-        return Results.Created($"/api/v1/admin/trails/{trailId}", new { id = trailId });
+        var result = await mediator.Send(command);
+        
+        var response = new 
+        { 
+            id = result.Id,
+            matches = result.Matches.Select(m => new {
+                trailId = m.TrailId,
+                trailName = m.TrailName,
+                matchPercentage = m.MatchPercentage,
+                message = $"This trail is a {m.MatchPercentage}% match to '{m.TrailName}'"
+            })
+        };
+        
+        return Results.Created($"/api/v1/admin/trails/{result.Id}", response);
     }
     catch (Exception ex)
     {
@@ -353,6 +367,35 @@ app.MapPost("/api/v1/admin/trails/upload-gpx", [Authorize] async (string name, I
 })
 .WithName("UploadGpx")
 .DisableAntiforgery(); // Simple for dev, adjust for prod security
+
+app.MapPost("/api/v1/admin/trails/check-similarity", [Authorize] async (string? name, IFormFile file, IMediator mediator) =>
+{
+    if (file == null || file.Length == 0) return Results.BadRequest("No file uploaded.");
+    
+    using var reader = new StreamReader(file.OpenReadStream());
+    var gpxXml = await reader.ReadToEndAsync();
+    
+    try 
+    {
+        var command = new CheckTrailSimilarityCommand(name, gpxXml);
+        var matches = await mediator.Send(command);
+        
+        var response = matches.Select(m => new {
+            trailId = m.TrailId,
+            trailName = m.TrailName,
+            matchPercentage = m.MatchPercentage,
+            message = $"This trail is a {m.MatchPercentage}% match to '{m.TrailName}'"
+        });
+        
+        return Results.Ok(response);
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(ex.Message);
+    }
+})
+.WithName("CheckTrailSimilarity")
+.DisableAntiforgery();
 
 app.MapPost("/api/v1/admin/trails/bulk-upload-gpx", [Authorize] async (HttpContext context, IMediator mediator) =>
 {
