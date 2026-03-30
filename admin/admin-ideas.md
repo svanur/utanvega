@@ -19,6 +19,7 @@
 [none yet]
 
 ## Done
+- Extend trail similarity check to 'Bulk Upload' for multiple GPX files.
 - Sort trail similarity list by percentage descending and color background based on similarity degree.
 - Display trail similarity information BEFORE the upload button is clicked in the GPX upload popup.
 - The 'Trail similarity' has to be displayed in the 'Upload GPX Trail' popup.

@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Utanvega.Backend.Application.Trails.Commands.CreateTrailFromGpx;
 using Utanvega.Backend.Application.Trails.Commands.CheckTrailSimilarity;
 using Utanvega.Backend.Application.Trails.Commands.BulkCreateTrailsFromGpx;
+using Utanvega.Backend.Application.Trails.Commands.BulkCheckTrailSimilarity;
 using Utanvega.Backend.Application.Trails.Commands.UpdateTrail;
 using Utanvega.Backend.Application.Trails.Commands.DeleteTrail;
 using Utanvega.Backend.Application.Trails.Commands.BulkTrailAction;
@@ -397,7 +398,7 @@ app.MapPost("/api/v1/admin/trails/check-similarity", [Authorize] async (string? 
 .WithName("CheckTrailSimilarity")
 .DisableAntiforgery();
 
-app.MapPost("/api/v1/admin/trails/bulk-upload-gpx", [Authorize] async (HttpContext context, IMediator mediator) =>
+app.MapPost("/api/v1/admin/trails/bulk-check-similarity", [Authorize] async (HttpContext context, IMediator mediator) =>
 {
     var form = await context.Request.ReadFormAsync();
     var files = form.Files.GetFiles("files");
@@ -405,7 +406,7 @@ app.MapPost("/api/v1/admin/trails/bulk-upload-gpx", [Authorize] async (HttpConte
 
     if (files == null || files.Count == 0) return Results.BadRequest("No files uploaded.");
     
-    var gpxFiles = new List<GpxFileInfo>();
+    var gpxFiles = new List<Utanvega.Backend.Application.Trails.Commands.BulkCheckTrailSimilarity.GpxFileInfo>();
     for (int i = 0; i < files.Count; i++)
     {
         var file = files[i];
@@ -414,7 +415,53 @@ app.MapPost("/api/v1/admin/trails/bulk-upload-gpx", [Authorize] async (HttpConte
         using var reader = new StreamReader(file.OpenReadStream());
         var gpxXml = await reader.ReadToEndAsync();
         
-        gpxFiles.Add(new GpxFileInfo(name, gpxXml));
+        gpxFiles.Add(new Utanvega.Backend.Application.Trails.Commands.BulkCheckTrailSimilarity.GpxFileInfo(name, gpxXml, file.FileName));
+    }
+    
+    try 
+    {
+        var command = new BulkCheckTrailSimilarityCommand(gpxFiles);
+        var results = await mediator.Send(command);
+        
+        var response = results.Select(r => new {
+            fileName = r.FileName,
+            name = r.Name,
+            matches = r.Matches.Select(m => new {
+                trailId = m.TrailId,
+                trailName = m.TrailName,
+                matchPercentage = m.MatchPercentage,
+                message = $"This trail is a {m.MatchPercentage}% match to '{m.TrailName}'"
+            })
+        });
+        
+        return Results.Ok(response);
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(ex.Message);
+    }
+})
+.WithName("BulkCheckTrailSimilarity")
+.DisableAntiforgery();
+
+app.MapPost("/api/v1/admin/trails/bulk-upload-gpx", [Authorize] async (HttpContext context, IMediator mediator) =>
+{
+    var form = await context.Request.ReadFormAsync();
+    var files = form.Files.GetFiles("files");
+    var names = form.TryGetValue("names", out var namesList) ? namesList.ToList() : new List<string?>();
+
+    if (files == null || files.Count == 0) return Results.BadRequest("No files uploaded.");
+    
+    var gpxFiles = new List<Utanvega.Backend.Application.Trails.Commands.BulkCreateTrailsFromGpx.GpxFileInfo>();
+    for (int i = 0; i < files.Count; i++)
+    {
+        var file = files[i];
+        var name = names.Count > i ? names[i] : null;
+
+        using var reader = new StreamReader(file.OpenReadStream());
+        var gpxXml = await reader.ReadToEndAsync();
+        
+        gpxFiles.Add(new Utanvega.Backend.Application.Trails.Commands.BulkCreateTrailsFromGpx.GpxFileInfo(name, gpxXml));
     }
     
     try 
