@@ -113,17 +113,27 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                 Back to Trails
             </Button>
 
-            <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
-                <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
-                    <Typography variant="h4" component="h1" fontWeight="bold">
+            <Paper elevation={3} sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
+                <Box mb={3}>
+                    <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
                         {trail.name}
                     </Typography>
-                    <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                    
+                    <Stack 
+                        direction="row" 
+                        spacing={1} 
+                        alignItems="center" 
+                        justifyContent="flex-end"
+                        flexWrap="wrap" 
+                        useFlexGap 
+                        sx={{ mb: 2 }}
+                    >
                         <Chip 
                             icon={getActivityIcon(trail.activityType)} 
                             label={trail.activityType} 
                             color="primary" 
                             variant="outlined" 
+                            size="small"
                         />
                         {trail.locations && trail.locations.length > 0 && trail.locations.map((loc) => (
                             <Chip 
@@ -135,43 +145,46 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                 component={RouterLink}
                                 to={`/locations/${loc.slug}`}
                                 clickable
+                                size="small"
                             />
                         ))}
                         <ShareButtons title={trail.name} />
                         <QRCodeShare slug={trail.slug} trailName={trail.name} />
                     </Stack>
-                </Box>
 
-                <Grid container spacing={2} sx={{ mb: 3 }}>
-                    <Grid item xs={3} sm={3}>
-                        <Stack alignItems="center" spacing={0.5} justifyContent="center">
-                            <RouteIcon color="action" />
-                            <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>Distance</Typography>
-                            <Typography variant="h6" sx={{ fontSize: { xs: '0.9rem', sm: '1.25rem' } }}>{distanceKm} km</Typography>
-                        </Stack>
+                    <Divider sx={{ my: 2, display: { xs: 'block', sm: 'none' }, opacity: 0.6 }} />
+
+                    <Grid container spacing={1} sx={{ mt: 1 }}>
+                        <Grid item xs={3}>
+                            <Stack alignItems="center" spacing={0.5}>
+                                <RouteIcon color="action" fontSize="small" />
+                                <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>Distance</Typography>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>{distanceKm} km</Typography>
+                            </Stack>
+                        </Grid>
+                        <Grid item xs={3}>
+                            <Stack alignItems="center" spacing={0.5}>
+                                <TrendingUpIcon color="action" fontSize="small" />
+                                <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>Gain</Typography>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>+{Math.round(trail.elevationGain)}m</Typography>
+                            </Stack>
+                        </Grid>
+                        <Grid item xs={3}>
+                            <Stack alignItems="center" spacing={0.5}>
+                                <TrendingDownIcon color="action" fontSize="small" />
+                                <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>Loss</Typography>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>-{Math.round(trail.elevationLoss)}m</Typography>
+                            </Stack>
+                        </Grid>
+                        <Grid item xs={3}>
+                            <Stack alignItems="center" spacing={0.5}>
+                                {getTrailTypeIcon(trail.trailType)}
+                                <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>Type</Typography>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', textAlign: 'center' }}>{getTrailTypeLabel(trail.trailType)}</Typography>
+                            </Stack>
+                        </Grid>
                     </Grid>
-                    <Grid item xs={3} sm={3}>
-                        <Stack alignItems="center" spacing={0.5} justifyContent="center">
-                            <TrendingUpIcon color="action" />
-                            <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>Elevation Gain</Typography>
-                            <Typography variant="h6" sx={{ fontSize: { xs: '0.9rem', sm: '1.25rem' } }}>+{Math.round(trail.elevationGain)} m</Typography>
-                        </Stack>
-                    </Grid>
-                    <Grid item xs={3} sm={3}>
-                        <Stack alignItems="center" spacing={0.5} justifyContent="center">
-                            <TrendingDownIcon color="action" />
-                            <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>Elevation Loss</Typography>
-                            <Typography variant="h6" sx={{ fontSize: { xs: '0.9rem', sm: '1.25rem' } }}>-{Math.round(trail.elevationLoss)} m</Typography>
-                        </Stack>
-                    </Grid>
-                    <Grid item xs={3} sm={3}>
-                        <Stack alignItems="center" spacing={0.5} justifyContent="center">
-                            {getTrailTypeIcon(trail.trailType)}
-                            <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>Trail Type</Typography>
-                            <Typography variant="h6" sx={{ fontSize: { xs: '0.8rem', sm: '1.25rem' }, textAlign: 'center', lineHeight: 1.1 }}>{getTrailTypeLabel(trail.trailType)}</Typography>
-                        </Stack>
-                    </Grid>
-                </Grid>
+                </Box>
 
                 <Divider sx={{ mb: 3 }} />
 
