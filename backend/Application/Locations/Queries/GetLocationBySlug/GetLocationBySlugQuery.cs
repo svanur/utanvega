@@ -45,7 +45,8 @@ public class GetLocationBySlugQueryHandler : IRequestHandler<GetLocationBySlugQu
             location.Center?.Y,
             location.Center?.X,
             location.Radius,
-            location.Children.Count
+            location.Children.Count,
+            _context.TrailLocations.Count(tl => tl.LocationId == location.Id)
         );
 
         var trails = await _context.Trails

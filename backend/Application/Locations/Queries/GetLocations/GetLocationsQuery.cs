@@ -51,7 +51,8 @@ public class GetLocationsQueryHandler : IRequestHandler<GetLocationsQuery, List<
                 l.Center != null ? l.Center.Y : null,
                 l.Center != null ? l.Center.X : null,
                 l.Radius,
-                l.Children.Count
+                l.Children.Count,
+                l.TrailLocations.Count
             ))
             .ToListAsync(cancellationToken);
     }

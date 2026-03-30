@@ -13,6 +13,7 @@ export interface Location {
     longitude?: number;
     radius?: number;
     childrenCount: number;
+    trailsCount: number;
 }
 
 export interface LocationWithTrails {

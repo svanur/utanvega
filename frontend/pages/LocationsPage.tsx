@@ -85,11 +85,21 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                                                 variant="outlined" 
                                                 color="secondary" 
                                             />
-                                            {loc.childrenCount > 0 && (
-                                                <Typography variant="caption" color="text.secondary">
-                                                    {loc.childrenCount} sub-locations
-                                                </Typography>
-                                            )}
+                                            <Stack direction="row" spacing={1} alignItems="center">
+                                                {loc.childrenCount > 0 && (
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        {loc.childrenCount} sub-locations
+                                                    </Typography>
+                                                )}
+                                                {loc.childrenCount > 0 && loc.trailsCount > 0 && (
+                                                    <Typography variant="caption" color="text.secondary">•</Typography>
+                                                )}
+                                                {loc.trailsCount > 0 && (
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        {loc.trailsCount} trails
+                                                    </Typography>
+                                                )}
+                                            </Stack>
                                         </Box>
                                         {loc.description && (
                                             <Typography variant="body2" color="text.secondary" sx={{ mt: 1, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>

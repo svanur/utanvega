@@ -13,5 +13,6 @@ public record LocationDto(
     double? Latitude,
     double? Longitude,
     double? Radius,
-    int ChildrenCount
+    int ChildrenCount,
+    int TrailsCount
 );
