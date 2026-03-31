@@ -19,4 +19,6 @@ public class TrailLocation
     public Location Location { get; set; } = null!;
     
     public TrailLocationRole Role { get; set; } = TrailLocationRole.BelongsTo;
+    
+    public int Order { get; set; } = 0;
 }

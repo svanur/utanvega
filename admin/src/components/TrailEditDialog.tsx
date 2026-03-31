@@ -8,6 +8,7 @@ import ChangeLogList from './ChangeLogList';
 type TrailLocationInfo = {
     locationId: string;
     role: 'Start' | 'End' | 'BelongsTo' | 'PassingThrough';
+    order: number;
 };
 
 type TrailDetail = {
@@ -108,7 +109,8 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
                     updatedBy: 'admin', // Simple for now
                     locations: trail.locations.map(l => ({
                         locationId: l.locationId,
-                        role: l.role
+                        role: l.role,
+                        order: l.order
                     }))
                 }),
             });
@@ -135,7 +137,7 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
             setError('This location is already linked to this trail.');
             return;
         }
-        const updatedLocations = [...trail.locations, { locationId: newLocId, role: newLocRole }];
+        const updatedLocations = [...trail.locations, { locationId: newLocId, role: newLocRole, order: trail.locations.length }];
         setTrail({ ...trail, locations: updatedLocations });
         setNewLocId('');
     };

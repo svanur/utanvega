@@ -307,8 +307,9 @@ app.MapGet("/api/v1/admin/trails/{idOrSlug}", [Authorize] async (string idOrSlug
             Locations = t.TrailLocations.Select(tl => new
             {
                 tl.LocationId,
-                Role = tl.Role.ToString()
-            }).ToList()
+                Role = tl.Role.ToString(),
+                tl.Order
+            }).OrderBy(tl => tl.Order).ToList()
         });
 
     var trail = isGuid 

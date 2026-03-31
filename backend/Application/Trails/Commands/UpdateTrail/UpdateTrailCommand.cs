@@ -7,7 +7,8 @@ namespace Utanvega.Backend.Application.Trails.Commands.UpdateTrail;
 
 public record TrailLocationUpdateDto(
     Guid LocationId,
-    string Role
+    string Role,
+    int Order
 );
 
 public record UpdateTrailCommand(
@@ -90,18 +91,24 @@ public class UpdateTrailCommandHandler : IRequestHandler<UpdateTrailCommand, boo
                 }
             }
 
-            // Add new locations
+            // Add or Update locations
             foreach (var requested in requestedLocations)
             {
                 if (Enum.TryParse<TrailLocationRole>(requested.Role, true, out var role))
                 {
-                    if (!currentLocations.Any(c => c.LocationId == requested.LocationId && c.Role == role))
+                    var existing = currentLocations.FirstOrDefault(c => c.LocationId == requested.LocationId && c.Role == role);
+                    if (existing != null)
+                    {
+                        existing.Order = requested.Order;
+                    }
+                    else
                     {
                         var newTL = new TrailLocation
                         {
                             TrailId = trail.Id,
                             LocationId = requested.LocationId,
-                            Role = role
+                            Role = role,
+                            Order = requested.Order
                         };
                         _context.TrailLocations.Add(newTL);
                     }
