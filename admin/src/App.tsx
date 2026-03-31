@@ -1,4 +1,4 @@
-import { Box, CssBaseline, ThemeProvider, createTheme, AppBar, Toolbar, Typography, Container, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Fab, Snackbar, Alert, Button, CircularProgress } from '@mui/material';
+import { Box, CssBaseline, ThemeProvider, createTheme, AppBar, Toolbar, Typography, Container, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Fab, Snackbar, Alert, Button, CircularProgress, Link } from '@mui/material';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
@@ -29,13 +29,14 @@ function AdminContent() {
   const [currentPage, setCurrentPage] = useState<'trails' | 'locations'>('trails');
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [snackbar, setSnackbar] = useState<{ open: boolean, message: string, severity: 'success' | 'error' }>({
+  const [selectedTrailId, setSelectedTrailId] = useState<string | null>(null);
+  const [snackbar, setSnackbar] = useState<{ open: boolean, message: React.ReactNode, severity: 'success' | 'error' }>({
     open: false,
     message: '',
     severity: 'success'
   });
 
-  const notify = (message: string, severity: 'success' | 'error' = 'success') => {
+  const notify = (message: React.ReactNode, severity: 'success' | 'error' = 'success') => {
     setSnackbar({ open: true, message, severity });
   };
 
@@ -43,8 +44,24 @@ function AdminContent() {
     setSnackbar({ ...snackbar, open: false });
   };
 
-  const handleUploadSuccess = () => {
-    notify('Trail uploaded successfully');
+  const handleUploadSuccess = (trail?: { id: string, slug: string, name: string }) => {
+    if (trail) {
+      notify(
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography variant="body2">Trail '{trail.name}' uploaded successfully.</Typography>
+          <Link 
+            component="button"
+            onClick={() => setSelectedTrailId(trail.id)}
+            color="inherit" 
+            sx={{ fontWeight: 'bold', textDecoration: 'underline', verticalAlign: 'baseline', fontSize: 'inherit', p: 0 }}
+          >
+            View Trail
+          </Link>
+        </Box>
+      );
+    } else {
+      notify('Trail uploaded successfully');
+    }
     setRefreshTrigger(prev => prev + 1);
     setCurrentPage('trails');
   };
@@ -103,7 +120,7 @@ function AdminContent() {
         <Toolbar />
         <Container maxWidth="lg">
           {currentPage === 'trails' ? (
-            <TrailList key={refreshTrigger} onNotify={notify} />
+            <TrailList key={`${refreshTrigger}-${selectedTrailId}`} onNotify={notify} initialTrailId={selectedTrailId} />
           ) : (
             <LocationList onNotify={notify} />
           )}

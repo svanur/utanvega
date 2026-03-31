@@ -335,6 +335,21 @@ app.MapDelete("/api/v1/admin/trails/{id}", [Authorize] async (Guid id, IMediator
 })
 .WithName("DeleteTrail");
 
+app.MapPatch("/api/v1/admin/trails/{id}/status", [Authorize] async (Guid id, [Microsoft.AspNetCore.Mvc.FromBody] string status, UtanvegaDbContext context) =>
+{
+    var trail = await context.Trails.FindAsync(id);
+    if (trail == null) return Results.NotFound();
+
+    if (Enum.TryParse<Utanvega.Backend.Core.Entities.TrailStatus>(status, true, out var trailStatus))
+    {
+        trail.Status = trailStatus;
+        await context.SaveChangesWithAuditAsync("admin");
+        return Results.NoContent();
+    }
+    return Results.BadRequest("Invalid status");
+})
+.WithName("UpdateTrailStatus");
+
 app.MapPost("/api/v1/admin/trails/bulk-action", [Authorize] async (BulkTrailActionCommand command, IMediator mediator) =>
 {
     var count = await mediator.Send(command);
@@ -366,6 +381,8 @@ app.MapPost("/api/v1/admin/trails/upload-gpx", [Authorize] async (string name, I
         var response = new 
         { 
             id = result.Id,
+            slug = result.Slug,
+            name = result.Name,
             matches = result.Matches.Select(m => new {
                 trailId = m.TrailId,
                 trailName = m.TrailName,

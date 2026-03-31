@@ -20,7 +20,7 @@ import { apiFetch } from '../hooks/api';
 
 interface GpxBulkUploadProps {
   onUploadSuccess: () => void;
-  onNotify: (message: string, severity?: 'success' | 'error') => void;
+  onNotify: (message: React.ReactNode, severity?: 'success' | 'error') => void;
 }
 
 interface GpxFile {

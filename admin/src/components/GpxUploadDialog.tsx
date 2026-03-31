@@ -13,7 +13,7 @@ interface SimilarityMatch {
     message: string;
 }
 
-export default function GpxUploadDialog({ open, onClose, onUploadSuccess }: { open: boolean, onClose: () => void, onUploadSuccess: () => void }) {
+export default function GpxUploadDialog({ open, onClose, onUploadSuccess }: { open: boolean, onClose: () => void, onUploadSuccess: (trail?: { id: string, slug: string, name: string }) => void }) {
     const [name, setName] = useState('');
     const [file, setFile] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
@@ -131,7 +131,7 @@ export default function GpxUploadDialog({ open, onClose, onUploadSuccess }: { op
             const result = await response.json();
             
             // Success!
-            onUploadSuccess();
+            onUploadSuccess({ id: result.id, slug: result.slug || name.toLowerCase().replace(/ /g, '-'), name });
             handleClose();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Unknown error');

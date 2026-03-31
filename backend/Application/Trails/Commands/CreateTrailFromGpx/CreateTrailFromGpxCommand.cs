@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Utanvega.Backend.Application.Trails.Commands.CreateTrailFromGpx;
 
-public record CreateTrailFromGpxResult(Guid Id, List<TrailSimilarityMatch> Matches);
+public record CreateTrailFromGpxResult(Guid Id, string Slug, string Name, List<TrailSimilarityMatch> Matches);
 
 public record TrailSimilarityMatch(Guid TrailId, string TrailName, double MatchPercentage);
 
@@ -35,7 +35,7 @@ public class CreateTrailFromGpxCommandHandler : IRequestHandler<CreateTrailFromG
         _context.Trails.Add(trail);
         await _context.SaveChangesWithAuditAsync("system"); // Could pass user if available
         
-        return new CreateTrailFromGpxResult(trail.Id, matches);
+        return new CreateTrailFromGpxResult(trail.Id, trail.Slug, trail.Name, matches);
     }
 
     public async Task<List<TrailSimilarityMatch>> CheckSimilarityAsync(Trail trail, CancellationToken cancellationToken)

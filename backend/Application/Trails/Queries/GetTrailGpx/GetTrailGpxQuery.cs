@@ -35,7 +35,7 @@ public class GetTrailGpxQueryHandler : IRequestHandler<GetTrailGpxQuery, GpxResp
                 new XAttribute("creator", "Utanvega"),
                 new XElement(ns + "metadata",
                     new XElement(ns + "name", trail.Name),
-                    new XElement(ns + "link", new XAttribute("href", $"https://utanvega.is/trails/{trail.Slug}"),
+                    new XElement(ns + "link", new XAttribute("href", $"https://utanvega.vercel.app/trails/{trail.Slug}"),
                         new XElement(ns + "text", "Utanvega Trail"))
                 ),
                 new XElement(ns + "trk",

@@ -1,4 +1,5 @@
-import { Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Chip, Button, CircularProgress, Alert, Box, Dialog, DialogTitle, DialogContent, IconButton, DialogActions, FormControlLabel, Switch, Checkbox, TextField, TableSortLabel, InputAdornment, MenuItem, Select, FormControl, InputLabel, Tooltip } from '@mui/material';
+import { Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Chip, Button, CircularProgress, Alert, Box, Dialog, DialogTitle, DialogContent, IconButton, DialogActions, FormControlLabel, Switch, Checkbox, TextField, TableSortLabel, InputAdornment, MenuItem, Select, FormControl, InputLabel, Tooltip, Link } from '@mui/material';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import MapIcon from '@mui/icons-material/Map';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -15,11 +16,11 @@ import TrailMap from '../components/TrailMap';
 import TrailEditDialog from '../components/TrailEditDialog';
 import GpxBulkUpload from '../components/GpxBulkUpload';
 
-export default function TrailList({ onNotify }: { onNotify: (message: string, severity?: 'success' | 'error') => void }) {
+export default function TrailList({ onNotify, initialTrailId }: { onNotify: (message: React.ReactNode, severity?: 'success' | 'error') => void, initialTrailId?: string | null }) {
   const [includeDeleted, setIncludeDeleted] = useState(false);
   const { trails, loading, error, refresh } = useTrails(includeDeleted);
   const [selectedTrailMap, setSelectedTrailMap] = useState<{ id: string, name: string } | null>(null);
-  const [selectedTrailEdit, setSelectedTrailEdit] = useState<string | null>(null);
+  const [selectedTrailEdit, setSelectedTrailEdit] = useState<string | null>(initialTrailId || null);
   const [trailToDelete, setTrailToDelete] = useState<{ id: string, name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
@@ -146,6 +147,20 @@ export default function TrailList({ onNotify }: { onNotify: (message: string, se
         refresh();
     } catch (err) {
         onNotify('Failed to restore trail', 'error');
+    }
+  };
+
+  const handleUpdateStatus = async (trailId: string, newStatus: string) => {
+    try {
+        await apiFetch(`/api/v1/admin/trails/${trailId}/status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newStatus),
+        });
+        onNotify(`Trail status updated to ${newStatus}`);
+        refresh();
+    } catch (err) {
+        onNotify('Failed to update trail status', 'error');
     }
   };
 
@@ -326,6 +341,7 @@ export default function TrailList({ onNotify }: { onNotify: (message: string, se
                   Status
                 </TableSortLabel>
               </TableCell>
+              <TableCell align="center">Web</TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -362,7 +378,25 @@ export default function TrailList({ onNotify }: { onNotify: (message: string, se
                     label={trail.status} 
                     color={trail.status === 'Published' ? 'success' : trail.status === 'Deleted' ? 'error' : 'default'} 
                     size="small" 
+                    onClick={() => {
+                      if (trail.status === 'Deleted') return;
+                      const nextStatus = trail.status === 'Published' ? 'Draft' : 'Published';
+                      handleUpdateStatus(trail.id, nextStatus);
+                    }}
+                    sx={{ cursor: trail.status === 'Deleted' ? 'default' : 'pointer' }}
                   />
+                </TableCell>
+                <TableCell align="center">
+                  <Tooltip title="View trail on website">
+                    <IconButton 
+                      size="small" 
+                      component="a" 
+                      href={`https://utanvega.vercel.app/trails/${trail.slug}`} 
+                      target="_blank"
+                    >
+                      <OpenInNewIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
                 </TableCell>
                 <TableCell align="right">
                   <Button size="small" startIcon={<MapIcon />} onClick={() => setSelectedTrailMap({ id: trail.id, name: trail.name })}>Map</Button>
@@ -379,7 +413,7 @@ export default function TrailList({ onNotify }: { onNotify: (message: string, se
             ))}
             {trails.length === 0 && (
               <TableRow>
-                <TableCell colSpan={9} align="center">No trails found. Upload a GPX to get started!</TableCell>
+                <TableCell colSpan={10} align="center">No trails found. Upload a GPX to get started!</TableCell>
               </TableRow>
             )}
           </TableBody>
@@ -411,8 +445,24 @@ export default function TrailList({ onNotify }: { onNotify: (message: string, se
         open={Boolean(selectedTrailEdit)} 
         trailId={selectedTrailEdit} 
         onClose={() => setSelectedTrailEdit(null)} 
-        onSaveSuccess={() => {
-            onNotify('Trail updated successfully');
+        onSaveSuccess={(trail) => {
+            if (trail) {
+              onNotify(
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="body2">Trail '{trail.name}' updated successfully.</Typography>
+                      <Link 
+                        component="button"
+                        onClick={() => setSelectedTrailEdit(trail.id)}
+                        color="inherit" 
+                        sx={{ fontWeight: 'bold', textDecoration: 'underline', verticalAlign: 'baseline', fontSize: 'inherit', p: 0 }}
+                      >
+                        View Trail
+                      </Link>
+                </Box>
+              );
+            } else {
+              onNotify('Trail updated successfully');
+            }
             refresh();
         }}
       />
@@ -444,7 +494,7 @@ function BulkUploadDialog({ open, onClose, onUploadSuccess, onNotify }: {
   open: boolean, 
   onClose: () => void, 
   onUploadSuccess: () => void, 
-  onNotify: (message: string, severity?: 'success' | 'error') => void 
+  onNotify: (message: React.ReactNode, severity?: 'success' | 'error') => void 
 }) {
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
