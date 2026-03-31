@@ -69,52 +69,43 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail }) => {
         <Card sx={{ mb: 2, overflow: 'visible', position: 'relative' }}>
             <CardActionArea onClick={handleClick}>
                 <CardContent>
-                    <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
-                        <Typography variant="h6" component="div" fontWeight="bold">
-                            {trail.name}
-                        </Typography>
-                        <Stack direction="row" spacing={1} alignItems="center">
-                            <Chip 
-                                icon={getActivityIcon(trail.activityType)} 
-                                label={trail.activityType} 
-                                size="small" 
-                                variant="outlined" 
-                                color="primary"
+                    {/* 1st row: Trail name */}
+                    <Typography variant="h6" component="div" fontWeight="bold">
+                        {trail.name}
+                    </Typography>
+
+                    {/* 2nd row: ActivityType and locations */}
+                    <Box 
+                        mt={1}
+                        display="flex" 
+                        flexWrap="wrap" 
+                        gap={1}
+                        justifyContent="flex-end"
+                    >
+                        <Chip 
+                            icon={getActivityIcon(trail.activityType)} 
+                            label={trail.activityType} 
+                            size="small" 
+                            variant="outlined" 
+                            color="primary"
+                        />
+                        {trail.locations?.map(loc => (
+                            <Chip
+                                key={loc.slug}
+                                label={loc.name}
+                                size="small"
+                                variant="outlined"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/locations/${loc.slug}`);
+                                }}
+                                sx={{ cursor: 'pointer' }}
                             />
-                            {trail.locations?.map(loc => (
-                                <Chip
-                                    key={loc.slug}
-                                    label={loc.name}
-                                    size="small"
-                                    variant="outlined"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        navigate(`/locations/${loc.slug}`);
-                                    }}
-                                    sx={{ cursor: 'pointer' }}
-                                />
-                            ))}
-                        </Stack>
+                        ))}
                     </Box>
 
-                    {trail.description && (
-                        <Typography 
-                            variant="body2" 
-                            color="text.secondary" 
-                            sx={{ 
-                                mb: 2,
-                                display: '-webkit-box',
-                                WebkitLineClamp: 2,
-                                WebkitBoxOrient: 'vertical',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                            }}
-                        >
-                            {trail.description}
-                        </Typography>
-                    )}
-
-                    <Stack direction="row" spacing={1.5} color="text.secondary" flexWrap="wrap">
+                    {/* 3rd row: distance, gain, loss, distance-to-user */}
+                    <Stack direction="row" spacing={1.5} color="text.secondary" flexWrap="wrap" mt={2}>
                         <Box display="flex" alignItems="center">
                             <RouteIcon sx={{ mr: 0.5, fontSize: 18 }} />
                             <Typography variant="body2">{distanceKm} km</Typography>
@@ -126,10 +117,6 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail }) => {
                         <Box display="flex" alignItems="center">
                             <TrendingDownIcon sx={{ mr: 0.5, fontSize: 18 }} />
                             <Typography variant="body2">-{Math.round(trail.elevationLoss)} m</Typography>
-                        </Box>
-                        <Box display="flex" alignItems="center" sx={{ display: { xs: 'none', sm: 'flex' } }}>
-                            {getTrailTypeIcon(trail.trailType)}
-                            <Typography variant="body2" sx={{ ml: 0.5 }}>{getTrailTypeLabel(trail.trailType)}</Typography>
                         </Box>
                         {userDist && (
                             <Box display="flex" alignItems="center">
