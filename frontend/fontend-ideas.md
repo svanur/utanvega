@@ -17,6 +17,10 @@
 - [ ] "Report Condition" mobile UI for real-time trail status.
 - [ ] System Share Sheet integration using `navigator.share()`.
 
+##In progress
+
+- [ ] Interactive Elevation Profile: Make the `ElevationChart` interactive. When a user hovers or drags their finger across the chart, show a corresponding dot on the map to see *exactly* where that steep climb is.
+
 ## Done
 
 - [x] Add total count of trails

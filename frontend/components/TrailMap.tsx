@@ -2,7 +2,7 @@ import { MapContainer, TileLayer, Polyline, useMap, Marker, useMapEvents } from 
 import { Box, Typography, Paper, IconButton } from '@mui/material';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
 import { useEffect, useState, useMemo } from 'react';
-import L from 'leaflet';
+import L, { LatLngExpression } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 // Fix for default marker icon in Leaflet
@@ -18,6 +18,7 @@ const DefaultIcon = L.icon({
     iconAnchor: [12, 41],
 });
 
+// @ts-ignore
 L.Marker.prototype.options.icon = DefaultIcon;
 
 export type GeoJsonGeometry = {
@@ -52,6 +53,34 @@ interface TrailMapProps {
     slug: string;
     onDataLoaded?: (data: GeoJsonGeometry) => void;
     hoverPoint?: { lat: number; lng: number } | null;
+}
+
+function HoverMarker({ point }: { point: { lat: number; lng: number } | null | undefined }) {
+    const map = useMap();
+    
+    useEffect(() => {
+        if (point) {
+            const latLng: LatLngExpression = [point.lat, point.lng];
+            // Only pan if the point is not currently in the view, or just slightly pan to keep it centered if needed
+            // For smoother experience, we might not want to pan at all unless it's outside
+            if (!map.getBounds().contains(latLng)) {
+                map.panTo(latLng);
+            }
+        }
+    }, [point, map]);
+
+    if (!point) return null;
+
+    const hoverIcon = new L.Icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-gold.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+    });
+
+    return <Marker position={[point.lat, point.lng]} icon={hoverIcon} zIndexOffset={1000} />;
 }
 
 export default function TrailMap({ slug, onDataLoaded, hoverPoint }: TrailMapProps) {
@@ -153,6 +182,7 @@ export default function TrailMap({ slug, onDataLoaded, hoverPoint }: TrailMapPro
                 center={[64.1265, -21.8174]} 
                 zoom={13} 
                 style={{ height: '100%', width: '100%' }}
+                scrollWheelZoom={false}
             >
                 <MapEvents />
                 <TileLayer
@@ -175,7 +205,7 @@ export default function TrailMap({ slug, onDataLoaded, hoverPoint }: TrailMapPro
                 )}
 
                 <ChangeView bounds={positions} followMe={followMe} userLocation={userLocation} />
-                {hoverPoint && <Marker position={[hoverPoint.lat, hoverPoint.lng]} />}
+                <HoverMarker point={hoverPoint} />
             </MapContainer>
         </Box>
     );
