@@ -20,7 +20,8 @@ import {
     ToggleButton,
     ToggleButtonGroup,
     FormControlLabel,
-    Checkbox
+    Checkbox,
+    Fade
 } from '@mui/material';
 import { 
     Search as SearchIcon, 
@@ -33,7 +34,8 @@ import {
     Star as StarIcon,
     StarBorder as StarBorderIcon,
     VisibilityOff as VisibilityOffIcon,
-    Visibility as VisibilityIcon
+    Visibility as VisibilityIcon,
+    Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { useTrails } from '../hooks/useTrails';
 import { useFavorites } from '../hooks/useFavorites';
@@ -45,6 +47,8 @@ export const TrailList: React.FC = () => {
     const { 
         trails, 
         loading, 
+        refreshing,
+        refresh,
         error, 
         userLocation, 
         searchQuery, 
@@ -60,8 +64,39 @@ export const TrailList: React.FC = () => {
     const [showAdvanced, setShowAdvanced] = React.useState(false);
     const [viewMode, setViewMode] = React.useState<'list' | 'map'>('list');
     const [showHidden, setShowHidden] = React.useState(false);
-
     const [hidingSlugs, setHidingSlugs] = React.useState<string[]>([]);
+    const [touchStart, setTouchStart] = React.useState<number | null>(null);
+    const [pullOffset, setPullOffset] = React.useState(0);
+    const PULL_THRESHOLD = 80;
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        if (window.scrollY === 0) {
+            setTouchStart(e.touches[0].clientY);
+        }
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (touchStart !== null) {
+            const currentY = e.touches[0].clientY;
+            const offset = currentY - touchStart;
+            if (offset > 0) {
+                // Apply resistance
+                const resistanceOffset = Math.pow(offset, 0.85);
+                setPullOffset(resistanceOffset);
+                if (resistanceOffset > 10) {
+                    if (e.cancelable) e.preventDefault();
+                }
+            }
+        }
+    };
+
+    const handleTouchEnd = () => {
+        if (pullOffset > PULL_THRESHOLD) {
+            refresh();
+        }
+        setTouchStart(null);
+        setPullOffset(0);
+    };
 
     // Filter trails based on favorites if enabled
     const filteredTrails = React.useMemo(() => {
@@ -113,7 +148,49 @@ export const TrailList: React.FC = () => {
     };
 
     return (
-        <Container maxWidth="md" sx={{ py: 2 }}>
+        <Container 
+            maxWidth="md" 
+            sx={{ 
+                py: 2, 
+                position: 'relative',
+                transform: `translateY(${pullOffset / 2}px)`,
+                transition: touchStart === null ? 'transform 0.3s ease-out' : 'none'
+            }}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+        >
+            {/* Pull to refresh indicator */}
+            <Fade in={pullOffset > 10 || refreshing}>
+                <Box
+                    sx={{
+                        position: 'absolute',
+                        top: -40,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        zIndex: 100,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        bgcolor: 'background.paper',
+                        borderRadius: '50%',
+                        width: 40,
+                        height: 40,
+                        boxShadow: 2
+                    }}
+                >
+                    {refreshing ? (
+                        <CircularProgress size={24} />
+                    ) : (
+                        <RefreshIcon 
+                            sx={{ 
+                                transform: `rotate(${Math.min(pullOffset * 2, 360)}deg)`,
+                                color: pullOffset > PULL_THRESHOLD ? 'primary.main' : 'action.active'
+                            }} 
+                        />
+                    )}
+                </Box>
+            </Fade>
             <Box mb={2}>
                 <TextField
                     fullWidth

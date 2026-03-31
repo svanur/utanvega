@@ -50,12 +50,20 @@ export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 export function useTrails() {
     const [trails, setTrails] = useState<Trail[]>([]);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
 
-    useEffect(() => {
+    const fetchTrails = (isRefreshing = false) => {
+        if (isRefreshing) {
+            setRefreshing(true);
+        } else {
+            setLoading(true);
+        }
+        setError(null);
+
         // Get user location
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
@@ -72,7 +80,7 @@ export function useTrails() {
         }
 
         // Fetch trails
-        fetch(`${API_URL}/api/v1/trails`)
+        return fetch(`${API_URL}/api/v1/trails`)
             .then(res => {
                 if (!res.ok) throw new Error('Failed to fetch trails');
                 return res.json();
@@ -80,12 +88,22 @@ export function useTrails() {
             .then(data => {
                 setTrails(data);
                 setLoading(false);
+                setRefreshing(false);
             })
             .catch(err => {
                 setError(err.message);
                 setLoading(false);
+                setRefreshing(false);
             });
+    };
+
+    useEffect(() => {
+        fetchTrails();
     }, []);
+
+    const refresh = () => {
+        return fetchTrails(true);
+    };
 
     // Calculate distance and sort
     const processedTrails = useMemo(() => {
@@ -154,6 +172,8 @@ export function useTrails() {
     return { 
         trails: processedTrails, 
         loading, 
+        refreshing,
+        refresh,
         error, 
         userLocation, 
         searchQuery, 
