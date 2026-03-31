@@ -47,7 +47,10 @@ public class GetTrailBySlugQueryHandler : IRequestHandler<GetTrailBySlugQuery, T
             trail.Type.ToString(),
             (trail.GpxData as LineString)?.StartPoint.Y,
             (trail.GpxData as LineString)?.StartPoint.X,
-            trail.TrailLocations.Select(tl => new LocationInfoDto(tl.Location.Name, tl.Location.Slug)).ToList()
+            trail.TrailLocations
+                .OrderBy(tl => tl.Order)
+                .Select(tl => new LocationInfoDto(tl.Location.Name, tl.Location.Slug, tl.Order))
+                .ToList()
         );
     }
 }

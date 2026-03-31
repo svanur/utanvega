@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 export interface LocationInfo {
     name: string;
     slug: string;
+    order: number;
 }
 
 export interface Trail {

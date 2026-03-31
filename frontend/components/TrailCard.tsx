@@ -89,19 +89,21 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail }) => {
                             variant="outlined" 
                             color="primary"
                         />
-                        {trail.locations?.map(loc => (
-                            <Chip
-                                key={loc.slug}
-                                label={loc.name}
-                                size="small"
-                                variant="outlined"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigate(`/locations/${loc.slug}`);
-                                }}
-                                sx={{ cursor: 'pointer' }}
-                            />
-                        ))}
+                        {[...trail.locations]
+                            .sort((a, b) => a.order - b.order)
+                            .map(loc => (
+                                <Chip
+                                    key={loc.slug}
+                                    label={loc.name}
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigate(`/locations/${loc.slug}`);
+                                    }}
+                                    sx={{ cursor: 'pointer' }}
+                                />
+                            ))}
                     </Box>
 
                     {/* 3rd row: distance, gain, loss, distance-to-user */}
