@@ -21,13 +21,18 @@ import LoopIcon from '@mui/icons-material/Loop';
 import SyncAltIcon from '@mui/icons-material/SyncAlt';
 import EastIcon from '@mui/icons-material/East';
 import StarIcon from '@mui/icons-material/Star';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import { useNavigate } from 'react-router-dom';
 import { Trail } from '../hooks/useTrails';
 import { useFavorites } from '../hooks/useFavorites';
+import { useHiddenTrails } from '../hooks/useHiddenTrails';
 import { TrailQuickView } from './TrailQuickView';
 
 interface TrailCardProps {
     trail: Trail;
+    onToggleFavorite?: (slug: string) => void;
+    onHide?: (slug: string) => void;
+    isHiding?: boolean;
 }
 
 const getActivityIcon = (type: string) => {
@@ -58,9 +63,10 @@ const getTrailTypeLabel = (type: string) => {
     }
 };
 
-export const TrailCard: React.FC<TrailCardProps> = ({ trail }) => {
+export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, onHide, isHiding }) => {
     const navigate = useNavigate();
     const { isFavorite, toggleFavorite } = useFavorites();
+    const { hideTrail } = useHiddenTrails();
     const [swipeOffset, setSwipeOffset] = useState(0);
     const touchStart = useRef<number | null>(null);
     const touchYStart = useRef<number | null>(null);
@@ -109,9 +115,13 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail }) => {
                 }
             }
 
-            // Only allow right swipe for favorites, max offset for effect
-            if (diffX > 0 && !quickViewOpen) {
-                setSwipeOffset(Math.min(diffX, 150));
+            // Allow right swipe for favorites and left swipe for hiding
+            if (!quickViewOpen) {
+                if (diffX > 0) {
+                    setSwipeOffset(Math.min(diffX, 150));
+                } else {
+                    setSwipeOffset(Math.max(diffX, -150));
+                }
             }
         }
     };
@@ -123,7 +133,21 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail }) => {
         }
 
         if (swipeOffset > 100) {
-            toggleFavorite(trail.slug);
+            if (onToggleFavorite) {
+                onToggleFavorite(trail.slug);
+            } else {
+                toggleFavorite(trail.slug);
+            }
+            // Trigger haptic feedback if available
+            if ('vibrate' in navigator) {
+                navigator.vibrate(10);
+            }
+        } else if (swipeOffset < -100) {
+            if (onHide) {
+                onHide(trail.slug);
+            } else {
+                hideTrail(trail.slug);
+            }
             // Trigger haptic feedback if available
             if ('vibrate' in navigator) {
                 navigator.vibrate(10);
@@ -135,7 +159,15 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail }) => {
     };
 
     return (
-        <Box sx={{ position: 'relative', mb: 2 }}>
+        <Box 
+            sx={{ 
+                position: 'relative', 
+                mb: 2,
+                transition: 'opacity 0.3s ease, transform 0.3s ease',
+                opacity: isHiding ? 0 : 1,
+                transform: isHiding ? 'translateX(-100%)' : 'none'
+            }}
+        >
             {/* Background Swipe Indicator */}
             <Box 
                 sx={{ 
@@ -157,6 +189,30 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail }) => {
                 <Typography sx={{ color: 'white', ml: 1, fontWeight: 'bold' }}>
                     {isFavorited ? 'Remove Favorite' : 'Add Favorite'}
                 </Typography>
+            </Box>
+
+            {/* Right Background Swipe Indicator (Hide) */}
+            <Box 
+                sx={{ 
+                    position: 'absolute', 
+                    top: 0, 
+                    left: 0, 
+                    right: 0, 
+                    bottom: 0, 
+                    bgcolor: 'error.main',
+                    borderRadius: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'flex-end',
+                    pr: 3,
+                    opacity: swipeOffset < 0 ? Math.min(Math.abs(swipeOffset) / 100, 1) : 0,
+                    zIndex: 0
+                }}
+            >
+                <Typography sx={{ color: 'white', mr: 1, fontWeight: 'bold' }}>
+                    Hide Trail
+                </Typography>
+                <VisibilityOffIcon sx={{ color: 'white' }} />
             </Box>
 
             <Card 

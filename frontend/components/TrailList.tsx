@@ -31,10 +31,13 @@ import {
     List as ListIcon,
     Map as MapIcon,
     Star as StarIcon,
-    StarBorder as StarBorderIcon
+    StarBorder as StarBorderIcon,
+    VisibilityOff as VisibilityOffIcon,
+    Visibility as VisibilityIcon
 } from '@mui/icons-material';
 import { useTrails } from '../hooks/useTrails';
 import { useFavorites } from '../hooks/useFavorites';
+import { useHiddenTrails } from '../hooks/useHiddenTrails';
 import { TrailCard } from './TrailCard';
 import { TrailMapView } from './TrailMapView';
 
@@ -51,16 +54,26 @@ export const TrailList: React.FC = () => {
         resetFilters
     } = useTrails();
 
-    const { favorites } = useFavorites();
+    const { favorites, toggleFavorite } = useFavorites();
+    const { hiddenSlugs, hideTrail, clearHidden } = useHiddenTrails();
 
     const [showAdvanced, setShowAdvanced] = React.useState(false);
     const [viewMode, setViewMode] = React.useState<'list' | 'map'>('list');
+    const [showHidden, setShowHidden] = React.useState(false);
+
+    const [hidingSlugs, setHidingSlugs] = React.useState<string[]>([]);
 
     // Filter trails based on favorites if enabled
     const filteredTrails = React.useMemo(() => {
-        if (!filters.favoritesOnly) return trails;
-        return trails.filter(t => favorites.includes(t.slug));
-    }, [trails, filters.favoritesOnly, favorites]);
+        let result = trails;
+        if (filters.favoritesOnly) {
+            result = result.filter(t => favorites.includes(t.slug));
+        }
+        if (!showHidden) {
+            result = result.filter(t => !hiddenSlugs.includes(t.slug) || hidingSlugs.includes(t.slug));
+        }
+        return result;
+    }, [trails, filters.favoritesOnly, favorites, hiddenSlugs, showHidden, hidingSlugs]);
 
     // Derived values for filters
     const locations = React.useMemo(() => {
@@ -91,8 +104,12 @@ export const TrailList: React.FC = () => {
         );
     }
 
-    const handleFilterChange = (key: string, value: any) => {
-        setFilters({ ...filters, [key]: value });
+    const handleHideTrail = (slug: string) => {
+        setHidingSlugs(prev => [...prev, slug]);
+        setTimeout(() => {
+            hideTrail(slug);
+            setHidingSlugs(prev => prev.filter(s => s !== slug));
+        }, 300); // Match transition duration in TrailCard
     };
 
     return (
@@ -256,7 +273,25 @@ export const TrailList: React.FC = () => {
                             />
                         </Grid>
 
-                        <Grid item xs={12} display="flex" justifyContent="flex-end">
+                        <Grid item xs={12} display="flex" justifyContent="space-between" alignItems="center">
+                            <Box>
+                                <FormControlLabel
+                                    control={
+                                        <Checkbox 
+                                            checked={showHidden}
+                                            onChange={(e) => setShowHidden(e.target.checked)}
+                                            icon={<VisibilityIcon />}
+                                            checkedIcon={<VisibilityOffIcon color="error" />}
+                                        />
+                                    }
+                                    label="Show Hidden Trails"
+                                />
+                                {hiddenSlugs.length > 0 && (
+                                    <Button size="small" color="error" onClick={clearHidden} sx={{ ml: 1 }}>
+                                        Clear Hidden ({hiddenSlugs.length})
+                                    </Button>
+                                )}
+                            </Box>
                             <Button size="small" onClick={resetFilters}>
                                 Reset Filters
                             </Button>
@@ -309,7 +344,14 @@ export const TrailList: React.FC = () => {
                     </Typography>
                 ) : (
                     filteredTrails.map(trail => (
-                        <TrailCard key={trail.id} trail={trail} />
+                        <Collapse key={trail.id} in={!hidingSlugs.includes(trail.slug)}>
+                            <TrailCard 
+                                trail={trail} 
+                                onHide={handleHideTrail}
+                                onToggleFavorite={toggleFavorite}
+                                isHiding={hidingSlugs.includes(trail.slug)}
+                            />
+                        </Collapse>
                     ))
                 )
             ) : (
