@@ -239,7 +239,7 @@ export const TrailQuickView: React.FC<TrailQuickViewProps> = ({ trail, open, onC
                             <Typography variant="subtitle2" fontWeight="bold">Elevation Profile</Typography>
                         </AccordionSummary>
                         <AccordionDetails sx={{ px: 0, pb: 0 }}>
-                            <Box sx={{ minHeight: 200, display: 'flex', flexDirection: 'column' }}>
+                            <Box sx={{ minHeight: 220, width: '100%', display: 'flex', flexDirection: 'column' }}>
                                 {loading ? (
                                     <Box display="flex" justifyContent="center" alignItems="center" flex={1} py={2}>
                                         <CircularProgress size={30} />

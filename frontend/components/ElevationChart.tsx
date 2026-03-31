@@ -105,48 +105,50 @@ const ElevationChart: React.FC<ElevationChartProps> = ({ coordinates, onHover })
   };
 
   return (
-    <Box sx={{ width: '100%', height: 250, mt: 3 }}>
+    <Box sx={{ width: '100%', mt: 3 }}>
       <Typography variant="h6" gutterBottom>
         Elevation Profile
       </Typography>
-      <ResponsiveContainer width="100%" height="100%">
-        <AreaChart
-          data={chartData}
-          margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-          onMouseMove={handleMouseMove}
-          onMouseLeave={() => onHover(null)}
-        >
-          <defs>
-            <linearGradient id="colorEle" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor={theme.palette.primary.main} stopOpacity={0.8} />
-              <stop offset="95%" stopColor={theme.palette.primary.main} stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} />
-          <XAxis
-            dataKey="distance"
-            type="number"
-            domain={['dataMin', 'dataMax']}
-            tickFormatter={(value: number) => `${value.toFixed(1)} km`}
-            fontSize={12}
-          />
-          <YAxis
-            dataKey="elevation"
-            domain={['auto', 'auto']}
-            tickFormatter={(value: number) => `${value} m`}
-            fontSize={12}
-          />
-          <Tooltip content={<CustomTooltip />} />
-          <Area
-            type="monotone"
-            dataKey="elevation"
-            stroke={theme.palette.primary.main}
-            fillOpacity={1}
-            fill="url(#colorEle)"
-            isAnimationActive={false}
-          />
-        </AreaChart>
-      </ResponsiveContainer>
+      <Box sx={{ width: '100%', height: 220, position: 'relative' }}>
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+          <AreaChart
+            data={chartData}
+            margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={() => onHover(null)}
+          >
+            <defs>
+              <linearGradient id="colorEle" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={theme.palette.primary.main} stopOpacity={0.8} />
+                <stop offset="95%" stopColor={theme.palette.primary.main} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+            <XAxis
+              dataKey="distance"
+              type="number"
+              domain={['dataMin', 'dataMax']}
+              tickFormatter={(value: number) => `${value.toFixed(1)} km`}
+              fontSize={12}
+            />
+            <YAxis
+              dataKey="elevation"
+              domain={['auto', 'auto']}
+              tickFormatter={(value: number) => `${value} m`}
+              fontSize={12}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <Area
+              type="monotone"
+              dataKey="elevation"
+              stroke={theme.palette.primary.main}
+              fillOpacity={1}
+              fill="url(#colorEle)"
+              isAnimationActive={false}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </Box>
     </Box>
   );
 };
