@@ -21,7 +21,9 @@ public class CreateTrailFromGpxCommandHandler : IRequestHandler<CreateTrailFromG
     public CreateTrailFromGpxCommandHandler(UtanvegaDbContext context)
     {
         _context = context;
-        _geometryFactory = new GeometryFactory(new PrecisionModel(), 4326); // WGS 84
+        // DotSpatialAffineCoordinateSequenceFactory may include M (Measure) dimension, which PostGIS column (LineStringZ) rejects.
+        // We use CoordinateArraySequenceFactory for standard XYZ support.
+        _geometryFactory = new GeometryFactory(new PrecisionModel(), 4326); // WGS 84, default factory uses CoordinateArraySequenceFactory
     }
 
     public async Task<CreateTrailFromGpxResult> Handle(CreateTrailFromGpxCommand request, CancellationToken cancellationToken)
@@ -146,10 +148,18 @@ public class CreateTrailFromGpxCommandHandler : IRequestHandler<CreateTrailFromG
         }
 
         var coordinates = points.Select(p => new CoordinateZ(p.Lon, p.Lat, p.Ele)).ToArray();
-        // Create LineString with Z dimension explicitly
+        // Create LineString with Z dimension explicitly. CoordinateZ ensures XYZ.
+        // We use a factory that we know handles Z.
         var lineString = _geometryFactory.CreateLineString(coordinates);
         
-        // Log coordinates for verification
+        // Final check: if the geometry created doesn't have Z despite CoordinateZ being used,
+        // it might be the factory's sequence factory. But we checked that.
+        // Let's ensure NTS treats it as 3D.
+        if (lineString.Coordinates.Length > 0 && double.IsNaN(lineString.Coordinates[0].Z))
+        {
+             Console.WriteLine("[DEBUG_LOG] CRITICAL: Created LineString has NaN for Z! Points might be lost.");
+        }
+        
         Console.WriteLine($"[DEBUG_LOG] Created LineString with {coordinates.Length} points. Geometry Dimension: {lineString.Dimension}, HasZ: {lineString.Coordinates.Any(c => !double.IsNaN(c.Z))}");
         if (coordinates.Length > 0)
         {

@@ -38,8 +38,13 @@ const ElevationChart: React.FC<ElevationChartProps> = ({ coordinates, onHover })
       // Check if elevation exists (3rd element in coordinate array)
       const elevation = current.length > 2 ? current[2] : 0;
       
-      // Log for debugging (remove in production if too noisy)
-      if (i % 100 === 0 || i < 5) console.log(`[DEBUG_LOG] Point ${i}: elevation=${elevation}, coordLength=${current.length}, coords=[${current.join(',')}]`);
+      // Log for debugging (every 100 points, or first few, and definitely if suspicious)
+      if (i % 100 === 0 || i < 5) {
+        console.log(`[DEBUG_LOG] Point ${i}: elevation=${elevation}, coordLength=${current.length}, coords=[${current.join(',')}]`);
+      }
+      if (i === 0 && (elevation === 0 || current.length < 3)) {
+        console.warn(`[DEBUG_LOG] Suspicious elevation at point 0: elevation=${elevation}, coordLength=${current.length}`);
+      }
 
       if (i > 0) {
         const prev = coordinates[i - 1];
