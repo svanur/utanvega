@@ -33,6 +33,7 @@ interface TrailCardProps {
     onToggleFavorite?: (slug: string) => void;
     onHide?: (slug: string) => void;
     isHiding?: boolean;
+    compact?: boolean;
 }
 
 const getActivityIcon = (type: string) => {
@@ -63,7 +64,7 @@ const getTrailTypeLabel = (type: string) => {
     }
 };
 
-export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, onHide, isHiding }) => {
+export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, onHide, isHiding, compact }) => {
     const navigate = useNavigate();
     const { isFavorite, toggleFavorite } = useFavorites();
     const { hideTrail } = useHiddenTrails();
@@ -254,6 +255,7 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                         />
                         {[...trail.locations]
                             .sort((a, b) => a.order - b.order)
+                            .slice(0, compact ? 1 : undefined)
                             .map(loc => (
                                 <Chip
                                     key={loc.slug}
@@ -270,20 +272,20 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                     </Box>
 
                     {/* 3rd row: distance, gain, loss, distance-to-user */}
-                    <Stack direction="row" spacing={1.5} color="text.secondary" flexWrap="wrap" mt={2}>
-                        <Box display="flex" alignItems="center">
-                            <RouteIcon sx={{ mr: 0.5, fontSize: 18 }} />
+                    <Stack direction="row" spacing={compact ? 1 : 1.5} color="text.secondary" flexWrap="wrap" mt={2} justifyContent={compact ? 'space-between' : 'flex-start'}>
+                        <Box display="flex" flexDirection={compact ? 'column' : 'row'} alignItems="center">
+                            <RouteIcon sx={{ mr: compact ? 0 : 0.5, mb: compact ? 0.5 : 0, fontSize: 18 }} />
                             <Typography variant="body2">{distanceKm} km</Typography>
                         </Box>
-                        <Box display="flex" alignItems="center">
-                            <TrendingUpIcon sx={{ mr: 0.5, fontSize: 18 }} />
+                        <Box display="flex" flexDirection={compact ? 'column' : 'row'} alignItems="center">
+                            <TrendingUpIcon sx={{ mr: compact ? 0 : 0.5, mb: compact ? 0.5 : 0, fontSize: 18 }} />
                             <Typography variant="body2">+{Math.round(trail.elevationGain)} m</Typography>
                         </Box>
-                        <Box display="flex" alignItems="center">
-                            <TrendingDownIcon sx={{ mr: 0.5, fontSize: 18 }} />
+                        <Box display="flex" flexDirection={compact ? 'column' : 'row'} alignItems="center">
+                            <TrendingDownIcon sx={{ mr: compact ? 0 : 0.5, mb: compact ? 0.5 : 0, fontSize: 18 }} />
                             <Typography variant="body2">-{Math.round(trail.elevationLoss)} m</Typography>
                         </Box>
-                        {userDist && (
+                        {userDist && !compact && (
                             <Box display="flex" alignItems="center">
                                 <LocationOnIcon sx={{ mr: 0.5, fontSize: 18, color: 'primary.main' }} />
                                 <Typography variant="body2" color="primary.main" fontWeight="medium">

@@ -26,11 +26,12 @@ import SyncAltIcon from '@mui/icons-material/SyncAlt';
 import EastIcon from '@mui/icons-material/East';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import Layout from '../components/Layout';
-import { useTrailBySlug } from '../hooks/useTrails';
+import { useTrailBySlug, useTrails } from '../hooks/useTrails';
 import TrailMap, { GeoJsonGeometry } from '../components/TrailMap';
 import ElevationChart from '../components/ElevationChart';
 import ShareButtons from '../components/ShareButtons';
 import QRCodeShare from '../components/QRCodeShare';
+import { TrailCard } from '../components/TrailCard';
 
 const getActivityIcon = (type: string) => {
     switch (type.toLowerCase()) {
@@ -69,8 +70,16 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     const { slug } = useParams<{ slug: string }>();
     const navigate = useNavigate();
     const { trail, loading, error } = useTrailBySlug(slug);
+    const { trails: allTrails } = useTrails();
     const [geometry, setGeometry] = useState<GeoJsonGeometry | null>(null);
     const [hoverPoint, setHoverPoint] = useState<{ lat: number; lng: number } | null>(null);
+
+    const relatedTrails = (allTrails && trail) 
+        ? allTrails
+            .filter(t => t.slug !== trail.slug) // Exclude current trail
+            .filter(t => t.locations.some(loc => trail.locations.some(trailLoc => trailLoc.slug === loc.slug))) // Shared location
+            .slice(0, 3) // Take up to 3
+        : [];
 
     if (loading) {
         return (
@@ -204,6 +213,21 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                     />
                 )}
             </Paper>
+
+            {relatedTrails.length > 0 && (
+                <Box mt={4} mb={6}>
+                    <Typography variant="h5" component="h2" fontWeight="bold" gutterBottom>
+                        Related Trails
+                    </Typography>
+                    <Grid container spacing={2}>
+                        {relatedTrails.map((relatedTrail) => (
+                            <Grid item xs={12} sm={6} md={4} key={relatedTrail.slug}>
+                                <TrailCard trail={relatedTrail} compact={true} />
+                            </Grid>
+                        ))}
+                    </Grid>
+                </Box>
+            )}
         </Layout>
     );
 }
