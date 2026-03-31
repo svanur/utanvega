@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
-import { Box, Typography, Button, Link } from '@mui/material';
+import { Box, Typography, Button, IconButton, Paper } from '@mui/material';
+import MyLocationIcon from '@mui/icons-material/MyLocation';
 import { Trail } from '../hooks/useTrails';
 import { Link as RouterLink } from 'react-router-dom';
 
@@ -19,17 +20,55 @@ interface TrailMapViewProps {
     userLocation: { lat: number; lng: number } | null;
 }
 
-function ChangeView({ bounds }: { bounds: L.LatLngBoundsExpression }) {
+function ChangeView({ bounds, followMe, userLocation }: { 
+    bounds: L.LatLngBoundsExpression | null, 
+    followMe: boolean,
+    userLocation: { lat: number; lng: number } | null 
+}) {
     const map = useMap();
+
+    useMapEvents({
+        dragstart: () => {
+            // We'll handle disabling followMe via a prop callback if needed, 
+            // but since ChangeView is a child, we'll use a simpler approach in the main component
+        },
+    });
+
     useEffect(() => {
-        if (bounds && (bounds as L.LatLngBounds).isValid()) {
+        if (!followMe && bounds && (bounds as L.LatLngBounds).isValid()) {
             map.fitBounds(bounds, { padding: [50, 50] });
         }
-    }, [bounds, map]);
+    }, [bounds, map, followMe]);
+
+    useEffect(() => {
+        if (followMe && userLocation) {
+            map.setView([userLocation.lat, userLocation.lng], map.getZoom());
+        }
+    }, [followMe, userLocation, map]);
+
     return null;
 }
 
 export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation }) => {
+    const [followMe, setFollowMe] = useState(false);
+
+    const handleFollowMeClick = () => {
+        setFollowMe(prev => !prev);
+    };
+
+    const MapEvents = () => {
+        useMapEvents({
+            dragstart: () => {
+                if (followMe) setFollowMe(false);
+            },
+            zoomstart: () => {
+                // Optional: disable follow me on zoom too? 
+                // Usually zoom is fine, but if they zoom out a lot it might be annoying if it snaps back.
+                // For now let's only do drag.
+            }
+        });
+        return null;
+    };
     const trailsWithLocation = useMemo(() => 
         trails.filter(t => t.startLatitude !== null && t.startLongitude !== null && (t.startLatitude !== 0 || t.startLongitude !== 0)),
     [trails]);
@@ -80,11 +119,41 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
                 zIndex: 1000,
             }
         }}>
-            <MapContainer 
-                center={[64.1265, -21.8174]} 
-                zoom={10} 
-                style={{ height: '100%', width: '100%' }}
-            >
+            <Box sx={{ position: 'relative', height: '100%', width: '100%' }}>
+                <Paper 
+                    elevation={3} 
+                    sx={{ 
+                        position: 'absolute', 
+                        top: 10, 
+                        right: 10, 
+                        zIndex: 1100,
+                        borderRadius: '50%',
+                        overflow: 'hidden',
+                        backgroundColor: 'white'
+                    }}
+                >
+                    <IconButton 
+                        onClick={handleFollowMeClick}
+                        color={followMe ? "primary" : "default"}
+                        sx={{ 
+                            backgroundColor: followMe ? 'rgba(25, 118, 210, 0.1)' : 'white',
+                            '&:hover': {
+                                backgroundColor: followMe ? 'rgba(25, 118, 210, 0.2)' : '#f5f5f5',
+                            }
+                        }}
+                        title={followMe ? "Stop following my location" : "Follow my location"}
+                        aria-label="follow my location"
+                    >
+                        <MyLocationIcon />
+                    </IconButton>
+                </Paper>
+
+                <MapContainer 
+                    center={[64.1265, -21.8174]} 
+                    zoom={10} 
+                    style={{ height: '100%', width: '100%' }}
+                >
+                    <MapEvents />
                 <TileLayer
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -133,8 +202,9 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
                     </Marker>
                 ))}
 
-                {bounds && <ChangeView bounds={bounds} />}
+                {bounds && <ChangeView bounds={bounds} followMe={followMe} userLocation={userLocation} />}
             </MapContainer>
+            </Box>
         </Box>
     );
 };

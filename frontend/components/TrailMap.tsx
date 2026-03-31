@@ -1,5 +1,6 @@
-import { MapContainer, TileLayer, Polyline, useMap, Marker } from 'react-leaflet';
-import { Box, Typography } from '@mui/material';
+import { MapContainer, TileLayer, Polyline, useMap, Marker, useMapEvents } from 'react-leaflet';
+import { Box, Typography, Paper, IconButton } from '@mui/material';
+import MyLocationIcon from '@mui/icons-material/MyLocation';
 import { useEffect, useState, useMemo } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -26,13 +27,24 @@ export type GeoJsonGeometry = {
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
-function ChangeView({ bounds }: { bounds: [number, number][] }) {
+function ChangeView({ bounds, followMe, userLocation }: { 
+    bounds: [number, number][],
+    followMe: boolean,
+    userLocation: { lat: number; lng: number } | null
+}) {
     const map = useMap();
     useEffect(() => {
-        if (bounds.length > 0) {
+        if (!followMe && bounds.length > 0) {
             map.fitBounds(bounds as any, { padding: [20, 20] });
         }
-    }, [bounds, map]);
+    }, [bounds, map, followMe]);
+
+    useEffect(() => {
+        if (followMe && userLocation) {
+            map.setView([userLocation.lat, userLocation.lng], map.getZoom());
+        }
+    }, [followMe, userLocation, map]);
+
     return null;
 }
 
@@ -46,6 +58,38 @@ export default function TrailMap({ slug, onDataLoaded, hoverPoint }: TrailMapPro
     const [geometry, setGeometry] = useState<GeoJsonGeometry | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [followMe, setFollowMe] = useState(false);
+    const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+
+    // Get user location for this component specifically
+    useEffect(() => {
+        if (navigator.geolocation) {
+            const watchId = navigator.geolocation.watchPosition(
+                (position) => {
+                    setUserLocation({
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    });
+                },
+                (err) => console.warn('Geolocation failed in TrailMap:', err),
+                { enableHighAccuracy: true }
+            );
+            return () => navigator.geolocation.clearWatch(watchId);
+        }
+    }, []);
+
+    const handleFollowMeClick = () => {
+        setFollowMe(prev => !prev);
+    };
+
+    const MapEvents = () => {
+        useMapEvents({
+            dragstart: () => {
+                if (followMe) setFollowMe(false);
+            },
+        });
+        return null;
+    };
 
     // Convert GeoJSON [lon, lat] to Leaflet [lat, lon]
     const positions = useMemo(() => 
@@ -76,18 +120,61 @@ export default function TrailMap({ slug, onDataLoaded, hoverPoint }: TrailMapPro
     if (error || !geometry) return <Typography color="error">No GPS data available for this trail.</Typography>;
 
     return (
-        <Box sx={{ height: 400, width: '100%', mt: 2, borderRadius: 2, overflow: 'hidden', border: '1px solid #ccc' }}>
+        <Box sx={{ height: 400, width: '100%', mt: 2, borderRadius: 2, overflow: 'hidden', border: '1px solid #ccc', position: 'relative' }}>
+            <Paper 
+                elevation={3} 
+                sx={{ 
+                    position: 'absolute', 
+                    top: 10, 
+                    right: 10, 
+                    zIndex: 1100,
+                    borderRadius: '50%',
+                    overflow: 'hidden',
+                    backgroundColor: 'white'
+                }}
+            >
+                <IconButton 
+                    onClick={handleFollowMeClick}
+                    color={followMe ? "primary" : "default"}
+                    sx={{ 
+                        backgroundColor: followMe ? 'rgba(25, 118, 210, 0.1)' : 'white',
+                        '&:hover': {
+                            backgroundColor: followMe ? 'rgba(25, 118, 210, 0.2)' : '#f5f5f5',
+                        }
+                    }}
+                    title={followMe ? "Stop following my location" : "Follow my location"}
+                    aria-label="follow my location"
+                >
+                    <MyLocationIcon />
+                </IconButton>
+            </Paper>
+
             <MapContainer 
                 center={[64.1265, -21.8174]} 
                 zoom={13} 
                 style={{ height: '100%', width: '100%' }}
             >
+                <MapEvents />
                 <TileLayer
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
                 <Polyline positions={positions} color="#2196f3" weight={5} opacity={0.7} />
-                <ChangeView bounds={positions} />
+                
+                {userLocation && (
+                    <Marker position={[userLocation.lat, userLocation.lng]} 
+                        icon={L.icon({
+                            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+                            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                            iconSize: [25, 41],
+                            iconAnchor: [12, 41],
+                            popupAnchor: [1, -34],
+                            shadowSize: [41, 41]
+                        })} 
+                    />
+                )}
+
+                <ChangeView bounds={positions} followMe={followMe} userLocation={userLocation} />
                 {hoverPoint && <Marker position={[hoverPoint.lat, hoverPoint.lng]} />}
             </MapContainer>
         </Box>

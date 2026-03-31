@@ -12,7 +12,7 @@
 ## Backlog
 
 - [x] Convert to PWA for home-screen installation and better mobile experience.
-- [ ] GPS "Follow Me" mode on `TrailMapView`.
+- [x] GPS "Follow Me" mode on `TrailMapView`.
 - [ ] Off-trail vibration alerts using GPS tracking.
 - [ ] "Report Condition" mobile UI for real-time trail status.
 - [ ] System Share Sheet integration using `navigator.share()`.
