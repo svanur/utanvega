@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { 
     Card, 
     CardContent, 
@@ -19,8 +19,10 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 import LoopIcon from '@mui/icons-material/Loop';
 import SyncAltIcon from '@mui/icons-material/SyncAlt';
 import EastIcon from '@mui/icons-material/East';
+import StarIcon from '@mui/icons-material/Star';
 import { useNavigate } from 'react-router-dom';
 import { Trail } from '../hooks/useTrails';
+import { useFavorites } from '../hooks/useFavorites';
 
 interface TrailCardProps {
     trail: Trail;
@@ -56,23 +58,95 @@ const getTrailTypeLabel = (type: string) => {
 
 export const TrailCard: React.FC<TrailCardProps> = ({ trail }) => {
     const navigate = useNavigate();
+    const { isFavorite, toggleFavorite } = useFavorites();
+    const [swipeOffset, setSwipeOffset] = useState(0);
+    const touchStart = useRef<number | null>(null);
+    const isFavorited = isFavorite(trail.slug);
+
     const distanceKm = (trail.length / 1000).toFixed(1);
     const userDist = trail.distanceToUser !== undefined && trail.distanceToUser !== Infinity
         ? `${trail.distanceToUser.toFixed(1)} km away`
         : null;
 
     const handleClick = () => {
-        navigate(`/trails/${trail.slug}`);
+        if (Math.abs(swipeOffset) < 10) {
+            navigate(`/trails/${trail.slug}`);
+        }
+    };
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        touchStart.current = e.touches[0].clientX;
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (touchStart.current !== null) {
+            const currentX = e.touches[0].clientX;
+            const diff = currentX - touchStart.current;
+            // Only allow right swipe for favorites, max offset for effect
+            if (diff > 0) {
+                setSwipeOffset(Math.min(diff, 150));
+            }
+        }
+    };
+
+    const handleTouchEnd = () => {
+        if (swipeOffset > 100) {
+            toggleFavorite(trail.slug);
+            // Trigger haptic feedback if available
+            if ('vibrate' in navigator) {
+                navigator.vibrate(10);
+            }
+        }
+        setSwipeOffset(0);
+        touchStart.current = null;
     };
 
     return (
-        <Card sx={{ mb: 2, overflow: 'visible', position: 'relative' }}>
-            <CardActionArea onClick={handleClick}>
-                <CardContent>
-                    {/* 1st row: Trail name */}
-                    <Typography variant="h6" component="div" fontWeight="bold">
-                        {trail.name}
-                    </Typography>
+        <Box sx={{ position: 'relative', mb: 2 }}>
+            {/* Background Swipe Indicator */}
+            <Box 
+                sx={{ 
+                    position: 'absolute', 
+                    top: 0, 
+                    left: 0, 
+                    right: 0, 
+                    bottom: 0, 
+                    bgcolor: isFavorited ? 'warning.light' : 'primary.main',
+                    borderRadius: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    pl: 3,
+                    opacity: swipeOffset > 0 ? Math.min(swipeOffset / 100, 1) : 0,
+                    zIndex: 0
+                }}
+            >
+                <StarIcon sx={{ color: 'white' }} />
+                <Typography sx={{ color: 'white', ml: 1, fontWeight: 'bold' }}>
+                    {isFavorited ? 'Remove Favorite' : 'Add Favorite'}
+                </Typography>
+            </Box>
+
+            <Card 
+                sx={{ 
+                    overflow: 'visible', 
+                    position: 'relative',
+                    transform: `translateX(${swipeOffset}px)`,
+                    transition: swipeOffset === 0 ? 'transform 0.3s ease' : 'none',
+                    zIndex: 1
+                }}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+            >
+                <CardActionArea onClick={handleClick}>
+                    <CardContent>
+                        {/* 1st row: Trail name and favorite star */}
+                        <Box display="flex" justifyContent="space-between" alignItems="center">
+                            <Typography variant="h6" component="div" fontWeight="bold">
+                                {trail.name}
+                            </Typography>
+                            {isFavorited && <StarIcon color="warning" fontSize="small" />}
+                        </Box>
 
                     {/* 2nd row: ActivityType and locations */}
                     <Box 
@@ -129,8 +203,9 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail }) => {
                             </Box>
                         )}
                     </Stack>
-                </CardContent>
-            </CardActionArea>
-        </Card>
+                    </CardContent>
+                </CardActionArea>
+            </Card>
+        </Box>
     );
 };

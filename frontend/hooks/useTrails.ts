@@ -31,6 +31,7 @@ export interface FilterState {
     maxElevationLoss: number;
     trailType: string;
     location: string;
+    favoritesOnly: boolean;
 }
 
 const DEFAULT_FILTERS: FilterState = {
@@ -41,6 +42,7 @@ const DEFAULT_FILTERS: FilterState = {
     maxElevationLoss: 5000,
     trailType: 'All',
     location: 'All',
+    favoritesOnly: false,
 };
 
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';

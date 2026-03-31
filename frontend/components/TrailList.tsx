@@ -18,7 +18,9 @@ import {
     Grid,
     Divider,
     ToggleButton,
-    ToggleButtonGroup
+    ToggleButtonGroup,
+    FormControlLabel,
+    Checkbox
 } from '@mui/material';
 import { 
     Search as SearchIcon, 
@@ -27,9 +29,12 @@ import {
     ExpandMore as ExpandMoreIcon,
     ExpandLess as ExpandLessIcon,
     List as ListIcon,
-    Map as MapIcon
+    Map as MapIcon,
+    Star as StarIcon,
+    StarBorder as StarBorderIcon
 } from '@mui/icons-material';
 import { useTrails } from '../hooks/useTrails';
+import { useFavorites } from '../hooks/useFavorites';
 import { TrailCard } from './TrailCard';
 import { TrailMapView } from './TrailMapView';
 
@@ -46,21 +51,29 @@ export const TrailList: React.FC = () => {
         resetFilters
     } = useTrails();
 
+    const { favorites } = useFavorites();
+
     const [showAdvanced, setShowAdvanced] = React.useState(false);
     const [viewMode, setViewMode] = React.useState<'list' | 'map'>('list');
+
+    // Filter trails based on favorites if enabled
+    const filteredTrails = React.useMemo(() => {
+        if (!filters.favoritesOnly) return trails;
+        return trails.filter(t => favorites.includes(t.slug));
+    }, [trails, filters.favoritesOnly, favorites]);
 
     // Derived values for filters
     const locations = React.useMemo(() => {
         const locs = new Set<string>();
-        trails.forEach(t => t.locations?.forEach(l => locs.add(l.name)));
+        filteredTrails.forEach(t => t.locations?.forEach(l => locs.add(l.name)));
         return Array.from(locs).sort();
-    }, [trails]);
+    }, [filteredTrails]);
 
     const trailTypes = React.useMemo(() => {
         const types = new Set<string>();
-        trails.forEach(t => types.add(t.trailType));
+        filteredTrails.forEach(t => types.add(t.trailType));
         return Array.from(types).sort();
-    }, [trails]);
+    }, [filteredTrails]);
 
     if (loading) {
         return (
@@ -229,6 +242,20 @@ export const TrailList: React.FC = () => {
                             </FormControl>
                         </Grid>
 
+                        <Grid item xs={12}>
+                            <FormControlLabel
+                                control={
+                                    <Checkbox 
+                                        checked={filters.favoritesOnly}
+                                        onChange={(e) => handleFilterChange('favoritesOnly', e.target.checked)}
+                                        icon={<StarBorderIcon />}
+                                        checkedIcon={<StarIcon sx={{ color: 'warning.main' }} />}
+                                    />
+                                }
+                                label="Show Favorites Only"
+                            />
+                        </Grid>
+
                         <Grid item xs={12} display="flex" justifyContent="flex-end">
                             <Button size="small" onClick={resetFilters}>
                                 Reset Filters
@@ -241,6 +268,14 @@ export const TrailList: React.FC = () => {
             <Box mb={2} display="flex" justifyContent="space-between" alignItems="center">
                 <Typography variant="h5" fontWeight="bold">
                     {viewMode === 'list' ? 'Nearby Trails' : 'Trail Map'}
+                    <Typography 
+                        component="span" 
+                        variant="subtitle1" 
+                        color="text.secondary" 
+                        sx={{ ml: 1, fontWeight: 'normal' }}
+                    >
+                        ({filteredTrails.length})
+                    </Typography>
                 </Typography>
                 <Box display="flex" alignItems="center" gap={1}>
                     {!userLocation && viewMode === 'list' && (
@@ -266,19 +301,19 @@ export const TrailList: React.FC = () => {
             </Box>
 
             {viewMode === 'list' ? (
-                trails.length === 0 ? (
+                filteredTrails.length === 0 ? (
                     <Typography color="text.secondary" textAlign="center" py={4}>
-                        {searchQuery || Object.values(filters).some(v => v !== 'All' && v !== 1000 && v !== 0 && v !== 5000) 
+                        {searchQuery || Object.values(filters).some(v => v !== 'All' && v !== 1000 && v !== 0 && v !== 5000 && v !== false) 
                             ? `No trails matching your search criteria` 
                             : "No trails found."}
                     </Typography>
                 ) : (
-                    trails.map(trail => (
+                    filteredTrails.map(trail => (
                         <TrailCard key={trail.id} trail={trail} />
                     ))
                 )
             ) : (
-                <TrailMapView trails={trails} userLocation={userLocation} />
+                <TrailMapView trails={filteredTrails} userLocation={userLocation} />
             )}
         </Container>
     );
