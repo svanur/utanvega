@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { 
     Card, 
     CardContent, 
@@ -6,7 +6,8 @@ import {
     Box, 
     Stack, 
     Chip,
-    CardActionArea
+    CardActionArea,
+    Grid
 } from '@mui/material';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
 import HikingIcon from '@mui/icons-material/Hiking';
@@ -23,6 +24,7 @@ import StarIcon from '@mui/icons-material/Star';
 import { useNavigate } from 'react-router-dom';
 import { Trail } from '../hooks/useTrails';
 import { useFavorites } from '../hooks/useFavorites';
+import { TrailQuickView } from './TrailQuickView';
 
 interface TrailCardProps {
     trail: Trail;
@@ -61,6 +63,9 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail }) => {
     const { isFavorite, toggleFavorite } = useFavorites();
     const [swipeOffset, setSwipeOffset] = useState(0);
     const touchStart = useRef<number | null>(null);
+    const touchYStart = useRef<number | null>(null);
+    const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+    const [quickViewOpen, setQuickViewOpen] = useState(false);
     const isFavorited = isFavorite(trail.slug);
 
     const distanceKm = (trail.length / 1000).toFixed(1);
@@ -69,27 +74,54 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail }) => {
         : null;
 
     const handleClick = () => {
-        if (Math.abs(swipeOffset) < 10) {
+        if (Math.abs(swipeOffset) < 10 && !quickViewOpen) {
             navigate(`/trails/${trail.slug}`);
         }
     };
 
+    const handleLongPress = useCallback(() => {
+        setQuickViewOpen(true);
+        if ('vibrate' in navigator) {
+            navigator.vibrate(50);
+        }
+    }, []);
+
     const handleTouchStart = (e: React.TouchEvent) => {
         touchStart.current = e.touches[0].clientX;
+        touchYStart.current = e.touches[0].clientY;
+
+        // Start long press timer
+        longPressTimer.current = setTimeout(handleLongPress, 600);
     };
 
     const handleTouchMove = (e: React.TouchEvent) => {
         if (touchStart.current !== null) {
             const currentX = e.touches[0].clientX;
-            const diff = currentX - touchStart.current;
+            const currentY = e.touches[0].clientY;
+            const diffX = currentX - touchStart.current;
+            const diffY = currentY - (touchYStart.current || 0);
+
+            // If we move more than 10px in any direction, cancel long press
+            if (Math.abs(diffX) > 10 || Math.abs(diffY) > 10) {
+                if (longPressTimer.current) {
+                    clearTimeout(longPressTimer.current);
+                    longPressTimer.current = null;
+                }
+            }
+
             // Only allow right swipe for favorites, max offset for effect
-            if (diff > 0) {
-                setSwipeOffset(Math.min(diff, 150));
+            if (diffX > 0 && !quickViewOpen) {
+                setSwipeOffset(Math.min(diffX, 150));
             }
         }
     };
 
     const handleTouchEnd = () => {
+        if (longPressTimer.current) {
+            clearTimeout(longPressTimer.current);
+            longPressTimer.current = null;
+        }
+
         if (swipeOffset > 100) {
             toggleFavorite(trail.slug);
             // Trigger haptic feedback if available
@@ -99,6 +131,7 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail }) => {
         }
         setSwipeOffset(0);
         touchStart.current = null;
+        touchYStart.current = null;
     };
 
     return (
@@ -206,6 +239,12 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail }) => {
                     </CardContent>
                 </CardActionArea>
             </Card>
+
+            <TrailQuickView 
+                trail={trail} 
+                open={quickViewOpen} 
+                onClose={() => setQuickViewOpen(false)} 
+            />
         </Box>
     );
 };

@@ -5,7 +5,9 @@
 - [ ] Add 'Load more' button to trail list
 - [ ] Offline Map Support: Cache GeoJSON and map tiles locally.
 - [ ] Push Notifications: Notify users on new trails or condition changes.
-- [ ] Long Press for Quick View: Show elevation/info preview on hold.
+- [x] Long Press for Quick View: Show elevation/info preview on hold.
+    - [x] Map and elevation in collapsable component.
+    - [x] Show distance, gain, loss and trail type.
 
 ## Backlog
 
