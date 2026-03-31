@@ -70,7 +70,7 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
     const [swipeOffset, setSwipeOffset] = useState(0);
     const touchStart = useRef<number | null>(null);
     const touchYStart = useRef<number | null>(null);
-    const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+    const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [quickViewOpen, setQuickViewOpen] = useState(false);
     const isFavorited = isFavorite(trail.slug);
 

@@ -61,7 +61,7 @@ const visibilities = [
     { value: 'Private', label: 'Private' },
 ];
 
-export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess }: { open: boolean, trailId: string | null, onClose: () => void, onSaveSuccess: (trail?: { slug: string, name: string }) => void }) {
+export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess }: { open: boolean, trailId: string | null, onClose: () => void, onSaveSuccess: (trail?: { id: string, slug: string, name: string }) => void }) {
     const [trail, setTrail] = useState<TrailDetail | null>(null);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -114,7 +114,7 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
                     }))
                 }),
             });
-            onSaveSuccess({ slug: trail.slug, name: trail.name });
+            onSaveSuccess({ id: trail.id, slug: trail.slug, name: trail.name });
             onClose();
         } catch (err) {
             setError('Failed to save trail.');
