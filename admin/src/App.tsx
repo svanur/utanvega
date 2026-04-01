@@ -1,11 +1,13 @@
 import { Box, CssBaseline, ThemeProvider, createTheme, AppBar, Toolbar, Typography, Container, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Fab, Snackbar, Alert, Button, CircularProgress, Link } from '@mui/material';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
+import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { useState } from 'react';
 import TrailList from './pages/TrailList';
 import { LocationList } from './pages/LocationList';
+import TrailHealth from './pages/TrailHealth';
 import GpxUploadDialog from './components/GpxUploadDialog';
 import LoginPage from './pages/LoginPage';
 import { AuthProvider, useAuth } from './hooks/useAuth';
@@ -26,7 +28,7 @@ const DRAWER_WIDTH = 240;
 
 function AdminContent() {
   const { user, loading: authLoading, signOut } = useAuth();
-  const [currentPage, setCurrentPage] = useState<'trails' | 'locations'>('trails');
+  const [currentPage, setCurrentPage] = useState<'trails' | 'locations' | 'health'>('trails');
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [selectedTrailId, setSelectedTrailId] = useState<string | null>(null);
@@ -116,6 +118,12 @@ function AdminContent() {
                 <ListItemText primary="Locations" />
               </ListItemButton>
             </ListItem>
+            <ListItem disablePadding>
+              <ListItemButton selected={currentPage === 'health'} onClick={() => setCurrentPage('health')}>
+                <ListItemIcon><HealthAndSafetyIcon /></ListItemIcon>
+                <ListItemText primary="Trail Health" />
+              </ListItemButton>
+            </ListItem>
           </List>
         </Box>
       </Drawer>
@@ -124,6 +132,8 @@ function AdminContent() {
         <Container maxWidth="lg">
           {currentPage === 'trails' ? (
             <TrailList key={`${refreshTrigger}-${selectedTrailId}`} onNotify={notify} initialTrailId={selectedTrailId} />
+          ) : currentPage === 'health' ? (
+            <TrailHealth onEditTrail={(id) => { setSelectedTrailId(id); setCurrentPage('trails'); }} onNotify={notify} />
           ) : (
             <LocationList onNotify={notify} />
           )}
