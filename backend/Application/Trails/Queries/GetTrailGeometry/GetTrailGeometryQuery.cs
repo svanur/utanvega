@@ -39,51 +39,16 @@ public class GetTrailGeometryQueryHandler : IRequestHandler<GetTrailGeometryQuer
 
         if (geometry == null) return null;
 
-        // Use GeoJsonWriter directly as it is more predictable for Z values than the Serializer/Converter combo.
-        var writer = new NetTopologySuite.IO.GeoJsonWriter();
-        
-        // Ensure the writer is configured to include Z dimension
-        // In NTS 2.x, GeoJsonWriter doesn't have a direct CoordinateDimension property like the old ones,
-        // but it respects the geometry's dimensions if possible.
-        
-        // Log if we have Z coordinates
-        var pointsWithZ = geometry.Coordinates.Count(c => !double.IsNaN(c.Z));
-        
+        // Create a plain Newtonsoft serializer with ONLY a dimension-3 GeometryConverter.
+        // GeoJsonSerializer.Create() adds its own dim-2 converter first, which shadows any
+        // dim-3 converter added afterwards — so we avoid it entirely.
         var factory = new GeometryFactory(new PrecisionModel(), geometry.SRID);
-        var serializer = NetTopologySuite.IO.GeoJsonSerializer.Create(new Newtonsoft.Json.JsonSerializerSettings(), factory);
-        // Explicitly set the dimension to 3 in the converter
-        serializer.Converters.Add(new NetTopologySuite.IO.Converters.GeometryConverter(factory, 3));
-        
+        var settings = new Newtonsoft.Json.JsonSerializerSettings();
+        settings.Converters.Add(new NetTopologySuite.IO.Converters.GeometryConverter(factory, 3));
+        var serializer = Newtonsoft.Json.JsonSerializer.Create(settings);
+
         using var stringWriter = new StringWriter();
         serializer.Serialize(stringWriter, geometry);
-        var json = stringWriter.ToString();
-
-        // Check if Z coordinates actually made it into the JSON
-        // GeoJSON for 3D is [lon, lat, ele]. So a coordinate has 2 commas if it has Z.
-        // We'll check if any coordinate in the JSON has 2 commas.
-        bool jsonHasZ = json.Contains(",[") || (json.Count(f => f == ',') > geometry.Coordinates.Length * 2);
-        
-        if (pointsWithZ > 0 && !jsonHasZ)
-        {
-            Console.WriteLine($"[DEBUG_LOG] Warning: Serializer did not include Z despite {pointsWithZ} points having it. Trying fallback writer.");
-            // Fallback: GeoJsonWriter might just work if we are lucky
-            json = writer.Write(geometry);
-        }
-
-        Console.WriteLine($"[DEBUG_LOG] Geometry {request.Slug ?? request.Id.ToString()} has {geometry.Coordinates.Length} points. Points with Z: {pointsWithZ}");
-        
-        // Let's ensure the coordinates are actually treated as 3D if they have Z values.
-        // If some points have Z but others don't, or if they are all 0, it might be an issue.
-        if (pointsWithZ > 0)
-        {
-            Console.WriteLine($"[DEBUG_LOG] First 5 coordinates: {string.Join(", ", geometry.Coordinates.Take(5).Select(c => $"[{c.X}, {c.Y}, {c.Z}]"))}");
-        }
-        else
-        {
-             Console.WriteLine($"[DEBUG_LOG] No points with Z. Dimension: {geometry.Dimension}, GeometryType: {geometry.GeometryType}");
-        }
-
-        Console.WriteLine($"[DEBUG_LOG] GeoJSON output (first 200 chars): {json.Substring(0, Math.Min(200, json.Length))}");
-        return json;
+        return stringWriter.ToString();
     }
 }

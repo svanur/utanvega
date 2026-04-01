@@ -59,6 +59,7 @@ export const TrailQuickView: React.FC<TrailQuickViewProps> = ({ trail, open, onC
     const theme = useTheme();
     const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
     const [geometry, setGeometry] = useState<GeoJsonGeometry | null>(null);
+    const [hoverPoint, setHoverPoint] = useState<{ lat: number; lng: number } | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [mapExpanded, setMapExpanded] = useState(true);
@@ -85,6 +86,7 @@ export const TrailQuickView: React.FC<TrailQuickViewProps> = ({ trail, open, onC
         } else if (!open) {
             // Reset state when closed
             setGeometry(null);
+            setHoverPoint(null);
             setError(null);
         }
     }, [open, trail]);
@@ -186,7 +188,8 @@ export const TrailQuickView: React.FC<TrailQuickViewProps> = ({ trail, open, onC
                             {trail && (
                                 <TrailMap 
                                     slug={trail.slug} 
-                                    onDataLoaded={setGeometry} 
+                                    onDataLoaded={setGeometry}
+                                    hoverPoint={hoverPoint}
                                 />
                             )}
                             <Box 
@@ -251,7 +254,7 @@ export const TrailQuickView: React.FC<TrailQuickViewProps> = ({ trail, open, onC
                                 ) : geometry ? (
                                     <ElevationChart 
                                         coordinates={geometry.coordinates} 
-                                        onHover={() => {}} 
+                                        onHover={(point: any) => setHoverPoint(point ? { lat: point.lat, lng: point.lng } : null)} 
                                     />
                                 ) : (
                                     <Box py={2} textAlign="center">
