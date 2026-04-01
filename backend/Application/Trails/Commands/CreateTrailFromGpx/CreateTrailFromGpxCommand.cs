@@ -8,9 +8,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Utanvega.Backend.Application.Trails.Commands.CreateTrailFromGpx;
 
-public record CreateTrailFromGpxResult(Guid Id, string Slug, string Name, List<TrailSimilarityMatch> Matches);
+public record CreateTrailFromGpxResult(Guid Id, string Slug, string Name, List<TrailSimilarityMatch> Matches, List<DetectedLocationResult> DetectedLocations);
 
 public record TrailSimilarityMatch(Guid TrailId, string TrailName, double MatchPercentage);
+
+public record DetectedLocationResult(Guid Id, string Name, string Type, double DistanceMeters);
 
 public record CreateTrailFromGpxCommand(string? Name, string GpxXml) : IRequest<CreateTrailFromGpxResult>;
 
@@ -18,10 +20,12 @@ public class CreateTrailFromGpxCommandHandler : IRequestHandler<CreateTrailFromG
 {
     private readonly UtanvegaDbContext _context;
     private readonly GeometryFactory _geometryFactory;
+    private readonly LocationDetector _locationDetector;
 
-    public CreateTrailFromGpxCommandHandler(UtanvegaDbContext context)
+    public CreateTrailFromGpxCommandHandler(UtanvegaDbContext context, LocationDetector locationDetector)
     {
         _context = context;
+        _locationDetector = locationDetector;
         // DotSpatialAffineCoordinateSequenceFactory may include M (Measure) dimension, which PostGIS column (LineStringZ) rejects.
         // We use CoordinateArraySequenceFactory for standard XYZ support.
         _geometryFactory = new GeometryFactory(new PrecisionModel(), 4326); // WGS 84, default factory uses CoordinateArraySequenceFactory
@@ -34,9 +38,16 @@ public class CreateTrailFromGpxCommandHandler : IRequestHandler<CreateTrailFromG
         var matches = await CheckSimilarityAsync(trail, cancellationToken);
 
         _context.Trails.Add(trail);
-        await _context.SaveChangesWithAuditAsync("system"); // Could pass user if available
+
+        // Auto-detect and link locations based on trail start point
+        var detectedLocations = await _locationDetector.DetectAndLinkAsync(trail, cancellationToken);
+
+        await _context.SaveChangesWithAuditAsync("system");
         
-        return new CreateTrailFromGpxResult(trail.Id, trail.Slug, trail.Name, matches);
+        return new CreateTrailFromGpxResult(
+            trail.Id, trail.Slug, trail.Name, matches,
+            detectedLocations.Select(d => new DetectedLocationResult(d.Id, d.Name, d.Type, d.DistanceMeters)).ToList()
+        );
     }
 
     public async Task<List<TrailSimilarityMatch>> CheckSimilarityAsync(Trail trail, CancellationToken cancellationToken)

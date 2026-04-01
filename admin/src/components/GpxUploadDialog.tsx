@@ -14,7 +14,14 @@ interface SimilarityMatch {
     message: string;
 }
 
-export default function GpxUploadDialog({ open, onClose, onUploadSuccess }: { open: boolean, onClose: () => void, onUploadSuccess: (trail?: { id: string, slug: string, name: string }) => void }) {
+interface DetectedLocation {
+    id: string;
+    name: string;
+    type: string;
+    distanceMeters: number;
+}
+
+export default function GpxUploadDialog({ open, onClose, onUploadSuccess }: { open: boolean, onClose: () => void, onUploadSuccess: (trail?: { id: string, slug: string, name: string }, detectedLocations?: DetectedLocation[]) => void }) {
     const [name, setName] = useState('');
     const [file, setFile] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
@@ -131,8 +138,11 @@ export default function GpxUploadDialog({ open, onClose, onUploadSuccess }: { op
 
             const result = await response.json();
             
-            // Success!
-            onUploadSuccess({ id: result.id, slug: result.slug || generateSlug(name), name });
+            // Success — pass detected locations to caller
+            onUploadSuccess(
+                { id: result.id, slug: result.slug || generateSlug(name), name },
+                result.detectedLocations || []
+            );
             handleClose();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Unknown error');

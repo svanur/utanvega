@@ -142,6 +142,7 @@ builder.Services.AddDbContext<UtanvegaDbContext>(options =>
 // Add CQRS with MediatR
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 builder.Services.AddScoped<CreateTrailFromGpxCommandHandler>();
+builder.Services.AddScoped<LocationDetector>();
 
 // builder.Services.AddEndpointsApiExplorer();
 // builder.Services.AddSwaggerGen();
@@ -388,6 +389,13 @@ app.MapPost("/api/v1/admin/trails/recalculate-all-difficulties", [Authorize] asy
 })
 .WithName("RecalculateAllDifficulties");
 
+app.MapGet("/api/v1/admin/detect-locations", [Authorize] async (double lat, double lng, LocationDetector detector) =>
+{
+    var locations = await detector.DetectLocationsAsync(lat, lng);
+    return Results.Ok(locations.Select(l => new { l.Id, l.Name, l.Type, l.DistanceMeters }));
+})
+.WithName("DetectLocations");
+
 app.MapGet("/api/v1/admin/trails/{idOrSlug}/geometry", [Authorize] async (string idOrSlug, IMediator mediator) =>
 {
     var isGuid = Guid.TryParse(idOrSlug, out var id);
@@ -419,6 +427,12 @@ app.MapPost("/api/v1/admin/trails/upload-gpx", [Authorize] async (string name, I
                 trailName = m.TrailName,
                 matchPercentage = m.MatchPercentage,
                 message = $"This trail is a {m.MatchPercentage}% match to '{m.TrailName}'"
+            }),
+            detectedLocations = result.DetectedLocations.Select(l => new {
+                id = l.Id,
+                name = l.Name,
+                type = l.Type,
+                distanceMeters = l.DistanceMeters
             })
         };
         

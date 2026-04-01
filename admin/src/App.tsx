@@ -44,11 +44,14 @@ function AdminContent() {
     setSnackbar({ ...snackbar, open: false });
   };
 
-  const handleUploadSuccess = (trail?: { id: string, slug: string, name: string }) => {
+  const handleUploadSuccess = (trail?: { id: string, slug: string, name: string }, detectedLocations?: { id: string, name: string, type: string, distanceMeters: number }[]) => {
     if (trail) {
+      const locationMsg = detectedLocations && detectedLocations.length > 0
+        ? ` → Auto-linked to: ${detectedLocations.map(l => l.name).join(', ')}`
+        : '';
       notify(
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="body2">Trail '{trail.name}' uploaded successfully.</Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+          <Typography variant="body2">Trail '{trail.name}' uploaded successfully.{locationMsg}</Typography>
           <Link 
             component="button"
             onClick={() => setSelectedTrailId(trail.id)}
