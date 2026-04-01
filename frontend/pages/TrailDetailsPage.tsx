@@ -32,6 +32,7 @@ import Layout from '../components/Layout';
 import { useTrailBySlug, useTrails } from '../hooks/useTrails';
 import TrailMap, { GeoJsonGeometry } from '../components/TrailMap';
 import ElevationChart from '../components/ElevationChart';
+import RoutePlayback from '../components/RoutePlayback';
 import ShareButtons from '../components/ShareButtons';
 import QRCodeShare from '../components/QRCodeShare';
 import DifficultyInfo from '../components/DifficultyInfo';
@@ -77,6 +78,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     const { trails: allTrails } = useTrails();
     const [geometry, setGeometry] = useState<GeoJsonGeometry | null>(null);
     const [hoverPoint, setHoverPoint] = useState<{ lat: number; lng: number } | null>(null);
+    const [playbackIndex, setPlaybackIndex] = useState<number | null>(null);
 
     const relatedTrails = (allTrails && trail) 
         ? allTrails
@@ -227,10 +229,18 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                 />
 
                 {geometry && (
-                    <ElevationChart 
-                        coordinates={geometry.coordinates} 
-                        onHover={(point: any) => setHoverPoint(point ? { lat: point.lat, lng: point.lng } : null)} 
-                    />
+                    <>
+                        <RoutePlayback
+                            coordinates={geometry.coordinates}
+                            onPointChange={setHoverPoint}
+                            onIndexChange={setPlaybackIndex}
+                        />
+                        <ElevationChart 
+                            coordinates={geometry.coordinates} 
+                            onHover={(point: any) => setHoverPoint(point ? { lat: point.lat, lng: point.lng } : null)}
+                            activeIndex={playbackIndex}
+                        />
+                    </>
                 )}
             </Paper>
 

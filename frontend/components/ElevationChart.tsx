@@ -7,6 +7,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  ReferenceLine,
 } from 'recharts';
 import { Box, Paper, Typography, useTheme } from '@mui/material';
 
@@ -21,9 +22,10 @@ interface ElevationDataPoint {
 interface ElevationChartProps {
   coordinates: number[][]; // [lon, lat, ele]
   onHover: (point: ElevationDataPoint | null) => void;
+  activeIndex?: number | null;
 }
 
-const ElevationChart: React.FC<ElevationChartProps> = ({ coordinates, onHover }) => {
+const ElevationChart: React.FC<ElevationChartProps> = ({ coordinates, onHover, activeIndex }) => {
   const theme = useTheme();
 
   const chartData = useMemo(() => {
@@ -150,6 +152,14 @@ const ElevationChart: React.FC<ElevationChartProps> = ({ coordinates, onHover })
               fill="url(#colorEle)"
               isAnimationActive={false}
             />
+            {activeIndex != null && chartData[activeIndex] && (
+              <ReferenceLine
+                x={chartData[activeIndex].distance}
+                stroke={theme.palette.warning.main}
+                strokeWidth={2}
+                strokeDasharray="4 2"
+              />
+            )}
           </AreaChart>
         </ResponsiveContainer>
       </Box>
