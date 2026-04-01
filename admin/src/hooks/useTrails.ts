@@ -12,6 +12,9 @@ export type Trail = {
     status: 'Draft' | 'Published' | 'Flagged' | 'Archived' | 'Deleted';
     activityType: 'TrailRunning' | 'Running' | 'Cycling' | 'Hiking';
     trailType: 'OutAndBack' | 'Loop' | 'PointToPoint';
+    difficulty?: string;
+    startLatitude?: number | null;
+    startLongitude?: number | null;
     locations: { name: string, slug: string }[];
 };
 

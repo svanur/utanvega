@@ -73,6 +73,10 @@ export class QuoteService {
         { text: "Nobody said it was easy.", author: "Coldplay" },
         { text: "We're so happy and that's how we're gonna stay.", author: "Manfred Mann" },
         { text: "You only benefit from the training you recover from.", author: "The Albons" },
+        { text: "Step one: You start running. There is no step two.", author: "Barney Stinson on running a marathon" },
+        { text: "If you want to run, run a mile. If you want to experience a different life, run a marathon.", author: "Emil Zátopek" },
+        { text: "Everything you ever wanted to know about yourself, you can learn in 26.2 miles.", author: "Lori Culnane" },
+        { text: "How do you know if someone ran a marathon? Don’t worry, they’ll tell you.", author: "Jimmy Fallon" },
     ];
 
     static getRandomQuote(): Quote {
