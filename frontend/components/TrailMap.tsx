@@ -21,6 +21,22 @@ const DefaultIcon = L.icon({
 // @ts-ignore
 L.Marker.prototype.options.icon = DefaultIcon;
 
+// Start marker: green circle
+const StartIcon = L.divIcon({
+    html: '<div style="width:14px;height:14px;background:#4caf50;border:2px solid white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>',
+    iconSize: [14, 14],
+    iconAnchor: [7, 7],
+    className: '',
+});
+
+// End marker: red flag-style
+const EndIcon = L.divIcon({
+    html: '<div style="width:14px;height:14px;background:#f44336;border:2px solid white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>',
+    iconSize: [14, 14],
+    iconAnchor: [7, 7],
+    className: '',
+});
+
 export type GeoJsonGeometry = {
     type: string;
     coordinates: number[][]; // [lon, lat, ele]
@@ -53,37 +69,31 @@ interface TrailMapProps {
     slug: string;
     onDataLoaded?: (data: GeoJsonGeometry) => void;
     hoverPoint?: { lat: number; lng: number } | null;
+    activityType?: string;
 }
 
-function HoverMarker({ point }: { point: { lat: number; lng: number } | null | undefined }) {
-    const map = useMap();
-    
-    useEffect(() => {
-        if (point) {
-            const latLng: LatLngExpression = [point.lat, point.lng];
-            // Only pan if the point is not currently in the view, or just slightly pan to keep it centered if needed
-            // For smoother experience, we might not want to pan at all unless it's outside
-            if (!map.getBounds().contains(latLng)) {
-                map.panTo(latLng);
-            }
-        }
-    }, [point, map]);
+const activityEmoji: Record<string, string> = {
+    trailrunning: '🏃‍♀️',
+    running: '🏃‍♂️',
+    hiking: '🥾',
+    cycling: '🚴',
+};
 
+function HoverMarker({ point, activityType }: { point: { lat: number; lng: number } | null | undefined; activityType?: string }) {
     if (!point) return null;
 
-    const hoverIcon = new L.Icon({
-        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-gold.png',
-        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-        iconSize: [25, 41],
-        iconAnchor: [12, 41],
-        popupAnchor: [1, -34],
-        shadowSize: [41, 41]
+    const emoji = activityEmoji[(activityType || '').toLowerCase()] || '📍';
+    const icon = L.divIcon({
+        html: `<div style="font-size:22px;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))">${emoji}</div>`,
+        iconSize: [26, 26],
+        iconAnchor: [13, 13],
+        className: '',
     });
 
-    return <Marker position={[point.lat, point.lng]} icon={hoverIcon} zIndexOffset={1000} />;
+    return <Marker position={[point.lat, point.lng]} icon={icon} zIndexOffset={1000} />;
 }
 
-export default function TrailMap({ slug, onDataLoaded, hoverPoint }: TrailMapProps) {
+export default function TrailMap({ slug, onDataLoaded, hoverPoint, activityType }: TrailMapProps) {
     const [geometry, setGeometry] = useState<GeoJsonGeometry | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -191,6 +201,13 @@ export default function TrailMap({ slug, onDataLoaded, hoverPoint }: TrailMapPro
                 />
                 <Polyline positions={positions} color="#2196f3" weight={5} opacity={0.7} />
                 
+                {positions.length > 0 && (
+                    <>
+                        <Marker position={positions[0]} icon={StartIcon} />
+                        <Marker position={positions[positions.length - 1]} icon={EndIcon} />
+                    </>
+                )}
+                
                 {userLocation && (
                     <Marker position={[userLocation.lat, userLocation.lng]} 
                         icon={L.icon({
@@ -205,7 +222,7 @@ export default function TrailMap({ slug, onDataLoaded, hoverPoint }: TrailMapPro
                 )}
 
                 <ChangeView bounds={positions} followMe={followMe} userLocation={userLocation} />
-                <HoverMarker point={hoverPoint} />
+                <HoverMarker point={hoverPoint} activityType={activityType} />
             </MapContainer>
         </Box>
     );

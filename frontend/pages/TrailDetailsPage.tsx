@@ -223,6 +223,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                     slug={trail.slug} 
                     onDataLoaded={setGeometry} 
                     hoverPoint={hoverPoint}
+                    activityType={trail.activityType}
                 />
 
                 {geometry && (

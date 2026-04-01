@@ -190,6 +190,7 @@ export const TrailQuickView: React.FC<TrailQuickViewProps> = ({ trail, open, onC
                                     slug={trail.slug} 
                                     onDataLoaded={setGeometry}
                                     hoverPoint={hoverPoint}
+                                    activityType={trail.activityType}
                                 />
                             )}
                             <Box 

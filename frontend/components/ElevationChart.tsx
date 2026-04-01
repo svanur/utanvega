@@ -97,11 +97,15 @@ const ElevationChart: React.FC<ElevationChartProps> = ({ coordinates, onHover })
   };
 
   const handleMouseMove = (state: any) => {
-    if (state && state.activePayload && state.activePayload.length > 0) {
-      onHover(state.activePayload[0].payload);
-    } else {
-      onHover(null);
+    if (state?.isTooltipActive && state.activeTooltipIndex != null) {
+      const index = Number(state.activeTooltipIndex);
+      const point = chartData[index];
+      if (point) {
+        onHover(point);
+        return;
+      }
     }
+    onHover(null);
   };
 
   return (
@@ -109,8 +113,8 @@ const ElevationChart: React.FC<ElevationChartProps> = ({ coordinates, onHover })
       <Typography variant="h6" gutterBottom>
         Elevation Profile
       </Typography>
-      <Box sx={{ width: '100%', height: 220, position: 'relative' }}>
-        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+      <Box sx={{ width: '100%', height: 220, overflow: 'hidden' }}>
+        <ResponsiveContainer width="100%" height={220}>
           <AreaChart
             data={chartData}
             margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
