@@ -27,6 +27,7 @@ import { Trail } from '../hooks/useTrails';
 import { useFavorites } from '../hooks/useFavorites';
 import { useHiddenTrails } from '../hooks/useHiddenTrails';
 import { TrailQuickView } from './TrailQuickView';
+import DifficultyInfo from './DifficultyInfo';
 
 interface TrailCardProps {
     trail: Trail;
@@ -253,6 +254,9 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                             variant="outlined" 
                             color="primary"
                         />
+                        {trail.difficulty && (
+                            <DifficultyInfo difficulty={trail.difficulty} />
+                        )}
                         {[...trail.locations]
                             .sort((a, b) => a.order - b.order)
                             .slice(0, compact ? 1 : undefined)

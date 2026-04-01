@@ -67,6 +67,7 @@ public class GetLocationBySlugQueryHandler : IRequestHandler<GetLocationBySlugQu
             t.Status.ToString(),
             t.ActivityTypeId.ToString(),
             t.Type.ToString(),
+            t.Difficulty.ToString(),
             (t.GpxData as LineString)?.StartPoint.Y,
             (t.GpxData as LineString)?.StartPoint.X,
             t.TrailLocations

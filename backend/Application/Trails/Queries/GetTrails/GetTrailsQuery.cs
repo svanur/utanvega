@@ -21,6 +21,7 @@ public record TrailDto(
     string Status,
     string ActivityType,
     string TrailType,
+    string Difficulty,
     double? StartLatitude,
     double? StartLongitude,
     List<LocationInfoDto> Locations
@@ -65,6 +66,7 @@ public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailD
             t.Status.ToString(),
             t.ActivityTypeId.ToString(),
             t.Type.ToString(),
+            t.Difficulty.ToString(),
             (t.GpxData as LineString)?.StartPoint.Y,
             (t.GpxData as LineString)?.StartPoint.X,
             t.TrailLocations

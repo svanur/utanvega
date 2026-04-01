@@ -17,6 +17,7 @@ export interface Trail {
     status: string;
     activityType: string;
     trailType: string;
+    difficulty: string;
     startLatitude: number | null;
     startLongitude: number | null;
     locations: LocationInfo[];

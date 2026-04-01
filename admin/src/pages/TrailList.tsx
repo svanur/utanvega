@@ -2,6 +2,7 @@ import { Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import MapIcon from '@mui/icons-material/Map';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import CalculateIcon from '@mui/icons-material/Calculate';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
@@ -27,6 +28,7 @@ export default function TrailList({ onNotify, initialTrailId }: { onNotify: (mes
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkActioning, setBulkActioning] = useState(false);
+  const [recalculating, setRecalculating] = useState(false);
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -164,6 +166,19 @@ export default function TrailList({ onNotify, initialTrailId }: { onNotify: (mes
     }
   };
 
+  const handleRecalculateDifficulties = async () => {
+    setRecalculating(true);
+    try {
+        const data = await apiFetch<{ count: number }>('/api/v1/admin/trails/recalculate-all-difficulties', { method: 'POST' });
+        onNotify(`Recalculated difficulty for ${data.count} trails`);
+        refresh();
+    } catch (err) {
+        onNotify('Failed to recalculate difficulties', 'error');
+    } finally {
+        setRecalculating(false);
+    }
+  };
+
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>;
   if (error) return <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>;
 
@@ -223,6 +238,15 @@ export default function TrailList({ onNotify, initialTrailId }: { onNotify: (mes
             label="Show Deleted" 
           />
           <Button startIcon={<RefreshIcon />} onClick={refresh}>Refresh</Button>
+          <Tooltip title="Recalculate difficulty for all trails based on distance, elevation and activity type">
+            <Button 
+              startIcon={recalculating ? <CircularProgress size={18} /> : <CalculateIcon />} 
+              onClick={handleRecalculateDifficulties}
+              disabled={recalculating}
+            >
+              Recalculate Difficulties
+            </Button>
+          </Tooltip>
         </Box>
       </Box>
 

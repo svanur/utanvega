@@ -24,6 +24,7 @@ using Utanvega.Backend.Application.History.Queries.GetChangeLogs;
 using Utanvega.Backend.Application.Trails.Queries.GetTrailBySlug;
 using Utanvega.Backend.Application.Locations.Queries.GetLocationBySlug;
 using Utanvega.Backend.Application.Trails.Queries.GetTrailGpx;
+using Utanvega.Backend.Core.Services;
 using MediatR;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -356,6 +357,36 @@ app.MapPost("/api/v1/admin/trails/bulk-action", [Authorize] async (BulkTrailActi
     return Results.Ok(new { count });
 })
 .WithName("BulkTrailAction");
+
+app.MapPost("/api/v1/admin/trails/{id:guid}/recalculate-difficulty", [Authorize] async (Guid id, UtanvegaDbContext context) =>
+{
+    var trail = await context.Trails.FindAsync(id);
+    if (trail == null) return Results.NotFound();
+
+    trail.Difficulty = DifficultyCalculator.Calculate(trail);
+    trail.UpdatedAt = DateTime.UtcNow;
+    await context.SaveChangesWithAuditAsync("admin");
+
+    return Results.Ok(new { trail.Id, difficulty = trail.Difficulty.ToString() });
+})
+.WithName("RecalculateTrailDifficulty");
+
+app.MapPost("/api/v1/admin/trails/recalculate-all-difficulties", [Authorize] async (UtanvegaDbContext context) =>
+{
+    var trails = await context.Trails
+        .Where(t => t.Status != Utanvega.Backend.Core.Entities.TrailStatus.Deleted)
+        .ToListAsync();
+
+    foreach (var trail in trails)
+    {
+        trail.Difficulty = DifficultyCalculator.Calculate(trail);
+        trail.UpdatedAt = DateTime.UtcNow;
+    }
+
+    await context.SaveChangesWithAuditAsync("admin");
+    return Results.Ok(new { count = trails.Count });
+})
+.WithName("RecalculateAllDifficulties");
 
 app.MapGet("/api/v1/admin/trails/{idOrSlug}/geometry", [Authorize] async (string idOrSlug, IMediator mediator) =>
 {

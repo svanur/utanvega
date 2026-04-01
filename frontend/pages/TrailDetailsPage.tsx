@@ -34,6 +34,7 @@ import TrailMap, { GeoJsonGeometry } from '../components/TrailMap';
 import ElevationChart from '../components/ElevationChart';
 import ShareButtons from '../components/ShareButtons';
 import QRCodeShare from '../components/QRCodeShare';
+import DifficultyInfo from '../components/DifficultyInfo';
 import { TrailCard } from '../components/TrailCard';
 
 const getActivityIcon = (type: string) => {
@@ -159,6 +160,9 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                             variant="outlined" 
                             size="small"
                         />
+                        {trail.difficulty && (
+                            <DifficultyInfo difficulty={trail.difficulty} />
+                        )}
                         {trail.locations && trail.locations.length > 0 && trail.locations.map((loc) => (
                             <Chip 
                                 key={loc.slug}

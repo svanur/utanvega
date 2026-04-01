@@ -204,6 +204,7 @@ public class CreateTrailFromGpxCommandHandler : IRequestHandler<CreateTrailFromG
             Length = length,
             ElevationGain = gain,
             ElevationLoss = loss,
+            Difficulty = DifficultyCalculator.Calculate(length, gain, ActivityType.TrailRunning),
             Status = TrailStatus.Draft,
             CreatedAt = DateTime.UtcNow
         };
