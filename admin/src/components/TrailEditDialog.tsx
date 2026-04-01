@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Box, Typography, Alert, CircularProgress, MenuItem, IconButton, Paper, Chip, Tabs, Tab } from '@mui/material';
-import { Delete as DeleteIcon, Add as AddIcon, History as HistoryIcon } from '@mui/icons-material';
+import { Delete as DeleteIcon, Add as AddIcon, History as HistoryIcon, Map as MapIcon } from '@mui/icons-material';
+import { MapContainer, TileLayer, Polyline, CircleMarker, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { apiFetch } from '../hooks/api';
 import { useLocations, LocationDto } from '../hooks/useLocations';
 import ChangeLogList from './ChangeLogList';
@@ -156,6 +159,7 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
                     <Typography variant="h6">Edit Trail</Typography>
                     <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)}>
                         <Tab label="General" />
+                        <Tab icon={<MapIcon />} label="Map" />
                         <Tab icon={<HistoryIcon />} label="History" />
                     </Tabs>
                 </Box>
@@ -242,6 +246,8 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
                             </Paper>
                         </Box>
                     ) : <Typography>Trail not found.</Typography>
+                ) : activeTab === 1 ? (
+                    <TrailMapTab trailId={trailId} />
                 ) : (
                     <ChangeLogList entityName="Trail" entityId={trailId || undefined} title="Trail History" />
                 )}
@@ -253,5 +259,65 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
                 )}
             </DialogActions>
         </Dialog>
+    );
+}
+
+function FitBounds({ positions }: { positions: L.LatLngExpression[] }) {
+    const map = useMap();
+    useEffect(() => {
+        if (positions.length > 0) {
+            map.fitBounds(L.latLngBounds(positions), { padding: [30, 30] });
+        }
+    }, [map, positions]);
+    return null;
+}
+
+function TrailMapTab({ trailId }: { trailId: string | null }) {
+    const [positions, setPositions] = useState<[number, number][]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!trailId) return;
+        (async () => {
+            try {
+                setLoading(true);
+                const geo = await apiFetch<any>(`/api/v1/admin/trails/${trailId}/geometry`);
+                if (geo?.coordinates) {
+                    setPositions(geo.coordinates.map((c: number[]) => [c[1], c[0]] as [number, number]));
+                }
+            } catch {
+                setError('No GPX geometry available for this trail.');
+            } finally {
+                setLoading(false);
+            }
+        })();
+    }, [trailId]);
+
+    if (loading) return <Box sx={{ p: 3, textAlign: 'center' }}><CircularProgress /></Box>;
+    if (error || positions.length === 0) {
+        return <Alert severity="info" sx={{ mt: 1 }}>{error || 'No geometry data available.'}</Alert>;
+    }
+
+    const start = positions[0];
+    const end = positions[positions.length - 1];
+
+    return (
+        <Box sx={{ height: 450, mt: 1 }}>
+            <MapContainer
+                center={start}
+                zoom={13}
+                style={{ height: '100%', width: '100%', borderRadius: 8 }}
+            >
+                <TileLayer
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                <Polyline positions={positions} color="#1976d2" weight={4} />
+                <CircleMarker center={start} radius={8} pathOptions={{ color: '#2e7d32', fillColor: '#4caf50', fillOpacity: 1 }} />
+                <CircleMarker center={end} radius={8} pathOptions={{ color: '#c62828', fillColor: '#ef5350', fillOpacity: 1 }} />
+                <FitBounds positions={positions} />
+            </MapContainer>
+        </Box>
     );
 }
