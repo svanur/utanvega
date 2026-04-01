@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import { 
     Box, 
@@ -11,7 +11,8 @@ import {
     Divider,
     Stack,
     PaletteMode,
-    Link
+    Link,
+    IconButton
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import RouteIcon from '@mui/icons-material/Route';
@@ -25,6 +26,8 @@ import LoopIcon from '@mui/icons-material/Loop';
 import SyncAltIcon from '@mui/icons-material/SyncAlt';
 import EastIcon from '@mui/icons-material/East';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import Layout from '../components/Layout';
 import { useTrailBySlug, useTrails } from '../hooks/useTrails';
 import TrailMap, { GeoJsonGeometry } from '../components/TrailMap';
@@ -78,8 +81,20 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
         ? allTrails
             .filter(t => t.slug !== trail.slug) // Exclude current trail
             .filter(t => t.locations.some(loc => trail.locations.some(trailLoc => trailLoc.slug === loc.slug))) // Shared location
-            .slice(0, 3) // Take up to 3
         : [];
+
+    const scrollRef = useRef<HTMLDivElement>(null);
+
+    const scroll = (direction: 'left' | 'right') => {
+        if (scrollRef.current) {
+            const { scrollLeft, clientWidth } = scrollRef.current;
+            const scrollAmount = clientWidth;
+            scrollRef.current.scrollTo({
+                left: direction === 'left' ? scrollLeft - scrollAmount : scrollLeft + scrollAmount,
+                behavior: 'smooth'
+            });
+        }
+    };
 
     if (loading) {
         return (
@@ -216,16 +231,46 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
 
             {relatedTrails.length > 0 && (
                 <Box mt={4} mb={6}>
-                    <Typography variant="h5" component="h2" fontWeight="bold" gutterBottom>
-                        Related Trails
-                    </Typography>
-                    <Grid container spacing={2}>
+                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                        <Typography variant="h5" component="h2" fontWeight="bold">
+                            Related Trails
+                        </Typography>
+                        {relatedTrails.length > 3 && (
+                            <Box sx={{ display: { xs: 'none', sm: 'flex' } }}>
+                                <IconButton onClick={() => scroll('left')} size="small">
+                                    <ChevronLeftIcon />
+                                </IconButton>
+                                <IconButton onClick={() => scroll('right')} size="small">
+                                    <ChevronRightIcon />
+                                </IconButton>
+                            </Box>
+                        )}
+                    </Box>
+                    <Box 
+                        ref={scrollRef}
+                        sx={{ 
+                            display: 'flex', 
+                            overflowX: 'auto', 
+                            gap: 2,
+                            pb: 1,
+                            scrollSnapType: 'x mandatory',
+                            '&::-webkit-scrollbar': { display: 'none' },
+                            msOverflowStyle: 'none',
+                            scrollbarWidth: 'none',
+                        }}
+                    >
                         {relatedTrails.map((relatedTrail) => (
-                            <Grid item xs={12} sm={6} md={4} key={relatedTrail.slug}>
+                            <Box 
+                                key={relatedTrail.slug} 
+                                sx={{ 
+                                    minWidth: { xs: '85%', sm: 'calc(50% - 8px)', md: 'calc(33.333% - 10.7px)' },
+                                    scrollSnapAlign: 'start'
+                                }}
+                            >
                                 <TrailCard trail={relatedTrail} compact={true} />
-                            </Grid>
+                            </Box>
                         ))}
-                    </Grid>
+                    </Box>
                 </Box>
             )}
         </Layout>

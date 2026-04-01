@@ -147,6 +147,10 @@ export const TrailList: React.FC = () => {
         }, 300); // Match transition duration in TrailCard
     };
 
+    const handleFilterChange = (key: string, value: any) => {
+        setFilters({ ...filters, [key]: value });
+    };
+
     return (
         <Container 
             maxWidth="md" 
