@@ -1,6 +1,7 @@
 using MediatR;
 using NetTopologySuite.Geometries;
 using Utanvega.Backend.Core.Entities;
+using Utanvega.Backend.Core.Services;
 using Utanvega.Backend.Infrastructure.Persistence;
 using System.Xml.Linq;
 using Microsoft.EntityFrameworkCore;
@@ -193,22 +194,7 @@ public class CreateTrailFromGpxCommandHandler : IRequestHandler<CreateTrailFromG
             Console.WriteLine("[DEBUG_LOG] Warning: LineString does not seem to have Z coordinates despite being created with CoordinateZ.");
         }
 
-        // Generate slug - simple version for now
-        string slug = name.ToLower()
-            .Replace(" ", "-")
-            .Replace("á", "a")
-            .Replace("é", "e")
-            .Replace("í", "i")
-            .Replace("ó", "o")
-            .Replace("ú", "u")
-            .Replace("ý", "y")
-            .Replace("þ", "th")
-            .Replace("æ", "ae")
-            .Replace("ö", "o")
-            .Replace("ð", "d");
-        
-        // Remove other special characters
-        slug = new string(slug.Where(c => char.IsLetterOrDigit(c) || c == '-').ToArray());
+        var slug = SlugGenerator.Generate(name);
 
         return new Trail
         {

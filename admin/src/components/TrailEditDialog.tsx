@@ -4,6 +4,7 @@ import { Delete as DeleteIcon, Add as AddIcon, History as HistoryIcon } from '@m
 import { apiFetch } from '../hooks/api';
 import { useLocations, LocationDto } from '../hooks/useLocations';
 import ChangeLogList from './ChangeLogList';
+import { generateSlug } from '../utils/slugify';
 
 type TrailLocationInfo = {
     locationId: string;
@@ -127,7 +128,7 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
         if (!trail) return;
         setTrail({ ...trail, [field]: value });
         if (field === 'name') {
-            setTrail(prev => prev ? { ...prev, name: value, slug: value.toLowerCase().replace(/ /g, '-') } : null);
+            setTrail(prev => prev ? { ...prev, name: value, slug: generateSlug(value) } : null);
         }
     };
 

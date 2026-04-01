@@ -1,6 +1,7 @@
 using MediatR;
 using NetTopologySuite.Geometries;
 using Utanvega.Backend.Core.Entities;
+using Utanvega.Backend.Core.Services;
 using Utanvega.Backend.Infrastructure.Persistence;
 
 namespace Utanvega.Backend.Application.Locations.Commands.CreateLocation;
@@ -28,7 +29,7 @@ public class CreateLocationCommandHandler : IRequestHandler<CreateLocationComman
 
     public async Task<Guid> Handle(CreateLocationCommand request, CancellationToken cancellationToken)
     {
-        var slug = request.Slug ?? request.Name.ToLower().Replace(" ", "-");
+        var slug = request.Slug ?? SlugGenerator.Generate(request.Name);
         
         Enum.TryParse<LocationType>(request.Type, true, out var type);
 

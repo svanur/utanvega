@@ -3,6 +3,7 @@ import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, B
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 
 import { supabase } from '../hooks/supabase';
+import { generateSlug } from '../utils/slugify';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
@@ -131,7 +132,7 @@ export default function GpxUploadDialog({ open, onClose, onUploadSuccess }: { op
             const result = await response.json();
             
             // Success!
-            onUploadSuccess({ id: result.id, slug: result.slug || name.toLowerCase().replace(/ /g, '-'), name });
+            onUploadSuccess({ id: result.id, slug: result.slug || generateSlug(name), name });
             handleClose();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Unknown error');
