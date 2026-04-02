@@ -9,9 +9,12 @@ import {
     DialogContent, 
     DialogActions, 
     Button,
-    Link
+    Tabs,
+    Tab,
 } from '@mui/material';
 import QrCode2Icon from '@mui/icons-material/QrCode2';
+import PhoneAndroidIcon from '@mui/icons-material/PhoneAndroid';
+import DownloadIcon from '@mui/icons-material/Download';
 import { QRCodeSVG } from 'qrcode.react';
 
 interface QRCodeShareProps {
@@ -21,44 +24,46 @@ interface QRCodeShareProps {
 
 export default function QRCodeShare({ slug, trailName }: QRCodeShareProps) {
     const [open, setOpen] = useState(false);
+    const [tab, setTab] = useState(0);
     
-    // Construct the URL that we want the QR code to point to.
-    // For now, we'll point to the trail detail page itself.
-    // Garmin Connect can import from a URL if it's a GPX file, 
-    // but usually users just want to open the page on their phone.
-    // A more advanced version would point directly to a GPX export endpoint if available.
     const baseUrl = window.location.origin;
     const trailUrl = `${baseUrl}/trails/${slug}`;
-    
-    // Garmin Connect "import" doesn't have a simple public URL-based deep link for generic GPX files
-    // that works across all devices easily without a backend helper.
-    // However, if we provide the page URL, the user can open it on their phone 
-    // and then use the "Share" -> "Garmin Connect" if the app is installed.
-    // Or we can provide a direct link to the GPX if we know the pattern.
-    
     const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
     const gpxUrl = `${apiBaseUrl}/api/v1/trails/${slug}/gpx`;
-
-    const handleClickOpen = () => {
-        setOpen(true);
-    };
-
-    const handleClose = () => {
-        setOpen(false);
-    };
 
     return (
         <>
             <Tooltip title="Show QR Code">
-                <IconButton onClick={handleClickOpen} color="primary" size="small">
+                <IconButton onClick={() => setOpen(true)} color="primary" size="small">
                     <QrCode2Icon fontSize="small" />
                 </IconButton>
             </Tooltip>
 
-            <Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth>
-                <DialogTitle sx={{ textAlign: 'center' }}>
-                    Open "{trailName}" on Phone
+            <Dialog open={open} onClose={() => setOpen(false)} maxWidth="xs" fullWidth>
+                <DialogTitle sx={{ textAlign: 'center', pb: 1 }}>
+                    {trailName}
                 </DialogTitle>
+                <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 1 }}>
+                    <Tabs
+                        value={tab}
+                        onChange={(_, v) => setTab(v)}
+                        centered
+                        variant="fullWidth"
+                    >
+                        <Tab 
+                            icon={<PhoneAndroidIcon fontSize="small" />} 
+                            label="Trail Page" 
+                            iconPosition="start" 
+                            sx={{ textTransform: 'none', minHeight: 44, fontSize: '0.8rem' }} 
+                        />
+                        <Tab 
+                            icon={<DownloadIcon fontSize="small" />} 
+                            label="GPX File" 
+                            iconPosition="start" 
+                            sx={{ textTransform: 'none', minHeight: 44, fontSize: '0.8rem' }} 
+                        />
+                    </Tabs>
+                </Box>
                 <DialogContent>
                     <Box 
                         display="flex" 
@@ -69,28 +74,22 @@ export default function QRCodeShare({ slug, trailName }: QRCodeShareProps) {
                     >
                         <Box sx={{ p: 2, bgcolor: 'white', borderRadius: 2 }}>
                             <QRCodeSVG 
-                                value={trailUrl} 
+                                value={tab === 0 ? trailUrl : gpxUrl} 
                                 size={200}
                                 level="H"
                                 includeMargin={true}
                             />
                         </Box>
                         <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 2 }}>
-                            Scan this code with your phone's camera to open this trail. 
-                            From there, you can send it to Garmin Connect or other apps.
+                            {tab === 0
+                                ? 'Scan to open this trail on your phone.'
+                                : 'Scan to download the GPX file. Your phone will offer to open it in Garmin Connect, Coros, Suunto, or other GPS apps.'
+                            }
                         </Typography>
-                        
-                        <Box sx={{ mt: 2, textAlign: 'center' }}>
-                            <Link href={gpxUrl} target="_blank" rel="noopener noreferrer" underline="hover">
-                                <Typography variant="caption">
-                                    Direct GPX Download Link
-                                </Typography>
-                            </Link>
-                        </Box>
                     </Box>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleClose}>Close</Button>
+                    <Button onClick={() => setOpen(false)}>Close</Button>
                 </DialogActions>
             </Dialog>
         </>
