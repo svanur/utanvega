@@ -1,34 +1,73 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
     Dialog, 
-    DialogTitle, 
     DialogContent, 
     Box, 
     Typography, 
     IconButton, 
-    Stack, 
     Chip,
-    CircularProgress,
-    Divider,
-    Grid,
+    Button,
     useTheme,
     useMediaQuery,
-    Accordion,
-    AccordionSummary,
-    AccordionDetails
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import RouteIcon from '@mui/icons-material/Route';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
-import LandscapeIcon from '@mui/icons-material/Landscape';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
 import HikingIcon from '@mui/icons-material/Hiking';
 import DirectionsBikeIcon from '@mui/icons-material/DirectionsBike';
+import LandscapeIcon from '@mui/icons-material/Landscape';
+import { useNavigate } from 'react-router-dom';
 import { Trail, API_URL } from '../hooks/useTrails';
-import TrailMap, { GeoJsonGeometry } from './TrailMap';
-import ElevationChart from './ElevationChart';
+import DifficultyInfo from './DifficultyInfo';
+
+// Mini SVG elevation silhouette for background
+function ElevationSilhouette({ coordinates, color }: { coordinates: number[][]; color: string }) {
+    const path = useMemo(() => {
+        if (!coordinates || coordinates.length < 2) return '';
+        const elevations = coordinates.map(c => c.length > 2 ? c[2] : 0);
+        const minE = Math.min(...elevations);
+        const maxE = Math.max(...elevations);
+        const range = maxE - minE || 1;
+
+        // Sample ~80 points max for performance
+        const step = Math.max(1, Math.floor(coordinates.length / 80));
+        const sampled = elevations.filter((_, i) => i % step === 0 || i === elevations.length - 1);
+
+        const width = 100;
+        const height = 100;
+        const points = sampled.map((e, i) => {
+            const x = (i / (sampled.length - 1)) * width;
+            const y = height - ((e - minE) / range) * height * 0.8 - height * 0.1;
+            return `${x},${y}`;
+        });
+
+        return `M0,${height} L${points.join(' L')} L${width},${height} Z`;
+    }, [coordinates]);
+
+    if (!path) return null;
+
+    return (
+        <svg
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+            style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                opacity: 0.08,
+                pointerEvents: 'none',
+            }}
+        >
+            <path d={path} fill={color} />
+        </svg>
+    );
+}
 
 interface TrailQuickViewProps {
     trail: Trail | null;
@@ -48,230 +87,201 @@ const getActivityIcon = (type: string) => {
 
 const getTrailTypeLabel = (type: string) => {
     switch (type) {
-        case 'OutAndBack': return 'Out and Back';
-        case 'Loop': return 'Loop';
-        case 'PointToPoint': return 'Point to Point';
-        default: return type;
+        case 'OutAndBack': return 'out-and-back';
+        case 'Loop': return 'loop';
+        case 'PointToPoint': return 'point-to-point';
+        default: return type.toLowerCase();
     }
 };
 
+function estimateTime(lengthM: number, gainM: number, activityType: string): string {
+    const km = lengthM / 1000;
+    let baseSpeedKmh: number;
+    let climbPenaltyMinPer100m: number;
+
+    switch (activityType.toLowerCase()) {
+        case 'running':
+            baseSpeedKmh = 9; climbPenaltyMinPer100m = 2; break;
+        case 'trailrunning':
+            baseSpeedKmh = 7; climbPenaltyMinPer100m = 3; break;
+        case 'hiking':
+            baseSpeedKmh = 4; climbPenaltyMinPer100m = 10; break;
+        case 'cycling':
+            baseSpeedKmh = 20; climbPenaltyMinPer100m = 3; break;
+        default:
+            baseSpeedKmh = 5; climbPenaltyMinPer100m = 5;
+    }
+
+    const totalMinutes = Math.round((km / baseSpeedKmh) * 60 + (gainM / 100) * climbPenaltyMinPer100m);
+    if (totalMinutes < 60) return `${totalMinutes} min`;
+    const hours = Math.floor(totalMinutes / 60);
+    const mins = totalMinutes % 60;
+    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+}
+
+function generateSummary(trail: Trail): string {
+    const km = (trail.length / 1000).toFixed(1);
+    const difficulty = trail.difficulty?.toLowerCase() || '';
+    const trailType = getTrailTypeLabel(trail.trailType);
+    const locationName = trail.locations.length > 0 ? trail.locations[0].name : null;
+    const gain = Math.round(trail.elevationGain);
+
+    let s = difficulty ? `A ${difficulty}` : 'A';
+    s += ` ${km} km ${trailType}`;
+    if (locationName) s += ` in ${locationName}`;
+    if (gain > 50) s += ` with ${gain}m elevation gain`;
+    return s;
+}
+
 export const TrailQuickView: React.FC<TrailQuickViewProps> = ({ trail, open, onClose }) => {
     const theme = useTheme();
+    const navigate = useNavigate();
     const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
-    const [geometry, setGeometry] = useState<GeoJsonGeometry | null>(null);
-    const [hoverPoint, setHoverPoint] = useState<{ lat: number; lng: number } | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [mapExpanded, setMapExpanded] = useState(true);
-    const [elevationExpanded, setElevationExpanded] = useState(true);
+    const [coordinates, setCoordinates] = useState<number[][] | null>(null);
 
     useEffect(() => {
         if (open && trail) {
-            const fetchGeometry = async () => {
-                try {
-                    setLoading(true);
-                    setError(null);
-                    const res = await fetch(`${API_URL}/api/v1/trails/${trail.slug}/geometry`);
-                    if (!res.ok) throw new Error('Failed to fetch geometry');
-                    const data = await res.json();
-                    setGeometry(data);
-                } catch (err: any) {
-                    console.error('Failed to fetch geometry for quick view:', err);
-                    setError(err.message);
-                } finally {
-                    setLoading(false);
-                }
-            };
-            fetchGeometry();
+            fetch(`${API_URL}/api/v1/trails/${trail.slug}/geometry`)
+                .then(res => res.ok ? res.json() : null)
+                .then(data => setCoordinates(data?.coordinates || null))
+                .catch(() => setCoordinates(null));
         } else if (!open) {
-            // Reset state when closed
-            setGeometry(null);
-            setHoverPoint(null);
-            setError(null);
+            setCoordinates(null);
         }
     }, [open, trail]);
 
     if (!trail) return null;
 
-    const distanceKm = (trail.length / 1000).toFixed(2);
+    const distanceKm = (trail.length / 1000).toFixed(1);
+    const estTime = estimateTime(trail.length, trail.elevationGain, trail.activityType);
+    const summary = generateSummary(trail);
 
     return (
         <Dialog 
             open={open} 
             onClose={onClose}
-            fullScreen={fullScreen}
-            maxWidth="sm"
+            fullScreen={false}
+            maxWidth="xs"
             fullWidth
             PaperProps={{
-                sx: { borderRadius: fullScreen ? 0 : 3 }
+                sx: { 
+                    borderRadius: fullScreen ? '0 0 16px 16px' : 3,
+                    ...(fullScreen && {
+                        position: 'fixed',
+                        top: 0,
+                        m: 0,
+                    }),
+                }
+            }}
+            sx={{
+                '& .MuiDialog-container': { alignItems: 'flex-start' },
+            }}
+            slotProps={{
+                backdrop: { sx: { backgroundColor: 'rgba(0,0,0,0.3)' } }
             }}
         >
-            <DialogTitle sx={{ pr: 6, pb: 1 }}>
-                <Typography variant="h6" fontWeight="bold" component="span">
-                    {trail.name}
+            <DialogContent sx={{ p: 2, position: 'relative', overflow: 'hidden' }}>
+                {/* Elevation silhouette background */}
+                {coordinates && (
+                    <ElevationSilhouette coordinates={coordinates} color={theme.palette.primary.main} />
+                )}
+                {/* Header: name + close */}
+                <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
+                    <Typography variant="h6" fontWeight="bold" sx={{ pr: 2 }}>
+                        {trail.name}
+                    </Typography>
+                    <IconButton onClick={onClose} size="small" edge="end">
+                        <CloseIcon fontSize="small" />
+                    </IconButton>
+                </Box>
+
+                {/* Summary */}
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    {summary}
                 </Typography>
-                <IconButton
-                    aria-label="close"
-                    onClick={onClose}
-                    sx={{
-                        position: 'absolute',
-                        right: 8,
-                        top: 8,
-                        color: (theme) => theme.palette.grey[500],
-                    }}
-                >
-                    <CloseIcon />
-                </IconButton>
-            </DialogTitle>
-            <DialogContent dividers sx={{ p: 0 }}>
-                <Box p={2}>
-                    <Box mb={2}>
-                        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap mb={2}>
-                            {trail.locations.map(loc => (
-                                <Chip
-                                    key={loc.slug}
-                                    label={loc.name}
-                                    size="small"
-                                    variant="outlined"
-                                />
-                            ))}
-                        </Stack>
 
-                        <Grid container spacing={2}>
-                            <Grid item xs={3}>
-                                <Box display="flex" flexDirection="column" alignItems="center">
-                                    <RouteIcon color="action" />
-                                    <Typography variant="caption" color="text.secondary">Distance</Typography>
-                                    <Typography variant="subtitle2" fontWeight="bold">{distanceKm} km</Typography>
-                                </Box>
-                            </Grid>
-                            <Grid item xs={3}>
-                                <Box display="flex" flexDirection="column" alignItems="center">
-                                    <TrendingUpIcon color="success" />
-                                    <Typography variant="caption" color="text.secondary">Gain</Typography>
-                                    <Typography variant="subtitle2" fontWeight="bold">+{Math.round(trail.elevationGain)} m</Typography>
-                                </Box>
-                            </Grid>
-                            <Grid item xs={3}>
-                                <Box display="flex" flexDirection="column" alignItems="center">
-                                    <TrendingDownIcon color="error" />
-                                    <Typography variant="caption" color="text.secondary">Loss</Typography>
-                                    <Typography variant="subtitle2" fontWeight="bold">-{Math.round(trail.elevationLoss)} m</Typography>
-                                </Box>
-                            </Grid>
-                            <Grid item xs={3}>
-                                <Box display="flex" flexDirection="column" alignItems="center">
-                                    <LandscapeIcon color="primary" />
-                                    <Typography variant="caption" color="text.secondary">Type</Typography>
-                                    <Typography variant="subtitle2" fontWeight="bold" noWrap sx={{ maxWidth: '100%' }}>
-                                        {trail.trailType === 'PointToPoint' ? 'P2P' : trail.trailType}
-                                    </Typography>
-                                </Box>
-                            </Grid>
-                        </Grid>
-                    </Box>
-                </Box>
-
-                <Accordion 
-                    expanded={mapExpanded} 
-                    onChange={() => setMapExpanded(!mapExpanded)}
-                    disableGutters
-                    elevation={0}
-                    square
-                    sx={{ borderTop: 1, borderColor: 'divider' }}
-                >
-                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                        <Typography variant="subtitle2" fontWeight="bold">Map</Typography>
-                    </AccordionSummary>
-                    <AccordionDetails sx={{ p: 0 }}>
-                        <Box sx={{ height: 250, width: '100%', position: 'relative' }}>
-                            {trail && (
-                                <TrailMap 
-                                    slug={trail.slug} 
-                                    onDataLoaded={setGeometry}
-                                    hoverPoint={hoverPoint}
-                                    activityType={trail.activityType}
-                                />
-                            )}
-                            <Box 
-                                sx={{ 
-                                    position: 'absolute', 
-                                    top: 8, 
-                                    left: 8, 
-                                    zIndex: 1000,
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: 1
-                                }}
-                            >
-                                <Chip 
-                                    icon={getActivityIcon(trail.activityType)} 
-                                    label={trail.activityType} 
-                                    size="small" 
-                                    color="primary"
-                                    sx={{ boxShadow: 2 }}
-                                />
-                                <Chip 
-                                    label={getTrailTypeLabel(trail.trailType)} 
-                                    size="small" 
-                                    variant="filled"
-                                    sx={{ 
-                                        boxShadow: 2, 
-                                        bgcolor: 'background.paper',
-                                        color: 'text.primary',
-                                        '& .MuiChip-label': { fontWeight: 'medium' }
-                                    }}
-                                />
-                            </Box>
+                {/* Stats strip */}
+                <Box sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-around', 
+                    alignItems: 'center',
+                    bgcolor: theme.palette.action.hover,
+                    borderRadius: 2,
+                    py: 1.5,
+                    mb: 2,
+                }}>
+                    <Box sx={{ textAlign: 'center' }}>
+                        <Box display="flex" alignItems="center" justifyContent="center" gap={0.5}>
+                            <RouteIcon sx={{ fontSize: 16 }} color="action" />
+                            <Typography variant="subtitle2" fontWeight="bold">{distanceKm} km</Typography>
                         </Box>
-                    </AccordionDetails>
-                </Accordion>
-
-                <Box px={2} pb={2}>
-                    <Accordion 
-                        expanded={elevationExpanded} 
-                        onChange={() => setElevationExpanded(!elevationExpanded)}
-                        disableGutters
-                        elevation={0}
-                        square
-                        sx={{ 
-                            '&:before': { display: 'none' },
-                            bgcolor: 'transparent'
-                        }}
-                    >
-                        <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: 0 }}>
-                            <Typography variant="subtitle2" fontWeight="bold">Elevation Profile</Typography>
-                        </AccordionSummary>
-                        <AccordionDetails sx={{ px: 0, pb: 0 }}>
-                            <Box sx={{ minHeight: 220, width: '100%', display: 'flex', flexDirection: 'column' }}>
-                                {loading ? (
-                                    <Box display="flex" justifyContent="center" alignItems="center" flex={1} py={2}>
-                                        <CircularProgress size={30} />
-                                    </Box>
-                                ) : error ? (
-                                    <Box py={2} textAlign="center">
-                                        <Typography color="error" variant="body2">Could not load elevation profile</Typography>
-                                    </Box>
-                                ) : geometry ? (
-                                    <ElevationChart 
-                                        coordinates={geometry.coordinates} 
-                                        onHover={(point: any) => setHoverPoint(point ? { lat: point.lat, lng: point.lng } : null)} 
-                                    />
-                                ) : (
-                                    <Box py={2} textAlign="center">
-                                        <Typography color="text.secondary" variant="body2">No elevation data available</Typography>
-                                    </Box>
-                                )}
-                            </Box>
-                        </AccordionDetails>
-                    </Accordion>
-                    
-                    <Box mt={2} display="flex" justifyContent="center">
-                        <Typography variant="caption" color="text.secondary">
-                            Release to close or tap outside
-                        </Typography>
+                        <Typography variant="caption" color="text.secondary">Distance</Typography>
+                    </Box>
+                    <Box sx={{ textAlign: 'center' }}>
+                        <Box display="flex" alignItems="center" justifyContent="center" gap={0.5}>
+                            <TrendingUpIcon sx={{ fontSize: 16 }} color="success" />
+                            <Typography variant="subtitle2" fontWeight="bold">+{Math.round(trail.elevationGain)}m</Typography>
+                        </Box>
+                        <Typography variant="caption" color="text.secondary">Gain</Typography>
+                    </Box>
+                    <Box sx={{ textAlign: 'center' }}>
+                        <Box display="flex" alignItems="center" justifyContent="center" gap={0.5}>
+                            <TrendingDownIcon sx={{ fontSize: 16 }} color="error" />
+                            <Typography variant="subtitle2" fontWeight="bold">-{Math.round(trail.elevationLoss)}m</Typography>
+                        </Box>
+                        <Typography variant="caption" color="text.secondary">Loss</Typography>
+                    </Box>
+                    <Box sx={{ textAlign: 'center' }}>
+                        <Box display="flex" alignItems="center" justifyContent="center" gap={0.5}>
+                            <AccessTimeIcon sx={{ fontSize: 16 }} color="primary" />
+                            <Typography variant="subtitle2" fontWeight="bold">{estTime}</Typography>
+                        </Box>
+                        <Typography variant="caption" color="text.secondary">Est. time</Typography>
                     </Box>
                 </Box>
+
+                {/* Chips */}
+                <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 2 }}>
+                    {trail.difficulty && (
+                        <DifficultyInfo difficulty={trail.difficulty} activityType={trail.activityType} />
+                    )}
+                    <Chip
+                        icon={getActivityIcon(trail.activityType)}
+                        label={trail.activityType}
+                        size="small"
+                        variant="outlined"
+                        color="primary"
+                    />
+                    {trail.locations.map(loc => (
+                        <Chip key={loc.slug} label={loc.name} size="small" variant="outlined" />
+                    ))}
+                    {trail.tags?.map(tag => (
+                        <Chip
+                            key={tag.slug}
+                            label={tag.name}
+                            size="small"
+                            sx={{
+                                backgroundColor: tag.color || undefined,
+                                color: tag.color ? '#fff' : undefined,
+                            }}
+                            variant={tag.color ? 'filled' : 'outlined'}
+                        />
+                    ))}
+                </Box>
+
+                {/* View details button */}
+                <Button
+                    fullWidth
+                    variant="contained"
+                    endIcon={<OpenInNewIcon />}
+                    onClick={() => {
+                        onClose();
+                        navigate(`/trails/${trail.slug}`);
+                    }}
+                    sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 'bold' }}
+                >
+                    View trail details
+                </Button>
             </DialogContent>
         </Dialog>
     );
