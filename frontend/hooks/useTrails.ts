@@ -32,6 +32,8 @@ export interface Trail {
 }
 
 export interface FilterState {
+    minLength: number;
+    maxLength: number;
     maxDistance: number;
     minElevationGain: number;
     maxElevationGain: number;
@@ -44,11 +46,13 @@ export interface FilterState {
 }
 
 const DEFAULT_FILTERS: FilterState = {
-    maxDistance: 1000,
+    minLength: 0,
+    maxLength: 100,
+    maxDistance: 250,
     minElevationGain: 0,
-    maxElevationGain: 5000,
+    maxElevationGain: 3500,
     minElevationLoss: 0,
-    maxElevationLoss: 5000,
+    maxElevationLoss: 3500,
     trailType: 'All',
     location: 'All',
     favoritesOnly: false,
@@ -146,17 +150,22 @@ export function useTrails() {
 
         // Apply advanced filters
         result = result.filter(trail => {
+            // Trail length filter
+            if (trail.length < filters.minLength) return false;
+            if (filters.maxLength < 100 && trail.length > filters.maxLength) return false;
+
             // Distance filter (only if user location is available and trail has distance)
             if (userLocation && trail.distanceToUser !== undefined && trail.distanceToUser !== Infinity) {
-                // If maxDistance is 1000 (our max), we treat it as "no limit"
-                if (filters.maxDistance < 1000 && trail.distanceToUser > filters.maxDistance) return false;
+                if (filters.maxDistance < 250 && trail.distanceToUser > filters.maxDistance) return false;
             }
 
             // Elevation Gain
-            if (trail.elevationGain < filters.minElevationGain || trail.elevationGain > filters.maxElevationGain) return false;
+            if (trail.elevationGain < filters.minElevationGain) return false;
+            if (filters.maxElevationGain < 3500 && trail.elevationGain > filters.maxElevationGain) return false;
 
             // Elevation Loss
-            if (trail.elevationLoss < filters.minElevationLoss || trail.elevationLoss > filters.maxElevationLoss) return false;
+            if (trail.elevationLoss < filters.minElevationLoss) return false;
+            if (filters.maxElevationLoss < 3500 && trail.elevationLoss > filters.maxElevationLoss) return false;
 
             // Trail Type
             if (filters.trailType !== 'All' && trail.trailType !== filters.trailType) return false;

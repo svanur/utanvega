@@ -289,24 +289,42 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                     </Typography>
                     
                     <Grid container spacing={2}>
+                        {/* Trail Length — most useful filter first */}
                         <Grid item xs={12}>
                             <Typography variant="caption" color="text.secondary">
-                                Max Distance: {filters.maxDistance === 1000 ? 'Any' : `${filters.maxDistance} km`}
+                                Trail Length: {filters.minLength === 0 && filters.maxLength >= 100
+                                    ? 'Any'
+                                    : `${filters.minLength} – ${filters.maxLength >= 100 ? '100+' : filters.maxLength} km`}
                             </Typography>
                             <Slider
                                 size="small"
-                                value={filters.maxDistance}
-                                onChange={(_, v) => handleFilterChange('maxDistance', v)}
+                                value={[filters.minLength, Math.min(filters.maxLength, 100)]}
+                                onChange={(_, v) => {
+                                    const [min, max] = v as number[];
+                                    setFilters({ ...filters, minLength: min, maxLength: max });
+                                }}
                                 valueLabelDisplay="auto"
-                                min={1}
-                                max={1000}
-                                disabled={!userLocation}
+                                valueLabelFormat={(v) => v >= 100 ? '100+' : `${v}`}
+                                min={0}
+                                max={100}
+                                step={1}
+                                marks={[
+                                    { value: 0, label: '0' },
+                                    { value: 10, label: '10' },
+                                    { value: 25, label: '25' },
+                                    { value: 50, label: '50' },
+                                    { value: 100, label: '100+' },
+                                ]}
+                                sx={{ mt: 1, mx: 1 }}
                             />
                         </Grid>
 
+                        {/* Elevation Gain */}
                         <Grid item xs={12}>
                             <Typography variant="caption" color="text.secondary">
-                                Elevation Gain Range: {filters.minElevationGain} - {filters.maxElevationGain} m
+                                Elevation Gain: {filters.minElevationGain === 0 && filters.maxElevationGain >= 3500
+                                    ? 'Any'
+                                    : `${filters.minElevationGain} – ${filters.maxElevationGain >= 3500 ? '3500+' : filters.maxElevationGain} m`}
                             </Typography>
                             <Slider
                                 size="small"
@@ -316,14 +334,27 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                                     setFilters({ ...filters, minElevationGain: min, maxElevationGain: max });
                                 }}
                                 valueLabelDisplay="auto"
+                                valueLabelFormat={(v) => v >= 3500 ? '3500+' : `${v}`}
                                 min={0}
-                                max={5000}
+                                max={3500}
+                                step={50}
+                                marks={[
+                                    { value: 0, label: '0' },
+                                    { value: 500, label: '500' },
+                                    { value: 1000, label: '1k' },
+                                    { value: 2000, label: '2k' },
+                                    { value: 3500, label: '3.5k+' },
+                                ]}
+                                sx={{ mt: 1, mx: 1 }}
                             />
                         </Grid>
 
+                        {/* Elevation Loss */}
                         <Grid item xs={12}>
                             <Typography variant="caption" color="text.secondary">
-                                Elevation Loss Range: {filters.minElevationLoss} - {filters.maxElevationLoss} m
+                                Elevation Loss: {filters.minElevationLoss === 0 && filters.maxElevationLoss >= 3500
+                                    ? 'Any'
+                                    : `${filters.minElevationLoss} – ${filters.maxElevationLoss >= 3500 ? '3500+' : filters.maxElevationLoss} m`}
                             </Typography>
                             <Slider
                                 size="small"
@@ -333,10 +364,47 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                                     setFilters({ ...filters, minElevationLoss: min, maxElevationLoss: max });
                                 }}
                                 valueLabelDisplay="auto"
+                                valueLabelFormat={(v) => v >= 3500 ? '3500+' : `${v}`}
                                 min={0}
-                                max={5000}
+                                max={3500}
+                                step={50}
+                                marks={[
+                                    { value: 0, label: '0' },
+                                    { value: 500, label: '500' },
+                                    { value: 1000, label: '1k' },
+                                    { value: 2000, label: '2k' },
+                                    { value: 3500, label: '3.5k+' },
+                                ]}
+                                sx={{ mt: 1, mx: 1 }}
                             />
                         </Grid>
+
+                        {/* Distance from You */}
+                        {userLocation && (
+                            <Grid item xs={12}>
+                                <Typography variant="caption" color="text.secondary">
+                                    Distance from You: {filters.maxDistance >= 250 ? 'Any' : `≤ ${filters.maxDistance} km`}
+                                </Typography>
+                                <Slider
+                                    size="small"
+                                    value={Math.min(filters.maxDistance, 250)}
+                                    onChange={(_, v) => handleFilterChange('maxDistance', v as number)}
+                                    valueLabelDisplay="auto"
+                                    valueLabelFormat={(v) => v >= 250 ? 'Any' : `${v} km`}
+                                    min={0}
+                                    max={250}
+                                    step={5}
+                                    marks={[
+                                        { value: 0, label: '0 km' },
+                                        { value: 50, label: '50' },
+                                        { value: 100, label: '100' },
+                                        { value: 150, label: '150' },
+                                        { value: 250, label: 'Any' },
+                                    ]}
+                                    sx={{ mt: 1, mx: 1 }}
+                                />
+                            </Grid>
+                        )}
 
                         <Grid item xs={6}>
                             <FormControl fullWidth size="small">
@@ -486,7 +554,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
             {viewMode === 'list' ? (
                 filteredTrails.length === 0 ? (
                     <Typography color="text.secondary" textAlign="center" py={4}>
-                        {searchQuery || Object.values(filters).some(v => v !== 'All' && v !== 1000 && v !== 0 && v !== 5000 && v !== false) 
+                        {searchQuery || Object.values(filters).some(v => v !== 'All' && v !== 250 && v !== 0 && v !== 100 && v !== 3500 && v !== false) 
                             ? `No trails matching your search criteria` 
                             : "No trails found."}
                     </Typography>
