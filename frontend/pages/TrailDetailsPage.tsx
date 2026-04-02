@@ -294,7 +294,8 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                 key={relatedTrail.slug} 
                                 sx={{ 
                                     minWidth: { xs: '85%', sm: 'calc(50% - 8px)', md: 'calc(33.333% - 10.7px)' },
-                                    scrollSnapAlign: 'start'
+                                    scrollSnapAlign: 'start',
+                                    display: 'flex',
                                 }}
                             >
                                 <TrailCard trail={relatedTrail} compact={true} disableGestures={true} />

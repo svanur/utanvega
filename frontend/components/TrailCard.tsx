@@ -169,7 +169,10 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                 mb: 2,
                 transition: 'opacity 0.3s ease, transform 0.3s ease',
                 opacity: isHiding ? 0 : 1,
-                transform: isHiding ? 'translateX(-100%)' : 'none'
+                transform: isHiding ? 'translateX(-100%)' : 'none',
+                width: '100%',
+                display: 'flex',
+                flexDirection: 'column',
             }}
         >
             {/* Background Swipe Indicator */}
@@ -229,14 +232,17 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                     position: 'relative',
                     transform: disableGestures ? undefined : `translateX(${swipeOffset}px)`,
                     transition: disableGestures ? undefined : (swipeOffset === 0 ? 'transform 0.3s ease' : 'none'),
-                    zIndex: 1
+                    zIndex: 1,
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
                 }}
                 onTouchStart={disableGestures ? undefined : handleTouchStart}
                 onTouchMove={disableGestures ? undefined : handleTouchMove}
                 onTouchEnd={disableGestures ? undefined : handleTouchEnd}
             >
-                <CardActionArea onClick={handleClick}>
-                    <CardContent>
+                <CardActionArea onClick={handleClick} sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'flex-start' }}>
+                    <CardContent sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
                         {/* 1st row: Trail name and favorite star */}
                         <Box display="flex" justifyContent="space-between" alignItems="center">
                             <Typography variant="h6" component="div" fontWeight="bold">
@@ -303,7 +309,7 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                     </Box>
 
                     {/* 3rd row: distance, gain, loss, distance-to-user */}
-                    <Stack direction="row" spacing={compact ? 1 : 1.5} color="text.secondary" flexWrap="wrap" mt={2} justifyContent={compact ? 'space-between' : 'flex-start'}>
+                    <Stack direction="row" spacing={compact ? 1 : 1.5} color="text.secondary" flexWrap="wrap" mt="auto" pt={2} justifyContent={compact ? 'space-between' : 'flex-start'}>
                         <Box display="flex" flexDirection={compact ? 'column' : 'row'} alignItems="center">
                             <RouteIcon sx={{ mr: compact ? 0 : 0.5, mb: compact ? 0.5 : 0, fontSize: 18 }} />
                             <Typography variant="body2">{distanceKm} km</Typography>
