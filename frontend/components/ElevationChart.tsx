@@ -115,13 +115,15 @@ const ElevationChart: React.FC<ElevationChartProps> = ({ coordinates, onHover, a
       <Typography variant="h6" gutterBottom>
         Elevation Profile
       </Typography>
-      <Box sx={{ width: '100%', height: 220, overflow: 'hidden' }}>
+      <Box sx={{ width: '100%', height: 220, overflow: 'hidden', touchAction: 'none' }}>
         <ResponsiveContainer width="100%" height={220}>
           <AreaChart
             data={chartData}
             margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
             onMouseMove={handleMouseMove}
             onMouseLeave={() => onHover(null)}
+            onTouchMove={handleMouseMove}
+            onTouchEnd={() => onHover(null)}
           >
             <defs>
               <linearGradient id="colorEle" x1="0" y1="0" x2="0" y2="1">
