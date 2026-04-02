@@ -276,6 +276,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
             <Collapse in={showAdvanced}>
                 <Box 
                     p={2} 
+                    pr={4}
                     mb={3} 
                     sx={{ 
                         bgcolor: 'background.paper', 
@@ -315,7 +316,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                                     { value: 50, label: '50' },
                                     { value: 100, label: '100+' },
                                 ]}
-                                sx={{ mt: 1, mx: 1 }}
+                                sx={{ mt: 1 }}
                             />
                         </Grid>
 
@@ -345,7 +346,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                                     { value: 2000, label: '2k' },
                                     { value: 3500, label: '3.5k+' },
                                 ]}
-                                sx={{ mt: 1, mx: 1 }}
+                                sx={{ mt: 1 }}
                             />
                         </Grid>
 
@@ -375,7 +376,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                                     { value: 2000, label: '2k' },
                                     { value: 3500, label: '3.5k+' },
                                 ]}
-                                sx={{ mt: 1, mx: 1 }}
+                                sx={{ mt: 1 }}
                             />
                         </Grid>
 
@@ -401,7 +402,12 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                                         { value: 150, label: '150' },
                                         { value: 250, label: 'Any' },
                                     ]}
-                                    sx={{ mt: 1, mx: 1 }}
+                                    sx={{
+                                        mt: 1,
+                                        '& .MuiSlider-markLabel[data-index="0"]': {
+                                            pl: '32px',
+                                        },
+                                    }}
                                 />
                             </Grid>
                         )}
