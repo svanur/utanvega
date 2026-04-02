@@ -10,6 +10,8 @@ public record GetTrailsQuery(bool IncludeDeleted = false, bool PublishedOnly = f
 
 public record LocationInfoDto(string Name, string Slug, int Order);
 
+public record TagInfoDto(string Name, string Slug, string? Color);
+
 public record TrailDto(
     Guid Id,
     string Name,
@@ -24,7 +26,8 @@ public record TrailDto(
     string Difficulty,
     double? StartLatitude,
     double? StartLongitude,
-    List<LocationInfoDto> Locations
+    List<LocationInfoDto> Locations,
+    List<TagInfoDto> Tags
 );
 
 public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailDto>>
@@ -41,6 +44,8 @@ public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailD
         var query = _context.Trails
             .Include(t => t.TrailLocations)
                 .ThenInclude(tl => tl.Location)
+            .Include(t => t.TrailTags)
+                .ThenInclude(tt => tt.Tag)
             .AsQueryable();
 
         if (!request.IncludeDeleted)
@@ -72,6 +77,9 @@ public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailD
             t.TrailLocations
                 .OrderBy(tl => tl.Order)
                 .Select(tl => new LocationInfoDto(tl.Location.Name, tl.Location.Slug, tl.Order))
+                .ToList(),
+            t.TrailTags
+                .Select(tt => new TagInfoDto(tt.Tag.Name, tt.Tag.Slug, tt.Tag.Color))
                 .ToList()
         )).ToList();
 

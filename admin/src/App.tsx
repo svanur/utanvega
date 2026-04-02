@@ -3,6 +3,7 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
 import MapIcon from '@mui/icons-material/Map';
+import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { useState } from 'react';
@@ -10,6 +11,7 @@ import TrailList from './pages/TrailList';
 import { LocationList } from './pages/LocationList';
 import TrailHealth from './pages/TrailHealth';
 import TrailMapView from './pages/TrailMapView';
+import TagManagement from './pages/TagManagement';
 import GpxUploadDialog from './components/GpxUploadDialog';
 import LoginPage from './pages/LoginPage';
 import { AuthProvider, useAuth } from './hooks/useAuth';
@@ -30,7 +32,7 @@ const DRAWER_WIDTH = 240;
 
 function AdminContent() {
   const { user, loading: authLoading, signOut } = useAuth();
-  const [currentPage, setCurrentPage] = useState<'trails' | 'locations' | 'health' | 'map'>('trails');
+  const [currentPage, setCurrentPage] = useState<'trails' | 'locations' | 'health' | 'map' | 'tags'>('trails');
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [selectedTrailId, setSelectedTrailId] = useState<string | null>(null);
@@ -132,6 +134,12 @@ function AdminContent() {
                 <ListItemText primary="Trail Map" />
               </ListItemButton>
             </ListItem>
+            <ListItem disablePadding>
+              <ListItemButton selected={currentPage === 'tags'} onClick={() => setCurrentPage('tags')}>
+                <ListItemIcon><LocalOfferIcon /></ListItemIcon>
+                <ListItemText primary="Tags" />
+              </ListItemButton>
+            </ListItem>
           </List>
         </Box>
       </Drawer>
@@ -144,6 +152,8 @@ function AdminContent() {
             <TrailHealth onEditTrail={(id) => { setSelectedTrailId(id); setCurrentPage('trails'); }} onNotify={notify} />
           ) : currentPage === 'map' ? (
             <TrailMapView onEditTrail={(id) => { setSelectedTrailId(id); setCurrentPage('trails'); }} />
+          ) : currentPage === 'tags' ? (
+            <TagManagement onNotify={notify} />
           ) : (
             <LocationList onNotify={notify} />
           )}

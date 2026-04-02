@@ -33,6 +33,7 @@ interface TrailCardProps {
     trail: Trail;
     onToggleFavorite?: (slug: string) => void;
     onHide?: (slug: string) => void;
+    onTagClick?: (tagSlug: string) => void;
     isHiding?: boolean;
     compact?: boolean;
 }
@@ -65,7 +66,7 @@ const getTrailTypeLabel = (type: string) => {
     }
 };
 
-export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, onHide, isHiding, compact }) => {
+export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, onHide, onTagClick, isHiding, compact }) => {
     const navigate = useNavigate();
     const { isFavorite, toggleFavorite } = useFavorites();
     const { hideTrail } = useHiddenTrails();
@@ -247,6 +248,9 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                         gap={1}
                         justifyContent="flex-end"
                     >
+                        {trail.difficulty && (
+                            <DifficultyInfo difficulty={trail.difficulty} activityType={trail.activityType} />
+                        )}
                         <Chip 
                             icon={getActivityIcon(trail.activityType)} 
                             label={trail.activityType} 
@@ -254,9 +258,6 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                             variant="outlined" 
                             color="primary"
                         />
-                        {trail.difficulty && (
-                            <DifficultyInfo difficulty={trail.difficulty} />
-                        )}
                         {[...trail.locations]
                             .sort((a, b) => a.order - b.order)
                             .slice(0, compact ? 1 : undefined)
@@ -271,6 +272,27 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                                         navigate(`/locations/${loc.slug}`);
                                     }}
                                     sx={{ cursor: 'pointer' }}
+                                />
+                            ))}
+                        {trail.tags && trail.tags.length > 0 && trail.tags
+                            .slice(0, compact ? 2 : undefined)
+                            .map(tag => (
+                                <Chip
+                                    key={tag.slug}
+                                    label={tag.name}
+                                    size="small"
+                                    onClick={onTagClick ? (e) => {
+                                        e.stopPropagation();
+                                        e.preventDefault();
+                                        onTagClick(tag.slug);
+                                    } : undefined}
+                                    sx={{
+                                        backgroundColor: tag.color || undefined,
+                                        color: tag.color ? '#fff' : undefined,
+                                        fontSize: '0.7rem',
+                                        cursor: onTagClick ? 'pointer' : undefined,
+                                    }}
+                                    variant={tag.color ? 'filled' : 'outlined'}
                                 />
                             ))}
                     </Box>

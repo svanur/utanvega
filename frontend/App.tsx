@@ -1,12 +1,17 @@
 import { useMemo, useState } from 'react';
 import { CssBaseline, ThemeProvider } from '@mui/material';
 import type { PaletteMode } from '@mui/material';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { createAppTheme } from './theme';
 import HomePage from './pages/HomePage';
 import TrailDetailsPage from './pages/TrailDetailsPage';
 import LocationsPage from './pages/LocationsPage';
 import LocationDetailsPage from './pages/LocationDetailsPage';
+
+function TagPage({ mode, onToggleMode }: { mode: PaletteMode; onToggleMode: () => void }) {
+    const { slug } = useParams<{ slug: string }>();
+    return <HomePage mode={mode} onToggleMode={onToggleMode} tagSlug={slug} />;
+}
 
 export default function App() {
     const [mode, setMode] = useState<PaletteMode>('light');
@@ -25,6 +30,10 @@ export default function App() {
                     <Route 
                         path="/" 
                         element={<HomePage mode={mode} onToggleMode={handleToggleMode} />} 
+                    />
+                    <Route 
+                        path="/tags/:slug" 
+                        element={<TagPage mode={mode} onToggleMode={handleToggleMode} />} 
                     />
                     <Route 
                         path="/trails/:slug" 

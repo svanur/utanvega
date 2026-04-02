@@ -155,6 +155,9 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                         useFlexGap 
                         sx={{ mb: 2 }}
                     >
+                        {trail.difficulty && (
+                            <DifficultyInfo difficulty={trail.difficulty} activityType={trail.activityType} />
+                        )}
                         <Chip 
                             icon={getActivityIcon(trail.activityType)} 
                             label={trail.activityType} 
@@ -162,9 +165,6 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                             variant="outlined" 
                             size="small"
                         />
-                        {trail.difficulty && (
-                            <DifficultyInfo difficulty={trail.difficulty} />
-                        )}
                         {trail.locations && trail.locations.length > 0 && trail.locations.map((loc) => (
                             <Chip 
                                 key={loc.slug}
@@ -176,6 +176,21 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                 to={`/locations/${loc.slug}`}
                                 clickable
                                 size="small"
+                            />
+                        ))}
+                        {trail.tags && trail.tags.length > 0 && trail.tags.map((tag) => (
+                            <Chip
+                                key={tag.slug}
+                                label={tag.name}
+                                size="small"
+                                component={RouterLink}
+                                to={`/tags/${tag.slug}`}
+                                clickable
+                                sx={{
+                                    backgroundColor: tag.color || undefined,
+                                    color: tag.color ? '#fff' : undefined,
+                                }}
+                                variant={tag.color ? 'filled' : 'outlined'}
                             />
                         ))}
                         <ShareButtons title={trail.name} />

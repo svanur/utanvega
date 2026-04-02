@@ -6,6 +6,12 @@ export interface LocationInfo {
     order: number;
 }
 
+export interface TagInfo {
+    name: string;
+    slug: string;
+    color: string | null;
+}
+
 export interface Trail {
     id: string;
     name: string;
@@ -21,6 +27,7 @@ export interface Trail {
     startLatitude: number | null;
     startLongitude: number | null;
     locations: LocationInfo[];
+    tags?: TagInfo[];
     distanceToUser?: number; // in kilometers
 }
 
@@ -33,6 +40,7 @@ export interface FilterState {
     trailType: string;
     location: string;
     favoritesOnly: boolean;
+    selectedTags: string[];
 }
 
 const DEFAULT_FILTERS: FilterState = {
@@ -44,6 +52,7 @@ const DEFAULT_FILTERS: FilterState = {
     trailType: 'All',
     location: 'All',
     favoritesOnly: false,
+    selectedTags: [],
 };
 
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
@@ -155,6 +164,12 @@ export function useTrails() {
             // Location
             if (filters.location !== 'All') {
                 if (!trail.locations || !trail.locations.some(l => l.name === filters.location)) return false;
+            }
+
+            // Tags — trail must have ALL selected tags
+            if (filters.selectedTags.length > 0) {
+                const trailTagSlugs = trail.tags?.map(t => t.slug) || [];
+                if (!filters.selectedTags.every(tag => trailTagSlugs.includes(tag))) return false;
             }
 
             return true;

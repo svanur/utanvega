@@ -12,6 +12,8 @@ public class UtanvegaDbContext : DbContext
     public DbSet<Trail> Trails => Set<Trail>();
     public DbSet<Location> Locations => Set<Location>();
     public DbSet<TrailLocation> TrailLocations => Set<TrailLocation>();
+    public DbSet<Tag> Tags => Set<Tag>();
+    public DbSet<TrailTag> TrailTags => Set<TrailTag>();
     public DbSet<ChangeLog> ChangeLogs => Set<ChangeLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -87,6 +89,30 @@ public class UtanvegaDbContext : DbContext
             entity.Property(e => e.TimestampUtc).IsRequired();
             entity.HasIndex(e => e.EntityId);
             entity.HasIndex(e => e.EntityName);
+        });
+
+        modelBuilder.Entity<Tag>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Slug).IsRequired().HasMaxLength(120);
+            entity.HasIndex(e => e.Slug).IsUnique();
+            entity.Property(e => e.Color).HasMaxLength(20);
+        });
+
+        modelBuilder.Entity<TrailTag>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.HasOne(tt => tt.Trail)
+                  .WithMany(t => t.TrailTags)
+                  .HasForeignKey(tt => tt.TrailId);
+
+            entity.HasOne(tt => tt.Tag)
+                  .WithMany(t => t.TrailTags)
+                  .HasForeignKey(tt => tt.TagId);
+
+            entity.HasIndex(tt => new { tt.TrailId, tt.TagId }).IsUnique();
         });
     }
 }

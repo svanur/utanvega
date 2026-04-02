@@ -23,6 +23,8 @@ public class GetTrailBySlugQueryHandler : IRequestHandler<GetTrailBySlugQuery, T
         var trail = await _context.Trails
             .Include(t => t.TrailLocations)
                 .ThenInclude(tl => tl.Location)
+            .Include(t => t.TrailTags)
+                .ThenInclude(tt => tt.Tag)
             .AsNoTracking()
             .FirstOrDefaultAsync(t => t.Slug == request.Slug && t.Status == TrailStatus.Published, cancellationToken);
 
@@ -51,6 +53,9 @@ public class GetTrailBySlugQueryHandler : IRequestHandler<GetTrailBySlugQuery, T
             trail.TrailLocations
                 .OrderBy(tl => tl.Order)
                 .Select(tl => new LocationInfoDto(tl.Location.Name, tl.Location.Slug, tl.Order))
+                .ToList(),
+            trail.TrailTags
+                .Select(tt => new TagInfoDto(tt.Tag.Name, tt.Tag.Slug, tt.Tag.Color))
                 .ToList()
         );
     }

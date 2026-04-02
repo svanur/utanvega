@@ -22,7 +22,8 @@ public record UpdateTrailCommand(
     string Difficulty,
     string Visibility,
     string? UpdatedBy,
-    List<TrailLocationUpdateDto>? Locations = null
+    List<TrailLocationUpdateDto>? Locations = null,
+    List<Guid>? TagIds = null
 ) : IRequest<bool>;
 
 public class UpdateTrailCommandHandler : IRequestHandler<UpdateTrailCommand, bool>
@@ -38,6 +39,7 @@ public class UpdateTrailCommandHandler : IRequestHandler<UpdateTrailCommand, boo
     {
         var trail = await _context.Trails
             .Include(t => t.TrailLocations)
+            .Include(t => t.TrailTags)
             .FirstOrDefaultAsync(t => t.Id == request.Id, cancellationToken);
         
         if (trail == null) return false;
@@ -112,6 +114,30 @@ public class UpdateTrailCommandHandler : IRequestHandler<UpdateTrailCommand, boo
                         };
                         _context.TrailLocations.Add(newTL);
                     }
+                }
+            }
+        }
+
+        // Sync Tags
+        if (request.TagIds != null)
+        {
+            var currentTags = trail.TrailTags.ToList();
+            var requestedTagIds = request.TagIds.ToHashSet();
+
+            // Remove tags not in the request
+            foreach (var current in currentTags)
+            {
+                if (!requestedTagIds.Contains(current.TagId))
+                    _context.TrailTags.Remove(current);
+            }
+
+            // Add new tags
+            var existingTagIds = currentTags.Select(t => t.TagId).ToHashSet();
+            foreach (var tagId in requestedTagIds)
+            {
+                if (!existingTagIds.Contains(tagId))
+                {
+                    _context.TrailTags.Add(new TrailTag { TrailId = trail.Id, TagId = tagId });
                 }
             }
         }

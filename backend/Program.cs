@@ -291,34 +291,38 @@ app.MapGet("/api/v1/admin/trails/{idOrSlug}", [Authorize] async (string idOrSlug
 {
     var isGuid = Guid.TryParse(idOrSlug, out var id);
     var query = context.Trails
-        .AsNoTracking()
-        .Select(t => new
-        {
-            t.Id,
-            t.Name,
-            t.Slug,
-            t.Description,
-            ActivityType = t.ActivityTypeId.ToString(),
-            Status = t.Status.ToString(),
-            Type = t.Type.ToString(),
-            Difficulty = t.Difficulty.ToString(),
-            Visibility = t.Visibility.ToString(),
-            t.Length,
-            t.ElevationGain,
-            t.ElevationLoss,
-            Locations = t.TrailLocations.Select(tl => new
-            {
-                tl.LocationId,
-                Role = tl.Role.ToString(),
-                tl.Order
-            }).OrderBy(tl => tl.Order).ToList()
-        });
+        .Include(t => t.TrailLocations)
+        .Include(t => t.TrailTags).ThenInclude(tt => tt.Tag)
+        .AsNoTracking();
 
     var trail = isGuid 
         ? await query.FirstOrDefaultAsync(t => t.Id == id)
         : await query.FirstOrDefaultAsync(t => t.Slug == idOrSlug);
 
-    return trail != null ? Results.Ok(trail) : Results.NotFound();
+    if (trail == null) return Results.NotFound();
+
+    return Results.Ok(new
+    {
+        trail.Id,
+        trail.Name,
+        trail.Slug,
+        trail.Description,
+        ActivityType = trail.ActivityTypeId.ToString(),
+        Status = trail.Status.ToString(),
+        Type = trail.Type.ToString(),
+        Difficulty = trail.Difficulty.ToString(),
+        Visibility = trail.Visibility.ToString(),
+        trail.Length,
+        trail.ElevationGain,
+        trail.ElevationLoss,
+        Locations = trail.TrailLocations
+            .OrderBy(tl => tl.Order)
+            .Select(tl => new { tl.LocationId, Role = tl.Role.ToString(), tl.Order })
+            .ToList(),
+        Tags = trail.TrailTags
+            .Select(tt => new { tt.TagId, tt.Tag.Name, tt.Tag.Slug, tt.Tag.Color })
+            .ToList()
+    });
 })
 .WithName("GetAdminTrail");
 
@@ -592,6 +596,55 @@ app.MapDelete("/api/v1/admin/locations/{id}", [Authorize] async (Guid id, IMedia
 })
 .WithName("DeleteLocation");
 
+// Tags Admin API
+app.MapGet("/api/v1/admin/tags", [Authorize] async (UtanvegaDbContext context) =>
+{
+    var tags = await context.Tags
+        .AsNoTracking()
+        .OrderBy(t => t.Name)
+        .Select(t => new { t.Id, t.Name, t.Slug, t.Color, TrailCount = t.TrailTags.Count })
+        .ToListAsync();
+    return Results.Ok(tags);
+})
+.WithName("GetTags");
+
+app.MapPost("/api/v1/admin/tags", [Authorize] async (TagCreateDto dto, UtanvegaDbContext context) =>
+{
+    var tag = new Utanvega.Backend.Core.Entities.Tag
+    {
+        Name = dto.Name,
+        Slug = Utanvega.Backend.Core.Services.SlugGenerator.Generate(dto.Name),
+        Color = dto.Color
+    };
+    context.Tags.Add(tag);
+    await context.SaveChangesWithAuditAsync("admin");
+    return Results.Created($"/api/v1/admin/tags/{tag.Id}", new { tag.Id, tag.Name, tag.Slug, tag.Color });
+})
+.WithName("CreateTag");
+
+app.MapPut("/api/v1/admin/tags/{id}", [Authorize] async (Guid id, TagCreateDto dto, UtanvegaDbContext context) =>
+{
+    var tag = await context.Tags.FindAsync(id);
+    if (tag == null) return Results.NotFound();
+    tag.Name = dto.Name;
+    tag.Slug = Utanvega.Backend.Core.Services.SlugGenerator.Generate(dto.Name);
+    tag.Color = dto.Color;
+    await context.SaveChangesWithAuditAsync("admin");
+    return Results.NoContent();
+})
+.WithName("UpdateTag");
+
+app.MapDelete("/api/v1/admin/tags/{id}", [Authorize] async (Guid id, UtanvegaDbContext context) =>
+{
+    var tag = await context.Tags.Include(t => t.TrailTags).FirstOrDefaultAsync(t => t.Id == id);
+    if (tag == null) return Results.NotFound();
+    context.TrailTags.RemoveRange(tag.TrailTags);
+    context.Tags.Remove(tag);
+    await context.SaveChangesWithAuditAsync("admin");
+    return Results.NoContent();
+})
+.WithName("DeleteTag");
+
 // History / Audit API
 app.MapGet("/api/v1/admin/history", [Authorize] async (string? entityName, string? entityId, int? limit, IMediator mediator) =>
 {
@@ -601,3 +654,5 @@ app.MapGet("/api/v1/admin/history", [Authorize] async (string? entityName, strin
 .WithName("GetHistory");
 
 app.Run();
+
+public record TagCreateDto(string Name, string? Color);

@@ -21,7 +21,8 @@ import {
     ToggleButtonGroup,
     FormControlLabel,
     Checkbox,
-    Fade
+    Fade,
+    Chip
 } from '@mui/material';
 import { 
     Search as SearchIcon, 
@@ -42,8 +43,13 @@ import { useFavorites } from '../hooks/useFavorites';
 import { useHiddenTrails } from '../hooks/useHiddenTrails';
 import { TrailCard } from './TrailCard';
 import { TrailMapView } from './TrailMapView';
+import { useParams, useNavigate } from 'react-router-dom';
 
-export const TrailList: React.FC = () => {
+interface TrailListProps {
+    tagSlug?: string;
+}
+
+export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
     const { 
         trails, 
         loading, 
@@ -60,6 +66,14 @@ export const TrailList: React.FC = () => {
 
     const { favorites, toggleFavorite } = useFavorites();
     const { hiddenSlugs, hideTrail, clearHidden } = useHiddenTrails();
+    const navigate = useNavigate();
+
+    // Sync URL tag slug with filter state
+    React.useEffect(() => {
+        if (tagSlug && !filters.selectedTags.includes(tagSlug)) {
+            setFilters(prev => ({ ...prev, selectedTags: [tagSlug] }));
+        }
+    }, [tagSlug]);
 
     const [showAdvanced, setShowAdvanced] = React.useState(false);
     const [viewMode, setViewMode] = React.useState<'list' | 'map'>('list');
@@ -123,6 +137,14 @@ export const TrailList: React.FC = () => {
         return Array.from(types).sort();
     }, [filteredTrails]);
 
+    const availableTags = React.useMemo(() => {
+        const tagMap = new Map<string, { name: string; slug: string; color: string | null }>();
+        trails.forEach(t => t.tags?.forEach(tag => {
+            if (!tagMap.has(tag.slug)) tagMap.set(tag.slug, tag);
+        }));
+        return Array.from(tagMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+    }, [trails]);
+
     if (loading) {
         return (
             <Box display="flex" justifyContent="center" p={4}>
@@ -149,6 +171,14 @@ export const TrailList: React.FC = () => {
 
     const handleFilterChange = (key: string, value: any) => {
         setFilters({ ...filters, [key]: value });
+        if (key === 'selectedTags') {
+            const tags = value as string[];
+            if (tags.length === 1) {
+                navigate(`/tags/${tags[0]}`, { replace: true });
+            } else if (tags.length === 0 && tagSlug) {
+                navigate('/', { replace: true });
+            }
+        }
     };
 
     return (
@@ -354,6 +384,37 @@ export const TrailList: React.FC = () => {
                             />
                         </Grid>
 
+                        {availableTags.length > 0 && (
+                            <Grid item xs={12}>
+                                <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>Tags</Typography>
+                                <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                                    {availableTags.map(tag => {
+                                        const selected = filters.selectedTags.includes(tag.slug);
+                                        return (
+                                            <Chip
+                                                key={tag.slug}
+                                                label={tag.name}
+                                                size="small"
+                                                onClick={() => {
+                                                    const next = selected
+                                                        ? filters.selectedTags.filter(s => s !== tag.slug)
+                                                        : [...filters.selectedTags, tag.slug];
+                                                    handleFilterChange('selectedTags', next);
+                                                }}
+                                                sx={{
+                                                    backgroundColor: selected ? (tag.color || 'primary.main') : undefined,
+                                                    color: selected ? '#fff' : undefined,
+                                                    borderColor: tag.color || undefined,
+                                                    cursor: 'pointer',
+                                                }}
+                                                variant={selected ? 'filled' : 'outlined'}
+                                            />
+                                        );
+                                    })}
+                                </Box>
+                            </Grid>
+                        )}
+
                         <Grid item xs={12} display="flex" justifyContent="space-between" alignItems="center">
                             <Box>
                                 <FormControlLabel
@@ -373,7 +434,10 @@ export const TrailList: React.FC = () => {
                                     </Button>
                                 )}
                             </Box>
-                            <Button size="small" onClick={resetFilters}>
+                            <Button size="small" onClick={() => {
+                                resetFilters();
+                                if (tagSlug) navigate('/', { replace: true });
+                            }}>
                                 Reset Filters
                             </Button>
                         </Grid>
@@ -383,7 +447,10 @@ export const TrailList: React.FC = () => {
 
             <Box mb={2} display="flex" justifyContent="space-between" alignItems="center">
                 <Typography variant="h5" fontWeight="bold">
-                    {viewMode === 'list' ? 'Nearby Trails' : 'Trail Map'}
+                    {filters.selectedTags.length > 0
+                        ? `Trails tagged: ${filters.selectedTags.map(s => availableTags.find(t => t.slug === s)?.name || s).join(', ')}`
+                        : viewMode === 'list' ? 'Nearby Trails' : 'Trail Map'
+                    }
                     <Typography 
                         component="span" 
                         variant="subtitle1" 
@@ -430,6 +497,12 @@ export const TrailList: React.FC = () => {
                                 trail={trail} 
                                 onHide={handleHideTrail}
                                 onToggleFavorite={toggleFavorite}
+                                onTagClick={(tagSlug) => {
+                                    const next = filters.selectedTags.includes(tagSlug)
+                                        ? filters.selectedTags.filter(s => s !== tagSlug)
+                                        : [...filters.selectedTags, tagSlug];
+                                    handleFilterChange('selectedTags', next);
+                                }}
                                 isHiding={hidingSlugs.includes(trail.slug)}
                             />
                         </Collapse>

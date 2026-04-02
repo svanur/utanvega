@@ -44,11 +44,17 @@ const rows: ThresholdRow[] = [
 
 interface DifficultyInfoProps {
     difficulty: string;
+    activityType?: string;
 }
 
-export default function DifficultyInfo({ difficulty }: DifficultyInfoProps) {
+export default function DifficultyInfo({ difficulty, activityType }: DifficultyInfoProps) {
     const [open, setOpen] = useState(false);
     const theme = useTheme();
+
+    const activeColumn = activityType?.toLowerCase() as keyof ThresholdRow | undefined;
+
+    const colHighlight = (col: string) =>
+        activeColumn === col ? { bgcolor: theme.palette.action.selected } : undefined;
 
     return (
         <>
@@ -82,10 +88,10 @@ export default function DifficultyInfo({ difficulty }: DifficultyInfoProps) {
                             <TableHead>
                                 <TableRow sx={{ bgcolor: theme.palette.action.hover }}>
                                     <TableCell sx={{ fontWeight: 'bold' }}>Level</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold' }}>Trail Running</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold' }}>Running</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold' }}>Hiking</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold' }}>Cycling</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold', ...colHighlight('trailrunning') }}>Trail Running</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold', ...colHighlight('running') }}>Running</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold', ...colHighlight('hiking') }}>Hiking</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold', ...colHighlight('cycling') }}>Cycling</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
@@ -102,10 +108,10 @@ export default function DifficultyInfo({ difficulty }: DifficultyInfoProps) {
                                                 variant={row.level === difficulty ? 'filled' : 'outlined'}
                                             />
                                         </TableCell>
-                                        <TableCell>{row.trailRunning}</TableCell>
-                                        <TableCell>{row.running}</TableCell>
-                                        <TableCell>{row.hiking}</TableCell>
-                                        <TableCell>{row.cycling}</TableCell>
+                                        <TableCell sx={colHighlight('trailrunning')}>{row.trailRunning}</TableCell>
+                                        <TableCell sx={colHighlight('running')}>{row.running}</TableCell>
+                                        <TableCell sx={colHighlight('hiking')}>{row.hiking}</TableCell>
+                                        <TableCell sx={colHighlight('cycling')}>{row.cycling}</TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>

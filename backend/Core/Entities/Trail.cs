@@ -70,4 +70,5 @@ public class Trail
 
     // Relationships
     public ICollection<TrailLocation> TrailLocations { get; set; } = new List<TrailLocation>();
+    public ICollection<TrailTag> TrailTags { get; set; } = new List<TrailTag>();
 }
