@@ -40,6 +40,7 @@ export interface FilterState {
     minElevationLoss: number;
     maxElevationLoss: number;
     trailType: string;
+    difficulty: string;
     location: string;
     favoritesOnly: boolean;
     selectedTags: string[];
@@ -54,6 +55,7 @@ const DEFAULT_FILTERS: FilterState = {
     minElevationLoss: 0,
     maxElevationLoss: 3500,
     trailType: 'All',
+    difficulty: 'All',
     location: 'All',
     favoritesOnly: false,
     selectedTags: [],
@@ -169,6 +171,9 @@ export function useTrails() {
 
             // Trail Type
             if (filters.trailType !== 'All' && trail.trailType !== filters.trailType) return false;
+
+            // Difficulty
+            if (filters.difficulty !== 'All' && trail.difficulty !== filters.difficulty) return false;
 
             // Location
             if (filters.location !== 'All') {

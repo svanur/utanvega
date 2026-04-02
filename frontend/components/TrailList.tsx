@@ -406,7 +406,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                             </Grid>
                         )}
 
-                        <Grid item xs={6}>
+                        <Grid item xs={4}>
                             <FormControl fullWidth size="small">
                                 <InputLabel>Trail Type</InputLabel>
                                 <Select
@@ -422,7 +422,23 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                             </FormControl>
                         </Grid>
 
-                        <Grid item xs={6}>
+                        <Grid item xs={4}>
+                            <FormControl fullWidth size="small">
+                                <InputLabel>Difficulty</InputLabel>
+                                <Select
+                                    value={filters.difficulty}
+                                    label="Difficulty"
+                                    onChange={(e) => handleFilterChange('difficulty', e.target.value)}
+                                >
+                                    <MenuItem value="All">All Levels</MenuItem>
+                                    {['Easy', 'Moderate', 'Hard', 'Expert', 'Extreme'].map(d => (
+                                        <MenuItem key={d} value={d}>{d}</MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Grid>
+
+                        <Grid item xs={4}>
                             <FormControl fullWidth size="small">
                                 <InputLabel>Location</InputLabel>
                                 <Select
