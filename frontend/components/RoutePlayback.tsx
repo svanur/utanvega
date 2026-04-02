@@ -32,14 +32,17 @@ interface RoutePlaybackProps {
 }
 
 const SPEEDS = [
-    { label: '1x', interval: 80 },
-    { label: '2x', interval: 40 },
-    { label: '5x', interval: 16 },
-    { label: '10x', interval: 8 },
+    { label: '1x', interval: 80, step: 1 },
+    { label: '2x', interval: 40, step: 1 },
+    { label: '5x', interval: 16, step: 1 },
+    { label: '10x', interval: 8, step: 1 },
+    { label: '25x', interval: 8, step: 3 },
+    { label: '50x', interval: 8, step: 6 },
 ];
 
 export default function RoutePlayback({ coordinates, onPointChange, onIndexChange }: RoutePlaybackProps) {
     const [playing, setPlaying] = useState(false);
+    const [finished, setFinished] = useState(false);
     const [speedIndex, setSpeedIndex] = useState(0);
     const [currentIndex, setCurrentIndex] = useState(0);
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -81,27 +84,40 @@ export default function RoutePlayback({ coordinates, onPointChange, onIndexChang
             intervalRef.current = null;
         }
         setPlaying(false);
+        setFinished(false);
         setCurrentIndex(0);
         indexRef.current = 0;
         onPointChange(null);
         onIndexChange?.(null);
     }, [onPointChange, onIndexChange]);
 
+    const finish = useCallback(() => {
+        if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+        }
+        setPlaying(false);
+        setFinished(true);
+    }, []);
+
     const startInterval = useCallback((fromIndex: number) => {
         if (intervalRef.current) clearInterval(intervalRef.current);
         indexRef.current = fromIndex;
 
         intervalRef.current = setInterval(() => {
-            const next = indexRef.current + 1;
-            if (next >= total) {
-                stop();
+            const next = Math.min(indexRef.current + SPEEDS[speedIndex].step, total - 1);
+            if (next >= total - 1) {
+                indexRef.current = total - 1;
+                setCurrentIndex(total - 1);
+                emitPoint(total - 1);
+                finish();
                 return;
             }
             indexRef.current = next;
             setCurrentIndex(next);
             emitPoint(next);
         }, SPEEDS[speedIndex].interval);
-    }, [total, speedIndex, emitPoint, stop]);
+    }, [total, speedIndex, emitPoint, finish]);
 
     const play = useCallback(() => {
         const startFrom = indexRef.current >= total - 1 ? 0 : indexRef.current;
@@ -109,6 +125,7 @@ export default function RoutePlayback({ coordinates, onPointChange, onIndexChang
         indexRef.current = startFrom;
         emitPoint(startFrom);
         setPlaying(true);
+        setFinished(false);
         startInterval(startFrom);
     }, [total, emitPoint, startInterval]);
 
@@ -151,7 +168,7 @@ export default function RoutePlayback({ coordinates, onPointChange, onIndexChang
                 <IconButton
                     onClick={stop}
                     size="small"
-                    disabled={currentIndex === 0 && !playing}
+                    disabled={currentIndex === 0 && !playing && !finished}
                     title="Stop and reset"
                 >
                     <StopIcon />
@@ -170,7 +187,7 @@ export default function RoutePlayback({ coordinates, onPointChange, onIndexChang
                     ))}
                 </ToggleButtonGroup>
 
-                {(playing || currentIndex > 0) && (() => {
+                {(playing || currentIndex > 0 || finished) && (() => {
                     const s = cumulativeStats[currentIndex];
                     return (
                         <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }} component="span">
@@ -182,7 +199,7 @@ export default function RoutePlayback({ coordinates, onPointChange, onIndexChang
                 })()}
             </Stack>
 
-            {(playing || currentIndex > 0) && (
+            {(playing || currentIndex > 0 || finished) && (
                 <LinearProgress
                     variant="determinate"
                     value={progress}
