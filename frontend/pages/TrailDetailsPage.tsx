@@ -297,7 +297,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                     scrollSnapAlign: 'start'
                                 }}
                             >
-                                <TrailCard trail={relatedTrail} compact={true} />
+                                <TrailCard trail={relatedTrail} compact={true} disableGestures={true} />
                             </Box>
                         ))}
                     </Box>

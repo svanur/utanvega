@@ -36,6 +36,7 @@ interface TrailCardProps {
     onTagClick?: (tagSlug: string) => void;
     isHiding?: boolean;
     compact?: boolean;
+    disableGestures?: boolean;
 }
 
 const getActivityIcon = (type: string) => {
@@ -66,7 +67,7 @@ const getTrailTypeLabel = (type: string) => {
     }
 };
 
-export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, onHide, onTagClick, isHiding, compact }) => {
+export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, onHide, onTagClick, isHiding, compact, disableGestures }) => {
     const navigate = useNavigate();
     const { isFavorite, toggleFavorite } = useFavorites();
     const { hideTrail } = useHiddenTrails();
@@ -172,6 +173,7 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
             }}
         >
             {/* Background Swipe Indicator */}
+            {!disableGestures && (
             <Box 
                 sx={{ 
                     position: 'absolute', 
@@ -193,8 +195,10 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                     {isFavorited ? 'Remove Favorite' : 'Add Favorite'}
                 </Typography>
             </Box>
+            )}
 
             {/* Right Background Swipe Indicator (Hide) */}
+            {!disableGestures && (
             <Box 
                 sx={{ 
                     position: 'absolute', 
@@ -217,18 +221,19 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                 </Typography>
                 <VisibilityOffIcon sx={{ color: 'white' }} />
             </Box>
+            )}
 
             <Card 
                 sx={{ 
                     overflow: 'visible', 
                     position: 'relative',
-                    transform: `translateX(${swipeOffset}px)`,
-                    transition: swipeOffset === 0 ? 'transform 0.3s ease' : 'none',
+                    transform: disableGestures ? undefined : `translateX(${swipeOffset}px)`,
+                    transition: disableGestures ? undefined : (swipeOffset === 0 ? 'transform 0.3s ease' : 'none'),
                     zIndex: 1
                 }}
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
+                onTouchStart={disableGestures ? undefined : handleTouchStart}
+                onTouchMove={disableGestures ? undefined : handleTouchMove}
+                onTouchEnd={disableGestures ? undefined : handleTouchEnd}
             >
                 <CardActionArea onClick={handleClick}>
                     <CardContent>
@@ -324,11 +329,13 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                 </CardActionArea>
             </Card>
 
-            <TrailQuickView 
-                trail={trail} 
-                open={quickViewOpen} 
-                onClose={() => setQuickViewOpen(false)} 
-            />
+            {!disableGestures && (
+                <TrailQuickView 
+                    trail={trail} 
+                    open={quickViewOpen} 
+                    onClose={() => setQuickViewOpen(false)} 
+                />
+            )}
         </Box>
     );
 };
