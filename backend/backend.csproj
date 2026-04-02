@@ -5,7 +5,10 @@
         <RootNamespace>Utanvega.Backend</RootNamespace>
         <AssemblyName>Utanvega.Backend</AssemblyName>
       <UserSecretsId>8d671d16-4005-4aae-a914-79cedf665408</UserSecretsId>
-  </PropertyGroup>
+    </PropertyGroup>
+    <ItemGroup>
+        <InternalsVisibleTo Include="backend.Tests" />
+    </ItemGroup>
     <ItemGroup>
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.0" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="6.*" />

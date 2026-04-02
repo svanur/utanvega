@@ -70,7 +70,7 @@ public class LocationDetector
         return detected;
     }
 
-    private static double HaversineMeters(double lat1, double lon1, double lat2, double lon2)
+    internal static double HaversineMeters(double lat1, double lon1, double lat2, double lon2)
     {
         const double R = 6371000;
         var dLat = (lat2 - lat1) * Math.PI / 180.0;

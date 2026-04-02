@@ -1,9 +1,10 @@
 <Solution>
     <Folder Name="/Solution Items/">
-        <File Path=".github\workflows\ci.yml"/>
-        <File Path=".github\workflows\backend-build.yml"/>
-        <File Path=".github\workflows\frontend-build.yml"/>
+        <File Path=".github\workflows\ci.yml" />
+        <File Path=".github\workflows\backend-build.yml" />
+        <File Path=".github\workflows\frontend-build.yml" />
     </Folder>
-    <Project Path="backend/backend.csproj"/>
-    <Project Path="admin/admin.esproj"/>
+    <Project Path="backend.Tests/backend.Tests.csproj" />
+    <Project Path="backend/backend.csproj" />
+    <Project Path="admin/admin.esproj" />
 </Solution>
