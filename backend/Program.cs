@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using Utanvega.Backend.Infrastructure.Persistence;
+using Utanvega.Backend.Core.Entities;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
@@ -363,6 +364,41 @@ app.MapPost("/api/v1/admin/trails/bulk-action", [Authorize] async (BulkTrailActi
 })
 .WithName("BulkTrailAction");
 
+app.MapPost("/api/v1/admin/trails/bulk-add-tag", [Authorize] async (BulkAddTagRequest request, UtanvegaDbContext context) =>
+{
+    var tag = await context.Tags.FindAsync(request.TagId);
+    if (tag == null) return Results.NotFound("Tag not found");
+
+    var existingPairs = context.TrailTags
+        .Where(tt => request.TrailIds.Contains(tt.TrailId) && tt.TagId == request.TagId)
+        .Select(tt => tt.TrailId)
+        .ToHashSet();
+
+    var added = 0;
+    foreach (var trailId in request.TrailIds)
+    {
+        if (!existingPairs.Contains(trailId))
+        {
+            context.TrailTags.Add(new TrailTag { TrailId = trailId, TagId = request.TagId });
+            added++;
+        }
+    }
+    await context.SaveChangesAsync();
+    return Results.Ok(new { added });
+})
+.WithName("BulkAddTag");
+
+app.MapPost("/api/v1/admin/trails/bulk-remove-tag", [Authorize] async (BulkAddTagRequest request, UtanvegaDbContext context) =>
+{
+    var toRemove = context.TrailTags
+        .Where(tt => request.TrailIds.Contains(tt.TrailId) && tt.TagId == request.TagId)
+        .ToList();
+    context.TrailTags.RemoveRange(toRemove);
+    await context.SaveChangesAsync();
+    return Results.Ok(new { removed = toRemove.Count });
+})
+.WithName("BulkRemoveTag");
+
 app.MapPost("/api/v1/admin/trails/{id:guid}/recalculate-difficulty", [Authorize] async (Guid id, UtanvegaDbContext context) =>
 {
     var trail = await context.Trails.FindAsync(id);
@@ -656,3 +692,4 @@ app.MapGet("/api/v1/admin/history", [Authorize] async (string? entityName, strin
 app.Run();
 
 public record TagCreateDto(string Name, string? Color);
+public record BulkAddTagRequest(List<Guid> TrailIds, Guid TagId);

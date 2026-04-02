@@ -1,4 +1,4 @@
-import { Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Chip, Button, CircularProgress, Alert, Box, Dialog, DialogTitle, DialogContent, IconButton, DialogActions, FormControlLabel, Switch, Checkbox, TextField, TableSortLabel, InputAdornment, MenuItem, Select, FormControl, InputLabel, Tooltip, Link } from '@mui/material';
+import { Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Chip, Button, CircularProgress, Alert, Box, Dialog, DialogTitle, DialogContent, IconButton, DialogActions, FormControlLabel, Switch, Checkbox, TextField, TableSortLabel, InputAdornment, MenuItem, Select, FormControl, InputLabel, Tooltip, Link, Collapse, Divider, Stack } from '@mui/material';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import MapIcon from '@mui/icons-material/Map';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -10,8 +10,13 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import RestoreIcon from '@mui/icons-material/Restore';
 import SearchIcon from '@mui/icons-material/Search';
 import FilterAltOffIcon from '@mui/icons-material/FilterAltOff';
+import BuildIcon from '@mui/icons-material/Build';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import { useMemo, useState } from 'react';
 import { useTrails } from '../hooks/useTrails';
+import { useTags } from '../hooks/useTags';
 import { apiFetch } from '../hooks/api';
 import TrailMap from '../components/TrailMap';
 import TrailEditDialog from '../components/TrailEditDialog';
@@ -20,6 +25,7 @@ import GpxBulkUpload from '../components/GpxBulkUpload';
 export default function TrailList({ onNotify, initialTrailId }: { onNotify: (message: React.ReactNode, severity?: 'success' | 'error') => void, initialTrailId?: string | null }) {
   const [includeDeleted, setIncludeDeleted] = useState(false);
   const { trails, loading, error, refresh } = useTrails(includeDeleted);
+  const { tags } = useTags();
   const [selectedTrailMap, setSelectedTrailMap] = useState<{ id: string, name: string } | null>(null);
   const [selectedTrailEdit, setSelectedTrailEdit] = useState<string | null>(initialTrailId || null);
   const [trailToDelete, setTrailToDelete] = useState<{ id: string, name: string } | null>(null);
@@ -29,6 +35,7 @@ export default function TrailList({ onNotify, initialTrailId }: { onNotify: (mes
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkActioning, setBulkActioning] = useState(false);
   const [recalculating, setRecalculating] = useState(false);
+  const [showTools, setShowTools] = useState(false);
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -87,6 +94,27 @@ export default function TrailList({ onNotify, initialTrailId }: { onNotify: (mes
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
+  };
+
+  const handleBulkTag = async (tagId: string, action: 'add' | 'remove') => {
+    if (selectedIds.length === 0) return;
+    try {
+      setBulkActioning(true);
+      const endpoint = action === 'add' ? '/api/v1/admin/trails/bulk-add-tag' : '/api/v1/admin/trails/bulk-remove-tag';
+      const result = await apiFetch<{ added?: number; removed?: number }>(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ trailIds: selectedIds, tagId }),
+      });
+      const count = action === 'add' ? result.added : result.removed;
+      const tagName = tags.find(t => t.id === tagId)?.name || 'tag';
+      onNotify(`${action === 'add' ? 'Added' : 'Removed'} "${tagName}" ${action === 'add' ? 'to' : 'from'} ${count} trail(s)`);
+      refresh();
+    } catch (err) {
+      onNotify(`Failed to ${action} tag`, 'error');
+    } finally {
+      setBulkActioning(false);
+    }
   };
 
   const handleBulkAction = async (action: 'Delete' | 'UpdateStatus', value?: string) => {
@@ -184,71 +212,149 @@ export default function TrailList({ onNotify, initialTrailId }: { onNotify: (mes
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      {/* Header Row: Title + Quick Actions */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h4">Trails</Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          {selectedIds.length > 0 && (
-            <Box sx={{ bgcolor: 'action.selected', p: 1, borderRadius: 1, display: 'flex', gap: 1, alignItems: 'center' }}>
-              <Typography variant="body2" sx={{ mr: 1 }}>{selectedIds.length} selected</Typography>
-              <Button 
-                size="small" 
-                variant="outlined" 
-                color="error" 
-                startIcon={<DeleteIcon />}
-                onClick={() => handleBulkAction('Delete')}
-                disabled={bulkActioning}
+        <Stack direction="row" spacing={1} alignItems="center">
+          <Button startIcon={<RefreshIcon />} size="small" onClick={refresh}>Refresh</Button>
+          <Button
+            startIcon={showTools ? <ExpandLessIcon /> : <BuildIcon />}
+            size="small"
+            variant={showTools ? 'contained' : 'outlined'}
+            onClick={() => setShowTools(!showTools)}
+          >
+            Tools
+          </Button>
+        </Stack>
+      </Box>
+
+      {/* Collapsible Tools Panel */}
+      <Collapse in={showTools}>
+        <Paper sx={{ mb: 2, p: 2, border: '1px solid', borderColor: 'divider' }}>
+          <Stack spacing={2}>
+            {/* Upload Section */}
+            <Box>
+              <Typography variant="subtitle2" color="text.secondary" gutterBottom>📤 Upload</Typography>
+              <Button
+                variant="contained"
+                size="small"
+                startIcon={<CloudUploadIcon />}
+                onClick={() => setShowBulkUpload(true)}
               >
-                Delete
-              </Button>
-              <Button 
-                size="small" 
-                variant="outlined" 
-                onClick={() => handleBulkAction('UpdateStatus', 'Published')}
-                disabled={bulkActioning}
-              >
-                Publish
-              </Button>
-              <Button 
-                size="small" 
-                variant="outlined" 
-                onClick={() => handleBulkAction('UpdateStatus', 'Draft')}
-                disabled={bulkActioning}
-              >
-                Draft
-              </Button>
-              <Button 
-                size="small" 
-                variant="outlined" 
-                onClick={() => handleBulkAction('UpdateStatus', 'Archived')}
-                disabled={bulkActioning}
-              >
-                Archive
+                Bulk Upload GPX
               </Button>
             </Box>
-          )}
-          <Button 
-            variant="contained" 
-            startIcon={<CloudUploadIcon />} 
-            onClick={() => setShowBulkUpload(true)}
-          >
-            Bulk Upload
-          </Button>
-          <FormControlLabel 
-            control={<Switch checked={includeDeleted} onChange={(e) => setIncludeDeleted(e.target.checked)} />} 
-            label="Show Deleted" 
-          />
-          <Button startIcon={<RefreshIcon />} onClick={refresh}>Refresh</Button>
-          <Tooltip title="Recalculate difficulty for all trails based on distance, elevation and activity type">
-            <Button 
-              startIcon={recalculating ? <CircularProgress size={18} /> : <CalculateIcon />} 
-              onClick={handleRecalculateDifficulties}
-              disabled={recalculating}
-            >
-              Recalculate Difficulties
-            </Button>
-          </Tooltip>
-        </Box>
-      </Box>
+
+            <Divider />
+
+            {/* Maintenance Section */}
+            <Box>
+              <Typography variant="subtitle2" color="text.secondary" gutterBottom>🔧 Maintenance</Typography>
+              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                <Tooltip title="Recalculate difficulty for all trails based on distance, elevation and activity type">
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={recalculating ? <CircularProgress size={16} /> : <CalculateIcon />}
+                    onClick={handleRecalculateDifficulties}
+                    disabled={recalculating}
+                  >
+                    Recalculate Difficulties
+                  </Button>
+                </Tooltip>
+                <FormControlLabel
+                  control={<Switch size="small" checked={includeDeleted} onChange={(e) => setIncludeDeleted(e.target.checked)} />}
+                  label={<Typography variant="body2">Show Deleted</Typography>}
+                />
+              </Stack>
+            </Box>
+
+            {/* Bulk Actions Section (visible when items selected) */}
+            {selectedIds.length > 0 && (
+              <>
+                <Divider />
+                <Box>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    ⚡ Bulk Actions ({selectedIds.length} selected)
+                  </Typography>
+                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      color="error"
+                      startIcon={<DeleteIcon />}
+                      onClick={() => handleBulkAction('Delete')}
+                      disabled={bulkActioning}
+                    >
+                      Delete
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => handleBulkAction('UpdateStatus', 'Published')}
+                      disabled={bulkActioning}
+                    >
+                      Publish
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => handleBulkAction('UpdateStatus', 'Draft')}
+                      disabled={bulkActioning}
+                    >
+                      Draft
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => handleBulkAction('UpdateStatus', 'Archived')}
+                      disabled={bulkActioning}
+                    >
+                      Archive
+                    </Button>
+                  </Stack>
+                  {tags.length > 0 && (
+                    <Box sx={{ mt: 1.5 }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                        <LocalOfferIcon sx={{ fontSize: 14, verticalAlign: 'middle', mr: 0.5 }} />
+                        Add/Remove Tag:
+                      </Typography>
+                      <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+                        {tags.map(tag => (
+                          <Chip
+                            key={tag.id}
+                            label={tag.name}
+                            size="small"
+                            onClick={() => handleBulkTag(tag.id, 'add')}
+                            onDelete={() => handleBulkTag(tag.id, 'remove')}
+                            disabled={bulkActioning}
+                            sx={{
+                              borderColor: tag.color || undefined,
+                              '& .MuiChip-deleteIcon': { fontSize: 16 },
+                            }}
+                            variant="outlined"
+                          />
+                        ))}
+                      </Stack>
+                    </Box>
+                  )}
+                </Box>
+              </>
+            )}
+          </Stack>
+        </Paper>
+      </Collapse>
+
+      {/* Inline selection indicator (when tools panel is closed) */}
+      {!showTools && selectedIds.length > 0 && (
+        <Paper sx={{ mb: 2, p: 1.5, display: 'flex', alignItems: 'center', gap: 1, bgcolor: 'action.selected' }}>
+          <Typography variant="body2" fontWeight={600}>{selectedIds.length} selected</Typography>
+          <Button size="small" variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={() => handleBulkAction('Delete')} disabled={bulkActioning}>Delete</Button>
+          <Button size="small" variant="outlined" onClick={() => handleBulkAction('UpdateStatus', 'Published')} disabled={bulkActioning}>Publish</Button>
+          <Button size="small" variant="outlined" onClick={() => handleBulkAction('UpdateStatus', 'Draft')} disabled={bulkActioning}>Draft</Button>
+          <Button size="small" variant="outlined" onClick={() => handleBulkAction('UpdateStatus', 'Archived')} disabled={bulkActioning}>Archive</Button>
+        </Paper>
+      )}
 
       <Paper sx={{ mb: 3, p: 2, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
         <TextField
