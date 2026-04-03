@@ -35,7 +35,7 @@ utanvega/
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/your-org/utanvega.git
+git clone https://github.com/svanur/utanvega.git
 cd utanvega
 npm install
 cd frontend && npm install && cd ..
