@@ -1,25 +1,16 @@
 # Idea bank for frontend
 
 ## Need to explore and plan better
-
-- [ ] Add 'Load more' button to trail list
 - [ ] Offline Map Support: Cache GeoJSON and map tiles locally.
 - [ ] Push Notifications: Notify users on new trails or condition changes.
-- [x] Long Press for Quick View: Show elevation/info preview on hold.
-    - [x] Map and elevation in collapsable component.
-    - [x] Show distance, gain, loss and trail type.
 
 ## Backlog
-
-- [x] Convert to PWA for home-screen installation and better mobile experience.
-- [x] GPS "Follow Me" mode on `TrailMapView`.
 - [ ] Off-trail vibration alerts using GPS tracking.
 - [ ] "Report Condition" mobile UI for real-time trail status.
 - [ ] System Share Sheet integration using `navigator.share()`.
 
 ##In progress
 
-- [ ] Interactive Elevation Profile: Make the `ElevationChart` interactive. When a user hovers or drags their finger across the chart, show a corresponding dot on the map to see *exactly* where that steep climb is.
 
 ## Done
 
@@ -37,6 +28,12 @@
 - [x] Add simple search to trail list
 - [x] Display TrailType
 - [x] Display details trail page
-- [?] Open in Garmin connect
+- [x] Open in Garmin connect
 - [x] Share trail
 - [x] Display simple Trail list
+- [x] Long Press for Quick View: Show elevation/info preview on hold.
+  - [x] Map and elevation in collapsable component.
+  - [x] Show distance, gain, loss and trail type.
+- [x] Convert to PWA for home-screen installation and better mobile experience.
+- [x] Interactive Elevation Profile: Make the `ElevationChart` interactive. When a user hovers or drags their finger across the chart, show a corresponding dot on the map to see *exactly* where that steep climb is.
+- [x] GPS "Follow Me" mode on `TrailMapView`.

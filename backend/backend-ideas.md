@@ -7,13 +7,13 @@
 
 ## Backlog
 - [ ] Add `FavoriteCount` to Trail entity to track popular trails (incremented when users sync their local favorites)
-- [ ] Trail condition reporting API
 - [ ] User profiles and authentication (for future cross-device sync)
 
 ## In progress
-- [ ] Tracking mobile-first feature requirements
 
 ## Done
 - [x] Initial trail and location CRUD
 - [x] GPX data support via NetTopologySuite
 - [x] Sorting by `Order` field in TrailLocations
+- [x] Trail condition reporting API
+- [x] Tracking mobile-first feature requirements
