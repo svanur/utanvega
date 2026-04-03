@@ -197,6 +197,12 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                         <QRCodeShare slug={trail.slug} trailName={trail.name} />
                     </Stack>
 
+                    {trail.description && (
+                        <Typography variant="body1" color="text.secondary" sx={{ mb: 2, lineHeight: 1.7 }}>
+                            {trail.description}
+                        </Typography>
+                    )}
+
                     <Divider sx={{ my: 2, display: { xs: 'block', sm: 'none' }, opacity: 0.6 }} />
 
                     <Grid container spacing={1} sx={{ mt: 1 }}>

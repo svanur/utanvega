@@ -251,6 +251,26 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                             {isFavorited && <StarIcon color="warning" fontSize="small" />}
                         </Box>
 
+                        {/* Description snippet */}
+                        {trail.description && (
+                            <Typography
+                                variant="body2"
+                                color="text.secondary"
+                                sx={{
+                                    mt: 0.5,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    display: '-webkit-box',
+                                    WebkitLineClamp: 2,
+                                    WebkitBoxOrient: 'vertical',
+                                    fontSize: '0.8rem',
+                                    lineHeight: 1.4,
+                                }}
+                            >
+                                {trail.description}
+                            </Typography>
+                        )}
+
                     {/* 2nd row: ActivityType and locations */}
                     <Box 
                         mt={1}
