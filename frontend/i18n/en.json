@@ -1,0 +1,144 @@
+{
+    "nav": {
+        "locations": "Locations",
+        "darkMode": "Switch to dark mode",
+        "lightMode": "Switch to light mode"
+    },
+    "home": {
+        "nearbyTrails": "Nearby Trails",
+        "trailMap": "Trail Map",
+        "trailsTagged": "Trails tagged: {{tags}}",
+        "noTrailsMatch": "No trails matching your search criteria",
+        "noTrailsFound": "No trails found.",
+        "enableLocation": "Enable location for distance sorting"
+    },
+    "trail": {
+        "backToTrails": "Back to Trails",
+        "notFound": "Trail not found",
+        "distance": "Distance",
+        "gain": "Gain",
+        "loss": "Loss",
+        "type": "Type",
+        "routeMap": "Route Map",
+        "relatedTrails": "Related Trails",
+        "outAndBack": "Out and Back",
+        "loop": "Loop",
+        "pointToPoint": "Point to Point",
+        "viewDetails": "View trail details",
+        "loadingMap": "Loading Map...",
+        "noGpsData": "No GPS data available for this trail."
+    },
+    "trailCard": {
+        "removeFavorite": "Remove Favorite",
+        "addFavorite": "Add Favorite",
+        "hideTrail": "Hide Trail"
+    },
+    "quickView": {
+        "distance": "Distance",
+        "gain": "Gain",
+        "loss": "Loss",
+        "estTime": "Est. time",
+        "viewDetails": "View trail details",
+        "summaryBase": "A {{difficulty}} {{km}} km {{trailType}}",
+        "summaryBaseNoDifficulty": "A {{km}} km {{trailType}}",
+        "summaryIn": "in {{location}}",
+        "summaryGain": "with {{gain}}m elevation gain",
+        "outAndBack": "out-and-back",
+        "loop": "loop",
+        "pointToPoint": "point-to-point"
+    },
+    "filters": {
+        "searchPlaceholder": "Search name or description...",
+        "clearSearch": "clear search",
+        "advancedSearch": "advanced search",
+        "advancedFilters": "Advanced Filters",
+        "trailLength": "Trail Length",
+        "elevationGain": "Elevation Gain",
+        "elevationLoss": "Elevation Loss",
+        "distanceFromYou": "Distance from You",
+        "any": "Any",
+        "trailType": "Trail Type",
+        "allTypes": "All Types",
+        "difficulty": "Difficulty",
+        "allLevels": "All Levels",
+        "location": "Location",
+        "allLocations": "All Locations",
+        "showFavoritesOnly": "Show Favorites Only",
+        "tags": "Tags",
+        "showHiddenTrails": "Show Hidden Trails",
+        "clearHidden": "Clear Hidden ({{count}})",
+        "resetFilters": "Reset Filters"
+    },
+    "difficulty": {
+        "easy": "Easy",
+        "moderate": "Moderate",
+        "hard": "Hard",
+        "expert": "Expert",
+        "extreme": "Extreme",
+        "dialogTitle": "Difficulty Rating Criteria",
+        "explanation": "Difficulty is calculated using **effort distance**: the trail distance plus elevation gain divided by 100. For road running, only distance is used. Thresholds vary by activity type.",
+        "level": "Level",
+        "trailRunning": "Trail Running",
+        "running": "Running",
+        "hiking": "Hiking",
+        "cycling": "Cycling",
+        "formula": "**Effort distance** = distance (km) + elevation gain (m) ÷ 100. For example, a 15 km trail with 800 m gain = 23 km effort."
+    },
+    "elevation": {
+        "title": "Elevation Profile",
+        "distance": "Distance",
+        "elevation": "Elevation",
+        "gainSoFar": "Gain so far"
+    },
+    "playback": {
+        "play": "Play route",
+        "pause": "Pause",
+        "stop": "Stop and reset"
+    },
+    "map": {
+        "followLocation": "Follow my location",
+        "stopFollowing": "Stop following my location",
+        "youAreHere": "You are here",
+        "viewDetails": "View Details"
+    },
+    "locations": {
+        "title": "Explore by Location",
+        "subtitle": "{{locationCount}} locations · {{trailCount}} trails across Iceland",
+        "searchPlaceholder": "Search locations...",
+        "sortByTrails": "Sort by trail count",
+        "sortAlphabetically": "Sort alphabetically",
+        "showMap": "Show map",
+        "hideMap": "Hide map",
+        "trails": "trails",
+        "subLocations": "{{count}} sub-locations",
+        "noMatch": "No locations match your search.",
+        "noLocations": "No locations found.",
+        "backToLocations": "Back to Locations",
+        "locationNotFound": "Location not found",
+        "trailsIn": "Trails in {{name}} ({{count}})",
+        "noTrailsInLocation": "No trails found in this location yet."
+    },
+    "qr": {
+        "showQR": "Show QR Code",
+        "trailPage": "Trail Page",
+        "gpxFile": "GPX File",
+        "scanTrail": "Scan to open this trail on your phone.",
+        "scanGpx": "Scan to download the GPX file. Your phone will offer to open it in Garmin Connect, Coros, Suunto, or other GPS apps.",
+        "downloadGpx": "Download GPX",
+        "close": "Close"
+    },
+    "share": {
+        "share": "Share",
+        "copyLink": "Copy Link",
+        "linkCopied": "Link copied to clipboard!"
+    },
+    "footer": {
+        "checkingApi": "Checking API…",
+        "apiUnavailable": "API unavailable"
+    },
+    "header": {
+        "tagline": "Utanvega - A site to find fun trails and share with friends.",
+        "close": "Close",
+        "dontShowAgain": "Don't show again"
+    }
+}

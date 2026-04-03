@@ -1,4 +1,5 @@
 import { useMemo, useRef, useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Container,
     Typography,
@@ -109,6 +110,7 @@ type LocationsPageProps = {
 };
 
 export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps) {
+    const { t } = useTranslation();
     const { locations, loading, error } = useLocations();
     const { trails } = useTrails();
     const navigate = useNavigate();
@@ -187,10 +189,10 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
         <Layout mode={mode} onToggleMode={onToggleMode}>
             <Container maxWidth="md" sx={{ py: 3 }}>
                 <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom>
-                    Explore by Location
+                    {t('locations.title')}
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    {locations.length} locations · {trails.length} trails across Iceland
+                    {t('locations.subtitle', { locationCount: locations.length, trailCount: trails.length })}
                 </Typography>
 
                 {/* Map Hero */}
@@ -257,7 +259,7 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                 <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
                     <TextField
                         size="small"
-                        placeholder="Search locations..."
+                        placeholder={t('locations.searchPlaceholder')}
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                         sx={{ flex: 1 }}
@@ -276,10 +278,10 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                         onChange={(_, v) => v && setSortBy(v)}
                     >
                         <ToggleButton value="trails">
-                            <Tooltip title="Sort by trail count"><SortIcon sx={{ fontSize: 18 }} /></Tooltip>
+                            <Tooltip title={t('locations.sortByTrails')}><SortIcon sx={{ fontSize: 18 }} /></Tooltip>
                         </ToggleButton>
                         <ToggleButton value="name">
-                            <Tooltip title="Sort alphabetically"><Typography variant="caption" sx={{ fontWeight: 'bold', lineHeight: 1 }}>AÖ</Typography></Tooltip>
+                            <Tooltip title={t('locations.sortAlphabetically')}><Typography variant="caption" sx={{ fontWeight: 'bold', lineHeight: 1 }}>AÖ</Typography></Tooltip>
                         </ToggleButton>
                     </ToggleButtonGroup>
                     <ToggleButtonGroup
@@ -288,8 +290,8 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                         exclusive
                         onChange={(_, v) => v && setShowMap(v === 'map')}
                     >
-                        <ToggleButton value="map"><Tooltip title="Show map"><MapIcon sx={{ fontSize: 18 }} /></Tooltip></ToggleButton>
-                        <ToggleButton value="list"><Tooltip title="Hide map"><ViewListIcon sx={{ fontSize: 18 }} /></Tooltip></ToggleButton>
+                        <ToggleButton value="map"><Tooltip title={t('locations.showMap')}><MapIcon sx={{ fontSize: 18 }} /></Tooltip></ToggleButton>
+                        <ToggleButton value="list"><Tooltip title={t('locations.hideMap')}><ViewListIcon sx={{ fontSize: 18 }} /></Tooltip></ToggleButton>
                     </ToggleButtonGroup>
                 </Stack>
 
@@ -387,7 +389,7 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                                                     {/* Summary line */}
                                                     <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
                                                         <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                                                            {stats?.trailCount || loc.trailsCount} trails
+                                                            {stats?.trailCount || loc.trailsCount} {t('locations.trails')}
                                                         </Typography>
                                                         {stats && stats.totalKm > 0 && (
                                                             <>
@@ -409,7 +411,7 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                                                             <>
                                                                 <Typography variant="caption" color="text.secondary">·</Typography>
                                                                 <Typography variant="caption" color="text.secondary">
-                                                                    {loc.childrenCount} sub-locations
+                                                                    {t('locations.subLocations', { count: loc.childrenCount })}
                                                                 </Typography>
                                                             </>
                                                         )}
@@ -427,7 +429,7 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                 {filtered.length === 0 && (
                     <Box textAlign="center" py={8}>
                         <Typography color="text.secondary">
-                            {search ? 'No locations match your search.' : 'No locations found.'}
+                            {search ? t('locations.noMatch') : t('locations.noLocations')}
                         </Typography>
                     </Box>
                 )}

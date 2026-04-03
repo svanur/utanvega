@@ -23,6 +23,7 @@ import EastIcon from '@mui/icons-material/East';
 import StarIcon from '@mui/icons-material/Star';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Trail } from '../hooks/useTrails';
 import { useFavorites } from '../hooks/useFavorites';
 import { useHiddenTrails } from '../hooks/useHiddenTrails';
@@ -58,17 +59,18 @@ const getTrailTypeIcon = (type: string) => {
     }
 };
 
-const getTrailTypeLabel = (type: string) => {
+const getTrailTypeLabel = (type: string, t: (key: string) => string) => {
     switch (type) {
-        case 'OutAndBack': return 'Out and Back';
-        case 'Loop': return 'Loop';
-        case 'PointToPoint': return 'Point to Point';
+        case 'OutAndBack': return t('trail.outAndBack');
+        case 'Loop': return t('trail.loop');
+        case 'PointToPoint': return t('trail.pointToPoint');
         default: return type;
     }
 };
 
 export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, onHide, onTagClick, isHiding, compact, disableGestures }) => {
     const navigate = useNavigate();
+    const { t } = useTranslation();
     const { isFavorite, toggleFavorite } = useFavorites();
     const { hideTrail } = useHiddenTrails();
     const [swipeOffset, setSwipeOffset] = useState(0);
@@ -195,7 +197,7 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
             >
                 <StarIcon sx={{ color: 'white' }} />
                 <Typography sx={{ color: 'white', ml: 1, fontWeight: 'bold' }}>
-                    {isFavorited ? 'Remove Favorite' : 'Add Favorite'}
+                    {isFavorited ? t('trailCard.removeFavorite') : t('trailCard.addFavorite')}
                 </Typography>
             </Box>
             )}
@@ -220,7 +222,7 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                 }}
             >
                 <Typography sx={{ color: 'white', mr: 1, fontWeight: 'bold' }}>
-                    Hide Trail
+                    {t('trailCard.hideTrail')}
                 </Typography>
                 <VisibilityOffIcon sx={{ color: 'white' }} />
             </Box>

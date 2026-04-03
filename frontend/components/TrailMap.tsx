@@ -2,6 +2,7 @@ import { MapContainer, TileLayer, Polyline, useMap, Marker, useMapEvents } from 
 import { Box, Typography, Paper, IconButton } from '@mui/material';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
 import { useEffect, useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import L, { LatLngExpression } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -94,6 +95,7 @@ function HoverMarker({ point, activityType }: { point: { lat: number; lng: numbe
 }
 
 export default function TrailMap({ slug, onDataLoaded, hoverPoint, activityType }: TrailMapProps) {
+    const { t } = useTranslation();
     const [geometry, setGeometry] = useState<GeoJsonGeometry | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -155,8 +157,8 @@ export default function TrailMap({ slug, onDataLoaded, hoverPoint, activityType 
         fetchGeometry();
     }, [slug]);
 
-    if (loading) return <Typography>Loading Map...</Typography>;
-    if (error || !geometry) return <Typography color="error">No GPS data available for this trail.</Typography>;
+    if (loading) return <Typography>{t('trail.loadingMap')}</Typography>;
+    if (error || !geometry) return <Typography color="error">{t('trail.noGpsData')}</Typography>;
 
     return (
         <Box sx={{ height: 400, width: '100%', mt: 2, borderRadius: 2, overflow: 'hidden', border: '1px solid #ccc', position: 'relative' }}>
@@ -181,7 +183,7 @@ export default function TrailMap({ slug, onDataLoaded, hoverPoint, activityType 
                             backgroundColor: followMe ? 'rgba(25, 118, 210, 0.2)' : '#f5f5f5',
                         }
                     }}
-                    title={followMe ? "Stop following my location" : "Follow my location"}
+                    title={followMe ? t('map.stopFollowing') : t('map.followLocation')}
                     aria-label="follow my location"
                 >
                     <MyLocationIcon />

@@ -3,6 +3,7 @@ import { Box, IconButton, ToggleButtonGroup, ToggleButton, Typography, LinearPro
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
 import StopIcon from '@mui/icons-material/Stop';
+import { useTranslation } from 'react-i18next';
 
 interface CumulativeStats {
     distance: number; // km
@@ -41,6 +42,7 @@ const SPEEDS = [
 ];
 
 export default function RoutePlayback({ coordinates, onPointChange, onIndexChange }: RoutePlaybackProps) {
+    const { t } = useTranslation();
     const [playing, setPlaying] = useState(false);
     const [finished, setFinished] = useState(false);
     const [speedIndex, setSpeedIndex] = useState(0);
@@ -157,11 +159,11 @@ export default function RoutePlayback({ coordinates, onPointChange, onIndexChang
         <Box sx={{ mt: 2 }}>
             <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
                 {!playing ? (
-                    <IconButton onClick={play} color="primary" size="small" title="Play route">
+                    <IconButton onClick={play} color="primary" size="small" title={t('playback.play')}>
                         <PlayArrowIcon />
                     </IconButton>
                 ) : (
-                    <IconButton onClick={pause} color="primary" size="small" title="Pause">
+                    <IconButton onClick={pause} color="primary" size="small" title={t('playback.pause')}>
                         <PauseIcon />
                     </IconButton>
                 )}
@@ -169,7 +171,7 @@ export default function RoutePlayback({ coordinates, onPointChange, onIndexChang
                     onClick={stop}
                     size="small"
                     disabled={currentIndex === 0 && !playing && !finished}
-                    title="Stop and reset"
+                    title={t('playback.stop')}
                 >
                     <StopIcon />
                 </IconButton>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { 
     Container, 
     Typography, 
@@ -50,6 +51,7 @@ interface TrailListProps {
 }
 
 export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
+    const { t } = useTranslation();
     const { 
         trails, 
         loading, 
@@ -229,7 +231,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                 <TextField
                     fullWidth
                     variant="outlined"
-                    placeholder="Search name or description..."
+                    placeholder={t('filters.searchPlaceholder')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     InputProps={{
@@ -242,7 +244,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                             <InputAdornment position="end">
                                 {searchQuery && (
                                     <IconButton
-                                        aria-label="clear search"
+                                        aria-label={t('filters.clearSearch')}
                                         onClick={() => setSearchQuery('')}
                                         edge="end"
                                         size="small"
@@ -252,7 +254,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                                     </IconButton>
                                 )}
                                 <IconButton
-                                    aria-label="advanced search"
+                                    aria-label={t('filters.advancedSearch')}
                                     onClick={() => setShowAdvanced(!showAdvanced)}
                                     edge="end"
                                     size="small"
@@ -286,15 +288,15 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                     }}
                 >
                     <Typography variant="subtitle2" gutterBottom fontWeight="bold">
-                        Advanced Filters
+                        {t('filters.advancedFilters')}
                     </Typography>
                     
                     <Grid container spacing={2}>
                         {/* Trail Length — most useful filter first */}
                         <Grid item xs={12}>
                             <Typography variant="caption" color="text.secondary">
-                                Trail Length: {filters.minLength === 0 && filters.maxLength >= 100
-                                    ? 'Any'
+                                {t('filters.trailLength')}: {filters.minLength === 0 && filters.maxLength >= 100
+                                    ? t('filters.any')
                                     : `${filters.minLength} – ${filters.maxLength >= 100 ? '100+' : filters.maxLength} km`}
                             </Typography>
                             <Slider
@@ -323,8 +325,8 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                         {/* Elevation Gain */}
                         <Grid item xs={12}>
                             <Typography variant="caption" color="text.secondary">
-                                Elevation Gain: {filters.minElevationGain === 0 && filters.maxElevationGain >= 3500
-                                    ? 'Any'
+                                {t('filters.elevationGain')}: {filters.minElevationGain === 0 && filters.maxElevationGain >= 3500
+                                    ? t('filters.any')
                                     : `${filters.minElevationGain} – ${filters.maxElevationGain >= 3500 ? '3500+' : filters.maxElevationGain} m`}
                             </Typography>
                             <Slider
@@ -353,8 +355,8 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                         {/* Elevation Loss */}
                         <Grid item xs={12}>
                             <Typography variant="caption" color="text.secondary">
-                                Elevation Loss: {filters.minElevationLoss === 0 && filters.maxElevationLoss >= 3500
-                                    ? 'Any'
+                                {t('filters.elevationLoss')}: {filters.minElevationLoss === 0 && filters.maxElevationLoss >= 3500
+                                    ? t('filters.any')
                                     : `${filters.minElevationLoss} – ${filters.maxElevationLoss >= 3500 ? '3500+' : filters.maxElevationLoss} m`}
                             </Typography>
                             <Slider
@@ -384,14 +386,14 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                         {userLocation && (
                             <Grid item xs={12}>
                                 <Typography variant="caption" color="text.secondary">
-                                    Distance from You: {filters.maxDistance >= 250 ? 'Any' : `≤ ${filters.maxDistance} km`}
+                                    {t('filters.distanceFromYou')}: {filters.maxDistance >= 250 ? t('filters.any') : `≤ ${filters.maxDistance} km`}
                                 </Typography>
                                 <Slider
                                     size="small"
                                     value={Math.min(filters.maxDistance, 250)}
                                     onChange={(_, v) => handleFilterChange('maxDistance', v as number)}
                                     valueLabelDisplay="auto"
-                                    valueLabelFormat={(v) => v >= 250 ? 'Any' : `${v} km`}
+                                    valueLabelFormat={(v) => v >= 250 ? t('filters.any') : `${v} km`}
                                     min={0}
                                     max={250}
                                     step={5}
@@ -400,7 +402,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                                         { value: 50, label: '50' },
                                         { value: 100, label: '100' },
                                         { value: 150, label: '150' },
-                                        { value: 250, label: 'Any' },
+                                        { value: 250, label: t('filters.any') },
                                     ]}
                                     sx={{
                                         mt: 1,
@@ -414,13 +416,13 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
 
                         <Grid item xs={4}>
                             <FormControl fullWidth size="small">
-                                <InputLabel>Trail Type</InputLabel>
+                                <InputLabel>{t('filters.trailType')}</InputLabel>
                                 <Select
                                     value={filters.trailType}
-                                    label="Trail Type"
+                                    label={t('filters.trailType')}
                                     onChange={(e) => handleFilterChange('trailType', e.target.value)}
                                 >
-                                    <MenuItem value="All">All Types</MenuItem>
+                                    <MenuItem value="All">{t('filters.allTypes')}</MenuItem>
                                     {trailTypes.map(type => (
                                         <MenuItem key={type} value={type}>{type}</MenuItem>
                                     ))}
@@ -430,13 +432,13 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
 
                         <Grid item xs={4}>
                             <FormControl fullWidth size="small">
-                                <InputLabel>Difficulty</InputLabel>
+                                <InputLabel>{t('filters.difficulty')}</InputLabel>
                                 <Select
                                     value={filters.difficulty}
-                                    label="Difficulty"
+                                    label={t('filters.difficulty')}
                                     onChange={(e) => handleFilterChange('difficulty', e.target.value)}
                                 >
-                                    <MenuItem value="All">All Levels</MenuItem>
+                                    <MenuItem value="All">{t('filters.allLevels')}</MenuItem>
                                     {['Easy', 'Moderate', 'Hard', 'Expert', 'Extreme'].map(d => (
                                         <MenuItem key={d} value={d}>{d}</MenuItem>
                                     ))}
@@ -446,13 +448,13 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
 
                         <Grid item xs={4}>
                             <FormControl fullWidth size="small">
-                                <InputLabel>Location</InputLabel>
+                                <InputLabel>{t('filters.location')}</InputLabel>
                                 <Select
                                     value={filters.location}
-                                    label="Location"
+                                    label={t('filters.location')}
                                     onChange={(e) => handleFilterChange('location', e.target.value)}
                                 >
-                                    <MenuItem value="All">All Locations</MenuItem>
+                                    <MenuItem value="All">{t('filters.allLocations')}</MenuItem>
                                     {locations.map(loc => (
                                         <MenuItem key={loc} value={loc}>{loc}</MenuItem>
                                     ))}
@@ -470,13 +472,13 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                                         checkedIcon={<StarIcon sx={{ color: 'warning.main' }} />}
                                     />
                                 }
-                                label="Show Favorites Only"
+                                label={t('filters.showFavoritesOnly')}
                             />
                         </Grid>
 
                         {availableTags.length > 0 && (
                             <Grid item xs={12}>
-                                <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>Tags</Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>{t('filters.tags')}</Typography>
                                 <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
                                     {availableTags.map(tag => {
                                         const selected = filters.selectedTags.includes(tag.slug);
@@ -516,11 +518,11 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                                             checkedIcon={<VisibilityOffIcon color="error" />}
                                         />
                                     }
-                                    label="Show Hidden Trails"
+                                    label={t('filters.showHiddenTrails')}
                                 />
                                 {hiddenSlugs.length > 0 && (
                                     <Button size="small" color="error" onClick={clearHidden} sx={{ ml: 1 }}>
-                                        Clear Hidden ({hiddenSlugs.length})
+                                        {t('filters.clearHidden', { count: hiddenSlugs.length })}
                                     </Button>
                                 )}
                             </Box>
@@ -528,7 +530,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                                 resetFilters();
                                 if (tagSlug) navigate('/', { replace: true });
                             }}>
-                                Reset Filters
+                                {t('filters.resetFilters')}
                             </Button>
                         </Grid>
                     </Grid>
@@ -538,8 +540,8 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
             <Box mb={2} display="flex" justifyContent="space-between" alignItems="center">
                 <Typography variant="h5" fontWeight="bold">
                     {filters.selectedTags.length > 0
-                        ? `Trails tagged: ${filters.selectedTags.map(s => availableTags.find(t => t.slug === s)?.name || s).join(', ')}`
-                        : viewMode === 'list' ? 'Nearby Trails' : 'Trail Map'
+                        ? t('home.trailsTagged', { tags: filters.selectedTags.map(s => availableTags.find(tg => tg.slug === s)?.name || s).join(', ') })
+                        : viewMode === 'list' ? t('home.nearbyTrails') : t('home.trailMap')
                     }
                     <Typography 
                         component="span" 
@@ -553,7 +555,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                 <Box display="flex" alignItems="center" gap={1}>
                     {!userLocation && viewMode === 'list' && (
                         <Typography variant="caption" color="text.secondary">
-                            Enable location for distance sorting
+                            {t('home.enableLocation')}
                         </Typography>
                     )}
                     <ToggleButtonGroup
@@ -577,8 +579,8 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                 filteredTrails.length === 0 ? (
                     <Typography color="text.secondary" textAlign="center" py={4}>
                         {searchQuery || Object.values(filters).some(v => v !== 'All' && v !== 250 && v !== 0 && v !== 100 && v !== 3500 && v !== false) 
-                            ? `No trails matching your search criteria` 
-                            : "No trails found."}
+                            ? t('home.noTrailsMatch')
+                            : t('home.noTrailsFound')}
                     </Typography>
                 ) : (
                     filteredTrails.map(trail => (

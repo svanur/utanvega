@@ -1,0 +1,144 @@
+{
+    "nav": {
+        "locations": "Staðsetningar",
+        "darkMode": "Skipta yfir í dimmt þema",
+        "lightMode": "Skipta yfir í ljóst þema"
+    },
+    "home": {
+        "nearbyTrails": "Leiðir í nágrenninu",
+        "trailMap": "Kort",
+        "trailsTagged": "Leiðir merktar: {{tags}}",
+        "noTrailsMatch": "Engar leiðir passa við leitarskilyrði",
+        "noTrailsFound": "Engar leiðir fundust.",
+        "enableLocation": "Leyfa staðsetningu til að raða eftir fjarlægð"
+    },
+    "trail": {
+        "backToTrails": "Til baka",
+        "notFound": "Leið fannst ekki",
+        "distance": "Vegalengd",
+        "gain": "Hækkun",
+        "loss": "Lækkun",
+        "type": "Tegund",
+        "routeMap": "Leiðarkort",
+        "relatedTrails": "Tengdar leiðir",
+        "outAndBack": "Fram og til baka",
+        "loop": "Hringur",
+        "pointToPoint": "Milli staða",
+        "viewDetails": "Skoða nánari upplýsingar",
+        "loadingMap": "Hleð korti...",
+        "noGpsData": "Engin GPS gögn tiltæk fyrir þessa leið."
+    },
+    "trailCard": {
+        "removeFavorite": "Fjarlægja úr eftirlætum",
+        "addFavorite": "Bæta í eftirlæti",
+        "hideTrail": "Fela leið"
+    },
+    "quickView": {
+        "distance": "Vegalengd",
+        "gain": "Hækkun",
+        "loss": "Lækkun",
+        "estTime": "Áætlaður tími",
+        "viewDetails": "Skoða nánari upplýsingar",
+        "summaryBase": "{{difficulty}} leið, {{km}} km {{trailType}}",
+        "summaryBaseNoDifficulty": "{{km}} km {{trailType}} leið",
+        "summaryIn": "Staðsetning: {{location}}",
+        "summaryGain": "með {{gain}}m hækkun",
+        "outAndBack": "fram og til baka",
+        "loop": "hringur",
+        "pointToPoint": "milli staða"
+    },
+    "filters": {
+        "searchPlaceholder": "Leita eftir nafni eða lýsingu...",
+        "clearSearch": "hreinsa leit",
+        "advancedSearch": "ítarleg leit",
+        "advancedFilters": "Ítarleg síun",
+        "trailLength": "Lengd leiðar",
+        "elevationGain": "Hækkun",
+        "elevationLoss": "Lækkun",
+        "distanceFromYou": "Fjarlægð frá þér",
+        "any": "Allt",
+        "trailType": "Tegund",
+        "allTypes": "Allar tegundir",
+        "difficulty": "Erfiðleiki",
+        "allLevels": "Allir erfiðleikar",
+        "location": "Staðsetning",
+        "allLocations": "Allar staðsetningar",
+        "showFavoritesOnly": "Sýna eingöngu eftirlæti",
+        "tags": "Merki",
+        "showHiddenTrails": "Sýna faldar leiðir",
+        "clearHidden": "Hreinsa faldar ({{count}})",
+        "resetFilters": "Endurstilla síun"
+    },
+    "difficulty": {
+        "easy": "Auðveld",
+        "moderate": "Miðlungs erfið",
+        "hard": "Erfið",
+        "expert": "Snúin",
+        "extreme": "Mjög erfið",
+        "dialogTitle": "Skilyrði erfiðleikamats",
+        "explanation": "Erfiðleiki er reiknaður út frá **álagsvegalengd**: vegalengd leiðarinnar að viðbættri hækkun deilt með 100. Fyrir hlaupaleiðir á vegi er eingöngu vegalengd notuð. Viðmið eru mismunandi eftir tegund.",
+        "level": "Stig",
+        "trailRunning": "Utanvegahlaup",
+        "running": "Hlaup",
+        "hiking": "Fjallanga",
+        "cycling": "Hjólreiðar",
+        "formula": "**Álagsvegalengd** = vegalengd (km) + hækkun (m) ÷ 100. Til dæmis, 15 km leið með 800 m hækkun = 23 km álag."
+    },
+    "elevation": {
+        "title": "Hæðarsnið",
+        "distance": "Vegalengd",
+        "elevation": "Hæð",
+        "gainSoFar": "Hækkun til þessa"
+    },
+    "playback": {
+        "play": "Spila leið",
+        "pause": "Gera hlé",
+        "stop": "Stöðva og endurstilla"
+    },
+    "map": {
+        "followLocation": "Fylgja staðsetningu",
+        "stopFollowing": "Hætta að fylgja staðsetningu",
+        "youAreHere": "Þú ert hér",
+        "viewDetails": "Skoða nánar"
+    },
+    "locations": {
+        "title": "Skoða eftir staðsetningu",
+        "subtitle": "{{locationCount}} staðsetningar · {{trailCount}} leiðir á Íslandi",
+        "searchPlaceholder": "Leita að staðsetningu...",
+        "sortByTrails": "Raða eftir fjölda leiða",
+        "sortAlphabetically": "Raða í stafrófsröð",
+        "showMap": "Sýna kort",
+        "hideMap": "Fela kort",
+        "trails": "leiðir",
+        "subLocations": "{{count}} undirstaðsetningar",
+        "noMatch": "Engar staðsetningar passa við leit.",
+        "noLocations": "Engar staðsetningar fundust.",
+        "backToLocations": "Til baka",
+        "locationNotFound": "Staðsetning fannst ekki",
+        "trailsIn": "Leiðir í {{name}} ({{count}})",
+        "noTrailsInLocation": "Engar leiðir fundust á þessum stað."
+    },
+    "qr": {
+        "showQR": "Sýna QR kóða",
+        "trailPage": "Leið",
+        "gpxFile": "GPX skrá",
+        "scanTrail": "Skannaðu til að opna þessa leið í símanum.",
+        "scanGpx": "Skannaðu til að hlaða niður GPX skránni. Síminn mun bjóða upp á að opna hana í Garmin Connect, Coros, Suunto eða öðrum GPS forritum.",
+        "downloadGpx": "Hlaða niður GPX",
+        "close": "Loka"
+    },
+    "share": {
+        "share": "Deila",
+        "copyLink": "Afrita hlekk",
+        "linkCopied": "Hlekkur afritaður!"
+    },
+    "footer": {
+        "checkingApi": "Athuga API…",
+        "apiUnavailable": "API ekki tiltækt"
+    },
+    "header": {
+        "tagline": "Utanvega - Vefur til að finna skemmtilegar leiðir og deila með vinum.",
+        "close": "Loka",
+        "dontShowAgain": "Ekki sýna aftur"
+    }
+}

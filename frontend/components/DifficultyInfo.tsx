@@ -17,6 +17,7 @@ import {
     useTheme,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import { useTranslation } from 'react-i18next';
 
 const difficultyColors: Record<string, 'success' | 'info' | 'warning' | 'error' | 'secondary'> = {
     Easy: 'success',
@@ -48,6 +49,7 @@ interface DifficultyInfoProps {
 }
 
 export default function DifficultyInfo({ difficulty, activityType }: DifficultyInfoProps) {
+    const { t } = useTranslation();
     const [open, setOpen] = useState(false);
     const theme = useTheme();
 
@@ -68,7 +70,7 @@ export default function DifficultyInfo({ difficulty, activityType }: DifficultyI
 
             <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
                 <DialogTitle sx={{ pr: 6 }}>
-                    Difficulty Rating Criteria
+                    {t('difficulty.dialogTitle')}
                     <IconButton
                         aria-label="close"
                         onClick={() => setOpen(false)}
@@ -79,19 +81,18 @@ export default function DifficultyInfo({ difficulty, activityType }: DifficultyI
                 </DialogTitle>
                 <DialogContent>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        Difficulty is calculated using <strong>effort distance</strong>: the trail distance plus elevation gain divided by 100.
-                        For road running, only distance is used. Thresholds vary by activity type.
+                        {t('difficulty.explanation')}
                     </Typography>
 
                     <TableContainer component={Paper} variant="outlined">
                         <Table size="small">
                             <TableHead>
                                 <TableRow sx={{ bgcolor: theme.palette.action.hover }}>
-                                    <TableCell sx={{ fontWeight: 'bold' }}>Level</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold', ...colHighlight('trailrunning') }}>Trail Running</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold', ...colHighlight('running') }}>Running</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold', ...colHighlight('hiking') }}>Hiking</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold', ...colHighlight('cycling') }}>Cycling</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold' }}>{t('difficulty.level')}</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold', ...colHighlight('trailrunning') }}>{t('difficulty.trailRunning')}</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold', ...colHighlight('running') }}>{t('difficulty.running')}</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold', ...colHighlight('hiking') }}>{t('difficulty.hiking')}</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold', ...colHighlight('cycling') }}>{t('difficulty.cycling')}</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
@@ -120,8 +121,7 @@ export default function DifficultyInfo({ difficulty, activityType }: DifficultyI
 
                     <Box mt={2}>
                         <Typography variant="caption" color="text.secondary">
-                            <strong>Effort distance</strong> = distance (km) + elevation gain (m) ÷ 100.
-                            For example, a 15 km trail with 800 m gain = 23 km effort.
+                            {t('difficulty.formula')}
                         </Typography>
                     </Box>
                 </DialogContent>

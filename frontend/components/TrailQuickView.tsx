@@ -21,6 +21,7 @@ import HikingIcon from '@mui/icons-material/Hiking';
 import DirectionsBikeIcon from '@mui/icons-material/DirectionsBike';
 import LandscapeIcon from '@mui/icons-material/Landscape';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Trail, API_URL } from '../hooks/useTrails';
 import DifficultyInfo from './DifficultyInfo';
 
@@ -85,11 +86,11 @@ const getActivityIcon = (type: string) => {
     }
 };
 
-const getTrailTypeLabel = (type: string) => {
+const getTrailTypeLabelTranslated = (type: string, t: (key: string) => string) => {
     switch (type) {
-        case 'OutAndBack': return 'out-and-back';
-        case 'Loop': return 'loop';
-        case 'PointToPoint': return 'point-to-point';
+        case 'OutAndBack': return t('quickView.outAndBack');
+        case 'Loop': return t('quickView.loop');
+        case 'PointToPoint': return t('quickView.pointToPoint');
         default: return type.toLowerCase();
     }
 };
@@ -119,23 +120,36 @@ function estimateTime(lengthM: number, gainM: number, activityType: string): str
     return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
 }
 
-function generateSummary(trail: Trail): string {
+function generateSummary(trail: Trail, t: (key: string, opts?: Record<string, unknown>) => string, language: string): string {
     const km = (trail.length / 1000).toFixed(1);
-    const difficulty = trail.difficulty?.toLowerCase() || '';
-    const trailType = getTrailTypeLabel(trail.trailType);
+    const difficultyRaw = trail.difficulty?.toLowerCase() || '';
+    const difficulty = difficultyRaw ? t(`difficulty.${difficultyRaw}`) : '';
+    const trailType = getTrailTypeLabelTranslated(trail.trailType, t);
     const locationName = trail.locations.length > 0 ? trail.locations[0].name : null;
     const gain = Math.round(trail.elevationGain);
 
-    let s = difficulty ? `A ${difficulty}` : 'A';
-    s += ` ${km} km ${trailType}`;
-    if (locationName) s += ` in ${locationName}`;
-    if (gain > 50) s += ` with ${gain}m elevation gain`;
+    let s = difficulty
+        ? t('quickView.summaryBase', { difficulty, km, trailType })
+        : t('quickView.summaryBaseNoDifficulty', { km, trailType });
+
+    if (language === 'is') {
+        // IS: {difficulty} leið, {km} km {trailType} með {gain}m hækkun. Staðsetning: {location}.
+        if (gain > 50) s += ` ${t('quickView.summaryGain', { gain })}`;
+        s += '.';
+        if (locationName) s += ` ${t('quickView.summaryIn', { location: locationName })}.`;
+    } else {
+        // EN: A {difficulty} {km} km {trailType} in {location} with {gain}m elevation gain
+        if (locationName) s += ` ${t('quickView.summaryIn', { location: locationName })}`;
+        if (gain > 50) s += ` ${t('quickView.summaryGain', { gain })}`;
+    }
+
     return s;
 }
 
 export const TrailQuickView: React.FC<TrailQuickViewProps> = ({ trail, open, onClose }) => {
     const theme = useTheme();
     const navigate = useNavigate();
+    const { t, i18n } = useTranslation();
     const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
     const [coordinates, setCoordinates] = useState<number[][] | null>(null);
 
@@ -154,7 +168,7 @@ export const TrailQuickView: React.FC<TrailQuickViewProps> = ({ trail, open, onC
 
     const distanceKm = (trail.length / 1000).toFixed(1);
     const estTime = estimateTime(trail.length, trail.elevationGain, trail.activityType);
-    const summary = generateSummary(trail);
+    const summary = generateSummary(trail, t, i18n.language);
 
     return (
         <Dialog 
@@ -215,28 +229,28 @@ export const TrailQuickView: React.FC<TrailQuickViewProps> = ({ trail, open, onC
                             <RouteIcon sx={{ fontSize: 16 }} color="action" />
                             <Typography variant="subtitle2" fontWeight="bold">{distanceKm} km</Typography>
                         </Box>
-                        <Typography variant="caption" color="text.secondary">Distance</Typography>
+                        <Typography variant="caption" color="text.secondary">{t('quickView.distance')}</Typography>
                     </Box>
                     <Box sx={{ textAlign: 'center' }}>
                         <Box display="flex" alignItems="center" justifyContent="center" gap={0.5}>
                             <TrendingUpIcon sx={{ fontSize: 16 }} color="success" />
                             <Typography variant="subtitle2" fontWeight="bold">+{Math.round(trail.elevationGain)}m</Typography>
                         </Box>
-                        <Typography variant="caption" color="text.secondary">Gain</Typography>
+                        <Typography variant="caption" color="text.secondary">{t('quickView.gain')}</Typography>
                     </Box>
                     <Box sx={{ textAlign: 'center' }}>
                         <Box display="flex" alignItems="center" justifyContent="center" gap={0.5}>
                             <TrendingDownIcon sx={{ fontSize: 16 }} color="error" />
                             <Typography variant="subtitle2" fontWeight="bold">-{Math.round(trail.elevationLoss)}m</Typography>
                         </Box>
-                        <Typography variant="caption" color="text.secondary">Loss</Typography>
+                        <Typography variant="caption" color="text.secondary">{t('quickView.loss')}</Typography>
                     </Box>
                     <Box sx={{ textAlign: 'center' }}>
                         <Box display="flex" alignItems="center" justifyContent="center" gap={0.5}>
                             <AccessTimeIcon sx={{ fontSize: 16 }} color="primary" />
                             <Typography variant="subtitle2" fontWeight="bold">{estTime}</Typography>
                         </Box>
-                        <Typography variant="caption" color="text.secondary">Est. time</Typography>
+                        <Typography variant="caption" color="text.secondary">{t('quickView.estTime')}</Typography>
                     </Box>
                 </Box>
 
@@ -280,7 +294,7 @@ export const TrailQuickView: React.FC<TrailQuickViewProps> = ({ trail, open, onC
                     }}
                     sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 'bold' }}
                 >
-                    View trail details
+                    {t('quickView.viewDetails')}
                 </Button>
             </DialogContent>
         </Dialog>

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import { Box, Typography, Button, IconButton, Paper } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
 import { Trail } from '../hooks/useTrails';
 import { Link as RouterLink } from 'react-router-dom';
@@ -50,6 +51,7 @@ function ChangeView({ bounds, followMe, userLocation }: {
 }
 
 export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation }) => {
+    const { t } = useTranslation();
     const [followMe, setFollowMe] = useState(false);
 
     const handleFollowMeClick = () => {
@@ -141,7 +143,7 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
                                 backgroundColor: followMe ? 'rgba(25, 118, 210, 0.2)' : '#f5f5f5',
                             }
                         }}
-                        title={followMe ? "Stop following my location" : "Follow my location"}
+                        title={followMe ? t('map.stopFollowing') : t('map.followLocation')}
                         aria-label="follow my location"
                     >
                         <MyLocationIcon />
@@ -162,7 +164,7 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
                 {userLocation && (
                     <Marker position={[userLocation.lat, userLocation.lng]} icon={userLocationIcon}>
                         <Popup>
-                            <Typography variant="body2">You are here</Typography>
+                            <Typography variant="body2">{t('map.youAreHere')}</Typography>
                         </Popup>
                     </Marker>
                 )}
@@ -195,7 +197,7 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
                                         '&:hover': { color: '#fff !important' }
                                     }}
                                 >
-                                    View Details
+                                    {t('map.viewDetails')}
                                 </Button>
                             </Box>
                         </Popup>

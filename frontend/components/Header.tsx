@@ -1,11 +1,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Box, Button, Stack, Typography, Collapse, IconButton, FormControlLabel, Checkbox, Paper } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import { useTranslation } from 'react-i18next';
 import { QuoteService } from '../services/QuoteService';
 
 export default function Header() {
     const [isVisible, setIsVisible] = useState(false);
     const [dontShowAgain, setDontShowAgain] = useState(false);
+    const { t } = useTranslation();
 
     const quote = useMemo(() => QuoteService.getRandomQuote(), []);
 
@@ -36,7 +38,7 @@ export default function Header() {
                     </IconButton>
                     <Box>
                         <Typography variant="overline" color="primary">
-                            🌄Utanvega🏃‍♂️🚴‍
+                            🌄Utanvega🏃‍♂️🏃‍♀️🚴‍
                         </Typography>
                         <Typography variant="h4" component="h1" gutterBottom>
                             {quote.text}
@@ -47,12 +49,12 @@ export default function Header() {
                             </Typography>
                         )}
                         <Typography variant="body1" color="text.secondary">
-                            Utanvega - Vefur til að finna skemmtilegar leiðir og deila með vinum. 
+                            {t('header.tagline')}
                         </Typography>
                     </Box>
 
                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
-                        <Button variant="contained" onClick={handleClose}>Loka</Button>
+                        <Button variant="contained" onClick={handleClose}>{t('header.close')}</Button>
                         <FormControlLabel
                             control={
                                 <Checkbox 
@@ -61,7 +63,7 @@ export default function Header() {
                                     onChange={(e) => setDontShowAgain(e.target.checked)} 
                                 />
                             }
-                            label={<Typography variant="caption">Ekki sýna aftur</Typography>}
+                            label={<Typography variant="caption">{t('header.dontShowAgain')}</Typography>}
                         />
                     </Stack>
                 </Stack>

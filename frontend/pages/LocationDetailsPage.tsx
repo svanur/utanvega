@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { 
     Box, 
     Typography, 
@@ -27,6 +28,7 @@ type LocationDetailsPageProps = {
 };
 
 export default function LocationDetailsPage({ mode, onToggleMode }: LocationDetailsPageProps) {
+    const { t } = useTranslation();
     const { slug } = useParams<{ slug: string }>();
     const navigate = useNavigate();
     const { location, trails, loading, error } = useLocationBySlug(slug);
@@ -62,13 +64,13 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
         return (
             <Layout mode={mode} onToggleMode={onToggleMode}>
                 <Container sx={{ mt: 4 }}>
-                    <Alert severity="error">{error || 'Location not found'}</Alert>
+                    <Alert severity="error">{error || t('locations.locationNotFound')}</Alert>
                     <Button 
                         startIcon={<ArrowBackIcon />} 
                         onClick={() => navigate('/locations')}
                         sx={{ mt: 2 }}
                     >
-                        Back to Locations
+                        {t('locations.backToLocations')}
                     </Button>
                 </Container>
             </Layout>
@@ -83,7 +85,7 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
                     onClick={() => navigate('/locations')}
                     sx={{ mb: 2 }}
                 >
-                    Back to Locations
+                    {t('locations.backToLocations')}
                 </Button>
 
                 <Paper elevation={3} sx={{ p: 3, mb: 4, borderRadius: '16px' }}>
@@ -109,7 +111,7 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
                 </Paper>
 
                 <Typography variant="h5" fontWeight="bold" gutterBottom>
-                    Trails in {location.name} ({trails?.length || 0})
+                    {t('locations.trailsIn', { name: location.name, count: trails?.length || 0 })}
                 </Typography>
 
                 {trails && trails.length > 0 ? (
@@ -131,7 +133,7 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
                 ) : (
                     <Box textAlign="center" py={8}>
                         <Typography color="text.secondary">
-                            No trails found in this location yet.
+                            {t('locations.noTrailsInLocation')}
                         </Typography>
                     </Box>
                 )}

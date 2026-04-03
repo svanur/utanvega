@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { 
     Box, 
     Typography, 
@@ -57,11 +58,11 @@ const getTrailTypeIcon = (type: string) => {
     }
 };
 
-const getTrailTypeLabel = (type: string) => {
+const getTrailTypeLabel = (type: string, t: (key: string) => string) => {
     switch (type) {
-        case 'OutAndBack': return 'Out and Back';
-        case 'Loop': return 'Loop';
-        case 'PointToPoint': return 'Point to Point';
+        case 'OutAndBack': return t('trail.outAndBack');
+        case 'Loop': return t('trail.loop');
+        case 'PointToPoint': return t('trail.pointToPoint');
         default: return type;
     }
 };
@@ -74,6 +75,7 @@ type TrailDetailsPageProps = {
 export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPageProps) {
     const { slug } = useParams<{ slug: string }>();
     const navigate = useNavigate();
+    const { t } = useTranslation();
     const { trail, loading, error } = useTrailBySlug(slug);
     const { trails: allTrails } = useTrails();
     const [geometry, setGeometry] = useState<GeoJsonGeometry | null>(null);
@@ -114,14 +116,14 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
             <Layout mode={mode} onToggleMode={onToggleMode}>
                 <Box textAlign="center" mt={4}>
                     <Typography color="error" variant="h6">
-                        {error || 'Trail not found'}
+                        {error || t('trail.notFound')}
                     </Typography>
                     <Button 
                         startIcon={<ArrowBackIcon />} 
                         onClick={() => navigate('/')}
                         sx={{ mt: 2 }}
                     >
-                        Back to Trails
+                        {t('trail.backToTrails')}
                     </Button>
                 </Box>
             </Layout>
@@ -137,7 +139,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                 onClick={() => navigate('/')}
                 sx={{ mb: 2 }}
             >
-                Back to Trails
+                {t('trail.backToTrails')}
             </Button>
 
             <Paper elevation={3} sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
@@ -209,29 +211,29 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                         <Grid item xs={3}>
                             <Stack alignItems="center" spacing={0.5}>
                                 <RouteIcon color="action" fontSize="small" />
-                                <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>Distance</Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>{t('trail.distance')}</Typography>
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>{distanceKm} km</Typography>
                             </Stack>
                         </Grid>
                         <Grid item xs={3}>
                             <Stack alignItems="center" spacing={0.5}>
                                 <TrendingUpIcon color="action" fontSize="small" />
-                                <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>Gain</Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>{t('trail.gain')}</Typography>
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>+{Math.round(trail.elevationGain)}m</Typography>
                             </Stack>
                         </Grid>
                         <Grid item xs={3}>
                             <Stack alignItems="center" spacing={0.5}>
                                 <TrendingDownIcon color="action" fontSize="small" />
-                                <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>Loss</Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>{t('trail.loss')}</Typography>
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>-{Math.round(trail.elevationLoss)}m</Typography>
                             </Stack>
                         </Grid>
                         <Grid item xs={3}>
                             <Stack alignItems="center" spacing={0.5}>
                                 {getTrailTypeIcon(trail.trailType)}
-                                <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>Type</Typography>
-                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', textAlign: 'center' }}>{getTrailTypeLabel(trail.trailType)}</Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>{t('trail.type')}</Typography>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', textAlign: 'center' }}>{getTrailTypeLabel(trail.trailType, t)}</Typography>
                             </Stack>
                         </Grid>
                     </Grid>
@@ -240,7 +242,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                 <Divider sx={{ mb: 3 }} />
 
                 <Typography variant="h6" gutterBottom>
-                    Route Map
+                    {t('trail.routeMap')}
                 </Typography>
                 <TrailMap 
                     slug={trail.slug} 
@@ -269,7 +271,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                 <Box mt={4} mb={6}>
                     <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
                         <Typography variant="h5" component="h2" fontWeight="bold">
-                            Related Trails
+                            {t('trail.relatedTrails')}
                         </Typography>
                         {relatedTrails.length > 3 && (
                             <Box sx={{ display: { xs: 'none', sm: 'flex' } }}>

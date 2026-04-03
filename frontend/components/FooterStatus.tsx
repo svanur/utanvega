@@ -2,10 +2,12 @@ import { Box, Chip, Stack, Typography } from '@mui/material';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import CircularProgress from '@mui/material/CircularProgress';
+import { useTranslation } from 'react-i18next';
 import { useHealth } from '../hooks/useHealth';
 
 export default function FooterStatus() {
     const { data, loading, error } = useHealth();
+    const { t } = useTranslation();
 
     return (
         <Box
@@ -21,20 +23,20 @@ export default function FooterStatus() {
         >
             <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="space-between">
                 <Typography variant="body2" color="text.secondary">
-                    🌄Utanvega🏃‍♂️🚴‍
+                    🌄Utanvega🏃‍♂️🏃‍♀️🚴‍
                 </Typography>
 
                 {loading ? (
                     <Stack direction="row" spacing={1} alignItems="center">
                         <CircularProgress size={14} thickness={5} />
                         <Typography variant="body2" color="text.secondary">
-                            Checking API…
+                            {t('footer.checkingApi')}
                         </Typography>
                     </Stack>
                 ) : error ? (
                     <Chip
                         icon={<ErrorOutlineIcon />}
-                        label="API unavailable"
+                        label={t('footer.apiUnavailable')}
                         color="error"
                         variant="outlined"
                         size="small"

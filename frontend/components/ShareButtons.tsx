@@ -6,6 +6,7 @@ import {
     Alert
 } from '@mui/material';
 import ShareIcon from '@mui/icons-material/Share';
+import { useTranslation } from 'react-i18next';
 
 interface ShareButtonsProps {
     title: string;
@@ -13,6 +14,7 @@ interface ShareButtonsProps {
 }
 
 export default function ShareButtons({ title, url }: ShareButtonsProps) {
+    const { t } = useTranslation();
     const [openSnackbar, setOpenSnackbar] = useState(false);
     const shareUrl = url || window.location.href;
 
@@ -38,7 +40,7 @@ export default function ShareButtons({ title, url }: ShareButtonsProps) {
 
     return (
         <>
-            <Tooltip title={typeof navigator.share !== 'undefined' ? "Share" : "Copy Link"}>
+            <Tooltip title={typeof navigator.share !== 'undefined' ? t('share.share') : t('share.copyLink')}>
                 <IconButton onClick={handleShare} color="primary" size="small">
                     <ShareIcon fontSize="small" />
                 </IconButton>
@@ -51,7 +53,7 @@ export default function ShareButtons({ title, url }: ShareButtonsProps) {
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
             >
                 <Alert onClose={() => setOpenSnackbar(false)} severity="success" sx={{ width: '100%' }}>
-                    Link copied to clipboard!
+                    {t('share.linkCopied')}
                 </Alert>
             </Snackbar>
         </>

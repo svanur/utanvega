@@ -16,6 +16,7 @@ import QrCode2Icon from '@mui/icons-material/QrCode2';
 import PhoneAndroidIcon from '@mui/icons-material/PhoneAndroid';
 import DownloadIcon from '@mui/icons-material/Download';
 import { QRCodeSVG } from 'qrcode.react';
+import { useTranslation } from 'react-i18next';
 
 interface QRCodeShareProps {
     slug: string;
@@ -23,6 +24,7 @@ interface QRCodeShareProps {
 }
 
 export default function QRCodeShare({ slug, trailName }: QRCodeShareProps) {
+    const { t } = useTranslation();
     const [open, setOpen] = useState(false);
     const [tab, setTab] = useState(0);
     
@@ -33,7 +35,7 @@ export default function QRCodeShare({ slug, trailName }: QRCodeShareProps) {
 
     return (
         <>
-            <Tooltip title="Show QR Code">
+            <Tooltip title={t('qr.showQR')}>
                 <IconButton onClick={() => setOpen(true)} color="primary" size="small">
                     <QrCode2Icon fontSize="small" />
                 </IconButton>
@@ -52,13 +54,13 @@ export default function QRCodeShare({ slug, trailName }: QRCodeShareProps) {
                     >
                         <Tab 
                             icon={<PhoneAndroidIcon fontSize="small" />} 
-                            label="Trail Page" 
+                            label={t('qr.trailPage')} 
                             iconPosition="start" 
                             sx={{ textTransform: 'none', minHeight: 44, fontSize: '0.8rem' }} 
                         />
                         <Tab 
                             icon={<DownloadIcon fontSize="small" />} 
-                            label="GPX File" 
+                            label={t('qr.gpxFile')} 
                             iconPosition="start" 
                             sx={{ textTransform: 'none', minHeight: 44, fontSize: '0.8rem' }} 
                         />
@@ -82,8 +84,8 @@ export default function QRCodeShare({ slug, trailName }: QRCodeShareProps) {
                         </Box>
                         <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 2 }}>
                             {tab === 0
-                                ? 'Scan to open this trail on your phone.'
-                                : 'Scan to download the GPX file. Your phone will offer to open it in Garmin Connect, Coros, Suunto, or other GPS apps.'
+                                ? t('qr.scanTrail')
+                                : t('qr.scanGpx')
                             }
                         </Typography>
                         {tab === 1 && (
@@ -95,13 +97,13 @@ export default function QRCodeShare({ slug, trailName }: QRCodeShareProps) {
                                 download
                                 sx={{ mt: 2, textTransform: 'none' }}
                             >
-                                Download GPX
+                                {t('qr.downloadGpx')}
                             </Button>
                         )}
                     </Box>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setOpen(false)}>Close</Button>
+                    <Button onClick={() => setOpen(false)}>{t('qr.close')}</Button>
                 </DialogActions>
             </Dialog>
         </>

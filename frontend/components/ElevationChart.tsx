@@ -10,6 +10,7 @@ import {
   ReferenceLine,
 } from 'recharts';
 import { Box, Paper, Typography, useTheme } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 
 interface ElevationDataPoint {
   distance: number;
@@ -27,6 +28,7 @@ interface ElevationChartProps {
 
 const ElevationChart: React.FC<ElevationChartProps> = ({ coordinates, onHover, activeIndex }) => {
   const theme = useTheme();
+  const { t } = useTranslation();
 
   const chartData = useMemo(() => {
     let totalDistance = 0;
@@ -84,13 +86,13 @@ const ElevationChart: React.FC<ElevationChartProps> = ({ coordinates, onHover, a
       return (
         <Paper sx={{ p: 1.5, border: `1px solid ${theme.palette.divider}` }}>
           <Typography variant="body2" fontWeight="bold">
-            Distance: {data.distance.toFixed(2)} km
+            {t('elevation.distance')}: {data.distance.toFixed(2)} km
           </Typography>
           <Typography variant="body2" color="primary">
-            Elevation: {Math.round(data.elevation)} m
+            {t('elevation.elevation')}: {Math.round(data.elevation)} m
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Gain so far: {Math.round(data.totalGain)} m
+            {t('elevation.gainSoFar')}: {Math.round(data.totalGain)} m
           </Typography>
         </Paper>
       );
@@ -113,7 +115,7 @@ const ElevationChart: React.FC<ElevationChartProps> = ({ coordinates, onHover, a
   return (
     <Box sx={{ width: '100%', mt: 3 }}>
       <Typography variant="h6" gutterBottom>
-        Elevation Profile
+        {t('elevation.title')}
       </Typography>
       <Box sx={{ width: '100%', height: 220, overflow: 'hidden', touchAction: 'none' }}>
         <ResponsiveContainer width="100%" height={220}>
