@@ -29,8 +29,11 @@ import EastIcon from '@mui/icons-material/East';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
 import Layout from '../components/Layout';
 import { useTrailBySlug, useTrails } from '../hooks/useTrails';
+import { useFavorites } from '../hooks/useFavorites';
 import TrailMap, { GeoJsonGeometry } from '../components/TrailMap';
 import ElevationChart from '../components/ElevationChart';
 import RoutePlayback from '../components/RoutePlayback';
@@ -78,6 +81,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     const { t } = useTranslation();
     const { trail, loading, error } = useTrailBySlug(slug);
     const { trails: allTrails } = useTrails();
+    const { isFavorite, toggleFavorite } = useFavorites();
     const [geometry, setGeometry] = useState<GeoJsonGeometry | null>(null);
     const [hoverPoint, setHoverPoint] = useState<{ lat: number; lng: number } | null>(null);
     const [playbackIndex, setPlaybackIndex] = useState<number | null>(null);
@@ -144,9 +148,18 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
 
             <Paper elevation={3} sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
                 <Box mb={3}>
-                    <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
-                        {trail.name}
-                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                        <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' }, flex: 1 }}>
+                            {trail.name}
+                        </Typography>
+                        <IconButton 
+                            onClick={() => toggleFavorite(trail.slug)}
+                            color="warning"
+                            sx={{ mt: 0.5 }}
+                        >
+                            {isFavorite(trail.slug) ? <StarIcon /> : <StarBorderIcon />}
+                        </IconButton>
+                    </Box>
                     
                     <Stack 
                         direction="row" 
