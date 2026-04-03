@@ -16,6 +16,7 @@ export type Trail = {
     startLatitude?: number | null;
     startLongitude?: number | null;
     locations: { name: string, slug: string }[];
+    tags?: { name: string, slug: string, color: string | null }[];
 };
 
 export function useTrails(includeDeleted: boolean = false) {

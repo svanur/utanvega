@@ -1,4 +1,4 @@
-# 🏔️ Útanvega — Trail Discovery for Iceland
+# 🏔️ Utanvega — Trail Discovery for Iceland
 
 A web application for finding and sharing trails in Iceland. Browse trails on a map, filter by activity type, difficulty, location, and tags — or explore elevation profiles with interactive charts and route playback.
 

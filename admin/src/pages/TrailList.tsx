@@ -440,16 +440,7 @@ export default function TrailList({ onNotify, initialTrailId }: { onNotify: (mes
                   direction={orderBy === 'elevationGain' ? order : 'asc'}
                   onClick={() => handleRequestSort('elevationGain')}
                 >
-                  Gain (m)
-                </TableSortLabel>
-              </TableCell>
-              <TableCell align="right">
-                <TableSortLabel
-                  active={orderBy === 'elevationLoss'}
-                  direction={orderBy === 'elevationLoss' ? order : 'asc'}
-                  onClick={() => handleRequestSort('elevationLoss')}
-                >
-                  Loss (m)
+                  Elev ↑↓
                 </TableSortLabel>
               </TableCell>
               <TableCell>
@@ -462,6 +453,7 @@ export default function TrailList({ onNotify, initialTrailId }: { onNotify: (mes
                 </TableSortLabel>
               </TableCell>
               <TableCell>Location</TableCell>
+              <TableCell>Tags</TableCell>
               <TableCell>
                 <TableSortLabel
                   active={orderBy === 'status'}
@@ -497,11 +489,30 @@ export default function TrailList({ onNotify, initialTrailId }: { onNotify: (mes
                     )}
                 </TableCell>
                 <TableCell align="right">{(trail.length / 1000).toFixed(2)}</TableCell>
-                <TableCell align="right">{Math.round(trail.elevationGain)}</TableCell>
-                <TableCell align="right">{Math.round(trail.elevationLoss)}</TableCell>
+                <TableCell align="right">
+                  <Typography variant="body2" component="span">↑{Math.round(trail.elevationGain)}</Typography>
+                  <Typography variant="body2" component="span" color="text.secondary"> ↓{Math.round(trail.elevationLoss)}</Typography>
+                </TableCell>
                 <TableCell>{trail.trailType}</TableCell>
                 <TableCell>
                   {trail.locations?.map(l => l.name).join(', ') || 'N/A'}
+                </TableCell>
+                <TableCell>
+                  <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                    {trail.tags?.map(tag => (
+                      <Chip
+                        key={tag.slug}
+                        label={tag.name}
+                        size="small"
+                        variant="outlined"
+                        sx={{
+                          borderColor: tag.color || undefined,
+                          fontSize: '0.7rem',
+                          height: 22,
+                        }}
+                      />
+                    ))}
+                  </Box>
                 </TableCell>
                 <TableCell>
                   <Chip 

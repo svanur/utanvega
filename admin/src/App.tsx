@@ -1,4 +1,4 @@
-import { Box, CssBaseline, ThemeProvider, createTheme, AppBar, Toolbar, Typography, Container, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Fab, Snackbar, Alert, Button, CircularProgress, Link } from '@mui/material';
+import { Box, CssBaseline, ThemeProvider, createTheme, AppBar, Toolbar, Typography, Container, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Fab, Snackbar, Alert, Button, CircularProgress, Link, IconButton, Tooltip } from '@mui/material';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
@@ -6,6 +6,8 @@ import MapIcon from '@mui/icons-material/Map';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import LogoutIcon from '@mui/icons-material/Logout';
+import MenuIcon from '@mui/icons-material/Menu';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import { useState } from 'react';
 import TrailList from './pages/TrailList';
 import { LocationList } from './pages/LocationList';
@@ -28,11 +30,13 @@ const theme = createTheme({
   },
 });
 
-const DRAWER_WIDTH = 240;
+const DRAWER_WIDTH = 220;
+const DRAWER_COLLAPSED = 56;
 
 function AdminContent() {
   const { user, loading: authLoading, signOut } = useAuth();
   const [currentPage, setCurrentPage] = useState<'trails' | 'locations' | 'health' | 'map' | 'tags'>('trails');
+  const [drawerOpen, setDrawerOpen] = useState(true);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [selectedTrailId, setSelectedTrailId] = useState<string | null>(null);
@@ -91,6 +95,9 @@ function AdminContent() {
     <Box sx={{ display: 'flex' }}>
       <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
         <Toolbar>
+          <IconButton color="inherit" edge="start" onClick={() => setDrawerOpen(!drawerOpen)} sx={{ mr: 1 }}>
+            {drawerOpen ? <ChevronLeftIcon /> : <MenuIcon />}
+          </IconButton>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             🌄 Utanvega Admin
           </Typography>
@@ -102,50 +109,48 @@ function AdminContent() {
       <Drawer
         variant="permanent"
         sx={{
-          width: DRAWER_WIDTH,
+          width: drawerOpen ? DRAWER_WIDTH : DRAWER_COLLAPSED,
           flexShrink: 0,
-          [`& .MuiDrawer-paper`]: { width: DRAWER_WIDTH, boxSizing: 'border-box' },
+          transition: 'width 0.2s',
+          [`& .MuiDrawer-paper`]: {
+            width: drawerOpen ? DRAWER_WIDTH : DRAWER_COLLAPSED,
+            boxSizing: 'border-box',
+            transition: 'width 0.2s',
+            overflowX: 'hidden',
+          },
         }}
       >
         <Toolbar />
         <Box sx={{ overflow: 'auto' }}>
           <List>
-            <ListItem disablePadding>
-              <ListItemButton selected={currentPage === 'trails'} onClick={() => setCurrentPage('trails')}>
-                <ListItemIcon><DashboardIcon /></ListItemIcon>
-                <ListItemText primary="All Trails" />
-              </ListItemButton>
-            </ListItem>
-            <ListItem disablePadding>
-              <ListItemButton selected={currentPage === 'locations'} onClick={() => setCurrentPage('locations')}>
-                <ListItemIcon><LocationOnIcon /></ListItemIcon>
-                <ListItemText primary="Locations" />
-              </ListItemButton>
-            </ListItem>
-            <ListItem disablePadding>
-              <ListItemButton selected={currentPage === 'health'} onClick={() => setCurrentPage('health')}>
-                <ListItemIcon><HealthAndSafetyIcon /></ListItemIcon>
-                <ListItemText primary="Trail Health" />
-              </ListItemButton>
-            </ListItem>
-            <ListItem disablePadding>
-              <ListItemButton selected={currentPage === 'map'} onClick={() => setCurrentPage('map')}>
-                <ListItemIcon><MapIcon /></ListItemIcon>
-                <ListItemText primary="Trail Map" />
-              </ListItemButton>
-            </ListItem>
-            <ListItem disablePadding>
-              <ListItemButton selected={currentPage === 'tags'} onClick={() => setCurrentPage('tags')}>
-                <ListItemIcon><LocalOfferIcon /></ListItemIcon>
-                <ListItemText primary="Tags" />
-              </ListItemButton>
-            </ListItem>
+            {[
+              { key: 'trails' as const, icon: <DashboardIcon />, label: 'All Trails' },
+              { key: 'locations' as const, icon: <LocationOnIcon />, label: 'Locations' },
+              { key: 'health' as const, icon: <HealthAndSafetyIcon />, label: 'Trail Health' },
+              { key: 'map' as const, icon: <MapIcon />, label: 'Trail Map' },
+              { key: 'tags' as const, icon: <LocalOfferIcon />, label: 'Tags' },
+            ].map(item => (
+              <ListItem key={item.key} disablePadding>
+                <Tooltip title={drawerOpen ? '' : item.label} placement="right">
+                  <ListItemButton
+                    selected={currentPage === item.key}
+                    onClick={() => setCurrentPage(item.key)}
+                    sx={{ justifyContent: drawerOpen ? 'initial' : 'center', px: 2 }}
+                  >
+                    <ListItemIcon sx={{ minWidth: drawerOpen ? 40 : 'auto', justifyContent: 'center' }}>
+                      {item.icon}
+                    </ListItemIcon>
+                    {drawerOpen && <ListItemText primary={item.label} />}
+                  </ListItemButton>
+                </Tooltip>
+              </ListItem>
+            ))}
           </List>
         </Box>
       </Drawer>
-      <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
+      <Box component="main" sx={{ flexGrow: 1, p: 3, transition: 'margin-left 0.2s' }}>
         <Toolbar />
-        <Container maxWidth="lg">
+        <Container maxWidth={false}>
           {currentPage === 'trails' ? (
             <TrailList key={`${refreshTrigger}-${selectedTrailId}`} onNotify={notify} initialTrailId={selectedTrailId} />
           ) : currentPage === 'health' ? (
