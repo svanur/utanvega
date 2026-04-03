@@ -16,6 +16,7 @@ import TrailMapView from './pages/TrailMapView';
 import TagManagement from './pages/TagManagement';
 import GpxUploadDialog from './components/GpxUploadDialog';
 import LoginPage from './pages/LoginPage';
+import ErrorBoundary from './components/ErrorBoundary';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 
 const theme = createTheme({
@@ -200,9 +201,11 @@ export default function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <AuthProvider>
-        <AdminContent />
-      </AuthProvider>
+      <ErrorBoundary>
+        <AuthProvider>
+          <AdminContent />
+        </AuthProvider>
+      </ErrorBoundary>
     </ThemeProvider>
   );
 }

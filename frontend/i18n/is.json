@@ -140,5 +140,10 @@
         "tagline": "Utanvega - Vefur til að finna skemmtilegar leiðir og deila með vinum.",
         "close": "Loka",
         "dontShowAgain": "Ekki sýna aftur"
+    },
+    "error": {
+        "title": "Eitthvað fór úrskeiðis",
+        "message": "Óvænt villa kom upp. Vinsamlegast reyndu að endurhlaða síðunni.",
+        "reload": "Endurhlaða síðu"
     }
 }

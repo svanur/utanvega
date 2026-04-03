@@ -140,5 +140,10 @@
         "tagline": "Utanvega - A site to find fun trails and share with friends.",
         "close": "Close",
         "dontShowAgain": "Don't show again"
+    },
+    "error": {
+        "title": "Something went wrong",
+        "message": "An unexpected error occurred. Please try reloading.",
+        "reload": "Reload page"
     }
 }
