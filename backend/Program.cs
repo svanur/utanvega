@@ -96,12 +96,19 @@ else if (string.IsNullOrEmpty(connectionString))
 }
 
 // Supabase Auth Configuration
-var supabaseUrl = builder.Configuration["SUPABASE_URL"] ?? "https://honsdscqmhvsoumrcnad.supabase.co";
-var jwtSecret = builder.Configuration["SUPABASE_JWT_SECRET"];
+var supabaseUrl = builder.Configuration["SUPABASE_URL"];
+if (string.IsNullOrEmpty(supabaseUrl))
+{
+    if (builder.Environment.IsDevelopment())
+        Console.WriteLine("[WARN] SUPABASE_URL not set, Supabase auth will not work.");
+    else
+        throw new InvalidOperationException("SUPABASE_URL must be configured in production.");
+}
 
+var jwtSecret = builder.Configuration["SUPABASE_JWT_SECRET"];
 if (string.IsNullOrEmpty(jwtSecret) && !builder.Environment.IsDevelopment())
 {
-    Console.WriteLine("[CRITICAL] SUPABASE_JWT_SECRET is missing in production. App will likely fail to validate Admin requests.");
+    throw new InvalidOperationException("SUPABASE_JWT_SECRET must be configured in production.");
 }
 else if (!string.IsNullOrEmpty(jwtSecret))
 {
@@ -111,11 +118,11 @@ else if (!string.IsNullOrEmpty(jwtSecret))
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
-        options.Authority = supabaseUrl + "/auth/v1";
+        options.Authority = supabaseUrl is not null ? supabaseUrl + "/auth/v1" : null;
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuer = true,
-            ValidIssuer = supabaseUrl + "/auth/v1",
+            ValidateIssuer = !string.IsNullOrEmpty(supabaseUrl),
+            ValidIssuer = supabaseUrl is not null ? supabaseUrl + "/auth/v1" : null,
             ValidateAudience = true,
             ValidAudience = "authenticated",
             ValidateLifetime = true,
@@ -124,9 +131,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 : null,
             ValidateIssuerSigningKey = !string.IsNullOrEmpty(jwtSecret)
         };
-        
-        // Supabase uses a single key for all tenants if you use the shared API.
-        // For development without a secret, we might need to be careful.
     });
 
 builder.Services.AddAuthorization(options =>
@@ -187,7 +191,22 @@ Console.WriteLine("[INFO] Application built. Starting up...");
 
 app.UseCors("Frontend");
 
-// Return validation errors as structured 400 responses
+// Security headers
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    context.Response.Headers["X-Frame-Options"] = "DENY";
+    context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    context.Response.Headers["X-XSS-Protection"] = "0";
+    await next();
+});
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+}
+
+// Return validation errors as structured 400 responses; sanitize unhandled exceptions
 app.Use(async (context, next) =>
 {
     try
@@ -202,6 +221,16 @@ app.Use(async (context, next) =>
             .GroupBy(e => e.PropertyName)
             .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
         await context.Response.WriteAsJsonAsync(new { title = "Validation failed", errors });
+    }
+    catch (Exception ex)
+    {
+        if (!context.Response.HasStarted)
+        {
+            Console.WriteLine($"[ERROR] Unhandled exception: {ex}");
+            context.Response.StatusCode = 500;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsJsonAsync(new { title = "An unexpected error occurred." });
+        }
     }
 });
 
@@ -505,11 +534,12 @@ app.MapPost("/api/v1/admin/trails/upload-gpx", [Authorize] async (string name, I
     }
     catch (Exception ex)
     {
-        return Results.Problem(ex.Message);
+        Console.WriteLine($"[ERROR] GPX upload failed: {ex}");
+        return Results.Problem("Failed to process GPX file. Ensure it contains valid GPX data.");
     }
 })
 .WithName("UploadGpx")
-.DisableAntiforgery(); // Simple for dev, adjust for prod security
+.DisableAntiforgery(); // Bearer token auth is not vulnerable to CSRF; antiforgery not needed
 
 app.MapPost("/api/v1/admin/trails/check-similarity", [Authorize] async (string? name, IFormFile file, IMediator mediator) =>
 {
@@ -534,11 +564,12 @@ app.MapPost("/api/v1/admin/trails/check-similarity", [Authorize] async (string? 
     }
     catch (Exception ex)
     {
-        return Results.Problem(ex.Message);
+        Console.WriteLine($"[ERROR] Similarity check failed: {ex}");
+        return Results.Problem("Failed to check trail similarity. Ensure the GPX data is valid.");
     }
 })
 .WithName("CheckTrailSimilarity")
-.DisableAntiforgery();
+.DisableAntiforgery(); // Bearer token auth is not vulnerable to CSRF; antiforgery not needed
 
 app.MapPost("/api/v1/admin/trails/bulk-check-similarity", [Authorize] async (HttpContext context, IMediator mediator) =>
 {
@@ -580,11 +611,12 @@ app.MapPost("/api/v1/admin/trails/bulk-check-similarity", [Authorize] async (Htt
     }
     catch (Exception ex)
     {
-        return Results.Problem(ex.Message);
+        Console.WriteLine($"[ERROR] Bulk similarity check failed: {ex}");
+        return Results.Problem("Failed to check trail similarity. Ensure the GPX files contain valid data.");
     }
 })
 .WithName("BulkCheckTrailSimilarity")
-.DisableAntiforgery();
+.DisableAntiforgery(); // Bearer token auth is not vulnerable to CSRF; antiforgery not needed
 
 app.MapPost("/api/v1/admin/trails/bulk-upload-gpx", [Authorize] async (HttpContext context, IMediator mediator) =>
 {
@@ -614,11 +646,12 @@ app.MapPost("/api/v1/admin/trails/bulk-upload-gpx", [Authorize] async (HttpConte
     }
     catch (Exception ex)
     {
-        return Results.Problem(ex.Message);
+        Console.WriteLine($"[ERROR] Bulk GPX upload failed: {ex}");
+        return Results.Problem("Failed to upload GPX files. Ensure they contain valid GPX data.");
     }
 })
 .WithName("BulkUploadGpx")
-.DisableAntiforgery();
+.DisableAntiforgery(); // Bearer token auth is not vulnerable to CSRF; antiforgery not needed
 
 // Locations Admin API
 app.MapGet("/api/v1/admin/locations", [Authorize] async (Guid? parentId, string? search, IMediator mediator) =>
@@ -650,9 +683,14 @@ app.MapDelete("/api/v1/admin/locations/{id}", [Authorize] async (Guid id, IMedia
         await mediator.Send(new DeleteLocationCommand(id));
         return Results.NoContent();
     }
+    catch (InvalidOperationException)
+    {
+        return Results.BadRequest("Cannot delete this location. It may have child locations or linked trails.");
+    }
     catch (Exception ex)
     {
-        return Results.BadRequest(ex.Message);
+        Console.WriteLine($"[ERROR] Location delete failed: {ex}");
+        return Results.Problem("Failed to delete location.");
     }
 })
 .WithName("DeleteLocation");
