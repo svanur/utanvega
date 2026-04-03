@@ -86,6 +86,18 @@ export default function QRCodeShare({ slug, trailName }: QRCodeShareProps) {
                                 : 'Scan to download the GPX file. Your phone will offer to open it in Garmin Connect, Coros, Suunto, or other GPS apps.'
                             }
                         </Typography>
+                        {tab === 1 && (
+                            <Button
+                                variant="outlined"
+                                size="small"
+                                startIcon={<DownloadIcon />}
+                                href={gpxUrl}
+                                download
+                                sx={{ mt: 2, textTransform: 'none' }}
+                            >
+                                Download GPX
+                            </Button>
+                        )}
                     </Box>
                 </DialogContent>
                 <DialogActions>
