@@ -27,6 +27,8 @@ using Utanvega.Backend.Application.Locations.Queries.GetLocationBySlug;
 using Utanvega.Backend.Application.Trails.Queries.GetTrailGpx;
 using Utanvega.Backend.Core.Services;
 using MediatR;
+using FluentValidation;
+using Utanvega.Backend.Application.Validation;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -141,7 +143,12 @@ builder.Services.AddDbContext<UtanvegaDbContext>(options =>
     options.UseNpgsql(connectionString, o => o.UseNetTopologySuite()));
 
 // Add CQRS with MediatR
-builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
+builder.Services.AddMediatR(cfg =>
+{
+    cfg.RegisterServicesFromAssembly(typeof(Program).Assembly);
+    cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
+});
+builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
 builder.Services.AddScoped<CreateTrailFromGpxCommandHandler>();
 builder.Services.AddScoped<LocationDetector>();
 
@@ -179,6 +186,24 @@ Console.WriteLine("[INFO] Application built. Starting up...");
 // app.UseSwaggerUI();
 
 app.UseCors("Frontend");
+
+// Return validation errors as structured 400 responses
+app.Use(async (context, next) =>
+{
+    try
+    {
+        await next(context);
+    }
+    catch (ValidationException ex)
+    {
+        context.Response.StatusCode = 400;
+        context.Response.ContentType = "application/json";
+        var errors = ex.Errors
+            .GroupBy(e => e.PropertyName)
+            .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
+        await context.Response.WriteAsJsonAsync(new { title = "Validation failed", errors });
+    }
+});
 
 app.UseAuthentication();
 app.UseAuthorization();
