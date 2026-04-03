@@ -589,6 +589,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                                 trail={trail} 
                                 onHide={handleHideTrail}
                                 onToggleFavorite={toggleFavorite}
+                                isFavorited={favorites.includes(trail.slug)}
                                 onTagClick={(tagSlug) => {
                                     const next = filters.selectedTags.includes(tagSlug)
                                         ? filters.selectedTags.filter(s => s !== tagSlug)

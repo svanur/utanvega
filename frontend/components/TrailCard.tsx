@@ -36,6 +36,7 @@ interface TrailCardProps {
     onHide?: (slug: string) => void;
     onTagClick?: (tagSlug: string) => void;
     isHiding?: boolean;
+    isFavorited?: boolean;
     compact?: boolean;
     disableGestures?: boolean;
 }
@@ -68,7 +69,7 @@ const getTrailTypeLabel = (type: string, t: (key: string) => string) => {
     }
 };
 
-export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, onHide, onTagClick, isHiding, compact, disableGestures }) => {
+export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, onHide, onTagClick, isHiding, isFavorited: isFavoritedProp, compact, disableGestures }) => {
     const navigate = useNavigate();
     const { t } = useTranslation();
     const { isFavorite, toggleFavorite } = useFavorites();
@@ -78,7 +79,7 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
     const touchYStart = useRef<number | null>(null);
     const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [quickViewOpen, setQuickViewOpen] = useState(false);
-    const isFavorited = isFavorite(trail.slug);
+    const isFavorited = isFavoritedProp ?? isFavorite(trail.slug);
 
     const distanceKm = (trail.length / 1000).toFixed(1);
     const userDist = trail.distanceToUser !== undefined && trail.distanceToUser !== Infinity
