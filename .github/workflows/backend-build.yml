@@ -11,6 +11,10 @@ on:
         type: string
         required: false
         default: "backend/backend.csproj"
+      test-project-path:
+        type: string
+        required: false
+        default: "backend.Tests/backend.Tests.csproj"
       build-configuration:
         type: string
         required: false
@@ -47,3 +51,6 @@ jobs:
 
       - name: Build
         run: dotnet build "${{ inputs.project-path }}" --configuration "${{ inputs.build-configuration }}" --no-restore
+
+      - name: Test
+        run: dotnet test "${{ inputs.test-project-path }}" --configuration "${{ inputs.build-configuration }}" --no-restore --verbosity normal
