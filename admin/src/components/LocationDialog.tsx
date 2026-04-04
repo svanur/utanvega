@@ -13,7 +13,7 @@ import { apiFetch } from '../hooks/api';
 import ChangeLogList from './ChangeLogList';
 
 // Fix for default Leaflet marker icon
-// @ts-ignore
+// @ts-expect-error - Leaflet internal _getIconUrl not in type definitions
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',

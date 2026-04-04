@@ -19,7 +19,6 @@ const DefaultIcon = L.icon({
     iconAnchor: [12, 41],
 });
 
-// @ts-ignore
 L.Marker.prototype.options.icon = DefaultIcon;
 
 // Start marker: green circle

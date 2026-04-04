@@ -8,7 +8,7 @@ import { Trail } from '../hooks/useTrails';
 import { Link as RouterLink } from 'react-router-dom';
 
 // Fix for Leaflet marker icons in React
-// @ts-ignore
+// @ts-expect-error - Leaflet internal _getIconUrl not in type definitions
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
     iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',

@@ -26,6 +26,29 @@ interface ElevationChartProps {
   activeIndex?: number | null;
 }
 
+function ChartTooltip({ active, payload }: { active?: boolean; payload?: Array<{ payload: ElevationDataPoint }> }) {
+  const theme = useTheme();
+  const { t } = useTranslation();
+
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    return (
+      <Paper sx={{ p: 1.5, border: `1px solid ${theme.palette.divider}` }}>
+        <Typography variant="body2" fontWeight="bold">
+          {t('elevation.distance')}: {data.distance.toFixed(2)} km
+        </Typography>
+        <Typography variant="body2" color="primary">
+          {t('elevation.elevation')}: {Math.round(data.elevation)} m
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {t('elevation.gainSoFar')}: {Math.round(data.totalGain)} m
+        </Typography>
+      </Paper>
+    );
+  }
+  return null;
+}
+
 const ElevationChart: React.FC<ElevationChartProps> = ({ coordinates, onHover, activeIndex }) => {
   const theme = useTheme();
   const { t } = useTranslation();
@@ -80,26 +103,6 @@ const ElevationChart: React.FC<ElevationChartProps> = ({ coordinates, onHover, a
     return R * c;
   }
 
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload as ElevationDataPoint;
-      return (
-        <Paper sx={{ p: 1.5, border: `1px solid ${theme.palette.divider}` }}>
-          <Typography variant="body2" fontWeight="bold">
-            {t('elevation.distance')}: {data.distance.toFixed(2)} km
-          </Typography>
-          <Typography variant="body2" color="primary">
-            {t('elevation.elevation')}: {Math.round(data.elevation)} m
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {t('elevation.gainSoFar')}: {Math.round(data.totalGain)} m
-          </Typography>
-        </Paper>
-      );
-    }
-    return null;
-  };
-
   const handleMouseMove = (state: any) => {
     if (state?.isTooltipActive && state.activeTooltipIndex != null) {
       const index = Number(state.activeTooltipIndex);
@@ -147,7 +150,7 @@ const ElevationChart: React.FC<ElevationChartProps> = ({ coordinates, onHover, a
               tickFormatter={(value: number) => `${value} m`}
               fontSize={12}
             />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip content={<ChartTooltip />} />
             <Area
               type="monotone"
               dataKey="elevation"
