@@ -1,5 +1,7 @@
 <Solution>
     <Folder Name="/Solution Items/">
+        <File Path="README.md" />
+        <File Path="AGENTS.md" />
         <File Path=".github\workflows\ci.yml" />
         <File Path=".github\workflows\backend-build.yml" />
         <File Path=".github\workflows\frontend-build.yml" />
@@ -7,4 +9,5 @@
     <Project Path="backend.Tests/backend.Tests.csproj" />
     <Project Path="backend/backend.csproj" />
     <Project Path="admin/admin.esproj" />
+    <Project Path="frontend/frontend.esproj" />
 </Solution>
