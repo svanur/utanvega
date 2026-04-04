@@ -1,4 +1,4 @@
-import { Box, Typography, Paper, Divider, Stack } from '@mui/material';
+import { Avatar, Box, Typography, Paper, Divider, Stack } from '@mui/material';
 import type { PaletteMode } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import Timeline from '@mui/lab/Timeline';
@@ -9,7 +9,6 @@ import TimelineContent from '@mui/lab/TimelineContent';
 import TimelineOppositeContent from '@mui/lab/TimelineOppositeContent';
 import TimelineDot from '@mui/lab/TimelineDot';
 import TimelineIcon from '@mui/icons-material/Timeline';
-import PersonIcon from '@mui/icons-material/Person';
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import MapIcon from '@mui/icons-material/Map';
@@ -48,15 +47,21 @@ export default function AboutPage({ mode, onToggleMode }: AboutPageProps) {
 
                 {/* Author */}
                 <Paper variant="outlined" sx={{ p: 3, mb: 4, borderRadius: 2 }}>
-                    <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
-                        <PersonIcon color="primary" />
-                        <Typography variant="h6" fontWeight="bold">
-                            {t('about.authorTitle')}
-                        </Typography>
+                    <Stack direction="row" alignItems="center" spacing={2}>
+                        <Avatar
+                            src="/images/svanur-utanvega.jpg"
+                            alt="Svanur"
+                            sx={{ width: 80, height: 80 }}
+                        />
+                        <Box>
+                            <Typography variant="h6" fontWeight="bold">
+                                {t('about.authorTitle')}
+                            </Typography>
+                            <Typography variant="body1" color="text.secondary">
+                                {t('about.authorDescription')}
+                            </Typography>
+                        </Box>
                     </Stack>
-                    <Typography variant="body1" color="text.secondary">
-                        {t('about.authorDescription')}
-                    </Typography>
                     {/* Social links placeholder — uncomment when links are available
                     <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
                         <Chip label="Instagram" component="a" href="#" clickable size="small" />

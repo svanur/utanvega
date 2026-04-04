@@ -10,4 +10,7 @@
   <ItemGroup>
     <Script Include="tsconfig.json" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="public\images\" />
+  </ItemGroup>
 </Project>
