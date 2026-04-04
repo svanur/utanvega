@@ -152,9 +152,10 @@ export function useTrails() {
 
         // Apply advanced filters
         result = result.filter(trail => {
-            // Trail length filter
-            if (trail.length < filters.minLength) return false;
-            if (filters.maxLength < 100 && trail.length > filters.maxLength) return false;
+            // Trail length filter (trail.length is in meters, filters are in km)
+            const trailLengthKm = trail.length / 1000;
+            if (trailLengthKm < filters.minLength) return false;
+            if (filters.maxLength < 100 && trailLengthKm > filters.maxLength) return false;
 
             // Distance filter (only if user location is available and trail has distance)
             if (userLocation && trail.distanceToUser !== undefined && trail.distanceToUser !== Infinity) {
