@@ -1,4 +1,5 @@
 {
+    "loading": "Loading trails...",
     "nav": {
         "locations": "Locations",
         "darkMode": "Switch to dark mode",

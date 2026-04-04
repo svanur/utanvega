@@ -45,6 +45,7 @@ import { useHiddenTrails } from '../hooks/useHiddenTrails';
 import { TrailCard } from './TrailCard';
 import { TrailMapView } from './TrailMapView';
 import { useParams, useNavigate } from 'react-router-dom';
+import RunningLoader from './RunningLoader';
 
 interface TrailListProps {
     tagSlug?: string;
@@ -150,7 +151,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
     if (loading) {
         return (
             <Box display="flex" justifyContent="center" p={4}>
-                <CircularProgress />
+                <RunningLoader />
             </Box>
         );
     }

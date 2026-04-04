@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { 
     Box, 
     Typography, 
-    CircularProgress, 
     Button, 
     Paper, 
     Grid, 
@@ -21,6 +20,7 @@ import Layout from '../components/Layout';
 import { useLocationBySlug } from '../hooks/useLocations';
 import { TrailCard } from '../components/TrailCard';
 import { TrailMapView } from '../components/TrailMapView';
+import RunningLoader from '../components/RunningLoader';
 
 type LocationDetailsPageProps = {
     mode: PaletteMode;
@@ -54,7 +54,7 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
         return (
             <Layout mode={mode} onToggleMode={onToggleMode}>
                 <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
-                    <CircularProgress />
+                    <RunningLoader />
                 </Box>
             </Layout>
         );

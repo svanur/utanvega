@@ -8,7 +8,6 @@ import {
     Card,
     CardContent,
     CardActionArea,
-    CircularProgress,
     Alert,
     PaletteMode,
     Chip,
@@ -33,6 +32,7 @@ import 'leaflet/dist/leaflet.css';
 import Layout from '../components/Layout';
 import { useLocations, Location } from '../hooks/useLocations';
 import { useTrails, Trail } from '../hooks/useTrails';
+import RunningLoader from '../components/RunningLoader';
 
 const activityEmoji: Record<string, string> = {
     hiking: '🥾',
@@ -169,7 +169,7 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
         return (
             <Layout mode={mode} onToggleMode={onToggleMode}>
                 <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
-                    <CircularProgress />
+                    <RunningLoader />
                 </Box>
             </Layout>
         );

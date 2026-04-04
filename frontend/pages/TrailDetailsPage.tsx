@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { 
     Box, 
     Typography, 
-    CircularProgress, 
     Button, 
     Paper, 
     Grid, 
@@ -40,6 +39,7 @@ import RoutePlayback from '../components/RoutePlayback';
 import ShareButtons from '../components/ShareButtons';
 import QRCodeShare from '../components/QRCodeShare';
 import DifficultyInfo from '../components/DifficultyInfo';
+import RunningLoader from '../components/RunningLoader';
 import { TrailCard } from '../components/TrailCard';
 
 const getActivityIcon = (type: string) => {
@@ -109,7 +109,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
         return (
             <Layout mode={mode} onToggleMode={onToggleMode}>
                 <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
-                    <CircularProgress />
+                    <RunningLoader />
                 </Box>
             </Layout>
         );
