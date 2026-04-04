@@ -544,7 +544,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                 <Typography variant="h5" fontWeight="bold">
                     {filters.selectedTags.length > 0
                         ? t('home.trailsTagged', { tags: filters.selectedTags.map(s => availableTags.find(tg => tg.slug === s)?.name || s).join(', ') })
-                        : viewMode === 'list' ? t('home.nearbyTrails') : t('home.trailMap')
+                        : viewMode === 'list' ? (userLocation ? t('home.nearbyTrails') : t('home.allTrails')) : t('home.trailMap')
                     }
                     <Typography 
                         component="span" 

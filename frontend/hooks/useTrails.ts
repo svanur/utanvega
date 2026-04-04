@@ -190,9 +190,11 @@ export function useTrails() {
             return true;
         });
 
-        // Sort by distance if user location is available
+        // Sort by distance if user location is available, otherwise alphabetically
         if (userLocation) {
             result.sort((a, b) => (a.distanceToUser || 0) - (b.distanceToUser || 0));
+        } else {
+            result.sort((a, b) => a.name.localeCompare(b.name, 'is'));
         }
 
         return result;

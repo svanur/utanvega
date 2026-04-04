@@ -7,6 +7,7 @@
     },
     "home": {
         "nearbyTrails": "Nearby Trails",
+        "allTrails": "Trails",
         "trailMap": "Trail Map",
         "trailsTagged": "Trails tagged: {{tags}}",
         "noTrailsMatch": "No trails matching your search criteria",
