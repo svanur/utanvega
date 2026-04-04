@@ -1,8 +1,21 @@
-import { Box, Typography, Paper, Divider, Chip, Stack } from '@mui/material';
+import { Box, Typography, Paper, Divider, Stack } from '@mui/material';
 import type { PaletteMode } from '@mui/material';
 import { useTranslation } from 'react-i18next';
+import Timeline from '@mui/lab/Timeline';
+import TimelineItem from '@mui/lab/TimelineItem';
+import TimelineSeparator from '@mui/lab/TimelineSeparator';
+import TimelineConnector from '@mui/lab/TimelineConnector';
+import TimelineContent from '@mui/lab/TimelineContent';
+import TimelineOppositeContent from '@mui/lab/TimelineOppositeContent';
+import TimelineDot from '@mui/lab/TimelineDot';
 import TimelineIcon from '@mui/icons-material/Timeline';
 import PersonIcon from '@mui/icons-material/Person';
+import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import MapIcon from '@mui/icons-material/Map';
+import TuneIcon from '@mui/icons-material/Tune';
+import BuildIcon from '@mui/icons-material/Build';
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import Layout from '../components/Layout';
 
 interface AboutPageProps {
@@ -11,12 +24,12 @@ interface AboutPageProps {
 }
 
 const changelog = [
-    { version: '1.5', date: '2025-06', key: 'v1_5' },
-    { version: '1.4', date: '2025-05', key: 'v1_4' },
-    { version: '1.3', date: '2025-04', key: 'v1_3' },
-    { version: '1.2', date: '2025-03', key: 'v1_2' },
-    { version: '1.1', date: '2025-02', key: 'v1_1' },
-    { version: '1.0', date: '2025-01', key: 'v1_0' },
+    { version: '1.5', date: '2025-06', key: 'v1_5', icon: <AutoFixHighIcon />, color: 'primary' as const },
+    { version: '1.4', date: '2025-05', key: 'v1_4', icon: <BuildIcon />, color: 'secondary' as const },
+    { version: '1.3', date: '2025-04', key: 'v1_3', icon: <TuneIcon />, color: 'primary' as const },
+    { version: '1.2', date: '2025-03', key: 'v1_2', icon: <MapIcon />, color: 'secondary' as const },
+    { version: '1.1', date: '2025-02', key: 'v1_1', icon: <FavoriteIcon />, color: 'primary' as const },
+    { version: '1.0', date: '2025-01', key: 'v1_0', icon: <RocketLaunchIcon />, color: 'secondary' as const },
 ];
 
 export default function AboutPage({ mode, onToggleMode }: AboutPageProps) {
@@ -55,40 +68,41 @@ export default function AboutPage({ mode, onToggleMode }: AboutPageProps) {
                 <Divider sx={{ mb: 4 }} />
 
                 {/* Timeline */}
-                <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 3 }}>
+                <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
                     <TimelineIcon color="primary" />
                     <Typography variant="h5" fontWeight="bold">
                         {t('about.changelogTitle')}
                     </Typography>
                 </Stack>
 
-                <Stack spacing={2}>
-                    {changelog.map((entry) => (
-                        <Paper
-                            key={entry.key}
-                            variant="outlined"
-                            sx={{ p: 2, borderRadius: 2, borderLeft: 3, borderLeftColor: 'primary.main' }}
-                        >
-                            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
-                                <Chip
-                                    label={`v${entry.version}`}
-                                    size="small"
-                                    color="primary"
-                                    variant="outlined"
-                                />
-                                <Typography variant="caption" color="text.secondary">
-                                    {entry.date}
+                <Timeline position="alternate">
+                    {changelog.map((entry, index) => (
+                        <TimelineItem key={entry.key}>
+                            <TimelineOppositeContent
+                                sx={{ m: 'auto 0', color: 'text.secondary' }}
+                            >
+                                <Typography variant="body2">
+                                    v{entry.version} · {entry.date}
                                 </Typography>
-                            </Stack>
-                            <Typography variant="subtitle2" fontWeight="bold">
-                                {t(`about.changelog.${entry.key}.title`)}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                                {t(`about.changelog.${entry.key}.description`)}
-                            </Typography>
-                        </Paper>
+                            </TimelineOppositeContent>
+                            <TimelineSeparator>
+                                <TimelineConnector sx={index === 0 ? { bgcolor: 'transparent' } : undefined} />
+                                <TimelineDot color={entry.color}>
+                                    {entry.icon}
+                                </TimelineDot>
+                                <TimelineConnector sx={index === changelog.length - 1 ? { bgcolor: 'transparent' } : undefined} />
+                            </TimelineSeparator>
+                            <TimelineContent sx={{ py: '12px', px: 2 }}>
+                                <Typography variant="h6" component="span">
+                                    {t(`about.changelog.${entry.key}.title`)}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    {t(`about.changelog.${entry.key}.description`)}
+                                </Typography>
+                            </TimelineContent>
+                        </TimelineItem>
                     ))}
-                </Stack>
+                </Timeline>
             </Box>
         </Layout>
     );
