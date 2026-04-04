@@ -1,7 +1,7 @@
 import { Typography, CircularProgress, Alert, Box, Link, Stack, Button } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { useMemo, useState } from 'react';
-import { useTrails } from '../hooks/useTrails';
+import { useTrails, Trail } from '../hooks/useTrails';
 import { useTags } from '../hooks/useTags';
 import { apiFetch } from '../hooks/api';
 import TrailEditDialog from '../components/TrailEditDialog';
@@ -45,8 +45,8 @@ export default function TrailList({ onNotify, initialTrailId }: { onNotify: (mes
         const isAsc = order === 'asc';
         let comparison = 0;
         
-        const aValue = (a as any)[orderBy];
-        const bValue = (b as any)[orderBy];
+        const aValue = (a as unknown as Record<string, string | number>)[orderBy];
+        const bValue = (b as unknown as Record<string, string | number>)[orderBy];
 
         if (aValue < bValue) comparison = -1;
         if (aValue > bValue) comparison = 1;
@@ -98,7 +98,7 @@ export default function TrailList({ onNotify, initialTrailId }: { onNotify: (mes
       const tagName = tags.find(t => t.id === tagId)?.name || 'tag';
       onNotify(`${action === 'add' ? 'Added' : 'Removed'} "${tagName}" ${action === 'add' ? 'to' : 'from'} ${count} trail(s)`);
       refresh();
-    } catch (err) {
+    } catch (_err) {
       onNotify(`Failed to ${action} tag`, 'error');
     } finally {
       setBulkActioning(false);
@@ -128,7 +128,7 @@ export default function TrailList({ onNotify, initialTrailId }: { onNotify: (mes
         onNotify(`Bulk action '${action}' completed successfully`);
         setSelectedIds([]);
         refresh();
-    } catch (err) {
+    } catch (_err) {
         onNotify(`Failed to perform bulk action: ${action}`, 'error');
     } finally {
         setBulkActioning(false);
@@ -143,14 +143,14 @@ export default function TrailList({ onNotify, initialTrailId }: { onNotify: (mes
         setTrailToDelete(null);
         onNotify('Trail deleted successfully');
         refresh();
-    } catch (err) {
+    } catch (_err) {
         onNotify('Failed to delete trail', 'error');
     } finally {
         setDeleting(false);
     }
   };
 
-  const handleRestore = async (trail: any) => {
+  const handleRestore = async (trail: Trail) => {
     try {
         await apiFetch(`/api/v1/admin/trails/${trail.id}`, {
             method: 'PUT',
@@ -163,7 +163,7 @@ export default function TrailList({ onNotify, initialTrailId }: { onNotify: (mes
         });
         onNotify('Trail restored to Draft');
         refresh();
-    } catch (err) {
+    } catch (_err) {
         onNotify('Failed to restore trail', 'error');
     }
   };
@@ -177,7 +177,7 @@ export default function TrailList({ onNotify, initialTrailId }: { onNotify: (mes
         });
         onNotify(`Trail status updated to ${newStatus}`);
         refresh();
-    } catch (err) {
+    } catch (_err) {
         onNotify('Failed to update trail status', 'error');
     }
   };
@@ -188,7 +188,7 @@ export default function TrailList({ onNotify, initialTrailId }: { onNotify: (mes
         const data = await apiFetch<{ count: number }>('/api/v1/admin/trails/recalculate-all-difficulties', { method: 'POST' });
         onNotify(`Recalculated difficulty for ${data.count} trails`);
         refresh();
-    } catch (err) {
+    } catch (_err) {
         onNotify('Failed to recalculate difficulties', 'error');
     } finally {
         setRecalculating(false);

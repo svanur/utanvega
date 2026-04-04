@@ -45,7 +45,7 @@ export function useLocations(parentId: string | null = null, search: string | nu
 
     useEffect(() => {
         fetchLocations();
-    }, [parentId, search]);
+    }, [parentId, search]); // eslint-disable-line react-hooks/exhaustive-deps -- only run on mount and when params change
 
     return { locations, loading, error, refresh: fetchLocations };
 }

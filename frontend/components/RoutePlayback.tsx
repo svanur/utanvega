@@ -140,10 +140,12 @@ export default function RoutePlayback({ coordinates, onPointChange, onIndexChang
     }, []);
 
     // Update interval speed when speed changes during playback
+    // Intentionally excludes `playing` and `startInterval` to avoid restarting the interval on every render
     useEffect(() => {
         if (playing) {
             startInterval(indexRef.current);
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [speedIndex]);
 
     // Cleanup on unmount

@@ -272,7 +272,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                         />
                         <ElevationChart 
                             coordinates={geometry.coordinates} 
-                            onHover={(point: any) => setHoverPoint(point ? { lat: point.lat, lng: point.lng } : null)}
+                            onHover={(point) => setHoverPoint(point ? { lat: point.lat, lng: point.lng } : null)}
                             activeIndex={playbackIndex}
                         />
                     </>

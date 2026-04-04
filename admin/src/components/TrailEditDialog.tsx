@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Box, Typography, Alert, CircularProgress, MenuItem, IconButton, Paper, Chip, Tabs, Tab } from '@mui/material';
-import { Delete as DeleteIcon, Add as AddIcon, History as HistoryIcon, Map as MapIcon, LocalOffer as TagIcon } from '@mui/icons-material';
+import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Box, Typography, Alert, CircularProgress, MenuItem, Paper, Chip, Tabs, Tab } from '@mui/material';
+import { Add as AddIcon, History as HistoryIcon, Map as MapIcon, LocalOffer as TagIcon } from '@mui/icons-material';
 import { MapContainer, TileLayer, Polyline, CircleMarker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { apiFetch } from '../hooks/api';
-import { useLocations, LocationDto } from '../hooks/useLocations';
+import { useLocations } from '../hooks/useLocations';
 import { useTags } from '../hooks/useTags';
 import ChangeLogList from './ChangeLogList';
 import { generateSlug } from '../utils/slugify';
@@ -94,7 +94,7 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
                     setLoading(true);
                     const data = await apiFetch<TrailDetail>(`/api/v1/admin/trails/${trailId}`);
                     setTrail(data);
-                } catch (err) {
+                } catch (_err) {
                     setError('Failed to load trail details.');
                 } finally {
                     setLoading(false);
@@ -132,14 +132,14 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
             });
             onSaveSuccess({ id: trail.id, slug: trail.slug, name: trail.name });
             onClose();
-        } catch (err) {
+        } catch (_err) {
             setError('Failed to save trail.');
         } finally {
             setSaving(false);
         }
     };
 
-    const handleChange = (field: keyof TrailDetail, value: any) => {
+    const handleChange = (field: keyof TrailDetail, value: string) => {
         if (!trail) return;
         setTrail({ ...trail, [field]: value });
         if (field === 'name') {
@@ -255,7 +255,7 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
                                         label="Role" 
                                         size="small"
                                         value={newLocRole} 
-                                        onChange={(e) => setNewLocRole(e.target.value as any)}
+                                        onChange={(e) => setNewLocRole(e.target.value as typeof newLocRole)}
                                         sx={{ width: 150 }}
                                     >
                                         {roles.map(r => <MenuItem key={r} value={r}>{r}</MenuItem>)}
@@ -357,7 +357,7 @@ function TrailMapTab({ trailId }: { trailId: string | null }) {
         (async () => {
             try {
                 setLoading(true);
-                const geo = await apiFetch<any>(`/api/v1/admin/trails/${trailId}/geometry`);
+                const geo = await apiFetch<{ coordinates: number[][] }>(`/api/v1/admin/trails/${trailId}/geometry`);
                 if (geo?.coordinates) {
                     setPositions(geo.coordinates.map((c: number[]) => [c[1], c[0]] as [number, number]));
                 }

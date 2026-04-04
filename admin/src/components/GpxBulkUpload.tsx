@@ -59,7 +59,7 @@ const GpxBulkUpload: React.FC<GpxBulkUploadProps> = ({ onUploadSuccess, onNotify
             // Fallback to filename without extension
             resolve(file.name.replace(/\.[^/.]+$/, ""));
           }
-        } catch (err) {
+        } catch (_err) {
           // Fallback to filename on error
           resolve(file.name.replace(/\.[^/.]+$/, ""));
         }
@@ -135,7 +135,7 @@ const GpxBulkUpload: React.FC<GpxBulkUploadProps> = ({ onUploadSuccess, onNotify
     });
 
     try {
-      const results = await apiFetch<any[]>('/api/v1/admin/trails/bulk-check-similarity', {
+      const results = await apiFetch<{ fileName: string; matches: SimilarityMatch[] }[]>('/api/v1/admin/trails/bulk-check-similarity', {
         method: 'POST',
         body: formData,
       });

@@ -1,5 +1,6 @@
 import { MapContainer, TileLayer, Polyline, useMap } from 'react-leaflet';
-import { Box, Typography, Button } from '@mui/material';
+import { Box, Typography } from '@mui/material';
+import L from 'leaflet';
 import { useEffect, useState } from 'react';
 import { apiFetch } from '../hooks/api';
 
@@ -12,13 +13,13 @@ function ChangeView({ bounds }: { bounds: [number, number][] }) {
     const map = useMap();
     useEffect(() => {
         if (bounds.length > 0) {
-            map.fitBounds(bounds as any);
+            map.fitBounds(bounds as L.LatLngBoundsExpression);
         }
     }, [bounds, map]);
     return null;
 }
 
-export default function TrailMap({ trailId, trailName }: { trailId: string, trailName: string }) {
+export default function TrailMap({ trailId, trailName: _trailName }: { trailId: string, trailName: string }) {
     const [geometry, setGeometry] = useState<GeoJsonGeometry | null>(null);
     const [loading, setLoading] = useState(true);
 

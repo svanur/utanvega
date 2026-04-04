@@ -14,7 +14,7 @@ interface LocationListProps {
 }
 
 export function LocationList({ onNotify }: LocationListProps) {
-    const { locations, loading, error, refresh } = useLocations();
+    const { locations, loading, error: _error, refresh } = useLocations();
     const [selectedLocation, setSelectedLocation] = useState<LocationDto | undefined>();
     const [dialogOpen, setDialogOpen] = useState(false);
 

@@ -32,7 +32,7 @@ interface LocationDialogProps {
 
 const LOCATION_TYPES: LocationType[] = ['Country', 'Area', 'Region', 'Municipality', 'Place', 'Other'];
 
-function MapPicker({ lat, lon, radius, onUpdate, onRadiusUpdate }: { 
+function MapPicker({ lat, lon, radius, onUpdate, onRadiusUpdate: _onRadiusUpdate }: { 
     lat: number | null, 
     lon: number | null, 
     radius: number | null, 
@@ -54,7 +54,7 @@ function MapPicker({ lat, lon, radius, onUpdate, onRadiusUpdate }: {
                 if (bounds.isValid() && !bounds.contains([lat, lon])) {
                     map.setView([lat, lon], map.getZoom());
                 }
-            } catch (e) {
+            } catch (_e) {
                 // Bounds might not be ready yet
                 map.setView([lat, lon], map.getZoom());
             }

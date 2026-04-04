@@ -3,7 +3,7 @@ import { Box, Typography, Paper, IconButton } from '@mui/material';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
 import { useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import L, { LatLngExpression } from 'leaflet';
+import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 // Fix for default marker icon in Leaflet
@@ -52,7 +52,7 @@ function ChangeView({ bounds, followMe, userLocation }: {
     const map = useMap();
     useEffect(() => {
         if (!followMe && bounds.length > 0) {
-            map.fitBounds(bounds as any, { padding: [20, 20] });
+            map.fitBounds(bounds as L.LatLngBoundsExpression, { padding: [20, 20] });
         }
     }, [bounds, map, followMe]);
 
@@ -146,14 +146,16 @@ export default function TrailMap({ slug, onDataLoaded, hoverPoint, activityType 
                 const data = await res.json();
                 setGeometry(data);
                 if (onDataLoaded) onDataLoaded(data);
-            } catch (err: any) {
+            } catch (err: unknown) {
                 console.error('Failed to fetch geometry:', err);
-                setError(err.message);
+                setError(err instanceof Error ? err.message : String(err));
             } finally {
                 setLoading(false);
             }
         };
         fetchGeometry();
+    // onDataLoaded is a callback that may change on every render; only re-fetch when slug changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [slug]);
 
     if (loading) return <Typography>{t('trail.loadingMap')}</Typography>;

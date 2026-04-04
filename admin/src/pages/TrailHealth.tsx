@@ -110,12 +110,13 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
       try {
         const data = await apiFetch<TrailDto[]>('/api/v1/admin/trails?includeDeleted=false');
         setTrails(data);
-      } catch (err) {
+      } catch (_err) {
         onNotify('Failed to load trails', 'error');
       } finally {
         setLoading(false);
       }
     })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- onNotify callback reference changes on every render
   }, []);
 
   const scored = useMemo(() =>

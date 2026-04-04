@@ -17,7 +17,6 @@ import {
     Select,
     MenuItem,
     Grid,
-    Divider,
     ToggleButton,
     ToggleButtonGroup,
     FormControlLabel,
@@ -29,8 +28,6 @@ import {
     Search as SearchIcon, 
     Clear as ClearIcon, 
     FilterList as FilterIcon,
-    ExpandMore as ExpandMoreIcon,
-    ExpandLess as ExpandLessIcon,
     List as ListIcon,
     Map as MapIcon,
     Star as StarIcon,
@@ -44,7 +41,7 @@ import { useFavorites } from '../hooks/useFavorites';
 import { useHiddenTrails } from '../hooks/useHiddenTrails';
 import { TrailCard } from './TrailCard';
 import { TrailMapView } from './TrailMapView';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import RunningLoader from './RunningLoader';
 
 interface TrailListProps {
@@ -72,10 +69,12 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
     const navigate = useNavigate();
 
     // Sync URL tag slug with filter state
+    // Only sync on mount or when URL tag changes, not when filters/setFilters change
     React.useEffect(() => {
         if (tagSlug && !filters.selectedTags.includes(tagSlug)) {
             setFilters(prev => ({ ...prev, selectedTags: [tagSlug] }));
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [tagSlug]);
 
     const [showAdvanced, setShowAdvanced] = React.useState(false);
@@ -172,7 +171,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
         }, 300); // Match transition duration in TrailCard
     };
 
-    const handleFilterChange = (key: string, value: any) => {
+    const handleFilterChange = (key: string, value: string | number | boolean | string[]) => {
         setFilters({ ...filters, [key]: value });
         if (key === 'selectedTags') {
             const tags = value as string[];

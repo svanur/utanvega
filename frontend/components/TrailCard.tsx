@@ -6,8 +6,7 @@ import {
     Box, 
     Stack, 
     Chip,
-    CardActionArea,
-    Grid
+    CardActionArea
 } from '@mui/material';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
 import HikingIcon from '@mui/icons-material/Hiking';
@@ -17,9 +16,6 @@ import RouteIcon from '@mui/icons-material/Route';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
-import LoopIcon from '@mui/icons-material/Loop';
-import SyncAltIcon from '@mui/icons-material/SyncAlt';
-import EastIcon from '@mui/icons-material/East';
 import StarIcon from '@mui/icons-material/Star';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import { useNavigate } from 'react-router-dom';
@@ -48,24 +44,6 @@ const getActivityIcon = (type: string) => {
         case 'cycling': return <DirectionsBikeIcon fontSize="small" />;
         case 'hiking': return <HikingIcon fontSize="small" />;
         default: return <RouteIcon fontSize="small" />;
-    }
-};
-
-const getTrailTypeIcon = (type: string) => {
-    switch (type) {
-        case 'OutAndBack': return <SyncAltIcon sx={{ fontSize: 18 }} />;
-        case 'Loop': return <LoopIcon sx={{ fontSize: 18 }} />;
-        case 'PointToPoint': return <EastIcon sx={{ fontSize: 18 }} />;
-        default: return <RouteIcon sx={{ fontSize: 18 }} />;
-    }
-};
-
-const getTrailTypeLabel = (type: string, t: (key: string) => string) => {
-    switch (type) {
-        case 'OutAndBack': return t('trail.outAndBack');
-        case 'Loop': return t('trail.loop');
-        case 'PointToPoint': return t('trail.pointToPoint');
-        default: return type;
     }
 };
 

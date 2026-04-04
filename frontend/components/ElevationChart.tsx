@@ -9,6 +9,7 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from 'recharts';
+import type { CategoricalChartFunc } from 'recharts/types/chart/types';
 import { Box, Paper, Typography, useTheme } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 
@@ -103,7 +104,7 @@ const ElevationChart: React.FC<ElevationChartProps> = ({ coordinates, onHover, a
     return R * c;
   }
 
-  const handleMouseMove = (state: any) => {
+  const handleMouseMove: CategoricalChartFunc = (state) => {
     if (state?.isTooltipActive && state.activeTooltipIndex != null) {
       const index = Number(state.activeTooltipIndex);
       const point = chartData[index];

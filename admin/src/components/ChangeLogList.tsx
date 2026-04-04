@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Box, Typography, Paper, List, ListItem, ListItemText, Divider, CircularProgress, Chip, Collapse, IconButton } from '@mui/material';
+import { Box, Typography, Paper, List, ListItem, ListItemText, Divider, CircularProgress, Chip, Collapse } from '@mui/material';
 import { ExpandMore as ExpandMoreIcon, ExpandLess as ExpandLessIcon, History as HistoryIcon } from '@mui/icons-material';
 import { apiFetch } from '../hooks/api';
 
@@ -59,14 +59,17 @@ export default function ChangeLogList({ entityName, entityId, limit = 50, title 
             const obj = JSON.parse(changesJson);
             return (
                 <Box sx={{ mt: 1, p: 1, bgcolor: '#f5f5f5', borderRadius: 1, fontFamily: 'monospace', fontSize: '0.8rem' }}>
-                    {Object.entries(obj).map(([prop, val]: [string, any]) => (
+                    {Object.entries(obj).map(([prop, val]) => {
+                        const change = val as { From: unknown; To: unknown };
+                        return (
                         <div key={prop}>
-                            <strong>{prop}</strong>: <span style={{ color: '#d32f2f' }}>{JSON.stringify(val.From)}</span> → <span style={{ color: '#2e7d32' }}>{JSON.stringify(val.To)}</span>
+                            <strong>{prop}</strong>: <span style={{ color: '#d32f2f' }}>{JSON.stringify(change.From)}</span> → <span style={{ color: '#2e7d32' }}>{JSON.stringify(change.To)}</span>
                         </div>
-                    ))}
+                        );
+                    })}
                 </Box>
             );
-        } catch (e) {
+        } catch (_e) {
             return changesJson;
         }
     };

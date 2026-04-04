@@ -53,7 +53,7 @@ export default function GpxUploadDialog({ open, onClose, onUploadSuccess }: { op
                         // Fallback to filename without extension
                         extractedName = selectedFile.name.replace(/\.[^/.]+$/, "");
                     }
-                } catch (err) {
+                } catch (_err) {
                     // Fallback to filename on error
                     extractedName = selectedFile.name.replace(/\.[^/.]+$/, "");
                 }
