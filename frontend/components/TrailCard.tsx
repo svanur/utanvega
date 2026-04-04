@@ -61,7 +61,7 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
 
     const distanceKm = (trail.length / 1000).toFixed(1);
     const userDist = trail.distanceToUser !== undefined && trail.distanceToUser !== Infinity
-        ? `${trail.distanceToUser.toFixed(1)} km away`
+        ? `${trail.distanceToUser.toFixed(1)} ${t('trailCard.kmAway')}`
         : null;
 
     const handleClick = () => {

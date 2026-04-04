@@ -33,7 +33,8 @@
     "trailCard": {
         "removeFavorite": "Remove Favorite",
         "addFavorite": "Add Favorite",
-        "hideTrail": "Hide Trail"
+        "hideTrail": "Hide Trail",
+        "kmAway": "km away"
     },
     "quickView": {
         "distance": "Distance",

@@ -33,7 +33,8 @@
     "trailCard": {
         "removeFavorite": "Fjarlægja úr eftirlætum",
         "addFavorite": "Bæta í eftirlæti",
-        "hideTrail": "Fela leið"
+        "hideTrail": "Fela leið",
+        "kmAway": "km í burtu"
     },
     "quickView": {
         "distance": "Vegalengd",
