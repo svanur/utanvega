@@ -325,9 +325,9 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                         {/* Elevation Gain */}
                         <Grid item xs={12}>
                             <Typography variant="caption" color="text.secondary">
-                                {t('filters.elevationGain')}: {filters.minElevationGain === 0 && filters.maxElevationGain >= 3500
+                                {t('filters.elevationGain')}: {filters.minElevationGain === 0 && filters.maxElevationGain >= 2000
                                     ? t('filters.any')
-                                    : `${filters.minElevationGain} – ${filters.maxElevationGain >= 3500 ? '3500+' : filters.maxElevationGain} m`}
+                                    : `${filters.minElevationGain} – ${filters.maxElevationGain >= 2000 ? '2000+' : filters.maxElevationGain} m`}
                             </Typography>
                             <Slider
                                 size="small"
@@ -337,16 +337,16 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                                     setFilters({ ...filters, minElevationGain: min, maxElevationGain: max });
                                 }}
                                 valueLabelDisplay="auto"
-                                valueLabelFormat={(v) => v >= 3500 ? '3500+' : `${v}`}
+                                valueLabelFormat={(v) => v >= 2000 ? '2000+' : `${v}`}
                                 min={0}
-                                max={3500}
-                                step={50}
+                                max={2000}
+                                step={25}
                                 marks={[
                                     { value: 0, label: '0' },
+                                    { value: 250, label: '250' },
                                     { value: 500, label: '500' },
                                     { value: 1000, label: '1k' },
-                                    { value: 2000, label: '2k' },
-                                    { value: 3500, label: '3.5k+' },
+                                    { value: 2000, label: '2k+' },
                                 ]}
                                 sx={{ mt: 1 }}
                             />
@@ -355,9 +355,9 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                         {/* Elevation Loss */}
                         <Grid item xs={12}>
                             <Typography variant="caption" color="text.secondary">
-                                {t('filters.elevationLoss')}: {filters.minElevationLoss === 0 && filters.maxElevationLoss >= 3500
+                                {t('filters.elevationLoss')}: {filters.minElevationLoss === 0 && filters.maxElevationLoss >= 2000
                                     ? t('filters.any')
-                                    : `${filters.minElevationLoss} – ${filters.maxElevationLoss >= 3500 ? '3500+' : filters.maxElevationLoss} m`}
+                                    : `${filters.minElevationLoss} – ${filters.maxElevationLoss >= 2000 ? '2000+' : filters.maxElevationLoss} m`}
                             </Typography>
                             <Slider
                                 size="small"
@@ -367,16 +367,16 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                                     setFilters({ ...filters, minElevationLoss: min, maxElevationLoss: max });
                                 }}
                                 valueLabelDisplay="auto"
-                                valueLabelFormat={(v) => v >= 3500 ? '3500+' : `${v}`}
+                                valueLabelFormat={(v) => v >= 2000 ? '2000+' : `${v}`}
                                 min={0}
-                                max={3500}
-                                step={50}
+                                max={2000}
+                                step={25}
                                 marks={[
                                     { value: 0, label: '0' },
+                                    { value: 250, label: '250' },
                                     { value: 500, label: '500' },
                                     { value: 1000, label: '1k' },
-                                    { value: 2000, label: '2k' },
-                                    { value: 3500, label: '3.5k+' },
+                                    { value: 2000, label: '2k+' },
                                 ]}
                                 sx={{ mt: 1 }}
                             />
@@ -581,7 +581,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
             {viewMode === 'list' ? (
                 filteredTrails.length === 0 ? (
                     <Typography color="text.secondary" textAlign="center" py={4}>
-                        {searchQuery || Object.values(filters).some(v => v !== 'All' && v !== 250 && v !== 0 && v !== 100 && v !== 3500 && v !== false) 
+                        {searchQuery || Object.values(filters).some(v => v !== 'All' && v !== 250 && v !== 0 && v !== 100 && v !== 2000 && v !== false) 
                             ? t('home.noTrailsMatch')
                             : t('home.noTrailsFound')}
                     </Typography>

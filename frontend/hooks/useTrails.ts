@@ -51,9 +51,9 @@ const DEFAULT_FILTERS: FilterState = {
     maxLength: 100,
     maxDistance: 250,
     minElevationGain: 0,
-    maxElevationGain: 3500,
+    maxElevationGain: 2000,
     minElevationLoss: 0,
-    maxElevationLoss: 3500,
+    maxElevationLoss: 2000,
     trailType: 'All',
     difficulty: 'All',
     location: 'All',
@@ -163,11 +163,11 @@ export function useTrails() {
 
             // Elevation Gain
             if (trail.elevationGain < filters.minElevationGain) return false;
-            if (filters.maxElevationGain < 3500 && trail.elevationGain > filters.maxElevationGain) return false;
+            if (filters.maxElevationGain < 2000 && trail.elevationGain > filters.maxElevationGain) return false;
 
             // Elevation Loss
             if (trail.elevationLoss < filters.minElevationLoss) return false;
-            if (filters.maxElevationLoss < 3500 && trail.elevationLoss > filters.maxElevationLoss) return false;
+            if (filters.maxElevationLoss < 2000 && trail.elevationLoss > filters.maxElevationLoss) return false;
 
             // Trail Type
             if (filters.trailType !== 'All' && trail.trailType !== filters.trailType) return false;
