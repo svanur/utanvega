@@ -67,7 +67,8 @@
         "tags": "Tags",
         "showHiddenTrails": "Show Hidden Trails",
         "clearHidden": "Clear Hidden ({{count}})",
-        "resetFilters": "Reset Filters"
+        "resetFilters": "Reset Filters",
+        "closeFilters": "Close"
     },
     "difficulty": {
         "easy": "Easy",

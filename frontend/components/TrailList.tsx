@@ -532,6 +532,9 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                             }}>
                                 {t('filters.resetFilters')}
                             </Button>
+                            <Button size="small" variant="outlined" onClick={() => setShowAdvanced(false)}>
+                                {t('filters.closeFilters')}
+                            </Button>
                         </Grid>
                     </Grid>
                 </Box>

@@ -67,7 +67,8 @@
         "tags": "Merki",
         "showHiddenTrails": "Sýna faldar leiðir",
         "clearHidden": "Hreinsa faldar ({{count}})",
-        "resetFilters": "Endurstilla síun"
+        "resetFilters": "Endurstilla síun",
+        "closeFilters": "Loka"
     },
     "difficulty": {
         "easy": "Auðveld",
