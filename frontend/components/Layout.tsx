@@ -35,6 +35,10 @@ export default function Layout({ children, mode, onToggleMode }: LayoutProps) {
                         {t('nav.locations')}
                     </Button>
 
+                    <Button color="inherit" onClick={() => navigate('/about')}>
+                        {t('nav.about')}
+                    </Button>
+
                     <LanguageToggle />
 
                     <Tooltip title={mode === 'light' ? t('nav.darkMode') : t('nav.lightMode')}>

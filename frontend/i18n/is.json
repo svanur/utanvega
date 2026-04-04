@@ -2,6 +2,7 @@
     "loading": "Hleð leiðum...",
     "nav": {
         "locations": "Staðsetningar",
+        "about": "Um",
         "darkMode": "Skipta yfir í dimmt þema",
         "lightMode": "Skipta yfir í ljóst þema"
     },
@@ -92,7 +93,7 @@
         "title": "Hæðarsnið",
         "distance": "Vegalengd",
         "elevation": "Hæð",
-        "gainSoFar": "Hækkun til þessa"
+        "gainSoFar": "Samanlögð hækkun"
     },
     "playback": {
         "play": "Spila leið",
@@ -149,5 +150,38 @@
         "title": "Eitthvað fór úrskeiðis",
         "message": "Óvænt villa kom upp. Vinsamlegast reyndu að endurhlaða síðunni.",
         "reload": "Endurhlaða síðu"
+    },
+    "about": {
+        "title": "Um Utanvega",
+        "description": "Utanvega er vefur til að finna skemmtilegar leiðir fyrir hlaupara, gönguferðafólk og hjólreiðamenn á Íslandi. Finndu leiðir nálægt þér, skoðaðu hæðarsnið og deildu eftirlætisleiðum með vinum.",
+        "authorTitle": "Búið til af Svanur",
+        "authorDescription": "Utanvegahlaupari og forritari á Íslandi sem smíðar verkfæri til að hjálpa fólki að uppgötva og njóta útivistar.",
+        "changelogTitle": "Breytingasaga",
+        "changelog": {
+            "v1_5": {
+                "title": "Gæði og frágangsatriði",
+                "description": "ESLint uppsetning, hreinsun á lint villum, öryggisendurbætur, inntaksstaðfesting með FluentValidation og bættar hleðsluhreyfinímyndir."
+            },
+            "v1_4": {
+                "title": "Endurbætur á stjórnborði",
+                "description": "Uppskipting stjórnborðshluta, heilsumæliborð leiða, fjölda GPX upphal og breytingaskráning."
+            },
+            "v1_3": {
+                "title": "Síur og leit",
+                "description": "Ítarlegar síur með hæð, fjarlægð og leiðartegund. Síun eftir merkjum og leitarbætur."
+            },
+            "v1_2": {
+                "title": "Kort og hæðarsnið",
+                "description": "Gagnvirk leiðarkort með Leaflet, hæðarsniðsgröf, leiðarendurspilunar og QR kóðadeiling."
+            },
+            "v1_1": {
+                "title": "Staðsetningar og eftirlæti",
+                "description": "Staðsetningarsíður, röðun eftir fjarlægð, eftirlæti og faldar leiðir, og stuðningur við dimmt þema."
+            },
+            "v1_0": {
+                "title": "Fyrsta útgáfa",
+                "description": "Leiðalisti með leit, upplýsingasíður með GPX gögnum, tvítyngt viðmót (íslenska/enska) og snjalltækjafyrst hönnun."
+            }
+        }
     }
 }

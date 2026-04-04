@@ -2,6 +2,7 @@
     "loading": "Loading trails...",
     "nav": {
         "locations": "Locations",
+        "about": "About",
         "darkMode": "Switch to dark mode",
         "lightMode": "Switch to light mode"
     },
@@ -149,5 +150,38 @@
         "title": "Something went wrong",
         "message": "An unexpected error occurred. Please try reloading.",
         "reload": "Reload page"
+    },
+    "about": {
+        "title": "About Utanvega",
+        "description": "Utanvega is a trail discovery platform built for runners, hikers, and cyclists exploring Iceland's wild landscapes. Find trails near you, check elevation profiles, and share your favorites with friends.",
+        "authorTitle": "Created by Svanur",
+        "authorDescription": "Trail runner and developer based in Iceland, building tools to help people discover and enjoy the outdoors.",
+        "changelogTitle": "Changelog",
+        "changelog": {
+            "v1_5": {
+                "title": "Quality & polish",
+                "description": "ESLint setup, lint cleanup, security hardening, input validation with FluentValidation, and improved loading animations."
+            },
+            "v1_4": {
+                "title": "Admin improvements",
+                "description": "Split admin components, trail health dashboard, bulk GPX upload, and changelog tracking."
+            },
+            "v1_3": {
+                "title": "Filters & search",
+                "description": "Advanced filters with elevation, distance, and trail type sliders. Tag-based filtering and search improvements."
+            },
+            "v1_2": {
+                "title": "Maps & elevation",
+                "description": "Interactive trail maps with Leaflet, elevation profile charts, route playback, and QR code sharing."
+            },
+            "v1_1": {
+                "title": "Locations & favorites",
+                "description": "Location pages, distance-based sorting, favorites and hidden trails, and dark mode support."
+            },
+            "v1_0": {
+                "title": "Initial release",
+                "description": "Trail listing with search, detail pages with GPX data, bilingual support (Icelandic/English), and mobile-first design."
+            }
+        }
     }
 }

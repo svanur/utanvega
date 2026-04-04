@@ -312,7 +312,7 @@ app.MapGet("/api/v1/locations/{slug}", async (string slug, IMediator mediator) =
 app.MapGet("/api/v1/health", () => Results.Ok(new
 {
     status = "healthy",
-    service = "backend",
+    service = "api",
     version = "v1",
     timestampUtc = DateTime.UtcNow
 }))
@@ -321,7 +321,7 @@ app.MapGet("/api/v1/health", () => Results.Ok(new
 app.MapGet("/api/v1/admin/health", [Authorize] () => Results.Ok(new
 {
     status = "healthy",
-    service = "backend",
+    service = "backend 1",
     area = "admin",
     version = "v1",
     timestampUtc = DateTime.UtcNow

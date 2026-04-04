@@ -8,6 +8,7 @@ import HomePage from './pages/HomePage';
 import TrailDetailsPage from './pages/TrailDetailsPage';
 import LocationsPage from './pages/LocationsPage';
 import LocationDetailsPage from './pages/LocationDetailsPage';
+import AboutPage from './pages/AboutPage';
 
 function TagPage({ mode, onToggleMode }: { mode: PaletteMode; onToggleMode: () => void }) {
     const { slug } = useParams<{ slug: string }>();
@@ -48,6 +49,10 @@ export default function App() {
                     <Route 
                         path="/locations/:slug" 
                         element={<LocationDetailsPage mode={mode} onToggleMode={handleToggleMode} />} 
+                    />
+                    <Route 
+                        path="/about" 
+                        element={<AboutPage mode={mode} onToggleMode={handleToggleMode} />} 
                     />
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
