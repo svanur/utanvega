@@ -34,9 +34,11 @@ import {
     StarBorder as StarBorderIcon,
     VisibilityOff as VisibilityOffIcon,
     Visibility as VisibilityIcon,
-    Refresh as RefreshIcon
+    Refresh as RefreshIcon,
+    Sort as SortIcon
 } from '@mui/icons-material';
 import { useTrails } from '../hooks/useTrails';
+import type { SortOption } from '../hooks/useTrails';
 import { useFavorites } from '../hooks/useFavorites';
 import { useHiddenTrails } from '../hooks/useHiddenTrails';
 import { TrailCard } from './TrailCard';
@@ -540,11 +542,11 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                 </Box>
             </Collapse>
 
-            <Box mb={2} display="flex" justifyContent="space-between" alignItems="center">
+            <Box mb={2} display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1}>
                 <Typography variant="h5" fontWeight="bold">
                     {filters.selectedTags.length > 0
                         ? t('home.trailsTagged', { tags: filters.selectedTags.map(s => availableTags.find(tg => tg.slug === s)?.name || s).join(', ') })
-                        : viewMode === 'list' ? (userLocation ? t('home.nearbyTrails') : t('home.allTrails')) : t('home.trailMap')
+                        : viewMode === 'list' ? t('home.allTrails') : t('home.trailMap')
                     }
                     <Typography 
                         component="span" 
@@ -556,10 +558,23 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                     </Typography>
                 </Typography>
                 <Box display="flex" alignItems="center" gap={1}>
-                    {!userLocation && viewMode === 'list' && (
-                        <Typography variant="caption" color="text.secondary">
-                            {t('home.enableLocation')}
-                        </Typography>
+                    {viewMode === 'list' && (
+                        <Select
+                            value={filters.sortBy}
+                            onChange={(e) => setFilters(f => ({ ...f, sortBy: e.target.value as SortOption }))}
+                            size="small"
+                            variant="outlined"
+                            startAdornment={<SortIcon fontSize="small" sx={{ mr: 0.5, color: 'text.secondary' }} />}
+                            sx={{ minWidth: 140, fontSize: '0.85rem' }}
+                        >
+                            <MenuItem value="distance" disabled={!userLocation}>
+                                {t('sort.distance')}
+                            </MenuItem>
+                            <MenuItem value="name">{t('sort.name')}</MenuItem>
+                            <MenuItem value="shortest">{t('sort.shortest')}</MenuItem>
+                            <MenuItem value="longest">{t('sort.longest')}</MenuItem>
+                            <MenuItem value="elevation">{t('sort.elevation')}</MenuItem>
+                        </Select>
                     )}
                     <ToggleButtonGroup
                         value={viewMode}

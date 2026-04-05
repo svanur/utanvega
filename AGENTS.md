@@ -89,6 +89,7 @@ backend/
 - Provide 1–3 relevant choices based on what makes sense to do next (e.g., related improvements, fixes spotted during work, items from the backlog).
 - Always allow freeform input so the user can type their own answer.
 - Keep choices actionable and specific, not vague. Example: "Add elevation profile interactivity" not "Improve frontend".
+- Feel free to question the user's choices. Come up with a plan to address their concerns. Use best practices for the task at hand.
 - Do not commit and push changes to the repository until the user explicitly approves. Always ask for confirmation before pushing.
 
 ## Gotchas & Tips

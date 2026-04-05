@@ -31,6 +31,8 @@ export interface Trail {
     distanceToUser?: number; // in kilometers
 }
 
+export type SortOption = 'distance' | 'name' | 'shortest' | 'longest' | 'elevation';
+
 export interface FilterState {
     minLength: number;
     maxLength: number;
@@ -44,6 +46,7 @@ export interface FilterState {
     location: string;
     favoritesOnly: boolean;
     selectedTags: string[];
+    sortBy: SortOption;
 }
 
 const DEFAULT_FILTERS: FilterState = {
@@ -59,6 +62,7 @@ const DEFAULT_FILTERS: FilterState = {
     location: 'All',
     favoritesOnly: false,
     selectedTags: [],
+    sortBy: 'distance',
 };
 
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
@@ -190,11 +194,24 @@ export function useTrails() {
             return true;
         });
 
-        // Sort by distance if user location is available, otherwise alphabetically
-        if (userLocation) {
-            result.sort((a, b) => (a.distanceToUser || 0) - (b.distanceToUser || 0));
-        } else {
-            result.sort((a, b) => a.name.localeCompare(b.name, 'is'));
+        // Sort based on selected option (fall back to name if distance unavailable)
+        const sortBy = (userLocation || filters.sortBy !== 'distance') ? filters.sortBy : 'name';
+        switch (sortBy) {
+            case 'distance':
+                result.sort((a, b) => (a.distanceToUser || 0) - (b.distanceToUser || 0));
+                break;
+            case 'name':
+                result.sort((a, b) => a.name.localeCompare(b.name, 'is'));
+                break;
+            case 'shortest':
+                result.sort((a, b) => a.length - b.length);
+                break;
+            case 'longest':
+                result.sort((a, b) => b.length - a.length);
+                break;
+            case 'elevation':
+                result.sort((a, b) => b.elevationGain - a.elevationGain);
+                break;
         }
 
         return result;

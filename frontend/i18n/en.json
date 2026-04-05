@@ -148,6 +148,13 @@
         "healthy": "healthy",
         "apiUnavailable": "API unavailable"
     },
+    "sort": {
+        "distance": "Nearest",
+        "name": "Name (A–Ö)",
+        "shortest": "Shortest",
+        "longest": "Longest",
+        "elevation": "Most elevation"
+    },
     "header": {
         "tagline": "Utanvega - A site to find fun trails and share with friends.",
         "close": "Close",

@@ -148,6 +148,13 @@
         "healthy": "virkt",
         "apiUnavailable": "API ekki tiltækt"
     },
+    "sort": {
+        "distance": "Nálægast",
+        "name": "Nafn (A–Ö)",
+        "shortest": "Styðst",
+        "longest": "Lengst",
+        "elevation": "Mest hækkun"
+    },
     "header": {
         "tagline": "Utanvega - Vefur til að finna skemmtilegar leiðir og deila með vinum.",
         "close": "Loka",
