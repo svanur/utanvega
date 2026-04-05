@@ -30,11 +30,20 @@ using MediatR;
 using FluentValidation;
 using Utanvega.Backend.Application.Validation;
 
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Allow large multipart uploads (90+ GPX files in bulk)
+builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = 200 * 1024 * 1024); // 200 MB
+builder.Services.Configure<FormOptions>(o =>
+{
+    o.MultipartBodyLengthLimit = 200 * 1024 * 1024;
+    o.ValueCountLimit = 2048;
+});
 
 // Add Database with PostGIS
 var rawConnectionString = builder.Configuration.GetConnectionString("DefaultConnection") 

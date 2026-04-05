@@ -1,4 +1,4 @@
-import { Typography, CircularProgress, Alert, Box, Link, Stack, Button } from '@mui/material';
+import { Typography, CircularProgress, Alert, Box, Link, Stack, Button, Chip } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { useMemo, useState } from 'react';
 import { useTrails, Trail } from '../hooks/useTrails';
@@ -202,7 +202,9 @@ export default function TrailList({ onNotify, initialTrailId }: { onNotify: (mes
     <Box>
       {/* Header Row: Title + Quick Actions */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h4">Trails</Typography>
+        <Typography variant="h4">
+          Trails <Chip label={filteredAndSortedTrails.length} size="small" color="primary" sx={{ ml: 1, verticalAlign: 'middle' }} />
+        </Typography>
         <Stack direction="row" spacing={1} alignItems="center">
           <Button startIcon={<RefreshIcon />} size="small" onClick={refresh}>Refresh</Button>
           <TrailToolsPanel

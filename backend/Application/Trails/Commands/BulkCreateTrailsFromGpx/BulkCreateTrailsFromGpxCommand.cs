@@ -29,6 +29,7 @@ public class BulkCreateTrailsFromGpxCommandHandler : IRequestHandler<BulkCreateT
     public async Task<List<Guid>> Handle(BulkCreateTrailsFromGpxCommand request, CancellationToken cancellationToken)
     {
         var resultIds = new List<Guid>();
+        var usedSlugs = new HashSet<string>();
 
         foreach (var file in request.Files)
         {
@@ -36,13 +37,15 @@ public class BulkCreateTrailsFromGpxCommandHandler : IRequestHandler<BulkCreateT
             {
                 var trail = _singleHandler.ProcessGpx(file.Name, file.GpxXml);
                 
-                // Check if slug already exists to avoid unique constraint violation
+                // Check if slug already exists in DB or in this batch
                 var existing = await _context.Trails.AnyAsync(t => t.Slug == trail.Slug, cancellationToken);
-                if (existing)
+                while (existing || usedSlugs.Contains(trail.Slug))
                 {
-                    trail.Slug += "-" + Guid.NewGuid().ToString().Substring(0, 4);
+                    trail.Slug += "-" + Guid.NewGuid().ToString()[..4];
+                    existing = await _context.Trails.AnyAsync(t => t.Slug == trail.Slug, cancellationToken);
                 }
 
+                usedSlugs.Add(trail.Slug);
                 _context.Trails.Add(trail);
 
                 // Auto-detect and link locations
