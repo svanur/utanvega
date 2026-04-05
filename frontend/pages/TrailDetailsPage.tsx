@@ -31,6 +31,7 @@ import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import Layout from '../components/Layout';
 import { useTrailBySlug, useTrails } from '../hooks/useTrails';
+import LostRunner from '../components/LostRunner';
 import { useFavorites } from '../hooks/useFavorites';
 import TrailMap, { GeoJsonGeometry } from '../components/TrailMap';
 import ElevationChart from '../components/ElevationChart';
@@ -117,18 +118,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     if (error || !trail) {
         return (
             <Layout mode={mode} onToggleMode={onToggleMode}>
-                <Box textAlign="center" mt={4}>
-                    <Typography color="error" variant="h6">
-                        {error || t('trail.notFound')}
-                    </Typography>
-                    <Button 
-                        startIcon={<ArrowBackIcon />} 
-                        onClick={() => navigate('/')}
-                        sx={{ mt: 2 }}
-                    >
-                        {t('trail.backToTrails')}
-                    </Button>
-                </Box>
+                <LostRunner />
             </Layout>
         );
     }
