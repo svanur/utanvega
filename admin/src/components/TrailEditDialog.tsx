@@ -33,6 +33,9 @@ type TrailDetail = {
     type: string;
     difficulty: string;
     visibility: string;
+    length: number;
+    elevationGain: number;
+    elevationLoss: number;
     locations: TrailLocationInfo[];
     tags: TrailTagInfo[];
 };
@@ -167,7 +170,16 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
         <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
             <DialogTitle>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="h6">Edit Trail</Typography>
+                    <Box>
+                        <Typography variant="h6">Edit Trail</Typography>
+                        {trail && (
+                            <Box sx={{ display: 'flex', gap: 1, mt: 0.5, flexWrap: 'wrap' }}>
+                                <Chip size="small" label={`${(trail.length / 1000).toFixed(1)} km`} variant="outlined" />
+                                <Chip size="small" label={`↑ ${Math.round(trail.elevationGain)}m`} color="success" variant="outlined" />
+                                <Chip size="small" label={`↓ ${Math.round(trail.elevationLoss)}m`} color="error" variant="outlined" />
+                            </Box>
+                        )}
+                    </Box>
                     <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)}>
                         <Tab label="General" />
                         <Tab icon={<MapIcon />} label="Map" />
