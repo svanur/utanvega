@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Box, Typography, keyframes } from '@mui/material';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
 import { useTranslation } from 'react-i18next';
@@ -12,8 +13,36 @@ const dust = keyframes`
   100% { opacity: 0; transform: scale(2); }
 `;
 
+const loadingMessages = {
+    is: [
+        'Hleð leiðum...',
+        'Sveiflum fótum...',
+        'Sveiflum höndum...',
+        'Teygjum smá...',
+        'Drögum andann djúpt...',
+        'Bindum skóreimar...',
+        'Hoppum á staðnum...',
+        'Rólegt skokk...',
+        'Af stað...',
+    ],
+    en: [
+        'Loading trails...',
+        'Swinging legs...',
+        'Swinging arms...',
+        'Stretching a little...',
+        'Breathing deeply...',
+        'Tying shoelaces...',
+        'Jumping in place...',
+        'Easy jogging...',
+        "Let's go...",
+    ],
+};
+
 export default function RunningLoader({ message }: { message?: string }) {
-  const { t } = useTranslation();
+  const { i18n } = useTranslation();
+  const lang = i18n.language.startsWith('is') ? 'is' : 'en';
+  const [index] = useState(() => Math.floor(Math.random() * loadingMessages.en.length));
+  const text = message ?? loadingMessages[lang][index];
 
   return (
     <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" gap={1.5} py={2}>
@@ -44,7 +73,7 @@ export default function RunningLoader({ message }: { message?: string }) {
         ))}
       </Box>
       <Typography variant="body2" color="text.secondary">
-        {message || t('loading')}
+        {text}
       </Typography>
     </Box>
   );
