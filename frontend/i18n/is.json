@@ -156,6 +156,9 @@
         "description": "Utanvega er vefur til að finna skemmtilegar leiðir fyrir hlaupara, göngufólk og hjólreiðamenn á Íslandi. Finndu leiðir nálægt þér, skoðaðu kort og hæðarsnið og deildu eftirlætisleiðum með vinum.",
         "authorTitle": "Um mig",
         "authorDescription": "Utanvega er gæluverkefni sem byrjaði með excel skjali þar sem ég skráði niður áhugaverðar utanvegaleiðir. Auk þess að vera utanvegahlaupari/þjálfari, þá er hugbúnaðargerð 'hin vinnan' mín. Á utanvega mætast því vinnan og áhugamálið. Vonandi njótið þið vel og lengi. Svanur.",
+        "techTitle": "Tæknilausnir",
+        "techDescription": "Utanvega er byggt á React viðmóti, .NET 9 bakenda með PostGIS fyrir staðsetningarleit og PostgreSQL gagnagrunn. Kort eru knúin af Leaflet með OpenStreetMap flísum.",
+        "aiDescription": "Þróun með aðstoð Claude, gervigreindar kóðunarfulltrúa frá Anthropic, sem notaður er við kóðasmíði, endurbætur og gæðaeftirlit.",
         "changelogTitle": "Breytingasaga",
         "changelog": {
             "v1_5": {

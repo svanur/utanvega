@@ -1,4 +1,4 @@
-import { Avatar, Box, Typography, Paper, Divider, Stack } from '@mui/material';
+import { Avatar, Box, Chip, Typography, Paper, Divider, Stack } from '@mui/material';
 import type { PaletteMode } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import Timeline from '@mui/lab/Timeline';
@@ -8,6 +8,8 @@ import TimelineConnector from '@mui/lab/TimelineConnector';
 import TimelineContent from '@mui/lab/TimelineContent';
 import TimelineOppositeContent from '@mui/lab/TimelineOppositeContent';
 import TimelineDot from '@mui/lab/TimelineDot';
+import CodeIcon from '@mui/icons-material/Code';
+import SmartToyIcon from '@mui/icons-material/SmartToy';
 import TimelineIcon from '@mui/icons-material/Timeline';
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import FavoriteIcon from '@mui/icons-material/Favorite';
@@ -68,6 +70,30 @@ export default function AboutPage({ mode, onToggleMode }: AboutPageProps) {
                         <Chip label="Strava" component="a" href="#" clickable size="small" />
                     </Stack>
                     */}
+                </Paper>
+
+                {/* Tech Stack */}
+                <Paper variant="outlined" sx={{ p: 3, mb: 4, borderRadius: 2 }}>
+                    <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.5 }}>
+                        <CodeIcon color="primary" />
+                        <Typography variant="h6" fontWeight="bold">
+                            {t('about.techTitle')}
+                        </Typography>
+                    </Stack>
+                    <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+                        {t('about.techDescription')}
+                    </Typography>
+                    <Stack direction="row" flexWrap="wrap" gap={1} sx={{ mb: 2 }}>
+                        {['React', 'TypeScript', '.NET 9', 'PostgreSQL', 'PostGIS', 'Leaflet', 'MUI', 'Vite'].map((tech) => (
+                            <Chip key={tech} label={tech} size="small" variant="outlined" />
+                        ))}
+                    </Stack>
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                        <SmartToyIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+                        <Typography variant="body2" color="text.secondary">
+                            {t('about.aiDescription')}
+                        </Typography>
+                    </Stack>
                 </Paper>
 
                 <Divider sx={{ mb: 4 }} />
