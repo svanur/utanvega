@@ -154,8 +154,9 @@
     "about": {
         "title": "About Utanvega",
         "description": "Utanvega is a trail discovery platform built for runners, hikers, and cyclists exploring Iceland's wild landscapes. Find trails near you, check elevation profiles, and share your favorites with friends.",
-        "authorTitle": "Created by Svanur",
+        "authorTitle": "About me",
         "authorDescription": "Trail runner and developer based in Iceland, building tools to help people discover and enjoy the outdoors.",
+        "authorSignature": "Svanur Karlsson",
         "techTitle": "Technical Stack",
         "techDescription": "Utanvega is built with a React frontend, a .NET 9 backend with PostGIS for spatial queries, and PostgreSQL for data storage. Maps are powered by Leaflet with OpenStreetMap tiles.",
         "aiDescription": "Development assisted by Claude, an AI coding agent by Anthropic, used for code generation, refactoring, and quality improvements.",

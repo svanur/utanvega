@@ -62,6 +62,16 @@ export default function AboutPage({ mode, onToggleMode }: AboutPageProps) {
                             <Typography variant="body1" color="text.secondary">
                                 {t('about.authorDescription')}
                             </Typography>
+                            <Typography
+                                sx={{
+                                    fontFamily: '"Dancing Script", cursive',
+                                    fontSize: '1.5rem',
+                                    mt: 1.5,
+                                    color: 'text.primary',
+                                }}
+                            >
+                                {t('about.authorSignature')}
+                            </Typography>
                         </Box>
                     </Stack>
                     {/* Social links placeholder — uncomment when links are available
