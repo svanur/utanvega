@@ -1,4 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
   <rect width="192" height="192" rx="40" fill="#1976d2"/>
-  <text x="50%" y="55%" font-family="Arial" font-size="100" fill="white" text-anchor="middle" dominant-baseline="middle">U</text>
+  <!-- Mountains -->
+  <polygon points="30,140 70,65 110,140" fill="#ffffff" opacity="0.85"/>
+  <polygon points="75,140 115,50 155,140" fill="#ffffff"/>
+  <!-- Snow caps -->
+  <polygon points="115,50 105,70 125,70" fill="#bbdefb"/>
+  <polygon points="70,65 62,80 78,80" fill="#bbdefb"/>
+  <!-- Trail path -->
+  <path d="M40,155 Q70,130 96,145 Q122,160 155,135" stroke="#ffb74d" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <!-- Runner silhouette -->
+  <circle cx="150" cy="108" r="7" fill="#ffffff"/>
+  <path d="M150,115 L150,130 M150,122 L143,117 M150,122 L157,117 M150,130 L143,140 M150,130 L158,138" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
 </svg>
