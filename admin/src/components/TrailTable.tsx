@@ -4,6 +4,9 @@ import MapIcon from '@mui/icons-material/Map';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import RestoreIcon from '@mui/icons-material/Restore';
+import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
+import LoopIcon from '@mui/icons-material/Loop';
+import UndoIcon from '@mui/icons-material/Undo';
 import type { Trail } from '../hooks/useTrails';
 
 interface TrailTableProps {
@@ -103,6 +106,26 @@ export default function TrailTable({
   );
 }
 
+const trailTypeConfig: Record<string, { label: string; icon: React.ReactElement; color: 'primary' | 'secondary' | 'info' }> = {
+  Loop: { label: 'Loop', icon: <LoopIcon sx={{ fontSize: 16 }} />, color: 'primary' },
+  OutAndBack: { label: 'Out & Back', icon: <UndoIcon sx={{ fontSize: 16 }} />, color: 'secondary' },
+  PointToPoint: { label: 'Point to Point', icon: <TrendingFlatIcon sx={{ fontSize: 16 }} />, color: 'info' },
+};
+
+function TrailTypeChip({ type }: { type: string }) {
+  const config = trailTypeConfig[type] ?? { label: type, icon: <LoopIcon sx={{ fontSize: 16 }} />, color: 'primary' as const };
+  return (
+    <Chip
+      icon={config.icon}
+      label={config.label}
+      size="small"
+      color={config.color}
+      variant="outlined"
+      sx={{ fontSize: '0.7rem', height: 24 }}
+    />
+  );
+}
+
 interface TrailRowProps {
   trail: Trail;
   selected: boolean;
@@ -144,7 +167,7 @@ function TrailRow({ trail, selected, onSelect, onViewMap, onEdit, onDelete, onRe
         <Typography variant="body2" component="span">↑{Math.round(trail.elevationGain)}</Typography>
         <Typography variant="body2" component="span" color="text.secondary"> ↓{Math.round(trail.elevationLoss)}</Typography>
       </TableCell>
-      <TableCell>{trail.trailType}</TableCell>
+      <TableCell><TrailTypeChip type={trail.trailType} /></TableCell>
       <TableCell>
         {trail.locations?.map(l => l.name).join(', ') || 'N/A'}
       </TableCell>

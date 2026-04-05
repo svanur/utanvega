@@ -4,6 +4,7 @@ import {
   TableHead, TableRow, TableSortLabel, Chip, LinearProgress, Card,
   CardContent, Stack, Tooltip, IconButton, TextField, InputAdornment,
   Collapse, Alert, AlertTitle, List, ListItem, ListItemText, ListItemIcon,
+  Button, CircularProgress,
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
@@ -13,6 +14,7 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import DeleteIcon from '@mui/icons-material/Delete';
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import { apiFetch } from '../hooks/api';
 
 interface LocationInfo {
@@ -121,6 +123,7 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
   const [dupsLoading, setDupsLoading] = useState(true);
   const [dupsExpanded, setDupsExpanded] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [detecting, setDetecting] = useState(false);
 
   const handleDeleteDuplicate = async (trailId: string, trailName: string) => {
     if (!confirm(`Delete "${trailName}"? This will soft-delete the trail.`)) return;
@@ -133,6 +136,21 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
       onNotify('Failed to delete trail', 'error');
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const handleDetectTypes = async () => {
+    setDetecting(true);
+    try {
+      const result = await apiFetch<{ total: number; updated: number }>('/api/v1/admin/trails/detect-types', { method: 'POST' });
+      onNotify(`Trail types re-detected: ${result.updated} of ${result.total} trails updated`);
+      // Refresh trail data to show updated types
+      const data = await apiFetch<TrailDto[]>('/api/v1/admin/trails?includeDeleted=false');
+      setTrails(data);
+    } catch (_err) {
+      onNotify('Failed to detect trail types', 'error');
+    } finally {
+      setDetecting(false);
     }
   };
 
@@ -204,7 +222,18 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
 
   return (
     <Box>
-      <Typography variant="h5" gutterBottom fontWeight="bold">Trail Health Dashboard</Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+        <Typography variant="h5" fontWeight="bold">Trail Health Dashboard</Typography>
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={detecting ? <CircularProgress size={16} /> : <AutoFixHighIcon />}
+          disabled={detecting}
+          onClick={handleDetectTypes}
+        >
+          {detecting ? 'Detecting...' : 'Re-detect Trail Types'}
+        </Button>
+      </Box>
 
       {/* Summary Cards */}
       <Stack direction="row" spacing={2} sx={{ mb: 3 }} flexWrap="wrap" useFlexGap>

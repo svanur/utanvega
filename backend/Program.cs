@@ -533,6 +533,7 @@ app.MapPost("/api/v1/admin/trails/upload-gpx", [Authorize] async (string name, I
             id = result.Id,
             slug = result.Slug,
             name = result.Name,
+            detectedType = result.DetectedType,
             matches = result.Matches.Select(m => new {
                 trailId = m.TrailId,
                 trailName = m.TrailName,
@@ -776,6 +777,30 @@ app.MapGet("/api/v1/admin/trails/duplicates", [Authorize] async (double? thresho
     return Results.Ok(duplicates);
 })
 .WithName("GetDuplicateTrails");
+
+// Re-detect trail types for all trails with GPX data
+app.MapPost("/api/v1/admin/trails/detect-types", [Authorize] async (UtanvegaDbContext context) =>
+{
+    var trails = await context.Trails
+        .Where(t => t.GpxData != null && t.Status != TrailStatus.Deleted)
+        .ToListAsync();
+
+    var updated = 0;
+    foreach (var trail in trails)
+    {
+        var detected = TrailTypeDetector.Detect(trail);
+        if (trail.Type != detected)
+        {
+            trail.Type = detected;
+            updated++;
+        }
+    }
+
+    await context.SaveChangesWithAuditAsync("system");
+    
+    return Results.Ok(new { total = trails.Count, updated });
+})
+.WithName("DetectTrailTypes");
 
 app.Run();
 
