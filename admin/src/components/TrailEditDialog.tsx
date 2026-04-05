@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Box, Typography, Alert, CircularProgress, MenuItem, Paper, Chip, Tabs, Tab, Autocomplete } from '@mui/material';
-import { Add as AddIcon, History as HistoryIcon, Map as MapIcon, LocalOffer as TagIcon } from '@mui/icons-material';
+import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Box, Typography, Alert, CircularProgress, MenuItem, Paper, Chip, Tabs, Tab, Autocomplete, Checkbox } from '@mui/material';
+import { Add as AddIcon, History as HistoryIcon, Map as MapIcon, LocalOffer as TagIcon, CheckBoxOutlineBlank, CheckBox as CheckBoxIcon } from '@mui/icons-material';
 import { MapContainer, TileLayer, Polyline, CircleMarker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -84,7 +84,6 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
 
     const [newLocId, setNewLocId] = useState('');
     const [newLocRole, setNewLocRole] = useState<'Start' | 'End' | 'BelongsTo' | 'PassingThrough'>('BelongsTo');
-    const [newTagId, setNewTagId] = useState('');
     const [activeTab, setActiveTab] = useState(0);
 
     useEffect(() => {
@@ -162,20 +161,6 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
         if (!trail) return;
         const updatedLocations = trail.locations.filter(l => l.locationId !== locId);
         setTrail({ ...trail, locations: updatedLocations });
-    };
-
-    const handleAddTag = () => {
-        if (!trail || !newTagId) return;
-        if (trail.tags.some(t => t.tagId === newTagId)) return;
-        const tag = allTags.find(t => t.id === newTagId);
-        if (!tag) return;
-        setTrail({ ...trail, tags: [...trail.tags, { tagId: tag.id, name: tag.name, slug: tag.slug, color: tag.color }] });
-        setNewTagId('');
-    };
-
-    const handleRemoveTag = (tagId: string) => {
-        if (!trail) return;
-        setTrail({ ...trail, tags: trail.tags.filter(t => t.tagId !== tagId) });
     };
 
     return (
@@ -274,48 +259,52 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
                                 Tags
                             </Typography>
                             <Paper variant="outlined" sx={{ p: 2 }}>
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                                    {trail.tags.map(t => (
-                                        <Chip
-                                            key={t.tagId}
-                                            label={t.name}
-                                            onDelete={() => handleRemoveTag(t.tagId)}
-                                            sx={{
-                                                backgroundColor: t.color || undefined,
-                                                color: t.color ? '#fff' : undefined,
-                                            }}
-                                            variant={t.color ? 'filled' : 'outlined'}
-                                        />
-                                    ))}
-                                    {trail.tags.length === 0 && <Typography variant="body2" color="text.secondary">No tags.</Typography>}
-                                </Box>
-                                <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-                                    <TextField
-                                        select
-                                        label="Add Tag"
-                                        size="small"
-                                        value={newTagId}
-                                        onChange={(e) => setNewTagId(e.target.value)}
-                                        sx={{ flexGrow: 1 }}
-                                    >
-                                        {allTags
-                                            .filter(t => !trail.tags.some(tt => tt.tagId === t.id))
-                                            .map(t => (
-                                                <MenuItem key={t.id} value={t.id}>
-                                                    {t.color && <Box component="span" sx={{ display: 'inline-block', width: 12, height: 12, borderRadius: '50%', backgroundColor: t.color, mr: 1, verticalAlign: 'middle' }} />}
-                                                    {t.name}
-                                                </MenuItem>
-                                            ))}
-                                    </TextField>
-                                    <Button
-                                        variant="outlined"
-                                        startIcon={<AddIcon />}
-                                        onClick={handleAddTag}
-                                        sx={{ mt: 0.5 }}
-                                    >
-                                        Add
-                                    </Button>
-                                </Box>
+                                <Autocomplete
+                                    multiple
+                                    size="small"
+                                    disableCloseOnSelect
+                                    options={allTags}
+                                    getOptionLabel={(opt) => opt.name}
+                                    value={allTags.filter(t => trail.tags.some(tt => tt.tagId === t.id))}
+                                    onChange={(_e, selected) => {
+                                        setTrail({
+                                            ...trail,
+                                            tags: selected.map(t => ({ tagId: t.id, name: t.name, slug: t.slug, color: t.color })),
+                                        });
+                                    }}
+                                    isOptionEqualToValue={(opt, val) => opt.id === val.id}
+                                    renderOption={(props, option, { selected }) => (
+                                        <li {...props} key={option.id}>
+                                            <Checkbox
+                                                icon={<CheckBoxOutlineBlank fontSize="small" />}
+                                                checkedIcon={<CheckBoxIcon fontSize="small" />}
+                                                checked={selected}
+                                                sx={{ mr: 1 }}
+                                            />
+                                            {option.color && <Box component="span" sx={{ display: 'inline-block', width: 12, height: 12, borderRadius: '50%', backgroundColor: option.color, mr: 1 }} />}
+                                            {option.name}
+                                        </li>
+                                    )}
+                                    renderTags={(value, getTagProps) =>
+                                        value.map((tag, index) => {
+                                            const { key, ...rest } = getTagProps({ index });
+                                            return (
+                                                <Chip
+                                                    key={key}
+                                                    label={tag.name}
+                                                    {...rest}
+                                                    sx={{
+                                                        backgroundColor: tag.color || undefined,
+                                                        color: tag.color ? '#fff' : undefined,
+                                                        '& .MuiChip-deleteIcon': { color: tag.color ? 'rgba(255,255,255,0.7)' : undefined },
+                                                    }}
+                                                    variant={tag.color ? 'filled' : 'outlined'}
+                                                />
+                                            );
+                                        })
+                                    }
+                                    renderInput={(params) => <TextField {...params} label="Tags" placeholder="Search tags..." />}
+                                />
                             </Paper>
                         </Box>
                     ) : <Typography>Trail not found.</Typography>
