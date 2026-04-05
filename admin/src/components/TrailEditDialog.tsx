@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Box, Typography, Alert, CircularProgress, MenuItem, Paper, Chip, Tabs, Tab } from '@mui/material';
+import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Box, Typography, Alert, CircularProgress, MenuItem, Paper, Chip, Tabs, Tab, Autocomplete } from '@mui/material';
 import { Add as AddIcon, History as HistoryIcon, Map as MapIcon, LocalOffer as TagIcon } from '@mui/icons-material';
 import { MapContainer, TileLayer, Polyline, CircleMarker, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -83,7 +83,7 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
     const { tags: allTags } = useTags();
 
     const [newLocId, setNewLocId] = useState('');
-    const [newLocRole, setNewLocRole] = useState<'Start' | 'End' | 'BelongsTo' | 'PassingThrough'>('PassingThrough');
+    const [newLocRole, setNewLocRole] = useState<'Start' | 'End' | 'BelongsTo' | 'PassingThrough'>('BelongsTo');
     const [newTagId, setNewTagId] = useState('');
     const [activeTab, setActiveTab] = useState(0);
 
@@ -238,18 +238,16 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
                                 </Box>
                                 
                                 <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-                                    <TextField 
-                                        select 
-                                        label="Add Location" 
+                                    <Autocomplete
                                         size="small"
-                                        value={newLocId} 
-                                        onChange={(e) => setNewLocId(e.target.value)}
                                         sx={{ flexGrow: 1 }}
-                                    >
-                                        {allLocations.map(loc => (
-                                            <MenuItem key={loc.id} value={loc.id}>{loc.name} ({loc.type})</MenuItem>
-                                        ))}
-                                    </TextField>
+                                        options={allLocations.filter(l => !trail.locations.some(tl => tl.locationId === l.id))}
+                                        getOptionLabel={(opt) => `${opt.name} (${opt.type})`}
+                                        value={allLocations.find(l => l.id === newLocId) ?? null}
+                                        onChange={(_e, val) => setNewLocId(val?.id ?? '')}
+                                        renderInput={(params) => <TextField {...params} label="Add Location" placeholder="Search locations..." />}
+                                        isOptionEqualToValue={(opt, val) => opt.id === val.id}
+                                    />
                                     <TextField 
                                         select 
                                         label="Role" 
