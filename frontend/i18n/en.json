@@ -4,7 +4,9 @@
         "locations": "Locations",
         "about": "About",
         "darkMode": "Switch to dark mode",
-        "lightMode": "Switch to light mode"
+        "lightMode": "Switch to light mode",
+        "switchToEnglish": "Switch to English",
+        "switchToIcelandic": "Switch to Icelandic"
     },
     "home": {
         "nearbyTrails": "Nearby Trails",
@@ -13,7 +15,10 @@
         "trailsTagged": "Trails tagged: {{tags}}",
         "noTrailsMatch": "No trails matching your search criteria",
         "noTrailsFound": "No trails found.",
-        "enableLocation": "Enable location for distance sorting"
+        "enableLocation": "Enable location for distance sorting",
+        "viewMode": "View mode",
+        "listView": "List view",
+        "mapView": "Map view"
     },
     "trail": {
         "backToTrails": "Back to Trails",
@@ -121,7 +126,8 @@
         "backToLocations": "Back to Locations",
         "locationNotFound": "Location not found",
         "trailsIn": "Trails in {{name}} ({{count}})",
-        "noTrailsInLocation": "No trails found in this location yet."
+        "noTrailsInLocation": "No trails found in this location yet.",
+        "parentLocation": "In: {{name}}"
     },
     "qr": {
         "showQR": "Show QR Code",
@@ -139,6 +145,7 @@
     },
     "footer": {
         "checkingApi": "Checking API…",
+        "healthy": "healthy",
         "apiUnavailable": "API unavailable"
     },
     "header": {

@@ -99,7 +99,7 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
                     <Stack direction="row" spacing={1} mb={2}>
                         <Chip label={location.type} color="secondary" variant="outlined" size="small" />
                         {location.parentName && (
-                            <Chip label={`In: ${location.parentName}`} variant="outlined" size="small" />
+                            <Chip label={t('locations.parentLocation', { name: location.parentName })} variant="outlined" size="small" />
                         )}
                     </Stack>
 

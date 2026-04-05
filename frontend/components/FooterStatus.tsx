@@ -45,7 +45,7 @@ export default function FooterStatus() {
                     <Stack direction="row" spacing={1} alignItems="center">
                         <Chip
                             icon={<CheckCircleOutlineIcon />}
-                            label={`${data?.status ?? 'healthy'} • ${data?.version ?? 'v1'}`}
+                            label={`${data?.status ?? t('footer.healthy')} • ${data?.version ?? 'v1'}`}
                             color="success"
                             variant="outlined"
                             size="small"

@@ -4,7 +4,9 @@
         "locations": "Staðsetningar",
         "about": "Um",
         "darkMode": "Skipta yfir í dimmt þema",
-        "lightMode": "Skipta yfir í ljóst þema"
+        "lightMode": "Skipta yfir í ljóst þema",
+        "switchToEnglish": "Switch to English",
+        "switchToIcelandic": "Skipta yfir á íslensku"
     },
     "home": {
         "nearbyTrails": "Leiðir í nágrenninu",
@@ -13,7 +15,10 @@
         "trailsTagged": "Leiðir merktar: {{tags}}",
         "noTrailsMatch": "Engar leiðir passa við leitarskilyrði",
         "noTrailsFound": "Engar leiðir fundust.",
-        "enableLocation": "Leyfa staðsetningu til að raða eftir fjarlægð"
+        "enableLocation": "Leyfa staðsetningu til að raða eftir fjarlægð",
+        "viewMode": "Birting",
+        "listView": "Listayfirlit",
+        "mapView": "Kortayfirlit"
     },
     "trail": {
         "backToTrails": "Til baka",
@@ -121,7 +126,8 @@
         "backToLocations": "Til baka",
         "locationNotFound": "Staðsetning fannst ekki",
         "trailsIn": "Leiðir í {{name}} ({{count}})",
-        "noTrailsInLocation": "Engar leiðir fundust á þessum stað."
+        "noTrailsInLocation": "Engar leiðir fundust á þessum stað.",
+        "parentLocation": "Í: {{name}}"
     },
     "qr": {
         "showQR": "Sýna QR kóða",
@@ -139,6 +145,7 @@
     },
     "footer": {
         "checkingApi": "Athuga API…",
+        "healthy": "virkt",
         "apiUnavailable": "API ekki tiltækt"
     },
     "header": {

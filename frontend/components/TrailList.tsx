@@ -566,12 +566,12 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                         exclusive
                         onChange={(_, value) => value && setViewMode(value)}
                         size="small"
-                        aria-label="view mode"
+                        aria-label={t('home.viewMode')}
                     >
-                        <ToggleButton value="list" aria-label="list view">
+                        <ToggleButton value="list" aria-label={t('home.listView')}>
                             <ListIcon fontSize="small" />
                         </ToggleButton>
-                        <ToggleButton value="map" aria-label="map view">
+                        <ToggleButton value="map" aria-label={t('home.mapView')}>
                             <MapIcon fontSize="small" />
                         </ToggleButton>
                     </ToggleButtonGroup>
