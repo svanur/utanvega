@@ -394,8 +394,15 @@ app.MapGet("/api/v1/admin/trails/{idOrSlug}", [Authorize] async (string idOrSlug
 app.MapPut("/api/v1/admin/trails/{id}", [Authorize] async (Guid id, UpdateTrailCommand command, IMediator mediator) =>
 {
     if (id != command.Id) return Results.BadRequest("ID mismatch");
-    var success = await mediator.Send(command);
-    return success ? Results.NoContent() : Results.NotFound();
+    try
+    {
+        var success = await mediator.Send(command);
+        return success ? Results.NoContent() : Results.NotFound();
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.Conflict(new { error = ex.Message });
+    }
 })
 .WithName("UpdateTrail");
 

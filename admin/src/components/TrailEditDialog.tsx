@@ -132,8 +132,8 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
             });
             onSaveSuccess({ id: trail.id, slug: trail.slug, name: trail.name });
             onClose();
-        } catch (_err) {
-            setError('Failed to save trail.');
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to save trail.');
         } finally {
             setSaving(false);
         }

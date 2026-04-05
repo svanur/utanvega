@@ -24,7 +24,13 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
     const response = await fetch(url, { ...options, headers });
 
     if (!response.ok) {
-        throw new Error(`API error: ${response.statusText}`);
+        let detail = response.statusText;
+        try {
+            const body = await response.json();
+            if (body?.error) detail = body.error;
+            else if (body?.detail) detail = body.detail;
+        } catch { /* no JSON body */ }
+        throw new Error(detail);
     }
 
     if (response.status === 204) {

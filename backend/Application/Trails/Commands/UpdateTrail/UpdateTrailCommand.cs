@@ -45,7 +45,15 @@ public class UpdateTrailCommandHandler : IRequestHandler<UpdateTrailCommand, boo
         if (trail == null) return false;
         
         trail.Name = request.Name;
+        
+        // Reject if slug is taken by a different trail
+        var slugTaken = await _context.Trails.AnyAsync(t => t.Slug == request.Slug && t.Id != request.Id, cancellationToken);
+        if (slugTaken)
+        {
+            throw new InvalidOperationException($"A trail with slug '{request.Slug}' already exists.");
+        }
         trail.Slug = request.Slug;
+        
         trail.Description = request.Description;
         
         if (Enum.TryParse<ActivityType>(request.ActivityType, true, out var activityType))

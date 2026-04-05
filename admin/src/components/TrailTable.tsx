@@ -1,4 +1,4 @@
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Chip, Button, Box, Checkbox, TableSortLabel, Tooltip, IconButton, Paper } from '@mui/material';
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Chip, Button, Box, Checkbox, TableSortLabel, Tooltip, IconButton, Paper, Link } from '@mui/material';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import MapIcon from '@mui/icons-material/Map';
 import EditIcon from '@mui/icons-material/Edit';
@@ -124,7 +124,15 @@ function TrailRow({ trail, selected, onSelect, onViewMap, onEdit, onDelete, onRe
         <Checkbox checked={selected} onChange={onSelect} />
       </TableCell>
       <TableCell component="th" scope="row">
-        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{trail.name}</Typography>
+        <Link
+          component="button"
+          variant="body2"
+          sx={{ fontWeight: 'bold', textAlign: 'left', cursor: 'pointer' }}
+          underline="hover"
+          onClick={onEdit}
+        >
+          {trail.name}
+        </Link>
         {trail.description && (
           <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block', maxWidth: 300 }}>
             {trail.description}
