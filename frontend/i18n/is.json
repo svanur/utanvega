@@ -153,9 +153,9 @@
     },
     "about": {
         "title": "Um Utanvega",
-        "description": "Utanvega er vefur til að finna skemmtilegar leiðir fyrir hlaupara, gönguferðafólk og hjólreiðamenn á Íslandi. Finndu leiðir nálægt þér, skoðaðu hæðarsnið og deildu eftirlætisleiðum með vinum.",
-        "authorTitle": "Búið til af Svanur",
-        "authorDescription": "Utanvegahlaupari og forritari á Íslandi sem smíðar verkfæri til að hjálpa fólki að uppgötva og njóta útivistar.",
+        "description": "Utanvega er vefur til að finna skemmtilegar leiðir fyrir hlaupara, göngufólk og hjólreiðamenn á Íslandi. Finndu leiðir nálægt þér, skoðaðu kort og hæðarsnið og deildu eftirlætisleiðum með vinum.",
+        "authorTitle": "Um mig",
+        "authorDescription": "Utanvega er gæluverkefni sem byrjaði með excel skjali þar sem ég skráði niður áhugaverðar utanvegaleiðir. Auk þess að vera utanvegahlaupari/þjálfari, þá er hugbúnaðargerð 'hin vinnan' mín. Á utanvega mætast því vinnan og áhugamálið. Vonandi njótið þið vel og lengi. Svanur.",
         "changelogTitle": "Breytingasaga",
         "changelog": {
             "v1_5": {
