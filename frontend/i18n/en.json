@@ -16,6 +16,7 @@
         "noTrailsMatch": "No trails matching your search criteria",
         "noTrailsFound": "No trails found.",
         "enableLocation": "Enable location for distance sorting",
+        "locationDenied": "Location blocked — allow in browser settings",
         "viewMode": "View mode",
         "listView": "List view",
         "mapView": "Map view"

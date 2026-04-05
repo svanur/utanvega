@@ -73,8 +73,29 @@ export function useTrails() {
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+    const [locationDenied, setLocationDenied] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
+
+    const requestLocation = () => {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    setUserLocation({
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    });
+                    setLocationDenied(false);
+                },
+                (err) => {
+                    console.warn('Geolocation failed:', err.message);
+                    if (err.code === GeolocationPositionError.PERMISSION_DENIED) {
+                        setLocationDenied(true);
+                    }
+                }
+            );
+        }
+    };
 
     const fetchTrails = (isRefreshing = false) => {
         if (isRefreshing) {
@@ -85,19 +106,7 @@ export function useTrails() {
         setError(null);
 
         // Get user location
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    setUserLocation({
-                        lat: position.coords.latitude,
-                        lng: position.coords.longitude
-                    });
-                },
-                (err) => {
-                    console.warn('Geolocation failed:', err.message);
-                }
-            );
-        }
+        requestLocation();
 
         // Fetch trails
         return fetch(`${API_URL}/api/v1/trails`)
@@ -225,7 +234,9 @@ export function useTrails() {
         refreshing,
         refresh,
         error, 
-        userLocation, 
+        userLocation,
+        locationDenied,
+        requestLocation,
         searchQuery, 
         setSearchQuery,
         filters,

@@ -16,6 +16,7 @@
         "noTrailsMatch": "Engar leiðir passa við leitarskilyrði",
         "noTrailsFound": "Engar leiðir fundust.",
         "enableLocation": "Leyfa staðsetningu til að raða eftir fjarlægð",
+        "locationDenied": "Staðsetning lokuð — leyfa í stillingum vafrans",
         "viewMode": "Birting",
         "listView": "Listayfirlit",
         "mapView": "Kortayfirlit"

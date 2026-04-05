@@ -22,7 +22,8 @@ import {
     FormControlLabel,
     Checkbox,
     Fade,
-    Chip
+    Chip,
+    Tooltip
 } from '@mui/material';
 import { 
     Search as SearchIcon, 
@@ -35,7 +36,8 @@ import {
     VisibilityOff as VisibilityOffIcon,
     Visibility as VisibilityIcon,
     Refresh as RefreshIcon,
-    Sort as SortIcon
+    Sort as SortIcon,
+    MyLocation as MyLocationIcon
 } from '@mui/icons-material';
 import { useTrails } from '../hooks/useTrails';
 import type { SortOption } from '../hooks/useTrails';
@@ -58,7 +60,9 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
         refreshing,
         refresh,
         error, 
-        userLocation, 
+        userLocation,
+        locationDenied,
+        requestLocation,
         searchQuery, 
         setSearchQuery,
         filters,
@@ -558,6 +562,17 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                     </Typography>
                 </Typography>
                 <Box display="flex" alignItems="center" gap={1}>
+                    {!userLocation && viewMode === 'list' && (
+                        <Tooltip title={locationDenied ? t('home.locationDenied') : t('home.enableLocation')}>
+                            <IconButton
+                                size="small"
+                                onClick={requestLocation}
+                                color={locationDenied ? 'warning' : 'primary'}
+                            >
+                                <MyLocationIcon fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                    )}
                     {viewMode === 'list' && (
                         <Select
                             value={filters.sortBy}
