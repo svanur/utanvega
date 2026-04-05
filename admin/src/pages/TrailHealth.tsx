@@ -3,11 +3,16 @@ import {
   Box, Typography, Paper, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, TableSortLabel, Chip, LinearProgress, Card,
   CardContent, Stack, Tooltip, IconButton, TextField, InputAdornment,
+  Collapse, Alert, AlertTitle, List, ListItem, ListItemText, ListItemIcon,
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import EditIcon from '@mui/icons-material/Edit';
 import SearchIcon from '@mui/icons-material/Search';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { apiFetch } from '../hooks/api';
 
 interface LocationInfo {
@@ -37,6 +42,14 @@ interface HealthCheck {
   label: string;
   passed: boolean;
   tooltip: string;
+}
+
+interface DuplicatePair {
+  trailAId: string;
+  trailAName: string;
+  trailBId: string;
+  trailBName: string;
+  matchPercentage: number;
 }
 
 function getHealthChecks(trail: TrailDto): HealthCheck[] {
@@ -104,6 +117,24 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
   const [sortField, setSortField] = useState<SortField>('score');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [search, setSearch] = useState('');
+  const [duplicates, setDuplicates] = useState<DuplicatePair[]>([]);
+  const [dupsLoading, setDupsLoading] = useState(true);
+  const [dupsExpanded, setDupsExpanded] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDeleteDuplicate = async (trailId: string, trailName: string) => {
+    if (!confirm(`Delete "${trailName}"? This will soft-delete the trail.`)) return;
+    try {
+      setDeletingId(trailId);
+      await apiFetch(`/api/v1/admin/trails/${trailId}`, { method: 'DELETE' });
+      setDuplicates(prev => prev.filter(d => d.trailAId !== trailId && d.trailBId !== trailId));
+      onNotify(`"${trailName}" deleted`);
+    } catch (_err) {
+      onNotify('Failed to delete trail', 'error');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -114,6 +145,16 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
         onNotify('Failed to load trails', 'error');
       } finally {
         setLoading(false);
+      }
+    })();
+    (async () => {
+      try {
+        const data = await apiFetch<DuplicatePair[]>('/api/v1/admin/trails/duplicates?threshold=90');
+        setDuplicates(data);
+      } catch (_err) {
+        console.error('Failed to load duplicates');
+      } finally {
+        setDupsLoading(false);
       }
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps -- onNotify callback reference changes on every render
@@ -172,7 +213,85 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
         <SummaryCard title="Perfect (100%)" value={perfectCount} color="#2e7d32" />
         <SummaryCard title="Critical (<50%)" value={criticalCount} color="#d32f2f" />
         <SummaryCard title="Published" value={`${publishedCount}/${trails.length}`} color="#7b1fa2" />
+        <SummaryCard
+          title="Duplicates"
+          value={dupsLoading ? '...' : duplicates.length}
+          color={duplicates.length > 0 ? '#d32f2f' : '#2e7d32'}
+        />
       </Stack>
+
+      {/* Duplicates Section */}
+      {dupsLoading && (
+        <Alert severity="info" sx={{ mb: 2 }} icon={<ContentCopyIcon />}>
+          <AlertTitle>Scanning for duplicates...</AlertTitle>
+          Comparing {trails.length > 0 ? `${trails.length} trails` : 'trails'} — this may take a moment.
+          <LinearProgress sx={{ mt: 1 }} />
+        </Alert>
+      )}
+      {!dupsLoading && duplicates.length > 0 && (
+        <Alert
+          severity="warning"
+          sx={{ mb: 2, cursor: 'pointer' }}
+          icon={<ContentCopyIcon />}
+          action={
+            <IconButton size="small" onClick={() => setDupsExpanded(!dupsExpanded)}>
+              {dupsExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+            </IconButton>
+          }
+          onClick={() => setDupsExpanded(!dupsExpanded)}
+        >
+          <AlertTitle>
+            {duplicates.length} potential duplicate{duplicates.length !== 1 ? 's' : ''} found (≥90% overlap)
+          </AlertTitle>
+          <Collapse in={dupsExpanded}>
+            <List dense disablePadding>
+              {duplicates.map((d, i) => (
+                <ListItem key={i} disableGutters>
+                  <ListItemIcon sx={{ minWidth: 32 }}>
+                    <Chip label={`${d.matchPercentage}%`} size="small" color="error" variant="outlined" />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={`"${d.trailAName}" ↔ "${d.trailBName}"`}
+                    primaryTypographyProps={{ variant: 'body2' }}
+                  />
+                  <Stack direction="row" spacing={0.5}>
+                    {onEditTrail && (
+                      <>
+                        <IconButton size="small" onClick={(e) => { e.stopPropagation(); onEditTrail(d.trailAId); }} title={`Edit ${d.trailAName}`}>
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton size="small" onClick={(e) => { e.stopPropagation(); onEditTrail(d.trailBId); }} title={`Edit ${d.trailBName}`}>
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                      </>
+                    )}
+                    <Tooltip title={`Delete "${d.trailAName}"`} arrow>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        disabled={deletingId === d.trailAId}
+                        onClick={(e) => { e.stopPropagation(); handleDeleteDuplicate(d.trailAId, d.trailAName); }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title={`Delete "${d.trailBName}"`} arrow>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        disabled={deletingId === d.trailBId}
+                        onClick={(e) => { e.stopPropagation(); handleDeleteDuplicate(d.trailBId, d.trailBName); }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Stack>
+                </ListItem>
+              ))}
+            </List>
+          </Collapse>
+        </Alert>
+      )}
 
       {/* Search */}
       <TextField

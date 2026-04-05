@@ -21,6 +21,7 @@ using Utanvega.Backend.Application.Locations.Queries.GetLocations;
 using Utanvega.Backend.Application.Locations.Commands.CreateLocation;
 using Utanvega.Backend.Application.Locations.Commands.UpdateLocation;
 using Utanvega.Backend.Application.Locations.Commands.DeleteLocation;
+using Utanvega.Backend.Application.Trails.Queries.GetDuplicateTrails;
 using Utanvega.Backend.Application.History.Queries.GetChangeLogs;
 using Utanvega.Backend.Application.Trails.Queries.GetTrailBySlug;
 using Utanvega.Backend.Application.Locations.Queries.GetLocationBySlug;
@@ -760,6 +761,14 @@ app.MapGet("/api/v1/admin/history", [Authorize] async (string? entityName, strin
     return Results.Ok(logs);
 })
 .WithName("GetHistory");
+
+// Duplicate Detection
+app.MapGet("/api/v1/admin/trails/duplicates", [Authorize] async (double? threshold, IMediator mediator) =>
+{
+    var duplicates = await mediator.Send(new GetDuplicateTrailsQuery(threshold ?? 95));
+    return Results.Ok(duplicates);
+})
+.WithName("GetDuplicateTrails");
 
 app.Run();
 

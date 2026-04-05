@@ -37,6 +37,12 @@ public class CreateTrailFromGpxCommandHandler : IRequestHandler<CreateTrailFromG
 
         var matches = await CheckSimilarityAsync(trail, cancellationToken);
 
+        // Ensure slug is unique
+        while (await _context.Trails.AnyAsync(t => t.Slug == trail.Slug, cancellationToken))
+        {
+            trail.Slug += "-" + Guid.NewGuid().ToString()[..4];
+        }
+
         _context.Trails.Add(trail);
 
         // Auto-detect and link locations based on trail start point
