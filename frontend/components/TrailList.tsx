@@ -47,6 +47,7 @@ import { useTrails, ALL_ACTIVITY_TYPES } from '../hooks/useTrails';
 import type { SortOption, FilterState } from '../hooks/useTrails';
 import { useFavorites } from '../hooks/useFavorites';
 import { useHiddenTrails } from '../hooks/useHiddenTrails';
+import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
 import { useLocationTree } from '../hooks/useLocations';
 import type { LocationTreeNode } from '../hooks/useLocations';
 import { TrailCard } from './TrailCard';
@@ -80,6 +81,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
 
     const { favorites, toggleFavorite } = useFavorites();
     const { hiddenSlugs, hideTrail, clearHidden } = useHiddenTrails();
+    const { recentSlugs } = useRecentlyViewed();
     const { tree: locationTree } = useLocationTree();
     const navigate = useNavigate();
 
@@ -207,6 +209,18 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
         }
         return result;
     }, [trails, filters.favoritesOnly, favorites, hiddenSlugs, showHidden, hidingSlugs]);
+
+    // Recently viewed trails (resolved from slugs → trail objects)
+    const recentTrails = React.useMemo(() => {
+        if (!recentSlugs.length || !trails.length) return [] as typeof trails;
+        const result: typeof trails = [];
+        for (const slug of recentSlugs) {
+            const found = trails.find(t => t.slug === slug);
+            if (found) result.push(found);
+            if (result.length >= 6) break;
+        }
+        return result;
+    }, [recentSlugs, trails]);
 
     // Derived values for filters
     const locations = React.useMemo(() => {
@@ -692,6 +706,31 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                     </Grid>
                 </Box>
             </Collapse>
+
+            {/* Recently Viewed — show when no filters active */}
+            {recentTrails.length > 0 && viewMode === 'list' && !searchQuery && !filters.favoritesOnly && (
+                <Box mb={3}>
+                    <Typography variant="subtitle1" fontWeight="bold" mb={1} color="text.secondary">
+                        {t('home.recentlyViewed')}
+                    </Typography>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            gap: 2,
+                            overflowX: 'auto',
+                            pb: 1,
+                            '&::-webkit-scrollbar': { height: 4 },
+                            '&::-webkit-scrollbar-thumb': { borderRadius: 2, bgcolor: 'divider' },
+                        }}
+                    >
+                        {recentTrails.map(trail => (
+                            <Box key={trail.slug} sx={{ minWidth: 260, maxWidth: 300 }}>
+                                <TrailCard trail={trail} compact disableGestures />
+                            </Box>
+                        ))}
+                    </Box>
+                </Box>
+            )}
 
             <Box mb={2} display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1}>
                 <Typography variant="h5" fontWeight="bold">

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { 
@@ -38,6 +38,7 @@ import Layout from '../components/Layout';
 import { useTrailBySlug, useTrails, useTrailSuggestions } from '../hooks/useTrails';
 import LostRunner from '../components/LostRunner';
 import { useFavorites } from '../hooks/useFavorites';
+import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
 import TrailMap, { GeoJsonGeometry } from '../components/TrailMap';
 import ElevationChart from '../components/ElevationChart';
 import RoutePlayback from '../components/RoutePlayback';
@@ -87,10 +88,16 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     const { trail, loading, error } = useTrailBySlug(slug);
     const { trails: allTrails } = useTrails();
     const { isFavorite, toggleFavorite } = useFavorites();
+    const { addRecent } = useRecentlyViewed();
     const { suggestions, loading: suggestionsLoading } = useTrailSuggestions(slug, !!error || (!loading && !trail));
     const [geometry, setGeometry] = useState<GeoJsonGeometry | null>(null);
     const [hoverPoint, setHoverPoint] = useState<{ lat: number; lng: number } | null>(null);
     const [playbackIndex, setPlaybackIndex] = useState<number | null>(null);
+
+    // Record trail view for "recently viewed"
+    React.useEffect(() => {
+        if (trail?.slug) addRecent(trail.slug);
+    }, [trail?.slug, addRecent]);
 
     const relatedTrails = (allTrails && trail) 
         ? (() => {

@@ -11,6 +11,7 @@
     "home": {
         "nearbyTrails": "Leiðir í nágrenninu",
         "allTrails": "Leiðir",
+        "recentlyViewed": "Nýlega skoðað",
         "trailMap": "Kort",
         "trailsTagged": "Leiðir merktar: {{tags}}",
         "noTrailsMatch": "Engar leiðir passa við leitarskilyrði",
