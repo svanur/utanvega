@@ -427,25 +427,28 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                         Hiking: <HikingIcon fontSize="small" />,
                         Cycling: <DirectionsBikeIcon fontSize="small" />,
                     }[type];
+                    const label = t(`difficulty.${type.charAt(0).toLowerCase() + type.slice(1)}`);
                     return (
-                        <Chip
-                            key={type}
-                            icon={icon}
-                            label={t(`difficulty.${type.charAt(0).toLowerCase() + type.slice(1)}`)}
-                            onClick={() => {
-                                const current = filters.selectedActivityTypes;
-                                const updated = selected
-                                    ? current.filter(t => t !== type)
-                                    : [...current, type];
-                                setFilters(f => ({ ...f, selectedActivityTypes: updated.length > 0 ? updated : [...ALL_ACTIVITY_TYPES] }));
-                            }}
-                            color={selected ? 'primary' : 'default'}
-                            variant={selected ? 'filled' : 'outlined'}
-                            sx={{ 
-                                fontWeight: selected ? 'bold' : 'normal',
-                                opacity: selected ? 1 : 0.6,
-                            }}
-                        />
+                        <Tooltip key={type} title={label} arrow>
+                            <Chip
+                                icon={icon}
+                                label={label}
+                                onClick={() => {
+                                    const current = filters.selectedActivityTypes;
+                                    const updated = selected
+                                        ? current.filter(t => t !== type)
+                                        : [...current, type];
+                                    setFilters(f => ({ ...f, selectedActivityTypes: updated.length > 0 ? updated : [...ALL_ACTIVITY_TYPES] }));
+                                }}
+                                color={selected ? 'primary' : 'default'}
+                                variant={selected ? 'filled' : 'outlined'}
+                                sx={{ 
+                                    fontWeight: selected ? 'bold' : 'normal',
+                                    opacity: selected ? 1 : 0.6,
+                                    '& .MuiChip-label': { display: { xs: 'none', sm: 'block' } },
+                                }}
+                            />
+                        </Tooltip>
                     );
                 })}
             </Box>
