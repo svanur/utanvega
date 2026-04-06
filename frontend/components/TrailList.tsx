@@ -44,14 +44,14 @@ import {
     DirectionsBike as DirectionsBikeIcon
 } from '@mui/icons-material';
 import { useTrails, ALL_ACTIVITY_TYPES } from '../hooks/useTrails';
-import type { SortOption } from '../hooks/useTrails';
+import type { SortOption, FilterState } from '../hooks/useTrails';
 import { useFavorites } from '../hooks/useFavorites';
 import { useHiddenTrails } from '../hooks/useHiddenTrails';
 import { useLocationTree } from '../hooks/useLocations';
 import type { LocationTreeNode } from '../hooks/useLocations';
 import { TrailCard } from './TrailCard';
 import { TrailMapView } from './TrailMapView';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import RunningLoader from './RunningLoader';
 import ListSubheader from '@mui/material/ListSubheader';
 
@@ -61,6 +61,7 @@ interface TrailListProps {
 
 export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
     const { t } = useTranslation();
+    const [searchParams, setSearchParams] = useSearchParams();
     const { 
         trails, 
         loading, 
@@ -81,6 +82,57 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
     const { hiddenSlugs, hideTrail, clearHidden } = useHiddenTrails();
     const { tree: locationTree } = useLocationTree();
     const navigate = useNavigate();
+
+    const [showAdvanced, setShowAdvanced] = React.useState(false);
+    const [viewMode, setViewMode] = React.useState<'list' | 'map'>('list');
+    const [showHidden, setShowHidden] = React.useState(false);
+    const [hidingSlugs, setHidingSlugs] = React.useState<string[]>([]);
+
+    // Initialize filters from URL params on first render
+    const urlInitialized = React.useRef(false);
+    React.useEffect(() => {
+        if (urlInitialized.current) return;
+        urlInitialized.current = true;
+
+        const q = searchParams.get('q');
+        const activity = searchParams.get('activity');
+        const difficulty = searchParams.get('difficulty');
+        const trailType = searchParams.get('trailType');
+        const sort = searchParams.get('sort') as SortOption | null;
+        const view = searchParams.get('view');
+
+        if (q) setSearchQuery(q);
+        if (view === 'map') setViewMode('map');
+
+        const updates: Partial<FilterState> = {};
+        if (activity) updates.selectedActivityTypes = activity.split(',');
+        if (difficulty && difficulty !== 'All') updates.difficulty = difficulty;
+        if (trailType && trailType !== 'All') updates.trailType = trailType;
+        if (sort) updates.sortBy = sort;
+
+        if (Object.keys(updates).length > 0) {
+            setFilters(prev => ({ ...prev, ...updates }));
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Sync filters → URL params (skip defaults to keep URL clean)
+    React.useEffect(() => {
+        if (!urlInitialized.current) return;
+        const params = new URLSearchParams();
+
+        if (searchQuery) params.set('q', searchQuery);
+        if (filters.selectedActivityTypes.length < ALL_ACTIVITY_TYPES.length) {
+            params.set('activity', filters.selectedActivityTypes.join(','));
+        }
+        if (filters.difficulty !== 'All') params.set('difficulty', filters.difficulty);
+        if (filters.trailType !== 'All') params.set('trailType', filters.trailType);
+        if (filters.sortBy !== 'distance') params.set('sort', filters.sortBy);
+        if (viewMode === 'map') params.set('view', 'map');
+
+        setSearchParams(params, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchQuery, filters.selectedActivityTypes, filters.difficulty, filters.trailType, filters.sortBy, viewMode]);
 
     // Build flat list of locations with depth + descendant slug sets for the dropdown
     const { locationMenuItems, descendantSlugs } = React.useMemo(() => {
@@ -104,7 +156,6 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
     }, [locationTree]);
 
     // Sync URL tag slug with filter state
-    // Only sync on mount or when URL tag changes, not when filters/setFilters change
     React.useEffect(() => {
         if (tagSlug && !filters.selectedTags.includes(tagSlug)) {
             setFilters(prev => ({ ...prev, selectedTags: [tagSlug] }));
@@ -112,10 +163,6 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [tagSlug]);
 
-    const [showAdvanced, setShowAdvanced] = React.useState(false);
-    const [viewMode, setViewMode] = React.useState<'list' | 'map'>('list');
-    const [showHidden, setShowHidden] = React.useState(false);
-    const [hidingSlugs, setHidingSlugs] = React.useState<string[]>([]);
     const [touchStart, setTouchStart] = React.useState<number | null>(null);
     const [pullOffset, setPullOffset] = React.useState(0);
     const PULL_THRESHOLD = 80;
