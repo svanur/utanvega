@@ -179,7 +179,7 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
                             <Box sx={{ minWidth: 200, p: 0.5 }}>
                                 <Typography variant="h6" gutterBottom>{trail.name}</Typography>
                                 <Typography variant="body2" color="textSecondary" gutterBottom>
-                                    {trail.trailType} • {trail.length} km
+                                    {trail.trailType} • {(trail.length / 1000).toFixed(1)} km
                                 </Typography>
                                 {trail.description && (
                                     <Typography variant="body2" sx={{ mb: 1, maxHeight: 60, overflow: 'hidden', textOverflow: 'ellipsis' }}>

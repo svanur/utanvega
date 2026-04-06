@@ -68,7 +68,7 @@ function computeLocationStats(trails: Trail[], locationSlug: string): LocationSt
     let totalElevationGain = 0;
 
     for (const t of matching) {
-        totalKm += t.length;
+        totalKm += t.length / 1000;
         totalElevationGain += t.elevationGain;
         const act = t.activityType?.toLowerCase() || 'unknown';
         activityCounts[act] = (activityCounts[act] || 0) + 1;
