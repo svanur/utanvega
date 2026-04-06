@@ -58,6 +58,7 @@ import { useLocationTree } from '../hooks/useLocations';
 import type { LocationTreeNode } from '../hooks/useLocations';
 import { TrailCard } from './TrailCard';
 import { TrailMapView } from './TrailMapView';
+import ShareButtons from './ShareButtons';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import ListSubheader from '@mui/material/ListSubheader';
 
@@ -850,6 +851,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                             <MapIcon fontSize="small" />
                         </ToggleButton>
                     </ToggleButtonGroup>
+                    <ShareButtons title={t('home.allTrails')} />
                 </Box>
             </Box>
 
