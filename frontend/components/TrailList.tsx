@@ -23,7 +23,11 @@ import {
     Checkbox,
     Fade,
     Chip,
-    Tooltip
+    Tooltip,
+    Skeleton,
+    Card,
+    CardContent,
+    Stack
 } from '@mui/material';
 import { 
     Search as SearchIcon, 
@@ -53,7 +57,6 @@ import type { LocationTreeNode } from '../hooks/useLocations';
 import { TrailCard } from './TrailCard';
 import { TrailMapView } from './TrailMapView';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import RunningLoader from './RunningLoader';
 import ListSubheader from '@mui/material/ListSubheader';
 
 interface TrailListProps {
@@ -245,9 +248,30 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
 
     if (loading) {
         return (
-            <Box display="flex" justifyContent="center" p={4}>
-                <RunningLoader />
-            </Box>
+            <Container maxWidth="md" sx={{ mt: 2 }}>
+                {Array.from({ length: 5 }).map((_, i) => (
+                    <Card key={i} sx={{ mb: 2 }}>
+                        <CardContent>
+                            <Box display="flex" justifyContent="space-between" alignItems="center">
+                                <Skeleton variant="text" width="60%" height={32} />
+                                <Skeleton variant="circular" width={20} height={20} />
+                            </Box>
+                            <Skeleton variant="text" width="90%" height={18} sx={{ mt: 0.5 }} />
+                            <Skeleton variant="text" width="70%" height={18} />
+                            <Box display="flex" gap={1} mt={1.5}>
+                                <Skeleton variant="rounded" width={90} height={24} />
+                                <Skeleton variant="rounded" width={70} height={24} />
+                                <Skeleton variant="rounded" width={80} height={24} />
+                            </Box>
+                            <Stack direction="row" spacing={2} mt={2}>
+                                <Skeleton variant="text" width={60} height={20} />
+                                <Skeleton variant="text" width={60} height={20} />
+                                <Skeleton variant="text" width={60} height={20} />
+                            </Stack>
+                        </CardContent>
+                    </Card>
+                ))}
+            </Container>
         );
     }
 
