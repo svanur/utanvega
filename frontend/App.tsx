@@ -5,6 +5,8 @@ import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-
 import { createAppTheme } from './theme';
 import ErrorBoundary from './components/ErrorBoundary';
 import HomePage from './pages/HomePage';
+import { useEasterEggs } from './hooks/useEasterEggs';
+import { EasterEggs } from './components/EasterEggs';
 
 // Lazy-loaded pages (not needed on initial load)
 const TrailDetailsPage = lazy(() => import('./pages/TrailDetailsPage'));
@@ -42,6 +44,8 @@ export default function App() {
         });
     };
 
+    const { activeEgg, clearEgg } = useEasterEggs();
+
     return (
         <ThemeProvider theme={theme}>
             <CssBaseline />
@@ -78,6 +82,7 @@ export default function App() {
                 </Suspense>
             </BrowserRouter>
             </ErrorBoundary>
+            <EasterEggs activeEgg={activeEgg} onComplete={clearEgg} />
         </ThemeProvider>
     );
 }

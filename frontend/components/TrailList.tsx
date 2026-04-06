@@ -98,6 +98,16 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
     const [showAdvanced, setShowAdvanced] = React.useState(false);
     const [viewMode, setViewMode] = React.useState<'list' | 'map'>('list');
     const [showHidden, setShowHidden] = React.useState(false);
+
+    // Easter egg: "hin upprunalegu" in search triggers The Originals
+    const originalsTriggered = React.useRef(false);
+    React.useEffect(() => {
+        if (searchQuery.toLowerCase().trim() === 'hin upprunalegu' && !originalsTriggered.current) {
+            originalsTriggered.current = true;
+            window.dispatchEvent(new CustomEvent('easter-egg', { detail: { egg: 'originals' } }));
+            setTimeout(() => { originalsTriggered.current = false; }, 10000);
+        }
+    }, [searchQuery]);
     const [hidingSlugs, setHidingSlugs] = React.useState<string[]>([]);
     const recentScrollRef = React.useRef<HTMLDivElement>(null);
 
