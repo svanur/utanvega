@@ -63,67 +63,72 @@ export default function TrailSlotMachine({ open, trailNames, winner, onComplete 
             sx={{
                 zIndex: (theme) => theme.zIndex.modal + 1,
                 bgcolor: 'rgba(0, 0, 0, 0.85)',
+                display: 'flex',
                 flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
                 gap: 3,
             }}
         >
-            <CasinoIcon
-                sx={{
-                    fontSize: 56,
-                    color: '#fff',
-                    animation: settled ? 'none' : 'spin 0.5s linear infinite',
-                    '@keyframes spin': {
-                        '0%': { transform: 'rotate(0deg)' },
-                        '100%': { transform: 'rotate(360deg)' },
-                    },
-                }}
-            />
-
-            <Box
-                sx={{
-                    border: '2px solid',
-                    borderColor: settled ? 'success.main' : 'grey.600',
-                    borderRadius: 3,
-                    px: 4,
-                    py: 2,
-                    minWidth: { xs: 260, sm: 350 },
-                    textAlign: 'center',
-                    bgcolor: settled ? 'rgba(76, 175, 80, 0.15)' : 'rgba(255,255,255,0.05)',
-                    transition: 'all 0.3s ease',
-                }}
-            >
-                <Typography
-                    variant="h5"
+            <Box display="flex" flexDirection="column" alignItems="center" gap={3}>
+                <CasinoIcon
                     sx={{
+                        fontSize: 56,
                         color: '#fff',
-                        fontWeight: settled ? 'bold' : 'normal',
-                        fontSize: { xs: '1.2rem', sm: '1.5rem' },
-                        transition: 'font-weight 0.2s',
-                        minHeight: '2em',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                    }}
-                >
-                    {displayName || '...'}
-                </Typography>
-            </Box>
-
-            {settled && (
-                <Typography
-                    variant="body2"
-                    sx={{
-                        color: 'grey.400',
-                        animation: 'fadeIn 0.4s ease-in',
-                        '@keyframes fadeIn': {
-                            '0%': { opacity: 0 },
-                            '100%': { opacity: 1 },
+                        animation: settled ? 'none' : 'spin 0.5s linear infinite',
+                        '@keyframes spin': {
+                            '0%': { transform: 'rotate(0deg)' },
+                            '100%': { transform: 'rotate(360deg)' },
                         },
                     }}
+                />
+
+                <Box
+                    sx={{
+                        border: '2px solid',
+                        borderColor: settled ? 'success.main' : 'grey.500',
+                        borderRadius: 3,
+                        px: 4,
+                        py: 2,
+                        minWidth: { xs: 260, sm: 350 },
+                        textAlign: 'center',
+                        bgcolor: settled ? 'rgba(76, 175, 80, 0.15)' : 'rgba(255,255,255,0.08)',
+                        transition: 'all 0.3s ease',
+                    }}
                 >
-                    🏃 Let&apos;s go!
-                </Typography>
-            )}
+                    <Typography
+                        variant="h5"
+                        sx={{
+                            color: '#fff',
+                            fontWeight: settled ? 'bold' : 'normal',
+                            fontSize: { xs: '1.2rem', sm: '1.5rem' },
+                            transition: 'font-weight 0.2s',
+                            minHeight: '2em',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}
+                    >
+                        {displayName || '...'}
+                    </Typography>
+                </Box>
+
+                {settled && (
+                    <Typography
+                        variant="body2"
+                        sx={{
+                            color: 'grey.400',
+                            animation: 'fadeIn 0.4s ease-in',
+                            '@keyframes fadeIn': {
+                                '0%': { opacity: 0 },
+                                '100%': { opacity: 1 },
+                            },
+                        }}
+                    >
+                        🏃 Let&apos;s go!
+                    </Typography>
+                )}
+            </Box>
         </Backdrop>
     );
 }
