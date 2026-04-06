@@ -1,6 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { Box, Typography, Backdrop } from '@mui/material';
-import CasinoIcon from '@mui/icons-material/Casino';
 
 interface TrailSlotMachineProps {
     open: boolean;
@@ -12,7 +10,7 @@ interface TrailSlotMachineProps {
 export default function TrailSlotMachine({ open, trailNames, winner, onComplete }: TrailSlotMachineProps) {
     const [displayName, setDisplayName] = useState('');
     const [settled, setSettled] = useState(false);
-    const intervalRef = useRef<ReturnType<typeof setInterval>>();
+    const intervalRef = useRef<ReturnType<typeof setTimeout>>();
     const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
     const onCompleteRef = useRef(onComplete);
     const winnerRef = useRef(winner);
@@ -58,77 +56,66 @@ export default function TrailSlotMachine({ open, trailNames, winner, onComplete 
     if (!open) return null;
 
     return (
-        <Backdrop
-            open={open}
-            sx={{
-                zIndex: (theme) => theme.zIndex.modal + 1,
-                bgcolor: 'rgba(0, 0, 0, 0.85)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 3,
-            }}
-        >
-            <Box display="flex" flexDirection="column" alignItems="center" gap={3}>
-                <CasinoIcon
-                    sx={{
-                        fontSize: 56,
-                        color: '#fff',
-                        animation: settled ? 'none' : 'spin 0.5s linear infinite',
-                        '@keyframes spin': {
-                            '0%': { transform: 'rotate(0deg)' },
-                            '100%': { transform: 'rotate(360deg)' },
-                        },
-                    }}
-                />
+        <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 9999,
+            backgroundColor: 'rgba(0, 0, 0, 0.88)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '24px',
+        }}>
+            {/* Spinning dice emoji */}
+            <div style={{
+                fontSize: '48px',
+                animation: settled ? 'none' : 'slotSpin 0.5s linear infinite',
+            }}>
+                🎲
+            </div>
+            <style>{`@keyframes slotSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
 
-                <Box
-                    sx={{
-                        border: '2px solid',
-                        borderColor: settled ? 'success.main' : 'grey.500',
-                        borderRadius: 3,
-                        px: 4,
-                        py: 2,
-                        minWidth: { xs: 260, sm: 350 },
-                        textAlign: 'center',
-                        bgcolor: settled ? 'rgba(76, 175, 80, 0.15)' : 'rgba(255,255,255,0.08)',
-                        transition: 'all 0.3s ease',
-                    }}
-                >
-                    <Typography
-                        variant="h5"
-                        sx={{
-                            color: '#fff',
-                            fontWeight: settled ? 'bold' : 'normal',
-                            fontSize: { xs: '1.2rem', sm: '1.5rem' },
-                            transition: 'font-weight 0.2s',
-                            minHeight: '2em',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                        }}
-                    >
-                        {displayName || '...'}
-                    </Typography>
-                </Box>
+            {/* Trail name display */}
+            <div style={{
+                border: `2px solid ${settled ? '#4caf50' : '#666'}`,
+                borderRadius: '12px',
+                padding: '16px 32px',
+                minWidth: '260px',
+                maxWidth: '90vw',
+                textAlign: 'center',
+                backgroundColor: settled ? 'rgba(76, 175, 80, 0.15)' : 'rgba(255, 255, 255, 0.08)',
+                transition: 'all 0.3s ease',
+            }}>
+                <div style={{
+                    color: '#ffffff',
+                    fontWeight: settled ? 'bold' : 'normal',
+                    fontSize: settled ? '1.4rem' : '1.2rem',
+                    minHeight: '2em',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.2s',
+                    fontFamily: 'inherit',
+                }}>
+                    {displayName || '...'}
+                </div>
+            </div>
 
-                {settled && (
-                    <Typography
-                        variant="body2"
-                        sx={{
-                            color: 'grey.400',
-                            animation: 'fadeIn 0.4s ease-in',
-                            '@keyframes fadeIn': {
-                                '0%': { opacity: 0 },
-                                '100%': { opacity: 1 },
-                            },
-                        }}
-                    >
-                        🏃 Let&apos;s go!
-                    </Typography>
-                )}
-            </Box>
-        </Backdrop>
+            {/* Let's go! */}
+            {settled && (
+                <div style={{
+                    color: '#aaa',
+                    fontSize: '0.9rem',
+                    animation: 'slotFadeIn 0.4s ease-in',
+                }}>
+                    🏃 Let&apos;s go!
+                </div>
+            )}
+            <style>{`@keyframes slotFadeIn { from { opacity: 0; } to { opacity: 1; } }`}</style>
+        </div>
     );
 }
