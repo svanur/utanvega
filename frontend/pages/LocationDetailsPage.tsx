@@ -30,6 +30,7 @@ import type { LocationTreeNode } from '../hooks/useLocations';
 import { TrailCard } from '../components/TrailCard';
 import { TrailMapView } from '../components/TrailMapView';
 import RunningLoader from '../components/RunningLoader';
+import ShareButtons from '../components/ShareButtons';
 
 type LocationDetailsPageProps = {
     mode: PaletteMode;
@@ -171,9 +172,10 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
                 <Paper elevation={3} sx={{ p: { xs: 2, sm: 3 }, mb: 4, borderRadius: '16px' }}>
                     <Stack direction="row" alignItems="center" spacing={1} mb={1}>
                         <LocationOnIcon color="primary" sx={{ fontSize: { xs: 28, sm: 35 } }} />
-                        <Typography variant="h4" component="h1" fontWeight="bold" sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
+                        <Typography variant="h4" component="h1" fontWeight="bold" sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' }, flex: 1 }}>
                             {location.name}
                         </Typography>
+                        <ShareButtons title={location.name} />
                     </Stack>
                     
                     <Stack direction="row" spacing={1} mb={2}>
