@@ -27,7 +27,8 @@ import {
     Skeleton,
     Card,
     CardContent,
-    Stack
+    Stack,
+    Snackbar
 } from '@mui/material';
 import { 
     Search as SearchIcon, 
@@ -47,13 +48,15 @@ import {
     Hiking as HikingIcon,
     DirectionsBike as DirectionsBikeIcon,
     ChevronLeft as ChevronLeftIcon,
-    ChevronRight as ChevronRightIcon
+    ChevronRight as ChevronRightIcon,
+    Casino as CasinoIcon
 } from '@mui/icons-material';
 import { useTrails, ALL_ACTIVITY_TYPES } from '../hooks/useTrails';
 import type { SortOption, FilterState } from '../hooks/useTrails';
 import { useFavorites } from '../hooks/useFavorites';
 import { useHiddenTrails } from '../hooks/useHiddenTrails';
 import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
+import { useShake } from '../hooks/useShake';
 import { useLocationTree } from '../hooks/useLocations';
 import type { LocationTreeNode } from '../hooks/useLocations';
 import { TrailCard } from './TrailCard';
@@ -107,6 +110,35 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
             });
         }
     };
+
+    // Shake-to-random-trail
+    const [shakeSnackbar, setShakeSnackbar] = React.useState<{ open: boolean; trailName: string }>({ open: false, trailName: '' });
+    const filteredTrailsRef = React.useRef<typeof trails>([]);
+    const userLocationRef = React.useRef(userLocation);
+    React.useEffect(() => { userLocationRef.current = userLocation; }, [userLocation]);
+
+    const handleShake = React.useCallback(() => {
+        const candidates = filteredTrailsRef.current;
+        if (candidates.length === 0) return;
+
+        // If location enabled, prefer trails within 50km
+        let nearby = candidates;
+        if (userLocationRef.current) {
+            const close = candidates.filter(t => t.distanceToUser !== undefined && t.distanceToUser !== Infinity && t.distanceToUser <= 50);
+            if (close.length > 0) nearby = close;
+        }
+
+        const pick = nearby[Math.floor(Math.random() * nearby.length)];
+        if (navigator.vibrate) navigator.vibrate(200);
+        setShakeSnackbar({ open: true, trailName: pick.name });
+        setTimeout(() => navigate(`/trails/${pick.slug}`), 1200);
+    }, [navigate]);
+
+    const { supported: shakeSupported, permissionGranted: shakePermission, requestPermission: requestShakePermission } = useShake({
+        onShake: handleShake,
+        threshold: 25,
+        cooldown: 3000,
+    });
 
     // Initialize filters from URL params on first render
     const urlInitialized = React.useRef(false);
@@ -227,6 +259,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
         }
         return result;
     }, [trails, filters.favoritesOnly, favorites, hiddenSlugs, showHidden, hidingSlugs]);
+    React.useEffect(() => { filteredTrailsRef.current = filteredTrails; }, [filteredTrails]);
 
     // Recently viewed trails (resolved from slugs → trail objects)
     const recentTrails = React.useMemo(() => {
@@ -853,6 +886,21 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                         </ToggleButton>
                     </ToggleButtonGroup>
                     <ShareButtons title={t('home.allTrails')} />
+                    <Tooltip title={shakeSupported && !shakePermission ? t('home.enableShake') : t('home.randomTrail')}>
+                        <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={() => {
+                                if (shakeSupported && !shakePermission) {
+                                    requestShakePermission();
+                                } else {
+                                    handleShake();
+                                }
+                            }}
+                        >
+                            <CasinoIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
                 </Box>
             </Box>
 
@@ -884,6 +932,14 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
             ) : (
                 <TrailMapView trails={filteredTrails} userLocation={userLocation} />
             )}
+
+            <Snackbar
+                open={shakeSnackbar.open}
+                autoHideDuration={1500}
+                onClose={() => setShakeSnackbar(s => ({ ...s, open: false }))}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                message={`🎲 ${shakeSnackbar.trailName}`}
+            />
         </Container>
     );
 };
