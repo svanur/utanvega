@@ -197,6 +197,14 @@
         "aiDescription": "Development assisted by Claude, an AI coding agent by Anthropic, used for code generation, refactoring, and quality improvements.",
         "changelogTitle": "Changelog",
         "changelog": {
+            "v1_8": {
+                "title": "Fun & performance",
+                "description": "Shake-to-random-trail with slot machine animation, share/copy URL button, fun illustrated 404 pages for missing trails and locations, empty filter state with bored runner, and code splitting with lazy loading for faster page loads."
+            },
+            "v1_7": {
+                "title": "UX & mobile",
+                "description": "Dark mode with dark map tiles, trail type icons on cards, URL shareable filters, recently viewed trails carousel, skeleton loading screens, map marker clustering, compact trail cards, and icon-only activity pills on mobile."
+            },
             "v1_6": {
                 "title": "Locations & discovery",
                 "description": "Hierarchical locations with breadcrumbs, fuzzy trail search with suggestions, location detail stats, location role display, activity type icons, and copy-link sharing."
