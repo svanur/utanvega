@@ -1,11 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
+import MarkerClusterGroup from '@changey/react-leaflet-markercluster';
 import L from 'leaflet';
 import { Box, Typography, Button, IconButton, Paper, useTheme } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
 import { Trail } from '../hooks/useTrails';
 import { Link as RouterLink } from 'react-router-dom';
+import 'leaflet.markercluster/dist/MarkerCluster.css';
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 
 // Fix for Leaflet marker icons in React
 // @ts-expect-error - Leaflet internal _getIconUrl not in type definitions
@@ -176,6 +179,12 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
                     </Marker>
                 )}
 
+                <MarkerClusterGroup
+                    chunkedLoading
+                    maxClusterRadius={50}
+                    spiderfyOnMaxZoom
+                    showCoverageOnHover={false}
+                >
                 {trailsWithLocation.map(trail => (
                     <Marker 
                         key={trail.id} 
@@ -210,6 +219,7 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
                         </Popup>
                     </Marker>
                 ))}
+                </MarkerClusterGroup>
 
                 {bounds && <ChangeView bounds={bounds} followMe={followMe} userLocation={userLocation} />}
             </MapContainer>
