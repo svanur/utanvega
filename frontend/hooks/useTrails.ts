@@ -46,8 +46,11 @@ export interface FilterState {
     location: string;
     favoritesOnly: boolean;
     selectedTags: string[];
+    selectedActivityTypes: string[];
     sortBy: SortOption;
 }
+
+export const ALL_ACTIVITY_TYPES = ['TrailRunning', 'Running', 'Hiking', 'Cycling'];
 
 const DEFAULT_FILTERS: FilterState = {
     minLength: 0,
@@ -62,6 +65,7 @@ const DEFAULT_FILTERS: FilterState = {
     location: 'All',
     favoritesOnly: false,
     selectedTags: [],
+    selectedActivityTypes: [...ALL_ACTIVITY_TYPES],
     sortBy: 'distance',
 };
 
@@ -165,6 +169,11 @@ export function useTrails() {
 
         // Apply advanced filters
         result = result.filter(trail => {
+            // Activity Type filter
+            if (filters.selectedActivityTypes.length < ALL_ACTIVITY_TYPES.length) {
+                if (!filters.selectedActivityTypes.includes(trail.activityType)) return false;
+            }
+
             // Trail length filter (trail.length is in meters, filters are in km)
             const trailLengthKm = trail.length / 1000;
             if (trailLengthKm < filters.minLength) return false;

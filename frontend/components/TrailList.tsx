@@ -39,7 +39,7 @@ import {
     Sort as SortIcon,
     MyLocation as MyLocationIcon
 } from '@mui/icons-material';
-import { useTrails } from '../hooks/useTrails';
+import { useTrails, ALL_ACTIVITY_TYPES } from '../hooks/useTrails';
 import type { SortOption } from '../hooks/useTrails';
 import { useFavorites } from '../hooks/useFavorites';
 import { useHiddenTrails } from '../hooks/useHiddenTrails';
@@ -279,6 +279,32 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                         }
                     }}
                 />
+            </Box>
+
+            {/* Activity Type pills */}
+            <Box display="flex" gap={1} mb={2} flexWrap="wrap">
+                {ALL_ACTIVITY_TYPES.map(type => {
+                    const selected = filters.selectedActivityTypes.includes(type);
+                    return (
+                        <Chip
+                            key={type}
+                            label={t(`difficulty.${type.charAt(0).toLowerCase() + type.slice(1)}`)}
+                            onClick={() => {
+                                const current = filters.selectedActivityTypes;
+                                const updated = selected
+                                    ? current.filter(t => t !== type)
+                                    : [...current, type];
+                                setFilters(f => ({ ...f, selectedActivityTypes: updated.length > 0 ? updated : [...ALL_ACTIVITY_TYPES] }));
+                            }}
+                            color={selected ? 'primary' : 'default'}
+                            variant={selected ? 'filled' : 'outlined'}
+                            sx={{ 
+                                fontWeight: selected ? 'bold' : 'normal',
+                                opacity: selected ? 1 : 0.6,
+                            }}
+                        />
+                    );
+                })}
             </Box>
 
             <Collapse in={showAdvanced}>
