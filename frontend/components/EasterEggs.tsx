@@ -15,6 +15,26 @@ function KonamiRunner({ onComplete }: { onComplete: () => void }) {
         return () => clearTimeout(timer);
     }, [onComplete]);
 
+    const workouts = [
+        '5 × 1 km at threshold 🔥',
+        'Today is TEMPO day!',
+        '10 km at marathon pace 🏅',
+        'Easy 8 km recovery jog 🧘',
+        '400m repeats × 10 — go!',
+        'Fartlek: 1 min fast, 2 min easy',
+        'Long run: 25 km, stay chill 😎',
+        'Hill sprints × 8 — find a hill!',
+        '3 × 2 km at half-marathon pace',
+        'Strides after warm-up today',
+        '6 × 800 m with 90s recovery',
+        'Progression run: start easy, finish fast',
+        '20 min tempo, 10 min easy, repeat',
+        'Track Tuesday: 12 × 400 m 🏟️',
+        'Rest day... just kidding, GO RUN!',
+    ];
+
+    const [workout] = useState(() => workouts[Math.floor(Math.random() * workouts.length)]);
+
     const [confetti] = useState(() => Array.from({ length: 60 }, (_, i) => {
         const colors = ['#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff', '#ff6eb4', '#a855f7'];
         return {
@@ -50,6 +70,24 @@ function KonamiRunner({ onComplete }: { onComplete: () => void }) {
                     0% { left: -120px; }
                     100% { left: calc(100vw + 120px); }
                 }
+                .ee-workout {
+                    position: absolute;
+                    bottom: 15%;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    font-size: clamp(16px, 3vw, 28px);
+                    font-weight: 700;
+                    color: #fff;
+                    text-shadow: 0 2px 8px rgba(0,0,0,0.6), 0 0 20px rgba(255,107,107,0.4);
+                    white-space: nowrap;
+                    animation: ee-workout-pop 0.5s ease-out 0.8s both;
+                    font-family: system-ui, -apple-system, sans-serif;
+                }
+                @keyframes ee-workout-pop {
+                    0% { opacity: 0; transform: translateX(-50%) scale(0.5); }
+                    70% { transform: translateX(-50%) scale(1.1); }
+                    100% { opacity: 1; transform: translateX(-50%) scale(1); }
+                }
                 .ee-confetti {
                     position: absolute;
                     top: -20px;
@@ -63,6 +101,7 @@ function KonamiRunner({ onComplete }: { onComplete: () => void }) {
                 }
             `}</style>
             <div className="ee-runner">🏃</div>
+            <div className="ee-workout">{workout}</div>
             {confetti.map(c => (
                 <div
                     key={c.id}

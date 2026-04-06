@@ -121,7 +121,7 @@ export default function EmptyFilterState({ onClearFilters, hasActiveFilters, sea
 
     const isOriginals = searchQuery?.toLowerCase().trim() === 'hin upprunalegu';
     const quote = isOriginals
-        ? (lang === 'is' ? 'Þú ert æðislegt, en...' : 'You are awesome, but...')
+        ? (lang === 'is' ? 'Sjáið, þarna eru hin upprunalegu...' : 'You are awesome, but...')
         : quotes[lang][index];
 
     return (
