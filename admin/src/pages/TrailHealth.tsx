@@ -124,6 +124,7 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
   const [dupsExpanded, setDupsExpanded] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [detecting, setDetecting] = useState(false);
+  const [detectingLocations, setDetectingLocations] = useState(false);
 
   const handleDeleteDuplicate = async (trailId: string, trailName: string) => {
     if (!confirm(`Delete "${trailName}"? This will soft-delete the trail.`)) return;
@@ -151,6 +152,20 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
       onNotify('Failed to detect trail types', 'error');
     } finally {
       setDetecting(false);
+    }
+  };
+
+  const handleDetectLocations = async () => {
+    setDetectingLocations(true);
+    try {
+      const result = await apiFetch<{ total: number; updated: number }>('/api/v1/admin/trails/detect-locations', { method: 'POST' });
+      onNotify(`Locations re-detected: ${result.updated} of ${result.total} trails updated`);
+      const data = await apiFetch<TrailDto[]>('/api/v1/admin/trails?includeDeleted=false');
+      setTrails(data);
+    } catch (_err) {
+      onNotify('Failed to detect locations', 'error');
+    } finally {
+      setDetectingLocations(false);
     }
   };
 
@@ -224,15 +239,26 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
         <Typography variant="h5" fontWeight="bold">Trail Health Dashboard</Typography>
-        <Button
-          variant="outlined"
-          size="small"
-          startIcon={detecting ? <CircularProgress size={16} /> : <AutoFixHighIcon />}
-          disabled={detecting}
-          onClick={handleDetectTypes}
-        >
-          {detecting ? 'Detecting...' : 'Re-detect Trail Types'}
-        </Button>
+        <Stack direction="row" spacing={1}>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={detectingLocations ? <CircularProgress size={16} /> : <AutoFixHighIcon />}
+            disabled={detectingLocations || detecting}
+            onClick={handleDetectLocations}
+          >
+            {detectingLocations ? 'Detecting...' : 'Re-detect Locations'}
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={detecting ? <CircularProgress size={16} /> : <AutoFixHighIcon />}
+            disabled={detecting || detectingLocations}
+            onClick={handleDetectTypes}
+          >
+            {detecting ? 'Detecting...' : 'Re-detect Trail Types'}
+          </Button>
+        </Stack>
       </Box>
 
       {/* Summary Cards */}

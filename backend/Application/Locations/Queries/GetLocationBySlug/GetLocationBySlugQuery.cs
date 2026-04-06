@@ -10,6 +10,7 @@ namespace Utanvega.Backend.Application.Locations.Queries.GetLocationBySlug;
 
 public record LocationWithTrailsDto(
     LocationDto Location,
+    List<LocationDto> ChildLocations,
     List<TrailDto> Trails
 );
 
@@ -49,12 +50,28 @@ public class GetLocationBySlugQueryHandler : IRequestHandler<GetLocationBySlugQu
             _context.TrailLocations.Count(tl => tl.LocationId == location.Id)
         );
 
+        // Build child location DTOs
+        var childDtos = await _context.Locations
+            .Where(l => l.ParentId == location.Id)
+            .OrderBy(l => l.Name)
+            .Select(l => new LocationDto(
+                l.Id, l.Name, l.Slug, l.Description, l.Type.ToString(),
+                l.ParentId, location.Name, l.Center != null ? l.Center.Y : null,
+                l.Center != null ? l.Center.X : null, l.Radius,
+                l.Children.Count, l.TrailLocations.Count))
+            .ToListAsync(cancellationToken);
+
+        // Collect all descendant location IDs for ancestor-aware trail query
+        var allLocationIds = await CollectDescendantIds(location.Id, cancellationToken);
+        allLocationIds.Add(location.Id);
+
         var trails = await _context.Trails
             .Include(t => t.TrailLocations)
                 .ThenInclude(tl => tl.Location)
             .Include(t => t.TrailTags)
                 .ThenInclude(tt => tt.Tag)
-            .Where(t => t.Status == TrailStatus.Published && t.TrailLocations.Any(tl => tl.LocationId == location.Id))
+            .Where(t => t.Status == TrailStatus.Published
+                && t.TrailLocations.Any(tl => allLocationIds.Contains(tl.LocationId)))
             .AsNoTracking()
             .ToListAsync(cancellationToken);
 
@@ -81,6 +98,40 @@ public class GetLocationBySlugQueryHandler : IRequestHandler<GetLocationBySlugQu
                 .ToList()
         )).ToList();
 
-        return new LocationWithTrailsDto(locationDto, trailDtos);
+        return new LocationWithTrailsDto(locationDto, childDtos, trailDtos);
+    }
+
+    /// <summary>
+    /// Recursively collect all descendant location IDs using BFS.
+    /// </summary>
+    private async Task<HashSet<Guid>> CollectDescendantIds(Guid parentId, CancellationToken ct)
+    {
+        var all = new HashSet<Guid>();
+        var queue = new Queue<Guid>();
+        queue.Enqueue(parentId);
+
+        // Load the full parent→children map once
+        var childrenMap = (await _context.Locations
+            .AsNoTracking()
+            .Where(l => l.ParentId != null)
+            .Select(l => new { l.Id, ParentId = l.ParentId!.Value })
+            .ToListAsync(ct))
+            .GroupBy(l => l.ParentId)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.Id).ToList());
+
+        while (queue.Count > 0)
+        {
+            var current = queue.Dequeue();
+            if (childrenMap.TryGetValue(current, out var children))
+            {
+                foreach (var childId in children)
+                {
+                    all.Add(childId);
+                    queue.Enqueue(childId);
+                }
+            }
+        }
+
+        return all;
     }
 }

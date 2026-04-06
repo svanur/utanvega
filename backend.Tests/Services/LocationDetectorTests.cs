@@ -76,4 +76,48 @@ public class LocationDetectorTests
         // Should be within ~200m (Öskjuhlíð is a small area)
         Assert.True(distance < 500, $"Expected < 500m, got {distance:F0}m");
     }
+
+    // ─── SampleRoute ───
+
+    [Fact]
+    public void SampleRoute_FewCoords_ReturnsAll()
+    {
+        var coords = new[]
+        {
+            new NetTopologySuite.Geometries.Coordinate(-21.0, 64.0),
+            new NetTopologySuite.Geometries.Coordinate(-21.1, 64.1),
+        };
+        var result = LocationDetector.SampleRoute(coords, 12);
+        Assert.Equal(2, result.Count);
+        Assert.Equal(64.0, result[0].Lat);
+        Assert.Equal(-21.0, result[0].Lng);
+    }
+
+    [Fact]
+    public void SampleRoute_ManyCoords_ReturnsRequestedCount()
+    {
+        var coords = Enumerable.Range(0, 100)
+            .Select(i => new NetTopologySuite.Geometries.Coordinate(-21.0 + i * 0.001, 64.0 + i * 0.001))
+            .ToArray();
+        var result = LocationDetector.SampleRoute(coords, 12);
+        Assert.Equal(12, result.Count);
+        // First point
+        Assert.Equal(64.0, result[0].Lat);
+        Assert.Equal(-21.0, result[0].Lng);
+        // Last point
+        Assert.Equal(coords[^1].Y, result[^1].Lat);
+        Assert.Equal(coords[^1].X, result[^1].Lng);
+    }
+
+    [Fact]
+    public void SampleRoute_IncludesFirstAndLastPoints()
+    {
+        var coords = Enumerable.Range(0, 50)
+            .Select(i => new NetTopologySuite.Geometries.Coordinate(-21.0 + i * 0.01, 64.0 + i * 0.01))
+            .ToArray();
+        var result = LocationDetector.SampleRoute(coords, 5);
+        Assert.Equal(5, result.Count);
+        Assert.Equal((coords[0].Y, coords[0].X), result[0]);
+        Assert.Equal((coords[^1].Y, coords[^1].X), result[^1]);
+    }
 }

@@ -43,10 +43,13 @@ import { useTrails, ALL_ACTIVITY_TYPES } from '../hooks/useTrails';
 import type { SortOption } from '../hooks/useTrails';
 import { useFavorites } from '../hooks/useFavorites';
 import { useHiddenTrails } from '../hooks/useHiddenTrails';
+import { useLocationTree } from '../hooks/useLocations';
+import type { LocationTreeNode } from '../hooks/useLocations';
 import { TrailCard } from './TrailCard';
 import { TrailMapView } from './TrailMapView';
 import { useNavigate } from 'react-router-dom';
 import RunningLoader from './RunningLoader';
+import ListSubheader from '@mui/material/ListSubheader';
 
 interface TrailListProps {
     tagSlug?: string;
@@ -72,7 +75,29 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
 
     const { favorites, toggleFavorite } = useFavorites();
     const { hiddenSlugs, hideTrail, clearHidden } = useHiddenTrails();
+    const { tree: locationTree } = useLocationTree();
     const navigate = useNavigate();
+
+    // Build flat list of locations with depth + descendant slug sets for the dropdown
+    const { locationMenuItems, descendantSlugs } = React.useMemo(() => {
+        const items: { slug: string; name: string; depth: number; totalTrails: number }[] = [];
+        const descendants = new Map<string, Set<string>>();
+
+        function flatten(nodes: LocationTreeNode[], depth: number): string[] {
+            const allSlugs: string[] = [];
+            for (const node of nodes) {
+                items.push({ slug: node.slug, name: node.name, depth, totalTrails: node.totalTrailsCount });
+                const childSlugs = flatten(node.children, depth + 1);
+                const descSet = new Set(childSlugs);
+                descendants.set(node.slug, descSet);
+                allSlugs.push(node.slug, ...childSlugs);
+            }
+            return allSlugs;
+        }
+
+        flatten(locationTree, 0);
+        return { locationMenuItems: items, descendantSlugs: descendants };
+    }, [locationTree]);
 
     // Sync URL tag slug with filter state
     // Only sync on mount or when URL tag changes, not when filters/setFilters change
@@ -186,6 +211,15 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
             } else if (tags.length === 0 && tagSlug) {
                 navigate('/', { replace: true });
             }
+        }
+    };
+
+    const handleLocationChange = (slug: string) => {
+        if (slug === 'All') {
+            setFilters({ ...filters, location: 'All', locationSlugs: [] });
+        } else {
+            const expanded = [slug, ...(descendantSlugs.get(slug) ?? [])];
+            setFilters({ ...filters, location: slug, locationSlugs: expanded });
         }
     };
 
@@ -484,12 +518,41 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                                 <Select
                                     value={filters.location}
                                     label={t('filters.location')}
-                                    onChange={(e) => handleFilterChange('location', e.target.value)}
+                                    onChange={(e) => handleLocationChange(e.target.value)}
                                 >
                                     <MenuItem value="All">{t('filters.allLocations')}</MenuItem>
-                                    {locations.map(loc => (
-                                        <MenuItem key={loc} value={loc}>{loc}</MenuItem>
-                                    ))}
+                                    {locationMenuItems.length > 0
+                                        ? locationMenuItems
+                                            .filter(item => item.depth === 0 && item.totalTrails > 0)
+                                            .flatMap(root => {
+                                                const children = locationMenuItems.filter(
+                                                    child => descendantSlugs.get(root.slug)?.has(child.slug) && child.depth === 1 && child.totalTrails > 0
+                                                );
+                                                if (children.length === 0) {
+                                                    return [
+                                                        <MenuItem key={root.slug} value={root.slug}>
+                                                            {root.name} ({root.totalTrails})
+                                                        </MenuItem>
+                                                    ];
+                                                }
+                                                return [
+                                                    <ListSubheader key={`hdr-${root.slug}`} sx={{ lineHeight: '32px', bgcolor: 'background.paper' }}>
+                                                        {root.name}
+                                                    </ListSubheader>,
+                                                    <MenuItem key={root.slug} value={root.slug} sx={{ pl: 2 }}>
+                                                        {t('filters.allIn', { name: root.name })} ({root.totalTrails})
+                                                    </MenuItem>,
+                                                    ...children.map(child => (
+                                                        <MenuItem key={child.slug} value={child.slug} sx={{ pl: 4 }}>
+                                                            {child.name} ({child.totalTrails})
+                                                        </MenuItem>
+                                                    ))
+                                                ];
+                                            })
+                                        : locations.map(loc => (
+                                            <MenuItem key={loc} value={loc}>{loc}</MenuItem>
+                                        ))
+                                    }
                                 </Select>
                             </FormControl>
                         </Grid>

@@ -25,6 +25,7 @@ using Utanvega.Backend.Application.Trails.Queries.GetDuplicateTrails;
 using Utanvega.Backend.Application.History.Queries.GetChangeLogs;
 using Utanvega.Backend.Application.Trails.Queries.GetTrailBySlug;
 using Utanvega.Backend.Application.Locations.Queries.GetLocationBySlug;
+using Utanvega.Backend.Application.Locations.Queries.GetLocationTree;
 using Utanvega.Backend.Application.Trails.Queries.GetTrailGpx;
 using Utanvega.Backend.Core.Services;
 using MediatR;
@@ -312,6 +313,13 @@ app.MapGet("/api/v1/locations", async (IMediator mediator) =>
 })
 .WithName("GetPublicLocations");
 
+app.MapGet("/api/v1/locations/tree", async (IMediator mediator) =>
+{
+    var tree = await mediator.Send(new GetLocationTreeQuery());
+    return Results.Ok(tree);
+})
+.WithName("GetLocationTree");
+
 app.MapGet("/api/v1/locations/{slug}", async (string slug, IMediator mediator) =>
 {
     var location = await mediator.Send(new GetLocationBySlugQuery(slug));
@@ -544,6 +552,7 @@ app.MapPost("/api/v1/admin/trails/upload-gpx", [Authorize] async (string name, I
                 id = l.Id,
                 name = l.Name,
                 type = l.Type,
+                role = l.Role,
                 distanceMeters = l.DistanceMeters
             })
         };
@@ -801,6 +810,25 @@ app.MapPost("/api/v1/admin/trails/detect-types", [Authorize] async (UtanvegaDbCo
     return Results.Ok(new { total = trails.Count, updated });
 })
 .WithName("DetectTrailTypes");
+
+app.MapPost("/api/v1/admin/trails/detect-locations", [Authorize] async (UtanvegaDbContext context, LocationDetector detector) =>
+{
+    var trails = await context.Trails
+        .Where(t => t.GpxData != null && t.Status != TrailStatus.Deleted)
+        .ToListAsync();
+
+    var updated = 0;
+    foreach (var trail in trails)
+    {
+        var detected = await detector.RedetectAndRelinkAsync(trail);
+        if (detected.Count > 0) updated++;
+    }
+
+    await context.SaveChangesWithAuditAsync("system");
+
+    return Results.Ok(new { total = trails.Count, updated });
+})
+.WithName("DetectTrailLocations");
 
 app.Run();
 

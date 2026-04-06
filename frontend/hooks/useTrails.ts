@@ -44,6 +44,7 @@ export interface FilterState {
     trailType: string;
     difficulty: string;
     location: string;
+    locationSlugs: string[]; // Selected location + all descendant slugs for hierarchy-aware filtering
     favoritesOnly: boolean;
     selectedTags: string[];
     selectedActivityTypes: string[];
@@ -63,6 +64,7 @@ const DEFAULT_FILTERS: FilterState = {
     trailType: 'All',
     difficulty: 'All',
     location: 'All',
+    locationSlugs: [],
     favoritesOnly: false,
     selectedTags: [],
     selectedActivityTypes: [...ALL_ACTIVITY_TYPES],
@@ -198,9 +200,12 @@ export function useTrails() {
             // Difficulty
             if (filters.difficulty !== 'All' && trail.difficulty !== filters.difficulty) return false;
 
-            // Location
+            // Location (hierarchy-aware: matches selected location + all descendants)
             if (filters.location !== 'All') {
-                if (!trail.locations || !trail.locations.some(l => l.name === filters.location)) return false;
+                const slugsToMatch = filters.locationSlugs.length > 0
+                    ? filters.locationSlugs
+                    : [filters.location];
+                if (!trail.locations || !trail.locations.some(l => slugsToMatch.includes(l.slug))) return false;
             }
 
             // Tags — trail must have ALL selected tags

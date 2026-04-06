@@ -16,8 +16,19 @@ export interface Location {
     trailsCount: number;
 }
 
+export interface LocationTreeNode {
+    id: string;
+    name: string;
+    slug: string;
+    type: string;
+    trailsCount: number;
+    totalTrailsCount: number;
+    children: LocationTreeNode[];
+}
+
 export interface LocationWithTrails {
     location: Location;
+    childLocations: Location[];
     trails: Trail[];
 }
 
@@ -43,6 +54,30 @@ export function useLocations() {
     }, []);
 
     return { locations, loading, error };
+}
+
+export function useLocationTree() {
+    const [tree, setTree] = useState<LocationTreeNode[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        fetch(`${API_URL}/api/v1/locations/tree`)
+            .then(res => {
+                if (!res.ok) throw new Error('Failed to fetch location tree');
+                return res.json();
+            })
+            .then(data => {
+                setTree(data);
+                setLoading(false);
+            })
+            .catch(err => {
+                setError(err.message);
+                setLoading(false);
+            });
+    }, []);
+
+    return { tree, loading, error };
 }
 
 export function useLocationBySlug(slug: string | undefined) {
