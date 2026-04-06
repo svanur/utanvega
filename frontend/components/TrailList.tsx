@@ -45,7 +45,9 @@ import {
     Landscape as LandscapeIcon,
     DirectionsRun as DirectionsRunIcon,
     Hiking as HikingIcon,
-    DirectionsBike as DirectionsBikeIcon
+    DirectionsBike as DirectionsBikeIcon,
+    ChevronLeft as ChevronLeftIcon,
+    ChevronRight as ChevronRightIcon
 } from '@mui/icons-material';
 import { useTrails, ALL_ACTIVITY_TYPES } from '../hooks/useTrails';
 import type { SortOption, FilterState } from '../hooks/useTrails';
@@ -92,6 +94,17 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
     const [viewMode, setViewMode] = React.useState<'list' | 'map'>('list');
     const [showHidden, setShowHidden] = React.useState(false);
     const [hidingSlugs, setHidingSlugs] = React.useState<string[]>([]);
+    const recentScrollRef = React.useRef<HTMLDivElement>(null);
+
+    const scrollRecent = (direction: 'left' | 'right') => {
+        if (recentScrollRef.current) {
+            const { scrollLeft, clientWidth } = recentScrollRef.current;
+            recentScrollRef.current.scrollTo({
+                left: direction === 'left' ? scrollLeft - clientWidth : scrollLeft + clientWidth,
+                behavior: 'smooth'
+            });
+        }
+    };
 
     // Initialize filters from URL params on first render
     const urlInitialized = React.useRef(false);
@@ -734,21 +747,36 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
             {/* Recently Viewed — show when no filters active */}
             {recentTrails.length > 0 && viewMode === 'list' && !searchQuery && !filters.favoritesOnly && (
                 <Box mb={3}>
-                    <Typography variant="subtitle1" fontWeight="bold" mb={1} color="text.secondary">
-                        {t('home.recentlyViewed')}
-                    </Typography>
+                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                        <Typography variant="subtitle1" fontWeight="bold" color="text.secondary">
+                            {t('home.recentlyViewed')}
+                        </Typography>
+                        {recentTrails.length > 3 && (
+                            <Box sx={{ display: { xs: 'none', sm: 'flex' } }}>
+                                <IconButton onClick={() => scrollRecent('left')} size="small">
+                                    <ChevronLeftIcon />
+                                </IconButton>
+                                <IconButton onClick={() => scrollRecent('right')} size="small">
+                                    <ChevronRightIcon />
+                                </IconButton>
+                            </Box>
+                        )}
+                    </Box>
                     <Box
+                        ref={recentScrollRef}
                         sx={{
                             display: 'flex',
                             gap: 2,
                             overflowX: 'auto',
                             pb: 1,
-                            '&::-webkit-scrollbar': { height: 4 },
-                            '&::-webkit-scrollbar-thumb': { borderRadius: 2, bgcolor: 'divider' },
+                            scrollSnapType: 'x mandatory',
+                            '&::-webkit-scrollbar': { display: 'none' },
+                            msOverflowStyle: 'none',
+                            scrollbarWidth: 'none',
                         }}
                     >
                         {recentTrails.map(trail => (
-                            <Box key={trail.slug} sx={{ minWidth: 200, maxWidth: 240, height: 140, display: 'flex' }}>
+                            <Box key={trail.slug} sx={{ minWidth: 200, maxWidth: 240, height: 140, display: 'flex', scrollSnapAlign: 'start' }}>
                                 <TrailCard trail={trail} compact disableGestures />
                             </Box>
                         ))}
