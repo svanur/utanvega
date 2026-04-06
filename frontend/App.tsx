@@ -1,14 +1,24 @@
-import { useMemo, useState } from 'react';
-import { CssBaseline, ThemeProvider } from '@mui/material';
+import { lazy, Suspense, useMemo, useState } from 'react';
+import { CssBaseline, ThemeProvider, CircularProgress, Box } from '@mui/material';
 import type { PaletteMode } from '@mui/material';
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { createAppTheme } from './theme';
 import ErrorBoundary from './components/ErrorBoundary';
 import HomePage from './pages/HomePage';
-import TrailDetailsPage from './pages/TrailDetailsPage';
-import LocationsPage from './pages/LocationsPage';
-import LocationDetailsPage from './pages/LocationDetailsPage';
-import AboutPage from './pages/AboutPage';
+
+// Lazy-loaded pages (not needed on initial load)
+const TrailDetailsPage = lazy(() => import('./pages/TrailDetailsPage'));
+const LocationsPage = lazy(() => import('./pages/LocationsPage'));
+const LocationDetailsPage = lazy(() => import('./pages/LocationDetailsPage'));
+const AboutPage = lazy(() => import('./pages/AboutPage'));
+
+function PageLoader() {
+    return (
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
+            <CircularProgress />
+        </Box>
+    );
+}
 
 function TagPage({ mode, onToggleMode }: { mode: PaletteMode; onToggleMode: () => void }) {
     const { slug } = useParams<{ slug: string }>();
@@ -37,6 +47,7 @@ export default function App() {
             <CssBaseline />
             <ErrorBoundary>
             <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                <Suspense fallback={<PageLoader />}>
                 <Routes>
                     <Route 
                         path="/" 
@@ -64,6 +75,7 @@ export default function App() {
                     />
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
+                </Suspense>
             </BrowserRouter>
             </ErrorBoundary>
         </ThemeProvider>
