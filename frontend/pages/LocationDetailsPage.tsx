@@ -11,13 +11,11 @@ import {
     Stack,
     PaletteMode,
     Container,
-    Alert,
     Divider,
     Card,
     CardActionArea,
     CardContent
 } from '@mui/material';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import FolderIcon from '@mui/icons-material/Folder';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
@@ -31,6 +29,7 @@ import { TrailCard } from '../components/TrailCard';
 import { TrailMapView } from '../components/TrailMapView';
 import RunningLoader from '../components/RunningLoader';
 import ShareButtons from '../components/ShareButtons';
+import LostLocation from '../components/LostLocation';
 
 type LocationDetailsPageProps = {
     mode: PaletteMode;
@@ -123,15 +122,8 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
     if (error || !location) {
         return (
             <Layout mode={mode} onToggleMode={onToggleMode}>
-                <Container sx={{ mt: 4 }}>
-                    <Alert severity="error">{error || t('locations.locationNotFound')}</Alert>
-                    <Button 
-                        startIcon={<ArrowBackIcon />} 
-                        onClick={() => navigate('/locations')}
-                        sx={{ mt: 2 }}
-                    >
-                        {t('locations.backToLocations')}
-                    </Button>
+                <Container>
+                    <LostLocation />
                 </Container>
             </Layout>
         );

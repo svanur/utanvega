@@ -59,6 +59,7 @@ import type { LocationTreeNode } from '../hooks/useLocations';
 import { TrailCard } from './TrailCard';
 import { TrailMapView } from './TrailMapView';
 import ShareButtons from './ShareButtons';
+import EmptyFilterState from './EmptyFilterState';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import ListSubheader from '@mui/material/ListSubheader';
 
@@ -857,11 +858,10 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
 
             {viewMode === 'list' ? (
                 filteredTrails.length === 0 ? (
-                    <Typography color="text.secondary" textAlign="center" py={4}>
-                        {searchQuery || Object.values(filters).some(v => v !== 'All' && v !== 250 && v !== 0 && v !== 100 && v !== 2000 && v !== false) 
-                            ? t('home.noTrailsMatch')
-                            : t('home.noTrailsFound')}
-                    </Typography>
+                    <EmptyFilterState 
+                        hasActiveFilters={!!(searchQuery || Object.values(filters).some(v => v !== 'All' && v !== 250 && v !== 0 && v !== 100 && v !== 2000 && v !== false))}
+                        onClearFilters={() => { resetFilters(); setSearchQuery(''); }}
+                    />
                 ) : (
                     filteredTrails.map(trail => (
                         <Collapse key={trail.id} in={!hidingSlugs.includes(trail.slug)}>
