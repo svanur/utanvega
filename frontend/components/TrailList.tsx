@@ -748,7 +748,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                         }}
                     >
                         {recentTrails.map(trail => (
-                            <Box key={trail.slug} sx={{ minWidth: 260, maxWidth: 300 }}>
+                            <Box key={trail.slug} sx={{ minWidth: 200, maxWidth: 240, height: 140, display: 'flex' }}>
                                 <TrailCard trail={trail} compact disableGestures />
                             </Box>
                         ))}

@@ -406,7 +406,8 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                             <Box 
                                 key={relatedTrail.slug} 
                                 sx={{ 
-                                    minWidth: { xs: '85%', sm: 'calc(50% - 8px)', md: 'calc(33.333% - 10.7px)' },
+                                    minWidth: { xs: '60%', sm: 'calc(33.333% - 10.7px)', md: 'calc(25% - 12px)' },
+                                    height: 140,
                                     scrollSnapAlign: 'start',
                                     display: 'flex',
                                 }}

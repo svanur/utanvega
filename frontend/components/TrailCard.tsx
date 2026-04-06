@@ -6,7 +6,8 @@ import {
     Box, 
     Stack, 
     Chip,
-    CardActionArea
+    CardActionArea,
+    Tooltip
 } from '@mui/material';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
 import HikingIcon from '@mui/icons-material/Hiking';
@@ -244,17 +245,28 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                 onTouchEnd={disableGestures ? undefined : handleTouchEnd}
             >
                 <CardActionArea onClick={handleClick} sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'flex-start' }}>
-                    <CardContent sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                    <CardContent sx={{ display: 'flex', flexDirection: 'column', flex: 1, ...(compact ? { p: 1.5, '&:last-child': { pb: 1.5 } } : {}) }}>
                         {/* 1st row: Trail name and favorite star */}
                         <Box display="flex" justifyContent="space-between" alignItems="center">
-                            <Typography variant="h6" component="div" fontWeight="bold">
+                            <Typography 
+                                variant={compact ? 'body1' : 'h6'} 
+                                component="div" 
+                                fontWeight="bold"
+                                sx={compact ? { 
+                                    fontSize: '0.85rem', 
+                                    lineHeight: 1.3,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                } : undefined}
+                            >
                                 {trail.name}
                             </Typography>
-                            {isFavorited && <StarIcon color="warning" fontSize="small" />}
+                            {isFavorited && <StarIcon color="warning" sx={{ fontSize: compact ? 14 : 20 }} />}
                         </Box>
 
-                        {/* Description snippet */}
-                        {trail.description && (
+                        {/* Description snippet — hidden in compact mode */}
+                        {!compact && trail.description && (
                             <Typography
                                 variant="body2"
                                 color="text.secondary"
@@ -273,7 +285,26 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                             </Typography>
                         )}
 
-                    {/* 2nd row: ActivityType and locations */}
+                    {/* 2nd row: icons-only in compact, full chips in normal */}
+                    {compact ? (
+                        <Stack direction="row" spacing={0.5} mt={0.5} alignItems="center" flexWrap="wrap">
+                            <Tooltip title={trail.activityType} arrow>
+                                <Box sx={{ color: 'primary.main', display: 'flex' }}>
+                                    {getActivityIcon(trail.activityType)}
+                                </Box>
+                            </Tooltip>
+                            {trail.trailType && trail.trailType !== 'Unknown' && (
+                                <Tooltip title={t(trailTypeI18nKey(trail.trailType))} arrow>
+                                    <Box sx={{ color: 'text.secondary', display: 'flex' }}>
+                                        {getTrailTypeIcon(trail.trailType)}
+                                    </Box>
+                                </Tooltip>
+                            )}
+                            {trail.difficulty && (
+                                <DifficultyInfo difficulty={trail.difficulty} activityType={trail.activityType} />
+                            )}
+                        </Stack>
+                    ) : (
                     <Box 
                         mt={1}
                         display="flex" 
@@ -302,7 +333,6 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                         )}
                         {[...trail.locations]
                             .sort((a, b) => a.order - b.order)
-                            .slice(0, compact ? 1 : undefined)
                             .map(loc => (
                                 <Chip
                                     key={loc.slug}
@@ -317,7 +347,6 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                                 />
                             ))}
                         {trail.tags && trail.tags.length > 0 && trail.tags
-                            .slice(0, compact ? 2 : undefined)
                             .map(tag => (
                                 <Chip
                                     key={tag.slug}
@@ -338,20 +367,21 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                                 />
                             ))}
                     </Box>
+                    )}
 
-                    {/* 3rd row: distance, gain, loss, distance-to-user */}
-                    <Stack direction="row" spacing={compact ? 1 : 1.5} color="text.secondary" flexWrap="wrap" mt="auto" pt={2} justifyContent={compact ? 'space-between' : 'flex-start'}>
-                        <Box display="flex" flexDirection={compact ? 'column' : 'row'} alignItems="center">
-                            <RouteIcon sx={{ mr: compact ? 0 : 0.5, mb: compact ? 0.5 : 0, fontSize: 18 }} />
-                            <Typography variant="body2">{distanceKm} km</Typography>
+                    {/* 3rd row: distance, gain, loss — icon-only in compact */}
+                    <Stack direction="row" spacing={compact ? 0.5 : 1.5} color="text.secondary" flexWrap="wrap" mt="auto" pt={compact ? 1 : 2} justifyContent={compact ? 'space-between' : 'flex-start'}>
+                        <Box display="flex" alignItems="center">
+                            <RouteIcon sx={{ mr: compact ? 0 : 0.5, fontSize: compact ? 14 : 18 }} />
+                            <Typography variant="body2" fontSize={compact ? '0.75rem' : undefined}>{distanceKm} km</Typography>
                         </Box>
-                        <Box display="flex" flexDirection={compact ? 'column' : 'row'} alignItems="center">
-                            <TrendingUpIcon sx={{ mr: compact ? 0 : 0.5, mb: compact ? 0.5 : 0, fontSize: 18 }} />
-                            <Typography variant="body2">+{Math.round(trail.elevationGain)} m</Typography>
+                        <Box display="flex" alignItems="center">
+                            <TrendingUpIcon sx={{ mr: compact ? 0 : 0.5, fontSize: compact ? 14 : 18 }} />
+                            <Typography variant="body2" fontSize={compact ? '0.75rem' : undefined}>+{Math.round(trail.elevationGain)}</Typography>
                         </Box>
-                        <Box display="flex" flexDirection={compact ? 'column' : 'row'} alignItems="center">
-                            <TrendingDownIcon sx={{ mr: compact ? 0 : 0.5, mb: compact ? 0.5 : 0, fontSize: 18 }} />
-                            <Typography variant="body2">-{Math.round(trail.elevationLoss)} m</Typography>
+                        <Box display="flex" alignItems="center">
+                            <TrendingDownIcon sx={{ mr: compact ? 0 : 0.5, fontSize: compact ? 14 : 18 }} />
+                            <Typography variant="body2" fontSize={compact ? '0.75rem' : undefined}>-{Math.round(trail.elevationLoss)}</Typography>
                         </Box>
                         {userDist && !compact && (
                             <Box display="flex" alignItems="center">
