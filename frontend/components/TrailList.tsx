@@ -60,7 +60,7 @@ import { useShake } from '../hooks/useShake';
 import { useLocationTree } from '../hooks/useLocations';
 import type { LocationTreeNode } from '../hooks/useLocations';
 import { TrailCard } from './TrailCard';
-import { TrailMapView } from './TrailMapView';
+const TrailMapView = React.lazy(() => import('./TrailMapView').then(m => ({ default: m.TrailMapView })));
 import ShareButtons from './ShareButtons';
 import EmptyFilterState from './EmptyFilterState';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -936,7 +936,13 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                     ))
                 )
             ) : (
-                <TrailMapView trails={filteredTrails} userLocation={userLocation} />
+                <React.Suspense fallback={
+                    <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+                        <CircularProgress />
+                    </Box>
+                }>
+                    <TrailMapView trails={filteredTrails} userLocation={userLocation} />
+                </React.Suspense>
             )}
 
             <Snackbar
