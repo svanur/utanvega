@@ -150,6 +150,8 @@
         "scanTrail": "Scan to open this trail on your phone.",
         "scanGpx": "Scan to download the GPX file. Your phone will offer to open it in Garmin Connect, Coros, Suunto, or other GPS apps.",
         "downloadGpx": "Download GPX",
+        "copyLink": "Copy page link",
+        "linkCopied": "Link copied!",
         "close": "Close"
     },
     "share": {

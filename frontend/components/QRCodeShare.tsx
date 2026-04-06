@@ -15,6 +15,8 @@ import {
 import QrCode2Icon from '@mui/icons-material/QrCode2';
 import PhoneAndroidIcon from '@mui/icons-material/PhoneAndroid';
 import DownloadIcon from '@mui/icons-material/Download';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import CheckIcon from '@mui/icons-material/Check';
 import { QRCodeSVG } from 'qrcode.react';
 import { useTranslation } from 'react-i18next';
 
@@ -27,6 +29,7 @@ export default function QRCodeShare({ slug, trailName }: QRCodeShareProps) {
     const { t } = useTranslation();
     const [open, setOpen] = useState(false);
     const [tab, setTab] = useState(0);
+    const [copied, setCopied] = useState(false);
     
     const baseUrl = window.location.origin;
     const trailUrl = `${baseUrl}/trails/${slug}`;
@@ -88,6 +91,22 @@ export default function QRCodeShare({ slug, trailName }: QRCodeShareProps) {
                                 : t('qr.scanGpx')
                             }
                         </Typography>
+                        {tab === 0 && (
+                            <Button
+                                variant="outlined"
+                                size="small"
+                                startIcon={copied ? <CheckIcon /> : <ContentCopyIcon />}
+                                color={copied ? 'success' : 'primary'}
+                                onClick={() => {
+                                    navigator.clipboard.writeText(trailUrl);
+                                    setCopied(true);
+                                    setTimeout(() => setCopied(false), 2000);
+                                }}
+                                sx={{ mt: 2, textTransform: 'none' }}
+                            >
+                                {copied ? t('qr.linkCopied') : t('qr.copyLink')}
+                            </Button>
+                        )}
                         {tab === 1 && (
                             <Button
                                 variant="outlined"

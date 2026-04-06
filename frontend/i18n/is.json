@@ -150,6 +150,8 @@
         "scanTrail": "Skannaðu til að opna þessa leið í símanum.",
         "scanGpx": "Skannaðu til að hlaða niður GPX skránni. Síminn mun bjóða upp á að opna hana í Garmin Connect, Coros, Suunto eða öðrum GPS forritum.",
         "downloadGpx": "Hlaða niður GPX",
+        "copyLink": "Afrita hlekk",
+        "linkCopied": "Hlekkur afritaður!",
         "close": "Loka"
     },
     "share": {
