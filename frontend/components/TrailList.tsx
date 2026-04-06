@@ -128,11 +128,17 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
             if (close.length > 0) nearby = close;
         }
 
+        // If no difficulty filter active, prefer Easy/Moderate trails
+        if (filters.difficulty === 'All') {
+            const easyMod = nearby.filter(t => t.difficulty === 'Easy' || t.difficulty === 'Moderate');
+            if (easyMod.length > 0) nearby = easyMod;
+        }
+
         const pick = nearby[Math.floor(Math.random() * nearby.length)];
         if (navigator.vibrate) navigator.vibrate(200);
         setShakeSnackbar({ open: true, trailName: pick.name });
         setTimeout(() => navigate(`/trails/${pick.slug}`), 1200);
-    }, [navigate]);
+    }, [navigate, filters.difficulty]);
 
     const { supported: shakeSupported, permissionGranted: shakePermission, requestPermission: requestShakePermission } = useShake({
         onShake: handleShake,
