@@ -21,8 +21,9 @@ public class DeleteTrailCommandHandler : IRequestHandler<DeleteTrailCommand, boo
         var trail = await _context.Trails.FirstOrDefaultAsync(t => t.Id == request.Id, cancellationToken);
         if (trail == null) return false;
 
-        // Soft delete: Change status instead of removing
+        // Soft delete: Change status and free the slug for reuse
         trail.Status = TrailStatus.Deleted;
+        trail.Slug = $"{trail.Slug}-deleted-{Guid.NewGuid().ToString()[..8]}";
         trail.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesWithAuditAsync("system");

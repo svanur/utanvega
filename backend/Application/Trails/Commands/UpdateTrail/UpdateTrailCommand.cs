@@ -46,8 +46,9 @@ public class UpdateTrailCommandHandler : IRequestHandler<UpdateTrailCommand, boo
         
         trail.Name = request.Name;
         
-        // Reject if slug is taken by a different trail
-        var slugTaken = await _context.Trails.AnyAsync(t => t.Slug == request.Slug && t.Id != request.Id, cancellationToken);
+        // Reject if slug is taken by a different non-deleted trail
+        var slugTaken = await _context.Trails.AnyAsync(
+            t => t.Slug == request.Slug && t.Id != request.Id && t.Status != TrailStatus.Deleted, cancellationToken);
         if (slugTaken)
         {
             throw new InvalidOperationException($"A trail with slug '{request.Slug}' already exists.");
