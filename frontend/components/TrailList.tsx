@@ -446,6 +446,10 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                                     fontWeight: selected ? 'bold' : 'normal',
                                     opacity: selected ? 1 : 0.6,
                                     '& .MuiChip-label': { display: { xs: 'none', sm: 'block' } },
+                                    '& .MuiChip-icon': { mx: { xs: 0, sm: undefined } },
+                                    px: { xs: 0.5, sm: undefined },
+                                    minWidth: { xs: 36, sm: undefined },
+                                    justifyContent: 'center',
                                 }}
                             />
                         </Tooltip>
