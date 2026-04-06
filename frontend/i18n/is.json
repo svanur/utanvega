@@ -131,7 +131,11 @@
         "locationNotFound": "Staðsetning fannst ekki",
         "trailsIn": "Leiðir í {{name}} ({{count}})",
         "noTrailsInLocation": "Engar leiðir fundust á þessum stað.",
-        "parentLocation": "Í: {{name}}"
+        "parentLocation": "Í: {{name}}",
+        "statsTrails": "Leiðir",
+        "statsDistance": "Heildarvegalengd",
+        "statsElevGain": "Hækkun",
+        "statsElevLoss": "Lækkun"
     },
     "qr": {
         "showQR": "Sýna QR kóða",

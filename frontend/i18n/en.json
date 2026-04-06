@@ -131,7 +131,11 @@
         "locationNotFound": "Location not found",
         "trailsIn": "Trails in {{name}} ({{count}})",
         "noTrailsInLocation": "No trails found in this location yet.",
-        "parentLocation": "In: {{name}}"
+        "parentLocation": "In: {{name}}",
+        "statsTrails": "Trails",
+        "statsDistance": "Total distance",
+        "statsElevGain": "Elevation gain",
+        "statsElevLoss": "Elevation loss"
     },
     "qr": {
         "showQR": "Show QR Code",

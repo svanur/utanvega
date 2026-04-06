@@ -21,6 +21,9 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import FolderIcon from '@mui/icons-material/Folder';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
+import StraightenIcon from '@mui/icons-material/Straighten';
+import TerrainIcon from '@mui/icons-material/Terrain';
+import RouteIcon from '@mui/icons-material/Route';
 import Layout from '../components/Layout';
 import { useLocationBySlug, useLocationTree } from '../hooks/useLocations';
 import type { LocationTreeNode } from '../hooks/useLocations';
@@ -40,6 +43,39 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
     const { location, childLocations, trails, loading, error } = useLocationBySlug(slug);
     const { tree: locationTree } = useLocationTree();
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+
+    const activityEmoji: Record<string, string> = {
+        trailrunning: '🏃', running: '🏃‍♂️', hiking: '🥾', cycling: '🚴', walking: '🚶',
+    };
+
+    // Compute location trail statistics
+    const stats = useMemo(() => {
+        if (!trails || trails.length === 0) return null;
+        let totalKm = 0, totalGain = 0, totalLoss = 0;
+        const activities: Record<string, number> = {};
+        const difficulties: Record<string, number> = {};
+        const trailTypes: Record<string, number> = {};
+
+        for (const t of trails) {
+            totalKm += t.length / 1000;
+            totalGain += t.elevationGain;
+            totalLoss += t.elevationLoss;
+            const act = t.activityType?.toLowerCase() || 'unknown';
+            activities[act] = (activities[act] || 0) + 1;
+            if (t.difficulty) difficulties[t.difficulty] = (difficulties[t.difficulty] || 0) + 1;
+            if (t.trailType) trailTypes[t.trailType] = (trailTypes[t.trailType] || 0) + 1;
+        }
+
+        return {
+            count: trails.length,
+            totalKm: Math.round(totalKm * 10) / 10,
+            totalGain: Math.round(totalGain),
+            totalLoss: Math.round(totalLoss),
+            activities,
+            difficulties,
+            trailTypes,
+        };
+    }, [trails]);
 
     // Build breadcrumb path from tree
     const breadcrumbs = useMemo(() => {
@@ -132,10 +168,10 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
                     ))}
                 </Stack>
 
-                <Paper elevation={3} sx={{ p: 3, mb: 4, borderRadius: '16px' }}>
+                <Paper elevation={3} sx={{ p: { xs: 2, sm: 3 }, mb: 4, borderRadius: '16px' }}>
                     <Stack direction="row" alignItems="center" spacing={1} mb={1}>
-                        <LocationOnIcon color="primary" fontSize="large" />
-                        <Typography variant="h4" component="h1" fontWeight="bold">
+                        <LocationOnIcon color="primary" sx={{ fontSize: { xs: 28, sm: 35 } }} />
+                        <Typography variant="h4" component="h1" fontWeight="bold" sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
                             {location.name}
                         </Typography>
                     </Stack>
@@ -148,6 +184,65 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
                         <Typography variant="body1" color="text.secondary" paragraph>
                             {location.description}
                         </Typography>
+                    )}
+
+                    {stats && (
+                        <>
+                            <Divider sx={{ my: 2 }} />
+                            {/* Key numbers — 2x2 grid on mobile, single row on desktop */}
+                            <Grid container spacing={2} sx={{ mb: 2 }}>
+                                <Grid item xs={6} sm={3}>
+                                    <Stack alignItems="center" spacing={0.5}>
+                                        <RouteIcon color="primary" />
+                                        <Typography variant="h6" fontWeight="bold">{stats.count}</Typography>
+                                        <Typography variant="caption" color="text.secondary">{t('locations.statsTrails')}</Typography>
+                                    </Stack>
+                                </Grid>
+                                <Grid item xs={6} sm={3}>
+                                    <Stack alignItems="center" spacing={0.5}>
+                                        <StraightenIcon color="primary" />
+                                        <Typography variant="h6" fontWeight="bold">{stats.totalKm} km</Typography>
+                                        <Typography variant="caption" color="text.secondary">{t('locations.statsDistance')}</Typography>
+                                    </Stack>
+                                </Grid>
+                                <Grid item xs={6} sm={3}>
+                                    <Stack alignItems="center" spacing={0.5}>
+                                        <TerrainIcon color="success" />
+                                        <Typography variant="h6" fontWeight="bold">↑ {stats.totalGain} m</Typography>
+                                        <Typography variant="caption" color="text.secondary">{t('locations.statsElevGain')}</Typography>
+                                    </Stack>
+                                </Grid>
+                                <Grid item xs={6} sm={3}>
+                                    <Stack alignItems="center" spacing={0.5}>
+                                        <TerrainIcon color="error" />
+                                        <Typography variant="h6" fontWeight="bold">↓ {stats.totalLoss} m</Typography>
+                                        <Typography variant="caption" color="text.secondary">{t('locations.statsElevLoss')}</Typography>
+                                    </Stack>
+                                </Grid>
+                            </Grid>
+
+                            {/* Activity breakdown */}
+                            <Stack direction="row" spacing={1} sx={{ mb: 1, flexWrap: 'wrap', gap: 0.5 }}>
+                                {Object.entries(stats.activities).map(([act, n]) => (
+                                    <Chip
+                                        key={act}
+                                        label={`${activityEmoji[act] || '🏞️'} ${act.charAt(0).toUpperCase() + act.slice(1)} (${n})`}
+                                        size="small"
+                                        variant="outlined"
+                                    />
+                                ))}
+                            </Stack>
+
+                            {/* Trail type + difficulty breakdown */}
+                            <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
+                                {Object.entries(stats.trailTypes).map(([type, n]) => (
+                                    <Chip key={type} label={`${type} (${n})`} size="small" color="info" variant="outlined" />
+                                ))}
+                                {Object.entries(stats.difficulties).map(([diff, n]) => (
+                                    <Chip key={diff} label={`${diff} (${n})`} size="small" color="warning" variant="outlined" />
+                                ))}
+                            </Stack>
+                        </>
                     )}
                 </Paper>
 
