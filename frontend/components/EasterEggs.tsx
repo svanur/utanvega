@@ -42,6 +42,7 @@ function KonamiRunner({ onComplete }: { onComplete: () => void }) {
                     position: absolute;
                     bottom: 30%;
                     font-size: 80px;
+                    transform: scaleX(-1);
                     animation: ee-run 3.5s ease-in-out forwards;
                     filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
                 }

@@ -110,14 +110,19 @@ function EmptyFilterSvg() {
 interface EmptyFilterStateProps {
     onClearFilters: () => void;
     hasActiveFilters: boolean;
+    searchQuery?: string;
 }
 
-export default function EmptyFilterState({ onClearFilters, hasActiveFilters }: EmptyFilterStateProps) {
+export default function EmptyFilterState({ onClearFilters, hasActiveFilters, searchQuery }: EmptyFilterStateProps) {
     const { i18n, t } = useTranslation();
 
     const lang = i18n.language.startsWith('is') ? 'is' : 'en';
     const [index] = useState(() => Math.floor(Math.random() * quotes.en.length));
-    const quote = quotes[lang][index];
+
+    const isOriginals = searchQuery?.toLowerCase().trim() === 'hin upprunalegu';
+    const quote = isOriginals
+        ? (lang === 'is' ? 'Þú ert æðislegt, en...' : 'You are awesome, but...')
+        : quotes[lang][index];
 
     return (
         <Box

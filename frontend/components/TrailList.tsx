@@ -939,6 +939,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                     <EmptyFilterState 
                         hasActiveFilters={!!(searchQuery || Object.values(filters).some(v => v !== 'All' && v !== 250 && v !== 0 && v !== 100 && v !== 2000 && v !== false))}
                         onClearFilters={() => { resetFilters(); setSearchQuery(''); }}
+                        searchQuery={searchQuery}
                     />
                 ) : (
                     filteredTrails.map(trail => (
