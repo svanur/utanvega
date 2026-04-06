@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 
 interface TrailSlotMachineProps {
     open: boolean;
@@ -23,7 +24,7 @@ export default function TrailSlotMachine({ open, trailNames, winner, onComplete 
 
         const names = trailNames.length > 0 ? trailNames : [winnerRef.current || '...'];
         setSettled(false);
-        setDisplayName('');
+        setDisplayName(names[0]);
         let speed = 60;
         let elapsed = 0;
         const totalDuration = 1800;
@@ -55,67 +56,31 @@ export default function TrailSlotMachine({ open, trailNames, winner, onComplete 
 
     if (!open) return null;
 
-    return (
-        <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 9999,
-            backgroundColor: 'rgba(0, 0, 0, 0.88)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '24px',
-        }}>
-            {/* Spinning dice emoji */}
-            <div style={{
-                fontSize: '48px',
-                animation: settled ? 'none' : 'slotSpin 0.5s linear infinite',
-            }}>
-                🎲
-            </div>
-            <style>{`@keyframes slotSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-
-            {/* Trail name display */}
-            <div style={{
-                border: `2px solid ${settled ? '#4caf50' : '#666'}`,
-                borderRadius: '12px',
-                padding: '16px 32px',
-                minWidth: '260px',
-                maxWidth: '90vw',
-                textAlign: 'center',
-                backgroundColor: settled ? 'rgba(76, 175, 80, 0.15)' : 'rgba(255, 255, 255, 0.08)',
-                transition: 'all 0.3s ease',
-            }}>
-                <div style={{
-                    color: '#ffffff',
-                    fontWeight: settled ? 'bold' : 'normal',
-                    fontSize: settled ? '1.4rem' : '1.2rem',
-                    minHeight: '2em',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'all 0.2s',
-                    fontFamily: 'inherit',
-                }}>
-                    {displayName || '...'}
+    const overlay = (
+        <>
+            <style>{`
+                .slot-overlay { position:fixed; inset:0; z-index:99999; background:rgba(0,0,0,0.9); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:24px; }
+                .slot-dice { font-size:48px; }
+                .slot-dice.spinning { animation: slotSpin 0.5s linear infinite; }
+                .slot-box { border:2px solid #666; border-radius:12px; padding:16px 32px; min-width:260px; max-width:90vw; text-align:center; background:rgba(255,255,255,0.08); transition:all 0.3s ease; }
+                .slot-box.settled { border-color:#4caf50; background:rgba(76,175,80,0.15); }
+                .slot-name { color:#fff; font-size:1.3rem; min-height:2em; display:flex; align-items:center; justify-content:center; font-family:inherit; transition:all 0.2s; }
+                .slot-name.settled { font-weight:bold; font-size:1.5rem; }
+                .slot-go { color:#aaa; font-size:0.9rem; opacity:0; animation: slotFadeIn 0.4s ease-in forwards; }
+                @keyframes slotSpin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+                @keyframes slotFadeIn { from{opacity:0} to{opacity:1} }
+            `}</style>
+            <div className="slot-overlay" onClick={(e) => e.stopPropagation()}>
+                <div className={`slot-dice ${settled ? '' : 'spinning'}`}>🎲</div>
+                <div className={`slot-box ${settled ? 'settled' : ''}`}>
+                    <div className={`slot-name ${settled ? 'settled' : ''}`}>
+                        {displayName || '...'}
+                    </div>
                 </div>
+                {settled && <div className="slot-go">🏃 Let&apos;s go!</div>}
             </div>
-
-            {/* Let's go! */}
-            {settled && (
-                <div style={{
-                    color: '#aaa',
-                    fontSize: '0.9rem',
-                    animation: 'slotFadeIn 0.4s ease-in',
-                }}>
-                    🏃 Let&apos;s go!
-                </div>
-            )}
-            <style>{`@keyframes slotFadeIn { from { opacity: 0; } to { opacity: 1; } }`}</style>
-        </div>
+        </>
     );
+
+    return createPortal(overlay, document.body);
 }
