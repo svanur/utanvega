@@ -754,7 +754,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
             </Collapse>
 
             {/* Recently Viewed — show when no filters active */}
-            {recentTrails.length > 0 && viewMode === 'list' && !searchQuery && !filters.favoritesOnly && (
+            {recentTrails.length > 0 && viewMode === 'list' && !searchQuery && !filters.favoritesOnly && !tagSlug && (
                 <Box mb={3}>
                     <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
                         <Typography variant="subtitle1" fontWeight="bold" color="text.secondary">
