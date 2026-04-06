@@ -27,8 +27,7 @@ import {
     Skeleton,
     Card,
     CardContent,
-    Stack,
-    Snackbar
+    Stack
 } from '@mui/material';
 import { 
     Search as SearchIcon, 
@@ -63,6 +62,7 @@ import { TrailCard } from './TrailCard';
 const TrailMapView = React.lazy(() => import('./TrailMapView').then(m => ({ default: m.TrailMapView })));
 import ShareButtons from './ShareButtons';
 import EmptyFilterState from './EmptyFilterState';
+import TrailSlotMachine from './TrailSlotMachine';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import ListSubheader from '@mui/material/ListSubheader';
 
@@ -112,7 +112,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
     };
 
     // Shake-to-random-trail
-    const [shakeSnackbar, setShakeSnackbar] = React.useState<{ open: boolean; trailName: string }>({ open: false, trailName: '' });
+    const [slotMachine, setSlotMachine] = React.useState<{ open: boolean; winner: string; winnerSlug: string }>({ open: false, winner: '', winnerSlug: '' });
     const filteredTrailsRef = React.useRef<typeof trails>([]);
     const userLocationRef = React.useRef(userLocation);
     React.useEffect(() => { userLocationRef.current = userLocation; }, [userLocation]);
@@ -136,9 +136,15 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
 
         const pick = nearby[Math.floor(Math.random() * nearby.length)];
         if (navigator.vibrate) navigator.vibrate(200);
-        setShakeSnackbar({ open: true, trailName: pick.name });
-        setTimeout(() => navigate(`/trails/${pick.slug}`), 1200);
-    }, [navigate, filters.difficulty]);
+        setSlotMachine({ open: true, winner: pick.name, winnerSlug: pick.slug });
+    }, [filters.difficulty]);
+
+    const handleSlotComplete = React.useCallback(() => {
+        setSlotMachine(s => {
+            if (s.winnerSlug) navigate(`/trails/${s.winnerSlug}`);
+            return { ...s, open: false };
+        });
+    }, [navigate]);
 
     const { supported: shakeSupported, permissionGranted: shakePermission, requestPermission: requestShakePermission } = useShake({
         onShake: handleShake,
@@ -266,6 +272,15 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
         return result;
     }, [trails, filters.favoritesOnly, favorites, hiddenSlugs, showHidden, hidingSlugs]);
     React.useEffect(() => { filteredTrailsRef.current = filteredTrails; }, [filteredTrails]);
+
+    // Gather trail names for the slot machine display
+    const slotTrailNames = React.useMemo(() => {
+        const names = filteredTrails.map(t => t.name);
+        while (names.length > 0 && names.length < 8) {
+            names.push(...names.slice(0, 8 - names.length));
+        }
+        return names;
+    }, [filteredTrails]);
 
     // Recently viewed trails (resolved from slugs → trail objects)
     const recentTrails = React.useMemo(() => {
@@ -945,12 +960,11 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                 </React.Suspense>
             )}
 
-            <Snackbar
-                open={shakeSnackbar.open}
-                autoHideDuration={1500}
-                onClose={() => setShakeSnackbar(s => ({ ...s, open: false }))}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-                message={`🎲 ${shakeSnackbar.trailName}`}
+            <TrailSlotMachine
+                open={slotMachine.open}
+                trailNames={slotTrailNames}
+                winner={slotMachine.winner}
+                onComplete={handleSlotComplete}
             />
         </Container>
     );
