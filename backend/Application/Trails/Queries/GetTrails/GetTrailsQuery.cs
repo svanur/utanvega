@@ -8,7 +8,7 @@ namespace Utanvega.Backend.Application.Trails.Queries.GetTrails;
 
 public record GetTrailsQuery(bool IncludeDeleted = false, bool PublishedOnly = false) : IRequest<List<TrailDto>>;
 
-public record LocationInfoDto(string Name, string Slug, int Order);
+public record LocationInfoDto(string Name, string Slug, int Order, string Role);
 
 public record TagInfoDto(string Name, string Slug, string? Color);
 
@@ -76,7 +76,7 @@ public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailD
             (t.GpxData as LineString)?.StartPoint.X,
             t.TrailLocations
                 .OrderBy(tl => tl.Order)
-                .Select(tl => new LocationInfoDto(tl.Location.Name, tl.Location.Slug, tl.Order))
+                .Select(tl => new LocationInfoDto(tl.Location.Name, tl.Location.Slug, tl.Order, tl.Role.ToString()))
                 .ToList(),
             t.TrailTags
                 .Select(tt => new TagInfoDto(tt.Tag.Name, tt.Tag.Slug, tt.Tag.Color))

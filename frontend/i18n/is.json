@@ -35,7 +35,13 @@
         "pointToPoint": "Milli staða",
         "viewDetails": "Skoða nánari upplýsingar",
         "loadingMap": "Hleð korti...",
-        "noGpsData": "Engin GPS gögn tiltæk fyrir þessa leið."
+        "noGpsData": "Engin GPS gögn tiltæk fyrir þessa leið.",
+        "role": {
+            "Start": "Upphaf",
+            "End": "Endir",
+            "PassingThrough": "Í gegn",
+            "Near": "Nálægt"
+        }
     },
     "trailCard": {
         "removeFavorite": "Fjarlægja úr eftirlætum",

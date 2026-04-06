@@ -25,6 +25,9 @@ import LoopIcon from '@mui/icons-material/Loop';
 import SyncAltIcon from '@mui/icons-material/SyncAlt';
 import EastIcon from '@mui/icons-material/East';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
+import FlagIcon from '@mui/icons-material/Flag';
+import SportsScoreIcon from '@mui/icons-material/SportsScore';
+import NearMeIcon from '@mui/icons-material/NearMe';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import StarIcon from '@mui/icons-material/Star';
@@ -169,19 +172,33 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                             variant="outlined" 
                             size="small"
                         />
-                        {trail.locations && trail.locations.length > 0 && trail.locations.map((loc) => (
-                            <Chip 
-                                key={loc.slug}
-                                icon={<LocationOnIcon sx={{ fontSize: '1rem' }} />} 
-                                label={loc.name} 
-                                variant="outlined"
-                                color="secondary"
-                                component={RouterLink}
-                                to={`/locations/${loc.slug}`}
-                                clickable
-                                size="small"
-                            />
-                        ))}
+                        {trail.locations && trail.locations.length > 0 && trail.locations.map((loc) => {
+                            const roleIcon = {
+                                Start: <FlagIcon sx={{ fontSize: '1rem' }} />,
+                                End: <SportsScoreIcon sx={{ fontSize: '1rem' }} />,
+                                BelongsTo: <LocationOnIcon sx={{ fontSize: '1rem' }} />,
+                                PassingThrough: <NearMeIcon sx={{ fontSize: '1rem' }} />,
+                                Near: <NearMeIcon sx={{ fontSize: '1rem' }} />,
+                            }[loc.role] || <LocationOnIcon sx={{ fontSize: '1rem' }} />;
+                            
+                            const roleLabel = loc.role && loc.role !== 'BelongsTo'
+                                ? `${loc.name} · ${t(`trail.role.${loc.role}`)}`
+                                : loc.name;
+
+                            return (
+                                <Chip 
+                                    key={loc.slug}
+                                    icon={roleIcon} 
+                                    label={roleLabel}
+                                    variant="outlined"
+                                    color="secondary"
+                                    component={RouterLink}
+                                    to={`/locations/${loc.slug}`}
+                                    clickable
+                                    size="small"
+                                />
+                            );
+                        })}
                         {trail.tags && trail.tags.length > 0 && trail.tags.map((tag) => (
                             <Chip
                                 key={tag.slug}

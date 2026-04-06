@@ -35,7 +35,13 @@
         "pointToPoint": "Point to Point",
         "viewDetails": "View trail details",
         "loadingMap": "Loading Map...",
-        "noGpsData": "No GPS data available for this trail."
+        "noGpsData": "No GPS data available for this trail.",
+        "role": {
+            "Start": "Start",
+            "End": "Finish",
+            "PassingThrough": "Passing through",
+            "Near": "Nearby"
+        }
     },
     "trailCard": {
         "removeFavorite": "Remove Favorite",

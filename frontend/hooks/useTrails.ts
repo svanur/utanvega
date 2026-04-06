@@ -4,6 +4,7 @@ export interface LocationInfo {
     name: string;
     slug: string;
     order: number;
+    role: string;
 }
 
 export interface TagInfo {
