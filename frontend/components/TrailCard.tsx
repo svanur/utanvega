@@ -61,9 +61,9 @@ const getTrailTypeIcon = (type: string) => {
 
 const trailTypeI18nKey = (type: string) => {
     switch (type) {
-        case 'Loop': return 'trailType.loop';
-        case 'OutAndBack': return 'trailType.outAndBack';
-        case 'PointToPoint': return 'trailType.pointToPoint';
+        case 'Loop': return 'trail.loop';
+        case 'OutAndBack': return 'trail.outAndBack';
+        case 'PointToPoint': return 'trail.pointToPoint';
         default: return type;
     }
 };
