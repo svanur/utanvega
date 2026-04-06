@@ -36,6 +36,7 @@
         "viewDetails": "View trail details",
         "loadingMap": "Loading Map...",
         "noGpsData": "No GPS data available for this trail.",
+        "wereYouLookingFor": "Were you looking for one of these?",
         "role": {
             "Start": "Start",
             "End": "Finish",

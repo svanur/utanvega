@@ -24,6 +24,7 @@ using Utanvega.Backend.Application.Locations.Commands.DeleteLocation;
 using Utanvega.Backend.Application.Trails.Queries.GetDuplicateTrails;
 using Utanvega.Backend.Application.History.Queries.GetChangeLogs;
 using Utanvega.Backend.Application.Trails.Queries.GetTrailBySlug;
+using Utanvega.Backend.Application.Trails.Queries.GetTrailSuggestions;
 using Utanvega.Backend.Application.Locations.Queries.GetLocationBySlug;
 using Utanvega.Backend.Application.Locations.Queries.GetLocationTree;
 using Utanvega.Backend.Application.Trails.Queries.GetTrailGpx;
@@ -278,6 +279,13 @@ app.MapGet("/api/v1/trails", async (IMediator mediator) =>
     return Results.Ok(trails);
 })
 .WithName("GetPublicTrails");
+
+app.MapGet("/api/v1/trails/suggestions", async (string slug, IMediator mediator) =>
+{
+    var suggestions = await mediator.Send(new GetTrailSuggestionsQuery(slug));
+    return Results.Ok(suggestions);
+})
+.WithName("GetTrailSuggestions");
 
 app.MapGet("/api/v1/trails/{slug}", async (string slug, IMediator mediator) =>
 {

@@ -11,7 +11,9 @@ import {
     Divider,
     Stack,
     PaletteMode,
-    IconButton
+    IconButton,
+    Container,
+    CircularProgress
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import RouteIcon from '@mui/icons-material/Route';
@@ -33,7 +35,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import Layout from '../components/Layout';
-import { useTrailBySlug, useTrails } from '../hooks/useTrails';
+import { useTrailBySlug, useTrails, useTrailSuggestions } from '../hooks/useTrails';
 import LostRunner from '../components/LostRunner';
 import { useFavorites } from '../hooks/useFavorites';
 import TrailMap, { GeoJsonGeometry } from '../components/TrailMap';
@@ -85,6 +87,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     const { trail, loading, error } = useTrailBySlug(slug);
     const { trails: allTrails } = useTrails();
     const { isFavorite, toggleFavorite } = useFavorites();
+    const { suggestions, loading: suggestionsLoading } = useTrailSuggestions(slug, !!error || (!loading && !trail));
     const [geometry, setGeometry] = useState<GeoJsonGeometry | null>(null);
     const [hoverPoint, setHoverPoint] = useState<{ lat: number; lng: number } | null>(null);
     const [playbackIndex, setPlaybackIndex] = useState<number | null>(null);
@@ -122,6 +125,48 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
         return (
             <Layout mode={mode} onToggleMode={onToggleMode}>
                 <LostRunner />
+                {(suggestions.length > 0 || suggestionsLoading) && (
+                    <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
+                        <Typography variant="h6" gutterBottom sx={{ textAlign: 'center' }}>
+                            {t('trail.wereYouLookingFor')}
+                        </Typography>
+                        {suggestionsLoading ? (
+                            <Box display="flex" justifyContent="center" py={2}>
+                                <CircularProgress size={24} />
+                            </Box>
+                        ) : (
+                            <Stack spacing={1}>
+                                {suggestions.map(s => (
+                                    <Paper
+                                        key={s.slug}
+                                        elevation={1}
+                                        sx={{
+                                            p: 2,
+                                            cursor: 'pointer',
+                                            '&:hover': { bgcolor: 'action.hover' },
+                                            borderRadius: 2,
+                                        }}
+                                        onClick={() => navigate(`/trails/${s.slug}`)}
+                                    >
+                                        <Stack direction="row" alignItems="center" justifyContent="space-between">
+                                            <Box>
+                                                <Typography variant="subtitle1" fontWeight="bold">
+                                                    {s.name}
+                                                </Typography>
+                                                <Stack direction="row" spacing={1} mt={0.5}>
+                                                    <Chip label={`${(s.length / 1000).toFixed(1)} km`} size="small" variant="outlined" />
+                                                    <Chip label={s.activityType} size="small" variant="outlined" />
+                                                    <Chip label={s.trailType} size="small" color="info" variant="outlined" />
+                                                </Stack>
+                                            </Box>
+                                            <Typography variant="body2" color="primary">→</Typography>
+                                        </Stack>
+                                    </Paper>
+                                ))}
+                            </Stack>
+                        )}
+                    </Container>
+                )}
             </Layout>
         );
     }

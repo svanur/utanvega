@@ -312,6 +312,37 @@ export function useTrailBySlug(slug?: string) {
     return { trail, loading, error };
 }
 
+export interface TrailSuggestion {
+    name: string;
+    slug: string;
+    length: number;
+    activityType: string;
+    trailType: string;
+}
+
+export function useTrailSuggestions(slug?: string, enabled = false) {
+    const [suggestions, setSuggestions] = useState<TrailSuggestion[]>([]);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (!slug || !enabled) return;
+
+        setLoading(true);
+        fetch(`${API_URL}/api/v1/trails/suggestions?slug=${encodeURIComponent(slug)}`)
+            .then(res => res.ok ? res.json() : [])
+            .then(data => {
+                setSuggestions(data);
+                setLoading(false);
+            })
+            .catch(() => {
+                setSuggestions([]);
+                setLoading(false);
+            });
+    }, [slug, enabled]);
+
+    return { suggestions, loading };
+}
+
 // Haversine formula to calculate distance between two points in km
 function calculateHaversineDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
     const R = 6371; // Earth's radius in km
