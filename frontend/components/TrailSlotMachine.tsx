@@ -14,28 +14,34 @@ export default function TrailSlotMachine({ open, trailNames, winner, onComplete 
     const [settled, setSettled] = useState(false);
     const intervalRef = useRef<ReturnType<typeof setInterval>>();
     const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
+    const onCompleteRef = useRef(onComplete);
+    const winnerRef = useRef(winner);
+
+    useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
+    useEffect(() => { winnerRef.current = winner; }, [winner]);
 
     useEffect(() => {
-        if (!open || trailNames.length === 0) return;
+        if (!open) return;
 
+        const names = trailNames.length > 0 ? trailNames : [winnerRef.current || '...'];
         setSettled(false);
+        setDisplayName('');
         let speed = 60;
         let elapsed = 0;
         const totalDuration = 1800;
 
         const tick = () => {
-            const pick = trailNames[Math.floor(Math.random() * trailNames.length)];
+            const pick = names[Math.floor(Math.random() * names.length)];
             setDisplayName(pick);
             elapsed += speed;
 
             if (elapsed >= totalDuration) {
-                setDisplayName(winner);
+                setDisplayName(winnerRef.current);
                 setSettled(true);
-                timeoutRef.current = setTimeout(onComplete, 900);
+                timeoutRef.current = setTimeout(() => onCompleteRef.current(), 900);
                 return;
             }
 
-            // Slow down progressively
             speed = Math.min(300, speed + 15);
             intervalRef.current = setTimeout(tick, speed);
         };

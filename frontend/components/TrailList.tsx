@@ -140,11 +140,10 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
     }, [filters.difficulty]);
 
     const handleSlotComplete = React.useCallback(() => {
-        setSlotMachine(s => {
-            if (s.winnerSlug) navigate(`/trails/${s.winnerSlug}`);
-            return { ...s, open: false };
-        });
-    }, [navigate]);
+        const slug = slotMachine.winnerSlug;
+        setSlotMachine(s => ({ ...s, open: false }));
+        if (slug) navigate(`/trails/${slug}`);
+    }, [navigate, slotMachine.winnerSlug]);
 
     const { supported: shakeSupported, permissionGranted: shakePermission, requestPermission: requestShakePermission } = useShake({
         onShake: handleShake,
