@@ -16,12 +16,20 @@ function TagPage({ mode, onToggleMode }: { mode: PaletteMode; onToggleMode: () =
 }
 
 export default function App() {
-    const [mode, setMode] = useState<PaletteMode>('light');
+    const [mode, setMode] = useState<PaletteMode>(() => {
+        const saved = localStorage.getItem('theme-mode');
+        if (saved === 'light' || saved === 'dark') return saved;
+        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    });
 
     const theme = useMemo(() => createAppTheme(mode), [mode]);
 
     const handleToggleMode = () => {
-        setMode((current) => (current === 'light' ? 'dark' : 'light'));
+        setMode((current) => {
+            const next = current === 'light' ? 'dark' : 'light';
+            localStorage.setItem('theme-mode', next);
+            return next;
+        });
     };
 
     return (

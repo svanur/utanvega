@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
-import { Box, Typography, Button, IconButton, Paper } from '@mui/material';
+import { Box, Typography, Button, IconButton, Paper, useTheme } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
 import { Trail } from '../hooks/useTrails';
@@ -52,6 +52,8 @@ function ChangeView({ bounds, followMe, userLocation }: {
 
 export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation }) => {
     const { t } = useTranslation();
+    const theme = useTheme();
+    const isDark = theme.palette.mode === 'dark';
     const [followMe, setFollowMe] = useState(false);
 
     const handleFollowMeClick = () => {
@@ -157,8 +159,13 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
                 >
                     <MapEvents />
                 <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    key={isDark ? 'dark' : 'light'}
+                    attribution={isDark
+                        ? '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>'
+                        : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}
+                    url={isDark
+                        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                        : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'}
                 />
                 
                 {userLocation && (

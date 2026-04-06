@@ -1,5 +1,5 @@
 import { MapContainer, TileLayer, Polyline, useMap, Marker, useMapEvents } from 'react-leaflet';
-import { Box, Typography, Paper, IconButton } from '@mui/material';
+import { Box, Typography, Paper, IconButton, useTheme } from '@mui/material';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
 import { useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -95,6 +95,8 @@ function HoverMarker({ point, activityType }: { point: { lat: number; lng: numbe
 
 export default function TrailMap({ slug, onDataLoaded, hoverPoint, activityType }: TrailMapProps) {
     const { t } = useTranslation();
+    const theme = useTheme();
+    const isDark = theme.palette.mode === 'dark';
     const [geometry, setGeometry] = useState<GeoJsonGeometry | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -199,8 +201,13 @@ export default function TrailMap({ slug, onDataLoaded, hoverPoint, activityType 
             >
                 <MapEvents />
                 <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    key={isDark ? 'dark' : 'light'}
+                    attribution={isDark
+                        ? '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>'
+                        : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}
+                    url={isDark
+                        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                        : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'}
                 />
                 <Polyline positions={positions} color="#2196f3" weight={5} opacity={0.7} />
                 
