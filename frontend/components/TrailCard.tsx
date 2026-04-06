@@ -16,6 +16,9 @@ import RouteIcon from '@mui/icons-material/Route';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
+import AllInclusiveIcon from '@mui/icons-material/AllInclusive';
+import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
+import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
 import StarIcon from '@mui/icons-material/Star';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import { useNavigate } from 'react-router-dom';
@@ -44,6 +47,24 @@ const getActivityIcon = (type: string) => {
         case 'cycling': return <DirectionsBikeIcon fontSize="small" />;
         case 'hiking': return <HikingIcon fontSize="small" />;
         default: return <RouteIcon fontSize="small" />;
+    }
+};
+
+const getTrailTypeIcon = (type: string) => {
+    switch (type) {
+        case 'Loop': return <AllInclusiveIcon sx={{ fontSize: 14 }} />;
+        case 'OutAndBack': return <CompareArrowsIcon sx={{ fontSize: 14 }} />;
+        case 'PointToPoint': return <TrendingFlatIcon sx={{ fontSize: 14 }} />;
+        default: return null;
+    }
+};
+
+const trailTypeI18nKey = (type: string) => {
+    switch (type) {
+        case 'Loop': return 'trailType.loop';
+        case 'OutAndBack': return 'trailType.outAndBack';
+        case 'PointToPoint': return 'trailType.pointToPoint';
+        default: return type;
     }
 };
 
@@ -270,6 +291,15 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                             variant="outlined" 
                             color="primary"
                         />
+                        {trail.trailType && trail.trailType !== 'Unknown' && (
+                            <Chip
+                                icon={getTrailTypeIcon(trail.trailType) || undefined}
+                                label={t(trailTypeI18nKey(trail.trailType))}
+                                size="small"
+                                variant="outlined"
+                                sx={{ fontSize: '0.7rem' }}
+                            />
+                        )}
                         {[...trail.locations]
                             .sort((a, b) => a.order - b.order)
                             .slice(0, compact ? 1 : undefined)
