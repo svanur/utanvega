@@ -199,15 +199,15 @@
         "changelog": {
             "v1_8": {
                 "title": "Gaman og afköst",
-                "description": "Hristu símann fyrir handahófsleið með spilakassahreyfinímynd, deila/afrita slóð hnappur, skemmtilegar 404 síður fyrir leiðir og staðsetningar sem finnast ekki, tóm síustaða með leiddri hlaupara, og kóðaskipting með lata hleðslu fyrir hraðvirkari síðuhleðslu."
+                "description": "Hristu símann til að finna leið af handahófi. Hnappi bætt við til að deila/afrita slóð. Skemmtilegar 404 síður fyrir leiðir og staðsetningar sem finnast ekki. Kóðaskipting með lazy-loading fyrir hraðvirkari síðuhleðslu. Sagði einhver Easter-egg? Neiii..."
             },
             "v1_7": {
-                "title": "Notendaupplifun og farsíma",
+                "title": "Notenda- og farsímaupplifun",
                 "description": "Dökkt þema með dökkum kortaflísum, leiðartegundatákn á spjöldum, deilanleg URL síur, nýlega skoðaðar leiðir á hringekju, beinagrindarhleðsla, kortamerkjaklasi, þétt leiðarspjöld og tákn-eingöngu virknipillur á farsíma."
             },
             "v1_6": {
                 "title": "Staðsetningar og uppgötvun",
-                "description": "Stigveldis staðsetningar með brauðmylsnu, óskýr leit að leiðum með tillögum, tölfræði staðsetninga, staðsetningarhlutverk, virknitegundatákn og hlekkjaafritun."
+                "description": "Stigveldis staðsetningar með brauðmylsnu. Fuzzy leit að leiðum með tillögum. Tölfræði staðsetninga, staðsetningarhlutverk, virknitegundatákn og hlekkjaafritun."
             },
             "v1_5": {
                 "title": "Gæði og frágangsatriði",
