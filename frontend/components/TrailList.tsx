@@ -37,7 +37,11 @@ import {
     Visibility as VisibilityIcon,
     Refresh as RefreshIcon,
     Sort as SortIcon,
-    MyLocation as MyLocationIcon
+    MyLocation as MyLocationIcon,
+    Landscape as LandscapeIcon,
+    DirectionsRun as DirectionsRunIcon,
+    Hiking as HikingIcon,
+    DirectionsBike as DirectionsBikeIcon
 } from '@mui/icons-material';
 import { useTrails, ALL_ACTIVITY_TYPES } from '../hooks/useTrails';
 import type { SortOption } from '../hooks/useTrails';
@@ -319,9 +323,16 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
             <Box display="flex" gap={1} mb={2} flexWrap="wrap">
                 {ALL_ACTIVITY_TYPES.map(type => {
                     const selected = filters.selectedActivityTypes.includes(type);
+                    const icon = {
+                        TrailRunning: <LandscapeIcon fontSize="small" />,
+                        Running: <DirectionsRunIcon fontSize="small" />,
+                        Hiking: <HikingIcon fontSize="small" />,
+                        Cycling: <DirectionsBikeIcon fontSize="small" />,
+                    }[type];
                     return (
                         <Chip
                             key={type}
+                            icon={icon}
                             label={t(`difficulty.${type.charAt(0).toLowerCase() + type.slice(1)}`)}
                             onClick={() => {
                                 const current = filters.selectedActivityTypes;
