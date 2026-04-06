@@ -294,6 +294,10 @@ export function useTrailBySlug(slug?: string) {
     useEffect(() => {
         if (!slug) return;
 
+        setLoading(true);
+        setError(null);
+        setTrail(null);
+
         fetch(`${API_URL}/api/v1/trails/${slug}`)
             .then(res => {
                 if (!res.ok) throw new Error('Failed to fetch trail');
