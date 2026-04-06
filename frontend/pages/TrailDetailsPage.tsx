@@ -93,9 +93,43 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     const [playbackIndex, setPlaybackIndex] = useState<number | null>(null);
 
     const relatedTrails = (allTrails && trail) 
-        ? allTrails
-            .filter(t => t.slug !== trail.slug) // Exclude current trail
-            .filter(t => t.locations.some(loc => trail.locations.some(trailLoc => trailLoc.slug === loc.slug))) // Shared location
+        ? (() => {
+            const baseSlug = trail.slug.replace(/-\d+$/, '');
+
+            const scored = allTrails
+                .filter(t => t.slug !== trail.slug)
+                .map(t => {
+                    let score = 0;
+
+                    const tBase = t.slug.replace(/-\d+$/, '');
+                    const isSameBase = tBase === baseSlug 
+                        || t.slug.startsWith(baseSlug + '-')
+                        || trail.slug.startsWith(tBase + '-');
+                    if (isSameBase) score += 5;
+
+                    const sharedLocations = t.locations.filter(loc => 
+                        trail.locations.some(tl => tl.slug === loc.slug)
+                    ).length;
+                    score += sharedLocations * 3;
+
+                    const sharedTags = (t.tags || []).filter(tag =>
+                        (trail.tags || []).some(tt => tt.slug === tag.slug)
+                    ).length;
+                    score += sharedTags * 2;
+
+                    if (t.activityType === trail.activityType) score += 1;
+
+                    return { trail: t, score, sameBase: isSameBase };
+                })
+                .filter(r => r.score > 0)
+                .sort((a, b) => {
+                    if (a.sameBase !== b.sameBase) return a.sameBase ? -1 : 1;
+                    return b.score - a.score;
+                })
+                .slice(0, 10);
+
+            return scored.map(r => r.trail);
+        })()
         : [];
 
     const scrollRef = useRef<HTMLDivElement>(null);

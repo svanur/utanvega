@@ -193,6 +193,10 @@
         "aiDescription": "Vefurinn er þróaður með aðstoð Claude, gervigreindar- og kóðunarfulltrúa frá Anthropic. Claude hjálpar til við kóðun, prófanir, endurbætur og gæðaeftirlit.",
         "changelogTitle": "Breytingasaga",
         "changelog": {
+            "v1_6": {
+                "title": "Staðsetningar og uppgötvun",
+                "description": "Stigveldis staðsetningar með brauðmylsnu, óskýr leit að leiðum með tillögum, tölfræði staðsetninga, staðsetningarhlutverk, virknitegundatákn og hlekkjaafritun."
+            },
             "v1_5": {
                 "title": "Gæði og frágangsatriði",
                 "description": "ESLint uppsetning, hreinsun á lint villum, öryggisendurbætur, inntaksstaðfesting með FluentValidation og bættar hleðsluhreyfinímyndir."

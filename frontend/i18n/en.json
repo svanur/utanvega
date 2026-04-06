@@ -193,6 +193,10 @@
         "aiDescription": "Development assisted by Claude, an AI coding agent by Anthropic, used for code generation, refactoring, and quality improvements.",
         "changelogTitle": "Changelog",
         "changelog": {
+            "v1_6": {
+                "title": "Locations & discovery",
+                "description": "Hierarchical locations with breadcrumbs, fuzzy trail search with suggestions, location detail stats, location role display, activity type icons, and copy-link sharing."
+            },
             "v1_5": {
                 "title": "Quality & polish",
                 "description": "ESLint setup, lint cleanup, security hardening, input validation with FluentValidation, and improved loading animations."

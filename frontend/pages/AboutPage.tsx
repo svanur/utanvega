@@ -17,6 +17,7 @@ import MapIcon from '@mui/icons-material/Map';
 import TuneIcon from '@mui/icons-material/Tune';
 import BuildIcon from '@mui/icons-material/Build';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
+import SearchIcon from '@mui/icons-material/Search';
 import Layout from '../components/Layout';
 
 interface AboutPageProps {
@@ -25,6 +26,7 @@ interface AboutPageProps {
 }
 
 const changelog = [
+    { version: '1.6', date: '2025-07', key: 'v1_6', icon: <SearchIcon />, color: 'secondary' as const },
     { version: '1.5', date: '2025-06', key: 'v1_5', icon: <AutoFixHighIcon />, color: 'primary' as const },
     { version: '1.4', date: '2025-05', key: 'v1_4', icon: <BuildIcon />, color: 'secondary' as const },
     { version: '1.3', date: '2025-04', key: 'v1_3', icon: <TuneIcon />, color: 'primary' as const },
