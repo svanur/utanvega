@@ -41,7 +41,7 @@ export class QuoteService {
         { text: "If you will never try, you will never know, your worth", author: "Coldplay" },
         { text: "The focus must be on learning from failure, not that you are a failure", author: "Lanny Bassham" },
         { text: "If you are not having loads of problems, your goals are to low", author: "Lanny Bassham" },
-        { text: "Nothing can prepare you fpr the unknown, you just have to go for it.", author: "Hillary Allen" },
+        { text: "Nothing can prepare you for the unknown, you just have to go for it.", author: "Hillary Allen" },
         { text: "Ofmetnastu ekki af lífsins móðurmjólk, kirkjugarðar heimsins geyma ómissandi fólk.", author: "Magnús Eiríksson" },
         { text: "The greatest thing you'll ever learn Is just to love and be loved in return.", author: "Nature boy" },
         { text: "Með ykkur mér við hlið, er ferðalagið létt.", author: "Botnleðja" },
@@ -77,6 +77,7 @@ export class QuoteService {
         { text: "If you want to run, run a mile. If you want to experience a different life, run a marathon.", author: "Emil Zátopek" },
         { text: "Everything you ever wanted to know about yourself, you can learn in 26.2 miles.", author: "Lori Culnane" },
         { text: "How do you know if someone ran a marathon? Don’t worry, they’ll tell you.", author: "Jimmy Fallon" },
+        { text: "Just remember, it never always gets worse.", author: "Runner's Adage" },
     ];
 
     static getRandomQuote(): Quote {
