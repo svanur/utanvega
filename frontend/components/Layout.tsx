@@ -7,6 +7,7 @@ import type { PaletteMode } from '@mui/material';
 
 import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
 import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined';
+import SearchIcon from '@mui/icons-material/Search';
 import MenuIcon from '@mui/icons-material/Menu';
 import FooterStatus from './FooterStatus';
 import LanguageToggle from './LanguageToggle';
@@ -45,6 +46,14 @@ export default function Layout({ children, mode, onToggleMode }: LayoutProps) {
                         <>
                             <IconButton
                                 color="inherit"
+                                onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
+                                aria-label="search"
+                                size="small"
+                            >
+                                <SearchIcon />
+                            </IconButton>
+                            <IconButton
+                                color="inherit"
                                 onClick={(e) => setAnchorEl(e.currentTarget)}
                                 aria-label="menu"
                             >
@@ -74,6 +83,23 @@ export default function Layout({ children, mode, onToggleMode }: LayoutProps) {
                     )}
 
                     <LanguageToggle />
+
+                    {!isMobile && (
+                        <Tooltip title={t('spotlight.shortcutHint')}>
+                            <IconButton
+                                color="inherit"
+                                size="small"
+                                onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
+                                aria-label="search"
+                                sx={{ gap: 0.5, borderRadius: 1, px: 1 }}
+                            >
+                                <SearchIcon fontSize="small" />
+                                <Typography variant="caption" sx={{ fontSize: '0.65rem', opacity: 0.7, border: '1px solid', borderColor: 'inherit', borderRadius: 0.5, px: 0.5, lineHeight: 1.6 }}>
+                                    ⌘K
+                                </Typography>
+                            </IconButton>
+                        </Tooltip>
+                    )}
 
                     <Tooltip title={mode === 'light' ? t('nav.darkMode') : t('nav.lightMode')}>
                         <IconButton color="inherit" onClick={onToggleMode} size="small" aria-label="toggle dark mode">

@@ -8,6 +8,15 @@
         "switchToEnglish": "Switch to English",
         "switchToIcelandic": "Switch to Icelandic"
     },
+    "spotlight": {
+        "placeholder": "Search trails and locations...",
+        "trailsSection": "Trails",
+        "locationsSection": "Locations",
+        "trails": "trails",
+        "noResults": "No results found",
+        "hint": "Start typing to search trails and locations",
+        "shortcutHint": "Search (Ctrl+K)"
+    },
     "home": {
         "nearbyTrails": "Nearby Trails",
         "allTrails": "Trails",
@@ -255,6 +264,14 @@
         "aiDescription": "Development assisted by Claude, an AI coding agent by Anthropic, used for code generation, refactoring, and quality improvements.",
         "changelogTitle": "Changelog",
         "changelog": {
+            "v2_2": {
+                "title": "Spotlight search",
+                "description": "Press Ctrl+K to instantly search trails and locations from anywhere. Fuzzy matching with Icelandic character support, keyboard navigation, and grouped results."
+            },
+            "v2_1": {
+                "title": "Trail weather",
+                "description": "Live weather forecasts on trail pages via Open-Meteo — current conditions, hourly and 5-day forecast, trail condition indicator, and elevation-aware summit weather for mountain trails. Collapsible panel with bilingual weather descriptions."
+            },
             "v2_0": {
                 "title": "Analytics & insights",
                 "description": "Trail view tracking with privacy-safe IP deduplication, trending trails discovery carousel, \"Most Popular\" sort option, and a full analytics dashboard in admin with daily views, peak hours, and week-over-week trends."

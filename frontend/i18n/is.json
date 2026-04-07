@@ -8,6 +8,15 @@
         "switchToEnglish": "Switch to English",
         "switchToIcelandic": "Skipta yfir á íslensku"
     },
+    "spotlight": {
+        "placeholder": "Leita að leiðum og stöðum...",
+        "trailsSection": "Leiðir",
+        "locationsSection": "Staðir",
+        "trails": "leiðir",
+        "noResults": "Ekkert fannst",
+        "hint": "Byrjaðu að skrifa til að leita að leiðum og stöðum",
+        "shortcutHint": "Leita (Ctrl+K)"
+    },
     "home": {
         "nearbyTrails": "Leiðir í nágrenninu",
         "allTrails": "Leiðir",
@@ -255,6 +264,14 @@
         "aiDescription": "Vefurinn er þróaður með aðstoð Claude, gervigreindar- og kóðunarfulltrúa frá Anthropic. Claude hjálpar til við kóðun, prófanir, endurbætur og gæðaeftirlit.",
         "changelogTitle": "Breytingasaga",
         "changelog": {
+            "v2_2": {
+                "title": "Hraðleit",
+                "description": "Ýttu á Ctrl+K til að leita strax að leiðum og stöðum hvar sem er. Sveigjanleg leit og flokkaðar niðurstöður."
+            },
+            "v2_1": {
+                "title": "Veður á leiðum",
+                "description": "Lifandi veðurspá á leiðarsíðum frá Open-Meteo — núverandi aðstæður, klukkutíma- og 5 daga spá, leiðaraðstæðuvísir og hæðarmeðvituð veðurspá fyrir toppa á fjallaleiðum."
+            },
             "v2_0": {
                 "title": "Greining og innsýn",
                 "description": "Mæling á notkun vefsins, sýna vinsælar leiðir í hringekju. Nú hægt að raða lista eftir 'vinsælustu leiðunum'. Greiningarmæliborð í stjórnborði með daglegum skoðunum, álagstímum og þróun milli vikna."

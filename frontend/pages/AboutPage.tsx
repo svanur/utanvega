@@ -22,6 +22,7 @@ import CasinoIcon from '@mui/icons-material/Casino';
 import PhoneIphoneIcon from '@mui/icons-material/PhoneIphone';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
+import WbSunnyIcon from '@mui/icons-material/WbSunny';
 import Layout from '../components/Layout';
 
 interface AboutPageProps {
@@ -29,7 +30,11 @@ interface AboutPageProps {
     onToggleMode: () => void;
 }
 
+import ManageSearchIcon from '@mui/icons-material/ManageSearch';
+
 const changelog = [
+    { version: '2.2', date: '2025-12', key: 'v2_2', icon: <ManageSearchIcon />, color: 'secondary' as const },
+    { version: '2.1', date: '2025-12', key: 'v2_1', icon: <WbSunnyIcon />, color: 'primary' as const },
     { version: '2.0', date: '2025-11', key: 'v2_0', icon: <TrendingUpIcon />, color: 'secondary' as const },
     { version: '1.9', date: '2025-10', key: 'v1_9', icon: <DirectionsRunIcon />, color: 'primary' as const },
     { version: '1.8', date: '2025-09', key: 'v1_8', icon: <CasinoIcon />, color: 'primary' as const },
