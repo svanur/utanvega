@@ -122,7 +122,9 @@
         "followLocation": "Follow my location",
         "stopFollowing": "Stop following my location",
         "youAreHere": "You are here",
-        "viewDetails": "View Details"
+        "viewDetails": "View Details",
+        "showTracks": "Show trail tracks",
+        "hideTracks": "Hide trail tracks"
     },
     "locations": {
         "title": "Explore by Location",

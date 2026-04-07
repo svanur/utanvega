@@ -122,7 +122,9 @@
         "followLocation": "Fylgja staðsetningu",
         "stopFollowing": "Hætta að fylgja staðsetningu",
         "youAreHere": "Þú ert hér",
-        "viewDetails": "Skoða nánar"
+        "viewDetails": "Skoða nánar",
+        "showTracks": "Sýna leiðir á korti",
+        "hideTracks": "Fela leiðir á korti"
     },
     "locations": {
         "title": "Skoða eftir staðsetningu",

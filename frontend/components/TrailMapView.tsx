@@ -1,11 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, useMapEvents } from 'react-leaflet';
 import MarkerClusterGroup from '@changey/react-leaflet-markercluster';
 import L from 'leaflet';
-import { Box, Typography, Button, IconButton, Paper, useTheme } from '@mui/material';
+import { Box, Typography, Button, IconButton, Paper, Tooltip, useTheme } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
+import RouteIcon from '@mui/icons-material/Route';
 import { Trail } from '../hooks/useTrails';
+import { useTrailGeometries } from '../hooks/useTrailGeometries';
+import type { TrailGeometryFeature } from '../hooks/useTrailGeometries';
 import { Link as RouterLink } from 'react-router-dom';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
@@ -53,11 +56,20 @@ function ChangeView({ bounds, followMe, userLocation }: {
     return null;
 }
 
+const ACTIVITY_COLORS: Record<string, string> = {
+    TrailRunning: '#e65100', // deep orange
+    Running: '#1565c0',     // blue
+    Hiking: '#2e7d32',      // green
+    Cycling: '#6a1b9a',     // purple
+};
+
 export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation }) => {
     const { t } = useTranslation();
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
     const [followMe, setFollowMe] = useState(false);
+    const [showTracks, setShowTracks] = useState(true);
+    const { geometries } = useTrailGeometries();
 
     const handleFollowMeClick = () => {
         setFollowMe(prev => !prev);
@@ -79,6 +91,13 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
     const trailsWithLocation = useMemo(() => 
         trails.filter(t => t.startLatitude !== null && t.startLongitude !== null && (t.startLatitude !== 0 || t.startLongitude !== 0)),
     [trails]);
+
+    // Filter geometries to only trails in the current view
+    const visibleGeometries = useMemo(() => {
+        if (!showTracks || geometries.length === 0) return [];
+        const slugSet = new Set(trails.map(t => t.slug));
+        return geometries.filter(g => slugSet.has(g.slug));
+    }, [trails, geometries, showTracks]);
 
     const bounds = useMemo(() => {
         if (trailsWithLocation.length === 0) return null;
@@ -134,25 +153,47 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
                         top: 10, 
                         right: 10, 
                         zIndex: 1100,
-                        borderRadius: '50%',
+                        borderRadius: 4,
                         overflow: 'hidden',
-                        backgroundColor: 'white'
+                        backgroundColor: 'white',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 0.5,
+                        p: 0.5,
                     }}
                 >
-                    <IconButton 
-                        onClick={handleFollowMeClick}
-                        color={followMe ? "primary" : "default"}
-                        sx={{ 
-                            backgroundColor: followMe ? 'rgba(25, 118, 210, 0.1)' : 'white',
-                            '&:hover': {
-                                backgroundColor: followMe ? 'rgba(25, 118, 210, 0.2)' : '#f5f5f5',
-                            }
-                        }}
-                        title={followMe ? t('map.stopFollowing') : t('map.followLocation')}
-                        aria-label="follow my location"
-                    >
-                        <MyLocationIcon />
-                    </IconButton>
+                    <Tooltip title={followMe ? t('map.stopFollowing') : t('map.followLocation')} placement="left">
+                        <IconButton 
+                            onClick={handleFollowMeClick}
+                            color={followMe ? "primary" : "default"}
+                            size="small"
+                            sx={{ 
+                                backgroundColor: followMe ? 'rgba(25, 118, 210, 0.1)' : 'white',
+                                '&:hover': {
+                                    backgroundColor: followMe ? 'rgba(25, 118, 210, 0.2)' : '#f5f5f5',
+                                }
+                            }}
+                            aria-label="follow my location"
+                        >
+                            <MyLocationIcon />
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip title={showTracks ? t('map.hideTracks') : t('map.showTracks')} placement="left">
+                        <IconButton
+                            onClick={() => setShowTracks(prev => !prev)}
+                            color={showTracks ? "primary" : "default"}
+                            size="small"
+                            sx={{
+                                backgroundColor: showTracks ? 'rgba(25, 118, 210, 0.1)' : 'white',
+                                '&:hover': {
+                                    backgroundColor: showTracks ? 'rgba(25, 118, 210, 0.2)' : '#f5f5f5',
+                                }
+                            }}
+                            aria-label="toggle tracks"
+                        >
+                            <RouteIcon />
+                        </IconButton>
+                    </Tooltip>
                 </Paper>
 
                 <MapContainer 
@@ -178,6 +219,16 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
                         </Popup>
                     </Marker>
                 )}
+
+                {visibleGeometries.map(geo => (
+                    <Polyline
+                        key={geo.slug}
+                        positions={geo.coordinates}
+                        color={ACTIVITY_COLORS[geo.activityType] ?? '#1976d2'}
+                        weight={3}
+                        opacity={0.7}
+                    />
+                ))}
 
                 <MarkerClusterGroup
                     chunkedLoading

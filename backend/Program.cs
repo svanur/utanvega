@@ -28,6 +28,7 @@ using Utanvega.Backend.Application.Trails.Queries.GetTrailSuggestions;
 using Utanvega.Backend.Application.Locations.Queries.GetLocationBySlug;
 using Utanvega.Backend.Application.Locations.Queries.GetLocationTree;
 using Utanvega.Backend.Application.Trails.Queries.GetTrailGpx;
+using Utanvega.Backend.Application.Trails.Queries.GetTrailGeometries;
 using Utanvega.Backend.Core.Services;
 using MediatR;
 using FluentValidation;
@@ -286,6 +287,13 @@ app.MapGet("/api/v1/trails/suggestions", async (string slug, IMediator mediator)
     return Results.Ok(suggestions);
 })
 .WithName("GetTrailSuggestions");
+
+app.MapGet("/api/v1/trails/geometries", async (IMediator mediator) =>
+{
+    var features = await mediator.Send(new GetTrailGeometriesQuery());
+    return Results.Ok(features);
+})
+.WithName("GetTrailGeometries");
 
 app.MapGet("/api/v1/trails/{slug}", async (string slug, IMediator mediator) =>
 {
