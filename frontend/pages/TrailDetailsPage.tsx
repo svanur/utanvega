@@ -35,7 +35,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import Layout from '../components/Layout';
-import { useTrailBySlug, useTrails, useTrailSuggestions, recordTrailView } from '../hooks/useTrails';
+import { useTrailBySlug, useTrails, useTrailSuggestions, useTrailWeather, recordTrailView } from '../hooks/useTrails';
 import LostRunner from '../components/LostRunner';
 import { useFavorites } from '../hooks/useFavorites';
 import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
@@ -46,6 +46,7 @@ import ShareButtons from '../components/ShareButtons';
 import QRCodeShare from '../components/QRCodeShare';
 import DifficultyInfo from '../components/DifficultyInfo';
 import RunningLoader from '../components/RunningLoader';
+import WeatherCard from '../components/WeatherCard';
 import { TrailCard } from '../components/TrailCard';
 
 const getActivityIcon = (type: string) => {
@@ -86,6 +87,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     const navigate = useNavigate();
     const { t } = useTranslation();
     const { trail, loading, error } = useTrailBySlug(slug);
+    const { weather, loading: weatherLoading, error: weatherError } = useTrailWeather(slug);
     const { trails: allTrails } = useTrails();
     const { isFavorite, toggleFavorite } = useFavorites();
     const { addRecent } = useRecentlyViewed();
@@ -374,6 +376,9 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                     </>
                 )}
             </Paper>
+
+            {/* Weather forecast */}
+            <WeatherCard weather={weather} loading={weatherLoading} error={weatherError} />
 
             {relatedTrails.length > 0 && (
                 <Box mt={4} mb={6}>

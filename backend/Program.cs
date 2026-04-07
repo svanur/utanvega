@@ -33,6 +33,7 @@ using Utanvega.Backend.Application.Trails.Queries.GetTrailGpx;
 using Utanvega.Backend.Application.Trails.Queries.GetTrailGeometries;
 using Utanvega.Backend.Application.Trails.Queries.GetTrendingTrails;
 using Utanvega.Backend.Application.Trails.Commands.RecordTrailView;
+using Utanvega.Backend.Application.Weather.Queries;
 using Utanvega.Backend.Core.Services;
 using MediatR;
 using FluentValidation;
@@ -173,6 +174,8 @@ builder.Services.AddMediatR(cfg =>
 builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
 builder.Services.AddScoped<CreateTrailFromGpxCommandHandler>();
 builder.Services.AddScoped<LocationDetector>();
+builder.Services.AddHttpClient("OpenMeteo");
+builder.Services.AddMemoryCache();
 
 // builder.Services.AddEndpointsApiExplorer();
 // builder.Services.AddSwaggerGen();
@@ -359,6 +362,14 @@ app.MapGet("/api/v1/trails/trending", async (int? count, int? days, IMediator me
     return Results.Ok(trending);
 })
 .WithName("GetTrendingTrails");
+
+app.MapGet("/api/v1/trails/{slug}/weather", async (string slug, IMediator mediator) =>
+{
+    var weather = await mediator.Send(new GetTrailWeatherQuery(slug));
+    if (weather == null) return Results.NotFound();
+    return Results.Ok(weather);
+})
+.WithName("GetTrailWeather");
 
 app.MapGet("/api/v1/locations", async (IMediator mediator) =>
 {

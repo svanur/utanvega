@@ -400,3 +400,77 @@ export function useTrendingTrails(count = 10, days = 7) {
 
     return { trending, loading };
 }
+
+// Weather types and hook
+export interface WeatherPointDto {
+    latitude: number;
+    longitude: number;
+    elevation: number;
+    temperature: number;
+    apparentTemperature: number;
+    windSpeed: number;
+    windGusts: number;
+    precipitation: number;
+    weatherCode: number;
+    cloudCover: number;
+    label: string;
+}
+
+export interface HourlyForecastDto {
+    time: string;
+    temperature: number;
+    apparentTemperature: number;
+    windSpeed: number;
+    windGusts: number;
+    precipitation: number;
+    weatherCode: number;
+    cloudCover: number;
+}
+
+export interface DailyForecastDto {
+    date: string;
+    temperatureMax: number;
+    temperatureMin: number;
+    precipitationSum: number;
+    windSpeedMax: number;
+    windGustsMax: number;
+    weatherCode: number;
+}
+
+export interface TrailWeather {
+    current: WeatherPointDto;
+    hourly: HourlyForecastDto[];
+    daily: DailyForecastDto[];
+    summit: WeatherPointDto | null;
+    condition: 'Good' | 'Fair' | 'Poor';
+}
+
+export function useTrailWeather(slug?: string) {
+    const [weather, setWeather] = useState<TrailWeather | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!slug) return;
+
+        setLoading(true);
+        setError(null);
+
+        fetch(`${API_URL}/api/v1/trails/${slug}/weather`)
+            .then(res => {
+                if (!res.ok) throw new Error('Weather unavailable');
+                return res.json();
+            })
+            .then(data => {
+                setWeather(data);
+                setLoading(false);
+            })
+            .catch(err => {
+                setError(err.message);
+                setWeather(null);
+                setLoading(false);
+            });
+    }, [slug]);
+
+    return { weather, loading, error };
+}
