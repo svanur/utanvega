@@ -24,6 +24,7 @@ using Utanvega.Backend.Application.Locations.Commands.UpdateLocation;
 using Utanvega.Backend.Application.Locations.Commands.DeleteLocation;
 using Utanvega.Backend.Application.Trails.Queries.GetDuplicateTrails;
 using Utanvega.Backend.Application.History.Queries.GetChangeLogs;
+using Utanvega.Backend.Application.Analytics.Queries;
 using Utanvega.Backend.Application.Trails.Queries.GetTrailBySlug;
 using Utanvega.Backend.Application.Trails.Queries.GetTrailSuggestions;
 using Utanvega.Backend.Application.Locations.Queries.GetLocationBySlug;
@@ -398,6 +399,13 @@ app.MapGet("/api/v1/admin/health", [Authorize] () => Results.Ok(new
     timestampUtc = DateTime.UtcNow
 }))
 .WithName("AdminHealth");
+
+app.MapGet("/api/v1/admin/analytics", [Authorize] async (IMediator mediator) =>
+{
+    var analytics = await mediator.Send(new GetAnalyticsQuery());
+    return Results.Ok(analytics);
+})
+.WithName("AdminAnalytics");
 
 app.MapGet("/", () => new
 {
