@@ -111,7 +111,8 @@
         "title": "Hæðarsnið",
         "distance": "Vegalengd",
         "elevation": "Hæð",
-        "gainSoFar": "Samanlögð hækkun"
+        "gainSoFar": "Samanlögð hækkun",
+        "grade": "Halli"
     },
     "playback": {
         "play": "Spila leið",

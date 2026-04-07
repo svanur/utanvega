@@ -111,7 +111,8 @@
         "title": "Elevation Profile",
         "distance": "Distance",
         "elevation": "Elevation",
-        "gainSoFar": "Gain so far"
+        "gainSoFar": "Gain so far",
+        "grade": "Grade"
     },
     "playback": {
         "play": "Play route",
