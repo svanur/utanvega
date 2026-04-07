@@ -77,7 +77,7 @@ export class QuoteService {
         { text: "If you want to run, run a mile. If you want to experience a different life, run a marathon.", author: "Emil Zátopek" },
         { text: "Everything you ever wanted to know about yourself, you can learn in 26.2 miles.", author: "Lori Culnane" },
         { text: "How do you know if someone ran a marathon? Don’t worry, they’ll tell you.", author: "Jimmy Fallon" },
-        { text: "Just remember, it never always gets worse.", author: "Runner's Adage" },
+        { text: "Just remember, it never always gets worse.", author: "Sigurður Óli" },
     ];
 
     static getRandomQuote(): Quote {
