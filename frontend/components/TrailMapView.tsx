@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, useMapEvents } from 'react-leaflet';
 import MarkerClusterGroup from '@changey/react-leaflet-markercluster';
 import L from 'leaflet';
@@ -154,6 +154,78 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
         className: 'trail-marker'
     }), []);
 
+    // Memoize marker cluster to prevent re-clustering on unrelated state changes
+    // (selectedSlug/selectionSource updates caused re-renders that re-processed all markers)
+    const selectedSlugRef = useRef(selectedSlug);
+    selectedSlugRef.current = selectedSlug;
+    const selectionSourceRef = useRef(selectionSource);
+    selectionSourceRef.current = selectionSource;
+
+    const handleMarkerClick = useCallback((e: L.LeafletMouseEvent) => {
+        ignoreMapClick.current = true;
+        e.target.openPopup();
+    }, []);
+
+    const handlePopupOpen = useCallback((slug: string) => {
+        setSelectedSlug(slug);
+        setSelectionSource('pin');
+    }, []);
+
+    const handlePopupClose = useCallback(() => {
+        setSelectedSlug(null);
+        setSelectionSource(null);
+    }, []);
+
+    const markerCluster = useMemo(() => (
+                <MarkerClusterGroup
+                    chunkedLoading
+                    maxClusterRadius={50}
+                    spiderfyOnMaxZoom
+                    showCoverageOnHover={false}
+                >
+                {trailsWithLocation.map(trail => (
+                    <Marker 
+                        key={trail.id} 
+                        position={[trail.startLatitude!, trail.startLongitude!]}
+                        icon={trailIcon}
+                        eventHandlers={{
+                            click: handleMarkerClick,
+                            popupopen: () => handlePopupOpen(trail.slug),
+                            popupclose: handlePopupClose,
+                        }}
+                    >
+                        <Popup>
+                            <Box sx={{ minWidth: 200, p: 0.5 }}>
+                                <Typography variant="h6" gutterBottom>{trail.name}</Typography>
+                                <Typography variant="body2" color="textSecondary" gutterBottom>
+                                    {trail.trailType} • {(trail.length / 1000).toFixed(1)} km
+                                </Typography>
+                                {trail.description && (
+                                    <Typography variant="body2" sx={{ mb: 1, maxHeight: 60, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                        {trail.description}
+                                    </Typography>
+                                )}
+                                <Button 
+                                    component={RouterLink} 
+                                    to={`/trails/${trail.slug}`} 
+                                    variant="contained" 
+                                    size="small" 
+                                    fullWidth
+                                    sx={{ 
+                                        color: '#fff !important',
+                                        '&:hover': { color: '#fff !important' }
+                                    }}
+                                >
+                                    {t('map.viewDetails')}
+                                </Button>
+                            </Box>
+                        </Popup>
+                    </Marker>
+                ))}
+                </MarkerClusterGroup>
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    ), [trailsWithLocation, trailIcon, handleMarkerClick, handlePopupOpen, handlePopupClose]);
+
     return (
         <Box sx={{ 
             height: '70vh', 
@@ -272,52 +344,7 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
                     );
                 })}
 
-                <MarkerClusterGroup
-                    chunkedLoading
-                    maxClusterRadius={50}
-                    spiderfyOnMaxZoom
-                    showCoverageOnHover={false}
-                >
-                {trailsWithLocation.map(trail => (
-                    <Marker 
-                        key={trail.id} 
-                        position={[trail.startLatitude!, trail.startLongitude!]}
-                        icon={trailIcon}
-                        eventHandlers={{
-                            click: () => { ignoreMapClick.current = true; },
-                            popupopen: () => { setSelectedSlug(trail.slug); setSelectionSource('pin'); },
-                            popupclose: () => { setSelectedSlug(null); setSelectionSource(null); },
-                        }}
-                    >
-                        <Popup>
-                            <Box sx={{ minWidth: 200, p: 0.5 }}>
-                                <Typography variant="h6" gutterBottom>{trail.name}</Typography>
-                                <Typography variant="body2" color="textSecondary" gutterBottom>
-                                    {trail.trailType} • {(trail.length / 1000).toFixed(1)} km
-                                </Typography>
-                                {trail.description && (
-                                    <Typography variant="body2" sx={{ mb: 1, maxHeight: 60, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                        {trail.description}
-                                    </Typography>
-                                )}
-                                <Button 
-                                    component={RouterLink} 
-                                    to={`/trails/${trail.slug}`} 
-                                    variant="contained" 
-                                    size="small" 
-                                    fullWidth
-                                    sx={{ 
-                                        color: '#fff !important',
-                                        '&:hover': { color: '#fff !important' }
-                                    }}
-                                >
-                                    {t('map.viewDetails')}
-                                </Button>
-                            </Box>
-                        </Popup>
-                    </Marker>
-                ))}
-                </MarkerClusterGroup>
+                {markerCluster}
 
                 {bounds && <ChangeView bounds={bounds} followMe={followMe} userLocation={userLocation} />}
             </MapContainer>

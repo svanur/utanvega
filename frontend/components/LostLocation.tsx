@@ -18,6 +18,9 @@ const quotes = {
         'Þetta er ekki á neinu korti sem ég þekki.',
         'Hvar í ósköpunum...?',
         'Staðurinn brást mér.',
+        'Ég sé ekki alveg nógu vel á úrið.',
+        'Ég VERÐ að fá mér nýtt úr.',
+        'Hvað meinarðu, svaf ég ekki nógu vel?',
     ],
     en: [
         'This place has vanished from the map...',
@@ -32,6 +35,9 @@ const quotes = {
         "This isn't on any map I know.",
         'Where on earth...?',
         'The location failed me.',
+        'I cant see clearly where I am.',
+        'I MUST get a new watch.',
+        'What do you mean? I didn\'t sleep well enough?',
     ],
 };
 
