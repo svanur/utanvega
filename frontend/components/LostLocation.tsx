@@ -7,12 +7,12 @@ import ExploreIcon from '@mui/icons-material/Explore';
 const quotes = {
     is: [
         'Þessi staður er horfinn af kortinu...',
-        'Kompassinn segir nei.',
+        'Áttavitinn segir nei.',
         'Er þetta Bermúdaþríhyrningurinn?',
         'Hér var eitthvað... einu sinni.',
         'GPS-ið mitt er í ruglinu.',
         'Ég er viss um að þetta var hér áðan!',
-        'Kortið ljúgur!',
+        'Kortið lýgur!',
         'Jörðin gleypti þetta!',
         'Bíddu, ég er að reikna...',
         'Þetta er ekki á neinu korti sem ég þekki.',
@@ -21,6 +21,7 @@ const quotes = {
         'Ég sé ekki alveg nógu vel á úrið.',
         'Ég VERÐ að fá mér nýtt úr.',
         'Hvað meinarðu, svaf ég ekki nógu vel?',
+        'UNPRODUCTIVE',
     ],
     en: [
         'This place has vanished from the map...',
@@ -38,6 +39,7 @@ const quotes = {
         'I cant see clearly where I am.',
         'I MUST get a new watch.',
         'What do you mean? I didn\'t sleep well enough?',
+        'UNPRODUCTIVE',
     ],
 };
 
