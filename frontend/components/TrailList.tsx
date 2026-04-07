@@ -195,7 +195,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
         const params = new URLSearchParams();
 
         if (searchQuery) params.set('q', searchQuery);
-        if (filters.selectedActivityTypes.length < ALL_ACTIVITY_TYPES.length) {
+        if (filters.selectedActivityTypes.length > 0) {
             params.set('activity', filters.selectedActivityTypes.join(','));
         }
         if (filters.difficulty !== 'All') params.set('difficulty', filters.difficulty);
@@ -503,7 +503,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                                     const updated = selected
                                         ? current.filter(t => t !== type)
                                         : [...current, type];
-                                    setFilters(f => ({ ...f, selectedActivityTypes: updated.length > 0 ? updated : [...ALL_ACTIVITY_TYPES] }));
+                                    setFilters(f => ({ ...f, selectedActivityTypes: updated }));
                                 }}
                                 color={selected ? 'primary' : 'default'}
                                 variant={selected ? 'filled' : 'outlined'}

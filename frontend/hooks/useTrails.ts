@@ -68,7 +68,7 @@ const DEFAULT_FILTERS: FilterState = {
     locationSlugs: [],
     favoritesOnly: false,
     selectedTags: [],
-    selectedActivityTypes: [...ALL_ACTIVITY_TYPES],
+    selectedActivityTypes: [],
     sortBy: 'distance',
 };
 
@@ -172,8 +172,8 @@ export function useTrails() {
 
         // Apply advanced filters
         result = result.filter(trail => {
-            // Activity Type filter
-            if (filters.selectedActivityTypes.length < ALL_ACTIVITY_TYPES.length) {
+            // Activity Type filter (empty = show all)
+            if (filters.selectedActivityTypes.length > 0) {
                 if (!filters.selectedActivityTypes.includes(trail.activityType)) return false;
             }
 
