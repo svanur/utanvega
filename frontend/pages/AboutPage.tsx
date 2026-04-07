@@ -20,6 +20,8 @@ import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import SearchIcon from '@mui/icons-material/Search';
 import CasinoIcon from '@mui/icons-material/Casino';
 import PhoneIphoneIcon from '@mui/icons-material/PhoneIphone';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
 import Layout from '../components/Layout';
 
 interface AboutPageProps {
@@ -28,6 +30,8 @@ interface AboutPageProps {
 }
 
 const changelog = [
+    { version: '2.0', date: '2025-11', key: 'v2_0', icon: <TrendingUpIcon />, color: 'secondary' as const },
+    { version: '1.9', date: '2025-10', key: 'v1_9', icon: <DirectionsRunIcon />, color: 'primary' as const },
     { version: '1.8', date: '2025-09', key: 'v1_8', icon: <CasinoIcon />, color: 'primary' as const },
     { version: '1.7', date: '2025-08', key: 'v1_7', icon: <PhoneIphoneIcon />, color: 'secondary' as const },
     { version: '1.6', date: '2025-07', key: 'v1_6', icon: <SearchIcon />, color: 'primary' as const },

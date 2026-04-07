@@ -203,6 +203,14 @@
         "aiDescription": "Vefurinn er þróaður með aðstoð Claude, gervigreindar- og kóðunarfulltrúa frá Anthropic. Claude hjálpar til við kóðun, prófanir, endurbætur og gæðaeftirlit.",
         "changelogTitle": "Breytingasaga",
         "changelog": {
+            "v2_0": {
+                "title": "Greining og innsýn",
+                "description": "Mæling á notkun vefsins, sýna vinsælar leiðir í hringekju. Nú hægt að raða lista eftir 'vinsælustu leiðunum'. Greiningarmæliborð í stjórnborði með daglegum skoðunum, álagstímum og þróun milli vikna."
+            },
+            "v1_9": {
+                "title": "Virkni síur og stjórnborðsverkfæri",
+                "description": "Virknitegundar síupillur á leiðalista, leitarhæft staðsetningarval og fjölvalsmerkjarammar í stjórnborði, leiðartölfræði í breytingaglugga, sjálfvirk leiðartegundargreining við uppfærslu og fjöldagreining leiðartegunda."
+            },
             "v1_8": {
                 "title": "Gaman og afköst",
                 "description": "Hristu símann til að finna leið af handahófi. Hnappi bætt við til að deila/afrita slóð. Skemmtilegar 404 síður fyrir leiðir og staðsetningar sem finnast ekki. Kóðaskipting með lazy-loading fyrir hraðvirkari síðuhleðslu. Sagði einhver Easter-egg? Neiii..."

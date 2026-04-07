@@ -203,6 +203,14 @@
         "aiDescription": "Development assisted by Claude, an AI coding agent by Anthropic, used for code generation, refactoring, and quality improvements.",
         "changelogTitle": "Changelog",
         "changelog": {
+            "v2_0": {
+                "title": "Analytics & insights",
+                "description": "Trail view tracking with privacy-safe IP deduplication, trending trails discovery carousel, \"Most Popular\" sort option, and a full analytics dashboard in admin with daily views, peak hours, and week-over-week trends."
+            },
+            "v1_9": {
+                "title": "Activity filters & admin tools",
+                "description": "Activity type filter pills on the trail list, searchable location dropdown and multi-select tag checkboxes in admin, trail stats in the edit dialog, auto trail-type detection on update, and bulk re-detect trail types."
+            },
             "v1_8": {
                 "title": "Fun & performance",
                 "description": "Shake-to-random-trail with slot machine animation, share/copy URL button, fun illustrated 404 pages for missing trails and locations, empty filter state with bored runner, and code splitting with lazy loading for faster page loads."
