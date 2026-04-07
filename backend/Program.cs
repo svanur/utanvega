@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text.Encodings.Web;
 using Utanvega.Backend.Infrastructure.Persistence;
 using Utanvega.Backend.Core.Entities;
@@ -40,6 +41,7 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -197,6 +199,21 @@ builder.Services.Configure<Microsoft.AspNetCore.Mvc.JsonOptions>(options =>
     options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
 });
 
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddPolicy("trail-view", httpContext =>
+        RateLimitPartition.GetSlidingWindowLimiter(
+            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new SlidingWindowRateLimiterOptions
+            {
+                PermitLimit = 30,
+                Window = TimeSpan.FromMinutes(1),
+                SegmentsPerWindow = 6,
+                QueueLimit = 0,
+            }));
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+});
+
 var app = builder.Build();
 
 Console.WriteLine("[INFO] Application built. Starting up...");
@@ -205,6 +222,7 @@ Console.WriteLine("[INFO] Application built. Starting up...");
 // app.UseSwaggerUI();
 
 app.UseCors("Frontend");
+app.UseRateLimiter();
 
 // Security headers
 app.Use(async (context, next) =>
@@ -324,12 +342,15 @@ app.MapGet("/api/v1/trails/{slug}/gpx", async (string slug, IMediator mediator) 
 })
 .WithName("GetPublicTrailGpx");
 
-app.MapPost("/api/v1/trails/{slug}/view", async (string slug, IMediator mediator) =>
+app.MapPost("/api/v1/trails/{slug}/view", async (string slug, HttpContext httpContext, IMediator mediator) =>
 {
-    var recorded = await mediator.Send(new RecordTrailViewCommand(slug));
+    var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "";
+    var ipHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(ip))).ToLowerInvariant();
+    var recorded = await mediator.Send(new RecordTrailViewCommand(slug, ipHash));
     return recorded ? Results.Ok() : Results.NotFound();
 })
-.WithName("RecordTrailView");
+.WithName("RecordTrailView")
+.RequireRateLimiting("trail-view");
 
 app.MapGet("/api/v1/trails/trending", async (int? count, int? days, IMediator mediator) =>
 {

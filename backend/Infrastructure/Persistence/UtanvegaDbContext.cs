@@ -120,6 +120,7 @@ public class UtanvegaDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.ViewedAtUtc).IsRequired();
+            entity.Property(e => e.IpHash).HasMaxLength(64);
 
             entity.HasOne(v => v.Trail)
                   .WithMany()
@@ -128,6 +129,7 @@ public class UtanvegaDbContext : DbContext
 
             entity.HasIndex(e => e.TrailId);
             entity.HasIndex(e => e.ViewedAtUtc);
+            entity.HasIndex(e => new { e.TrailId, e.IpHash, e.ViewedAtUtc });
         });
     }
 }
