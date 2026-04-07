@@ -179,7 +179,8 @@
         "name": "Nafn (A–Ö)",
         "shortest": "Styst",
         "longest": "Lengst",
-        "elevation": "Mest hækkun"
+        "elevation": "Mest hækkun",
+        "popular": "Vinsælast"
     },
     "header": {
         "tagline": "Utanvega - Vefur til að finna skemmtilegar leiðir og deila með vinum.",

@@ -27,7 +27,8 @@ public record TrailDto(
     double? StartLatitude,
     double? StartLongitude,
     List<LocationInfoDto> Locations,
-    List<TagInfoDto> Tags
+    List<TagInfoDto> Tags,
+    int ViewCount = 0
 );
 
 public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailDto>>
@@ -60,6 +61,12 @@ public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailD
 
         var trails = await query.ToListAsync(cancellationToken);
 
+        // Fetch view counts in a single query
+        var viewCounts = await _context.TrailViews
+            .GroupBy(v => v.TrailId)
+            .Select(g => new { TrailId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.TrailId, x => x.Count, cancellationToken);
+
         var result = trails.Select(t => new TrailDto(
             t.Id,
             t.Name,
@@ -80,7 +87,8 @@ public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailD
                 .ToList(),
             t.TrailTags
                 .Select(tt => new TagInfoDto(tt.Tag.Name, tt.Tag.Slug, tt.Tag.Color))
-                .ToList()
+                .ToList(),
+            viewCounts.GetValueOrDefault(t.Id, 0)
         )).ToList();
 
         return result;

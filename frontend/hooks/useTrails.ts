@@ -29,10 +29,11 @@ export interface Trail {
     startLongitude: number | null;
     locations: LocationInfo[];
     tags?: TagInfo[];
+    viewCount?: number;
     distanceToUser?: number; // in kilometers
 }
 
-export type SortOption = 'distance' | 'name' | 'shortest' | 'longest' | 'elevation';
+export type SortOption = 'distance' | 'name' | 'shortest' | 'longest' | 'elevation' | 'popular';
 
 export interface FilterState {
     minLength: number;
@@ -235,6 +236,9 @@ export function useTrails() {
                 break;
             case 'elevation':
                 result.sort((a, b) => b.elevationGain - a.elevationGain);
+                break;
+            case 'popular':
+                result.sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0));
                 break;
         }
 

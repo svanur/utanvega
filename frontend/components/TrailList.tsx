@@ -965,6 +965,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                             <MenuItem value="shortest">{t('sort.shortest')}</MenuItem>
                             <MenuItem value="longest">{t('sort.longest')}</MenuItem>
                             <MenuItem value="elevation">{t('sort.elevation')}</MenuItem>
+                            <MenuItem value="popular">{t('sort.popular')}</MenuItem>
                         </Select>
                     )}
                     <ToggleButtonGroup
