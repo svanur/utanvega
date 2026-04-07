@@ -26,9 +26,12 @@ import SortIcon from '@mui/icons-material/Sort';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import MapIcon from '@mui/icons-material/Map';
 import ViewListIcon from '@mui/icons-material/ViewList';
-import { MapContainer, TileLayer, Circle, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Tooltip as LeafletTooltip, useMap } from 'react-leaflet';
+import MarkerClusterGroup from '@changey/react-leaflet-markercluster';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet.markercluster/dist/MarkerCluster.css';
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import Layout from '../components/Layout';
 import { useLocations, Location } from '../hooks/useLocations';
 import { useTrails, Trail } from '../hooks/useTrails';
@@ -154,8 +157,22 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
     );
 
     const scrollToCard = useCallback((slug: string) => {
-        cardRefs.current[slug]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, []);
+        const el = cardRefs.current[slug];
+        if (!el) return;
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Direct DOM highlight — more reliable than React state
+        const card = el.querySelector('.MuiCard-root') as HTMLElement;
+        if (card) {
+            card.style.outline = `3px solid ${theme.palette.primary.main}`;
+            card.style.boxShadow = `0 0 16px rgba(25, 118, 210, 0.4)`;
+            card.style.transform = 'scale(1.02)';
+            setTimeout(() => {
+                card.style.outline = '';
+                card.style.boxShadow = '';
+                card.style.transform = '';
+            }, 3000);
+        }
+    }, [theme.palette.primary.main]);
 
     const getCircleColor = (loc: Location) => {
         const stats = statsMap[loc.slug];
@@ -214,42 +231,49 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
                                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                             />
+                            <MarkerClusterGroup
+                                chunkedLoading
+                                maxClusterRadius={40}
+                                spiderfyOnMaxZoom
+                                showCoverageOnHover={false}
+                            >
                             {locationsWithCoords.map(loc => {
                                 const stats = statsMap[loc.slug];
-                                const radiusM = Math.min((loc.radius || 5) * 1000, 15000);
+                                const count = stats?.trailCount || 0;
+                                const color = getCircleColor(loc);
+                                const icon = L.divIcon({
+                                    className: '',
+                                    html: `<div style="
+                                        background: ${color};
+                                        width: 28px; height: 28px;
+                                        border-radius: 50%;
+                                        border: 2px solid white;
+                                        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+                                        display: flex; align-items: center; justify-content: center;
+                                        color: white; font-weight: 700; font-size: 11px;
+                                    ">${count}</div>`,
+                                    iconSize: [28, 28],
+                                    iconAnchor: [14, 14],
+                                });
                                 return (
-                                    <Circle
+                                    <Marker
                                         key={loc.id}
-                                        center={[loc.latitude!, loc.longitude!]}
-                                        radius={radiusM}
-                                        pathOptions={{
-                                            color: getCircleColor(loc),
-                                            fillColor: getCircleColor(loc),
-                                            fillOpacity: 0.08,
-                                            weight: 2,
-                                        }}
+                                        position={[loc.latitude!, loc.longitude!]}
+                                        icon={icon}
                                         eventHandlers={{
                                             click: () => scrollToCard(loc.slug),
                                         }}
                                     >
-                                        <Popup>
-                                            <Box sx={{ minWidth: 160 }}>
-                                                <Typography variant="subtitle2" fontWeight="bold">{loc.name}</Typography>
-                                                <Typography variant="caption" display="block">
-                                                    {stats?.trailCount || 0} trails · {stats?.totalKm || 0} km
-                                                </Typography>
-                                                {stats && Object.keys(stats.activityCounts).length > 0 && (
-                                                    <Typography variant="caption" display="block">
-                                                        {Object.entries(stats.activityCounts)
-                                                            .map(([act, n]) => `${activityEmoji[act] || '🏞️'} ${n}`)
-                                                            .join('  ')}
-                                                    </Typography>
-                                                )}
-                                            </Box>
-                                        </Popup>
-                                    </Circle>
+                                        <LeafletTooltip direction="top" offset={[0, -14]}>
+                                            <Typography variant="caption" fontWeight="bold">{loc.name}</Typography>
+                                            <Typography variant="caption" display="block" color="text.secondary">
+                                                {count} {count === 1 ? 'trail' : 'trails'}
+                                            </Typography>
+                                        </LeafletTooltip>
+                                    </Marker>
                                 );
                             })}
+                            </MarkerClusterGroup>
                             <FitBounds locations={locationsWithCoords} />
                         </MapContainer>
                     </Box>
@@ -306,7 +330,7 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                                         elevation={2}
                                         sx={{
                                             borderRadius: '16px',
-                                            transition: 'transform 0.2s, box-shadow 0.2s',
+                                            transition: 'transform 0.3s ease, box-shadow 0.3s ease, outline 0.3s ease',
                                             '&:hover': { transform: 'translateY(-3px)', boxShadow: 6 },
                                             height: '100%',
                                             display: 'flex',

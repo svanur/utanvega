@@ -11,10 +11,11 @@ const quotes = {
         'Ekkert hér sem passar...',
         'Prófaðu aðra blöndu!',
         'Ég fann ekkert :(',
-        'Villtu breyta síuninni?',
+        'Viltu breyta leitinni?',
         'Tómt! Engin leið passar.',
-        'Eins og að leita að nál í heystakk...',
+        'Eins og að leita að nál í heystakki...',
         'Þessar síur eru of krefjandi!',
+        'GELIÐ ER BÚIÐ!',
     ],
     en: [
         'No trails found... try again!',
@@ -27,6 +28,7 @@ const quotes = {
         'Empty! No trail matches.',
         'Like finding a needle in a haystack...',
         'These filters are too demanding!',
+        'NOOO... OUT OF GELS!'
     ],
 };
 
