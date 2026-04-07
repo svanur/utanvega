@@ -8,8 +8,8 @@ import MyLocationIcon from '@mui/icons-material/MyLocation';
 import RouteIcon from '@mui/icons-material/Route';
 import { Trail } from '../hooks/useTrails';
 import { useTrailGeometries } from '../hooks/useTrailGeometries';
-import type { TrailGeometryFeature } from '../hooks/useTrailGeometries';
 import { Link as RouterLink } from 'react-router-dom';
+import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 
@@ -63,31 +63,36 @@ const ACTIVITY_COLORS: Record<string, string> = {
     Cycling: '#6a1b9a',     // purple
 };
 
+// Must be stable components (not inline) to avoid Leaflet re-registration
+function MapInvalidateSize() {
+    const map = useMap();
+    useEffect(() => {
+        // Fix tiles not rendering when map is lazy-loaded into a container
+        const timer = setTimeout(() => map.invalidateSize(), 200);
+        return () => clearTimeout(timer);
+    }, [map]);
+    return null;
+}
+
+function MapDragHandler({ onDrag }: { onDrag: () => void }) {
+    useMapEvents({ dragstart: onDrag });
+    return null;
+}
+
 export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation }) => {
     const { t } = useTranslation();
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
     const [followMe, setFollowMe] = useState(false);
     const [showTracks, setShowTracks] = useState(true);
+    const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
     const { geometries } = useTrailGeometries();
 
     const handleFollowMeClick = () => {
         setFollowMe(prev => !prev);
     };
 
-    const MapEvents = () => {
-        useMapEvents({
-            dragstart: () => {
-                if (followMe) setFollowMe(false);
-            },
-            zoomstart: () => {
-                // Optional: disable follow me on zoom too? 
-                // Usually zoom is fine, but if they zoom out a lot it might be annoying if it snaps back.
-                // For now let's only do drag.
-            }
-        });
-        return null;
-    };
+    const handleDrag = React.useCallback(() => setFollowMe(false), []);
     const trailsWithLocation = useMemo(() => 
         trails.filter(t => t.startLatitude !== null && t.startLongitude !== null && (t.startLatitude !== 0 || t.startLongitude !== 0)),
     [trails]);
@@ -201,7 +206,8 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
                     zoom={10} 
                     style={{ height: '100%', width: '100%' }}
                 >
-                    <MapEvents />
+                    <MapInvalidateSize />
+                    <MapDragHandler onDrag={handleDrag} />
                 <TileLayer
                     key={isDark ? 'dark' : 'light'}
                     attribution={isDark
@@ -220,15 +226,25 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
                     </Marker>
                 )}
 
-                {visibleGeometries.map(geo => (
-                    <Polyline
-                        key={geo.slug}
-                        positions={geo.coordinates}
-                        color={ACTIVITY_COLORS[geo.activityType] ?? '#1976d2'}
-                        weight={3}
-                        opacity={0.7}
-                    />
-                ))}
+                {visibleGeometries.map(geo => {
+                    const isSelected = selectedSlug === geo.slug;
+                    const isDimmed = selectedSlug !== null && !isSelected;
+                    return (
+                        <Polyline
+                            key={geo.slug}
+                            positions={geo.coordinates}
+                            color={isSelected ? '#f44336' : (ACTIVITY_COLORS[geo.activityType] ?? '#1976d2')}
+                            weight={isSelected ? 5 : 3}
+                            opacity={isDimmed ? 0.15 : isSelected ? 1 : 0.7}
+                            eventHandlers={{
+                                click: (e) => {
+                                    L.DomEvent.stopPropagation(e.originalEvent);
+                                    setSelectedSlug(prev => prev === geo.slug ? null : geo.slug);
+                                }
+                            }}
+                        />
+                    );
+                })}
 
                 <MarkerClusterGroup
                     chunkedLoading
@@ -241,6 +257,10 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
                         key={trail.id} 
                         position={[trail.startLatitude!, trail.startLongitude!]}
                         icon={trailIcon}
+                        eventHandlers={{
+                            popupopen: () => setSelectedSlug(trail.slug),
+                            popupclose: () => setSelectedSlug(null),
+                        }}
                     >
                         <Popup>
                             <Box sx={{ minWidth: 200, p: 0.5 }}>
