@@ -48,9 +48,11 @@ import {
     DirectionsBike as DirectionsBikeIcon,
     ChevronLeft as ChevronLeftIcon,
     ChevronRight as ChevronRightIcon,
-    Casino as CasinoIcon
+    Casino as CasinoIcon,
+    Whatshot as WhatshotIcon,
+    History as HistoryIcon
 } from '@mui/icons-material';
-import { useTrails, ALL_ACTIVITY_TYPES } from '../hooks/useTrails';
+import { useTrails, ALL_ACTIVITY_TYPES, useTrendingTrails } from '../hooks/useTrails';
 import type { SortOption, FilterState } from '../hooks/useTrails';
 import { useFavorites } from '../hooks/useFavorites';
 import { useHiddenTrails } from '../hooks/useHiddenTrails';
@@ -92,6 +94,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
     const { favorites, toggleFavorite } = useFavorites();
     const { hiddenSlugs, hideTrail, clearHidden } = useHiddenTrails();
     const { recentSlugs } = useRecentlyViewed();
+    const { trending } = useTrendingTrails();
     const { tree: locationTree } = useLocationTree();
     const navigate = useNavigate();
 
@@ -109,17 +112,43 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
         }
     }, [searchQuery]);
     const [hidingSlugs, setHidingSlugs] = React.useState<string[]>([]);
-    const recentScrollRef = React.useRef<HTMLDivElement>(null);
+    const [discoveryTab, setDiscoveryTab] = React.useState<'trending' | 'recent'>('trending');
+    const discoveryScrollRef = React.useRef<HTMLDivElement>(null);
 
-    const scrollRecent = (direction: 'left' | 'right') => {
-        if (recentScrollRef.current) {
-            const { scrollLeft, clientWidth } = recentScrollRef.current;
-            recentScrollRef.current.scrollTo({
+    const handleDiscoveryTabChange = (tab: 'trending' | 'recent') => {
+        setDiscoveryTab(tab);
+        if (discoveryScrollRef.current) {
+            discoveryScrollRef.current.scrollTo({ left: 0 });
+        }
+    };
+
+    const scrollDiscovery = (direction: 'left' | 'right') => {
+        if (discoveryScrollRef.current) {
+            const { scrollLeft, clientWidth } = discoveryScrollRef.current;
+            discoveryScrollRef.current.scrollTo({
                 left: direction === 'left' ? scrollLeft - clientWidth : scrollLeft + clientWidth,
                 behavior: 'smooth'
             });
         }
     };
+
+    // Map trending data to full trail objects for TrailCard rendering
+    const trendingTrails = React.useMemo(() => {
+        if (!trending.length || !trails.length) return [];
+        return trending
+            .map(tt => {
+                const trail = trails.find(t => t.slug === tt.slug);
+                return trail ? { ...trail, viewCount: tt.viewCount } : null;
+            })
+            .filter(Boolean) as (typeof trails[0] & { viewCount: number })[];
+    }, [trending, trails]);
+
+    // Default to 'recent' tab if user has recent views but no trending data
+    React.useEffect(() => {
+        if (trendingTrails.length === 0 && recentSlugs.length > 0) {
+            setDiscoveryTab('recent');
+        }
+    }, [trendingTrails.length, recentSlugs.length]);
 
     // Shake-to-random-trail
     const [slotMachine, setSlotMachine] = React.useState<{ open: boolean; winner: string; winnerSlug: string }>({ open: false, winner: '', winnerSlug: '' });
@@ -816,26 +845,45 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                 </Box>
             </Collapse>
 
-            {/* Recently Viewed — show when no filters active */}
-            {recentTrails.length > 0 && viewMode === 'list' && !searchQuery && !filters.favoritesOnly && !tagSlug && (
+            {/* Discovery carousel — tabbed: Trending / Recently Viewed */}
+            {(trendingTrails.length > 0 || recentTrails.length > 0) && viewMode === 'list' && !searchQuery && !filters.favoritesOnly && !tagSlug && (
                 <Box mb={3}>
                     <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-                        <Typography variant="subtitle1" fontWeight="bold" color="text.secondary">
-                            {t('home.recentlyViewed')}
-                        </Typography>
-                        {recentTrails.length > 3 && (
-                            <Box sx={{ display: { xs: 'none', sm: 'flex' } }}>
-                                <IconButton onClick={() => scrollRecent('left')} size="small">
-                                    <ChevronLeftIcon />
-                                </IconButton>
-                                <IconButton onClick={() => scrollRecent('right')} size="small">
-                                    <ChevronRightIcon />
-                                </IconButton>
-                            </Box>
-                        )}
+                        <Box display="flex" gap={0.5}>
+                            {trendingTrails.length > 0 && (
+                                <Chip
+                                    icon={<WhatshotIcon />}
+                                    label={t('home.trendingTrails')}
+                                    size="small"
+                                    variant={discoveryTab === 'trending' ? 'filled' : 'outlined'}
+                                    color={discoveryTab === 'trending' ? 'warning' : 'default'}
+                                    onClick={() => handleDiscoveryTabChange('trending')}
+                                    sx={{ cursor: 'pointer' }}
+                                />
+                            )}
+                            {recentTrails.length > 0 && (
+                                <Chip
+                                    icon={<HistoryIcon />}
+                                    label={t('home.recentlyViewed')}
+                                    size="small"
+                                    variant={discoveryTab === 'recent' ? 'filled' : 'outlined'}
+                                    color={discoveryTab === 'recent' ? 'primary' : 'default'}
+                                    onClick={() => handleDiscoveryTabChange('recent')}
+                                    sx={{ cursor: 'pointer' }}
+                                />
+                            )}
+                        </Box>
+                        <Box sx={{ display: { xs: 'none', sm: 'flex' } }}>
+                            <IconButton onClick={() => scrollDiscovery('left')} size="small">
+                                <ChevronLeftIcon />
+                            </IconButton>
+                            <IconButton onClick={() => scrollDiscovery('right')} size="small">
+                                <ChevronRightIcon />
+                            </IconButton>
+                        </Box>
                     </Box>
                     <Box
-                        ref={recentScrollRef}
+                        ref={discoveryScrollRef}
                         sx={{
                             display: 'flex',
                             gap: 2,
@@ -847,7 +895,25 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                             scrollbarWidth: 'none',
                         }}
                     >
-                        {recentTrails.map(trail => (
+                        {discoveryTab === 'trending' && trendingTrails.map(trail => (
+                            <Box key={trail.slug} sx={{ minWidth: 200, maxWidth: 240, height: 140, display: 'flex', scrollSnapAlign: 'start', position: 'relative' }}>
+                                <TrailCard trail={trail} compact disableGestures />
+                                <Chip
+                                    label={t('home.views', { count: trail.viewCount })}
+                                    size="small"
+                                    color="warning"
+                                    sx={{
+                                        position: 'absolute',
+                                        top: 6,
+                                        right: 6,
+                                        fontSize: '0.65rem',
+                                        height: 20,
+                                        opacity: 0.9,
+                                    }}
+                                />
+                            </Box>
+                        ))}
+                        {discoveryTab === 'recent' && recentTrails.map(trail => (
                             <Box key={trail.slug} sx={{ minWidth: 200, maxWidth: 240, height: 140, display: 'flex', scrollSnapAlign: 'start' }}>
                                 <TrailCard trail={trail} compact disableGestures />
                             </Box>

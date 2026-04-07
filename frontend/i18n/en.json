@@ -12,6 +12,8 @@
         "nearbyTrails": "Nearby Trails",
         "allTrails": "Trails",
         "recentlyViewed": "Recently Viewed",
+        "trendingTrails": "Trending 🔥",
+        "views": "{{count}} views",
         "trailMap": "Trail Map",
         "trailsTagged": "Trails tagged: {{tags}}",
         "noTrailsMatch": "No trails matching your search criteria",

@@ -359,3 +359,40 @@ function calculateHaversineDistance(lat1: number, lon1: number, lat2: number, lo
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
 }
+
+export function recordTrailView(slug: string) {
+    fetch(`${API_URL}/api/v1/trails/${encodeURIComponent(slug)}/view`, {
+        method: 'POST',
+    }).catch(() => {
+        // Fire-and-forget — silently ignore errors
+    });
+}
+
+export interface TrendingTrail {
+    name: string;
+    slug: string;
+    activityType: string;
+    length: number;
+    elevationGain: number;
+    viewCount: number;
+}
+
+export function useTrendingTrails(count = 10, days = 7) {
+    const [trending, setTrending] = useState<TrendingTrail[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetch(`${API_URL}/api/v1/trails/trending?count=${count}&days=${days}`)
+            .then(res => res.ok ? res.json() : [])
+            .then(data => {
+                setTrending(data);
+                setLoading(false);
+            })
+            .catch(() => {
+                setTrending([]);
+                setLoading(false);
+            });
+    }, [count, days]);
+
+    return { trending, loading };
+}

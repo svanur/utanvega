@@ -35,7 +35,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import Layout from '../components/Layout';
-import { useTrailBySlug, useTrails, useTrailSuggestions } from '../hooks/useTrails';
+import { useTrailBySlug, useTrails, useTrailSuggestions, recordTrailView } from '../hooks/useTrails';
 import LostRunner from '../components/LostRunner';
 import { useFavorites } from '../hooks/useFavorites';
 import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
@@ -94,9 +94,12 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     const [hoverPoint, setHoverPoint] = useState<{ lat: number; lng: number } | null>(null);
     const [playbackIndex, setPlaybackIndex] = useState<number | null>(null);
 
-    // Record trail view for "recently viewed"
+    // Record trail view for "recently viewed" + server analytics
     React.useEffect(() => {
-        if (trail?.slug) addRecent(trail.slug);
+        if (trail?.slug) {
+            addRecent(trail.slug);
+            recordTrailView(trail.slug);
+        }
     }, [trail?.slug, addRecent]);
 
     const relatedTrails = (allTrails && trail) 

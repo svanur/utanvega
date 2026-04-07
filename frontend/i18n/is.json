@@ -12,6 +12,8 @@
         "nearbyTrails": "Leiðir í nágrenninu",
         "allTrails": "Leiðir",
         "recentlyViewed": "Nýlega skoðað",
+        "trendingTrails": "Vinsælt 🔥",
+        "views": "{{count}} skoðanir",
         "trailMap": "Kort",
         "trailsTagged": "Leiðir merktar: {{tags}}",
         "noTrailsMatch": "Engar leiðir passa við leitarskilyrði",

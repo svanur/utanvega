@@ -15,6 +15,7 @@ public class UtanvegaDbContext : DbContext
     public DbSet<Tag> Tags => Set<Tag>();
     public DbSet<TrailTag> TrailTags => Set<TrailTag>();
     public DbSet<ChangeLog> ChangeLogs => Set<ChangeLog>();
+    public DbSet<TrailView> TrailViews => Set<TrailView>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -113,6 +114,20 @@ public class UtanvegaDbContext : DbContext
                   .HasForeignKey(tt => tt.TagId);
 
             entity.HasIndex(tt => new { tt.TrailId, tt.TagId }).IsUnique();
+        });
+
+        modelBuilder.Entity<TrailView>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ViewedAtUtc).IsRequired();
+
+            entity.HasOne(v => v.Trail)
+                  .WithMany()
+                  .HasForeignKey(v => v.TrailId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => e.TrailId);
+            entity.HasIndex(e => e.ViewedAtUtc);
         });
     }
 }

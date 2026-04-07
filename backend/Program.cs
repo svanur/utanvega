@@ -29,6 +29,8 @@ using Utanvega.Backend.Application.Locations.Queries.GetLocationBySlug;
 using Utanvega.Backend.Application.Locations.Queries.GetLocationTree;
 using Utanvega.Backend.Application.Trails.Queries.GetTrailGpx;
 using Utanvega.Backend.Application.Trails.Queries.GetTrailGeometries;
+using Utanvega.Backend.Application.Trails.Queries.GetTrendingTrails;
+using Utanvega.Backend.Application.Trails.Commands.RecordTrailView;
 using Utanvega.Backend.Core.Services;
 using MediatR;
 using FluentValidation;
@@ -321,6 +323,20 @@ app.MapGet("/api/v1/trails/{slug}/gpx", async (string slug, IMediator mediator) 
     );
 })
 .WithName("GetPublicTrailGpx");
+
+app.MapPost("/api/v1/trails/{slug}/view", async (string slug, IMediator mediator) =>
+{
+    var recorded = await mediator.Send(new RecordTrailViewCommand(slug));
+    return recorded ? Results.Ok() : Results.NotFound();
+})
+.WithName("RecordTrailView");
+
+app.MapGet("/api/v1/trails/trending", async (int? count, int? days, IMediator mediator) =>
+{
+    var trending = await mediator.Send(new GetTrendingTrailsQuery(count ?? 10, days ?? 7));
+    return Results.Ok(trending);
+})
+.WithName("GetTrendingTrails");
 
 app.MapGet("/api/v1/locations", async (IMediator mediator) =>
 {
