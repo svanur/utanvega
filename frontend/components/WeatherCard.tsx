@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Box,
@@ -9,6 +9,7 @@ import {
     Skeleton,
     Divider,
     IconButton,
+    Collapse,
 } from '@mui/material';
 import ThermostatIcon from '@mui/icons-material/Thermostat';
 import AirIcon from '@mui/icons-material/Air';
@@ -16,6 +17,8 @@ import WaterDropIcon from '@mui/icons-material/WaterDrop';
 import LandscapeIcon from '@mui/icons-material/Landscape';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import type { TrailWeather, HourlyForecastDto, DailyForecastDto, WeatherPointDto } from '../hooks/useTrails';
 
 interface WeatherCardProps {
@@ -58,7 +61,7 @@ function formatHour(timeStr: string): string {
     }
 }
 
-function formatDay(dateStr: string, t: (key: string) => string): string {
+function formatDay(dateStr: string, t: (key: string) => string, locale: string): string {
     try {
         const date = new Date(dateStr + 'T00:00:00');
         const today = new Date();
@@ -66,10 +69,10 @@ function formatDay(dateStr: string, t: (key: string) => string): string {
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
 
-        if (date.getTime() === today.getTime()) return t('weather.now');
-        if (date.getTime() === tomorrow.getTime()) return 'Tomorrow';
+        if (date.getTime() === today.getTime()) return t('weather.today');
+        if (date.getTime() === tomorrow.getTime()) return t('weather.tomorrow');
 
-        return date.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' });
+        return date.toLocaleDateString(locale, { weekday: 'short', day: 'numeric' });
     } catch {
         return dateStr;
     }
@@ -206,7 +209,7 @@ function HourlyStrip({ hourly, t }: { hourly: HourlyForecastDto[]; t: (key: stri
     );
 }
 
-function DailyForecast({ daily, t }: { daily: DailyForecastDto[]; t: (key: string) => string }) {
+function DailyForecast({ daily, t, locale }: { daily: DailyForecastDto[]; t: (key: string) => string; locale: string }) {
     return (
         <Box>
             <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1 }}>
@@ -222,7 +225,7 @@ function DailyForecast({ daily, t }: { daily: DailyForecastDto[]; t: (key: strin
                         sx={{ py: 0.5, flexWrap: 'wrap' }}
                     >
                         <Typography variant="body2" sx={{ minWidth: { xs: 60, sm: 70 } }}>
-                            {formatDay(d.date, t)}
+                            {formatDay(d.date, t, locale)}
                         </Typography>
                         <Typography sx={{ fontSize: '1.1rem', minWidth: 28, textAlign: 'center' }}>
                             {getWeatherIcon(d.weatherCode)}
@@ -257,7 +260,9 @@ function DailyForecast({ daily, t }: { daily: DailyForecastDto[]; t: (key: strin
 }
 
 export default function WeatherCard({ weather, loading, error }: WeatherCardProps) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const [expanded, setExpanded] = useState(true);
+    const locale = i18n.language === 'is' ? 'is-IS' : 'en-US';
 
     if (loading) {
         return (
@@ -270,57 +275,89 @@ export default function WeatherCard({ weather, loading, error }: WeatherCardProp
     }
 
     if (error || !weather) {
-        return null; // Silently hide if weather unavailable
+        return null;
     }
 
     const conditionKey = `condition${weather.condition}` as const;
     const conditionDescKey = `condition${weather.condition}Desc` as const;
+    const icon = getWeatherIcon(weather.current.weatherCode);
 
     return (
         <Paper elevation={1} sx={{ p: { xs: 2, sm: 3 }, mb: 3, borderRadius: 2 }}>
-            {/* Header with condition chip */}
-            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+            {/* Clickable header — always visible */}
+            <Stack
+                direction="row"
+                alignItems="center"
+                justifyContent="space-between"
+                onClick={() => setExpanded(prev => !prev)}
+                sx={{ cursor: 'pointer', userSelect: 'none' }}
+            >
                 <Stack direction="row" alignItems="center" spacing={1}>
                     <ThermostatIcon color="primary" />
                     <Typography variant="h6" fontWeight="bold">
                         {t('weather.title')}
                     </Typography>
+                    {/* Quick summary when collapsed */}
+                    {!expanded && (
+                        <Stack direction="row" alignItems="center" spacing={1} sx={{ ml: 1 }}>
+                            <Typography sx={{ fontSize: '1.2rem' }}>{icon}</Typography>
+                            <Typography variant="body2" fontWeight="bold">
+                                {Math.round(weather.current.temperature)}°C
+                            </Typography>
+                            <Stack direction="row" alignItems="center" spacing={0.3}>
+                                <AirIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
+                                <Typography variant="caption" color="text.secondary">
+                                    {weather.current.windSpeed.toFixed(0)} m/s
+                                </Typography>
+                            </Stack>
+                        </Stack>
+                    )}
                 </Stack>
-                <Chip
-                    label={`${getConditionEmoji(weather.condition)} ${t(`weather.${conditionKey}`)}`}
-                    color={getConditionColor(weather.condition)}
-                    size="small"
-                    variant="outlined"
-                    title={t(`weather.${conditionDescKey}`)}
-                />
+                <Stack direction="row" alignItems="center" spacing={0.5}>
+                    <Chip
+                        label={`${getConditionEmoji(weather.condition)} ${t(`weather.${conditionKey}`)}`}
+                        color={getConditionColor(weather.condition)}
+                        size="small"
+                        variant="outlined"
+                        title={t(`weather.${conditionDescKey}`)}
+                    />
+                    <IconButton size="small" sx={{ ml: 0.5 }}>
+                        {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                    </IconButton>
+                </Stack>
             </Stack>
 
-            {/* Current conditions at start */}
-            <CurrentWeather point={weather.current} label={t('weather.atStart')} t={t} />
+            {/* Collapsible content */}
+            <Collapse in={expanded}>
+                <Box sx={{ mt: 2 }}>
+                    {/* Current conditions at start */}
+                    <CurrentWeather point={weather.current} label={t('weather.atStart')} t={t} />
 
-            {/* Summit conditions if available */}
-            {weather.summit && (
-                <>
+                    {/* Summit conditions if available */}
+                    {weather.summit && (
+                        <>
+                            <Divider sx={{ my: 2 }} />
+                            <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
+                                <LandscapeIcon fontSize="small" color="warning" />
+                                <Typography variant="caption" color="warning.main" fontWeight="bold">
+                                    {t('weather.atSummit')}
+                                </Typography>
+                            </Stack>
+                            <CurrentWeather point={weather.summit} label={t('weather.atSummit')} t={t} />
+                        </>
+                    )}
+
                     <Divider sx={{ my: 2 }} />
-                    <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
-                        <LandscapeIcon fontSize="small" color="warning" />
-                        <Typography variant="caption" color="warning.main" fontWeight="bold">
-                            {t('weather.atSummit')}
-                        </Typography>
-                    </Stack>
-                    <CurrentWeather point={weather.summit} label={t('weather.atSummit')} t={t} />
-                </>
-            )}
 
-            <Divider sx={{ my: 2 }} />
+                    {/* Hourly strip */}
+                    <HourlyStrip hourly={weather.hourly} t={t} />
 
-            {/* Hourly strip */}
-            <HourlyStrip hourly={weather.hourly} t={t} />
+                    <Divider sx={{ my: 2 }} />
 
-            <Divider sx={{ my: 2 }} />
-
-            {/* Daily forecast */}
-            <DailyForecast daily={weather.daily} t={t} />
+                    {/* Daily forecast */}
+                    <DailyForecast daily={weather.daily} t={t} locale={locale} />
+                </Box>
+            </Collapse>
         </Paper>
     );
 }

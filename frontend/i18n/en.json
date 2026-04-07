@@ -195,6 +195,8 @@
     "weather": {
         "title": "Weather forecast",
         "now": "Now",
+        "today": "Today",
+        "tomorrow": "Tomorrow",
         "feelsLike": "Feels like",
         "wind": "Wind",
         "gusts": "Gusts",

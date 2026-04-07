@@ -195,6 +195,8 @@
     "weather": {
         "title": "Veðurspá",
         "now": "Núna",
+        "today": "Í dag",
+        "tomorrow": "Á morgun",
         "feelsLike": "Líður eins og",
         "wind": "Vindur",
         "gusts": "Vindhviður",
