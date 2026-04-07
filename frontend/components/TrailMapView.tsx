@@ -74,8 +74,21 @@ function MapInvalidateSize() {
     return null;
 }
 
-function MapDragHandler({ onDrag }: { onDrag: () => void }) {
-    useMapEvents({ dragstart: onDrag });
+function MapDragHandler({ onDrag, onMapClick, ignoreClickRef }: { 
+    onDrag: () => void; 
+    onMapClick?: () => void;
+    ignoreClickRef?: React.MutableRefObject<boolean>;
+}) {
+    useMapEvents({
+        dragstart: onDrag,
+        click: () => {
+            if (ignoreClickRef?.current) {
+                ignoreClickRef.current = false;
+                return;
+            }
+            onMapClick?.();
+        },
+    });
     return null;
 }
 
@@ -86,6 +99,7 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
     const [followMe, setFollowMe] = useState(false);
     const [showTracks, setShowTracks] = useState(true);
     const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
+    const [selectionSource, setSelectionSource] = useState<'pin' | 'track' | null>(null);
     const { geometries } = useTrailGeometries();
 
     const handleFollowMeClick = () => {
@@ -93,9 +107,17 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
     };
 
     const handleDrag = React.useCallback(() => setFollowMe(false), []);
+    const handleMapClick = React.useCallback(() => { setSelectedSlug(null); setSelectionSource(null); }, []);
+    const ignoreMapClick = React.useRef(false);
     const trailsWithLocation = useMemo(() => 
         trails.filter(t => t.startLatitude !== null && t.startLongitude !== null && (t.startLatitude !== 0 || t.startLongitude !== 0)),
     [trails]);
+
+    const trailBySlug = useMemo(() => {
+        const map = new Map<string, Trail>();
+        trails.forEach(t => map.set(t.slug, t));
+        return map;
+    }, [trails]);
 
     // Filter geometries to only trails in the current view
     const visibleGeometries = useMemo(() => {
@@ -207,7 +229,7 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
                     style={{ height: '100%', width: '100%' }}
                 >
                     <MapInvalidateSize />
-                    <MapDragHandler onDrag={handleDrag} />
+                    <MapDragHandler onDrag={handleDrag} onMapClick={handleMapClick} ignoreClickRef={ignoreMapClick} />
                 <TileLayer
                     key={isDark ? 'dark' : 'light'}
                     attribution={isDark
@@ -233,13 +255,17 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
                         <Polyline
                             key={geo.slug}
                             positions={geo.coordinates}
-                            color={isSelected ? '#f44336' : (ACTIVITY_COLORS[geo.activityType] ?? '#1976d2')}
-                            weight={isSelected ? 5 : 3}
-                            opacity={isDimmed ? 0.15 : isSelected ? 1 : 0.7}
+                            pathOptions={{
+                                color: isSelected ? '#f44336' : (ACTIVITY_COLORS[geo.activityType] ?? '#1976d2'),
+                                weight: isSelected ? 5 : 3,
+                                opacity: isDimmed ? 0.15 : isSelected ? 1 : 0.7,
+                            }}
                             eventHandlers={{
                                 click: (e) => {
                                     L.DomEvent.stopPropagation(e.originalEvent);
+                                    ignoreMapClick.current = true;
                                     setSelectedSlug(prev => prev === geo.slug ? null : geo.slug);
+                                    setSelectionSource(prev => prev === 'track' && selectedSlug === geo.slug ? null : 'track');
                                 }
                             }}
                         />
@@ -258,8 +284,9 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
                         position={[trail.startLatitude!, trail.startLongitude!]}
                         icon={trailIcon}
                         eventHandlers={{
-                            popupopen: () => setSelectedSlug(trail.slug),
-                            popupclose: () => setSelectedSlug(null),
+                            click: () => { ignoreMapClick.current = true; },
+                            popupopen: () => { setSelectedSlug(trail.slug); setSelectionSource('pin'); },
+                            popupclose: () => { setSelectedSlug(null); setSelectionSource(null); },
                         }}
                     >
                         <Popup>
@@ -294,6 +321,46 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
 
                 {bounds && <ChangeView bounds={bounds} followMe={followMe} userLocation={userLocation} />}
             </MapContainer>
+
+                {/* Minimal info strip for selected track (only on track click, not pin click) */}
+                {selectedSlug && selectionSource === 'track' && (() => {
+                    const trail = trailBySlug.get(selectedSlug);
+                    if (!trail) return null;
+                    return (
+                        <Box
+                            component={RouterLink}
+                            to={`/trails/${trail.slug}`}
+                            sx={{
+                                position: 'absolute',
+                                bottom: 8,
+                                left: '50%',
+                                transform: 'translateX(-50%)',
+                                zIndex: 1100,
+                                backgroundColor: 'rgba(0,0,0,0.65)',
+                                backdropFilter: 'blur(8px)',
+                                color: '#fff',
+                                px: 2,
+                                py: 0.75,
+                                borderRadius: 3,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1.5,
+                                textDecoration: 'none',
+                                cursor: 'pointer',
+                                transition: 'background-color 0.2s',
+                                '&:hover': { backgroundColor: 'rgba(0,0,0,0.8)' },
+                                maxWidth: '90%',
+                            }}
+                        >
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {trail.name}
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', whiteSpace: 'nowrap' }}>
+                                {(trail.length / 1000).toFixed(1)} km · ↑{trail.elevationGain?.toFixed(0) ?? '?'}m
+                            </Typography>
+                        </Box>
+                    );
+                })()}
             </Box>
         </Box>
     );
