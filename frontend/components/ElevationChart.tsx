@@ -8,6 +8,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
+  ReferenceDot,
 } from 'recharts';
 import type { CategoricalChartFunc } from 'recharts/types/chart/types';
 import { Box, Paper, Typography, useTheme } from '@mui/material';
@@ -88,6 +89,16 @@ const ElevationChart: React.FC<ElevationChartProps> = ({ coordinates, onHover, a
     return data;
   }, [coordinates]);
 
+  const { minPoint, maxPoint } = useMemo(() => {
+    if (chartData.length === 0) return { minPoint: null, maxPoint: null };
+    let min = chartData[0], max = chartData[0];
+    for (const p of chartData) {
+      if (p.elevation < min.elevation) min = p;
+      if (p.elevation > max.elevation) max = p;
+    }
+    return { minPoint: min, maxPoint: max };
+  }, [chartData]);
+
   // Haversine formula to calculate distance between two points in meters
   function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
     const R = 6371e3; // Earth's radius in meters
@@ -166,6 +177,28 @@ const ElevationChart: React.FC<ElevationChartProps> = ({ coordinates, onHover, a
                 stroke={theme.palette.warning.main}
                 strokeWidth={2}
                 strokeDasharray="4 2"
+              />
+            )}
+            {maxPoint && (
+              <ReferenceDot
+                x={maxPoint.distance}
+                y={maxPoint.elevation}
+                r={5}
+                fill={theme.palette.error.main}
+                stroke="white"
+                strokeWidth={2}
+                label={{ value: `▲ ${Math.round(maxPoint.elevation)}m`, position: 'insideBottomRight', fontSize: 11, fontWeight: 'bold', fill: theme.palette.error.main, offset: 8 }}
+              />
+            )}
+            {minPoint && (
+              <ReferenceDot
+                x={minPoint.distance}
+                y={minPoint.elevation}
+                r={5}
+                fill={theme.palette.info.main}
+                stroke="white"
+                strokeWidth={2}
+                label={{ value: `▼ ${Math.round(minPoint.elevation)}m`, position: 'insideTopRight', fontSize: 11, fontWeight: 'bold', fill: theme.palette.info.main, offset: 8 }}
               />
             )}
           </AreaChart>
