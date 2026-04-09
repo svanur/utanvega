@@ -257,21 +257,28 @@ public class GetTrailWeatherQueryHandler : IRequestHandler<GetTrailWeatherQuery,
         var windSpeed = current.WindSpeed;
         var windGusts = current.WindGusts;
         var precipitation = current.Precipitation;
-        var temp = current.Temperature;
+        var feelsLike = current.ApparentTemperature;
+        var weatherCode = current.WeatherCode;
 
         if (summit != null)
         {
             windSpeed = Math.Max(windSpeed, summit.WindSpeed);
             windGusts = Math.Max(windGusts, summit.WindGusts);
             precipitation = Math.Max(precipitation, summit.Precipitation);
-            temp = Math.Min(temp, summit.Temperature);
+            feelsLike = Math.Min(feelsLike, summit.ApparentTemperature);
+            weatherCode = Math.Max(weatherCode, summit.WeatherCode);
         }
 
-        // Wind speed is in m/s
-        if (windSpeed > 20 || windGusts > 30 || precipitation > 5)
+        var isSnow = weatherCode is >= 71 and <= 77;
+        var isThunderstorm = weatherCode is >= 95 and <= 99;
+        var isFog = weatherCode is 45 or 48;
+
+        // Poor: dangerous conditions
+        if (windSpeed > 18 || windGusts > 25 || precipitation > 4 || feelsLike < -15 || isThunderstorm)
             return TrailCondition.Poor;
 
-        if (windSpeed > 12 || windGusts > 20 || precipitation > 1 || temp < -5)
+        // Fair: challenging but manageable
+        if (windSpeed > 10 || windGusts > 15 || precipitation > 0.5 || feelsLike < -5 || isSnow || isFog)
             return TrailCondition.Fair;
 
         return TrailCondition.Good;
