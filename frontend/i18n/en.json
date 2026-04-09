@@ -48,6 +48,7 @@
         "estTime": "Est. time",
         "routeMap": "Route Map",
         "getDirections": "Get directions to trailhead",
+        "downloadGpx": "Download GPX file",
         "relatedTrails": "Related Trails",
         "outAndBack": "Out and Back",
         "loop": "Loop",

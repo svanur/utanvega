@@ -48,6 +48,7 @@
         "estTime": "Áætlaður tími",
         "routeMap": "Leiðarkort",
         "getDirections": "Leiðsögn að upphafsstað",
+        "downloadGpx": "Hlaða niður GPX skrá",
         "relatedTrails": "Tengdar leiðir",
         "outAndBack": "Fram og til baka",
         "loop": "Hringur",

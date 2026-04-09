@@ -36,8 +36,9 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import Layout from '../components/Layout';
-import { useTrailBySlug, useTrails, useTrailSuggestions, useTrailWeather, recordTrailView } from '../hooks/useTrails';
+import { useTrailBySlug, useTrails, useTrailSuggestions, useTrailWeather, recordTrailView, API_URL } from '../hooks/useTrails';
 import { estimateDuration } from '../utils/estimateDuration';
 import PaceInfo from '../components/PaceInfo';
 import LostRunner from '../components/LostRunner';
@@ -312,6 +313,16 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                         ))}
                         <ShareButtons title={trail.name} />
                         <QRCodeShare slug={trail.slug} trailName={trail.name} />
+                        <Tooltip title={t('trail.downloadGpx')} arrow>
+                            <IconButton
+                                size="small"
+                                component="a"
+                                href={`${API_URL}/api/v1/trails/${trail.slug}/gpx`}
+                                download
+                            >
+                                <FileDownloadIcon fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
                         {geometry && geometry.coordinates.length > 0 && (
                             <Tooltip title={t('trail.getDirections')} arrow>
                                 <IconButton
