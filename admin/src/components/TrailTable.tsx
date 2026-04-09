@@ -112,6 +112,13 @@ const trailTypeConfig: Record<string, { label: string; icon: React.ReactElement;
   PointToPoint: { label: 'Point to Point', icon: <TrendingFlatIcon sx={{ fontSize: 16 }} />, color: 'info' },
 };
 
+const difficultyColors: Record<string, 'success' | 'warning' | 'error' | 'default'> = {
+  Easy: 'success',
+  Moderate: 'warning',
+  Hard: 'error',
+  Expert: 'error',
+};
+
 function TrailTypeChip({ type }: { type: string }) {
   const config = trailTypeConfig[type] ?? { label: type, icon: <LoopIcon sx={{ fontSize: 16 }} />, color: 'primary' as const };
   return (
@@ -120,6 +127,19 @@ function TrailTypeChip({ type }: { type: string }) {
       label={config.label}
       size="small"
       color={config.color}
+      variant="outlined"
+      sx={{ fontSize: '0.7rem', height: 24 }}
+    />
+  );
+}
+
+function DifficultyChip({ difficulty }: { difficulty: string }) {
+  if (!difficulty) return null;
+  return (
+    <Chip
+      label={difficulty}
+      size="small"
+      color={difficultyColors[difficulty] ?? 'default'}
       variant="outlined"
       sx={{ fontSize: '0.7rem', height: 24 }}
     />
@@ -170,7 +190,12 @@ function TrailRow({ trail, selected, onSelect, onViewMap, onEdit, onDelete, onRe
         <Typography variant="body2" component="span">↑{Math.round(trail.elevationGain)}</Typography>
         <Typography variant="body2" component="span" color="text.secondary"> ↓{Math.round(trail.elevationLoss)}</Typography>
       </TableCell>
-      <TableCell><TrailTypeChip type={trail.trailType} /></TableCell>
+      <TableCell>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+          {trail.difficulty && <DifficultyChip difficulty={trail.difficulty} />}
+          <TrailTypeChip type={trail.trailType} />
+        </Box>
+      </TableCell>
       <TableCell>
         {trail.locations?.map(l => l.name).join(', ') || 'N/A'}
       </TableCell>
