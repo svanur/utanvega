@@ -425,7 +425,7 @@ app.MapGet("/", () => new
     connection = string.IsNullOrEmpty(connectionString) ? "Missing" : "Configured"
 });
 
-app.MapGet("/api/v1/admin/trails", [Authorize] async (bool includeDeleted, IMediator mediator) =>
+app.MapGet("/api/v1/admin/trails", [Authorize] async (IMediator mediator, bool includeDeleted = false) =>
 {
     var trails = await mediator.Send(new GetTrailsQuery(includeDeleted));
     return Results.Ok(trails);

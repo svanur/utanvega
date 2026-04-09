@@ -9,6 +9,7 @@ import AddCircleIcon from '@mui/icons-material/AddCircle';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import SearchIcon from '@mui/icons-material/Search';
 import { useState } from 'react';
 import TrailList from './pages/TrailList';
 import { LocationList } from './pages/LocationList';
@@ -19,6 +20,7 @@ import AnalyticsPage from './pages/AnalyticsPage';
 import GpxUploadDialog from './components/GpxUploadDialog';
 import LoginPage from './pages/LoginPage';
 import ErrorBoundary from './components/ErrorBoundary';
+import AdminSpotlightSearch from './components/AdminSpotlightSearch';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 
 const theme = createTheme({
@@ -43,6 +45,7 @@ function AdminContent() {
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [selectedTrailId, setSelectedTrailId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState<string | null>(null);
   const [snackbar, setSnackbar] = useState<{ open: boolean, message: React.ReactNode, severity: 'success' | 'error' }>({
     open: false,
     message: '',
@@ -104,6 +107,19 @@ function AdminContent() {
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             🌄 Utanvega Admin
           </Typography>
+          <Tooltip title="Search (Ctrl+K)">
+            <IconButton
+              color="inherit"
+              size="small"
+              onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
+              sx={{ mr: 1 }}
+            >
+              <SearchIcon />
+              <Typography variant="caption" sx={{ fontSize: '0.6rem', opacity: 0.7, border: '1px solid', borderColor: 'inherit', borderRadius: 0.5, px: 0.5, ml: 0.5, lineHeight: 1.6 }}>
+                ⌘K
+              </Typography>
+            </IconButton>
+          </Tooltip>
           <Button color="inherit" onClick={signOut} startIcon={<LogoutIcon />}>
             Logout
           </Button>
@@ -156,7 +172,7 @@ function AdminContent() {
         <Toolbar />
         <Container maxWidth={false}>
           {currentPage === 'trails' ? (
-            <TrailList key={`${refreshTrigger}-${selectedTrailId}`} onNotify={notify} initialTrailId={selectedTrailId} />
+            <TrailList key={`${refreshTrigger}-${selectedTrailId}-${searchTerm}`} onNotify={notify} initialTrailId={selectedTrailId} initialSearch={searchTerm} />
           ) : currentPage === 'health' ? (
             <TrailHealth onEditTrail={(id) => { setSelectedTrailId(id); setCurrentPage('trails'); }} onNotify={notify} />
           ) : currentPage === 'map' ? (
@@ -198,6 +214,11 @@ function AdminContent() {
           </Snackbar>
         </Container>
       </Box>
+      <AdminSpotlightSearch
+        onEditTrail={(id) => { setSelectedTrailId(id); setSearchTerm(null); setCurrentPage('trails'); }}
+        onNavigate={(page) => setCurrentPage(page as typeof currentPage)}
+        onFilterTrails={(term) => { setSearchTerm(term); setSelectedTrailId(null); setCurrentPage('trails'); }}
+      />
     </Box>
   );
 }

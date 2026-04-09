@@ -12,7 +12,7 @@ import TrailFilterBar from '../components/TrailFilterBar';
 import TrailTable from '../components/TrailTable';
 import { TrailMapDialog, DeleteTrailDialog, BulkUploadDialog } from '../components/TrailDialogs';
 
-export default function TrailList({ onNotify, initialTrailId }: { onNotify: (message: React.ReactNode, severity?: 'success' | 'error') => void, initialTrailId?: string | null }) {
+export default function TrailList({ onNotify, initialTrailId, initialSearch }: { onNotify: (message: React.ReactNode, severity?: 'success' | 'error') => void, initialTrailId?: string | null, initialSearch?: string | null }) {
   const [includeDeleted, setIncludeDeleted] = useState(false);
   const { trails, loading, error, refresh } = useTrails(includeDeleted);
   const { tags } = useTags();
@@ -27,11 +27,20 @@ export default function TrailList({ onNotify, initialTrailId }: { onNotify: (mes
   const [recalculating, setRecalculating] = useState(false);
   const [showTools, setShowTools] = useState(false);
 
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(initialSearch || '');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [difficultyFilter, setDifficultyFilter] = useState<string>('all');
+  const [activityFilter, setActivityFilter] = useState<string>('all');
+  const [locationFilter, setLocationFilter] = useState<string>('all');
   const [orderBy, setOrderBy] = useState<string>('name');
   const [order, setOrder] = useState<'asc' | 'desc'>('asc');
+
+  const locationOptions = useMemo(() => {
+    const names = new Set<string>();
+    trails.forEach(t => t.locations?.forEach(l => names.add(l.name)));
+    return [...names].sort();
+  }, [trails]);
 
   const filteredAndSortedTrails = useMemo(() => {
     return trails
@@ -42,7 +51,12 @@ export default function TrailList({ onNotify, initialTrailId }: { onNotify: (mes
           (trail.description?.toLowerCase().includes(search.toLowerCase()) ?? false);
         const matchesStatus = statusFilter === 'all' || trail.status === statusFilter;
         const matchesType = typeFilter === 'all' || trail.trailType === typeFilter;
-        return matchesSearch && matchesStatus && matchesType;
+        const matchesDifficulty = difficultyFilter === 'all' || trail.difficulty === difficultyFilter;
+        const matchesActivity = activityFilter === 'all' || trail.activityType === activityFilter;
+        const matchesLocation = locationFilter === 'all' 
+          || (locationFilter === 'none' && (!trail.locations || trail.locations.length === 0))
+          || trail.locations?.some(l => l.name === locationFilter);
+        return matchesSearch && matchesStatus && matchesType && matchesDifficulty && matchesActivity && matchesLocation;
       })
       .sort((a, b) => {
         const isAsc = order === 'asc';
@@ -56,7 +70,7 @@ export default function TrailList({ onNotify, initialTrailId }: { onNotify: (mes
         
         return isAsc ? comparison : -comparison;
       });
-  }, [trails, search, statusFilter, typeFilter, orderBy, order]);
+  }, [trails, search, statusFilter, typeFilter, difficultyFilter, activityFilter, locationFilter, orderBy, order]);
 
   const handleRequestSort = (property: string) => {
     const isAsc = orderBy === property && order === 'asc';
@@ -68,6 +82,9 @@ export default function TrailList({ onNotify, initialTrailId }: { onNotify: (mes
     setSearch('');
     setStatusFilter('all');
     setTypeFilter('all');
+    setDifficultyFilter('all');
+    setActivityFilter('all');
+    setLocationFilter('all');
     setOrderBy('name');
     setOrder('asc');
     setIncludeDeleted(false);
@@ -223,7 +240,6 @@ export default function TrailList({ onNotify, initialTrailId }: { onNotify: (mes
 
       <TrailToolsPanel
         showTools={showTools}
-        onToggleTools={() => setShowTools(!showTools)}
         selectedIds={selectedIds}
         includeDeleted={includeDeleted}
         onIncludeDeletedChange={setIncludeDeleted}
@@ -243,6 +259,13 @@ export default function TrailList({ onNotify, initialTrailId }: { onNotify: (mes
         onStatusFilterChange={setStatusFilter}
         typeFilter={typeFilter}
         onTypeFilterChange={setTypeFilter}
+        difficultyFilter={difficultyFilter}
+        onDifficultyFilterChange={setDifficultyFilter}
+        activityFilter={activityFilter}
+        onActivityFilterChange={setActivityFilter}
+        locationFilter={locationFilter}
+        onLocationFilterChange={setLocationFilter}
+        locationOptions={locationOptions}
         includeDeleted={includeDeleted}
         onResetFilters={handleResetFilters}
       />

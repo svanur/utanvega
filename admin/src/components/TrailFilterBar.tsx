@@ -9,6 +9,13 @@ interface TrailFilterBarProps {
   onStatusFilterChange: (value: string) => void;
   typeFilter: string;
   onTypeFilterChange: (value: string) => void;
+  difficultyFilter: string;
+  onDifficultyFilterChange: (value: string) => void;
+  activityFilter: string;
+  onActivityFilterChange: (value: string) => void;
+  locationFilter: string;
+  onLocationFilterChange: (value: string) => void;
+  locationOptions: string[];
   includeDeleted: boolean;
   onResetFilters: () => void;
 }
@@ -20,6 +27,13 @@ export default function TrailFilterBar({
   onStatusFilterChange,
   typeFilter,
   onTypeFilterChange,
+  difficultyFilter,
+  onDifficultyFilterChange,
+  activityFilter,
+  onActivityFilterChange,
+  locationFilter,
+  onLocationFilterChange,
+  locationOptions,
   includeDeleted,
   onResetFilters,
 }: TrailFilterBarProps) {
@@ -64,6 +78,48 @@ export default function TrailFilterBar({
           <MenuItem value="Loop">Loop</MenuItem>
           <MenuItem value="OutAndBack">Out and Back</MenuItem>
           <MenuItem value="PointToPoint">Point to Point</MenuItem>
+        </Select>
+      </FormControl>
+      <FormControl size="small" sx={{ minWidth: 150 }}>
+        <InputLabel>Difficulty</InputLabel>
+        <Select
+          value={difficultyFilter}
+          label="Difficulty"
+          onChange={(e) => onDifficultyFilterChange(e.target.value)}
+        >
+          <MenuItem value="all">All Difficulties</MenuItem>
+          <MenuItem value="Easy">Easy</MenuItem>
+          <MenuItem value="Moderate">Moderate</MenuItem>
+          <MenuItem value="Hard">Hard</MenuItem>
+          <MenuItem value="Expert">Expert</MenuItem>
+        </Select>
+      </FormControl>
+      <FormControl size="small" sx={{ minWidth: 150 }}>
+        <InputLabel>Activity</InputLabel>
+        <Select
+          value={activityFilter}
+          label="Activity"
+          onChange={(e) => onActivityFilterChange(e.target.value)}
+        >
+          <MenuItem value="all">All Activities</MenuItem>
+          <MenuItem value="TrailRunning">Trail Running</MenuItem>
+          <MenuItem value="Running">Running</MenuItem>
+          <MenuItem value="Hiking">Hiking</MenuItem>
+          <MenuItem value="Cycling">Cycling</MenuItem>
+        </Select>
+      </FormControl>
+      <FormControl size="small" sx={{ minWidth: 150 }}>
+        <InputLabel>Location</InputLabel>
+        <Select
+          value={locationFilter}
+          label="Location"
+          onChange={(e) => onLocationFilterChange(e.target.value)}
+        >
+          <MenuItem value="all">All Locations</MenuItem>
+          <MenuItem value="none">No Location</MenuItem>
+          {locationOptions.map(name => (
+            <MenuItem key={name} value={name}>{name}</MenuItem>
+          ))}
         </Select>
       </FormControl>
       <Tooltip title="Reset all filters">

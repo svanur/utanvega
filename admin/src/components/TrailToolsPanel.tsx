@@ -2,14 +2,11 @@ import { Paper, Typography, Button, CircularProgress, Box, FormControlLabel, Swi
 import DeleteIcon from '@mui/icons-material/Delete';
 import CalculateIcon from '@mui/icons-material/Calculate';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
-import BuildIcon from '@mui/icons-material/Build';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import type { TagDto } from '../hooks/useTags';
 
 interface TrailToolsPanelProps {
   showTools: boolean;
-  onToggleTools: () => void;
   selectedIds: string[];
   includeDeleted: boolean;
   onIncludeDeletedChange: (value: boolean) => void;
@@ -24,7 +21,6 @@ interface TrailToolsPanelProps {
 
 export default function TrailToolsPanel({
   showTools,
-  onToggleTools,
   selectedIds,
   includeDeleted,
   onIncludeDeletedChange,
