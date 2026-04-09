@@ -379,11 +379,11 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                             <Typography variant="body2" fontSize={compact ? '0.75rem' : undefined}>{distanceKm} km</Typography>
                         </Box>
                         <Box display="flex" alignItems="center">
-                            <TrendingUpIcon sx={{ mr: compact ? 0 : 0.5, fontSize: compact ? 14 : 18 }} />
+                            <TrendingUpIcon sx={{ mr: compact ? 0 : 0.5, fontSize: compact ? 14 : 18, color: 'success.main' }} />
                             <Typography variant="body2" fontSize={compact ? '0.75rem' : undefined}>+{Math.round(trail.elevationGain)}</Typography>
                         </Box>
                         <Box display="flex" alignItems="center">
-                            <TrendingDownIcon sx={{ mr: compact ? 0 : 0.5, fontSize: compact ? 14 : 18 }} />
+                            <TrendingDownIcon sx={{ mr: compact ? 0 : 0.5, fontSize: compact ? 14 : 18, color: 'error.main' }} />
                             <Typography variant="body2" fontSize={compact ? '0.75rem' : undefined}>-{Math.round(trail.elevationLoss)}</Typography>
                         </Box>
                         <Box display="flex" alignItems="center">
