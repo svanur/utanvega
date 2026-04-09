@@ -91,6 +91,7 @@
         "trailLength": "Trail Length",
         "elevationGain": "Elevation Gain",
         "elevationLoss": "Elevation Loss",
+        "duration": "Est. Duration",
         "distanceFromYou": "Distance from You",
         "any": "Any",
         "trailType": "Trail Type",

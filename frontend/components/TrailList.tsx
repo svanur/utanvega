@@ -54,6 +54,7 @@ import {
 } from '@mui/icons-material';
 import { useTrails, ALL_ACTIVITY_TYPES, useTrendingTrails } from '../hooks/useTrails';
 import type { SortOption, FilterState } from '../hooks/useTrails';
+import { formatDuration } from '../utils/estimateDuration';
 import { useFavorites } from '../hooks/useFavorites';
 import { useHiddenTrails } from '../hooks/useHiddenTrails';
 import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
@@ -653,6 +654,36 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                                     { value: 500, label: '500' },
                                     { value: 1000, label: '1k' },
                                     { value: 2000, label: '2k+' },
+                                ]}
+                                sx={{ mt: 1 }}
+                            />
+                        </Grid>
+
+                        {/* Estimated Duration */}
+                        <Grid item xs={12}>
+                            <Typography variant="caption" color="text.secondary">
+                                {t('filters.duration')}: {filters.minDuration === 0 && filters.maxDuration >= 480
+                                    ? t('filters.any')
+                                    : `${formatDuration(filters.minDuration)} – ${filters.maxDuration >= 480 ? '8h+' : formatDuration(filters.maxDuration)}`}
+                            </Typography>
+                            <Slider
+                                size="small"
+                                value={[filters.minDuration, filters.maxDuration]}
+                                onChange={(_, v) => {
+                                    const [min, max] = v as number[];
+                                    setFilters({ ...filters, minDuration: min, maxDuration: max });
+                                }}
+                                valueLabelDisplay="auto"
+                                valueLabelFormat={(v) => v >= 480 ? '8h+' : formatDuration(v)}
+                                min={0}
+                                max={480}
+                                step={15}
+                                marks={[
+                                    { value: 0, label: '0' },
+                                    { value: 60, label: '1h' },
+                                    { value: 120, label: '2h' },
+                                    { value: 240, label: '4h' },
+                                    { value: 480, label: '8h+' },
                                 ]}
                                 sx={{ mt: 1 }}
                             />

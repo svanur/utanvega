@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { estimateDurationMinutes } from '../utils/estimateDuration';
 
 export interface LocationInfo {
     name: string;
@@ -43,6 +44,8 @@ export interface FilterState {
     maxElevationGain: number;
     minElevationLoss: number;
     maxElevationLoss: number;
+    minDuration: number;
+    maxDuration: number;
     trailType: string;
     difficulty: string;
     location: string;
@@ -63,6 +66,8 @@ const DEFAULT_FILTERS: FilterState = {
     maxElevationGain: 2000,
     minElevationLoss: 0,
     maxElevationLoss: 2000,
+    minDuration: 0,
+    maxDuration: 480,
     trailType: 'All',
     difficulty: 'All',
     location: 'All',
@@ -195,6 +200,13 @@ export function useTrails() {
             // Elevation Loss
             if (trail.elevationLoss < filters.minElevationLoss) return false;
             if (filters.maxElevationLoss < 2000 && trail.elevationLoss > filters.maxElevationLoss) return false;
+
+            // Estimated Duration
+            if (filters.minDuration > 0 || filters.maxDuration < 480) {
+                const durationMin = estimateDurationMinutes(trail.length, trail.elevationGain, trail.activityType);
+                if (durationMin < filters.minDuration) return false;
+                if (filters.maxDuration < 480 && durationMin > filters.maxDuration) return false;
+            }
 
             // Trail Type
             if (filters.trailType !== 'All' && trail.trailType !== filters.trailType) return false;
