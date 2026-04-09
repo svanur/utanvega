@@ -46,6 +46,7 @@
         "loss": "Loss",
         "type": "Type",
         "routeMap": "Route Map",
+        "getDirections": "Get directions to trailhead",
         "relatedTrails": "Related Trails",
         "outAndBack": "Out and Back",
         "loop": "Loop",
@@ -309,6 +310,10 @@
         "aiDescription": "Development assisted by Claude, an AI coding agent by Anthropic, used for code generation, refactoring, and quality improvements.",
         "changelogTitle": "Changelog",
         "changelog": {
+            "v2_3": {
+                "title": "Directions & legal",
+                "description": "Get directions to trailhead via Google Maps, disclaimer and privacy policy pages, smarter summit weather thresholds for highland trails, and improved trail condition ratings with feels-like temperature and weather code awareness."
+            },
             "v2_2": {
                 "title": "Spotlight search",
                 "description": "Press Ctrl+K to instantly search trails and locations from anywhere. Fuzzy matching with Icelandic character support, keyboard navigation, and grouped results."

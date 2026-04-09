@@ -46,6 +46,7 @@
         "loss": "Lækkun",
         "type": "Tegund",
         "routeMap": "Leiðarkort",
+        "getDirections": "Leiðsögn að upphafsstað",
         "relatedTrails": "Tengdar leiðir",
         "outAndBack": "Fram og til baka",
         "loop": "Hringur",
@@ -309,6 +310,10 @@
         "aiDescription": "Vefurinn er þróaður með aðstoð Claude, gervigreindar- og kóðunarfulltrúa frá Anthropic. Claude hjálpar til við kóðun, prófanir, endurbætur og gæðaeftirlit.",
         "changelogTitle": "Breytingasaga",
         "changelog": {
+            "v2_3": {
+                "title": "Leiðsögn og lögfræði",
+                "description": "Leiðsögn að upphafsstað leiðar í gegnum Google Maps, fyrirvara- og persónuverndarsíður og betri veðurspámörk fyrir hálendisleiðir."
+            },
             "v2_2": {
                 "title": "Hraðleit",
                 "description": "Ýttu á Ctrl+K til að leita strax að leiðum og stöðum hvar sem er. Sveigjanleg leit og flokkaðar niðurstöður."

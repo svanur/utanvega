@@ -13,7 +13,8 @@ import {
     PaletteMode,
     IconButton,
     Container,
-    CircularProgress
+    CircularProgress,
+    Tooltip
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import RouteIcon from '@mui/icons-material/Route';
@@ -34,6 +35,7 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
+import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
 import Layout from '../components/Layout';
 import { useTrailBySlug, useTrails, useTrailSuggestions, useTrailWeather, recordTrailView } from '../hooks/useTrails';
 import LostRunner from '../components/LostRunner';
@@ -307,6 +309,19 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                         ))}
                         <ShareButtons title={trail.name} />
                         <QRCodeShare slug={trail.slug} trailName={trail.name} />
+                        {geometry && geometry.coordinates.length > 0 && (
+                            <Tooltip title={t('trail.getDirections')} arrow>
+                                <IconButton
+                                    size="small"
+                                    component="a"
+                                    href={`https://www.google.com/maps/dir/?api=1&destination=${geometry.coordinates[0][1]},${geometry.coordinates[0][0]}`}
+                                    target="_blank"
+                                    rel="noopener"
+                                >
+                                    <DirectionsCarIcon fontSize="small" />
+                                </IconButton>
+                            </Tooltip>
+                        )}
                     </Stack>
 
                     {trail.description && (
