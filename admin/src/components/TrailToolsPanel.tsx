@@ -38,16 +38,6 @@ export default function TrailToolsPanel({
 }: TrailToolsPanelProps) {
   return (
     <>
-      {/* Toggle Button */}
-      <Button
-        startIcon={showTools ? <ExpandLessIcon /> : <BuildIcon />}
-        size="small"
-        variant={showTools ? 'contained' : 'outlined'}
-        onClick={onToggleTools}
-      >
-        Tools
-      </Button>
-
       {/* Collapsible Tools Panel */}
       <Collapse in={showTools}>
         <Paper sx={{ mb: 2, mt: 2, p: 2, border: '1px solid', borderColor: 'divider' }}>

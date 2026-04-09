@@ -1,5 +1,7 @@
 import { Typography, CircularProgress, Alert, Box, Link, Stack, Button, Chip } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import BuildIcon from '@mui/icons-material/Build';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { useMemo, useState } from 'react';
 import { useTrails, Trail } from '../hooks/useTrails';
 import { useTags } from '../hooks/useTags';
@@ -208,22 +210,31 @@ export default function TrailList({ onNotify, initialTrailId }: { onNotify: (mes
         </Typography>
         <Stack direction="row" spacing={1} alignItems="center">
           <Button startIcon={<RefreshIcon />} size="small" onClick={refresh}>Refresh</Button>
-          <TrailToolsPanel
-            showTools={showTools}
-            onToggleTools={() => setShowTools(!showTools)}
-            selectedIds={selectedIds}
-            includeDeleted={includeDeleted}
-            onIncludeDeletedChange={setIncludeDeleted}
-            onShowBulkUpload={() => setShowBulkUpload(true)}
-            recalculating={recalculating}
-            bulkActioning={bulkActioning}
-            tags={tags}
-            onRecalculateDifficulties={handleRecalculateDifficulties}
-            onBulkAction={handleBulkAction}
-            onBulkTag={handleBulkTag}
-          />
+          <Button
+            startIcon={showTools ? <ExpandLessIcon /> : <BuildIcon />}
+            size="small"
+            variant={showTools ? 'contained' : 'outlined'}
+            onClick={() => setShowTools(!showTools)}
+          >
+            Tools
+          </Button>
         </Stack>
       </Box>
+
+      <TrailToolsPanel
+        showTools={showTools}
+        onToggleTools={() => setShowTools(!showTools)}
+        selectedIds={selectedIds}
+        includeDeleted={includeDeleted}
+        onIncludeDeletedChange={setIncludeDeleted}
+        onShowBulkUpload={() => setShowBulkUpload(true)}
+        recalculating={recalculating}
+        bulkActioning={bulkActioning}
+        tags={tags}
+        onRecalculateDifficulties={handleRecalculateDifficulties}
+        onBulkAction={handleBulkAction}
+        onBulkTag={handleBulkTag}
+      />
 
       <TrailFilterBar
         search={search}
