@@ -261,7 +261,7 @@ function DailyForecast({ daily, t, locale }: { daily: DailyForecastDto[]; t: (ke
 
 export default function WeatherCard({ weather, loading, error }: WeatherCardProps) {
     const { t, i18n } = useTranslation();
-    const [expanded, setExpanded] = useState(true);
+    const [expanded, setExpanded] = useState(false);
     const locale = i18n.language === 'is' ? 'is-IS' : 'en-US';
 
     if (loading) {

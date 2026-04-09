@@ -71,6 +71,8 @@ public class GetTrailWeatherQueryHandler : IRequestHandler<GetTrailWeatherQuery,
     private readonly IMemoryCache _cache;
 
     private const int ElevationThresholdMeters = 300;
+    private const int HighlandElevationThreshold = 200;
+    private const int HighlandAltitudeMinMeters = 400;
     private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(30);
 
     public GetTrailWeatherQueryHandler(
@@ -120,7 +122,10 @@ public class GetTrailWeatherQueryHandler : IRequestHandler<GetTrailWeatherQuery,
             ? 0
             : highestCoord.Z - lowestZ;
 
-        var hasSummit = elevationDiff >= ElevationThresholdMeters;
+        var hasSummit = elevationDiff >= ElevationThresholdMeters
+            || (elevationDiff >= HighlandElevationThreshold
+                && !double.IsNaN(highestCoord.Z)
+                && highestCoord.Z >= HighlandAltitudeMinMeters);
 
         // Fetch weather for start point
         var startWeather = await FetchWeatherAsync(startCoord.Y, startCoord.X, cancellationToken);
