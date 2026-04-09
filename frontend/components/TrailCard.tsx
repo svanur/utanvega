@@ -21,10 +21,12 @@ import AllInclusiveIcon from '@mui/icons-material/AllInclusive';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
 import StarIcon from '@mui/icons-material/Star';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Trail } from '../hooks/useTrails';
+import { estimateDuration } from '../utils/estimateDuration';
 import { useFavorites } from '../hooks/useFavorites';
 import { useHiddenTrails } from '../hooks/useHiddenTrails';
 import { TrailQuickView } from './TrailQuickView';
@@ -82,6 +84,7 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
     const isFavorited = isFavoritedProp ?? isFavorite(trail.slug);
 
     const distanceKm = (trail.length / 1000).toFixed(1);
+    const estTime = estimateDuration(trail.length, trail.elevationGain, trail.activityType);
     const userDist = trail.distanceToUser !== undefined && trail.distanceToUser !== Infinity
         ? `${trail.distanceToUser.toFixed(1)} ${t('trailCard.kmAway')}`
         : null;
@@ -382,6 +385,10 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                         <Box display="flex" alignItems="center">
                             <TrendingDownIcon sx={{ mr: compact ? 0 : 0.5, fontSize: compact ? 14 : 18 }} />
                             <Typography variant="body2" fontSize={compact ? '0.75rem' : undefined}>-{Math.round(trail.elevationLoss)}</Typography>
+                        </Box>
+                        <Box display="flex" alignItems="center">
+                            <AccessTimeIcon sx={{ mr: compact ? 0 : 0.5, fontSize: compact ? 14 : 18 }} />
+                            <Typography variant="body2" fontSize={compact ? '0.75rem' : undefined}>~{estTime}</Typography>
                         </Box>
                         {userDist && !compact && (
                             <Box display="flex" alignItems="center">

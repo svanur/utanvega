@@ -45,6 +45,7 @@
         "gain": "Gain",
         "loss": "Loss",
         "type": "Type",
+        "estTime": "Est. time",
         "routeMap": "Route Map",
         "getDirections": "Get directions to trailhead",
         "relatedTrails": "Related Trails",
@@ -120,6 +121,14 @@
         "hiking": "Hiking",
         "cycling": "Cycling",
         "formula": "**Effort distance** = distance (km) + elevation gain (m) ÷ 100. For example, a 15 km trail with 800 m gain = 23 km effort."
+    },
+    "paceModel": {
+        "dialogTitle": "Estimated Time Model",
+        "explanation": "Time estimates are based on a modified Naismith's Rule. Flat speed varies by activity type, with extra time added per 100 m of elevation gain. Actual times will vary with fitness, terrain, and conditions.",
+        "activity": "Activity",
+        "baseSpeed": "Flat speed",
+        "climbPenalty": "Climb penalty",
+        "formula": "**Time** = distance ÷ flat speed + elevation gain × climb penalty. For example, a 10 km trail run with 500 m gain ≈ 86 min + 15 min = ~1h 41m."
     },
     "elevation": {
         "title": "Elevation Profile",

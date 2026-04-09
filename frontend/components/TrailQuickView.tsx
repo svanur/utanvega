@@ -23,6 +23,7 @@ import LandscapeIcon from '@mui/icons-material/Landscape';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Trail, API_URL } from '../hooks/useTrails';
+import { estimateDuration } from '../utils/estimateDuration';
 import DifficultyInfo from './DifficultyInfo';
 
 // Mini SVG elevation silhouette for background
@@ -95,30 +96,6 @@ const getTrailTypeLabelTranslated = (type: string, t: (key: string) => string) =
     }
 };
 
-function estimateTime(lengthM: number, gainM: number, activityType: string): string {
-    const km = lengthM / 1000;
-    let baseSpeedKmh: number;
-    let climbPenaltyMinPer100m: number;
-
-    switch (activityType.toLowerCase()) {
-        case 'running':
-            baseSpeedKmh = 9; climbPenaltyMinPer100m = 2; break;
-        case 'trailrunning':
-            baseSpeedKmh = 7; climbPenaltyMinPer100m = 3; break;
-        case 'hiking':
-            baseSpeedKmh = 4; climbPenaltyMinPer100m = 10; break;
-        case 'cycling':
-            baseSpeedKmh = 20; climbPenaltyMinPer100m = 3; break;
-        default:
-            baseSpeedKmh = 5; climbPenaltyMinPer100m = 5;
-    }
-
-    const totalMinutes = Math.round((km / baseSpeedKmh) * 60 + (gainM / 100) * climbPenaltyMinPer100m);
-    if (totalMinutes < 60) return `${totalMinutes} min`;
-    const hours = Math.floor(totalMinutes / 60);
-    const mins = totalMinutes % 60;
-    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
-}
 
 function generateSummary(trail: Trail, t: (key: string, opts?: Record<string, unknown>) => string, language: string): string {
     const km = (trail.length / 1000).toFixed(1);
@@ -167,7 +144,7 @@ export const TrailQuickView: React.FC<TrailQuickViewProps> = ({ trail, open, onC
     if (!trail) return null;
 
     const distanceKm = (trail.length / 1000).toFixed(1);
-    const estTime = estimateTime(trail.length, trail.elevationGain, trail.activityType);
+    const estTime = estimateDuration(trail.length, trail.elevationGain, trail.activityType);
     const summary = generateSummary(trail, t, i18n.language);
 
     return (

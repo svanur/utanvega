@@ -38,6 +38,8 @@ import StarBorderIcon from '@mui/icons-material/StarBorder';
 import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
 import Layout from '../components/Layout';
 import { useTrailBySlug, useTrails, useTrailSuggestions, useTrailWeather, recordTrailView } from '../hooks/useTrails';
+import { estimateDuration } from '../utils/estimateDuration';
+import PaceInfo from '../components/PaceInfo';
 import LostRunner from '../components/LostRunner';
 import { useFavorites } from '../hooks/useFavorites';
 import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
@@ -220,6 +222,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     }
 
     const distanceKm = (trail.length / 1000).toFixed(2);
+    const estTime = estimateDuration(trail.length, trail.elevationGain, trail.activityType);
 
     return (
         <Layout mode={mode} onToggleMode={onToggleMode}>
@@ -333,33 +336,36 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                     <Divider sx={{ my: 2, display: { xs: 'block', sm: 'none' }, opacity: 0.6 }} />
 
                     <Grid container spacing={1} sx={{ mt: 1 }}>
-                        <Grid item xs={3}>
+                        <Grid item xs={4} sm>
                             <Stack alignItems="center" spacing={0.5}>
                                 <RouteIcon color="action" fontSize="small" />
                                 <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>{t('trail.distance')}</Typography>
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>{distanceKm} km</Typography>
                             </Stack>
                         </Grid>
-                        <Grid item xs={3}>
+                        <Grid item xs={4} sm>
                             <Stack alignItems="center" spacing={0.5}>
-                                <TrendingUpIcon color="action" fontSize="small" />
+                                <TrendingUpIcon sx={{ color: 'success.main' }} fontSize="small" />
                                 <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>{t('trail.gain')}</Typography>
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>+{Math.round(trail.elevationGain)}m</Typography>
                             </Stack>
                         </Grid>
-                        <Grid item xs={3}>
+                        <Grid item xs={4} sm>
                             <Stack alignItems="center" spacing={0.5}>
-                                <TrendingDownIcon color="action" fontSize="small" />
+                                <TrendingDownIcon sx={{ color: 'error.main' }} fontSize="small" />
                                 <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>{t('trail.loss')}</Typography>
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>-{Math.round(trail.elevationLoss)}m</Typography>
                             </Stack>
                         </Grid>
-                        <Grid item xs={3}>
+                        <Grid item xs={6} sm>
                             <Stack alignItems="center" spacing={0.5}>
                                 {getTrailTypeIcon(trail.trailType)}
                                 <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>{t('trail.type')}</Typography>
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold', textAlign: 'center' }}>{getTrailTypeLabel(trail.trailType, t)}</Typography>
                             </Stack>
+                        </Grid>
+                        <Grid item xs={6} sm>
+                            <PaceInfo activityType={trail.activityType} formattedDuration={estTime} />
                         </Grid>
                     </Grid>
                 </Box>

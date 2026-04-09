@@ -45,6 +45,7 @@
         "gain": "Hækkun",
         "loss": "Lækkun",
         "type": "Tegund",
+        "estTime": "Áætlaður tími",
         "routeMap": "Leiðarkort",
         "getDirections": "Leiðsögn að upphafsstað",
         "relatedTrails": "Tengdar leiðir",
@@ -120,6 +121,14 @@
         "hiking": "Fjallganga",
         "cycling": "Hjólreiðar",
         "formula": "**Álagsvegalengd** = vegalengd (km) + hækkun (m) ÷ 100. Til dæmis, 15 km leið með 800 m hækkun = 23 km álag."
+    },
+    "paceModel": {
+        "dialogTitle": "Áætlaður tími — reikniregla",
+        "explanation": "Tímaáætlunin byggir á breyttri reglu Naísmiths. Grunnhraði fer eftir tegund hreyfingar og aukatími bætist við fyrir hverja 100 m hækkun. Raunverulegur tími fer eftir líkamsástandi, yfirborði og veðri.",
+        "activity": "Tegund",
+        "baseSpeed": "Grunnhraði",
+        "climbPenalty": "Hækkun",
+        "formula": "**Tími** = vegalengd ÷ grunnhraði + hækkun × hækkunarviðbót. Til dæmis, 10 km fjallahlaup með 500 m hækkun ≈ 86 mín + 15 mín = ~1k 41m."
     },
     "elevation": {
         "title": "Hæðarsnið",
