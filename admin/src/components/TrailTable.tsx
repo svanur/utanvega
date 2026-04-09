@@ -1,4 +1,4 @@
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Chip, Button, Box, Checkbox, TableSortLabel, Tooltip, IconButton, Paper, Link } from '@mui/material';
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Chip, Button, Box, Checkbox, TableSortLabel, Tooltip, IconButton, Paper } from '@mui/material';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import MapIcon from '@mui/icons-material/Map';
 import EditIcon from '@mui/icons-material/Edit';
@@ -8,6 +8,7 @@ import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
 import LoopIcon from '@mui/icons-material/Loop';
 import UndoIcon from '@mui/icons-material/Undo';
 import type { Trail } from '../hooks/useTrails';
+import { InlineEditText, InlineEditSelect } from './InlineEditCell';
 
 interface TrailTableProps {
   trails: Trail[];
@@ -22,6 +23,7 @@ interface TrailTableProps {
   onDelete: (trail: { id: string; name: string }) => void;
   onRestore: (trail: Trail) => void;
   onUpdateStatus: (trailId: string, status: string) => void;
+  onPatchTrail: (trailId: string, field: string, value: string) => Promise<void>;
 }
 
 export default function TrailTable({
@@ -37,6 +39,7 @@ export default function TrailTable({
   onDelete,
   onRestore,
   onUpdateStatus,
+  onPatchTrail,
 }: TrailTableProps) {
   return (
     <TableContainer component={Paper}>
@@ -93,6 +96,7 @@ export default function TrailTable({
               onDelete={() => onDelete({ id: trail.id, name: trail.name })}
               onRestore={() => onRestore(trail)}
               onUpdateStatus={onUpdateStatus}
+              onPatchTrail={onPatchTrail}
             />
           ))}
           {trails.length === 0 && (
@@ -155,9 +159,31 @@ interface TrailRowProps {
   onDelete: () => void;
   onRestore: () => void;
   onUpdateStatus: (trailId: string, status: string) => void;
+  onPatchTrail: (trailId: string, field: string, value: string) => Promise<void>;
 }
 
-function TrailRow({ trail, selected, onSelect, onViewMap, onEdit, onDelete, onRestore, onUpdateStatus }: TrailRowProps) {
+const statusOptions = [
+  { value: 'Draft', label: 'Draft' },
+  { value: 'Published', label: 'Published' },
+  { value: 'Flagged', label: 'Flagged' },
+  { value: 'Archived', label: 'Archived' },
+];
+
+const difficultyOptions = [
+  { value: 'Easy', label: 'Easy' },
+  { value: 'Moderate', label: 'Moderate' },
+  { value: 'Hard', label: 'Hard' },
+  { value: 'Expert', label: 'Expert' },
+];
+
+const activityOptions = [
+  { value: 'TrailRunning', label: 'Trail Running' },
+  { value: 'Running', label: 'Running' },
+  { value: 'Hiking', label: 'Hiking' },
+  { value: 'Cycling', label: 'Cycling' },
+];
+
+function TrailRow({ trail, selected, onSelect, onViewMap, onEdit, onDelete, onRestore, onUpdateStatus: _onUpdateStatus, onPatchTrail }: TrailRowProps) {
   return (
     <TableRow
       selected={selected}
@@ -167,23 +193,21 @@ function TrailRow({ trail, selected, onSelect, onViewMap, onEdit, onDelete, onRe
         <Checkbox checked={selected} onChange={onSelect} />
       </TableCell>
       <TableCell component="th" scope="row">
-        <Link
-          component="button"
-          variant="body2"
-          sx={{ fontWeight: 'bold', textAlign: 'left', cursor: 'pointer' }}
-          underline="hover"
-          onClick={onEdit}
-        >
-          {trail.name}
-        </Link>
+        <InlineEditText
+          value={trail.name}
+          onSave={(v) => onPatchTrail(trail.id, 'name', v)}
+          fontWeight="bold"
+        />
         <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block', maxWidth: 300, fontFamily: 'monospace', opacity: 0.7 }}>
           /{trail.slug}
         </Typography>
-        {trail.description && (
-          <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block', maxWidth: 300 }}>
-            {trail.description}
-          </Typography>
-        )}
+        <InlineEditText
+          value={trail.description || ''}
+          onSave={(v) => onPatchTrail(trail.id, 'description', v)}
+          variant="caption"
+          multiline
+          placeholder="Add description..."
+        />
       </TableCell>
       <TableCell align="right">{(trail.length / 1000).toFixed(2)}</TableCell>
       <TableCell align="right">
@@ -192,7 +216,25 @@ function TrailRow({ trail, selected, onSelect, onViewMap, onEdit, onDelete, onRe
       </TableCell>
       <TableCell>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-          {trail.difficulty && <DifficultyChip difficulty={trail.difficulty} />}
+          <InlineEditSelect
+            value={trail.difficulty || 'Moderate'}
+            options={difficultyOptions}
+            onSave={(v) => onPatchTrail(trail.id, 'difficulty', v)}
+            renderDisplay={(v) => <DifficultyChip difficulty={v} />}
+          />
+          <InlineEditSelect
+            value={trail.activityType}
+            options={activityOptions}
+            onSave={(v) => onPatchTrail(trail.id, 'activityType', v)}
+            renderDisplay={(v) => (
+              <Chip
+                label={activityOptions.find(o => o.value === v)?.label || v}
+                size="small"
+                variant="outlined"
+                sx={{ fontSize: '0.7rem', height: 24 }}
+              />
+            )}
+          />
           <TrailTypeChip type={trail.trailType} />
         </Box>
       </TableCell>
@@ -213,17 +255,22 @@ function TrailRow({ trail, selected, onSelect, onViewMap, onEdit, onDelete, onRe
         </Box>
       </TableCell>
       <TableCell>
-        <Chip
-          label={trail.status}
-          color={trail.status === 'Published' ? 'success' : trail.status === 'Deleted' ? 'error' : 'default'}
-          size="small"
-          onClick={() => {
-            if (trail.status === 'Deleted') return;
-            const nextStatus = trail.status === 'Published' ? 'Draft' : 'Published';
-            onUpdateStatus(trail.id, nextStatus);
-          }}
-          sx={{ cursor: trail.status === 'Deleted' ? 'default' : 'pointer' }}
-        />
+        {trail.status === 'Deleted' ? (
+          <Chip label="Deleted" color="error" size="small" />
+        ) : (
+          <InlineEditSelect
+            value={trail.status}
+            options={statusOptions}
+            onSave={(v) => onPatchTrail(trail.id, 'status', v)}
+            renderDisplay={(v) => (
+              <Chip
+                label={v}
+                color={v === 'Published' ? 'success' : v === 'Flagged' ? 'warning' : 'default'}
+                size="small"
+              />
+            )}
+          />
+        )}
       </TableCell>
       <TableCell align="center">
         <Tooltip title="View trail on website">

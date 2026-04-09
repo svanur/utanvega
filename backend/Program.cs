@@ -16,6 +16,7 @@ using Utanvega.Backend.Application.Trails.Commands.BulkCheckTrailSimilarity;
 using Utanvega.Backend.Application.Trails.Commands.UpdateTrail;
 using Utanvega.Backend.Application.Trails.Commands.DeleteTrail;
 using Utanvega.Backend.Application.Trails.Commands.BulkTrailAction;
+using Utanvega.Backend.Application.Trails.Commands.PatchTrail;
 using Utanvega.Backend.Application.Trails.Queries.GetTrails;
 using Utanvega.Backend.Application.Trails.Queries.GetTrailGeometry;
 using Utanvega.Backend.Application.Locations.Queries.GetLocations;
@@ -485,6 +486,14 @@ app.MapPut("/api/v1/admin/trails/{id}", [Authorize] async (Guid id, UpdateTrailC
     }
 })
 .WithName("UpdateTrail");
+
+app.MapPatch("/api/v1/admin/trails/{id}", [Authorize] async (Guid id, PatchTrailCommand command, IMediator mediator) =>
+{
+    if (id != command.Id) return Results.BadRequest("ID mismatch");
+    var success = await mediator.Send(command);
+    return success ? Results.NoContent() : Results.NotFound();
+})
+.WithName("PatchTrail");
 
 app.MapDelete("/api/v1/admin/trails/{id}", [Authorize] async (Guid id, IMediator mediator) =>
 {

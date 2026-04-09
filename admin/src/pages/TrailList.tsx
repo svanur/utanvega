@@ -208,6 +208,16 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
     }
   };
 
+  const handlePatchTrail = async (trailId: string, field: string, value: string) => {
+    await apiFetch(`/api/v1/admin/trails/${trailId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: trailId, [field]: value }),
+    });
+    onNotify(`Updated ${field}`);
+    refresh();
+  };
+
   const handleRecalculateDifficulties = async () => {
     setRecalculating(true);
     try {
@@ -289,6 +299,7 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
         onDelete={setTrailToDelete}
         onRestore={handleRestore}
         onUpdateStatus={handleUpdateStatus}
+        onPatchTrail={handlePatchTrail}
       />
 
       <TrailMapDialog trail={selectedTrailMap} onClose={() => setSelectedTrailMap(null)} />
