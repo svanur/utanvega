@@ -15,6 +15,7 @@ const LocationsPage = lazy(() => import('./pages/LocationsPage'));
 const LocationDetailsPage = lazy(() => import('./pages/LocationDetailsPage'));
 const AboutPage = lazy(() => import('./pages/AboutPage'));
 const DisclaimerPage = lazy(() => import('./pages/DisclaimerPage'));
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
 
 function PageLoader() {
     return (
@@ -82,6 +83,10 @@ export default function App() {
                     <Route 
                         path="/disclaimer" 
                         element={<DisclaimerPage mode={mode} onToggleMode={handleToggleMode} />} 
+                    />
+                    <Route 
+                        path="/privacy" 
+                        element={<PrivacyPage mode={mode} onToggleMode={handleToggleMode} />} 
                     />
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>

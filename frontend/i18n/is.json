@@ -4,6 +4,7 @@
         "locations": "Staðsetningar",
         "about": "Um",
         "disclaimer": "Fyrirvari",
+        "privacy": "Persónuvernd",
         "darkMode": "Skipta yfir í dimmt þema",
         "lightMode": "Skipta yfir í ljóst þema",
         "switchToEnglish": "Switch to English",
@@ -253,6 +254,28 @@
             "96": "Þrumuveður með hagli",
             "99": "Ofsaveður"
         }
+    },
+    "privacy": {
+        "title": "Persónuverndarstefna",
+        "intro": "Utanvega leggur áherslu á að virða friðhelgi einkalífs þíns. Þessi stefna útskýrir hvaða gögn við söfnum, hvernig við notum þau og réttindi þín. Í stuttu máli: við söfnum mjög litlu og deilum engu.",
+        "noAccounts": {
+            "title": "Enginn notendaaðgangur krafist",
+            "body": "Almenna Utanvega vefsíðan krefst þess ekki að þú stofnir aðgang eða skráir þig inn. Við söfnum ekki nafni þínu, netfangi eða neinum persónulegum upplýsingum til að nota síðuna."
+        },
+        "viewTracking": {
+            "title": "Mæling á leiðaskoðunum",
+            "body": "Þegar þú skoðar leið skráum við heimsóknina til að sýna vinsælar og vaxandi leiðir. Við vistum einstefnuhátt (hash) af IP-tölu þinni — ekki IP-töluna sjálfa — til að koma í veg fyrir tvítalningu. Ekki er hægt að snúa þessu háttnúmeri aftur til að auðkenna þig. Gögn eru eingöngu notuð til samanlagðrar tölfræði."
+        },
+        "localStorage": {
+            "title": "Gögn vistuð á tækinu þínu",
+            "body": "Eftirlætisleiðir þínar, faldar leiðir, tungumálsstilling og birtuhamur eru vistuð staðbundið á tækinu þínu í localStorage vafrans. Þessi gögn fara aldrei frá tækinu þínu og eru ekki send á netþjóna okkar. Þú getur eytt þeim hvenær sem er í gegnum vafrastillingar."
+        },
+        "thirdParty": {
+            "title": "Þjónustur þriðja aðila",
+            "body": "Veðurspár eru sóttar frá Open-Meteo í gegnum bakenda okkar — IP-tala þín er ekki birt fyrir Open-Meteo. Kortaflísar koma frá OpenStreetMap. Við notum engar greiningaþjónustur (ekkert Google Analytics, engar rakningarmyndir), engin auglýsinganet og engin vefkökur. Við seljum ekki eða deilum gögnum með þriðja aðila."
+        },
+        "contact": "Spurningar um persónuvernd? Hafðu samband í gegnum Um síðuna.",
+        "lastUpdated": "Síðast uppfært: {{date}}"
     },
     "disclaimer": {
         "title": "Fyrirvari",

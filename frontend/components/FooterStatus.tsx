@@ -29,6 +29,9 @@ export default function FooterStatus() {
                 <MuiLink component={Link} to="/disclaimer" variant="caption" color="text.secondary" underline="hover" sx={{ opacity: 0.7 }}>
                     {t('nav.disclaimer')}
                 </MuiLink>
+                <MuiLink component={Link} to="/privacy" variant="caption" color="text.secondary" underline="hover" sx={{ opacity: 0.7 }}>
+                    {t('nav.privacy')}
+                </MuiLink>
 
                 {loading ? (
                     <Stack direction="row" spacing={1} alignItems="center">

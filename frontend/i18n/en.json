@@ -4,6 +4,7 @@
         "locations": "Locations",
         "about": "About",
         "disclaimer": "Disclaimer",
+        "privacy": "Privacy",
         "darkMode": "Switch to dark mode",
         "lightMode": "Switch to light mode",
         "switchToEnglish": "Switch to English",
@@ -253,6 +254,28 @@
             "96": "Thunderstorm with hail",
             "99": "Severe thunderstorm"
         }
+    },
+    "privacy": {
+        "title": "Privacy Policy",
+        "intro": "Utanvega is committed to respecting your privacy. This policy explains what data we collect, how we use it, and your rights. The short version: we collect very little and share nothing.",
+        "noAccounts": {
+            "title": "No User Accounts Required",
+            "body": "The public Utanvega website does not require you to create an account or log in. We do not collect your name, email address, or any personal information to use the site."
+        },
+        "viewTracking": {
+            "title": "Trail View Tracking",
+            "body": "When you view a trail, we record the visit to show trending and popular trails. We store a one-way hash of your IP address — not the IP itself — to prevent duplicate counting. This hash cannot be reversed to identify you. View data is used solely for aggregate statistics (e.g., \"most viewed trails this week\")."
+        },
+        "localStorage": {
+            "title": "Data Stored on Your Device",
+            "body": "Your favorites, hidden trails, language preference, and dark/light mode setting are stored locally on your device using browser localStorage. This data never leaves your device and is not sent to our servers. You can clear it at any time through your browser settings."
+        },
+        "thirdParty": {
+            "title": "Third-Party Services",
+            "body": "Weather forecasts are fetched from Open-Meteo via our backend — your IP is not exposed to Open-Meteo. Map tiles are served by OpenStreetMap. We do not use any analytics services (no Google Analytics, no tracking pixels), no advertising networks, and no cookies. We do not sell or share any data with third parties."
+        },
+        "contact": "Questions about privacy? Reach out to us through the About page.",
+        "lastUpdated": "Last updated: {{date}}"
     },
     "disclaimer": {
         "title": "Disclaimer",
