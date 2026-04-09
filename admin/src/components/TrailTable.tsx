@@ -156,6 +156,9 @@ function TrailRow({ trail, selected, onSelect, onViewMap, onEdit, onDelete, onRe
         >
           {trail.name}
         </Link>
+        <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block', maxWidth: 300, fontFamily: 'monospace', opacity: 0.7 }}>
+          /{trail.slug}
+        </Typography>
         {trail.description && (
           <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block', maxWidth: 300 }}>
             {trail.description}
