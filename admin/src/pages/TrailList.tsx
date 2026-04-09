@@ -36,6 +36,7 @@ export default function TrailList({ onNotify, initialTrailId }: { onNotify: (mes
       .filter((trail) => {
         const matchesSearch = 
           trail.name.toLowerCase().includes(search.toLowerCase()) || 
+          trail.slug.toLowerCase().includes(search.toLowerCase()) ||
           (trail.description?.toLowerCase().includes(search.toLowerCase()) ?? false);
         const matchesStatus = statusFilter === 'all' || trail.status === statusFilter;
         const matchesType = typeFilter === 'all' || trail.trailType === typeFilter;
