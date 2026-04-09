@@ -2,7 +2,7 @@ import { Typography, CircularProgress, Alert, Box, Link, Stack, Button, Chip } f
 import RefreshIcon from '@mui/icons-material/Refresh';
 import BuildIcon from '@mui/icons-material/Build';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTrails, Trail } from '../hooks/useTrails';
 import { useTags } from '../hooks/useTags';
 import { apiFetch } from '../hooks/api';
@@ -26,6 +26,12 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
   const [bulkActioning, setBulkActioning] = useState(false);
   const [recalculating, setRecalculating] = useState(false);
   const [showTools, setShowTools] = useState(false);
+
+  useEffect(() => {
+    const handler = () => setShowTools(prev => !prev);
+    window.addEventListener('admin:toggle-tools', handler);
+    return () => window.removeEventListener('admin:toggle-tools', handler);
+  }, []);
 
   const [search, setSearch] = useState(initialSearch || '');
   const [statusFilter, setStatusFilter] = useState<string>('all');

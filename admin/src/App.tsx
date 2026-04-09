@@ -10,7 +10,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import SearchIcon from '@mui/icons-material/Search';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import TrailList from './pages/TrailList';
 import { LocationList } from './pages/LocationList';
 import TrailHealth from './pages/TrailHealth';
@@ -21,7 +21,10 @@ import GpxUploadDialog from './components/GpxUploadDialog';
 import LoginPage from './pages/LoginPage';
 import ErrorBoundary from './components/ErrorBoundary';
 import AdminSpotlightSearch from './components/AdminSpotlightSearch';
+import KeyboardShortcutsDialog from './components/KeyboardShortcutsDialog';
 import { AuthProvider, useAuth } from './hooks/useAuth';
+import { useAdminShortcuts } from './hooks/useAdminShortcuts';
+import KeyboardIcon from '@mui/icons-material/Keyboard';
 
 const theme = createTheme({
   palette: {
@@ -46,10 +49,31 @@ function AdminContent() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [selectedTrailId, setSelectedTrailId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string | null>(null);
+  const [showShortcuts, setShowShortcuts] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean, message: React.ReactNode, severity: 'success' | 'error' }>({
     open: false,
     message: '',
     severity: 'success'
+  });
+
+  const handleFocusSearch = useCallback(() => {
+    const input = document.querySelector<HTMLInputElement>('input[placeholder*="Search"]');
+    input?.focus();
+  }, []);
+
+  const handleToggleTools = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('admin:toggle-tools'));
+  }, []);
+
+  useAdminShortcuts({
+    onNavigate: setCurrentPage,
+    onToggleSidebar: () => setDrawerOpen(prev => !prev),
+    onNewTrail: () => { setCurrentPage('trails'); setIsUploadOpen(true); },
+    onRefresh: () => setRefreshTrigger(prev => prev + 1),
+    onToggleTools: handleToggleTools,
+    onShowHelp: () => setShowShortcuts(true),
+    onFocusSearch: handleFocusSearch,
+    currentPage,
   });
 
   const notify = (message: React.ReactNode, severity: 'success' | 'error' = 'success') => {
@@ -118,6 +142,16 @@ function AdminContent() {
               <Typography variant="caption" sx={{ fontSize: '0.6rem', opacity: 0.7, border: '1px solid', borderColor: 'inherit', borderRadius: 0.5, px: 0.5, ml: 0.5, lineHeight: 1.6 }}>
                 ⌘K
               </Typography>
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Shortcuts (Ctrl+?)">
+            <IconButton
+              color="inherit"
+              size="small"
+              onClick={() => setShowShortcuts(true)}
+              sx={{ mr: 1 }}
+            >
+              <KeyboardIcon />
             </IconButton>
           </Tooltip>
           <Button color="inherit" onClick={signOut} startIcon={<LogoutIcon />}>
@@ -219,6 +253,7 @@ function AdminContent() {
         onNavigate={(page) => setCurrentPage(page as typeof currentPage)}
         onFilterTrails={(term) => { setSearchTerm(term); setSelectedTrailId(null); setCurrentPage('trails'); }}
       />
+      <KeyboardShortcutsDialog open={showShortcuts} onClose={() => setShowShortcuts(false)} />
     </Box>
   );
 }
