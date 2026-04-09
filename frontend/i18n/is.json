@@ -3,6 +3,7 @@
     "nav": {
         "locations": "Staðsetningar",
         "about": "Um",
+        "disclaimer": "Fyrirvari",
         "darkMode": "Skipta yfir í dimmt þema",
         "lightMode": "Skipta yfir í ljóst þema",
         "switchToEnglish": "Switch to English",
@@ -252,6 +253,27 @@
             "96": "Þrumuveður með hagli",
             "99": "Ofsaveður"
         }
+    },
+    "disclaimer": {
+        "title": "Fyrirvari",
+        "useAtOwnRisk": {
+            "title": "Á eigin ábyrgð",
+            "body": "Allar upplýsingar á Utanvega eru eingöngu til upplýsinga. Þú berð sjálf/ur ábyrgð á eigin öryggi á öllum leiðum. Alltaf skaltu meta aðstæður, líkamlegt ástand og búnað áður en þú leggur af stað. Utanvega ber enga ábyrgð á meiðslum, slysum, skemmdum eða tjóni sem kann að hljótast af notkun upplýsinga á þessari síðu."
+        },
+        "weather": {
+            "title": "Veður og aðstæður",
+            "body": "Veðurspár eru sóttar frá Open-Meteo og eru ekki endilega nákvæmar. Veður á Íslandi getur breyst hratt og fyrirvaralaust. Ástandsvísar leiða (Góð, Sæmileg, Vond) eru reiknaðar út sjálfvirkt og ætti ekki að reiða sig eingöngu á þá. Athugaðu alltaf opinberar veðurspár á vedur.is áður en þú ferð í fjöll."
+        },
+        "accuracy": {
+            "title": "GPS gögn og nákvæmni",
+            "body": "Vegalengdir, hæðarsnið og GPS-slóðir eru áætlaðar og unnar úr GPX gögnum. Raunverulegar aðstæður, vegalengdir og erfiðleikastig geta verið frábrugðin því sem sýnt er. Merkingar og leiðir geta breyst með tímanum. Hafðu alltaf viðeigandi leiðsögutæki meðferðis."
+        },
+        "emergency": {
+            "title": "Neyðarupplýsingar",
+            "body": "Í neyðartilvikum á Íslandi, hringdu í 1 1 2. Landsbjörg sinnir björgunarþjónustu um allt land. Áður en þú leggur af stað, skráðu ferðaáætlun á safetravel.is og íhugaðu að hlaða niður 112 Iceland appinu."
+        },
+        "safetravel": "Skráðu alltaf ferðaáætlun á",
+        "lastUpdated": "Síðast uppfært: {{date}}"
     },
     "about": {
         "title": "Um Utanvega",

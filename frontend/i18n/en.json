@@ -3,6 +3,7 @@
     "nav": {
         "locations": "Locations",
         "about": "About",
+        "disclaimer": "Disclaimer",
         "darkMode": "Switch to dark mode",
         "lightMode": "Switch to light mode",
         "switchToEnglish": "Switch to English",
@@ -252,6 +253,27 @@
             "96": "Thunderstorm with hail",
             "99": "Severe thunderstorm"
         }
+    },
+    "disclaimer": {
+        "title": "Disclaimer",
+        "useAtOwnRisk": {
+            "title": "Use at Your Own Risk",
+            "body": "All trail information on Utanvega is provided for informational purposes only. You are solely responsible for your own safety when using any trail. Always assess conditions, your fitness level, and equipment before heading out. Utanvega is not liable for any injuries, accidents, damages, or losses arising from the use of the information on this site."
+        },
+        "weather": {
+            "title": "Weather & Conditions",
+            "body": "Weather forecasts are sourced from Open-Meteo and may not be accurate. Conditions in Iceland can change rapidly and without warning. The trail condition indicators (Good, Fair, Poor) are automated estimates and should not be your sole source of information. Always check official weather forecasts from vedur.is before heading into the mountains."
+        },
+        "accuracy": {
+            "title": "GPS Data & Accuracy",
+            "body": "Trail distances, elevation profiles, and GPS tracks are approximate and derived from GPX data. Actual trail conditions, distances, and difficulty may differ from what is shown. Trail markings and routes may change over time. Always carry proper navigation tools and know how to use them."
+        },
+        "emergency": {
+            "title": "Emergency Information",
+            "body": "In an emergency in Iceland, call 112. The Icelandic Association for Search and Rescue (ICE-SAR) operates rescue services nationwide. Before heading out, leave your travel plan at safetravel.is and consider downloading the 112 Iceland app."
+        },
+        "safetravel": "Always leave your travel plan at",
+        "lastUpdated": "Last updated: {{date}}"
     },
     "about": {
         "title": "About Utanvega",
