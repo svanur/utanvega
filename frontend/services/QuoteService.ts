@@ -78,6 +78,15 @@ export class QuoteService {
         { text: "Everything you ever wanted to know about yourself, you can learn in 26.2 miles.", author: "Lori Culnane" },
         { text: "How do you know if someone ran a marathon? Don’t worry, they’ll tell you.", author: "Jimmy Fallon" },
         { text: "Just remember, it never always gets worse.", author: "Sigurður Óli" },
+        { text: "Nature does not hurry, yet everything is accomplished.", author: "Lao Tzu" },
+        { text: "Be like a tree and let the dead leaves drop.", author: "Rumi" },
+        { text: "The butterfly counts not months but moments, and has time enough.", author: "Rabindranath Tagore" },
+        { text: "Running is the meditation for people who can't sit still.", author: "Anonymous" },
+        { text: "Through peaks and valleys, Still I Run.", author: "Running mantra" },
+        { text: "Be gentle with yourself. You’re doing the best you can." },
+        { text: "Only those who dare to fail greatly can ever achieve greatly.", author: "RFK" },
+        { text: "Where there's a will, there's a way.", author: "William Hazlitt" },
+        { text: "Ég get verið alveg fáránlega hress.", author: "Prins Póló" },
     ];
 
     static getRandomQuote(): Quote {
