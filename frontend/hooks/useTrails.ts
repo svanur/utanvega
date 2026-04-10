@@ -99,6 +99,7 @@ export function useTrails() {
                         lng: position.coords.longitude
                     });
                     setLocationDenied(false);
+                    try { sessionStorage.setItem('utanvega-user-loc', JSON.stringify({ lat: position.coords.latitude, lng: position.coords.longitude })); } catch { /* ignore */ }
                 },
                 (err) => {
                     console.warn('Geolocation failed:', err.message);

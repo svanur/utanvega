@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AppBar, Box, Container, IconButton, Toolbar, Tooltip, Typography, Button, Menu, MenuItem, useMediaQuery, useTheme } from '@mui/material';
+import { Box, Container, IconButton, Toolbar, Tooltip, Typography, Button, Menu, MenuItem, useMediaQuery, useTheme } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { PropsWithChildren } from 'react';
@@ -11,6 +11,8 @@ import SearchIcon from '@mui/icons-material/Search';
 import MenuIcon from '@mui/icons-material/Menu';
 import FooterStatus from './FooterStatus';
 import LanguageToggle from './LanguageToggle';
+import DynamicHeader from './DynamicHeader';
+import { useHeaderWeather } from '../hooks/useHeaderWeather';
 
 type LayoutProps = PropsWithChildren<{
     mode: PaletteMode;
@@ -23,6 +25,7 @@ export default function Layout({ children, mode, onToggleMode }: LayoutProps) {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+    const weather = useHeaderWeather();
 
     const navItems = [
         { label: t('nav.locations'), path: '/locations' },
@@ -31,7 +34,7 @@ export default function Layout({ children, mode, onToggleMode }: LayoutProps) {
 
     return (
         <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
-            <AppBar position="sticky" elevation={0}>
+            <DynamicHeader weather={weather} isDark={mode === 'dark'}>
                 <Toolbar sx={{ gap: 1 }}>
                     <Typography 
                         variant="h6" 
@@ -111,7 +114,7 @@ export default function Layout({ children, mode, onToggleMode }: LayoutProps) {
                         </IconButton>
                     </Tooltip>
                 </Toolbar>
-            </AppBar>
+            </DynamicHeader>
 
             <Container maxWidth="md" sx={{ py: 4, flex: 1 }}>
                 {children}
