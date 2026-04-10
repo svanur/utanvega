@@ -76,6 +76,7 @@ export default async function handler(request: Request) {
     const subtitle = locations ? ` · ${esc(locations)}` : '';
 
     const ogTitle = `${title} – ${distance} km${subtitle}`;
+    const ogImageUrl = `${SITE_URL}/api/og-image?slug=${encodeURIComponent(slug)}`;
 
     const html = `<!DOCTYPE html>
 <html lang="en">
@@ -89,12 +90,16 @@ export default async function handler(request: Request) {
   <meta property="og:url" content="${canonicalUrl}" />
   <meta property="og:site_name" content="Utanvega" />
   <meta property="og:type" content="website" />
+  <meta property="og:image" content="${ogImageUrl}" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
   <meta property="og:locale" content="is_IS" />
   <meta property="og:locale:alternate" content="en_US" />
 
-  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${ogTitle}" />
   <meta name="twitter:description" content="${description}" />
+  <meta name="twitter:image" content="${ogImageUrl}" />
 
   <meta http-equiv="refresh" content="0;url=${canonicalUrl}" />
 </head>
@@ -128,10 +133,14 @@ function defaultPage() {
   <meta property="og:url" content="${SITE_URL}" />
   <meta property="og:site_name" content="Utanvega" />
   <meta property="og:type" content="website" />
+  <meta property="og:image" content="${SITE_URL}/api/og-image" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
 
-  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Utanvega – Trail Discovery in Iceland" />
   <meta name="twitter:description" content="Explore and discover trails in Iceland for trail running, hiking, and cycling." />
+  <meta name="twitter:image" content="${SITE_URL}/api/og-image" />
 
   <meta http-equiv="refresh" content="0;url=${SITE_URL}" />
 </head>
