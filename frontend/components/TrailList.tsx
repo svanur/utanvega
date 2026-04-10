@@ -66,8 +66,9 @@ const TrailMapView = React.lazy(() => import('./TrailMapView').then(m => ({ defa
 import ShareButtons from './ShareButtons';
 import EmptyFilterState from './EmptyFilterState';
 import SmartPresets from './SmartPresets';
+import { getActivePresets } from '../utils/filterPresets';
 import TrailSlotMachine from './TrailSlotMachine';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import ListSubheader from '@mui/material/ListSubheader';
 
 interface TrailListProps {
@@ -77,6 +78,7 @@ interface TrailListProps {
 export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
     const { t } = useTranslation();
     const [searchParams, setSearchParams] = useSearchParams();
+    const location = useLocation();
     const { 
         trails, 
         loading, 
@@ -100,6 +102,13 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
     const { tree: locationTree } = useLocationTree();
     const navigate = useNavigate();
 
+    // Extract preset ID from navigation state (e.g. navigating from tag page with preset)
+    const initialPresetId = React.useMemo(() => {
+        const state = location.state as { presetId?: string } | null;
+        return state?.presetId ?? null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     const [showAdvanced, setShowAdvanced] = React.useState(false);
     const [viewMode, setViewMode] = React.useState<'list' | 'map'>('list');
     const [showHidden, setShowHidden] = React.useState(false);
@@ -116,6 +125,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
     const [hidingSlugs, setHidingSlugs] = React.useState<string[]>([]);
     const [discoveryTab, setDiscoveryTab] = React.useState<'trending' | 'recent'>('trending');
     const discoveryScrollRef = React.useRef<HTMLDivElement>(null);
+    const navigatingAway = React.useRef(false);
 
     const handleDiscoveryTabChange = (tab: 'trending' | 'recent') => {
         setDiscoveryTab(tab);
@@ -222,7 +232,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
 
     // Sync filters → URL params (skip defaults to keep URL clean)
     React.useEffect(() => {
-        if (!urlInitialized.current) return;
+        if (!urlInitialized.current || navigatingAway.current) return;
         const params = new URLSearchParams();
 
         if (searchQuery) params.set('q', searchQuery);
@@ -266,6 +276,21 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [tagSlug]);
+
+    // Apply preset from navigation state (when navigating from tag page with preset)
+    React.useEffect(() => {
+        const state = location.state as { presetId?: string } | null;
+        if (state?.presetId) {
+            const presets = getActivePresets(new Date(), !!userLocation);
+            const preset = presets.find(p => p.id === state.presetId);
+            if (preset) {
+                setFilters({ ...DEFAULT_FILTERS, ...preset.filters });
+            }
+            // Clear the state so it doesn't re-apply on re-renders
+            window.history.replaceState({}, '', location.pathname);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const [touchStart, setTouchStart] = React.useState<number | null>(null);
     const [pullOffset, setPullOffset] = React.useState(0);
@@ -559,6 +584,11 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                 setFilters={setFilters}
                 defaultFilters={DEFAULT_FILTERS}
                 hasGeolocation={!!userLocation}
+                initialPresetId={initialPresetId}
+                onPresetApply={tagSlug ? (presetId) => {
+                    navigatingAway.current = true;
+                    navigate('/', { replace: true, state: { presetId } });
+                } : undefined}
             />
 
             <Collapse in={showAdvanced}>

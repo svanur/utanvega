@@ -106,7 +106,7 @@ export default function SpotlightSearch() {
                 type: 'trail' as const,
                 name: trail.name,
                 slug: trail.slug,
-                subtitle: `${formatDistance(trail.length)} · ${trail.elevationGain}m ↑`,
+                subtitle: `${formatDistance(trail.length)} · ${Math.round(trail.elevationGain)}m ↑`,
                 score: scoreMatch(q, trail.name),
             }))
             .filter(r => r.score > 0)

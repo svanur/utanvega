@@ -51,7 +51,7 @@ const ALL_PRESETS: FilterPreset[] = [
         id: 'saturday-long-run',
         emoji: '🏔️',
         nameKey: 'presets.saturdayLongRun',
-        filters: { minLength: 20, selectedActivityTypes: ['TrailRunning', 'Running'] },
+        filters: { minLength: 20, selectedActivityTypes: ['TrailRunning', 'Running'], sortBy: 'longest' },
         schedule: { hours: [6, 14], days: [6] },
     },
 
@@ -76,7 +76,7 @@ const ALL_PRESETS: FilterPreset[] = [
         id: 'weekend-explorer',
         emoji: '🗺️',
         nameKey: 'presets.weekendExplorer',
-        filters: { minDuration: 120, maxDuration: 300 },
+        filters: { minDuration: 120, maxDuration: 300, sortBy: 'longest' },
         schedule: { hours: [8, 16], days: [0, 6] },
     },
 
@@ -117,7 +117,7 @@ const ALL_PRESETS: FilterPreset[] = [
         id: 'plan-tomorrow',
         emoji: '📋',
         nameKey: 'presets.planTomorrow',
-        filters: { minLength: 15 },
+        filters: { minLength: 15, sortBy: 'longest' },
         schedule: { hours: [21, 24] },
     },
     {
@@ -141,14 +141,14 @@ const ALL_PRESETS: FilterPreset[] = [
         id: 'short-sweet',
         emoji: '🍬',
         nameKey: 'presets.shortSweet',
-        filters: { maxLength: 5, maxDuration: 30, maxDistance: 50 },
+        filters: { maxLength: 5, maxDuration: 30, maxDistance: 50, sortBy: 'shortest' },
         schedule: {},
     },
     {
         id: 'big-climb',
         emoji: '⛰️',
         nameKey: 'presets.bigClimb',
-        filters: { minElevationGain: 500 },
+        filters: { minElevationGain: 500, sortBy: 'elevation' },
         schedule: {},
     },
     {

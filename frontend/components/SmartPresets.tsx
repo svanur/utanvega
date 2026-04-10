@@ -10,11 +10,13 @@ interface SmartPresetsProps {
     setFilters: React.Dispatch<React.SetStateAction<FilterState>>;
     defaultFilters: FilterState;
     hasGeolocation?: boolean;
+    initialPresetId?: string | null;
+    onPresetApply?: (presetId: string | null) => void;
 }
 
-const SmartPresets: React.FC<SmartPresetsProps> = ({ filters, setFilters, defaultFilters, hasGeolocation = false }) => {
+const SmartPresets: React.FC<SmartPresetsProps> = ({ filters, setFilters, defaultFilters, hasGeolocation = false, initialPresetId, onPresetApply }) => {
     const { t } = useTranslation();
-    const [activePresetId, setActivePresetId] = React.useState<string | null>(null);
+    const [activePresetId, setActivePresetId] = React.useState<string | null>(initialPresetId ?? null);
 
     const presets = React.useMemo(() => getActivePresets(new Date(), hasGeolocation), [hasGeolocation]);
 
@@ -43,13 +45,13 @@ const SmartPresets: React.FC<SmartPresetsProps> = ({ filters, setFilters, defaul
 
     const handlePresetClick = (preset: FilterPreset) => {
         if (activePresetId === preset.id) {
-            // Deactivate — reset to defaults
             setActivePresetId(null);
             setFilters(defaultFilters);
+            onPresetApply?.(null);
         } else {
-            // Activate — apply preset on top of defaults
             setActivePresetId(preset.id);
             setFilters({ ...defaultFilters, ...preset.filters });
+            onPresetApply?.(preset.id);
         }
     };
 
