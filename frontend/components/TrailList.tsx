@@ -52,7 +52,7 @@ import {
     Whatshot as WhatshotIcon,
     History as HistoryIcon
 } from '@mui/icons-material';
-import { useTrails, ALL_ACTIVITY_TYPES, useTrendingTrails } from '../hooks/useTrails';
+import { useTrails, ALL_ACTIVITY_TYPES, DEFAULT_FILTERS, useTrendingTrails } from '../hooks/useTrails';
 import type { SortOption, FilterState } from '../hooks/useTrails';
 import { formatDuration } from '../utils/estimateDuration';
 import { useFavorites } from '../hooks/useFavorites';
@@ -65,6 +65,7 @@ import { TrailCard } from './TrailCard';
 const TrailMapView = React.lazy(() => import('./TrailMapView').then(m => ({ default: m.TrailMapView })));
 import ShareButtons from './ShareButtons';
 import EmptyFilterState from './EmptyFilterState';
+import SmartPresets from './SmartPresets';
 import TrailSlotMachine from './TrailSlotMachine';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import ListSubheader from '@mui/material/ListSubheader';
@@ -551,6 +552,14 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                     );
                 })}
             </Box>
+
+            {/* Smart time-aware filter presets */}
+            <SmartPresets
+                filters={filters}
+                setFilters={setFilters}
+                defaultFilters={DEFAULT_FILTERS}
+                hasGeolocation={!!userLocation}
+            />
 
             <Collapse in={showAdvanced}>
                 <Box 

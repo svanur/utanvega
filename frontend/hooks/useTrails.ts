@@ -58,7 +58,7 @@ export interface FilterState {
 
 export const ALL_ACTIVITY_TYPES = ['TrailRunning', 'Running', 'Hiking', 'Cycling'];
 
-const DEFAULT_FILTERS: FilterState = {
+export const DEFAULT_FILTERS: FilterState = {
     minLength: 0,
     maxLength: 100,
     maxDistance: 250,

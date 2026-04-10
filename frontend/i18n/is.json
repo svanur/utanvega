@@ -321,6 +321,10 @@
         "aiDescription": "Vefurinn er þróaður með aðstoð Claude, gervigreindar- og kóðunarfulltrúa frá Anthropic. Claude hjálpar til við kóðun, prófanir, endurbætur og gæðaeftirlit.",
         "changelogTitle": "Breytingasaga",
         "changelog": {
+            "v2_4": {
+                "title": "Snjallar forstillingar og deiling",
+                "description": "Tímaháðar síuforstillingar sem breytast yfir daginn — Morgun 5 km, Eftir vinnu, Helgarskoðun og fleira. Open Graph merki með kraftmiklum forskoðunarmyndum leiða fyrir samfélagsmiðla. Nálægt mér forstilling þegar staðsetning er virk. GPX niðurhal á leiðarsíðum."
+            },
             "v2_3": {
                 "title": "Leiðsögn og lögfræði",
                 "description": "Leiðsögn að upphafsstað leiðar í gegnum Google Maps, fyrirvara- og persónuverndarsíður og betri veðurspámörk fyrir hálendisleiðir."
@@ -378,5 +382,25 @@
                 "description": "Leiðalisti með leit, upplýsingasíður með GPX gögnum, tvítyngt viðmót (íslenska/enska) og snjalltækjafyrst hönnun."
             }
         }
+    },
+    "presets": {
+        "morning5k": "Morgun 5 km",
+        "sunriseTrail": "Sólarupprás",
+        "quickTrail": "Fljótleg leið",
+        "lunchRun": "Hádegishlaup",
+        "saturdayLongRun": "Langt á laugardegi",
+        "sundayRecovery": "Sunnudagssæla",
+        "familyHike": "Fjölskylduganga",
+        "weekendExplorer": "Helgarskoðun",
+        "afternoon10k": "Síðdegis 10 km",
+        "easyHike": "Létt ganga",
+        "afterWork": "Eftir vinnu",
+        "eveningTrail": "Kvöldslóðin",
+        "planTomorrow": "Skipuleggja morgundaginn",
+        "cantSleep": "Geturðu ekki sofnað?",
+        "shortSweet": "Stutt og snögg",
+        "bigClimb": "Mikið klifur",
+        "under1Hour": "Undir 1 klst",
+        "nearby": "Nálægt mér"
     }
 }

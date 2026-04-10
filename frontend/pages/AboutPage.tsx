@@ -32,8 +32,10 @@ interface AboutPageProps {
 
 import ManageSearchIcon from '@mui/icons-material/ManageSearch';
 import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 
 const changelog = [
+    { version: '2.4', date: '2026-04', key: 'v2_4', icon: <AutoAwesomeIcon />, color: 'secondary' as const },
     { version: '2.3', date: '2026-04', key: 'v2_3', icon: <DirectionsCarIcon />, color: 'primary' as const },
     { version: '2.2', date: '2025-12', key: 'v2_2', icon: <ManageSearchIcon />, color: 'secondary' as const },
     { version: '2.1', date: '2025-12', key: 'v2_1', icon: <WbSunnyIcon />, color: 'primary' as const },

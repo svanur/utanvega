@@ -321,6 +321,10 @@
         "aiDescription": "Development assisted by Claude, an AI coding agent by Anthropic, used for code generation, refactoring, and quality improvements.",
         "changelogTitle": "Changelog",
         "changelog": {
+            "v2_4": {
+                "title": "Smart presets & sharing",
+                "description": "Time-aware filter presets that change throughout the day — Morning 5k, After Work, Weekend Explorer, and more. Open Graph meta tags with dynamic trail preview images for rich social media link sharing. Nearby preset when geolocation is active. GPX download button on trail pages."
+            },
             "v2_3": {
                 "title": "Directions & legal",
                 "description": "Get directions to trailhead via Google Maps, disclaimer and privacy policy pages, smarter summit weather thresholds for highland trails, and improved trail condition ratings with feels-like temperature and weather code awareness."
@@ -378,5 +382,25 @@
                 "description": "Trail listing with search, detail pages with GPX data, bilingual support (Icelandic/English), and mobile-first design."
             }
         }
+    },
+    "presets": {
+        "morning5k": "Morning 5k",
+        "sunriseTrail": "Sunrise Trail",
+        "quickTrail": "Quick Trail",
+        "lunchRun": "Lunch Run",
+        "saturdayLongRun": "Saturday Long Run",
+        "sundayRecovery": "Sunday Recovery",
+        "familyHike": "Family Hike",
+        "weekendExplorer": "Weekend Explorer",
+        "afternoon10k": "Afternoon 10k",
+        "easyHike": "Easy Hike",
+        "afterWork": "After Work",
+        "eveningTrail": "Evening Trail",
+        "planTomorrow": "Plan Tomorrow",
+        "cantSleep": "Can't Sleep?",
+        "shortSweet": "Short & Sweet",
+        "bigClimb": "Big Climb",
+        "under1Hour": "Under 1 Hour",
+        "nearby": "Nearby"
     }
 }
