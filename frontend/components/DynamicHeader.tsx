@@ -12,12 +12,12 @@ interface TimeSlot {
 }
 
 const TIME_SLOTS: TimeSlot[] = [
-    { hours: [5, 8],   gradient: 'linear-gradient(135deg, #FF6B35 0%, #F7931E 50%, #FDB813 100%)', gradientDark: 'linear-gradient(135deg, #bf4a1f 0%, #b36a10 50%, #a8820d 100%)' },
-    { hours: [8, 12],  gradient: 'linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)', gradientDark: 'linear-gradient(135deg, #0d47a1 0%, #1565c0 100%)' },
-    { hours: [12, 17], gradient: 'linear-gradient(135deg, #1565c0 0%, #1976d2 50%, #2196f3 100%)', gradientDark: 'linear-gradient(135deg, #0d3b7a 0%, #0d47a1 50%, #1565c0 100%)' },
-    { hours: [17, 20], gradient: 'linear-gradient(135deg, #FF6B35 0%, #e65100 40%, #AD1457 100%)', gradientDark: 'linear-gradient(135deg, #bf4a1f 0%, #a33b00 40%, #7b0d3c 100%)' },
-    { hours: [20, 23], gradient: 'linear-gradient(135deg, #283593 0%, #1a237e 100%)', gradientDark: 'linear-gradient(135deg, #1a2260 0%, #0d1242 100%)' },
-    { hours: [23, 5],  gradient: 'linear-gradient(135deg, #0d1b2a 0%, #1b2838 100%)', gradientDark: 'linear-gradient(135deg, #060d15 0%, #0d1520 100%)' },
+    { hours: [5, 8],   gradient: 'linear-gradient(90deg, #FF6B35 0%, #F7931E 50%, #FDB813 100%)', gradientDark: 'linear-gradient(90deg, #bf4a1f 0%, #b36a10 50%, #a8820d 100%)' },
+    { hours: [8, 12],  gradient: 'linear-gradient(90deg, #1976d2 0%, #42a5f5 100%)', gradientDark: 'linear-gradient(90deg, #0d47a1 0%, #1565c0 100%)' },
+    { hours: [12, 17], gradient: 'linear-gradient(90deg, #1565c0 0%, #1976d2 50%, #2196f3 100%)', gradientDark: 'linear-gradient(90deg, #0d3b7a 0%, #0d47a1 50%, #1565c0 100%)' },
+    { hours: [17, 20], gradient: 'linear-gradient(90deg, #FF6B35 0%, #e65100 40%, #AD1457 100%)', gradientDark: 'linear-gradient(90deg, #bf4a1f 0%, #a33b00 40%, #7b0d3c 100%)' },
+    { hours: [20, 23], gradient: 'linear-gradient(90deg, #283593 0%, #1a237e 100%)', gradientDark: 'linear-gradient(90deg, #1a2260 0%, #0d1242 100%)' },
+    { hours: [23, 5],  gradient: 'linear-gradient(90deg, #0d1b2a 0%, #1b2838 100%)', gradientDark: 'linear-gradient(90deg, #060d15 0%, #0d1520 100%)' },
 ];
 
 function getTimeGradient(hour: number, isDark: boolean): string {
@@ -30,7 +30,7 @@ function getTimeGradient(hour: number, isDark: boolean): string {
             if (hour >= start || hour < end) return isDark ? slot.gradientDark : slot.gradient;
         }
     }
-    return isDark ? 'linear-gradient(135deg, #0d47a1 0%, #1565c0 100%)' : 'linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)';
+    return isDark ? 'linear-gradient(90deg, #0d47a1 0%, #1565c0 100%)' : 'linear-gradient(90deg, #1976d2 0%, #42a5f5 100%)';
 }
 
 // ─── Weather Particles (CSS keyframes injected once) ──────────────
