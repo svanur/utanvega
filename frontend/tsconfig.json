@@ -15,5 +15,6 @@
     "types": ["vite/client"]
   },
   "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["api"],
   "references": []
 }
