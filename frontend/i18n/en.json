@@ -420,6 +420,9 @@
         "saved": "Available offline",
         "availableOffline": "This trail is saved for offline use, including map tiles",
         "remove": "Remove",
+        "removeOffline": "Remove offline data",
+        "removed": "Offline data removed",
+        "savedSuccess": "{{name}} saved for offline use",
         "saveFailed": "Failed to save trail offline",
         "removeFailed": "Failed to remove offline data",
         "badge": "Offline"

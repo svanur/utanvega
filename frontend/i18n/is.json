@@ -412,16 +412,19 @@
         "menuItem": "Setja upp appið"
     },
     "offline": {
-        "saveForOffline": "Vista fyrir notkun án nets",
-        "saving": "Vista {{name}} fyrir notkun án nets...",
-        "fetchingData": "Sæki leiðargögn...",
-        "cachingTiles": "Vista kortagögn ({{percent}}%)...",
-        "finishing": "Klári...",
-        "saved": "Tiltækt án nets",
-        "availableOffline": "Þessi leið er vistuð fyrir notkun án nets, ásamt kortagögnum",
-        "remove": "Fjarlægja",
-        "saveFailed": "Ekki tókst að vista leið",
-        "removeFailed": "Ekki tókst að fjarlægja gögn",
-        "badge": "Án nets"
+        "saveForOffline": "Vista fyrir notkun \u00e1n nets",
+        "saving": "Vista {{name}} fyrir notkun \u00e1n nets...",
+        "fetchingData": "S\u00e6ki lei\u00f0arg\u00f6gn...",
+        "cachingTiles": "Vista kortag\u00f6gn ({{percent}}%)...",
+        "finishing": "Kl\u00e1ri...",
+        "saved": "Tilt\u00e6kt \u00e1n nets",
+        "availableOffline": "\u00deessi lei\u00f0 er vistu\u00f0 fyrir notkun \u00e1n nets, \u00e1samt kortag\u00f6gnum",
+        "remove": "Fjarl\u00e6gja",
+        "removeOffline": "Fjarl\u00e6gja g\u00f6gn \u00e1n nets",
+        "removed": "G\u00f6gn \u00e1n nets fjarl\u00e6g\u00f0",
+        "savedSuccess": "{{name}} vistu\u00f0 fyrir notkun \u00e1n nets",
+        "saveFailed": "Ekki t\u00f3kst a\u00f0 vista lei\u00f0",
+        "removeFailed": "Ekki t\u00f3kst a\u00f0 fjarl\u00e6gja g\u00f6gn",
+        "badge": "\u00c1n nets"
     }
 }
