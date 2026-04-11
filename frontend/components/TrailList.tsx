@@ -216,6 +216,8 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
         const trailType = searchParams.get('trailType');
         const sort = searchParams.get('sort') as SortOption | null;
         const view = searchParams.get('view');
+        const favShortcut = searchParams.get('favorites');
+        const randomShortcut = searchParams.get('random');
 
         if (q) setSearchQuery(q);
         if (view === 'map') setViewMode('map');
@@ -225,9 +227,19 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
         if (difficulty && difficulty !== 'All') updates.difficulty = difficulty;
         if (trailType && trailType !== 'All') updates.trailType = trailType;
         if (sort) updates.sortBy = sort;
+        if (favShortcut === 'true') updates.favoritesOnly = true;
 
         if (Object.keys(updates).length > 0) {
             setFilters(prev => ({ ...prev, ...updates }));
+        }
+
+        // PWA shortcut: random trail — trigger after trails load
+        if (randomShortcut === 'true') {
+            const cleanParams = new URLSearchParams(searchParams);
+            cleanParams.delete('random');
+            setSearchParams(cleanParams, { replace: true });
+            // Delay to let trails load
+            setTimeout(() => handleShake(), 500);
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);

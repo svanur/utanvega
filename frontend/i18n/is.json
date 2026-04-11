@@ -402,5 +402,13 @@
         "bigClimb": "Mikið klifur",
         "under1Hour": "Undir 1 klst",
         "nearby": "Nálægt mér"
+    },
+    "install": {
+        "title": "Settu upp Utanvega",
+        "description": "Bættu við á heimaskjáinn fyrir skjótan aðgang.",
+        "button": "Setja upp",
+        "iosHint": "Ýttu á Deila, svo \u201ESetja á heimaskjá\u201C",
+        "iosAction": "Deila → Heimaskjár",
+        "menuItem": "Setja upp appið"
     }
 }

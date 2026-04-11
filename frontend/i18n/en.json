@@ -402,5 +402,13 @@
         "bigClimb": "Big Climb",
         "under1Hour": "Under 1 Hour",
         "nearby": "Nearby"
+    },
+    "install": {
+        "title": "Install Utanvega",
+        "description": "Add to your home screen for quick access and offline use.",
+        "button": "Install",
+        "iosHint": "Tap Share, then \"Add to Home Screen\"",
+        "iosAction": "Share → Add",
+        "menuItem": "Install App"
     }
 }

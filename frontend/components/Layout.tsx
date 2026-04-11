@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, Container, IconButton, Toolbar, Tooltip, Typography, Button, Menu, MenuItem, useMediaQuery, useTheme } from '@mui/material';
+import { Box, Container, IconButton, Toolbar, Tooltip, Typography, Button, Menu, MenuItem, useMediaQuery, useTheme, ListItemIcon, ListItemText } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { PropsWithChildren } from 'react';
@@ -9,10 +9,12 @@ import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
 import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined';
 import SearchIcon from '@mui/icons-material/Search';
 import MenuIcon from '@mui/icons-material/Menu';
+import GetAppIcon from '@mui/icons-material/GetApp';
 import FooterStatus from './FooterStatus';
 import LanguageToggle from './LanguageToggle';
 import DynamicHeader from './DynamicHeader';
 import { useHeaderWeather } from '../hooks/useHeaderWeather';
+import { useInstallPrompt } from '../hooks/useInstallPrompt';
 
 type LayoutProps = PropsWithChildren<{
     mode: PaletteMode;
@@ -26,6 +28,7 @@ export default function Layout({ children, mode, onToggleMode }: LayoutProps) {
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const weather = useHeaderWeather();
+    const { canPrompt, install } = useInstallPrompt();
 
     const navItems = [
         { label: t('nav.locations'), path: '/locations' },
@@ -75,6 +78,12 @@ export default function Layout({ children, mode, onToggleMode }: LayoutProps) {
                                         {item.label}
                                     </MenuItem>
                                 ))}
+                                {canPrompt && (
+                                    <MenuItem onClick={() => { install(); setAnchorEl(null); }}>
+                                        <ListItemIcon><GetAppIcon fontSize="small" /></ListItemIcon>
+                                        <ListItemText>{t('install.menuItem')}</ListItemText>
+                                    </MenuItem>
+                                )}
                             </Menu>
                         </>
                     ) : (

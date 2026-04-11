@@ -54,7 +54,17 @@ function formatDistance(meters: number): string {
 }
 
 export default function SpotlightSearch() {
-    const [open, setOpen] = useState(false);
+    const [open, setOpen] = useState(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('search') === 'true') {
+            // Clean up the URL param after reading
+            params.delete('search');
+            const newUrl = params.toString() ? `${window.location.pathname}?${params}` : window.location.pathname;
+            window.history.replaceState({}, '', newUrl);
+            return true;
+        }
+        return false;
+    });
     const [query, setQuery] = useState('');
     const [activeIndex, setActiveIndex] = useState(0);
     const [trails, setTrails] = useState<Trail[]>([]);

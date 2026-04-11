@@ -9,6 +9,7 @@ import { useEasterEggs } from './hooks/useEasterEggs';
 import { EasterEggs } from './components/EasterEggs';
 import SpotlightSearch from './components/SpotlightSearch';
 import { useFeatureFlags } from './hooks/useFeatureFlags';
+import InstallBanner from './components/InstallBanner';
 
 // Lazy-loaded pages (not needed on initial load)
 const TrailDetailsPage = lazy(() => import('./pages/TrailDetailsPage'));
@@ -94,6 +95,7 @@ export default function App() {
                 </Routes>
                 </Suspense>
                 {isEnabled('spotlight_search') && <SpotlightSearch />}
+                <InstallBanner />
             </BrowserRouter>
             </ErrorBoundary>
             <EasterEggs activeEgg={activeEgg} onComplete={clearEgg} />

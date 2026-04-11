@@ -45,6 +45,26 @@ export default defineConfig({
             type: 'image/svg+xml',
             purpose: 'any maskable'
           }
+        ],
+        shortcuts: [
+          {
+            name: 'Search Trails',
+            short_name: 'Search',
+            url: '/?search=true',
+            icons: [{ src: 'icons/icon-192.svg', sizes: '192x192' }]
+          },
+          {
+            name: 'Favorites',
+            short_name: 'Favorites',
+            url: '/?favorites=true',
+            icons: [{ src: 'icons/icon-192.svg', sizes: '192x192' }]
+          },
+          {
+            name: 'Random Trail',
+            short_name: 'Random',
+            url: '/?random=true',
+            icons: [{ src: 'icons/icon-192.svg', sizes: '192x192' }]
+          }
         ]
       }
     })
