@@ -7,7 +7,7 @@ const quotes = {
     is: [
         'Engin leið fannst... prófaðu aftur!',
         'Hmm, of mikil síun!',
-        'Þetta er of strangt!',
+        'Þetta er ekki nóg!',
         'Ekkert hér sem passar...',
         'Prófaðu aðra blöndu!',
         'Ég fann ekkert :(',
@@ -16,6 +16,7 @@ const quotes = {
         'Eins og að leita að nál í heystakki...',
         'Þessar síur eru of krefjandi!',
         'GELIÐ ER BÚIÐ!',
+        'Er ég villtur! Einmana...',
     ],
     en: [
         'No trails found... try again!',
@@ -28,7 +29,8 @@ const quotes = {
         'Empty! No trail matches.',
         'Like finding a needle in a haystack...',
         'These filters are too demanding!',
-        'NOOO... OUT OF GELS!'
+        'NOOO... OUT OF GELS!',
+        'I am lost and lonely...'
     ],
 };
 

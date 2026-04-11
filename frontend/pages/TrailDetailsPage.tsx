@@ -53,6 +53,7 @@ import DifficultyInfo from '../components/DifficultyInfo';
 import RunningLoader from '../components/RunningLoader';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import WeatherCard from '../components/WeatherCard';
+import OfflineButton from '../components/OfflineButton';
 import { TrailCard } from '../components/TrailCard';
 
 const getActivityIcon = (type: string) => {
@@ -386,6 +387,8 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                 </Box>
 
                 <Divider sx={{ mb: 3 }} />
+
+                <OfflineButton slug={trail.slug} trailName={trail.name} />
 
                 <Typography variant="h6" gutterBottom>
                     {t('trail.routeMap')}

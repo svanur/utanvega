@@ -410,5 +410,18 @@
         "iosHint": "Tap Share, then \"Add to Home Screen\"",
         "iosAction": "Share → Add",
         "menuItem": "Install App"
+    },
+    "offline": {
+        "saveForOffline": "Save for offline use",
+        "saving": "Saving {{name}} for offline...",
+        "fetchingData": "Fetching trail data...",
+        "cachingTiles": "Caching map tiles ({{percent}}%)...",
+        "finishing": "Finishing up...",
+        "saved": "Available offline",
+        "availableOffline": "This trail is saved for offline use, including map tiles",
+        "remove": "Remove",
+        "saveFailed": "Failed to save trail offline",
+        "removeFailed": "Failed to remove offline data",
+        "badge": "Offline"
     }
 }

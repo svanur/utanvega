@@ -307,6 +307,7 @@ export function useTrailBySlug(slug?: string) {
     const [trail, setTrail] = useState<Trail | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [isFromCache, setIsFromCache] = useState(false);
 
     useEffect(() => {
         if (!slug) return;
@@ -314,6 +315,7 @@ export function useTrailBySlug(slug?: string) {
         setLoading(true);
         setError(null);
         setTrail(null);
+        setIsFromCache(false);
 
         fetch(`${API_URL}/api/v1/trails/${slug}`)
             .then(res => {
@@ -324,13 +326,36 @@ export function useTrailBySlug(slug?: string) {
                 setTrail(data);
                 setLoading(false);
             })
-            .catch(err => {
+            .catch(async (err) => {
+                // Try offline fallback from IndexedDB
+                try {
+                    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+                        const req = indexedDB.open('utanvega-offline', 1);
+                        req.onsuccess = () => resolve(req.result);
+                        req.onerror = () => reject(req.error);
+                    });
+                    const tx = db.transaction('trails', 'readonly');
+                    const store = tx.objectStore('trails');
+                    const item = await new Promise<{ trail: Trail } | undefined>((resolve, reject) => {
+                        const req = store.get(slug);
+                        req.onsuccess = () => resolve(req.result);
+                        req.onerror = () => reject(req.error);
+                    });
+                    if (item?.trail) {
+                        setTrail(item.trail as Trail);
+                        setIsFromCache(true);
+                        setLoading(false);
+                        return;
+                    }
+                } catch {
+                    // IndexedDB not available
+                }
                 setError(err.message);
                 setLoading(false);
             });
     }, [slug]);
 
-    return { trail, loading, error };
+    return { trail, loading, error, isFromCache };
 }
 
 export interface TrailSuggestion {

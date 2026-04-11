@@ -149,6 +149,27 @@ export default function TrailMap({ slug, onDataLoaded, hoverPoint, activityType 
                 setGeometry(data);
                 if (onDataLoaded) onDataLoaded(data);
             } catch (err: unknown) {
+                // Offline fallback: try IndexedDB
+                try {
+                    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+                        const req = indexedDB.open('utanvega-offline', 1);
+                        req.onsuccess = () => resolve(req.result);
+                        req.onerror = () => reject(req.error);
+                    });
+                    const tx = db.transaction('trails', 'readonly');
+                    const item = await new Promise<{ geometry: GeoJsonGeometry } | undefined>((resolve, reject) => {
+                        const req = tx.objectStore('trails').get(slug);
+                        req.onsuccess = () => resolve(req.result);
+                        req.onerror = () => reject(req.error);
+                    });
+                    if (item?.geometry) {
+                        setGeometry(item.geometry);
+                        if (onDataLoaded) onDataLoaded(item.geometry);
+                        return;
+                    }
+                } catch {
+                    // IndexedDB not available
+                }
                 console.error('Failed to fetch geometry:', err);
                 setError(err instanceof Error ? err.message : String(err));
             } finally {

@@ -87,6 +87,7 @@ export class QuoteService {
         { text: "Only those who dare to fail greatly can ever achieve greatly.", author: "RFK" },
         { text: "Where there's a will, there's a way.", author: "William Hazlitt" },
         { text: "Ég get verið alveg fáránlega hress.", author: "Prins Póló" },
+        { text: "Ég hleyp og hleyp og hleyp og hleyp og hleyp. Ég er alinn upp á malbiki.", author: "Emmsjé Gauti" },
     ];
 
     static getRandomQuote(): Quote {
