@@ -70,6 +70,7 @@ import { getActivePresets } from '../utils/filterPresets';
 import TrailSlotMachine from './TrailSlotMachine';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import ListSubheader from '@mui/material/ListSubheader';
+import { useFeatureFlags } from '../hooks/useFeatureFlags';
 
 interface TrailListProps {
     tagSlug?: string;
@@ -101,6 +102,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
     const { trending } = useTrendingTrails();
     const { tree: locationTree } = useLocationTree();
     const navigate = useNavigate();
+    const { isEnabled } = useFeatureFlags();
 
     // Extract preset ID from navigation state (e.g. navigating from tag page with preset)
     const initialPresetId = React.useMemo(() => {
@@ -539,6 +541,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
             </Box>
 
             {/* Activity Type pills */}
+            {isEnabled('activity_pills') && (
             <Box display="flex" gap={1} mb={2} flexWrap="wrap">
                 {ALL_ACTIVITY_TYPES.map(type => {
                     const selected = filters.selectedActivityTypes.includes(type);
@@ -577,8 +580,10 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                     );
                 })}
             </Box>
+            )}
 
             {/* Smart time-aware filter presets */}
+            {isEnabled('smart_presets') && (
             <SmartPresets
                 filters={filters}
                 setFilters={setFilters}
@@ -590,6 +595,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                     navigate('/', { replace: true, state: { presetId } });
                 } : undefined}
             />
+            )}
 
             <Collapse in={showAdvanced}>
                 <Box 
@@ -916,7 +922,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
             </Collapse>
 
             {/* Discovery carousel — tabbed: Trending / Recently Viewed */}
-            {(trendingTrails.length > 0 || recentTrails.length > 0) && viewMode === 'list' && !searchQuery && !filters.favoritesOnly && !tagSlug && (
+            {isEnabled('discovery_carousel') && (trendingTrails.length > 0 || recentTrails.length > 0) && viewMode === 'list' && !searchQuery && !filters.favoritesOnly && !tagSlug && (
                 <Box mb={3}>
                     <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
                         <Box display="flex" gap={0.5}>
@@ -1052,7 +1058,8 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                             <MapIcon fontSize="small" />
                         </ToggleButton>
                     </ToggleButtonGroup>
-                    <ShareButtons title={t('home.allTrails')} />
+                    {isEnabled('share_trail') && <ShareButtons title={t('home.allTrails')} />}
+                    {isEnabled('random_trail') && (
                     <Tooltip title={shakeSupported && !shakePermission ? t('home.enableShake') : t('home.randomTrail')}>
                         <IconButton
                             size="small"
@@ -1068,6 +1075,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                             <CasinoIcon fontSize="small" />
                         </IconButton>
                     </Tooltip>
+                    )}
                 </Box>
             </Box>
 

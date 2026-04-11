@@ -8,6 +8,7 @@ import HomePage from './pages/HomePage';
 import { useEasterEggs } from './hooks/useEasterEggs';
 import { EasterEggs } from './components/EasterEggs';
 import SpotlightSearch from './components/SpotlightSearch';
+import { useFeatureFlags } from './hooks/useFeatureFlags';
 
 // Lazy-loaded pages (not needed on initial load)
 const TrailDetailsPage = lazy(() => import('./pages/TrailDetailsPage'));
@@ -48,6 +49,7 @@ export default function App() {
     };
 
     const { activeEgg, clearEgg } = useEasterEggs();
+    const { isEnabled } = useFeatureFlags();
 
     return (
         <ThemeProvider theme={theme}>
@@ -91,7 +93,7 @@ export default function App() {
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
                 </Suspense>
-                <SpotlightSearch />
+                {isEnabled('spotlight_search') && <SpotlightSearch />}
             </BrowserRouter>
             </ErrorBoundary>
             <EasterEggs activeEgg={activeEgg} onComplete={clearEgg} />

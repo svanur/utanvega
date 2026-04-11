@@ -51,6 +51,7 @@ import ShareButtons from '../components/ShareButtons';
 import QRCodeShare from '../components/QRCodeShare';
 import DifficultyInfo from '../components/DifficultyInfo';
 import RunningLoader from '../components/RunningLoader';
+import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import WeatherCard from '../components/WeatherCard';
 import { TrailCard } from '../components/TrailCard';
 
@@ -93,6 +94,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     const { t } = useTranslation();
     const { trail, loading, error } = useTrailBySlug(slug);
     const { weather, loading: weatherLoading, error: weatherError } = useTrailWeather(slug);
+    const { isEnabled } = useFeatureFlags();
     const { trails: allTrails } = useTrails();
     const { isFavorite, toggleFavorite } = useFavorites();
     const { addRecent } = useRecentlyViewed();
@@ -311,8 +313,9 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                 variant={tag.color ? 'filled' : 'outlined'}
                             />
                         ))}
-                        <ShareButtons title={trail.name} />
-                        <QRCodeShare slug={trail.slug} trailName={trail.name} />
+                        {isEnabled('share_trail') && <ShareButtons title={trail.name} />}
+                        {isEnabled('qr_code') && <QRCodeShare slug={trail.slug} trailName={trail.name} />}
+                        {isEnabled('download_trail') && (
                         <Tooltip title={t('trail.downloadGpx')} arrow>
                             <IconButton
                                 size="small"
@@ -323,7 +326,8 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                 <FileDownloadIcon fontSize="small" />
                             </IconButton>
                         </Tooltip>
-                        {geometry && geometry.coordinates.length > 0 && (
+                        )}
+                        {isEnabled('directions_to_trailhead') && geometry && geometry.coordinates.length > 0 && (
                             <Tooltip title={t('trail.getDirections')} arrow>
                                 <IconButton
                                     size="small"
@@ -376,7 +380,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                             </Stack>
                         </Grid>
                         <Grid item xs={6} sm>
-                            <PaceInfo activityType={trail.activityType} formattedDuration={estTime} />
+                            {isEnabled('pace_info') && <PaceInfo activityType={trail.activityType} formattedDuration={estTime} />}
                         </Grid>
                     </Grid>
                 </Box>
@@ -395,11 +399,13 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
 
                 {geometry && (
                     <>
+                        {isEnabled('route_playback') && (
                         <RoutePlayback
                             coordinates={geometry.coordinates}
                             onPointChange={setHoverPoint}
                             onIndexChange={setPlaybackIndex}
                         />
+                        )}
                         <ElevationChart 
                             coordinates={geometry.coordinates} 
                             onHover={(point) => setHoverPoint(point ? { lat: point.lat, lng: point.lng } : null)}
@@ -410,9 +416,11 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
             </Paper>
 
             {/* Weather forecast */}
+            {isEnabled('weather_forecast') && (
             <WeatherCard weather={weather} loading={weatherLoading} error={weatherError} />
+            )}
 
-            {relatedTrails.length > 0 && (
+            {isEnabled('related_trails') && relatedTrails.length > 0 && (
                 <Box mt={4} mb={6}>
                     <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
                         <Typography variant="h5" component="h2" fontWeight="bold">

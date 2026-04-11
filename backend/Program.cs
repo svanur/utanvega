@@ -38,6 +38,7 @@ using Utanvega.Backend.Application.Weather.Queries;
 using Utanvega.Backend.Core.Services;
 using MediatR;
 using FluentValidation;
+using Microsoft.Extensions.Caching.Memory;
 using Utanvega.Backend.Application.Validation;
 
 using Microsoft.AspNetCore.Http.Features;
@@ -502,6 +503,57 @@ app.MapDelete("/api/v1/admin/trails/{id}", [Authorize] async (Guid id, IMediator
 })
 .WithName("DeleteTrail");
 
+// --- Trail Location inline management ---
+app.MapPost("/api/v1/admin/trails/{trailId}/locations", [Authorize] async (Guid trailId, TrailLocationAddRequest body, UtanvegaDbContext context) =>
+{
+    var trail = await context.Trails.FindAsync(trailId);
+    if (trail == null) return Results.NotFound();
+
+    var location = await context.Locations.FindAsync(body.LocationId);
+    if (location == null) return Results.BadRequest("Location not found");
+
+    var existing = await context.Set<TrailLocation>()
+        .AnyAsync(tl => tl.TrailId == trailId && tl.LocationId == body.LocationId);
+    if (existing) return Results.Conflict("Location already linked");
+
+    if (!Enum.TryParse<TrailLocationRole>(body.Role, true, out var role))
+        role = TrailLocationRole.BelongsTo;
+
+    var maxOrder = await context.Set<TrailLocation>()
+        .Where(tl => tl.TrailId == trailId)
+        .Select(tl => (int?)tl.Order)
+        .MaxAsync() ?? -1;
+
+    context.Set<TrailLocation>().Add(new TrailLocation
+    {
+        TrailId = trailId,
+        LocationId = body.LocationId,
+        Role = role,
+        Order = maxOrder + 1,
+    });
+
+    trail.UpdatedAt = DateTime.UtcNow;
+    await context.SaveChangesAsync();
+    return Results.NoContent();
+})
+.WithName("AddTrailLocation");
+
+app.MapDelete("/api/v1/admin/trails/{trailId}/locations/{locationId}", [Authorize] async (Guid trailId, Guid locationId, UtanvegaDbContext context) =>
+{
+    var link = await context.Set<TrailLocation>()
+        .FirstOrDefaultAsync(tl => tl.TrailId == trailId && tl.LocationId == locationId);
+    if (link == null) return Results.NotFound();
+
+    context.Set<TrailLocation>().Remove(link);
+
+    var trail = await context.Trails.FindAsync(trailId);
+    if (trail != null) trail.UpdatedAt = DateTime.UtcNow;
+
+    await context.SaveChangesAsync();
+    return Results.NoContent();
+})
+.WithName("RemoveTrailLocation");
+
 app.MapPatch("/api/v1/admin/trails/{id}/status", [Authorize] async (Guid id, [Microsoft.AspNetCore.Mvc.FromBody] string status, UtanvegaDbContext context) =>
 {
     var trail = await context.Trails.FindAsync(id);
@@ -911,7 +963,79 @@ app.MapPost("/api/v1/admin/trails/detect-locations", [Authorize] async (Utanvega
 })
 .WithName("DetectTrailLocations");
 
+// --- Feature Flags ---
+app.MapGet("/api/v1/features", async (UtanvegaDbContext context, IMemoryCache cache) =>
+{
+    var flags = await cache.GetOrCreateAsync("feature_flags", async entry =>
+    {
+        entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
+        return await context.FeatureFlags
+            .AsNoTracking()
+            .ToDictionaryAsync(f => f.Name, f => f.Enabled);
+    });
+    return Results.Ok(flags);
+})
+.WithName("GetFeatureFlags");
+
+app.MapGet("/api/v1/admin/features", [Authorize] async (UtanvegaDbContext context) =>
+{
+    var flags = await context.FeatureFlags
+        .AsNoTracking()
+        .OrderBy(f => f.Name)
+        .ToListAsync();
+    return Results.Ok(flags);
+})
+.WithName("GetAdminFeatureFlags");
+
+app.MapPost("/api/v1/admin/features", [Authorize] async (FeatureFlagCreateDto body, UtanvegaDbContext context, IMemoryCache cache) =>
+{
+    var exists = await context.FeatureFlags.AnyAsync(f => f.Name == body.Name);
+    if (exists) return Results.Conflict("Feature flag already exists");
+
+    var flag = new FeatureFlag
+    {
+        Name = body.Name,
+        Enabled = body.Enabled,
+        Description = body.Description,
+    };
+    context.FeatureFlags.Add(flag);
+    await context.SaveChangesAsync();
+    cache.Remove("feature_flags");
+    return Results.Created($"/api/v1/admin/features/{flag.Id}", flag);
+})
+.WithName("CreateFeatureFlag");
+
+app.MapPatch("/api/v1/admin/features/{id}", [Authorize] async (Guid id, FeatureFlagUpdateDto body, UtanvegaDbContext context, IMemoryCache cache) =>
+{
+    var flag = await context.FeatureFlags.FindAsync(id);
+    if (flag == null) return Results.NotFound();
+
+    if (body.Enabled.HasValue) flag.Enabled = body.Enabled.Value;
+    if (body.Description != null) flag.Description = body.Description;
+    flag.UpdatedAt = DateTime.UtcNow;
+
+    await context.SaveChangesAsync();
+    cache.Remove("feature_flags");
+    return Results.Ok(flag);
+})
+.WithName("UpdateFeatureFlag");
+
+app.MapDelete("/api/v1/admin/features/{id}", [Authorize] async (Guid id, UtanvegaDbContext context, IMemoryCache cache) =>
+{
+    var flag = await context.FeatureFlags.FindAsync(id);
+    if (flag == null) return Results.NotFound();
+
+    context.FeatureFlags.Remove(flag);
+    await context.SaveChangesAsync();
+    cache.Remove("feature_flags");
+    return Results.NoContent();
+})
+.WithName("DeleteFeatureFlag");
+
 app.Run();
 
 public record TagCreateDto(string Name, string? Color);
 public record BulkAddTagRequest(List<Guid> TrailIds, Guid TagId);
+public record TrailLocationAddRequest(Guid LocationId, string? Role);
+public record FeatureFlagCreateDto(string Name, bool Enabled = true, string? Description = null);
+public record FeatureFlagUpdateDto(bool? Enabled, string? Description);

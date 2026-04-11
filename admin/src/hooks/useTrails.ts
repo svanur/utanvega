@@ -15,7 +15,7 @@ export type Trail = {
     difficulty?: string;
     startLatitude?: number | null;
     startLongitude?: number | null;
-    locations: { name: string, slug: string }[];
+    locations: { id: string, name: string, slug: string, role: string }[];
     tags?: { name: string, slug: string, color: string | null }[];
 };
 

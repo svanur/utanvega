@@ -1,4 +1,4 @@
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Chip, Button, Box, Checkbox, TableSortLabel, Tooltip, IconButton, Paper } from '@mui/material';
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Chip, Button, Box, Checkbox, TableSortLabel, Tooltip, IconButton, Paper, Autocomplete, TextField } from '@mui/material';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import MapIcon from '@mui/icons-material/Map';
 import EditIcon from '@mui/icons-material/Edit';
@@ -7,8 +7,11 @@ import RestoreIcon from '@mui/icons-material/Restore';
 import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
 import LoopIcon from '@mui/icons-material/Loop';
 import UndoIcon from '@mui/icons-material/Undo';
+import AddIcon from '@mui/icons-material/Add';
 import type { Trail } from '../hooks/useTrails';
+import type { LocationDto } from '../hooks/useLocations';
 import { InlineEditText, InlineEditSelect } from './InlineEditCell';
+import { useState } from 'react';
 
 interface TrailTableProps {
   trails: Trail[];
@@ -24,6 +27,9 @@ interface TrailTableProps {
   onRestore: (trail: Trail) => void;
   onUpdateStatus: (trailId: string, status: string) => void;
   onPatchTrail: (trailId: string, field: string, value: string) => Promise<void>;
+  allLocations: LocationDto[];
+  onAddLocation: (trailId: string, locationId: string, role?: string) => Promise<void>;
+  onRemoveLocation: (trailId: string, locationId: string) => Promise<void>;
 }
 
 export default function TrailTable({
@@ -40,6 +46,9 @@ export default function TrailTable({
   onRestore,
   onUpdateStatus,
   onPatchTrail,
+  allLocations,
+  onAddLocation,
+  onRemoveLocation,
 }: TrailTableProps) {
   return (
     <TableContainer component={Paper}>
@@ -97,6 +106,9 @@ export default function TrailTable({
               onRestore={() => onRestore(trail)}
               onUpdateStatus={onUpdateStatus}
               onPatchTrail={onPatchTrail}
+              allLocations={allLocations}
+              onAddLocation={onAddLocation}
+              onRemoveLocation={onRemoveLocation}
             />
           ))}
           {trails.length === 0 && (
@@ -160,6 +172,9 @@ interface TrailRowProps {
   onRestore: () => void;
   onUpdateStatus: (trailId: string, status: string) => void;
   onPatchTrail: (trailId: string, field: string, value: string) => Promise<void>;
+  allLocations: LocationDto[];
+  onAddLocation: (trailId: string, locationId: string, role?: string) => Promise<void>;
+  onRemoveLocation: (trailId: string, locationId: string) => Promise<void>;
 }
 
 const statusOptions = [
@@ -183,7 +198,10 @@ const activityOptions = [
   { value: 'Cycling', label: 'Cycling' },
 ];
 
-function TrailRow({ trail, selected, onSelect, onViewMap, onEdit, onDelete, onRestore, onUpdateStatus: _onUpdateStatus, onPatchTrail }: TrailRowProps) {
+function TrailRow({ trail, selected, onSelect, onViewMap, onEdit, onDelete, onRestore, onUpdateStatus: _onUpdateStatus, onPatchTrail, allLocations, onAddLocation, onRemoveLocation }: TrailRowProps) {
+  const [showAddLocation, setShowAddLocation] = useState(false);
+  const linkedIds = new Set(trail.locations?.map(l => l.id) ?? []);
+  const availableLocations = allLocations.filter(l => !linkedIds.has(l.id));
   return (
     <TableRow
       selected={selected}
@@ -239,7 +257,42 @@ function TrailRow({ trail, selected, onSelect, onViewMap, onEdit, onDelete, onRe
         </Box>
       </TableCell>
       <TableCell>
-        {trail.locations?.map(l => l.name).join(', ') || 'N/A'}
+        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', alignItems: 'center' }}>
+          {trail.locations?.map(l => (
+            <Chip
+              key={l.id}
+              label={l.name}
+              size="small"
+              variant="outlined"
+              onDelete={() => onRemoveLocation(trail.id, l.id)}
+              sx={{ fontSize: '0.7rem', height: 24 }}
+            />
+          ))}
+          {showAddLocation ? (
+            <Autocomplete
+              size="small"
+              options={availableLocations}
+              getOptionLabel={(opt) => opt.name}
+              onChange={(_e, val) => {
+                if (val) {
+                  onAddLocation(trail.id, val.id);
+                  setShowAddLocation(false);
+                }
+              }}
+              onBlur={() => setShowAddLocation(false)}
+              openOnFocus
+              autoHighlight
+              sx={{ minWidth: 180 }}
+              renderInput={(params) => (
+                <TextField {...params} placeholder="Add location..." autoFocus variant="standard" size="small" />
+              )}
+            />
+          ) : (
+            <IconButton size="small" onClick={() => setShowAddLocation(true)} sx={{ width: 24, height: 24 }}>
+              <AddIcon sx={{ fontSize: 16 }} />
+            </IconButton>
+          )}
+        </Box>
       </TableCell>
       <TableCell>
         <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>

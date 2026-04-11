@@ -91,7 +91,7 @@ public class GetLocationBySlugQueryHandler : IRequestHandler<GetLocationBySlugQu
             (t.GpxData as LineString)?.StartPoint.X,
             t.TrailLocations
                 .OrderBy(tl => tl.Order)
-                .Select(tl => new LocationInfoDto(tl.Location.Name, tl.Location.Slug, tl.Order, tl.Role.ToString()))
+                .Select(tl => new LocationInfoDto(tl.LocationId, tl.Location.Name, tl.Location.Slug, tl.Order, tl.Role.ToString()))
                 .ToList(),
             t.TrailTags
                 .Select(tt => new TagInfoDto(tt.Tag.Name, tt.Tag.Slug, tt.Tag.Color))

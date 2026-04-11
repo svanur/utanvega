@@ -5,6 +5,7 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { useEffect, useMemo, useState } from 'react';
 import { useTrails, Trail } from '../hooks/useTrails';
 import { useTags } from '../hooks/useTags';
+import { useLocations } from '../hooks/useLocations';
 import { apiFetch } from '../hooks/api';
 import TrailEditDialog from '../components/TrailEditDialog';
 import TrailToolsPanel from '../components/TrailToolsPanel';
@@ -16,6 +17,7 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
   const [includeDeleted, setIncludeDeleted] = useState(false);
   const { trails, loading, error, refresh } = useTrails(includeDeleted);
   const { tags } = useTags();
+  const { locations: allLocations } = useLocations();
   const [selectedTrailMap, setSelectedTrailMap] = useState<{ id: string, name: string } | null>(null);
   const [selectedTrailEdit, setSelectedTrailEdit] = useState<string | null>(initialTrailId || null);
   const [trailToDelete, setTrailToDelete] = useState<{ id: string, name: string } | null>(null);
@@ -218,6 +220,31 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
     refresh();
   };
 
+  const handleAddLocation = async (trailId: string, locationId: string, role: string = 'BelongsTo') => {
+    try {
+      await apiFetch(`/api/v1/admin/trails/${trailId}/locations`, {
+        method: 'POST',
+        body: JSON.stringify({ locationId, role }),
+      });
+      onNotify('Location added');
+      refresh();
+    } catch (err) {
+      onNotify(err instanceof Error ? err.message : 'Failed to add location', 'error');
+    }
+  };
+
+  const handleRemoveLocation = async (trailId: string, locationId: string) => {
+    try {
+      await apiFetch(`/api/v1/admin/trails/${trailId}/locations/${locationId}`, {
+        method: 'DELETE',
+      });
+      onNotify('Location removed');
+      refresh();
+    } catch (err) {
+      onNotify(err instanceof Error ? err.message : 'Failed to remove location', 'error');
+    }
+  };
+
   const handleRecalculateDifficulties = async () => {
     setRecalculating(true);
     try {
@@ -300,6 +327,9 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
         onRestore={handleRestore}
         onUpdateStatus={handleUpdateStatus}
         onPatchTrail={handlePatchTrail}
+        allLocations={allLocations}
+        onAddLocation={handleAddLocation}
+        onRemoveLocation={handleRemoveLocation}
       />
 
       <TrailMapDialog trail={selectedTrailMap} onClose={() => setSelectedTrailMap(null)} />

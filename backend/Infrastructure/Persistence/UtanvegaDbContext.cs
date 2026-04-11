@@ -16,6 +16,7 @@ public class UtanvegaDbContext : DbContext
     public DbSet<TrailTag> TrailTags => Set<TrailTag>();
     public DbSet<ChangeLog> ChangeLogs => Set<ChangeLog>();
     public DbSet<TrailView> TrailViews => Set<TrailView>();
+    public DbSet<FeatureFlag> FeatureFlags => Set<FeatureFlag>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -130,6 +131,14 @@ public class UtanvegaDbContext : DbContext
             entity.HasIndex(e => e.TrailId);
             entity.HasIndex(e => e.ViewedAtUtc);
             entity.HasIndex(e => new { e.TrailId, e.IpHash, e.ViewedAtUtc });
+        });
+
+        modelBuilder.Entity<FeatureFlag>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+            entity.HasIndex(e => e.Name).IsUnique();
+            entity.Property(e => e.Description).HasMaxLength(500);
         });
     }
 }

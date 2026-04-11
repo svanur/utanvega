@@ -1,0 +1,213 @@
+=========================================================================
+  UTANVEGA PWA IDEAS — Reviewed & Prioritized
+=========================================================================
+
+
+=========================================================================
+  ✅ DOABLE NOW — Well-supported APIs, practical for our scale
+=========================================================================
+
+1. CUSTOM INSTALL PROMPT
+   Show a friendly "Add to Home Screen" banner instead of relying on the
+   browser's default prompt. Guides users through installation.
+   Tech: beforeinstallprompt event (Chrome/Edge/Samsung), manual prompt
+   for iOS (Safari). We already have the manifest + service worker.
+   Effort: Small. Just UI work.
+
+2. OFFLINE TRAIL PACKS
+   Let users download trail data (GPX, descriptions, map tiles) before
+   heading into areas with no signal. Cached trails are available offline.
+   Tech: Service Worker + Cache API + IndexedDB. Leaflet tile layers can
+   be pre-cached with a bounded region.
+   Effort: Medium. Tile caching is the tricky part (storage limits).
+
+3. SHARE TRAIL (Web Share API)
+   One-tap sharing of a trail page or completed hike summary to WhatsApp,
+   social media, or any app. Works natively on mobile.
+   Tech: navigator.share() — supported on all modern mobile browsers.
+   Effort: Small. We already have shareable URLs.
+   Note: We partly have this with the copy-URL feature.
+
+4. RECEIVE GPX FILES (Share Target API)
+   Register the PWA as a share target so users can "Share" a GPX file
+   from another app (email, messaging) directly into Utanvega.
+   Tech: share_target in manifest.json + a handler page.
+   Effort: Small-Medium. Needs a file-receive endpoint or client handler.
+
+5. PUSH NOTIFICATIONS — Weather & Trail Alerts
+   Send alerts about sudden weather changes, trail closures, or new trails
+   added in the user's region.
+   Tech: Push API + Service Worker. Requires backend push infrastructure
+   (web-push library or Firebase Cloud Messaging).
+   Effort: Medium. Backend push service + user subscription management.
+
+6. NFC TRAILHEAD STICKERS
+   Program NFC stickers with a URL pointing to the trail page. Hikers tap
+   the sticker at the trailhead → the PWA opens to that trail.
+   Tech: Just a URL encoded on an NFC tag. No app code needed — the phone's
+   OS handles NFC→URL natively.
+   Effort: Tiny (code-wise). Physical sticker logistics is the real work.
+
+7. TRAIL PHOTO SPOTS (Geotagged Community Photos)
+   Let hikers snap and upload photos at trail markers or viewpoints. Photos
+   are automatically geotagged and pinned to the trail map.
+   Tech: <input type="file" capture="environment"> for camera access.
+   Geolocation API for coordinates. Cloud storage (S3/Supabase Storage).
+   Effort: Medium. Needs image storage backend + moderation.
+
+   Photo Variants:
+   a) EPHEMERAL ALERTS — Photos that expire after 24h (fallen tree, mud).
+      Backend tags with expiration; cleanup job removes them.
+   b) PERMANENT POIs — Viewpoint photos that stay on the map forever.
+      Stored in cloud storage with GPS coordinates in the database.
+
+   Offline Support:
+   - Save photo blob to IndexedDB when offline
+   - Queue upload via Background Sync API
+   - Auto-upload when signal returns (even if app is closed)
+
+8. GAMIFIED BADGES & ACHIEVEMENTS
+   Award badges for milestones: "First Hike of the Month", "100km Club",
+   "Trail Pioneer" (first to submit a new trail), "Summit Collector".
+   Tech: Badging API for home screen notification dot. All logic is
+   server-side based on existing trail view + favorites data.
+   Effort: Medium. Badge rules + UI + backend tracking.
+
+9. GPS BREADCRUMB TRACKER
+   Record the user's path in real-time as they hike. Save GPS coordinates
+   locally, sync to server when back in range.
+   Tech: Geolocation API (watchPosition) + IndexedDB for local storage +
+   Background Sync for deferred upload.
+   Effort: Medium-Large. Battery optimization is critical. Need to handle
+   GPS accuracy, sampling rate, and storage efficiently.
+
+
+=========================================================================
+  🔧 DOABLE WITH EFFORT — Needs significant work or has platform limits
+=========================================================================
+
+10. TRAIL JOURNALS (Live Trip Reports)
+    Users add photos, voice notes, and text at waypoints during a hike.
+    Everything syncs automatically when signal returns.
+    Tech: Background Sync API + IndexedDB + Media Capture.
+    Effort: Large. Complex offline-first data model, media handling,
+    and sync conflict resolution.
+
+11. SAFETY SHADOW (Dead Man's Switch)
+    Solo hikers set a "Return Time." If they don't check in by then, the
+    app sends their last known GPS to an emergency contact.
+    Tech: Periodic Background Sync API (Chrome only, requires engagement
+    scoring). Fallback: server-side timer that checks for heartbeats.
+    Effort: Large. Reliability is critical for a safety feature — can't
+    depend on experimental APIs. Server-side fallback is more robust.
+    ⚠️ Periodic Background Sync has very limited browser support.
+
+12. COLLABORATIVE TRIP PLANNING
+    Groups vote on trail options, coordinate logistics, and plan routes
+    together in real-time.
+    Tech: WebSocket or SSE for real-time sync. Could use Supabase Realtime.
+    Effort: Large. Real-time collaboration is a product in itself.
+
+13. CURATED LISTS & POI SHARING
+    Specialized community lists ("Dog-friendly loops", "Waterfall trails").
+    Users can share POIs from other apps (Google Maps) into Utanvega.
+    Tech: Share Target API for receiving POIs. Tags/categories system
+    for curated lists (we already have tags!).
+    Effort: Medium. Extends our existing tag system.
+
+14. DIGITAL GEOCACHING ("Dead Drops")
+    Users leave hidden digital notes at specific GPS coordinates. Others
+    can only read them when physically within ~10m of the spot.
+    Tech: Geolocation API (high accuracy) + IndexedDB + Vibration API
+    for proximity feedback.
+    Effort: Medium-Large. High-accuracy GPS is unreliable in mountains.
+    Fun concept but niche audience.
+
+
+=========================================================================
+  🧪 EXPERIMENTAL — Cutting-edge, limited browser support, or impractical
+=========================================================================
+
+15. AR WAYPOINT SHARING
+    Overlay community markers on the camera view — "Waterfall this way",
+    "Bee nest here".
+    Tech: WebXR Device API.
+    Reality check: WebXR is NOT supported on iOS Safari. Android Chrome
+    has limited support. This effectively excludes half the audience.
+    Verdict: Wait for better browser support.
+
+16. SMARTWATCH HEALTH INTEGRATION
+    Pull heart rate, elevation gain, and fitness data from wearables.
+    Tech: Web Bluetooth API.
+    Reality check: Web Bluetooth is Chrome-only (no Firefox, no Safari).
+    Most fitness bands use proprietary protocols. Garmin/Polar/Suunto
+    have their own APIs — a REST integration would be more practical.
+    Verdict: Use fitness platform APIs instead of Bluetooth.
+
+17. SOUNDSCAPE MAPPING
+    Drop audio clips at GPS coordinates. Other hikers hear them when
+    they walk by (bird calls, waterfall sounds).
+    Tech: Audio Worklet API + Geofencing.
+    Reality check: Cool concept but very niche. Geofencing via Service
+    Workers is not widely supported. Battery drain from continuous
+    location monitoring is a concern.
+    Verdict: Fun experiment, not a priority feature.
+
+18. HIKER-TO-HIKER MESH NETWORK
+    Phones exchange trail alerts via Bluetooth when passing each other
+    — no cell signal needed.
+    Tech: Web Bluetooth API broadcasting.
+    Reality check: Web Bluetooth can't do background broadcasting in
+    any browser. Would need a native app. Also: security/privacy
+    concerns with device-to-device communication.
+    Verdict: Not feasible as a PWA. Needs native app.
+
+19. AI TRAIL BOTANIST (Offline Plant ID)
+    Point camera at a plant → get identification, even offline.
+    Tech: TensorFlow.js with a bundled ML model.
+    Reality check: Actually somewhat feasible! But the model download
+    would be 50-200MB. Plant/animal identification models need large
+    training datasets. Better to use an existing API (iNaturalist,
+    PlantNet) when online.
+    Verdict: Use online API first; offline model as a stretch goal.
+
+20. TRAILHEAD SOCIAL FEATURES
+    Auto check-in via geofencing, "Who's nearby?" radar, vibration
+    pings when friends arrive, temporary buddy system.
+    Tech: Geofencing + Push API + Vibration API + WebSocket.
+    Reality check: Geofencing in Service Workers is not standardized.
+    Privacy implications of location sharing are significant. The
+    "Safety Buddy" concept is valuable but needs careful design.
+    Verdict: Interesting for a community-focused v3.0. Not now.
+
+
+=========================================================================
+  📋 RECOMMENDED PRIORITY ORDER
+=========================================================================
+
+  Phase 1 (Quick Wins):
+    → Custom install prompt
+    → Web Share API (share trail links)
+    → NFC trailhead stickers (just buy stickers + program URLs)
+
+  Phase 2 (Core Offline):
+    → Offline trail packs (cache trail data + map tiles)
+    → GPS breadcrumb tracker
+    → Share Target for GPX files
+
+  Phase 3 (Community):
+    → Push notifications (weather alerts, new trails)
+    → Trail photo spots (geotagged community photos)
+    → Gamified badges
+
+  Phase 4 (Advanced):
+    → Trail journals with background sync
+    → Safety shadow (server-side approach)
+    → Collaborative trip planning
+    → Digital geocaching
+
+  Phase 5 (Experimental / Future):
+    → AR waypoints (when WebXR matures)
+    → Soundscape mapping
+    → AI plant identification
+    → Mesh networking (needs native app)
