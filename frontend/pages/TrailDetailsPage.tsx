@@ -328,7 +328,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                             </IconButton>
                         </Tooltip>
                         )}
-                        <OfflineButton slug={trail.slug} trailName={trail.name} />
+                        {isEnabled('offline_button') && <OfflineButton slug={trail.slug} trailName={trail.name} />}
                         {isEnabled('directions_to_trailhead') && geometry && geometry.coordinates.length > 0 && (
                             <Tooltip title={t('trail.getDirections')} arrow>
                                 <IconButton

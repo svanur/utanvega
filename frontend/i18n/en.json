@@ -103,6 +103,7 @@
         "allLocations": "All Locations",
         "allIn": "All in {{name}}",
         "showFavoritesOnly": "Show Favorites Only",
+        "showOfflineOnly": "Show Offline Only",
         "tags": "Tags",
         "showHiddenTrails": "Show Hidden Trails",
         "clearHidden": "Clear Hidden ({{count}})",

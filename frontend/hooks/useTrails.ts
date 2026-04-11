@@ -51,6 +51,7 @@ export interface FilterState {
     location: string;
     locationSlugs: string[]; // Selected location + all descendant slugs for hierarchy-aware filtering
     favoritesOnly: boolean;
+    offlineOnly: boolean;
     selectedTags: string[];
     selectedActivityTypes: string[];
     sortBy: SortOption;
@@ -73,6 +74,7 @@ export const DEFAULT_FILTERS: FilterState = {
     location: 'All',
     locationSlugs: [],
     favoritesOnly: false,
+    offlineOnly: false,
     selectedTags: [],
     selectedActivityTypes: [],
     sortBy: 'distance',

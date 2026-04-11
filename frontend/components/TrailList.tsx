@@ -71,6 +71,8 @@ import TrailSlotMachine from './TrailSlotMachine';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import ListSubheader from '@mui/material/ListSubheader';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
+import { useOfflineTrails } from '../hooks/useOfflineTrails';
+import OfflinePinIcon from '@mui/icons-material/OfflinePin';
 
 interface TrailListProps {
     tagSlug?: string;
@@ -103,6 +105,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
     const { tree: locationTree } = useLocationTree();
     const navigate = useNavigate();
     const { isEnabled } = useFeatureFlags();
+    const { offlineSlugs, isOffline } = useOfflineTrails();
 
     // Extract preset ID from navigation state (e.g. navigating from tag page with preset)
     const initialPresetId = React.useMemo(() => {
@@ -339,17 +342,20 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
         setPullOffset(0);
     };
 
-    // Filter trails based on favorites if enabled
+    // Filter trails based on favorites/offline if enabled
     const filteredTrails = React.useMemo(() => {
         let result = trails;
         if (filters.favoritesOnly) {
             result = result.filter(t => favorites.includes(t.slug));
         }
+        if (filters.offlineOnly) {
+            result = result.filter(t => isOffline(t.slug));
+        }
         if (!showHidden) {
             result = result.filter(t => !hiddenSlugs.includes(t.slug) || hidingSlugs.includes(t.slug));
         }
         return result;
-    }, [trails, filters.favoritesOnly, favorites, hiddenSlugs, showHidden, hidingSlugs]);
+    }, [trails, filters.favoritesOnly, filters.offlineOnly, favorites, isOffline, hiddenSlugs, showHidden, hidingSlugs]);
     React.useEffect(() => { filteredTrailsRef.current = filteredTrails; }, [filteredTrails]);
 
     // Gather trail names for the slot machine display
@@ -855,7 +861,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                             </FormControl>
                         </Grid>
 
-                        <Grid item xs={12}>
+                        <Grid item xs={12} sm={6}>
                             <FormControlLabel
                                 control={
                                     <Checkbox 
@@ -868,6 +874,21 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                                 label={t('filters.showFavoritesOnly')}
                             />
                         </Grid>
+                        {isEnabled('offline_button') && offlineSlugs.size > 0 && (
+                        <Grid item xs={12} sm={6}>
+                            <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        checked={filters.offlineOnly}
+                                        onChange={(e) => handleFilterChange('offlineOnly', e.target.checked)}
+                                        icon={<OfflinePinIcon />}
+                                        checkedIcon={<OfflinePinIcon sx={{ color: 'success.main' }} />}
+                                    />
+                                }
+                                label={t('filters.showOfflineOnly')}
+                            />
+                        </Grid>
+                        )}
 
                         {availableTags.length > 0 && (
                             <Grid item xs={12}>
