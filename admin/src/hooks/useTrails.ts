@@ -41,5 +41,5 @@ export function useTrails(includeDeleted: boolean = false) {
         fetchTrails();
     }, [includeDeleted]); // eslint-disable-line react-hooks/exhaustive-deps -- only run on mount and when includeDeleted changes
 
-    return { trails, loading, error, refresh: fetchTrails };
+    return { trails, setTrails, loading, error, refresh: fetchTrails };
 }

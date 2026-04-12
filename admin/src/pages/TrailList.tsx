@@ -15,7 +15,7 @@ import { TrailMapDialog, DeleteTrailDialog, BulkUploadDialog } from '../componen
 
 export default function TrailList({ onNotify, initialTrailId, initialSearch }: { onNotify: (message: React.ReactNode, severity?: 'success' | 'error') => void, initialTrailId?: string | null, initialSearch?: string | null }) {
   const [includeDeleted, setIncludeDeleted] = useState(false);
-  const { trails, loading, error, refresh } = useTrails(includeDeleted);
+  const { trails, setTrails, loading, error, refresh } = useTrails(includeDeleted);
   const { tags } = useTags();
   const { locations: allLocations } = useLocations();
   const [selectedTrailMap, setSelectedTrailMap] = useState<{ id: string, name: string } | null>(null);
@@ -123,9 +123,19 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
         body: JSON.stringify({ trailIds: selectedIds, tagId }),
       });
       const count = action === 'add' ? result.added : result.removed;
-      const tagName = tags.find(t => t.id === tagId)?.name || 'tag';
+      const tag = tags.find(t => t.id === tagId);
+      const tagName = tag?.name || 'tag';
       onNotify(`${action === 'add' ? 'Added' : 'Removed'} "${tagName}" ${action === 'add' ? 'to' : 'from'} ${count} trail(s)`);
-      refresh();
+      const selectedSet = new Set(selectedIds);
+      setTrails(prev => prev.map(t => {
+        if (!selectedSet.has(t.id)) return t;
+        const current = t.tags ?? [];
+        if (action === 'add') {
+          if (!tag || current.some(ct => ct.slug === tag.slug)) return t;
+          return { ...t, tags: [...current, { name: tag.name, slug: tag.slug, color: tag.color }] };
+        }
+        return { ...t, tags: current.filter(ct => ct.slug !== tag?.slug) };
+      }));
     } catch (_err) {
       onNotify(`Failed to ${action} tag`, 'error');
     } finally {
@@ -190,7 +200,7 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
             }),
         });
         onNotify('Trail restored to Draft');
-        refresh();
+        setTrails(prev => prev.map(t => t.id === trail.id ? { ...t, status: 'Draft' as const } : t));
     } catch (_err) {
         onNotify('Failed to restore trail', 'error');
     }
@@ -204,7 +214,7 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
             body: JSON.stringify(newStatus),
         });
         onNotify(`Trail status updated to ${newStatus}`);
-        refresh();
+        setTrails(prev => prev.map(t => t.id === trailId ? { ...t, status: newStatus as Trail['status'] } : t));
     } catch (_err) {
         onNotify('Failed to update trail status', 'error');
     }
@@ -217,7 +227,7 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
         body: JSON.stringify({ id: trailId, [field]: value }),
     });
     onNotify(`Updated ${field}`);
-    refresh();
+    setTrails(prev => prev.map(t => t.id === trailId ? { ...t, [field]: value } : t));
   };
 
   const handleAddLocation = async (trailId: string, locationId: string, role: string = 'BelongsTo') => {
@@ -226,8 +236,14 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
         method: 'POST',
         body: JSON.stringify({ locationId, role }),
       });
+      const loc = allLocations.find(l => l.id === locationId);
+      if (loc) {
+        setTrails(prev => prev.map(t => t.id === trailId ? {
+          ...t,
+          locations: [...(t.locations || []), { id: loc.id, name: loc.name, slug: loc.slug, role }],
+        } : t));
+      }
       onNotify('Location added');
-      refresh();
     } catch (err) {
       onNotify(err instanceof Error ? err.message : 'Failed to add location', 'error');
     }
@@ -238,10 +254,51 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
       await apiFetch(`/api/v1/admin/trails/${trailId}/locations/${locationId}`, {
         method: 'DELETE',
       });
+      setTrails(prev => prev.map(t => t.id === trailId ? {
+        ...t,
+        locations: (t.locations || []).filter(l => l.id !== locationId),
+      } : t));
       onNotify('Location removed');
-      refresh();
     } catch (err) {
       onNotify(err instanceof Error ? err.message : 'Failed to remove location', 'error');
+    }
+  };
+
+  const handleAddTag = async (trailId: string, tagId: string) => {
+    try {
+      await apiFetch('/api/v1/admin/trails/bulk-add-tag', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ trailIds: [trailId], tagId }),
+      });
+      const tag = tags.find(t => t.id === tagId);
+      if (tag) {
+        setTrails(prev => prev.map(t => t.id === trailId ? {
+          ...t,
+          tags: [...(t.tags || []), { name: tag.name, slug: tag.slug, color: tag.color }],
+        } : t));
+      }
+      onNotify(`Tag "${tag?.name}" added`);
+    } catch (err) {
+      onNotify(err instanceof Error ? err.message : 'Failed to add tag', 'error');
+    }
+  };
+
+  const handleRemoveTag = async (trailId: string, tagId: string) => {
+    try {
+      await apiFetch('/api/v1/admin/trails/bulk-remove-tag', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ trailIds: [trailId], tagId }),
+      });
+      const tag = tags.find(t => t.id === tagId);
+      setTrails(prev => prev.map(t => t.id === trailId ? {
+        ...t,
+        tags: (t.tags || []).filter(tg => tg.slug !== tag?.slug),
+      } : t));
+      onNotify(`Tag "${tag?.name}" removed`);
+    } catch (err) {
+      onNotify(err instanceof Error ? err.message : 'Failed to remove tag', 'error');
     }
   };
 
@@ -330,6 +387,9 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
         allLocations={allLocations}
         onAddLocation={handleAddLocation}
         onRemoveLocation={handleRemoveLocation}
+        allTags={tags}
+        onAddTag={handleAddTag}
+        onRemoveTag={handleRemoveTag}
       />
 
       <TrailMapDialog trail={selectedTrailMap} onClose={() => setSelectedTrailMap(null)} />

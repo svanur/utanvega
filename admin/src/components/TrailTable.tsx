@@ -10,6 +10,7 @@ import UndoIcon from '@mui/icons-material/Undo';
 import AddIcon from '@mui/icons-material/Add';
 import type { Trail } from '../hooks/useTrails';
 import type { LocationDto } from '../hooks/useLocations';
+import type { TagDto } from '../hooks/useTags';
 import { InlineEditText, InlineEditSelect } from './InlineEditCell';
 import { useState } from 'react';
 
@@ -30,6 +31,9 @@ interface TrailTableProps {
   allLocations: LocationDto[];
   onAddLocation: (trailId: string, locationId: string, role?: string) => Promise<void>;
   onRemoveLocation: (trailId: string, locationId: string) => Promise<void>;
+  allTags: TagDto[];
+  onAddTag: (trailId: string, tagId: string) => Promise<void>;
+  onRemoveTag: (trailId: string, tagId: string) => Promise<void>;
 }
 
 export default function TrailTable({
@@ -49,6 +53,9 @@ export default function TrailTable({
   allLocations,
   onAddLocation,
   onRemoveLocation,
+  allTags,
+  onAddTag,
+  onRemoveTag,
 }: TrailTableProps) {
   return (
     <TableContainer component={Paper}>
@@ -109,6 +116,9 @@ export default function TrailTable({
               allLocations={allLocations}
               onAddLocation={onAddLocation}
               onRemoveLocation={onRemoveLocation}
+              allTags={allTags}
+              onAddTag={onAddTag}
+              onRemoveTag={onRemoveTag}
             />
           ))}
           {trails.length === 0 && (
@@ -175,6 +185,9 @@ interface TrailRowProps {
   allLocations: LocationDto[];
   onAddLocation: (trailId: string, locationId: string, role?: string) => Promise<void>;
   onRemoveLocation: (trailId: string, locationId: string) => Promise<void>;
+  allTags: TagDto[];
+  onAddTag: (trailId: string, tagId: string) => Promise<void>;
+  onRemoveTag: (trailId: string, tagId: string) => Promise<void>;
 }
 
 const statusOptions = [
@@ -198,10 +211,13 @@ const activityOptions = [
   { value: 'Cycling', label: 'Cycling' },
 ];
 
-function TrailRow({ trail, selected, onSelect, onViewMap, onEdit, onDelete, onRestore, onUpdateStatus: _onUpdateStatus, onPatchTrail, allLocations, onAddLocation, onRemoveLocation }: TrailRowProps) {
+function TrailRow({ trail, selected, onSelect, onViewMap, onEdit, onDelete, onRestore, onUpdateStatus: _onUpdateStatus, onPatchTrail, allLocations, onAddLocation, onRemoveLocation, allTags, onAddTag, onRemoveTag }: TrailRowProps) {
   const [showAddLocation, setShowAddLocation] = useState(false);
+  const [showAddTag, setShowAddTag] = useState(false);
   const linkedIds = new Set(trail.locations?.map(l => l.id) ?? []);
   const availableLocations = allLocations.filter(l => !linkedIds.has(l.id));
+  const linkedTagSlugs = new Set(trail.tags?.map(t => t.slug) ?? []);
+  const availableTags = allTags.filter(t => !linkedTagSlugs.has(t.slug));
   return (
     <TableRow
       selected={selected}
@@ -295,16 +311,54 @@ function TrailRow({ trail, selected, onSelect, onViewMap, onEdit, onDelete, onRe
         </Box>
       </TableCell>
       <TableCell>
-        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-          {trail.tags?.map(tag => (
-            <Chip
-              key={tag.slug}
-              label={tag.name}
+        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', alignItems: 'center' }}>
+          {trail.tags?.map(tag => {
+            const tagDto = allTags.find(t => t.slug === tag.slug);
+            return (
+              <Chip
+                key={tag.slug}
+                label={tag.name}
+                size="small"
+                variant="outlined"
+                onDelete={tagDto ? () => onRemoveTag(trail.id, tagDto.id) : undefined}
+                sx={{ borderColor: tag.color || undefined, fontSize: '0.7rem', height: 22 }}
+              />
+            );
+          })}
+          {showAddTag ? (
+            <Autocomplete
               size="small"
-              variant="outlined"
-              sx={{ borderColor: tag.color || undefined, fontSize: '0.7rem', height: 22 }}
+              options={availableTags}
+              getOptionLabel={(opt) => opt.name}
+              onChange={(_e, val) => {
+                if (val) {
+                  onAddTag(trail.id, val.id);
+                  setShowAddTag(false);
+                }
+              }}
+              onBlur={() => setShowAddTag(false)}
+              openOnFocus
+              autoHighlight
+              sx={{ minWidth: 160 }}
+              renderOption={(props, option) => (
+                <li {...props}>
+                  <Chip
+                    label={option.name}
+                    size="small"
+                    variant="outlined"
+                    sx={{ borderColor: option.color || undefined, fontSize: '0.7rem', height: 22 }}
+                  />
+                </li>
+              )}
+              renderInput={(params) => (
+                <TextField {...params} placeholder="Add tag..." autoFocus variant="standard" size="small" />
+              )}
             />
-          ))}
+          ) : (
+            <IconButton size="small" onClick={() => setShowAddTag(true)} sx={{ width: 24, height: 24 }}>
+              <AddIcon sx={{ fontSize: 16 }} />
+            </IconButton>
+          )}
         </Box>
       </TableCell>
       <TableCell>
