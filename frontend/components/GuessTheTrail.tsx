@@ -15,6 +15,7 @@ import type { LatLngTuple } from 'leaflet';
 import L from 'leaflet';
 import { useTranslation } from 'react-i18next';
 import confetti from 'canvas-confetti';
+import 'leaflet/dist/leaflet.css';
 import type { Trail } from '../hooks/useTrails';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';

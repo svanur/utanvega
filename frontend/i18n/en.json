@@ -455,7 +455,8 @@
     },
     "fun": {
         "guessTheTrail": "Guess the Trail",
-        "higherLower": "Higher or Lower"
+        "higherLower": "Higher or Lower",
+        "geoGuesser": "GeoGuesser"
     },
     "higherLower": {
         "question": "Does the right trail have higher or lower {{stat}}?",
@@ -471,5 +472,20 @@
             "elevation": "Elevation Gain",
             "elevationLoss": "Elevation Loss"
         }
+    },
+    "geoGuesser": {
+        "studyTrail": "Study this trail, then guess where it is!",
+        "readyToGuess": "I'm ready to guess!",
+        "hint": "Hint",
+        "pts": "pts",
+        "clickToGuess": "Click on the map to place your guess",
+        "confirmGuess": "Confirm Guess",
+        "gameOver": "Game Over!",
+        "finalScore": "Score: {{score}} / {{max}}",
+        "playAgain": "Play Again",
+        "resultBullseye": "Bullseye! You know Iceland like the back of your hand! 🎯",
+        "resultClose": "Very close! You've got a good sense of geography!",
+        "resultFar": "Not too far off! Keep exploring Iceland!",
+        "resultWayOff": "Way off! Time to study the map more! 😅"
     }
 }

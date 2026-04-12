@@ -5,6 +5,7 @@ import Layout from '../components/Layout';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import GuessTheTrail from '../components/GuessTheTrail';
 import HigherLower from '../components/HigherLower';
+import TrailGeoGuesser from '../components/TrailGeoGuesser';
 import { useTranslation } from 'react-i18next';
 
 interface FunPageProps {
@@ -39,10 +40,12 @@ export default function FunPage({ mode, onToggleMode }: FunPageProps) {
             >
                 <Tab label={`🗺️ ${t('fun.guessTheTrail')}`} />
                 <Tab label={`📊 ${t('fun.higherLower')}`} />
+                <Tab label={`📍 ${t('fun.geoGuesser')}`} />
             </Tabs>
 
             {tab === 0 && <GuessTheTrail />}
             {tab === 1 && <HigherLower />}
+            {tab === 2 && <TrailGeoGuesser />}
         </Layout>
     );
 }

@@ -455,7 +455,8 @@
     },
     "fun": {
         "guessTheTrail": "Giska \u00e1 lei\u00f0ina",
-        "higherLower": "H\u00e6rra e\u00f0a l\u00e6gra"
+        "higherLower": "H\u00e6rra e\u00f0a l\u00e6gra",
+        "geoGuesser": "Sta\u00f0setning"
     },
     "higherLower": {
         "question": "Er h\u00e6gri lei\u00f0in me\u00f0 h\u00e6rra e\u00f0a l\u00e6gra {{stat}}?",
@@ -471,5 +472,20 @@
             "elevation": "H\u00e6kkun",
             "elevationLoss": "L\u00e6kkun"
         }
+    },
+    "geoGuesser": {
+        "studyTrail": "Skoðaðu leiðina og giskaðu hvar hún er!",
+        "readyToGuess": "\u00c9g er tilb\u00fainn a\u00f0 giska!",
+        "hint": "V\u00edsbending",
+        "pts": "stig",
+        "clickToGuess": "Smelltu \u00e1 kortið til að setja gisk",
+        "confirmGuess": "Sta\u00f0festa gisk",
+        "gameOver": "Leik loki\u00f0!",
+        "finalScore": "Stig: {{score}} / {{max}}",
+        "playAgain": "Spila aftur",
+        "resultBullseye": "Alveg r\u00e9tt hj\u00e1 \u00fe\u00e9r! \u00de\u00fa \u00feekkir \u00cdsland sem vasabakin \u00fe\u00ednn! \ud83c\udfaf",
+        "resultClose": "Mj\u00f6g n\u00e1l\u00e6gt! \u00de\u00fa hefur gott landfr\u00e6\u00f0ivit!",
+        "resultFar": "Ekki svo langt! Haltu \u00e1fram a\u00f0 kanna \u00cdsland!",
+        "resultWayOff": "Langt fr\u00e1! T\u00edmi til a\u00f0 sko\u00f0a kortið betur! \ud83d\ude05"
     }
 }
