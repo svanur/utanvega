@@ -455,6 +455,7 @@
     },
     "fun": {
         "guessTheTrail": "Giska \u00e1 lei\u00f0ina",
+        "guessByElevation": "Giska \u00e1 h\u00e6\u00f0arsnið",
         "higherLower": "H\u00e6rra e\u00f0a l\u00e6gra",
         "geoGuesser": "Sta\u00f0setning",
         "noGamesEnabled": "Enginn leikur er virkur a\u00f0 svo st\u00f6ddu."
@@ -488,5 +489,8 @@
         "resultClose": "Mj\u00f6g n\u00e1l\u00e6gt! \u00de\u00fa hefur gott landfr\u00e6\u00f0ivit!",
         "resultFar": "Ekki svo langt! Haltu \u00e1fram a\u00f0 kanna \u00cdsland!",
         "resultWayOff": "Langt fr\u00e1! T\u00edmi til a\u00f0 sko\u00f0a kortið betur! \ud83d\ude05"
+    },
+    "elevationGame": {
+        "guessTitle": "Hva\u00f0a lei\u00f0 er me\u00f0 \u00feetta h\u00e6\u00f0arsni\u00f0?"
     }
 }

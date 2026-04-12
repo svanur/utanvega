@@ -206,7 +206,7 @@ export default function TrailGeoGuesser() {
             points: pts,
         }]);
         setPhase('result');
-    }, [guessPos, actualPos, targetTrail]);
+    }, [guessPos, actualPos, targetTrail, hintUsed]);
 
     const handleNext = useCallback(() => {
         if (round >= TOTAL_ROUNDS) {

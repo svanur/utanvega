@@ -455,6 +455,7 @@
     },
     "fun": {
         "guessTheTrail": "Guess the Trail",
+        "guessByElevation": "Guess by Elevation",
         "higherLower": "Higher or Lower",
         "geoGuesser": "GeoGuesser",
         "noGamesEnabled": "No games are currently enabled."
@@ -488,5 +489,8 @@
         "resultClose": "Very close! You've got a good sense of geography!",
         "resultFar": "Not too far off! Keep exploring Iceland!",
         "resultWayOff": "Way off! Time to study the map more! 😅"
+    },
+    "elevationGame": {
+        "guessTitle": "Which trail has this elevation profile?"
     }
 }

@@ -6,6 +6,7 @@ import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import GuessTheTrail from '../components/GuessTheTrail';
 import HigherLower from '../components/HigherLower';
 import TrailGeoGuesser from '../components/TrailGeoGuesser';
+import GuessByElevation from '../components/GuessByElevation';
 import { useTranslation } from 'react-i18next';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 
@@ -28,6 +29,7 @@ export default function FunPage({ mode, onToggleMode }: FunPageProps) {
 
     const games: GameDef[] = useMemo(() => [
         { key: 'guess', flag: 'game_guess_the_trail', label: `🗺️ ${t('fun.guessTheTrail')}`, component: <GuessTheTrail /> },
+        { key: 'elev', flag: 'game_guess_elevation', label: `📈 ${t('fun.guessByElevation')}`, component: <GuessByElevation /> },
         { key: 'hl', flag: 'game_higher_lower', label: `📊 ${t('fun.higherLower')}`, component: <HigherLower /> },
         { key: 'geo', flag: 'game_geoguesser', label: `📍 ${t('fun.geoGuesser')}`, component: <TrailGeoGuesser /> },
     ], [t]);
