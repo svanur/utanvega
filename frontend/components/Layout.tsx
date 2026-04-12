@@ -10,11 +10,13 @@ import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined';
 import SearchIcon from '@mui/icons-material/Search';
 import MenuIcon from '@mui/icons-material/Menu';
 import GetAppIcon from '@mui/icons-material/GetApp';
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import FooterStatus from './FooterStatus';
 import LanguageToggle from './LanguageToggle';
 import DynamicHeader from './DynamicHeader';
 import { useHeaderWeather } from '../hooks/useHeaderWeather';
 import { useInstallPrompt } from '../hooks/useInstallPrompt';
+import { useAdminMode } from '../hooks/useAdminMode';
 
 type LayoutProps = PropsWithChildren<{
     mode: PaletteMode;
@@ -29,10 +31,12 @@ export default function Layout({ children, mode, onToggleMode }: LayoutProps) {
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const weather = useHeaderWeather();
     const { canPrompt, install } = useInstallPrompt();
+    const { isAdmin } = useAdminMode();
 
     const navItems = [
-        { label: t('nav.locations'), path: '/locations' },
-        { label: t('nav.about'), path: '/about' },
+        ...(isAdmin ? [{ label: '🧙‍♂️ Fun', path: '/fun', adminOnly: true }] : []),
+        { label: t('nav.locations'), path: '/locations', adminOnly: false },
+        { label: t('nav.about'), path: '/about', adminOnly: false },
     ];
 
     return (
@@ -75,7 +79,8 @@ export default function Layout({ children, mode, onToggleMode }: LayoutProps) {
                                         key={item.path}
                                         onClick={() => { navigate(item.path); setAnchorEl(null); }}
                                     >
-                                        {item.label}
+                                        {item.adminOnly && <ListItemIcon><AutoFixHighIcon fontSize="small" color="warning" /></ListItemIcon>}
+                                        {item.adminOnly ? <ListItemText>{item.label}</ListItemText> : item.label}
                                     </MenuItem>
                                 ))}
                                 {canPrompt && (
@@ -87,11 +92,18 @@ export default function Layout({ children, mode, onToggleMode }: LayoutProps) {
                             </Menu>
                         </>
                     ) : (
-                        navItems.map((item) => (
-                            <Button key={item.path} color="inherit" onClick={() => navigate(item.path)}>
+                        <>
+                        {navItems.map((item) => (
+                            <Button
+                                key={item.path}
+                                color="inherit"
+                                onClick={() => navigate(item.path)}
+                                {...(item.adminOnly ? { startIcon: <AutoFixHighIcon sx={{ color: 'warning.main' }} /> } : {})}
+                            >
                                 {item.label}
                             </Button>
-                        ))
+                        ))}
+                        </>
                     )}
 
                     <LanguageToggle />

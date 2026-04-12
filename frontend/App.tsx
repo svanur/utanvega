@@ -10,6 +10,8 @@ import { EasterEggs } from './components/EasterEggs';
 import SpotlightSearch from './components/SpotlightSearch';
 import { useFeatureFlags } from './hooks/useFeatureFlags';
 import InstallBanner from './components/InstallBanner';
+import { useAdminMode } from './hooks/useAdminMode';
+import GandalfEntrance from './components/GandalfEntrance';
 
 // Lazy-loaded pages (not needed on initial load)
 const TrailDetailsPage = lazy(() => import('./pages/TrailDetailsPage'));
@@ -18,6 +20,7 @@ const LocationDetailsPage = lazy(() => import('./pages/LocationDetailsPage'));
 const AboutPage = lazy(() => import('./pages/AboutPage'));
 const DisclaimerPage = lazy(() => import('./pages/DisclaimerPage'));
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
+const FunPage = lazy(() => import('./pages/FunPage'));
 
 function PageLoader() {
     return (
@@ -51,6 +54,7 @@ export default function App() {
 
     const { activeEgg, clearEgg } = useEasterEggs();
     const { isEnabled } = useFeatureFlags();
+    const { isAdmin, gandalfQuote, dismissGandalf } = useAdminMode();
 
     return (
         <ThemeProvider theme={theme}>
@@ -91,6 +95,12 @@ export default function App() {
                         path="/privacy" 
                         element={<PrivacyPage mode={mode} onToggleMode={handleToggleMode} />} 
                     />
+                    {isAdmin && (
+                    <Route 
+                        path="/fun" 
+                        element={<FunPage mode={mode} onToggleMode={handleToggleMode} />} 
+                    />
+                    )}
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
                 </Suspense>
@@ -99,6 +109,7 @@ export default function App() {
             </BrowserRouter>
             </ErrorBoundary>
             <EasterEggs activeEgg={activeEgg} onComplete={clearEgg} />
+            <GandalfEntrance quote={gandalfQuote} onClose={dismissGandalf} />
         </ThemeProvider>
     );
 }
