@@ -452,5 +452,24 @@
         "hintType": "This is a {{type}} route",
         "hintActivity": "Popular for {{activity}}",
         "unknownLocation": "an unknown location"
+    },
+    "fun": {
+        "guessTheTrail": "Guess the Trail",
+        "higherLower": "Higher or Lower"
+    },
+    "higherLower": {
+        "question": "Does the right trail have higher or lower {{stat}}?",
+        "higher": "Higher",
+        "lower": "Lower",
+        "gameOver": "Game Over!",
+        "streak": "{{count}} correct in a row!",
+        "bestStreak": "Best streak: {{count}}",
+        "newRecord": "New Record!",
+        "playAgain": "Play Again",
+        "stat": {
+            "distance": "Distance",
+            "elevation": "Elevation Gain",
+            "elevationLoss": "Elevation Loss"
+        }
     }
 }

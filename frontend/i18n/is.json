@@ -452,5 +452,24 @@
         "hintType": "\u00deetta er {{type}} lei\u00f0",
         "hintActivity": "Vins\u00e6l fyrir {{activity}}",
         "unknownLocation": "\u00f3\u00feekktum sta\u00f0"
+    },
+    "fun": {
+        "guessTheTrail": "Giska \u00e1 lei\u00f0ina",
+        "higherLower": "H\u00e6rra e\u00f0a l\u00e6gra"
+    },
+    "higherLower": {
+        "question": "Er h\u00e6gri lei\u00f0in me\u00f0 h\u00e6rra e\u00f0a l\u00e6gra {{stat}}?",
+        "higher": "H\u00e6rra",
+        "lower": "L\u00e6gra",
+        "gameOver": "Leik loki\u00f0!",
+        "streak": "{{count}} r\u00e9tt \u00ed r\u00f6\u00f0!",
+        "bestStreak": "Besta r\u00f6\u00f0: {{count}}",
+        "newRecord": "N\u00fdtt met!",
+        "playAgain": "Spila aftur",
+        "stat": {
+            "distance": "Vegalengd",
+            "elevation": "H\u00e6kkun",
+            "elevationLoss": "L\u00e6kkun"
+        }
     }
 }
