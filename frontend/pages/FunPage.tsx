@@ -2,6 +2,7 @@ import { Box, Typography, Chip } from '@mui/material';
 import type { PaletteMode } from '@mui/material';
 import Layout from '../components/Layout';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
+import GuessTheTrail from '../components/GuessTheTrail';
 
 interface FunPageProps {
     mode: PaletteMode;
@@ -11,19 +12,20 @@ interface FunPageProps {
 export default function FunPage({ mode, onToggleMode }: FunPageProps) {
     return (
         <Layout mode={mode} onToggleMode={onToggleMode}>
-            <Box sx={{ textAlign: 'center', py: 8 }}>
-                <Typography sx={{ fontSize: '5rem', mb: 2 }}>🧙‍♂️</Typography>
-                <Typography variant="h3" gutterBottom sx={{ fontFamily: '"Georgia", serif' }}>
-                    This is fun
+            <Box sx={{ mb: 3, textAlign: 'center' }}>
+                <Typography variant="h4" gutterBottom sx={{ fontFamily: '"Georgia", serif' }}>
+                    🧙‍♂️ {' '}
+                    <Chip
+                        icon={<AutoFixHighIcon />}
+                        label="Admin Only"
+                        color="warning"
+                        variant="outlined"
+                        size="small"
+                    />
                 </Typography>
-                <Chip
-                    icon={<AutoFixHighIcon />}
-                    label="Admin Only"
-                    color="warning"
-                    variant="outlined"
-                    sx={{ mt: 2 }}
-                />
             </Box>
+
+            <GuessTheTrail />
         </Layout>
     );
 }

@@ -427,5 +427,30 @@
         "saveFailed": "Failed to save trail offline",
         "removeFailed": "Failed to remove offline data",
         "badge": "Offline"
+    },
+    "game": {
+        "guessTitle": "Which trail is this?",
+        "loading": "Loading next trail...",
+        "roundOf": "Round {{round}}/{{total}}",
+        "correct": "Correct!",
+        "wrong": "Wrong!",
+        "nextRound": "Next Round",
+        "seeResults": "See Results",
+        "gameOver": "Game Over!",
+        "finalScore": "Score: {{score}} / {{max}}",
+        "playAgain": "Play Again",
+        "resultExcellent": "Amazing! You really know your trails! 🏔️",
+        "resultGood": "Great job! You know your stuff!",
+        "resultOk": "Not bad! Keep exploring trails!",
+        "resultTryAgain": "Keep trying! Explore more trails to improve!",
+        "useHint": "Get a hint (-20 pts)",
+        "eliminateOne": "Eliminate one wrong answer (-10 pts)",
+        "potentialScore": "{{points}} pts available",
+        "hintLocation": "This trail is in {{location}}",
+        "hintDistance": "This trail is {{distance}} km long",
+        "hintElevation": "This trail gains {{gain}}m of elevation",
+        "hintType": "This is a {{type}} route",
+        "hintActivity": "Popular for {{activity}}",
+        "unknownLocation": "an unknown location"
     }
 }

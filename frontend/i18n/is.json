@@ -427,5 +427,30 @@
         "saveFailed": "Ekki t\u00f3kst a\u00f0 vista lei\u00f0",
         "removeFailed": "Ekki t\u00f3kst a\u00f0 fjarl\u00e6gja g\u00f6gn",
         "badge": "\u00c1n nets"
+    },
+    "game": {
+        "guessTitle": "Hva\u00f0a lei\u00f0 er \u00feetta?",
+        "loading": "Hle\u00f0 n\u00e6stu lei\u00f0...",
+        "roundOf": "Umfer\u00f0 {{round}}/{{total}}",
+        "correct": "R\u00e9tt!",
+        "wrong": "Rangt!",
+        "nextRound": "N\u00e6sta umfer\u00f0",
+        "seeResults": "Sj\u00e1 \u00farstli\u00f0",
+        "gameOver": "Leik loki\u00f0!",
+        "finalScore": "Stig: {{score}} / {{max}}",
+        "playAgain": "Spila aftur",
+        "resultExcellent": "Framúrskarandi! Þú þekkir leiðirnar þínar! 🏔️",
+        "resultGood": "Fl\u00f3tt! \u00de\u00fa veist \u00feat \u00feitt!",
+        "resultOk": "Ekki slæmt! Haltu áfram að kanna leiðir!",
+        "resultTryAgain": "Haltu \u00e1fram! Kannaðu fleiri leiðir til a\u00f0 b\u00e6ta \u00feig!",
+        "useHint": "F\u00e1 v\u00edsbendingu (-20 stig)",
+        "eliminateOne": "Fjarl\u00e6gja eitt rangt svar (-10 stig)",
+        "potentialScore": "{{points}} stig m\u00f6guleg",
+        "hintLocation": "\u00deessi lei\u00f0 er \u00ed {{location}}",
+        "hintDistance": "\u00deessi lei\u00f0 er {{distance}} km l\u00f6ng",
+        "hintElevation": "\u00deessi lei\u00f0 hefur {{gain}}m h\u00e6kkun",
+        "hintType": "\u00deetta er {{type}} lei\u00f0",
+        "hintActivity": "Vins\u00e6l fyrir {{activity}}",
+        "unknownLocation": "\u00f3\u00feekktum sta\u00f0"
     }
 }
