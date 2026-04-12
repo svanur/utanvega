@@ -456,7 +456,8 @@
     "fun": {
         "guessTheTrail": "Guess the Trail",
         "higherLower": "Higher or Lower",
-        "geoGuesser": "GeoGuesser"
+        "geoGuesser": "GeoGuesser",
+        "noGamesEnabled": "No games are currently enabled."
     },
     "higherLower": {
         "question": "Does the right trail have higher or lower {{stat}}?",

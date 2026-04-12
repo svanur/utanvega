@@ -456,7 +456,8 @@
     "fun": {
         "guessTheTrail": "Giska \u00e1 lei\u00f0ina",
         "higherLower": "H\u00e6rra e\u00f0a l\u00e6gra",
-        "geoGuesser": "Sta\u00f0setning"
+        "geoGuesser": "Sta\u00f0setning",
+        "noGamesEnabled": "Enginn leikur er virkur a\u00f0 svo st\u00f6ddu."
     },
     "higherLower": {
         "question": "Er h\u00e6gri lei\u00f0in me\u00f0 h\u00e6rra e\u00f0a l\u00e6gra {{stat}}?",

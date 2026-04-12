@@ -17,6 +17,7 @@ import DynamicHeader from './DynamicHeader';
 import { useHeaderWeather } from '../hooks/useHeaderWeather';
 import { useInstallPrompt } from '../hooks/useInstallPrompt';
 import { useAdminMode } from '../hooks/useAdminMode';
+import { useFeatureFlags } from '../hooks/useFeatureFlags';
 
 type LayoutProps = PropsWithChildren<{
     mode: PaletteMode;
@@ -32,9 +33,10 @@ export default function Layout({ children, mode, onToggleMode }: LayoutProps) {
     const weather = useHeaderWeather();
     const { canPrompt, install } = useInstallPrompt();
     const { isAdmin } = useAdminMode();
+    const { isEnabled } = useFeatureFlags();
 
     const navItems = [
-        ...(isAdmin ? [{ label: '🧙‍♂️ Fun', path: '/fun', adminOnly: true }] : []),
+        ...(isAdmin && isEnabled('game_fun_page') ? [{ label: '🧙‍♂️ Fun', path: '/fun', adminOnly: true }] : []),
         { label: t('nav.locations'), path: '/locations', adminOnly: false },
         { label: t('nav.about'), path: '/about', adminOnly: false },
     ];
