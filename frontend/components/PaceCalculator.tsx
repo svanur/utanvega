@@ -1,7 +1,9 @@
-import { useState, useCallback, useMemo } from 'react';
-import { Box, TextField, Typography, Paper, ToggleButtonGroup, ToggleButton, Chip, Divider, IconButton, InputAdornment, Table, TableBody, TableRow, TableCell, Collapse } from '@mui/material';
+import { useState, useCallback, useMemo, useEffect } from 'react';
+import { Box, TextField, Typography, Paper, ToggleButtonGroup, ToggleButton, Chip, Divider, IconButton, InputAdornment, Table, TableBody, TableRow, TableCell, Collapse, Autocomplete } from '@mui/material';
 import { KeyboardArrowUp, KeyboardArrowDown, Terrain, ExpandMore } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
+import { API_URL } from '../hooks/useTrails';
+import { estimateDurationMinutes } from '../utils/estimateDuration';
 
 type Field = 'pace' | 'distance' | 'time';
 
@@ -69,6 +71,13 @@ const TERRAIN_EMOJIS: Record<TerrainType, string> = {
 // Minutes added per 100m of elevation gain (trail running heuristic)
 const CLIMB_FACTOR = 0.5; // ~30 sec per 100m gain
 
+interface TrailOption {
+    name: string;
+    distance: number; // km
+    elevationGain: number; // m
+    activityType: string;
+}
+
 export default function PaceCalculator() {
     const { t } = useTranslation();
 
@@ -81,6 +90,24 @@ export default function PaceCalculator() {
     const [trailOpen, setTrailOpen] = useState(false);
     const [elevGainStr, setElevGainStr] = useState('');
     const [terrain, setTerrain] = useState<TerrainType>('trail');
+
+    // Trail picker
+    const [trailOptions, setTrailOptions] = useState<TrailOption[]>([]);
+    const [selectedTrail, setSelectedTrail] = useState<TrailOption | null>(null);
+
+    useEffect(() => {
+        fetch(`${API_URL}/api/v1/trails`)
+            .then(r => r.json())
+            .then((data: { name: string; length: number; elevationGain: number; activityType: string; status: string }[]) => {
+                setTrailOptions(
+                    data
+                        .filter(t => t.status === 'Published')
+                        .map(t => ({ name: t.name, distance: t.length / 1000, elevationGain: t.elevationGain, activityType: t.activityType }))
+                        .sort((a, b) => a.name.localeCompare(b.name))
+                );
+            })
+            .catch(() => { /* trail picker is optional */ });
+    }, []);
 
     const compute = useCallback((changed: Field, pVal: string, dVal: string, tVal: string) => {
         const pace = parseTime(pVal);
@@ -144,6 +171,40 @@ export default function PaceCalculator() {
         const dStr = d % 1 === 0 ? d.toString() : d.toFixed(2);
         setDistanceStr(dStr);
         compute('distance', paceStr, dStr, timeStr);
+    };
+
+    const handleTrailSelect = (_: unknown, trail: TrailOption | null) => {
+        setSelectedTrail(trail);
+        if (!trail) return;
+
+        // Fill distance
+        const d = unit === 'mi' ? trail.distance / MI_TO_KM : trail.distance;
+        const dStr = d.toFixed(2);
+        setDistanceStr(dStr);
+
+        // Fill elevation gain & open trail section
+        const gain = unit === 'mi' ? Math.round(trail.elevationGain / FT_TO_M) : trail.elevationGain;
+        setElevGainStr(gain > 0 ? Math.round(gain).toString() : '');
+
+        // Map activity type to terrain
+        const terrainMap: Record<string, TerrainType> = {
+            Running: 'road',
+            TrailRunning: 'trail',
+            Hiking: 'trail',
+            Cycling: 'road',
+        };
+        setTerrain(terrainMap[trail.activityType] ?? 'trail');
+
+        if (gain > 0) setTrailOpen(true);
+
+        // Estimate time from distance + elevation + activity type
+        const estMinutes = estimateDurationMinutes(trail.distance * 1000, trail.elevationGain, trail.activityType);
+        const estTime = formatTime(estMinutes);
+        setTimeStr(estTime);
+
+        // Compute pace from distance + estimated time
+        const estPace = estMinutes / d;
+        setPaceStr(formatPace(estPace));
     };
 
     const stepPace = (direction: 1 | -1) => {
@@ -253,6 +314,35 @@ export default function PaceCalculator() {
                             ),
                         }}
                     />
+
+                    {trailOptions.length > 0 && (
+                        <Autocomplete
+                            options={trailOptions}
+                            value={selectedTrail}
+                            onChange={handleTrailSelect}
+                            getOptionLabel={(o) => o.name}
+                            renderOption={(props, option) => (
+                                <li {...props} key={option.name}>
+                                    <Box sx={{ width: '100%' }}>
+                                        <Typography variant="body2">{option.name}</Typography>
+                                        <Typography variant="caption" color="text.secondary">
+                                            {option.distance.toFixed(1)} km · ↑{Math.round(option.elevationGain)}m
+                                        </Typography>
+                                    </Box>
+                                </li>
+                            )}
+                            renderInput={(params) => (
+                                <TextField
+                                    {...params}
+                                    label={t('tools.paceCalc.pickTrail')}
+                                    placeholder={t('tools.paceCalc.searchTrail')}
+                                    size="small"
+                                />
+                            )}
+                            size="small"
+                            clearOnBlur={false}
+                        />
+                    )}
 
                     <Box>
                         <TextField

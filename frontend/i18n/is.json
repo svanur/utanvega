@@ -523,7 +523,9 @@
             "adjustedTime": "Leiðréttur tími",
             "adjustedPace": "Leiðréttur hraði",
             "terrainLabel": "yfirborð",
-            "climbLabel": "klifur"
+            "climbLabel": "klifur",
+            "pickTrail": "Veldu leið",
+            "searchTrail": "Leita að leið..."
         }
     }
 }

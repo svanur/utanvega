@@ -523,7 +523,9 @@
             "adjustedTime": "Adjusted Time",
             "adjustedPace": "Adjusted Pace",
             "terrainLabel": "terrain",
-            "climbLabel": "climb"
+            "climbLabel": "climb",
+            "pickTrail": "Pick a trail",
+            "searchTrail": "Search trails..."
         }
     }
 }
