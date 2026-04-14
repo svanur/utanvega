@@ -1,6 +1,6 @@
-import { useState, useCallback } from 'react';
-import { Box, TextField, Typography, Paper, ToggleButtonGroup, ToggleButton, Chip, Divider, IconButton, InputAdornment, Table, TableBody, TableRow, TableCell } from '@mui/material';
-import { KeyboardArrowUp, KeyboardArrowDown } from '@mui/icons-material';
+import { useState, useCallback, useMemo } from 'react';
+import { Box, TextField, Typography, Paper, ToggleButtonGroup, ToggleButton, Chip, Divider, IconButton, InputAdornment, Table, TableBody, TableRow, TableCell, Collapse } from '@mui/material';
+import { KeyboardArrowUp, KeyboardArrowDown, Terrain, ExpandMore } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 
 type Field = 'pace' | 'distance' | 'time';
@@ -47,6 +47,28 @@ const PRESETS = [
     { key: 'marathon', km: 42.195 },
 ];
 
+const MI_TO_KM = 1.60934;
+const FT_TO_M = 0.3048;
+
+type TerrainType = 'road' | 'gravel' | 'trail' | 'technical';
+
+const TERRAIN_FACTORS: Record<TerrainType, number> = {
+    road: 1.0,
+    gravel: 1.05,
+    trail: 1.12,
+    technical: 1.22,
+};
+
+const TERRAIN_EMOJIS: Record<TerrainType, string> = {
+    road: '🛣️',
+    gravel: '🪨',
+    trail: '🌲',
+    technical: '⛰️',
+};
+
+// Minutes added per 100m of elevation gain (trail running heuristic)
+const CLIMB_FACTOR = 0.5; // ~30 sec per 100m gain
+
 export default function PaceCalculator() {
     const { t } = useTranslation();
 
@@ -55,7 +77,10 @@ export default function PaceCalculator() {
     const [timeStr, setTimeStr] = useState('');
     const [unit, setUnit] = useState<'km' | 'mi'>('km');
 
-    const MI_TO_KM = 1.60934;
+    // Trail adjustments
+    const [trailOpen, setTrailOpen] = useState(false);
+    const [elevGainStr, setElevGainStr] = useState('');
+    const [terrain, setTerrain] = useState<TerrainType>('trail');
 
     const compute = useCallback((changed: Field, pVal: string, dVal: string, tVal: string) => {
         const pace = parseTime(pVal);
@@ -144,6 +169,39 @@ export default function PaceCalculator() {
         setTimeStr(newTime);
         compute('time', paceStr, distanceStr, newTime);
     };
+
+    const stepElevation = (direction: 1 | -1) => {
+        const current = parseInt(elevGainStr) || 0;
+        const step = unit === 'mi' ? Math.round(100 * FT_TO_M) : 100; // 100m or ~100ft
+        const stepped = Math.max(0, current + direction * step);
+        setElevGainStr(stepped > 0 ? stepped.toString() : '');
+    };
+
+    // Trail-adjusted time calculation
+    const trailAdjusted = useMemo(() => {
+        const flatTime = parseTime(timeStr);
+        const dist = parseFloat(distanceStr) || null;
+        const elevGain = parseInt(elevGainStr) || 0;
+        const elevGainMeters = unit === 'mi' ? elevGain * FT_TO_M : elevGain;
+
+        if (!flatTime || !dist) return null;
+
+        const terrainFactor = TERRAIN_FACTORS[terrain];
+        const climbMinutes = (elevGainMeters / 100) * CLIMB_FACTOR;
+        const adjustedTime = flatTime * terrainFactor + climbMinutes;
+        const adjustedPace = adjustedTime / dist;
+        const addedMinutes = adjustedTime - flatTime;
+
+        if (addedMinutes < 0.1) return null;
+
+        return {
+            adjustedTime: formatTime(adjustedTime),
+            adjustedPace: formatPace(adjustedPace),
+            addedMinutes: formatTime(addedMinutes),
+            terrainPct: Math.round((terrainFactor - 1) * 100),
+            climbMinutes: climbMinutes > 0 ? formatTime(climbMinutes) : null,
+        };
+    }, [timeStr, distanceStr, elevGainStr, terrain, unit]);
 
     // Computed splits display
     const pace = parseTime(paceStr);
@@ -256,6 +314,109 @@ export default function PaceCalculator() {
                         }}
                     />
                 </Box>
+            </Paper>
+
+            {/* Trail Adjustments */}
+            <Paper sx={{ mt: 2, overflow: 'hidden' }}>
+                <Box
+                    onClick={() => setTrailOpen(!trailOpen)}
+                    sx={{
+                        display: 'flex', alignItems: 'center', gap: 1, p: 2,
+                        cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' },
+                    }}
+                >
+                    <Terrain fontSize="small" color="action" />
+                    <Typography variant="subtitle2" sx={{ flex: 1 }}>
+                        {t('tools.paceCalc.trailAdjust')}
+                    </Typography>
+                    <ExpandMore sx={{
+                        transform: trailOpen ? 'rotate(180deg)' : 'none',
+                        transition: 'transform 0.2s',
+                        fontSize: 20,
+                    }} />
+                </Box>
+                <Collapse in={trailOpen}>
+                    <Box sx={{ px: 2, pb: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        {/* Terrain type */}
+                        <Box>
+                            <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
+                                {t('tools.paceCalc.terrain')}
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                                {(Object.keys(TERRAIN_FACTORS) as TerrainType[]).map(tt => (
+                                    <Chip
+                                        key={tt}
+                                        label={`${TERRAIN_EMOJIS[tt]} ${t(`tools.paceCalc.terrains.${tt}`)}`}
+                                        size="small"
+                                        variant={terrain === tt ? 'filled' : 'outlined'}
+                                        color={terrain === tt ? 'primary' : 'default'}
+                                        onClick={() => setTerrain(tt)}
+                                        sx={{ cursor: 'pointer' }}
+                                    />
+                                ))}
+                            </Box>
+                            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                                {terrain !== 'road' && `+${Math.round((TERRAIN_FACTORS[terrain] - 1) * 100)}%`}
+                            </Typography>
+                        </Box>
+
+                        {/* Elevation gain */}
+                        <TextField
+                            label={t('tools.paceCalc.elevGain', { unit: unit === 'mi' ? 'ft' : 'm' })}
+                            placeholder={unit === 'mi' ? '1500' : '500'}
+                            value={elevGainStr}
+                            onChange={(e) => setElevGainStr(e.target.value)}
+                            fullWidth
+                            inputProps={{ inputMode: 'numeric' }}
+                            InputProps={{
+                                endAdornment: (
+                                    <InputAdornment position="end">
+                                        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                                            <IconButton size="small" onClick={() => stepElevation(1)} sx={{ p: 0 }}>
+                                                <KeyboardArrowUp sx={{ fontSize: 18 }} />
+                                            </IconButton>
+                                            <IconButton size="small" onClick={() => stepElevation(-1)} sx={{ p: 0 }}>
+                                                <KeyboardArrowDown sx={{ fontSize: 18 }} />
+                                            </IconButton>
+                                        </Box>
+                                    </InputAdornment>
+                                ),
+                            }}
+                        />
+
+                        {/* Adjusted results */}
+                        {trailAdjusted && (
+                            <Box sx={{
+                                bgcolor: 'action.hover', borderRadius: 1, p: 1.5,
+                                display: 'flex', flexDirection: 'column', gap: 0.5,
+                            }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <Typography variant="body2" color="text.secondary">
+                                        {t('tools.paceCalc.adjustedTime')}
+                                    </Typography>
+                                    <Typography variant="body2" fontWeight={700} fontFamily="monospace">
+                                        {trailAdjusted.adjustedTime}
+                                    </Typography>
+                                </Box>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <Typography variant="body2" color="text.secondary">
+                                        {t('tools.paceCalc.adjustedPace')}
+                                    </Typography>
+                                    <Typography variant="body2" fontFamily="monospace">
+                                        {trailAdjusted.adjustedPace}
+                                    </Typography>
+                                </Box>
+                                <Divider sx={{ my: 0.5 }} />
+                                <Typography variant="caption" color="text.secondary">
+                                    +{trailAdjusted.addedMinutes}
+                                    {trailAdjusted.terrainPct > 0 && ` (${t('tools.paceCalc.terrainLabel')}: +${trailAdjusted.terrainPct}%`}
+                                    {trailAdjusted.climbMinutes && `${trailAdjusted.terrainPct > 0 ? ', ' : ' ('}${t('tools.paceCalc.climbLabel')}: +${trailAdjusted.climbMinutes}`}
+                                    {(trailAdjusted.terrainPct > 0 || trailAdjusted.climbMinutes) && ')'}
+                                </Typography>
+                            </Box>
+                        )}
+                    </Box>
+                </Collapse>
             </Paper>
 
             {splits.length > 0 && (

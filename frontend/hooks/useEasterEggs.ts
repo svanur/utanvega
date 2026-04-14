@@ -40,20 +40,20 @@ export function useEasterEggs() {
 
             // Konami code works everywhere (arrow keys + letters)
             const expected = KONAMI_CODE[konamiIndex.current];
-            if (e.key === expected || e.key.toLowerCase() === expected) {
+            if (e.key && (e.key === expected || e.key.toLowerCase() === expected)) {
                 konamiIndex.current++;
                 if (konamiIndex.current === KONAMI_CODE.length) {
                     triggerEgg('konami');
                     konamiIndex.current = 0;
                 }
-            } else if (e.key === KONAMI_CODE[0]) {
+            } else if (e.key && e.key === KONAMI_CODE[0]) {
                 konamiIndex.current = 1;
             } else {
                 konamiIndex.current = 0;
             }
 
             // Typed word checks only outside inputs
-            if (!isInput && e.key.length === 1) {
+            if (!isInput && e.key && e.key.length === 1) {
                 clearTimeout(typedTimer.current);
                 typedChars.current += e.key.toLowerCase();
 

@@ -510,7 +510,20 @@
                 "10k": "10K",
                 "half": "Half",
                 "marathon": "Marathon"
-            }
+            },
+            "trailAdjust": "Trail Adjustments",
+            "terrain": "Terrain",
+            "terrains": {
+                "road": "Road",
+                "gravel": "Gravel",
+                "trail": "Trail",
+                "technical": "Technical"
+            },
+            "elevGain": "Elevation Gain ({{unit}})",
+            "adjustedTime": "Adjusted Time",
+            "adjustedPace": "Adjusted Pace",
+            "terrainLabel": "terrain",
+            "climbLabel": "climb"
         }
     }
 }

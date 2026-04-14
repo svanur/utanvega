@@ -510,7 +510,20 @@
                 "10k": "10K",
                 "half": "Hálft",
                 "marathon": "Maraþon"
-            }
+            },
+            "trailAdjust": "Utanvegaeiðréttingar",
+            "terrain": "Yfirborð",
+            "terrains": {
+                "road": "Vegur",
+                "gravel": "Malarvegur",
+                "trail": "Stígur",
+                "technical": "Torfært"
+            },
+            "elevGain": "Hækkun ({{unit}})",
+            "adjustedTime": "Leiðréttur tími",
+            "adjustedPace": "Leiðréttur hraði",
+            "terrainLabel": "yfirborð",
+            "climbLabel": "klifur"
         }
     }
 }
