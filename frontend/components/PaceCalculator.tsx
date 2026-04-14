@@ -269,11 +269,13 @@ export default function PaceCalculator() {
     const dist = parseFloat(distanceStr) || null;
     const splits: { label: string; time: string }[] = [];
     if (pace && dist && dist > 1) {
+        const marathonKm = unit === 'mi' ? 42.195 / MI_TO_KM : 42.195;
+        const step = dist > marathonKm ? 5 : 1;
         const fullUnits = Math.floor(dist);
-        for (let i = 1; i <= Math.min(fullUnits, 100); i++) {
+        for (let i = step; i <= Math.min(fullUnits, 500); i += step) {
             splits.push({ label: `${i} ${unit}`, time: formatTime(pace * i) });
         }
-        if (dist > fullUnits) {
+        if (dist > fullUnits || fullUnits % step !== 0) {
             splits.push({ label: `${dist} ${unit}`, time: formatTime(pace * dist) });
         }
     }
