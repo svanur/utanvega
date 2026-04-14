@@ -547,6 +547,23 @@
                 "50k": "50K",
                 "100k": "100K"
             }
+        },
+        "trailPredictor": {
+            "title": "Trail Predictor",
+            "subtitle": "Predict your time on a new trail based on a past performance",
+            "knownRace": "Your completed trail",
+            "targetRace": "Target trail",
+            "selectTrailA": "Select completed trail",
+            "selectTrailB": "Select target trail",
+            "yourTime": "Your time",
+            "timeHelp": "e.g. 1:30:00 or 55:00",
+            "prediction": "Prediction",
+            "predictedTime": "Predicted time",
+            "predictedPace": "Predicted pace",
+            "difference": "Difference",
+            "flatPace": "Flat equivalent pace",
+            "comparison": "Trail difference",
+            "method": "Grade-adjusted prediction using Riegel's formula + Naismith's rule"
         }
     }
 }

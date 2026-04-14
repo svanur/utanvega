@@ -547,6 +547,23 @@
                 "50k": "50K",
                 "100k": "100K"
             }
+        },
+        "trailPredictor": {
+            "title": "Utanvegaspá",
+            "subtitle": "Spáðu fyrir um tíma á nýjum stíg út frá fyrri árangri",
+            "knownRace": "Leið/keppni með þekktum tíma",
+            "targetRace": "Finna tíma fyrir aðra leið/keppni",
+            "selectTrailA": "Veldu leið",
+            "selectTrailB": "Veldu leið",
+            "yourTime": "Tíminn þinn",
+            "timeHelp": "t.d. 1:30:00 eða 55:00",
+            "prediction": "Spá",
+            "predictedTime": "Lokatími",
+            "predictedPace": "Lokahraði",
+            "difference": "Mismunur",
+            "flatPace": "Jafngildur hraði á sléttu",
+            "comparison": "Munur á stígum",
+            "method": "Hæðarleiðrétt spá með formúlu Riegels + reglu Naismithrs"
         }
     }
 }
