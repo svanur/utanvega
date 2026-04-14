@@ -32,6 +32,61 @@ interface LocationDialogProps {
 
 const LOCATION_TYPES: LocationType[] = ['Country', 'Area', 'Region', 'Municipality', 'Place', 'Other'];
 
+function parseCoordinates(text: string): { lat: number; lon: number } | null {
+    const cleaned = text.trim();
+    if (!cleaned) return null;
+
+    // "63.9830° N, 19.0670° W" or "63.9830°N, 19.0670°W"
+    const degDir = cleaned.match(
+        /(-?\d+\.?\d*)\s*°?\s*([NSns]),?\s*(-?\d+\.?\d*)\s*°?\s*([EWew])/
+    );
+    if (degDir) {
+        let lat = parseFloat(degDir[1]);
+        let lon = parseFloat(degDir[3]);
+        if (degDir[2].toUpperCase() === 'S') lat = -lat;
+        if (degDir[4].toUpperCase() === 'W') lon = -lon;
+        if (isValidCoord(lat, lon)) return { lat, lon };
+    }
+
+    // "N 63.9830, W 19.0670"
+    const dirDeg = cleaned.match(
+        /([NSns])\s*(-?\d+\.?\d*)\s*°?,?\s*([EWew])\s*(-?\d+\.?\d*)\s*°?/
+    );
+    if (dirDeg) {
+        let lat = parseFloat(dirDeg[2]);
+        let lon = parseFloat(dirDeg[4]);
+        if (dirDeg[1].toUpperCase() === 'S') lat = -lat;
+        if (dirDeg[3].toUpperCase() === 'W') lon = -lon;
+        if (isValidCoord(lat, lon)) return { lat, lon };
+    }
+
+    // DMS: 63°58'58.8"N 19°4'1.2"W
+    const dms = cleaned.match(
+        /(\d+)°\s*(\d+)[''′]\s*(\d+\.?\d*)[""″]?\s*([NSns]),?\s*(\d+)°\s*(\d+)[''′]\s*(\d+\.?\d*)[""″]?\s*([EWew])/
+    );
+    if (dms) {
+        let lat = parseInt(dms[1]) + parseInt(dms[2]) / 60 + parseFloat(dms[3]) / 3600;
+        let lon = parseInt(dms[5]) + parseInt(dms[6]) / 60 + parseFloat(dms[7]) / 3600;
+        if (dms[4].toUpperCase() === 'S') lat = -lat;
+        if (dms[8].toUpperCase() === 'W') lon = -lon;
+        if (isValidCoord(lat, lon)) return { lat, lon };
+    }
+
+    // Simple decimal: "63.9830, -19.0670"
+    const decimal = cleaned.match(/(-?\d+\.?\d*)\s*[,;\s]\s*(-?\d+\.?\d*)/);
+    if (decimal) {
+        const lat = parseFloat(decimal[1]);
+        const lon = parseFloat(decimal[2]);
+        if (isValidCoord(lat, lon)) return { lat, lon };
+    }
+
+    return null;
+}
+
+function isValidCoord(lat: number, lon: number): boolean {
+    return !isNaN(lat) && !isNaN(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
+}
+
 function MapPicker({ lat, lon, radius, onUpdate, onRadiusUpdate: _onRadiusUpdate }: { 
     lat: number | null, 
     lon: number | null, 
@@ -229,6 +284,31 @@ export function LocationDialog({ open, onClose, onSaveSuccess, onNotify, locatio
                                             <MenuItem key={l.id} value={l.id}>{l.name} ({l.type})</MenuItem>
                                         ))}
                                 </TextField>
+                                <Box sx={{ display: 'flex', gap: 2 }}>
+                                    <TextField
+                                        label="Paste coordinates"
+                                        placeholder='e.g. 63.9830° N, 19.0670° W'
+                                        fullWidth
+                                        onPaste={(e) => {
+                                            const text = e.clipboardData.getData('text');
+                                            const parsed = parseCoordinates(text);
+                                            if (parsed) {
+                                                setLatitude(parsed.lat.toFixed(6));
+                                                setLongitude(parsed.lon.toFixed(6));
+                                                e.preventDefault();
+                                            }
+                                        }}
+                                        onChange={(e) => {
+                                            const parsed = parseCoordinates(e.target.value);
+                                            if (parsed) {
+                                                setLatitude(parsed.lat.toFixed(6));
+                                                setLongitude(parsed.lon.toFixed(6));
+                                            }
+                                        }}
+                                        helperText="Paste or type coordinates in any common format"
+                                        size="small"
+                                    />
+                                </Box>
                                 <Box sx={{ display: 'flex', gap: 2 }}>
                                     <TextField
                                         label="Latitude"
