@@ -564,6 +564,13 @@
             "flatPace": "Jafngildur hraði á sléttu",
             "comparison": "Munur á stígum",
             "method": "Hæðarleiðrétt spá með formúlu Riegels + reglu Naismithrs"
+        },
+        "paceChart": {
+            "title": "Hraðatafla",
+            "subtitle": "Finndu tíma, t.d. í maraþon dálknum, athugaðu svo aðra dálka til að sjá jafngilda tíma. Fullkomið til að skipuleggja æfingar.",
+            "search": "Maraþontími eða 1km hraði",
+            "searchHelp": "t.d. 3:30:00 (maraþon) eða 5:00 (1K hraði)",
+            "note": "Tímar reiknaðir með formúlu Riegels."
         }
     }
 }

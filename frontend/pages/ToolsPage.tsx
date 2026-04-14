@@ -6,10 +6,12 @@ import Layout from '../components/Layout';
 import PaceCalculator from '../components/PaceCalculator';
 import RacePredictor from '../components/RacePredictor';
 import TrailRacePredictor from '../components/TrailRacePredictor';
+import PaceChart from '../components/PaceChart';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import TimerIcon from '@mui/icons-material/Timer';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import TerrainIcon from '@mui/icons-material/Terrain';
+import TableChartIcon from '@mui/icons-material/TableChart';
 
 interface ToolDef {
     key: string;
@@ -28,6 +30,7 @@ export default function ToolsPage({ mode, onToggleMode }: { mode: PaletteMode; o
         { key: 'pace', flag: 'tool_pace_calculator', label: t('tools.paceCalc.title'), icon: <TimerIcon />, component: <PaceCalculator /> },
         { key: 'predictor', flag: 'tool_race_predictor', label: t('tools.racePredictor.title'), icon: <EmojiEventsIcon />, component: <RacePredictor /> },
         { key: 'trail-predictor', flag: 'tool_trail_predictor', label: t('tools.trailPredictor.title'), icon: <TerrainIcon />, component: <TrailRacePredictor /> },
+        { key: 'pace-chart', flag: 'tool_pace_chart', label: t('tools.paceChart.title'), icon: <TableChartIcon />, component: <PaceChart /> },
     ];
 
     const tools = allTools.filter(tool => isEnabled(tool.flag));
