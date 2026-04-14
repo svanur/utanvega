@@ -526,6 +526,27 @@
             "climbLabel": "climb",
             "pickTrail": "Pick a trail",
             "searchTrail": "Search trails..."
+        },
+        "racePredictor": {
+            "title": "Race Predictor",
+            "subtitle": "Enter a recent race result to predict times for other distances",
+            "knownDistance": "Race distance",
+            "yourTime": "Your {{race}} time",
+            "timeHelp": "e.g. 22:00 or 1:45:00",
+            "predictions": "Predicted Times",
+            "race": "Race",
+            "predictedTime": "Time",
+            "predictedPace": "Pace",
+            "formula": "Based on Riegel's formula (exponent 1.06)",
+            "distances": {
+                "1k": "1K",
+                "5k": "5K",
+                "10k": "10K",
+                "half": "Half Marathon",
+                "marathon": "Marathon",
+                "50k": "50K",
+                "100k": "100K"
+            }
         }
     }
 }

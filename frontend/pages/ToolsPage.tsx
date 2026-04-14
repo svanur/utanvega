@@ -4,8 +4,10 @@ import { Box, Tabs, Tab, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import Layout from '../components/Layout';
 import PaceCalculator from '../components/PaceCalculator';
+import RacePredictor from '../components/RacePredictor';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import TimerIcon from '@mui/icons-material/Timer';
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 
 interface ToolDef {
     key: string;
@@ -22,6 +24,7 @@ export default function ToolsPage({ mode, onToggleMode }: { mode: PaletteMode; o
 
     const allTools: ToolDef[] = [
         { key: 'pace', flag: 'tool_pace_calculator', label: t('tools.paceCalc.title'), icon: <TimerIcon />, component: <PaceCalculator /> },
+        { key: 'predictor', flag: 'tool_race_predictor', label: t('tools.racePredictor.title'), icon: <EmojiEventsIcon />, component: <RacePredictor /> },
     ];
 
     const tools = allTools.filter(tool => isEnabled(tool.flag));
