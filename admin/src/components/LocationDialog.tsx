@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
     Dialog, DialogTitle, DialogContent, DialogActions,
     Button, TextField, MenuItem, Box, Alert, Typography, Slider,
-    Tabs, Tab
+    Tabs, Tab, Autocomplete, CircularProgress
 } from '@mui/material';
-import { History as HistoryIcon } from '@mui/icons-material';
+import { History as HistoryIcon, AutoFixHigh as WikiIcon } from '@mui/icons-material';
 import { MapContainer, TileLayer, Marker, Circle, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -31,6 +31,49 @@ interface LocationDialogProps {
 }
 
 const LOCATION_TYPES: LocationType[] = ['Country', 'Area', 'Region', 'Municipality', 'Place', 'Other'];
+
+interface NominatimResult {
+    place_id: number;
+    display_name: string;
+    lat: string;
+    lon: string;
+    type: string;
+}
+
+function useGeocode() {
+    const [options, setOptions] = useState<NominatimResult[]>([]);
+    const [loading, setLoading] = useState(false);
+    const timerRef = useRef<ReturnType<typeof setTimeout>>();
+
+    const search = useCallback((query: string) => {
+        clearTimeout(timerRef.current);
+        if (query.length < 3) { setOptions([]); return; }
+
+        setLoading(true);
+        timerRef.current = setTimeout(async () => {
+            try {
+                const params = new URLSearchParams({
+                    q: query,
+                    format: 'json',
+                    limit: '6',
+                    countrycodes: 'is',
+                    addressdetails: '0',
+                });
+                const res = await fetch(`https://nominatim.openstreetmap.org/search?${params}`, {
+                    headers: { 'Accept-Language': 'is,en' },
+                });
+                const data: NominatimResult[] = await res.json();
+                setOptions(data);
+            } catch {
+                setOptions([]);
+            } finally {
+                setLoading(false);
+            }
+        }, 400);
+    }, []);
+
+    return { options, loading, search, setOptions };
+}
 
 function parseCoordinates(text: string): { lat: number; lon: number } | null {
     const cleaned = text.trim();
@@ -156,6 +199,33 @@ export function LocationDialog({ open, onClose, onSaveSuccess, onNotify, locatio
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState(0);
+    const geo = useGeocode();
+    const [wikiLoading, setWikiLoading] = useState(false);
+
+    const lookupWikipedia = async () => {
+        if (!name.trim()) return;
+        setWikiLoading(true);
+        try {
+            // Try Icelandic Wikipedia first, then English
+            for (const lang of ['is', 'en']) {
+                const url = `https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(name.trim())}`;
+                const res = await fetch(url);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.extract) {
+                        setDescription(data.extract);
+                        onNotify(`Description loaded from ${lang}.wikipedia.org`, 'success');
+                        return;
+                    }
+                }
+            }
+            onNotify('No Wikipedia article found for this name', 'error');
+        } catch {
+            onNotify('Failed to fetch from Wikipedia', 'error');
+        } finally {
+            setWikiLoading(false);
+        }
+    };
 
     useEffect(() => {
         if (location) {
@@ -187,8 +257,8 @@ export function LocationDialog({ open, onClose, onSaveSuccess, onNotify, locatio
             const body = {
                 id: location?.id,
                 name,
-                slug,
-                description,
+                slug: slug || null,
+                description: description || null,
                 type,
                 parentId: parentId || null,
                 latitude: latitude ? parseFloat(latitude) : null,
@@ -237,12 +307,44 @@ export function LocationDialog({ open, onClose, onSaveSuccess, onNotify, locatio
                         <Box sx={{ display: 'flex', gap: 3, mt: 1 }}>
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 1 }}>
                                 {error && <Alert severity="error">{error}</Alert>}
-                                <TextField
-                                    label="Name"
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
+                                <Autocomplete
+                                    freeSolo
+                                    options={geo.options}
+                                    getOptionLabel={(opt) => typeof opt === 'string' ? opt : opt.display_name}
+                                    loading={geo.loading}
+                                    inputValue={name}
+                                    onInputChange={(_e, val, reason) => {
+                                        setName(val);
+                                        if (reason === 'input') geo.search(val);
+                                    }}
+                                    onChange={(_e, val) => {
+                                        if (val && typeof val !== 'string') {
+                                            const shortName = val.display_name.split(',')[0].trim();
+                                            setName(shortName);
+                                            setLatitude(parseFloat(val.lat).toFixed(6));
+                                            setLongitude(parseFloat(val.lon).toFixed(6));
+                                            geo.setOptions([]);
+                                        }
+                                    }}
+                                    filterOptions={(x) => x}
                                     fullWidth
-                                    required
+                                    renderInput={(params) => (
+                                        <TextField
+                                            {...params}
+                                            label="Name"
+                                            required
+                                            InputProps={{
+                                                ...params.InputProps,
+                                                endAdornment: (
+                                                    <>
+                                                        {geo.loading && <CircularProgress size={18} />}
+                                                        {params.InputProps.endAdornment}
+                                                    </>
+                                                ),
+                                            }}
+                                            helperText="Type to search places — select to auto-fill coordinates"
+                                        />
+                                    )}
                                 />
                                 <TextField
                                     label="Slug"
@@ -251,14 +353,27 @@ export function LocationDialog({ open, onClose, onSaveSuccess, onNotify, locatio
                                     fullWidth
                                     placeholder="auto-generated if empty"
                                 />
-                                <TextField
-                                    label="Description"
-                                    value={description}
-                                    onChange={(e) => setDescription(e.target.value)}
-                                    fullWidth
-                                    multiline
-                                    rows={2}
-                                />
+                                <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+                                    <TextField
+                                        label="Description"
+                                        value={description}
+                                        onChange={(e) => setDescription(e.target.value)}
+                                        fullWidth
+                                        multiline
+                                        rows={2}
+                                    />
+                                    <Button
+                                        variant="outlined"
+                                        size="small"
+                                        onClick={lookupWikipedia}
+                                        disabled={!name.trim() || wikiLoading}
+                                        startIcon={wikiLoading ? <CircularProgress size={16} /> : <WikiIcon />}
+                                        sx={{ mt: 0.5, whiteSpace: 'nowrap', minWidth: 'auto' }}
+                                        title="Lookup description from Wikipedia"
+                                    >
+                                        Wiki
+                                    </Button>
+                                </Box>
                                 <TextField
                                     select
                                     label="Type"
@@ -287,7 +402,7 @@ export function LocationDialog({ open, onClose, onSaveSuccess, onNotify, locatio
                                 <Box sx={{ display: 'flex', gap: 2 }}>
                                     <TextField
                                         label="Paste coordinates"
-                                        placeholder='e.g. 63.9830° N, 19.0670° W'
+                                        placeholder='e.g. 63.98° N, 19.06° W'
                                         fullWidth
                                         onPaste={(e) => {
                                             const text = e.clipboardData.getData('text');
@@ -305,7 +420,6 @@ export function LocationDialog({ open, onClose, onSaveSuccess, onNotify, locatio
                                                 setLongitude(parsed.lon.toFixed(6));
                                             }
                                         }}
-                                        helperText="Paste or type coordinates in any common format"
                                         size="small"
                                     />
                                 </Box>
