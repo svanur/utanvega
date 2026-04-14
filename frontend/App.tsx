@@ -21,6 +21,7 @@ const AboutPage = lazy(() => import('./pages/AboutPage'));
 const DisclaimerPage = lazy(() => import('./pages/DisclaimerPage'));
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
 const FunPage = lazy(() => import('./pages/FunPage'));
+const ToolsPage = lazy(() => import('./pages/ToolsPage'));
 
 function PageLoader() {
     return (
@@ -99,6 +100,12 @@ export default function App() {
                     <Route 
                         path="/fun" 
                         element={<FunPage mode={mode} onToggleMode={handleToggleMode} />} 
+                    />
+                    )}
+                    {isEnabled('tools_page') && (
+                    <Route 
+                        path="/tools" 
+                        element={<ToolsPage mode={mode} onToggleMode={handleToggleMode} />} 
                     />
                     )}
                     <Route path="*" element={<Navigate to="/" replace />} />

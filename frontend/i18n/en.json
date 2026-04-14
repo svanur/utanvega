@@ -492,5 +492,25 @@
     },
     "elevationGame": {
         "guessTitle": "Which trail has this elevation profile?"
+    },
+    "tools": {
+        "title": "Tools",
+        "noToolsEnabled": "No tools are currently enabled.",
+        "paceCalc": {
+            "title": "Pace Calculator",
+            "subtitle": "Enter any two fields to compute the third",
+            "pace": "Pace (min/{{unit}})",
+            "distance": "Distance ({{unit}})",
+            "time": "Time",
+            "paceHelp": "e.g. 5:30 for 5 min 30 sec",
+            "timeHelp": "e.g. 1:45:00 or 55:00",
+            "splits": "Splits",
+            "presets": {
+                "5k": "5K",
+                "10k": "10K",
+                "half": "Half",
+                "marathon": "Marathon"
+            }
+        }
     }
 }

@@ -492,5 +492,25 @@
     },
     "elevationGame": {
         "guessTitle": "Hva\u00f0a lei\u00f0 er me\u00f0 \u00feetta h\u00e6\u00f0arsni\u00f0?"
+    },
+    "tools": {
+        "title": "Verkf\u00e6ri",
+        "noToolsEnabled": "Engin verkf\u00e6ri eru virk.",
+        "paceCalc": {
+            "title": "Hraðareiknir",
+            "subtitle": "Sláðu inn tvö gildi til að reikna þriðja",
+            "pace": "Hraði (mín/{{unit}})",
+            "distance": "Vegalengd ({{unit}})",
+            "time": "Tími",
+            "paceHelp": "t.d. 5:30 fyrir 5 mín 30 sek",
+            "timeHelp": "t.d. 1:45:00 eða 55:00",
+            "splits": "Millitímar",
+            "presets": {
+                "5k": "5K",
+                "10k": "10K",
+                "half": "Hálft",
+                "marathon": "Maraþon"
+            }
+        }
     }
 }
