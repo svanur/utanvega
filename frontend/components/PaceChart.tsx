@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { Box, TextField, Typography, Paper, InputAdornment, IconButton, useTheme } from '@mui/material';
+import { Box, TextField, Typography, Paper, InputAdornment, IconButton, useTheme, Slider } from '@mui/material';
 import { KeyboardArrowUp, KeyboardArrowDown } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 
@@ -144,6 +144,42 @@ export default function PaceChart() {
                         ),
                     }}
                 />
+                <Box sx={{ px: 1, mt: 1 }}>
+                    <Slider
+                        value={(() => {
+                            // Map search to slider: try 1K pace first, then derive from marathon
+                            const t = parseTime(searchStr);
+                            if (!t) return 330; // ~5:30/km default
+                            // If value looks like a 1K pace (< 15 min), use directly
+                            if (t < 15) return Math.round(t * 60);
+                            // Otherwise, reverse Riegel to get 1K pace from marathon time
+                            const oneKm = t / Math.pow(42.195, RIEGEL_EXP);
+                            return Math.round(oneKm * 60);
+                        })()}
+                        onChange={(_, val) => {
+                            const secs = val as number;
+                            const m = Math.floor(secs / 60);
+                            const s = secs % 60;
+                            setSearchStr(`${m}:${String(s).padStart(2, '0')}`);
+                        }}
+                        min={150}
+                        max={540}
+                        step={5}
+                        valueLabelDisplay="auto"
+                        valueLabelFormat={(v) => {
+                            const m = Math.floor(v / 60);
+                            const s = v % 60;
+                            return `${m}:${String(s).padStart(2, '0')}/km`;
+                        }}
+                        marks={[
+                            { value: 180, label: '3:00' },
+                            { value: 300, label: '5:00' },
+                            { value: 420, label: '7:00' },
+                            { value: 540, label: '9:00' },
+                        ]}
+                        sx={{ mt: 0.5 }}
+                    />
+                </Box>
             </Paper>
 
             <Paper sx={{ overflow: 'hidden' }}>
