@@ -45,10 +45,10 @@ const DISTANCES: DistanceCol[] = [
     { key: 'Marathon', km: 42.195 },
 ];
 
-// Generate rows based on 1K pace (min/km), from ~2:30 to ~9:00 in 15-sec steps
+// Generate rows based on 1K pace (min/km), from ~2:00 to ~9:00 in 15-sec steps
 function generateRows() {
     const rows: { pacePerKm: number }[] = [];
-    for (let sec = 150; sec <= 540; sec += 15) {
+    for (let sec = 120; sec <= 540; sec += 15) {
         rows.push({ pacePerKm: sec / 60 });
     }
     return rows;
@@ -162,7 +162,7 @@ export default function PaceChart() {
                             const s = secs % 60;
                             setSearchStr(`${m}:${String(s).padStart(2, '0')}`);
                         }}
-                        min={150}
+                        min={120}
                         max={540}
                         step={5}
                         valueLabelDisplay="auto"
@@ -172,10 +172,10 @@ export default function PaceChart() {
                             return `${m}:${String(s).padStart(2, '0')}/km`;
                         }}
                         marks={[
-                            { value: 180, label: '3:00' },
-                            { value: 300, label: '5:00' },
-                            { value: 420, label: '7:00' },
-                            { value: 540, label: '9:00' },
+                            { value: 120, label: '2:00' },
+                            { value: 240, label: '4:00' },
+                            { value: 360, label: '6:00' },
+                            { value: 480, label: '8:00' },
                         ]}
                         sx={{ mt: 0.5 }}
                     />
