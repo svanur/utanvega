@@ -111,7 +111,22 @@ public class ScheduleRuleEngine : IScheduleRuleEngine
         if (rule.MonthStart is not { } monthStart || rule.MonthEnd is not { } monthEnd || rule.DayOfWeek is not { } dow)
             return null;
 
-        // Search up to 400 days ahead to handle year wrapping
+        // If weekOfMonth is set, find the nth day-of-week in each month
+        if (rule.WeekOfMonth is { } week)
+        {
+            for (int i = 0; i < 15; i++) // Check up to 15 months ahead
+            {
+                var checkMonth = fromDate.AddMonths(i);
+                if (!IsInSeasonalRange(checkMonth.Month, monthStart, monthEnd))
+                    continue;
+                var date = FindNthDayOfWeekInMonth(checkMonth.Year, checkMonth.Month, dow, week);
+                if (date.HasValue && date.Value >= fromDate)
+                    return date;
+            }
+            return null;
+        }
+
+        // Every matching day-of-week in range
         var current = fromDate;
         var limit = fromDate.AddDays(400);
 
@@ -131,12 +146,30 @@ public class ScheduleRuleEngine : IScheduleRuleEngine
         if (rule.MonthStart is not { } monthStart || rule.MonthEnd is not { } monthEnd || rule.DayOfWeek is not { } dow)
             return results;
 
-        var current = from;
-        while (current <= to)
+        // If weekOfMonth is set, find the nth day-of-week in each qualifying month
+        if (rule.WeekOfMonth is { } week)
         {
-            if (current.DayOfWeek == dow && IsInSeasonalRange(current.Month, monthStart, monthEnd))
-                results.Add(current);
-            current = current.AddDays(1);
+            var current = new DateOnly(from.Year, from.Month, 1);
+            while (current <= to)
+            {
+                if (IsInSeasonalRange(current.Month, monthStart, monthEnd))
+                {
+                    var date = FindNthDayOfWeekInMonth(current.Year, current.Month, dow, week);
+                    if (date.HasValue && date.Value >= from && date.Value <= to)
+                        results.Add(date.Value);
+                }
+                current = current.AddMonths(1);
+            }
+            return results;
+        }
+
+        // Every matching day-of-week in range
+        var day = from;
+        while (day <= to)
+        {
+            if (day.DayOfWeek == dow && IsInSeasonalRange(day.Month, monthStart, monthEnd))
+                results.Add(day);
+            day = day.AddDays(1);
         }
 
         return results;

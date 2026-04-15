@@ -16,6 +16,7 @@ public class Competition
 
     public string? OrganizerName { get; set; }
     public string? OrganizerWebsite { get; set; }
+    public string? RegistrationUrl { get; set; }
 
     public Guid? LocationId { get; set; }
     public Location? Location { get; set; }

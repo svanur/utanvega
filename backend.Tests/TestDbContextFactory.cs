@@ -148,6 +148,7 @@ internal class TestDbContext : UtanvegaDbContext
             entity.HasIndex(e => e.Slug).IsUnique();
             entity.Property(e => e.OrganizerName).HasMaxLength(200);
             entity.Property(e => e.OrganizerWebsite).HasMaxLength(500);
+            entity.Property(e => e.RegistrationUrl).HasMaxLength(500);
             entity.Property(e => e.Status).HasConversion<string>();
             entity.Property(e => e.ScheduleRule).HasConversion(
                 v => v == null ? null : JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
@@ -164,7 +165,6 @@ internal class TestDbContext : UtanvegaDbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
             entity.Property(e => e.DistanceLabel).HasMaxLength(50);
-            entity.Property(e => e.RegistrationUrl).HasMaxLength(500);
             entity.HasOne(e => e.Competition)
                   .WithMany(c => c.Races)
                   .HasForeignKey(e => e.CompetitionId)

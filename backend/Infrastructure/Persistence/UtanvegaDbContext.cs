@@ -1,5 +1,6 @@
 namespace Utanvega.Backend.Infrastructure.Persistence;
 
+using System.Text.Json;
 using Utanvega.Backend.Core.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -151,11 +152,16 @@ public class UtanvegaDbContext : DbContext
             entity.HasIndex(e => e.Slug).IsUnique();
             entity.Property(e => e.OrganizerName).HasMaxLength(200);
             entity.Property(e => e.OrganizerWebsite).HasMaxLength(500);
+            entity.Property(e => e.RegistrationUrl).HasMaxLength(500);
 
             entity.Property(e => e.Status).HasConversion<string>();
 
             entity.Property(e => e.ScheduleRule)
-                  .HasColumnType("jsonb");
+                  .HasColumnType("jsonb")
+                  .HasConversion(
+                      v => v == null ? null : JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                      v => v == null ? null : JsonSerializer.Deserialize<ScheduleRule>(v, (JsonSerializerOptions?)null)
+                  );
 
             entity.HasOne(e => e.Location)
                   .WithMany()
@@ -168,7 +174,7 @@ public class UtanvegaDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
             entity.Property(e => e.DistanceLabel).HasMaxLength(50);
-            entity.Property(e => e.RegistrationUrl).HasMaxLength(500);
+            entity.Property(e => e.Status).HasConversion<string>();
 
             entity.HasOne(e => e.Competition)
                   .WithMany(c => c.Races)

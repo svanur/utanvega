@@ -30,7 +30,8 @@ const shortcutGroups: ShortcutGroup[] = [
             { keys: ['Alt', '4'], description: 'Trail Map' },
             { keys: ['Alt', '5'], description: 'Tags' },
             { keys: ['Alt', '6'], description: 'Analytics' },
-            { keys: ['Alt', '7'], description: 'Features' },
+            { keys: ['Alt', '7'], description: 'Competitions' },
+            { keys: ['Alt', '8'], description: 'Features' },
         ],
     },
     {

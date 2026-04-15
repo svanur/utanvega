@@ -6,6 +6,7 @@ import MapIcon from '@mui/icons-material/Map';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import ToggleOnIcon from '@mui/icons-material/ToggleOn';
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
@@ -19,6 +20,7 @@ import TrailMapView from './pages/TrailMapView';
 import TagManagement from './pages/TagManagement';
 import AnalyticsPage from './pages/AnalyticsPage';
 import FeatureFlagsPage from './pages/FeatureFlagsPage';
+import CompetitionList from './pages/CompetitionList';
 import GpxUploadDialog from './components/GpxUploadDialog';
 import LoginPage from './pages/LoginPage';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -45,7 +47,7 @@ const DRAWER_COLLAPSED = 56;
 
 function AdminContent() {
   const { user, loading: authLoading, signOut } = useAuth();
-  const [currentPage, setCurrentPage] = useState<'trails' | 'locations' | 'health' | 'map' | 'tags' | 'analytics' | 'features'>('trails');
+  const [currentPage, setCurrentPage] = useState<'trails' | 'locations' | 'health' | 'map' | 'tags' | 'analytics' | 'features' | 'competitions'>('trails');
   const [drawerOpen, setDrawerOpen] = useState(true);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -185,6 +187,7 @@ function AdminContent() {
               { key: 'map' as const, icon: <MapIcon />, label: 'Trail Map' },
               { key: 'tags' as const, icon: <LocalOfferIcon />, label: 'Tags' },
               { key: 'analytics' as const, icon: <BarChartIcon />, label: 'Analytics' },
+              { key: 'competitions' as const, icon: <EmojiEventsIcon />, label: 'Competitions' },
               { key: 'features' as const, icon: <ToggleOnIcon />, label: 'Features' },
             ].map(item => (
               <ListItem key={item.key} disablePadding>
@@ -220,6 +223,8 @@ function AdminContent() {
             <AnalyticsPage />
           ) : currentPage === 'features' ? (
             <FeatureFlagsPage onNotify={notify} />
+          ) : currentPage === 'competitions' ? (
+            <CompetitionList onNotify={notify} />
           ) : (
             <LocationList onNotify={notify} />
           )}

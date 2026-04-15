@@ -36,6 +36,14 @@ using Utanvega.Backend.Application.Trails.Queries.GetTrendingTrails;
 using Utanvega.Backend.Application.Trails.Commands.RecordTrailView;
 using Utanvega.Backend.Application.Weather.Queries;
 using Utanvega.Backend.Core.Services;
+using Utanvega.Backend.Application.Competitions.Queries.GetCompetitions;
+using Utanvega.Backend.Application.Competitions.Queries.GetCompetition;
+using Utanvega.Backend.Application.Competitions.Commands.CreateCompetition;
+using Utanvega.Backend.Application.Competitions.Commands.UpdateCompetition;
+using Utanvega.Backend.Application.Competitions.Commands.DeleteCompetition;
+using Utanvega.Backend.Application.Competitions.Commands.CreateRace;
+using Utanvega.Backend.Application.Competitions.Commands.UpdateRace;
+using Utanvega.Backend.Application.Competitions.Commands.DeleteRace;
 using MediatR;
 using FluentValidation;
 using Microsoft.Extensions.Caching.Memory;
@@ -176,6 +184,7 @@ builder.Services.AddMediatR(cfg =>
 builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
 builder.Services.AddScoped<CreateTrailFromGpxCommandHandler>();
 builder.Services.AddScoped<LocationDetector>();
+builder.Services.AddSingleton<IScheduleRuleEngine, ScheduleRuleEngine>();
 builder.Services.AddHttpClient("OpenMeteo");
 builder.Services.AddMemoryCache();
 
@@ -1031,6 +1040,76 @@ app.MapDelete("/api/v1/admin/features/{id}", [Authorize] async (Guid id, Utanveg
     return Results.NoContent();
 })
 .WithName("DeleteFeatureFlag");
+
+// ============ Competition Endpoints ============
+
+app.MapGet("/api/v1/competitions", async (IMediator mediator, bool includeRetired = false) =>
+{
+    var competitions = await mediator.Send(new GetCompetitionsQuery(includeRetired));
+    return Results.Ok(competitions);
+})
+.WithName("GetPublicCompetitions");
+
+app.MapGet("/api/v1/competitions/{slug}", async (string slug, IMediator mediator) =>
+{
+    var competition = await mediator.Send(new GetCompetitionQuery(slug));
+    return competition != null ? Results.Ok(competition) : Results.NotFound();
+})
+.WithName("GetCompetitionBySlug");
+
+// Admin Competition CRUD
+app.MapGet("/api/v1/admin/competitions", [Authorize] async (IMediator mediator) =>
+{
+    var competitions = await mediator.Send(new GetCompetitionsQuery(IncludeRetired: true));
+    return Results.Ok(competitions);
+})
+.WithName("GetAdminCompetitions");
+
+app.MapPost("/api/v1/admin/competitions", [Authorize] async (CreateCompetitionCommand command, IMediator mediator) =>
+{
+    var id = await mediator.Send(command);
+    return Results.Created($"/api/v1/competitions/{id}", new { id });
+})
+.WithName("CreateCompetition");
+
+app.MapPut("/api/v1/admin/competitions/{id}", [Authorize] async (Guid id, UpdateCompetitionCommand command, IMediator mediator) =>
+{
+    if (id != command.Id) return Results.BadRequest("ID mismatch");
+    var success = await mediator.Send(command);
+    return success ? Results.NoContent() : Results.NotFound();
+})
+.WithName("UpdateCompetition");
+
+app.MapDelete("/api/v1/admin/competitions/{id}", [Authorize] async (Guid id, IMediator mediator) =>
+{
+    var success = await mediator.Send(new DeleteCompetitionCommand(id));
+    return success ? Results.NoContent() : Results.NotFound();
+})
+.WithName("DeleteCompetition");
+
+// Admin Race CRUD
+app.MapPost("/api/v1/admin/competitions/{competitionId}/races", [Authorize] async (Guid competitionId, CreateRaceCommand command, IMediator mediator) =>
+{
+    if (competitionId != command.CompetitionId) return Results.BadRequest("CompetitionId mismatch");
+    var id = await mediator.Send(command);
+    return Results.Created($"/api/v1/admin/competitions/{competitionId}/races/{id}", new { id });
+})
+.WithName("CreateRace");
+
+app.MapPut("/api/v1/admin/races/{id}", [Authorize] async (Guid id, UpdateRaceCommand command, IMediator mediator) =>
+{
+    if (id != command.Id) return Results.BadRequest("ID mismatch");
+    var success = await mediator.Send(command);
+    return success ? Results.NoContent() : Results.NotFound();
+})
+.WithName("UpdateRace");
+
+app.MapDelete("/api/v1/admin/races/{id}", [Authorize] async (Guid id, IMediator mediator) =>
+{
+    var success = await mediator.Send(new DeleteRaceCommand(id));
+    return success ? Results.NoContent() : Results.NotFound();
+})
+.WithName("DeleteRace");
 
 app.Run();
 
