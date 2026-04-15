@@ -104,7 +104,7 @@ export default function App() {
                     )}
                     {isEnabled('tools_page') && (
                     <Route 
-                        path="/tools" 
+                        path="/tools/:toolKey?" 
                         element={<ToolsPage mode={mode} onToggleMode={handleToggleMode} />} 
                     />
                     )}

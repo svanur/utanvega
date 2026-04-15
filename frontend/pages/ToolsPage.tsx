@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useMemo } from 'react';
 import type { PaletteMode } from '@mui/material';
 import { Box, Tabs, Tab, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
+import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import PaceCalculator from '../components/PaceCalculator';
 import RacePredictor from '../components/RacePredictor';
@@ -24,17 +25,23 @@ interface ToolDef {
 export default function ToolsPage({ mode, onToggleMode }: { mode: PaletteMode; onToggleMode: () => void }) {
     const { t } = useTranslation();
     const { isEnabled } = useFeatureFlags();
-    const [tab, setTab] = useState(0);
+    const { toolKey } = useParams<{ toolKey?: string }>();
+    const navigate = useNavigate();
 
     const allTools: ToolDef[] = [
-        { key: 'pace', flag: 'tool_pace_calculator', label: t('tools.paceCalc.title'), icon: <TimerIcon />, component: <PaceCalculator /> },
-        { key: 'predictor', flag: 'tool_race_predictor', label: t('tools.racePredictor.title'), icon: <EmojiEventsIcon />, component: <RacePredictor /> },
+        { key: 'pace-calculator', flag: 'tool_pace_calculator', label: t('tools.paceCalc.title'), icon: <TimerIcon />, component: <PaceCalculator /> },
+        { key: 'race-predictor', flag: 'tool_race_predictor', label: t('tools.racePredictor.title'), icon: <EmojiEventsIcon />, component: <RacePredictor /> },
         { key: 'trail-predictor', flag: 'tool_trail_predictor', label: t('tools.trailPredictor.title'), icon: <TerrainIcon />, component: <TrailRacePredictor /> },
         { key: 'pace-chart', flag: 'tool_pace_chart', label: t('tools.paceChart.title'), icon: <TableChartIcon />, component: <PaceChart /> },
     ];
 
     const tools = allTools.filter(tool => isEnabled(tool.flag));
-    const safeTab = tab >= tools.length ? 0 : tab;
+
+    const activeTab = useMemo(() => {
+        if (!toolKey) return 0;
+        const idx = tools.findIndex(t => t.key === toolKey);
+        return idx >= 0 ? idx : 0;
+    }, [toolKey, tools]);
 
     return (
         <Layout mode={mode} onToggleMode={onToggleMode}>
@@ -49,8 +56,8 @@ export default function ToolsPage({ mode, onToggleMode }: { mode: PaletteMode; o
                     <>
                         {tools.length > 1 && (
                             <Tabs
-                                value={safeTab}
-                                onChange={(_, v) => setTab(v)}
+                                value={activeTab}
+                                onChange={(_, v) => navigate(`/tools/${tools[v].key}`, { replace: true })}
                                 variant="scrollable"
                                 scrollButtons="auto"
                                 sx={{ mb: 2 }}
@@ -60,7 +67,7 @@ export default function ToolsPage({ mode, onToggleMode }: { mode: PaletteMode; o
                                 ))}
                             </Tabs>
                         )}
-                        {tools[safeTab]?.component}
+                        {tools[activeTab]?.component}
                     </>
                 )}
             </Box>
