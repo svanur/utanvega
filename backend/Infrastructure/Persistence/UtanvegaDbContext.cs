@@ -17,6 +17,8 @@ public class UtanvegaDbContext : DbContext
     public DbSet<ChangeLog> ChangeLogs => Set<ChangeLog>();
     public DbSet<TrailView> TrailViews => Set<TrailView>();
     public DbSet<FeatureFlag> FeatureFlags => Set<FeatureFlag>();
+    public DbSet<Competition> Competitions => Set<Competition>();
+    public DbSet<Race> Races => Set<Race>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -139,6 +141,46 @@ public class UtanvegaDbContext : DbContext
             entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
             entity.HasIndex(e => e.Name).IsUnique();
             entity.Property(e => e.Description).HasMaxLength(500);
+        });
+
+        modelBuilder.Entity<Competition>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Slug).IsRequired().HasMaxLength(250);
+            entity.HasIndex(e => e.Slug).IsUnique();
+            entity.Property(e => e.OrganizerName).HasMaxLength(200);
+            entity.Property(e => e.OrganizerWebsite).HasMaxLength(500);
+
+            entity.Property(e => e.Status).HasConversion<string>();
+
+            entity.Property(e => e.ScheduleRule)
+                  .HasColumnType("jsonb");
+
+            entity.HasOne(e => e.Location)
+                  .WithMany()
+                  .HasForeignKey(e => e.LocationId)
+                  .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<Race>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.DistanceLabel).HasMaxLength(50);
+            entity.Property(e => e.RegistrationUrl).HasMaxLength(500);
+
+            entity.HasOne(e => e.Competition)
+                  .WithMany(c => c.Races)
+                  .HasForeignKey(e => e.CompetitionId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Trail)
+                  .WithMany()
+                  .HasForeignKey(e => e.TrailId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(e => e.CompetitionId);
         });
     }
 }

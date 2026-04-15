@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 using Utanvega.Backend.Infrastructure.Persistence;
 
 namespace Utanvega.Backend.Tests;
@@ -118,6 +119,60 @@ internal class TestDbContext : UtanvegaDbContext
                   .WithMany(t => t.TrailTags)
                   .HasForeignKey(tt => tt.TagId);
             entity.HasIndex(tt => new { tt.TrailId, tt.TagId }).IsUnique();
+        });
+
+        modelBuilder.Entity<Core.Entities.FeatureFlag>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+            entity.HasIndex(e => e.Name).IsUnique();
+            entity.Property(e => e.Description).HasMaxLength(500);
+        });
+
+        modelBuilder.Entity<Core.Entities.TrailView>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ViewedAtUtc).IsRequired();
+            entity.Property(e => e.IpHash).HasMaxLength(64);
+            entity.HasOne(v => v.Trail)
+                  .WithMany()
+                  .HasForeignKey(v => v.TrailId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Core.Entities.Competition>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Slug).IsRequired().HasMaxLength(250);
+            entity.HasIndex(e => e.Slug).IsUnique();
+            entity.Property(e => e.OrganizerName).HasMaxLength(200);
+            entity.Property(e => e.OrganizerWebsite).HasMaxLength(500);
+            entity.Property(e => e.Status).HasConversion<string>();
+            entity.Property(e => e.ScheduleRule).HasConversion(
+                v => v == null ? null : JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                v => v == null ? null : JsonSerializer.Deserialize<Core.Entities.ScheduleRule>(v, (JsonSerializerOptions?)null)
+            );
+            entity.HasOne(e => e.Location)
+                  .WithMany()
+                  .HasForeignKey(e => e.LocationId)
+                  .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<Core.Entities.Race>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.DistanceLabel).HasMaxLength(50);
+            entity.Property(e => e.RegistrationUrl).HasMaxLength(500);
+            entity.HasOne(e => e.Competition)
+                  .WithMany(c => c.Races)
+                  .HasForeignKey(e => e.CompetitionId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Trail)
+                  .WithMany()
+                  .HasForeignKey(e => e.TrailId)
+                  .OnDelete(DeleteBehavior.SetNull);
         });
     }
 }
