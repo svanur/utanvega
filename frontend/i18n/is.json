@@ -3,6 +3,7 @@
     "nav": {
         "locations": "Staðsetningar",
         "about": "Um",
+        "races": "Keppni",
         "disclaimer": "Fyrirvari",
         "privacy": "Persónuvernd",
         "darkMode": "Skipta yfir í dimmt þema",
@@ -573,5 +574,34 @@
             "note": "Tímar reiknaðir með formúlu Riegels. Stuttar vegalengdir eru 'áætluð jafngild áreynsla', ekki viðvarandi hraði.",
             "print": "Prenta / hlaða niður sem PDF"
         }
+    },
+    "races": {
+        "title": "Keppni og mót",
+        "subtitle": "Komandi fjallahlaup og keppni á Íslandi",
+        "searchPlaceholder": "Leita að keppni...",
+        "noResults": "Engin keppni fannst",
+        "empty": "Engin keppni enn",
+        "noDate": "Dagsetning óákveðin",
+        "today": "🔥 Í dag!",
+        "tomorrow": "Á morgun!",
+        "passed": "Liðið",
+        "daysUntil": "Eftir {{count}} daga",
+        "raceCount_one": "{{count}} hlaupaleið",
+        "raceCount_other": "{{count}} hlaupaleiðir",
+        "raceCount": "{{count}} hlaupaleiðir",
+        "register": "Skráning",
+        "organizerSite": "Vefur skipuleggjanda",
+        "racesHeading": "Keppnishlaup",
+        "scheduleHeading": "Dagsetningar",
+        "noRaces": "Engin hlaup skráð enn fyrir þessa keppni.",
+        "notFound": "Keppni fannst ekki",
+        "backToRaces": "Til baka í keppni",
+        "viewTrail": "Skoða leið",
+        "cutoffHours_one": "{{count}} klukkustund hámark",
+        "cutoffHours_other": "{{count}} klukkustundir hámark",
+        "cutoffHours": "{{count}}klst hámark",
+        "dateLocale": "is",
+        "months": ["janúar", "febrúar", "mars", "apríl", "maí", "júní", "júlí", "ágúst", "september", "október", "nóvember", "desember"],
+        "weekdays": ["sunnudagur", "mánudagur", "þriðjudagur", "miðvikudagur", "fimmtudagur", "föstudagur", "laugardagur"]
     }
 }

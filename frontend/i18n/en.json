@@ -3,6 +3,7 @@
     "nav": {
         "locations": "Locations",
         "about": "About",
+        "races": "Races",
         "disclaimer": "Disclaimer",
         "privacy": "Privacy",
         "darkMode": "Switch to dark mode",
@@ -573,5 +574,34 @@
             "note": "Times calculated using Riegel's formula. Short distances approximate equivalent effort, not sustained pace.",
             "print": "Print / download as PDF"
         }
+    },
+    "races": {
+        "title": "Races & Competitions",
+        "subtitle": "Upcoming trail races and competitions in Iceland",
+        "searchPlaceholder": "Search competitions...",
+        "noResults": "No competitions match your search",
+        "empty": "No competitions yet",
+        "noDate": "Date TBD",
+        "today": "🔥 Today!",
+        "tomorrow": "Tomorrow!",
+        "passed": "Past event",
+        "daysUntil": "In {{count}} days",
+        "raceCount_one": "{{count}} course",
+        "raceCount_other": "{{count}} courses",
+        "raceCount": "{{count}} courses",
+        "register": "Register",
+        "organizerSite": "Organizer website",
+        "racesHeading": "Races",
+        "scheduleHeading": "Upcoming dates",
+        "noRaces": "No races listed yet for this competition.",
+        "notFound": "Competition not found",
+        "backToRaces": "Back to races",
+        "viewTrail": "View trail",
+        "cutoffHours_one": "{{count}} hour cutoff",
+        "cutoffHours_other": "{{count}} hours cutoff",
+        "cutoffHours": "{{count}}h cutoff",
+        "dateLocale": "en",
+        "months": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+        "weekdays": ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
     }
 }

@@ -22,6 +22,8 @@ const DisclaimerPage = lazy(() => import('./pages/DisclaimerPage'));
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
 const FunPage = lazy(() => import('./pages/FunPage'));
 const ToolsPage = lazy(() => import('./pages/ToolsPage'));
+const RacesPage = lazy(() => import('./pages/RacesPage'));
+const CompetitionDetailPage = lazy(() => import('./pages/CompetitionDetailPage'));
 
 function PageLoader() {
     return (
@@ -107,6 +109,18 @@ export default function App() {
                         path="/tools/:toolKey?" 
                         element={<ToolsPage mode={mode} onToggleMode={handleToggleMode} />} 
                     />
+                    )}
+                    {isEnabled('races_page') && (
+                    <>
+                    <Route 
+                        path="/races" 
+                        element={<RacesPage mode={mode} onToggleMode={handleToggleMode} />} 
+                    />
+                    <Route 
+                        path="/races/:slug" 
+                        element={<CompetitionDetailPage mode={mode} onToggleMode={handleToggleMode} />} 
+                    />
+                    </>
                     )}
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>

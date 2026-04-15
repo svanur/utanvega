@@ -22,6 +22,7 @@ public record CompetitionDetailDto(
     Core.Entities.ScheduleRule? ScheduleRule,
     DateOnly? NextDate,
     int? DaysUntil,
+    List<DateOnly> UpcomingDates,
     List<RaceDto> Races,
     DateTime CreatedAt,
     DateTime? UpdatedAt
@@ -57,6 +58,10 @@ public class GetCompetitionQueryHandler : IRequestHandler<GetCompetitionQuery, C
             ? nextDate.Value.DayNumber - today.DayNumber
             : (int?)null;
 
+        var upcomingDates = competition.ScheduleRule != null
+            ? _scheduleEngine.GetOccurrencesInRange(competition.ScheduleRule, today, today.AddMonths(12))
+            : new List<DateOnly>();
+
         var races = competition.Races
             .OrderBy(r => r.SortOrder)
             .Select(r => new RaceDto(
@@ -90,6 +95,7 @@ public class GetCompetitionQueryHandler : IRequestHandler<GetCompetitionQuery, C
             competition.ScheduleRule,
             nextDate,
             daysUntil,
+            upcomingDates,
             races,
             competition.CreatedAt,
             competition.UpdatedAt
