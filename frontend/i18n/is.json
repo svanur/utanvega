@@ -570,7 +570,8 @@
             "subtitle": "Finndu tíma, t.d. í maraþon dálknum, athugaðu svo aðra dálka til að sjá jafngilda tíma. Fullkomið til að skipuleggja æfingar.",
             "search": "Maraþontími eða 1km hraði",
             "searchHelp": "t.d. 3:30:00 (maraþon) eða 5:00 (1K hraði)",
-            "note": "Tímar reiknaðir með formúlu Riegels."
+            "note": "Tímar reiknaðir með formúlu Riegels. Stuttar vegalengdir eru 'áætluð jafngild áreynsla', ekki viðvarandi hraði.",
+            "print": "Prenta / hlaða niður sem PDF"
         }
     }
 }

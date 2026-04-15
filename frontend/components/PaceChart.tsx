@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { Box, TextField, Typography, Paper, InputAdornment, IconButton, useTheme, Slider } from '@mui/material';
-import { KeyboardArrowUp, KeyboardArrowDown } from '@mui/icons-material';
+import { Box, TextField, Typography, Paper, InputAdornment, IconButton, useTheme, Slider, Button } from '@mui/material';
+import { KeyboardArrowUp, KeyboardArrowDown, PrintOutlined } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 
 function parseTime(val: string): number | null {
@@ -108,6 +108,24 @@ export default function PaceChart() {
         setSearchStr(formatCompact(stepped));
     };
 
+    const tableRef = useRef<HTMLTableElement>(null);
+
+    const handlePrint = () => {
+        if (!tableRef.current) return;
+        const win = window.open('', '_blank');
+        if (!win) return;
+        win.document.write(`<!DOCTYPE html><html><head><title>Pace Chart — Utanvega</title>
+<style>body{font-family:system-ui,sans-serif;margin:20px}
+table{border-collapse:collapse;width:100%;font-size:11px}
+th,td{padding:4px 6px;border:1px solid #ccc;text-align:right;font-family:monospace}
+th{background:#f0f0f0;font-weight:700}
+td:first-child,th:first-child{text-align:left;font-weight:600}
+h2{margin:0 0 12px;font-size:16px}</style></head><body>
+<h2>🏃 Pace Chart — Utanvega</h2>${tableRef.current.outerHTML}</body></html>`);
+        win.document.close();
+        win.print();
+    };
+
     const borderColor = theme.palette.divider;
     const bgPaper = theme.palette.background.paper;
     const bgHighlight = theme.palette.action.selected;
@@ -184,7 +202,7 @@ export default function PaceChart() {
 
             <Paper sx={{ overflow: 'hidden' }}>
                 <Box sx={{ overflow: 'auto', maxHeight: '65vh' }}>
-                    <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '0.75rem', color: textPrimary }}>
+                    <table ref={tableRef} style={{ borderCollapse: 'collapse', width: '100%', fontSize: '0.75rem', color: textPrimary }}>
                         <thead>
                             <tr>
                                 <th style={{
@@ -251,6 +269,17 @@ export default function PaceChart() {
             <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', px: 1 }}>
                 {t('tools.paceChart.note')}
             </Typography>
+
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1.5 }}>
+                <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<PrintOutlined />}
+                    onClick={handlePrint}
+                >
+                    {t('tools.paceChart.print')}
+                </Button>
+            </Box>
         </Box>
     );
 }
