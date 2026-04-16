@@ -12,6 +12,8 @@ public record CreateCompetitionCommand(
     string? OrganizerName,
     string? OrganizerWebsite,
     string? RegistrationUrl,
+    string? AlertMessage,
+    string? AlertSeverity,
     Guid? LocationId,
     string Status,
     ScheduleRule? ScheduleRule
@@ -40,6 +42,8 @@ public class CreateCompetitionCommandHandler : IRequestHandler<CreateCompetition
             OrganizerName = request.OrganizerName,
             OrganizerWebsite = request.OrganizerWebsite,
             RegistrationUrl = request.RegistrationUrl,
+            AlertMessage = request.AlertMessage,
+            AlertSeverity = request.AlertSeverity,
             LocationId = request.LocationId,
             Status = status,
             ScheduleRule = request.ScheduleRule,

@@ -18,6 +18,9 @@ public class Competition
     public string? OrganizerWebsite { get; set; }
     public string? RegistrationUrl { get; set; }
 
+    public string? AlertMessage { get; set; }
+    public string? AlertSeverity { get; set; }
+
     public Guid? LocationId { get; set; }
     public Location? Location { get; set; }
 

@@ -10,6 +10,8 @@ public record CompetitionDto(
     string? OrganizerName,
     string? OrganizerWebsite,
     string? RegistrationUrl,
+    string? AlertMessage,
+    string? AlertSeverity,
     Guid? LocationId,
     string? LocationName,
     string Status,

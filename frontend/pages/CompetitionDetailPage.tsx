@@ -214,6 +214,16 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                         />
                     </Stack>
 
+                    {/* Competition Alert */}
+                    {competition.alertMessage && (
+                        <Alert
+                            severity={(competition.alertSeverity as 'info' | 'success' | 'warning' | 'error') ?? 'info'}
+                            sx={{ mt: 2, borderRadius: 2 }}
+                        >
+                            {competition.alertMessage}
+                        </Alert>
+                    )}
+
                     {/* Row 3: Schedule description */}
                     {(() => {
                         const desc = formatScheduleDescription(

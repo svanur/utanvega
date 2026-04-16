@@ -19,6 +19,8 @@ export interface CompetitionDto {
     organizerName: string | null;
     organizerWebsite: string | null;
     registrationUrl: string | null;
+    alertMessage: string | null;
+    alertSeverity: string | null;
     locationId: string | null;
     locationName: string | null;
     status: string;
@@ -57,6 +59,8 @@ export interface CreateCompetitionInput {
     organizerName?: string;
     organizerWebsite?: string;
     registrationUrl?: string;
+    alertMessage?: string;
+    alertSeverity?: string;
     locationId?: string | null;
     status: string;
     scheduleRule?: ScheduleRule | null;

@@ -75,6 +75,8 @@ public class CompetitionHandlerTests : IDisposable
             OrganizerName: "ÍSÍ",
             OrganizerWebsite: "https://marathon.is",
             RegistrationUrl: "https://marathon.is/register",
+            AlertMessage: null,
+            AlertSeverity: null,
             LocationId: null,
             Status: "Active",
             ScheduleRule: new ScheduleRule { Type = ScheduleType.Yearly, Month = 7, WeekOfMonth = 2, DayOfWeek = DayOfWeek.Saturday }
@@ -103,6 +105,8 @@ public class CompetitionHandlerTests : IDisposable
             OrganizerName: null,
             OrganizerWebsite: null,
             RegistrationUrl: null,
+            AlertMessage: null,
+            AlertSeverity: null,
             LocationId: null,
             Status: "Active",
             ScheduleRule: null
@@ -137,6 +141,8 @@ public class CompetitionHandlerTests : IDisposable
                 OrganizerName: "New Org",
                 OrganizerWebsite: "https://new.is",
                 RegistrationUrl: null,
+                AlertMessage: null,
+                AlertSeverity: null,
                 LocationId: null,
                 Status: "Cancelled",
                 ScheduleRule: null
@@ -166,6 +172,8 @@ public class CompetitionHandlerTests : IDisposable
             OrganizerName: null,
             OrganizerWebsite: null,
             RegistrationUrl: null,
+            AlertMessage: null,
+            AlertSeverity: null,
             LocationId: null,
             Status: "Active",
             ScheduleRule: null

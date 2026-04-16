@@ -19,6 +19,8 @@ export interface CompetitionSummary {
     organizerName: string | null;
     organizerWebsite: string | null;
     registrationUrl: string | null;
+    alertMessage: string | null;
+    alertSeverity: string | null;
     locationId: string | null;
     locationName: string | null;
     status: string;

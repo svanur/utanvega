@@ -12,6 +12,8 @@ public record UpdateCompetitionCommand(
     string? OrganizerName,
     string? OrganizerWebsite,
     string? RegistrationUrl,
+    string? AlertMessage,
+    string? AlertSeverity,
     Guid? LocationId,
     string Status,
     ScheduleRule? ScheduleRule
@@ -40,6 +42,8 @@ public class UpdateCompetitionCommandHandler : IRequestHandler<UpdateCompetition
         competition.OrganizerName = request.OrganizerName;
         competition.OrganizerWebsite = request.OrganizerWebsite;
         competition.RegistrationUrl = request.RegistrationUrl;
+        competition.AlertMessage = request.AlertMessage;
+        competition.AlertSeverity = request.AlertSeverity;
         competition.LocationId = request.LocationId;
         competition.Status = status;
         competition.ScheduleRule = request.ScheduleRule;

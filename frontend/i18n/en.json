@@ -577,7 +577,7 @@
     },
     "races": {
         "title": "Races & Competitions",
-        "subtitle": "Upcoming trail races and competitions in Iceland",
+        "subtitle": "Upcoming trail races and competitions in Iceland. Be sure to confirm final dates on the race organizer's website.",
         "searchPlaceholder": "Search competitions...",
         "noResults": "No competitions match your search",
         "empty": "No competitions yet",

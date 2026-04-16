@@ -5,7 +5,7 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress,
   MenuItem, Select, FormControl, InputLabel, Tooltip, Collapse,
   List, ListItem, ListItemText, ListItemSecondaryAction, Divider,
-  Autocomplete,
+  Autocomplete, Alert,
 } from '@mui/material';
 import {
   Delete as DeleteIcon,
@@ -79,6 +79,8 @@ export default function CompetitionList({ onNotify }: CompetitionListProps) {
   const [organizerName, setOrganizerName] = useState('');
   const [organizerWebsite, setOrganizerWebsite] = useState('');
   const [registrationUrl, setRegistrationUrl] = useState('');
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertSeverity, setAlertSeverity] = useState<string>('info');
   const [locationId, setLocationId] = useState<string>('');
   const [status, setStatus] = useState('Active');
   const [scheduleType, setScheduleType] = useState<ScheduleRule['type']>('Yearly');
@@ -104,6 +106,7 @@ export default function CompetitionList({ onNotify }: CompetitionListProps) {
   const resetForm = () => {
     setName(''); setSlug(''); setDescription('');
     setOrganizerName(''); setOrganizerWebsite(''); setRegistrationUrl('');
+    setAlertMessage(''); setAlertSeverity('info');
     setLocationId(''); setStatus('Active');
     setScheduleType('Yearly'); setScheduleMonth(7); setScheduleWeek(2);
     setScheduleDay('Saturday'); setScheduleMonthStart(10); setScheduleMonthEnd(3);
@@ -141,6 +144,8 @@ export default function CompetitionList({ onNotify }: CompetitionListProps) {
     setOrganizerName(comp.organizerName ?? '');
     setOrganizerWebsite(comp.organizerWebsite ?? '');
     setRegistrationUrl(comp.registrationUrl ?? '');
+    setAlertMessage(comp.alertMessage ?? '');
+    setAlertSeverity(comp.alertSeverity ?? 'info');
     setLocationId(comp.locationId ?? '');
     setStatus(comp.status);
     if (comp.scheduleRule) {
@@ -170,6 +175,8 @@ export default function CompetitionList({ onNotify }: CompetitionListProps) {
         organizerName: organizerName.trim() || undefined,
         organizerWebsite: organizerWebsite.trim() || undefined,
         registrationUrl: registrationUrl.trim() || undefined,
+        alertMessage: alertMessage.trim() || undefined,
+        alertSeverity: alertMessage.trim() ? alertSeverity : undefined,
         locationId: locationId || null,
         status,
         scheduleRule: buildScheduleRule(),
@@ -544,6 +551,34 @@ export default function CompetitionList({ onNotify }: CompetitionListProps) {
             margin="normal"
             placeholder="https://..."
           />
+
+          {/* Alert Banner */}
+          <Typography variant="subtitle2" sx={{ mt: 2, mb: 0.5 }}>Alert Banner</Typography>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+            <TextField
+              label="Alert Message"
+              value={alertMessage}
+              onChange={e => setAlertMessage(e.target.value)}
+              fullWidth
+              margin="dense"
+              placeholder="e.g. Registration closes May 1st!"
+              helperText="Leave empty for no alert"
+            />
+            <FormControl margin="dense" sx={{ minWidth: 140 }}>
+              <InputLabel>Severity</InputLabel>
+              <Select value={alertSeverity} onChange={e => setAlertSeverity(e.target.value)} label="Severity">
+                <MenuItem value="info">ℹ️ Info</MenuItem>
+                <MenuItem value="success">✅ Success</MenuItem>
+                <MenuItem value="warning">⚠️ Warning</MenuItem>
+                <MenuItem value="error">🚨 Error</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+          {alertMessage.trim() && (
+            <Alert severity={alertSeverity as 'info' | 'success' | 'warning' | 'error'} sx={{ mt: 1 }}>
+              {alertMessage}
+            </Alert>
+          )}
           <Box sx={{ display: 'flex', gap: 2 }}>
             <Autocomplete
               options={[...locations].sort((a, b) => a.name.localeCompare(b.name))}

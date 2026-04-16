@@ -193,6 +193,16 @@ export default function RacesPage({ mode, onToggleMode }: RacesPageProps) {
                                                     />
                                                 </Stack>
 
+                                                {/* Alert banner */}
+                                                {comp.alertMessage && (
+                                                    <Alert
+                                                        severity={(comp.alertSeverity as 'info' | 'success' | 'warning' | 'error') ?? 'info'}
+                                                        sx={{ mt: 1, borderRadius: 1.5, py: 0, '& .MuiAlert-message': { py: 0.5 } }}
+                                                    >
+                                                        <Typography variant="body2">{comp.alertMessage}</Typography>
+                                                    </Alert>
+                                                )}
+
                                                 {/* Next date */}
                                                 {comp.nextDate && (
                                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1.5 }}>

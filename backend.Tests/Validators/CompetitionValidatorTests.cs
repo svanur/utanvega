@@ -18,6 +18,8 @@ public class CompetitionValidatorTests
         OrganizerName: "ÍSÍ",
         OrganizerWebsite: "https://marathon.is",
         RegistrationUrl: null,
+        AlertMessage: null,
+        AlertSeverity: null,
         LocationId: null,
         Status: "Active",
         ScheduleRule: null
@@ -97,6 +99,8 @@ public class CompetitionValidatorTests
         OrganizerName: null,
         OrganizerWebsite: null,
         RegistrationUrl: null,
+        AlertMessage: null,
+        AlertSeverity: null,
         LocationId: null,
         Status: "Active",
         ScheduleRule: null
