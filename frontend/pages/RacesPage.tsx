@@ -15,14 +15,12 @@ import {
     InputAdornment,
     alpha,
     useTheme,
-    Button,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import SearchIcon from '@mui/icons-material/Search';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import Layout from '../components/Layout';
 import RunningLoader from '../components/RunningLoader';
 import { useCompetitions } from '../hooks/useCompetitions';
@@ -199,7 +197,10 @@ export default function RacesPage({ mode, onToggleMode }: RacesPageProps) {
                                                 {comp.nextDate && (
                                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1.5 }}>
                                                         <CalendarTodayIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                                                        <Typography variant="body2" color="text.secondary">
+                                                        <Typography variant="body2" color="text.secondary" sx={{ mr: 0.5 }}>
+                                                            {t('races.nextRace')}
+                                                        </Typography>
+                                                        <Typography variant="body2" fontWeight={600}>
                                                             {formatNextDate(comp.nextDate, t)}
                                                         </Typography>
                                                     </Box>
@@ -224,35 +225,19 @@ export default function RacesPage({ mode, onToggleMode }: RacesPageProps) {
                                             </Box>
 
                                             {/* Countdown chip */}
-                                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
-                                                <Chip
-                                                    label={getCountdownLabel(comp.daysUntil, t)}
-                                                    color={getCountdownColor(comp.daysUntil)}
-                                                    size="medium"
-                                                    sx={{
-                                                        fontWeight: 700,
-                                                        fontSize: '0.9rem',
-                                                        px: 1,
-                                                        bgcolor: comp.daysUntil !== null && comp.daysUntil <= 7
-                                                            ? alpha(theme.palette.error.main, 0.15)
-                                                            : undefined,
-                                                    }}
-                                                />
-                                                {comp.registrationUrl && (
-                                                    <Button
-                                                        size="small"
-                                                        variant="outlined"
-                                                        endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            window.open(comp.registrationUrl!, '_blank', 'noopener');
-                                                        }}
-                                                        sx={{ textTransform: 'none', fontSize: '0.75rem' }}
-                                                    >
-                                                        {t('races.register')}
-                                                    </Button>
-                                                )}
-                                            </Box>
+                                            <Chip
+                                                label={getCountdownLabel(comp.daysUntil, t)}
+                                                color={getCountdownColor(comp.daysUntil)}
+                                                size="medium"
+                                                sx={{
+                                                    fontWeight: 700,
+                                                    fontSize: '0.9rem',
+                                                    px: 1,
+                                                    bgcolor: comp.daysUntil !== null && comp.daysUntil <= 7
+                                                        ? alpha(theme.palette.error.main, 0.15)
+                                                        : undefined,
+                                                }}
+                                            />
                                         </Box>
                                     </CardContent>
                                 </CardActionArea>

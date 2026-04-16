@@ -582,6 +582,7 @@
         "noResults": "No competitions match your search",
         "empty": "No competitions yet",
         "noDate": "Date TBD",
+        "nextRace": "Next race:",
         "today": "🔥 Today!",
         "tomorrow": "Tomorrow!",
         "passed": "Past event",
@@ -602,6 +603,11 @@
         "cutoffHours": "{{count}}h cutoff",
         "dateLocale": "en",
         "months": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
-        "weekdays": ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+        "weekdays": ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+        "ordinals": ["", "1st", "2nd", "3rd", "4th"],
+        "ordinalLast": "last",
+        "scheduleSeasonal": "{{count}} races, every {{ordinal}} {{day}} from {{monthStart}} to {{monthEnd}}",
+        "scheduleYearly": "Held annually on the {{ordinal}} {{day}} of {{month}}",
+        "scheduleFixed": "One-off event on {{date}}"
     }
 }

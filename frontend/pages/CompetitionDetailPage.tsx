@@ -33,7 +33,7 @@ import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
 import Layout from '../components/Layout';
 import RunningLoader from '../components/RunningLoader';
 import { useCompetitionBySlug } from '../hooks/useCompetitions';
-import type { RaceDto } from '../hooks/useCompetitions';
+import type { RaceDto, ScheduleRule } from '../hooks/useCompetitions';
 
 type CompetitionDetailPageProps = {
     mode: PaletteMode;
@@ -62,6 +62,52 @@ function formatCutoff(minutes: number, t: (key: string, opts?: Record<string, un
     const m = minutes % 60;
     if (m === 0) return t('races.cutoffHours', { count: h });
     return `${h}h ${m}m`;
+}
+
+const DAY_OF_WEEK_INDEX: Record<string, number> = {
+    Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6,
+};
+
+function formatScheduleDescription(
+    rule: ScheduleRule | null,
+    upcomingCount: number,
+    t: (key: string, opts?: Record<string, unknown>) => string,
+): string | null {
+    if (!rule) return null;
+
+    const months = t('races.months', { returnObjects: true }) as unknown as string[];
+    const weekdays = t('races.weekdays', { returnObjects: true }) as unknown as string[];
+    const ordinals = t('races.ordinals', { returnObjects: true }) as unknown as string[];
+    const ordinalLast = t('races.ordinalLast') as string;
+
+    const getOrdinal = (w: number) => w === -1 ? ordinalLast : (ordinals[w] ?? `${w}.`);
+    const getDayName = (dow?: string) => dow ? weekdays[DAY_OF_WEEK_INDEX[dow] ?? 0] : '';
+
+    if (rule.type === 'Seasonal' && rule.monthStart && rule.monthEnd && rule.dayOfWeek) {
+        return t('races.scheduleSeasonal', {
+            count: upcomingCount,
+            ordinal: rule.weekOfMonth ? getOrdinal(rule.weekOfMonth) : '',
+            day: getDayName(rule.dayOfWeek),
+            monthStart: months[(rule.monthStart - 1)] ?? '',
+            monthEnd: months[(rule.monthEnd - 1)] ?? '',
+        });
+    }
+
+    if (rule.type === 'Yearly' && rule.month && rule.dayOfWeek && rule.weekOfMonth) {
+        return t('races.scheduleYearly', {
+            ordinal: getOrdinal(rule.weekOfMonth),
+            day: getDayName(rule.dayOfWeek),
+            month: months[(rule.month - 1)] ?? '',
+        });
+    }
+
+    if (rule.type === 'Fixed' && rule.date) {
+        return t('races.scheduleFixed', {
+            date: formatNextDate(rule.date, t),
+        });
+    }
+
+    return null;
 }
 
 function getCountdownLabel(daysUntil: number | null, t: (key: string, opts?: Record<string, unknown>) => string): string {
@@ -168,24 +214,41 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                         />
                     </Stack>
 
-                    {/* Row 3: Next date */}
+                    {/* Row 3: Schedule description */}
+                    {(() => {
+                        const desc = formatScheduleDescription(
+                            competition.scheduleRule,
+                            competition.upcomingDates?.length ?? 0,
+                            t,
+                        );
+                        return desc ? (
+                            <Typography variant="body2" sx={{ mt: 1.5, fontStyle: 'italic', color: 'text.secondary' }}>
+                                📅 {desc}
+                            </Typography>
+                        ) : null;
+                    })()}
+
+                    {/* Row 4: Next date */}
                     {competition.nextDate && (
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 2 }}>
                             <CalendarTodayIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
+                            <Typography variant="body2" color="text.secondary" sx={{ mr: 0.5 }}>
+                                {t('races.nextRace')}
+                            </Typography>
                             <Typography variant="body1" fontWeight={600}>
                                 {formatNextDate(competition.nextDate, t)}
                             </Typography>
                         </Box>
                     )}
 
-                    {/* Row 4: Description */}
+                    {/* Row 5: Description */}
                     {competition.description && (
                         <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
                             {competition.description}
                         </Typography>
                     )}
 
-                    {/* Row 5: Action buttons */}
+                    {/* Row 6: Action buttons */}
                     {(competition.registrationUrl || competition.organizerWebsite) && (
                         <Stack direction="row" spacing={1.5} sx={{ mt: 2.5 }}>
                             {competition.registrationUrl && (

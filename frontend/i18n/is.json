@@ -577,11 +577,12 @@
     },
     "races": {
         "title": "Keppni og mót",
-        "subtitle": "Komandi fjallahlaup og keppni á Íslandi",
+        "subtitle": "Komandi fjallahlaup og keppni á Íslandi. Athugið að staðfesta endanlegar dagsetningar á vefsíðu hlaupahaldara.",
         "searchPlaceholder": "Leita að keppni...",
         "noResults": "Engin keppni fannst",
         "empty": "Engin keppni enn",
         "noDate": "Dagsetning óákveðin",
+        "nextRace": "Næsta keppni:",
         "today": "🔥 Í dag!",
         "tomorrow": "Á morgun!",
         "passed": "Liðið",
@@ -602,6 +603,11 @@
         "cutoffHours": "{{count}}klst hámark",
         "dateLocale": "is",
         "months": ["janúar", "febrúar", "mars", "apríl", "maí", "júní", "júlí", "ágúst", "september", "október", "nóvember", "desember"],
-        "weekdays": ["sunnudagur", "mánudagur", "þriðjudagur", "miðvikudagur", "fimmtudagur", "föstudagur", "laugardagur"]
+        "weekdays": ["sunnudagur", "mánudagur", "þriðjudagur", "miðvikudagur", "fimmtudagur", "föstudagur", "laugardagur"],
+        "ordinals": ["", "1.", "2.", "3.", "4."],
+        "ordinalLast": "síðasta",
+        "scheduleSeasonal": "{{count}} hlaup - {{ordinal}} {{day}} í mánuði frá {{monthStart}} til {{monthEnd}}",
+        "scheduleYearly": "Haldið árlega - {{ordinal}} {{day}} í {{month}}",
+        "scheduleFixed": "Stakur viðburður: {{date}}"
     }
 }
