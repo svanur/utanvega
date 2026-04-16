@@ -5,6 +5,7 @@ export interface ScheduleRule {
     type: 'Yearly' | 'Seasonal' | 'Fixed';
     month?: number;
     weekOfMonth?: number;
+    dayOfMonth?: number;
     dayOfWeek?: string;
     monthStart?: number;
     monthEnd?: number;

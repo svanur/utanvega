@@ -14,6 +14,8 @@ import {
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
   EmojiEvents as TrophyIcon,
+  SortByAlpha as SortByAlphaIcon,
+  Schedule as ScheduleIcon,
 } from '@mui/icons-material';
 import { useCompetitions, type CompetitionDto, type ScheduleRule, type RaceDto, type CompetitionDetailDto } from '../hooks/useCompetitions';
 import { useLocations } from '../hooks/useLocations';
@@ -38,6 +40,9 @@ function formatSchedule(rule: ScheduleRule | null): string {
   if (!rule) return '—';
   if (rule.type === 'Fixed') return rule.date ?? '—';
   if (rule.type === 'Yearly') {
+    if (rule.dayOfMonth != null) {
+      return `${MONTHS[rule.month!]} ${rule.dayOfMonth}`;
+    }
     const week = rule.weekOfMonth === -1 ? 'Last' : `${rule.weekOfMonth}${ordinal(rule.weekOfMonth!)}`;
     return `${week} ${rule.dayOfWeek} in ${MONTHS[rule.month!]}`;
   }
@@ -71,6 +76,7 @@ export default function CompetitionList({ onNotify }: CompetitionListProps) {
   const [expandedDetail, setExpandedDetail] = useState<CompetitionDetailDto | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [sortBy, setSortBy] = useState<'name' | 'nextDate'>('name');
 
   // Form state
   const [name, setName] = useState('');
@@ -84,9 +90,11 @@ export default function CompetitionList({ onNotify }: CompetitionListProps) {
   const [locationId, setLocationId] = useState<string>('');
   const [status, setStatus] = useState('Active');
   const [scheduleType, setScheduleType] = useState<ScheduleRule['type']>('Yearly');
+  const [yearlyMode, setYearlyMode] = useState<'weekday' | 'date'>('weekday');
   const [scheduleMonth, setScheduleMonth] = useState(7);
   const [scheduleWeek, setScheduleWeek] = useState(2);
   const [scheduleDay, setScheduleDay] = useState('Saturday');
+  const [scheduleDayOfMonth, setScheduleDayOfMonth] = useState(1);
   const [scheduleMonthStart, setScheduleMonthStart] = useState(10);
   const [scheduleMonthEnd, setScheduleMonthEnd] = useState(3);
   const [scheduleDate, setScheduleDate] = useState('');
@@ -108,8 +116,8 @@ export default function CompetitionList({ onNotify }: CompetitionListProps) {
     setOrganizerName(''); setOrganizerWebsite(''); setRegistrationUrl('');
     setAlertMessage(''); setAlertSeverity('info');
     setLocationId(''); setStatus('Active');
-    setScheduleType('Yearly'); setScheduleMonth(7); setScheduleWeek(2);
-    setScheduleDay('Saturday'); setScheduleMonthStart(10); setScheduleMonthEnd(3);
+    setScheduleType('Yearly'); setYearlyMode('weekday'); setScheduleMonth(7); setScheduleWeek(2);
+    setScheduleDay('Saturday'); setScheduleDayOfMonth(1); setScheduleMonthStart(10); setScheduleMonthEnd(3);
     setScheduleDate(''); setScheduleSeasonalWeek(null);
   };
 
@@ -121,6 +129,9 @@ export default function CompetitionList({ onNotify }: CompetitionListProps) {
 
   const buildScheduleRule = (): ScheduleRule | null => {
     if (scheduleType === 'Yearly') {
+      if (yearlyMode === 'date') {
+        return { type: 'Yearly', month: scheduleMonth, dayOfMonth: scheduleDayOfMonth };
+      }
       return { type: 'Yearly', month: scheduleMonth, weekOfMonth: scheduleWeek, dayOfWeek: scheduleDay };
     }
     if (scheduleType === 'Seasonal') {
@@ -153,13 +164,15 @@ export default function CompetitionList({ onNotify }: CompetitionListProps) {
       setScheduleMonth(comp.scheduleRule.month ?? 7);
       setScheduleWeek(comp.scheduleRule.weekOfMonth ?? 2);
       setScheduleDay(comp.scheduleRule.dayOfWeek ?? 'Saturday');
+      setScheduleDayOfMonth(comp.scheduleRule.dayOfMonth ?? 1);
+      setYearlyMode(comp.scheduleRule.dayOfMonth != null ? 'date' : 'weekday');
       setScheduleMonthStart(comp.scheduleRule.monthStart ?? 10);
       setScheduleMonthEnd(comp.scheduleRule.monthEnd ?? 3);
       setScheduleDate(comp.scheduleRule.date ?? '');
       setScheduleSeasonalWeek(comp.scheduleRule.type === 'Seasonal' ? (comp.scheduleRule.weekOfMonth ?? null) : null);
     } else {
-      setScheduleType('Yearly'); setScheduleMonth(7); setScheduleWeek(2); setScheduleDay('Saturday');
-      setScheduleSeasonalWeek(null);
+      setScheduleType('Yearly'); setYearlyMode('weekday'); setScheduleMonth(7); setScheduleWeek(2); setScheduleDay('Saturday');
+      setScheduleDayOfMonth(1); setScheduleSeasonalWeek(null);
     }
     setShowDialog(true);
   };
@@ -301,6 +314,16 @@ export default function CompetitionList({ onNotify }: CompetitionListProps) {
 
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>;
 
+  const sortedCompetitions = [...competitions].sort((a, b) => {
+    if (sortBy === 'nextDate') {
+      if (!a.nextDate && !b.nextDate) return a.name.localeCompare(b.name);
+      if (!a.nextDate) return 1;
+      if (!b.nextDate) return -1;
+      return a.nextDate.localeCompare(b.nextDate);
+    }
+    return a.name.localeCompare(b.name);
+  });
+
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -308,6 +331,11 @@ export default function CompetitionList({ onNotify }: CompetitionListProps) {
           <TrophyIcon color="primary" />
           <Typography variant="h5">Competitions</Typography>
           <Chip label={competitions.length} size="small" color="primary" />
+          <Tooltip title={sortBy === 'name' ? 'Sort by next date' : 'Sort by name'}>
+            <IconButton size="small" onClick={() => setSortBy(s => s === 'name' ? 'nextDate' : 'name')}>
+              {sortBy === 'name' ? <SortByAlphaIcon fontSize="small" /> : <ScheduleIcon fontSize="small" />}
+            </IconButton>
+          </Tooltip>
         </Box>
         <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
           New Competition
@@ -329,7 +357,7 @@ export default function CompetitionList({ onNotify }: CompetitionListProps) {
             </TableRow>
           </TableHead>
           <TableBody>
-            {competitions.map(comp => (
+            {sortedCompetitions.map(comp => (
               <React.Fragment key={comp.id}>
                 <TableRow hover sx={{ cursor: 'pointer' }} onClick={() => toggleExpand(comp)}>
                   <TableCell>
@@ -612,29 +640,56 @@ export default function CompetitionList({ onNotify }: CompetitionListProps) {
           </FormControl>
 
           {scheduleType === 'Yearly' && (
-            <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
-              <FormControl sx={{ minWidth: 100 }}>
-                <InputLabel>Week</InputLabel>
-                <Select value={scheduleWeek} onChange={e => setScheduleWeek(Number(e.target.value))} label="Week">
-                  <MenuItem value={1}>1st</MenuItem>
-                  <MenuItem value={2}>2nd</MenuItem>
-                  <MenuItem value={3}>3rd</MenuItem>
-                  <MenuItem value={4}>4th</MenuItem>
-                  <MenuItem value={-1}>Last</MenuItem>
-                </Select>
-              </FormControl>
-              <FormControl sx={{ minWidth: 140 }}>
-                <InputLabel>Day</InputLabel>
-                <Select value={scheduleDay} onChange={e => setScheduleDay(e.target.value)} label="Day">
-                  {DAYS.map(d => <MenuItem key={d} value={d}>{d}</MenuItem>)}
-                </Select>
-              </FormControl>
-              <FormControl sx={{ minWidth: 140 }}>
-                <InputLabel>Month</InputLabel>
-                <Select value={scheduleMonth} onChange={e => setScheduleMonth(Number(e.target.value))} label="Month">
-                  {MONTHS.slice(1).map((m, i) => <MenuItem key={i + 1} value={i + 1}>{m}</MenuItem>)}
-                </Select>
-              </FormControl>
+            <Box sx={{ mt: 1 }}>
+              <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+                <Button size="small" variant={yearlyMode === 'weekday' ? 'contained' : 'outlined'} onClick={() => setYearlyMode('weekday')}>
+                  Weekday (e.g. 2nd Sat)
+                </Button>
+                <Button size="small" variant={yearlyMode === 'date' ? 'contained' : 'outlined'} onClick={() => setYearlyMode('date')}>
+                  Date (e.g. Dec 31)
+                </Button>
+              </Box>
+              {yearlyMode === 'weekday' ? (
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <FormControl sx={{ minWidth: 100 }}>
+                    <InputLabel>Week</InputLabel>
+                    <Select value={scheduleWeek} onChange={e => setScheduleWeek(Number(e.target.value))} label="Week">
+                      <MenuItem value={1}>1st</MenuItem>
+                      <MenuItem value={2}>2nd</MenuItem>
+                      <MenuItem value={3}>3rd</MenuItem>
+                      <MenuItem value={4}>4th</MenuItem>
+                      <MenuItem value={-1}>Last</MenuItem>
+                    </Select>
+                  </FormControl>
+                  <FormControl sx={{ minWidth: 140 }}>
+                    <InputLabel>Day</InputLabel>
+                    <Select value={scheduleDay} onChange={e => setScheduleDay(e.target.value)} label="Day">
+                      {DAYS.map(d => <MenuItem key={d} value={d}>{d}</MenuItem>)}
+                    </Select>
+                  </FormControl>
+                  <FormControl sx={{ minWidth: 140 }}>
+                    <InputLabel>Month</InputLabel>
+                    <Select value={scheduleMonth} onChange={e => setScheduleMonth(Number(e.target.value))} label="Month">
+                      {MONTHS.slice(1).map((m, i) => <MenuItem key={i + 1} value={i + 1}>{m}</MenuItem>)}
+                    </Select>
+                  </FormControl>
+                </Box>
+              ) : (
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <FormControl sx={{ minWidth: 140 }}>
+                    <InputLabel>Month</InputLabel>
+                    <Select value={scheduleMonth} onChange={e => setScheduleMonth(Number(e.target.value))} label="Month">
+                      {MONTHS.slice(1).map((m, i) => <MenuItem key={i + 1} value={i + 1}>{m}</MenuItem>)}
+                    </Select>
+                  </FormControl>
+                  <FormControl sx={{ minWidth: 100 }}>
+                    <InputLabel>Day</InputLabel>
+                    <Select value={scheduleDayOfMonth} onChange={e => setScheduleDayOfMonth(Number(e.target.value))} label="Day">
+                      {Array.from({ length: 31 }, (_, i) => <MenuItem key={i + 1} value={i + 1}>{i + 1}</MenuItem>)}
+                    </Select>
+                  </FormControl>
+                </Box>
+              )}
             </Box>
           )}
 

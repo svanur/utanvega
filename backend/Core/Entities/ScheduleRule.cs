@@ -18,6 +18,9 @@ public class ScheduleRule
     /// <summary>Week-of-month: 1–4, or -1 for "last". Used with DayOfWeek.</summary>
     public int? WeekOfMonth { get; set; }
 
+    /// <summary>Day of month (1-31) for yearly events on a specific calendar date (e.g. Dec 31).</summary>
+    public int? DayOfMonth { get; set; }
+
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public DayOfWeek? DayOfWeek { get; set; }
 

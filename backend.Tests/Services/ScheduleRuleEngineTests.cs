@@ -82,6 +82,108 @@ public class ScheduleRuleEngineTests
         Assert.Equal(new DateOnly(2026, 8, 29), result.Value);
     }
 
+    // ========== Yearly: Day-of-month mode ("December 31st every year") ==========
+
+    [Fact]
+    public void Yearly_DayOfMonth_Dec31_ReturnsSameYear()
+    {
+        var rule = new ScheduleRule
+        {
+            Type = ScheduleType.Yearly,
+            Month = 12,
+            DayOfMonth = 31,
+        };
+
+        var result = _engine.GetNextOccurrence(rule, new DateOnly(2026, 1, 1));
+        Assert.NotNull(result);
+        Assert.Equal(new DateOnly(2026, 12, 31), result.Value);
+    }
+
+    [Fact]
+    public void Yearly_DayOfMonth_PastThisYear_ReturnsNextYear()
+    {
+        var rule = new ScheduleRule
+        {
+            Type = ScheduleType.Yearly,
+            Month = 6,
+            DayOfMonth = 17,
+        };
+
+        // June 17 already past → next year
+        var result = _engine.GetNextOccurrence(rule, new DateOnly(2026, 7, 1));
+        Assert.NotNull(result);
+        Assert.Equal(new DateOnly(2027, 6, 17), result.Value);
+    }
+
+    [Fact]
+    public void Yearly_DayOfMonth_OnExactDate_ReturnsSameDate()
+    {
+        var rule = new ScheduleRule
+        {
+            Type = ScheduleType.Yearly,
+            Month = 12,
+            DayOfMonth = 31,
+        };
+
+        var result = _engine.GetNextOccurrence(rule, new DateOnly(2026, 12, 31));
+        Assert.Equal(new DateOnly(2026, 12, 31), result);
+    }
+
+    [Fact]
+    public void Yearly_DayOfMonth_Feb29_ClampsToFeb28InNonLeapYear()
+    {
+        var rule = new ScheduleRule
+        {
+            Type = ScheduleType.Yearly,
+            Month = 2,
+            DayOfMonth = 29,
+        };
+
+        // 2026 is not a leap year → clamp to Feb 28
+        var result = _engine.GetNextOccurrence(rule, new DateOnly(2026, 1, 1));
+        Assert.NotNull(result);
+        Assert.Equal(new DateOnly(2026, 2, 28), result.Value);
+    }
+
+    [Fact]
+    public void Yearly_DayOfMonth_Feb29_ReturnsCorrectInLeapYear()
+    {
+        var rule = new ScheduleRule
+        {
+            Type = ScheduleType.Yearly,
+            Month = 2,
+            DayOfMonth = 29,
+        };
+
+        // 2028 is a leap year
+        var result = _engine.GetNextOccurrence(rule, new DateOnly(2028, 1, 1));
+        Assert.NotNull(result);
+        Assert.Equal(new DateOnly(2028, 2, 29), result.Value);
+    }
+
+    [Fact]
+    public void OccurrencesInRange_Yearly_DayOfMonth_ReturnsMultipleYears()
+    {
+        var rule = new ScheduleRule
+        {
+            Type = ScheduleType.Yearly,
+            Month = 12,
+            DayOfMonth = 31,
+        };
+
+        var results = _engine.GetOccurrencesInRange(rule, new DateOnly(2025, 1, 1), new DateOnly(2027, 12, 31));
+        Assert.Equal(3, results.Count);
+        Assert.All(results, d => { Assert.Equal(12, d.Month); Assert.Equal(31, d.Day); });
+    }
+
+    [Fact]
+    public void Yearly_DayOfMonth_OnlyMonthSet_ReturnsNull()
+    {
+        // Month set but neither DayOfMonth nor DayOfWeek/WeekOfMonth → null
+        var rule = new ScheduleRule { Type = ScheduleType.Yearly, Month = 7 };
+        Assert.Null(_engine.GetNextOccurrence(rule, new DateOnly(2026, 1, 1)));
+    }
+
     // ========== Seasonal: "Every Thursday Oct–Mar" ==========
 
     [Fact]

@@ -74,10 +74,24 @@ public class ScheduleRuleEngine : IScheduleRuleEngine
 
     private static DateOnly? GetNextYearly(ScheduleRule rule, DateOnly fromDate)
     {
-        if (rule.Month is not { } month || rule.DayOfWeek is not { } dow || rule.WeekOfMonth is not { } week)
+        if (rule.Month is not { } month) return null;
+
+        // Day-of-month mode: "December 31st every year"
+        if (rule.DayOfMonth is { } dayOfMonth)
+        {
+            for (int y = fromDate.Year; y <= fromDate.Year + 1; y++)
+            {
+                var clampedDay = Math.Min(dayOfMonth, DateTime.DaysInMonth(y, month));
+                var date = new DateOnly(y, month, clampedDay);
+                if (date >= fromDate) return date;
+            }
+            return null;
+        }
+
+        // Weekday-in-month mode: "2nd Saturday of July"
+        if (rule.DayOfWeek is not { } dow || rule.WeekOfMonth is not { } week)
             return null;
 
-        // Try the current year first, then next year
         for (int y = fromDate.Year; y <= fromDate.Year + 1; y++)
         {
             var date = FindNthDayOfWeekInMonth(y, month, dow, week);
@@ -91,7 +105,23 @@ public class ScheduleRuleEngine : IScheduleRuleEngine
     private static List<DateOnly> GetYearlyInRange(ScheduleRule rule, DateOnly from, DateOnly to)
     {
         var results = new List<DateOnly>();
-        if (rule.Month is not { } month || rule.DayOfWeek is not { } dow || rule.WeekOfMonth is not { } week)
+        if (rule.Month is not { } month) return results;
+
+        // Day-of-month mode
+        if (rule.DayOfMonth is { } dayOfMonth)
+        {
+            for (int y = from.Year; y <= to.Year; y++)
+            {
+                var clampedDay = Math.Min(dayOfMonth, DateTime.DaysInMonth(y, month));
+                var date = new DateOnly(y, month, clampedDay);
+                if (date >= from && date <= to)
+                    results.Add(date);
+            }
+            return results;
+        }
+
+        // Weekday-in-month mode
+        if (rule.DayOfWeek is not { } dow || rule.WeekOfMonth is not { } week)
             return results;
 
         for (int y = from.Year; y <= to.Year; y++)
