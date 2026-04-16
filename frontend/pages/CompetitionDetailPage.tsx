@@ -233,7 +233,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                     {competition.alertMessage && (
                         <Alert
                             severity={(competition.alertSeverity as 'info' | 'success' | 'warning' | 'error') ?? 'info'}
-                            sx={{ mt: 2, borderRadius: 2 }}
+                            sx={{ mt: 2, borderRadius: 2, alignItems: 'center' }}
                         >
                             {competition.alertMessage}
                         </Alert>
