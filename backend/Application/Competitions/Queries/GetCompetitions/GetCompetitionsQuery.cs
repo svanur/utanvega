@@ -5,7 +5,7 @@ using Utanvega.Backend.Infrastructure.Persistence;
 
 namespace Utanvega.Backend.Application.Competitions.Queries.GetCompetitions;
 
-public record GetCompetitionsQuery(bool IncludeRetired = false) : IRequest<List<CompetitionDto>>;
+public record GetCompetitionsQuery(bool IncludeHidden = false) : IRequest<List<CompetitionDto>>;
 
 public class GetCompetitionsQueryHandler : IRequestHandler<GetCompetitionsQuery, List<CompetitionDto>>
 {
@@ -26,8 +26,8 @@ public class GetCompetitionsQueryHandler : IRequestHandler<GetCompetitionsQuery,
             .Include(c => c.Races)
             .AsQueryable();
 
-        if (!request.IncludeRetired)
-            query = query.Where(c => c.Status != Core.Entities.CompetitionStatus.Retired);
+        if (!request.IncludeHidden)
+            query = query.Where(c => c.Status != Core.Entities.CompetitionStatus.Hidden);
 
         var competitions = await query
             .OrderBy(c => c.Name)

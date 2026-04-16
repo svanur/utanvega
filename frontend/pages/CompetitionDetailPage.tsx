@@ -132,11 +132,17 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     const navigate = useNavigate();
     const theme = useTheme();
 
-    const activeRaces = useMemo(() => {
+    const visibleRaces = useMemo(() => {
         if (!competition) return [];
         return competition.races
-            .filter(r => r.status === 'Active')
-            .sort((a, b) => a.sortOrder - b.sortOrder);
+            .filter(r => r.status !== 'Hidden')
+            .sort((a, b) => {
+                // Cancelled last, then by sortOrder
+                const cancelledA = a.status === 'Cancelled' ? 1 : 0;
+                const cancelledB = b.status === 'Cancelled' ? 1 : 0;
+                if (cancelledA !== cancelledB) return cancelledA - cancelledB;
+                return a.sortOrder - b.sortOrder;
+            });
     }, [competition]);
 
     if (loading) {
@@ -188,15 +194,24 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                 >
                     {/* Row 1: Title + countdown */}
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2, flexWrap: 'wrap' }}>
-                        <Typography variant="h4" fontWeight={800} sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1, minWidth: 200 }}>
+                        <Typography variant="h4" fontWeight={800} sx={{
+                            display: 'flex', alignItems: 'center', gap: 1, flex: 1, minWidth: 200,
+                            ...(competition.status === 'Cancelled' && { textDecoration: 'line-through', opacity: 0.7 }),
+                        }}>
                             <EmojiEventsIcon sx={{ color: theme.palette.warning.main, flexShrink: 0 }} />
                             {competition.name}
                         </Typography>
-                        <Chip
-                            label={getCountdownLabel(competition.daysUntil, t)}
-                            color={getCountdownColor(competition.daysUntil)}
-                            sx={{ fontWeight: 700, fontSize: '1rem', px: 1.5, py: 0.5, height: 'auto', flexShrink: 0 }}
-                        />
+                        {competition.status === 'Cancelled' ? (
+                            <Chip label={t('races.statusCancelled')} color="error" sx={{ fontWeight: 700, fontSize: '1rem', px: 1.5, py: 0.5, height: 'auto', flexShrink: 0 }} />
+                        ) : competition.status === 'Upcoming' ? (
+                            <Chip label={t('races.statusUpcoming')} color="info" sx={{ fontWeight: 700, fontSize: '1rem', px: 1.5, py: 0.5, height: 'auto', flexShrink: 0 }} />
+                        ) : (
+                            <Chip
+                                label={getCountdownLabel(competition.daysUntil, t)}
+                                color={getCountdownColor(competition.daysUntil)}
+                                sx={{ fontWeight: 700, fontSize: '1rem', px: 1.5, py: 0.5, height: 'auto', flexShrink: 0 }}
+                            />
+                        )}
                     </Box>
 
                     {/* Row 2: Chips */}
@@ -208,7 +223,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             <Chip label={competition.organizerName} size="small" variant="outlined" />
                         )}
                         <Chip
-                            label={t('races.raceCount', { count: activeRaces.length })}
+                            label={t('races.raceCount', { count: visibleRaces.length })}
                             size="small"
                             color="primary"
                         />
@@ -224,8 +239,8 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                         </Alert>
                     )}
 
-                    {/* Row 3: Schedule description */}
-                    {(() => {
+                    {/* Row 3: Schedule description (hide for cancelled) */}
+                    {competition.status !== 'Cancelled' && (() => {
                         const desc = formatScheduleDescription(
                             competition.scheduleRule,
                             competition.upcomingDates?.length ?? 0,
@@ -238,8 +253,8 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                         ) : null;
                     })()}
 
-                    {/* Row 4: Next date */}
-                    {competition.nextDate && (
+                    {/* Row 4: Next date (hide for cancelled) */}
+                    {competition.nextDate && competition.status !== 'Cancelled' && (
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 2 }}>
                             <CalendarTodayIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
                             <Typography variant="body2" color="text.secondary" sx={{ mr: 0.5 }}>
@@ -292,18 +307,18 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                     {t('races.racesHeading')}
                 </Typography>
 
-                {activeRaces.length === 0 ? (
+                {visibleRaces.length === 0 ? (
                     <Alert severity="info">{t('races.noRaces')}</Alert>
                 ) : (
                     <Stack spacing={2}>
-                        {activeRaces.map((race: RaceDto) => (
+                        {visibleRaces.map((race: RaceDto) => (
                             <RaceCard key={race.id} race={race} t={t} />
                         ))}
                     </Stack>
                 )}
 
-                {/* Schedule section — show when there are multiple upcoming dates */}
-                {competition.upcomingDates && competition.upcomingDates.length > 1 && (
+                {/* Schedule section — show when there are multiple upcoming dates (hide for cancelled) */}
+                {competition.status !== 'Cancelled' && competition.upcomingDates && competition.upcomingDates.length > 1 && (
                     <Box sx={{ mt: 3 }}>
                         <Typography variant="h5" fontWeight={700} sx={{ mb: 1 }}>
                             {t('races.scheduleHeading')}
@@ -367,13 +382,26 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
 function RaceCard({ race, t }: { race: RaceDto; t: (key: string, opts?: Record<string, unknown>) => string }) {
     const theme = useTheme();
     return (
-        <Card variant="outlined" sx={{ borderRadius: 2 }}>
+        <Card variant="outlined" sx={{
+            borderRadius: 2,
+            ...(race.status === 'Cancelled' && { opacity: 0.6 }),
+            ...(race.status === 'Upcoming' && { borderStyle: 'dashed', borderColor: theme.palette.info.main }),
+        }}>
             <CardContent sx={{ p: { xs: 2, sm: 2.5 }, '&:last-child': { pb: { xs: 2, sm: 2.5 } } }}>
                 {/* Row 1: Name + View trail button */}
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1 }}>
-                    <Typography variant="h6" fontWeight={700} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Typography variant="h6" fontWeight={700} sx={{
+                        display: 'flex', alignItems: 'center', gap: 0.5,
+                        ...(race.status === 'Cancelled' && { textDecoration: 'line-through' }),
+                    }}>
                         <DirectionsRunIcon sx={{ fontSize: 20, color: theme.palette.primary.main }} />
                         {race.name}
+                        {race.status === 'Cancelled' && (
+                            <Chip label={t('races.statusCancelled')} size="small" color="error" sx={{ ml: 0.5, fontWeight: 600 }} />
+                        )}
+                        {race.status === 'Upcoming' && (
+                            <Chip label={t('races.statusUpcoming')} size="small" color="info" sx={{ ml: 0.5, fontWeight: 600 }} />
+                        )}
                     </Typography>
                     {race.trailSlug && (
                         <Button

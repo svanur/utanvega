@@ -4,7 +4,8 @@ public enum CompetitionStatus
 {
     Active,
     Cancelled,
-    Retired,
+    Upcoming,
+    Hidden,
 }
 
 public class Competition

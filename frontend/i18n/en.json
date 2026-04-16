@@ -608,6 +608,8 @@
         "ordinalLast": "last",
         "scheduleSeasonal": "{{count}} races, every {{ordinal}} {{day}} from {{monthStart}} to {{monthEnd}}",
         "scheduleYearly": "Held annually on the {{ordinal}} {{day}} of {{month}}",
-        "scheduleFixed": "One-off event on {{date}}"
+        "scheduleFixed": "One-off event on {{date}}",
+        "statusCancelled": "Cancelled",
+        "statusUpcoming": "Coming soon"
     }
 }

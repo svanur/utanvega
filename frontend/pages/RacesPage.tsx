@@ -64,7 +64,7 @@ export default function RacesPage({ mode, onToggleMode }: RacesPageProps) {
 
     const filtered = useMemo(() => {
         const q = search.toLowerCase().trim();
-        let result = competitions.filter(c => c.status === 'Active');
+        let result = competitions.filter(c => c.status !== 'Hidden');
 
         if (q) {
             result = result.filter(c =>
@@ -74,8 +74,12 @@ export default function RacesPage({ mode, onToggleMode }: RacesPageProps) {
             );
         }
 
-        // Sort: upcoming first (soonest nextDate), then by name
+        // Sort: Active/Upcoming first, Cancelled last; then by upcoming date, then name
         result.sort((a, b) => {
+            const cancelledA = a.status === 'Cancelled' ? 1 : 0;
+            const cancelledB = b.status === 'Cancelled' ? 1 : 0;
+            if (cancelledA !== cancelledB) return cancelledA - cancelledB;
+
             if (a.daysUntil !== null && b.daysUntil !== null) {
                 if (a.daysUntil >= 0 && b.daysUntil >= 0) return a.daysUntil - b.daysUntil;
                 if (a.daysUntil >= 0) return -1;
@@ -158,15 +162,22 @@ export default function RacesPage({ mode, onToggleMode }: RacesPageProps) {
                                         transform: 'translateY(-2px)',
                                         boxShadow: theme.shadows[4],
                                     },
+                                    ...(comp.status === 'Cancelled' && { opacity: 0.65 }),
                                 }}
                             >
                                 <CardActionArea onClick={() => navigate(`/races/${comp.slug}`)}>
                                     <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1, flexWrap: 'wrap' }}>
                                             <Box sx={{ flex: 1, minWidth: 200 }}>
-                                                <Typography variant="h6" fontWeight={700}>
+                                                <Typography variant="h6" fontWeight={700} sx={comp.status === 'Cancelled' ? { textDecoration: 'line-through' } : undefined}>
                                                     {comp.name}
                                                 </Typography>
+                                                {comp.status === 'Cancelled' && (
+                                                    <Chip label={t('races.statusCancelled')} size="small" color="error" sx={{ ml: 1, fontWeight: 600 }} />
+                                                )}
+                                                {comp.status === 'Upcoming' && (
+                                                    <Chip label={t('races.statusUpcoming')} size="small" color="info" sx={{ ml: 1, fontWeight: 600 }} />
+                                                )}
 
                                                 {/* Location + organizer */}
                                                 <Stack direction="row" spacing={1} sx={{ mt: 0.5, flexWrap: 'wrap' }}>
@@ -204,7 +215,7 @@ export default function RacesPage({ mode, onToggleMode }: RacesPageProps) {
                                                 )}
 
                                                 {/* Next date */}
-                                                {comp.nextDate && (
+                                                {comp.nextDate && comp.status !== 'Cancelled' && (
                                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1.5 }}>
                                                         <CalendarTodayIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
                                                         <Typography variant="body2" color="text.secondary" sx={{ mr: 0.5 }}>
@@ -234,20 +245,22 @@ export default function RacesPage({ mode, onToggleMode }: RacesPageProps) {
                                                 )}
                                             </Box>
 
-                                            {/* Countdown chip */}
-                                            <Chip
-                                                label={getCountdownLabel(comp.daysUntil, t)}
-                                                color={getCountdownColor(comp.daysUntil)}
-                                                size="medium"
-                                                sx={{
-                                                    fontWeight: 700,
-                                                    fontSize: '0.9rem',
-                                                    px: 1,
-                                                    bgcolor: comp.daysUntil !== null && comp.daysUntil <= 7
-                                                        ? alpha(theme.palette.error.main, 0.15)
-                                                        : undefined,
-                                                }}
-                                            />
+                                            {/* Countdown chip — hide for Cancelled/Upcoming (they have status chips in the title) */}
+                                            {comp.status !== 'Cancelled' && comp.status !== 'Upcoming' && (
+                                                <Chip
+                                                    label={getCountdownLabel(comp.daysUntil, t)}
+                                                    color={getCountdownColor(comp.daysUntil)}
+                                                    size="medium"
+                                                    sx={{
+                                                        fontWeight: 700,
+                                                        fontSize: '0.9rem',
+                                                        px: 1,
+                                                        bgcolor: comp.daysUntil !== null && comp.daysUntil <= 7
+                                                            ? alpha(theme.palette.error.main, 0.15)
+                                                            : undefined,
+                                                    }}
+                                                />
+                                            )}
                                         </Box>
                                     </CardContent>
                                 </CardActionArea>

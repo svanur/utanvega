@@ -1043,9 +1043,9 @@ app.MapDelete("/api/v1/admin/features/{id}", [Authorize] async (Guid id, Utanveg
 
 // ============ Competition Endpoints ============
 
-app.MapGet("/api/v1/competitions", async (IMediator mediator, bool includeRetired = false) =>
+app.MapGet("/api/v1/competitions", async (IMediator mediator, bool includeHidden = false) =>
 {
-    var competitions = await mediator.Send(new GetCompetitionsQuery(includeRetired));
+    var competitions = await mediator.Send(new GetCompetitionsQuery(includeHidden));
     return Results.Ok(competitions);
 })
 .WithName("GetPublicCompetitions");
@@ -1060,7 +1060,7 @@ app.MapGet("/api/v1/competitions/{slug}", async (string slug, IMediator mediator
 // Admin Competition CRUD
 app.MapGet("/api/v1/admin/competitions", [Authorize] async (IMediator mediator) =>
 {
-    var competitions = await mediator.Send(new GetCompetitionsQuery(IncludeRetired: true));
+    var competitions = await mediator.Send(new GetCompetitionsQuery(IncludeHidden: true));
     return Results.Ok(competitions);
 })
 .WithName("GetAdminCompetitions");

@@ -3,8 +3,9 @@ namespace Utanvega.Backend.Core.Entities;
 public enum RaceStatus
 {
     Active,
-    Inactive,
-    Retired,
+    Cancelled,
+    Upcoming,
+    Hidden,
 }
 
 public class Race

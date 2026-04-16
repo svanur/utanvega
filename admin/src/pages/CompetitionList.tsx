@@ -436,7 +436,7 @@ export default function CompetitionList({ onNotify }: CompetitionListProps) {
                                             <Chip
                                               label={race.status ?? 'Active'}
                                               size="small"
-                                              color={race.status === 'Active' ? 'success' : race.status === 'Retired' ? 'default' : 'info'}
+                                              color={race.status === 'Active' ? 'success' : race.status === 'Cancelled' ? 'error' : race.status === 'Upcoming' ? 'info' : 'default'}
                                             />
                                           </Box>
                                         }
@@ -593,8 +593,9 @@ export default function CompetitionList({ onNotify }: CompetitionListProps) {
               <InputLabel>Status</InputLabel>
               <Select value={status} onChange={e => setStatus(e.target.value)} label="Status">
                 <MenuItem value="Active">Active</MenuItem>
+                <MenuItem value="Upcoming">Upcoming</MenuItem>
                 <MenuItem value="Cancelled">Cancelled</MenuItem>
-                <MenuItem value="Retired">Retired</MenuItem>
+                <MenuItem value="Hidden">Hidden</MenuItem>
               </Select>
             </FormControl>
           </Box>
@@ -744,8 +745,9 @@ export default function CompetitionList({ onNotify }: CompetitionListProps) {
             <InputLabel>Race Status</InputLabel>
             <Select value={raceStatus} onChange={e => setRaceStatus(e.target.value)} label="Race Status">
               <MenuItem value="Active">Active</MenuItem>
-              <MenuItem value="Inactive">Inactive</MenuItem>
-              <MenuItem value="Retired">Retired</MenuItem>
+              <MenuItem value="Upcoming">Upcoming</MenuItem>
+              <MenuItem value="Cancelled">Cancelled</MenuItem>
+              <MenuItem value="Hidden">Hidden</MenuItem>
             </Select>
           </FormControl>
           <TextField

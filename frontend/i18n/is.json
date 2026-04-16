@@ -608,6 +608,8 @@
         "ordinalLast": "síðasta",
         "scheduleSeasonal": "{{count}} hlaup - {{ordinal}} {{day}} í mánuði frá {{monthStart}} til {{monthEnd}}",
         "scheduleYearly": "Haldið árlega - {{ordinal}} {{day}} í {{month}}",
-        "scheduleFixed": "Stakur viðburður: {{date}}"
+        "scheduleFixed": "Stakur viðburður: {{date}}",
+        "statusCancelled": "Aflýst",
+        "statusUpcoming": "Væntanlegt"
     }
 }

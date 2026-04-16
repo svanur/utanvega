@@ -390,40 +390,40 @@ public class CompetitionHandlerTests : IDisposable
     public async Task GetCompetitions_ReturnsAllActive()
     {
         var active = CreateTestCompetition("Active Comp");
-        var retired = CreateTestCompetition("Retired Comp");
-        retired.Status = CompetitionStatus.Retired;
+        var hidden = CreateTestCompetition("Hidden Comp");
+        hidden.Status = CompetitionStatus.Hidden;
 
         using (var ctx = _factory.CreateContext())
         {
-            ctx.Competitions.AddRange(active, retired);
+            ctx.Competitions.AddRange(active, hidden);
             await ctx.SaveChangesAsync();
         }
 
         using var queryCtx = _factory.CreateContext();
         var handler = new GetCompetitionsQueryHandler(queryCtx, _scheduleEngine);
-        var result = await handler.Handle(new GetCompetitionsQuery(IncludeRetired: false), CancellationToken.None);
+        var result = await handler.Handle(new GetCompetitionsQuery(IncludeHidden: false), CancellationToken.None);
 
         Assert.Single(result);
         Assert.Equal("Active Comp", result[0].Name);
     }
 
     [Fact]
-    public async Task GetCompetitions_IncludesRetired_WhenRequested()
+    public async Task GetCompetitions_IncludesHidden_WhenRequested()
     {
         var active = CreateTestCompetition("Active Comp");
-        var retired = CreateTestCompetition("Retired Comp");
-        retired.Slug = "retired-comp";
-        retired.Status = CompetitionStatus.Retired;
+        var hidden = CreateTestCompetition("Hidden Comp");
+        hidden.Slug = "hidden-comp";
+        hidden.Status = CompetitionStatus.Hidden;
 
         using (var ctx = _factory.CreateContext())
         {
-            ctx.Competitions.AddRange(active, retired);
+            ctx.Competitions.AddRange(active, hidden);
             await ctx.SaveChangesAsync();
         }
 
         using var queryCtx = _factory.CreateContext();
         var handler = new GetCompetitionsQueryHandler(queryCtx, _scheduleEngine);
-        var result = await handler.Handle(new GetCompetitionsQuery(IncludeRetired: true), CancellationToken.None);
+        var result = await handler.Handle(new GetCompetitionsQuery(IncludeHidden: true), CancellationToken.None);
 
         Assert.Equal(2, result.Count);
     }
