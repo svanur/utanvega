@@ -50,7 +50,8 @@ import {
     ChevronRight as ChevronRightIcon,
     Casino as CasinoIcon,
     Whatshot as WhatshotIcon,
-    History as HistoryIcon
+    History as HistoryIcon,
+    EmojiEvents as EmojiEventsIcon
 } from '@mui/icons-material';
 import { useTrails, ALL_ACTIVITY_TYPES, DEFAULT_FILTERS, useTrendingTrails } from '../hooks/useTrails';
 import type { SortOption, FilterState } from '../hooks/useTrails';
@@ -71,6 +72,7 @@ import TrailSlotMachine from './TrailSlotMachine';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import ListSubheader from '@mui/material/ListSubheader';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
+import { useCompetitions } from '../hooks/useCompetitions';
 import { useOfflineTrails } from '../hooks/useOfflineTrails';
 import OfflinePinIcon from '@mui/icons-material/OfflinePin';
 
@@ -105,6 +107,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
     const { tree: locationTree } = useLocationTree();
     const navigate = useNavigate();
     const { isEnabled } = useFeatureFlags();
+    const { competitions: allCompetitions } = useCompetitions();
     const { offlineSlugs, isOffline } = useOfflineTrails();
 
     // Extract preset ID from navigation state (e.g. navigating from tag page with preset)
@@ -128,11 +131,11 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
         }
     }, [searchQuery]);
     const [hidingSlugs, setHidingSlugs] = React.useState<string[]>([]);
-    const [discoveryTab, setDiscoveryTab] = React.useState<'trending' | 'recent'>('trending');
+    const [discoveryTab, setDiscoveryTab] = React.useState<'trending' | 'recent' | 'races'>('trending');
     const discoveryScrollRef = React.useRef<HTMLDivElement>(null);
     const navigatingAway = React.useRef(false);
 
-    const handleDiscoveryTabChange = (tab: 'trending' | 'recent') => {
+    const handleDiscoveryTabChange = (tab: 'trending' | 'recent' | 'races') => {
         setDiscoveryTab(tab);
         if (discoveryScrollRef.current) {
             discoveryScrollRef.current.scrollTo({ left: 0 });
@@ -159,6 +162,14 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
             })
             .filter(Boolean) as (typeof trails[0] & { viewCount: number })[];
     }, [trending, trails]);
+
+    const upcomingCompetitions = React.useMemo(() =>
+        allCompetitions
+            .filter(c => c.status === 'Active' && c.nextDate != null && (c.daysUntil ?? 999) >= 0)
+            .sort((a, b) => (a.nextDate ?? '').localeCompare(b.nextDate ?? ''))
+            .slice(0, 10),
+        [allCompetitions]
+    );
 
     // Default to 'recent' tab if user has recent views but no trending data
     React.useEffect(() => {
@@ -954,11 +965,11 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                 </Box>
             </Collapse>
 
-            {/* Discovery carousel — tabbed: Trending / Recently Viewed */}
-            {isEnabled('discovery_carousel') && (trendingTrails.length > 0 || recentTrails.length > 0) && viewMode === 'list' && !searchQuery && !filters.favoritesOnly && !tagSlug && (
+            {/* Discovery carousel — tabbed: Trending / Recently Viewed / Next Races */}
+            {isEnabled('discovery_carousel') && (trendingTrails.length > 0 || recentTrails.length > 0 || upcomingCompetitions.length > 0) && viewMode === 'list' && !searchQuery && !filters.favoritesOnly && !tagSlug && (
                 <Box mb={3}>
                     <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-                        <Box display="flex" gap={0.5}>
+                        <Box display="flex" gap={0.5} flexWrap="wrap">
                             {trendingTrails.length > 0 && (
                                 <Chip
                                     icon={<WhatshotIcon />}
@@ -978,6 +989,17 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                                     variant={discoveryTab === 'recent' ? 'filled' : 'outlined'}
                                     color={discoveryTab === 'recent' ? 'primary' : 'default'}
                                     onClick={() => handleDiscoveryTabChange('recent')}
+                                    sx={{ cursor: 'pointer' }}
+                                />
+                            )}
+                            {isEnabled('races_page') && upcomingCompetitions.length > 0 && (
+                                <Chip
+                                    icon={<EmojiEventsIcon />}
+                                    label={t('home.nextRaces')}
+                                    size="small"
+                                    variant={discoveryTab === 'races' ? 'filled' : 'outlined'}
+                                    color={discoveryTab === 'races' ? 'success' : 'default'}
+                                    onClick={() => handleDiscoveryTabChange('races')}
                                     sx={{ cursor: 'pointer' }}
                                 />
                             )}
@@ -1026,6 +1048,52 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                             <Box key={trail.slug} sx={{ minWidth: 200, maxWidth: 240, height: 140, display: 'flex', scrollSnapAlign: 'start' }}>
                                 <TrailCard trail={trail} compact disableGestures />
                             </Box>
+                        ))}
+                        {discoveryTab === 'races' && upcomingCompetitions.map(comp => (
+                            <Card
+                                key={comp.id}
+                                onClick={() => navigate(`/races/${comp.slug}`)}
+                                sx={{
+                                    minWidth: 200,
+                                    maxWidth: 260,
+                                    scrollSnapAlign: 'start',
+                                    cursor: 'pointer',
+                                    flexShrink: 0,
+                                    transition: 'transform 0.15s',
+                                    '&:hover': { transform: 'translateY(-2px)' },
+                                }}
+                            >
+                                <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
+                                    <Typography variant="subtitle2" noWrap fontWeight="bold">
+                                        {comp.name}
+                                    </Typography>
+                                    {comp.locationName && (
+                                        <Typography variant="caption" color="text.secondary" noWrap>
+                                            📍 {comp.locationName}
+                                        </Typography>
+                                    )}
+                                    <Box display="flex" gap={0.5} mt={0.5} flexWrap="wrap">
+                                        {comp.daysUntil != null && comp.daysUntil >= 0 && (
+                                            <Chip
+                                                label={comp.daysUntil === 0
+                                                    ? t('races.today')
+                                                    : t('races.daysUntil', { count: comp.daysUntil })}
+                                                size="small"
+                                                color="success"
+                                                sx={{ fontSize: '0.65rem', height: 20 }}
+                                            />
+                                        )}
+                                        {comp.raceCount > 0 && (
+                                            <Chip
+                                                label={t('races.raceCount', { count: comp.raceCount })}
+                                                size="small"
+                                                variant="outlined"
+                                                sx={{ fontSize: '0.65rem', height: 20 }}
+                                            />
+                                        )}
+                                    </Box>
+                                </CardContent>
+                            </Card>
                         ))}
                     </Box>
                 </Box>

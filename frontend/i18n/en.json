@@ -25,6 +25,7 @@
         "allTrails": "Trails",
         "recentlyViewed": "Recently Viewed",
         "trendingTrails": "Trending 🔥",
+        "nextRaces": "Next Races 🏆",
         "views": "{{count}} views",
         "trailMap": "Trail Map",
         "trailsTagged": "Trails tagged: {{tags}}",
