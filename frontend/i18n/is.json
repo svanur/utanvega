@@ -59,6 +59,7 @@
         "loadingMap": "Hleð korti...",
         "noGpsData": "Engin GPS gögn tiltæk fyrir þessa leið.",
         "wereYouLookingFor": "Varstu kannski að leita að einni af þessum?",
+        "partOfRace": "Hluti af {{competition}} ({{race}})",
         "role": {
             "Start": "Upphaf",
             "End": "Endir",

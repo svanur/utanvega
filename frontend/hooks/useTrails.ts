@@ -14,6 +14,14 @@ export interface TagInfo {
     color: string | null;
 }
 
+export interface LinkedRace {
+    competitionName: string;
+    competitionSlug: string;
+    raceName: string;
+    distanceLabel: string | null;
+    daysUntil: number | null;
+}
+
 export interface Trail {
     id: string;
     name: string;
@@ -31,6 +39,7 @@ export interface Trail {
     locations: LocationInfo[];
     tags?: TagInfo[];
     viewCount?: number;
+    linkedRaces?: LinkedRace[];
     distanceToUser?: number; // in kilometers
 }
 

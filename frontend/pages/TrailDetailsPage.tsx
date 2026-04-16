@@ -344,6 +344,48 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                         )}
                     </Stack>
 
+                    {/* Linked races banner */}
+                    {trail.linkedRaces && trail.linkedRaces.length > 0 && isEnabled('races_page') && (
+                        <Box sx={{ mb: 2 }}>
+                            {trail.linkedRaces.map((race, i) => (
+                                <Paper
+                                    key={i}
+                                    component={RouterLink}
+                                    to={`/races/${race.competitionSlug}`}
+                                    elevation={0}
+                                    sx={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 1,
+                                        px: 2,
+                                        py: 1,
+                                        mb: 0.5,
+                                        borderRadius: 2,
+                                        bgcolor: 'action.hover',
+                                        textDecoration: 'none',
+                                        color: 'inherit',
+                                        transition: 'background-color 0.2s',
+                                        '&:hover': { bgcolor: 'action.selected' },
+                                    }}
+                                >
+                                    <Typography variant="body2" sx={{ flexGrow: 1 }}>
+                                        🏆 {t('trail.partOfRace', { competition: race.competitionName, race: race.distanceLabel || race.raceName })}
+                                    </Typography>
+                                    {race.daysUntil != null && race.daysUntil >= 0 && (
+                                        <Chip
+                                            label={race.daysUntil === 0
+                                                ? t('races.today')
+                                                : t('races.daysUntil', { count: race.daysUntil })}
+                                            size="small"
+                                            color="success"
+                                            sx={{ fontSize: '0.7rem', height: 22 }}
+                                        />
+                                    )}
+                                </Paper>
+                            ))}
+                        </Box>
+                    )}
+
                     {trail.description && (
                         <Typography variant="body1" color="text.secondary" sx={{ mb: 2, lineHeight: 1.7 }}>
                             {trail.description}

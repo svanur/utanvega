@@ -12,6 +12,14 @@ public record LocationInfoDto(Guid Id, string Name, string Slug, int Order, stri
 
 public record TagInfoDto(string Name, string Slug, string? Color);
 
+public record LinkedRaceDto(
+    string CompetitionName,
+    string CompetitionSlug,
+    string RaceName,
+    string? DistanceLabel,
+    int? DaysUntil
+);
+
 public record TrailDto(
     Guid Id,
     string Name,
@@ -28,7 +36,8 @@ public record TrailDto(
     double? StartLongitude,
     List<LocationInfoDto> Locations,
     List<TagInfoDto> Tags,
-    int ViewCount = 0
+    int ViewCount = 0,
+    List<LinkedRaceDto>? LinkedRaces = null
 );
 
 public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailDto>>
