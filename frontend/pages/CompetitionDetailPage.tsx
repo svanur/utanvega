@@ -32,8 +32,11 @@ import TerrainIcon from '@mui/icons-material/Terrain';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
 import Layout from '../components/Layout';
 import RunningLoader from '../components/RunningLoader';
+import WeatherCard from '../components/WeatherCard';
 import { useCompetitionBySlug } from '../hooks/useCompetitions';
 import type { RaceDto, ScheduleRule } from '../hooks/useCompetitions';
+import { useTrailWeather } from '../hooks/useTrails';
+import { useFeatureFlags } from '../hooks/useFeatureFlags';
 
 type CompetitionDetailPageProps = {
     mode: PaletteMode;
@@ -131,6 +134,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     const { competition, loading, error } = useCompetitionBySlug(slug);
     const navigate = useNavigate();
     const theme = useTheme();
+    const { isEnabled } = useFeatureFlags();
 
     const visibleRaces = useMemo(() => {
         if (!competition) return [];
@@ -144,6 +148,15 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                 return a.sortOrder - b.sortOrder;
             });
     }, [competition]);
+
+    // Show weather when race is within 7 days and a trail is linked
+    const weatherTrailSlug = useMemo(() => {
+        if (!competition || competition.daysUntil === null || competition.daysUntil > 7 || competition.daysUntil < 0) return undefined;
+        const primary = visibleRaces.find(r => r.trailSlug);
+        return primary?.trailSlug ?? undefined;
+    }, [competition, visibleRaces]);
+
+    const { weather, loading: weatherLoading, error: weatherError } = useTrailWeather(weatherTrailSlug);
 
     if (loading) {
         return (
@@ -372,6 +385,16 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 })}
                             </List>
                         </Paper>
+                    </Box>
+                )}
+
+                {/* Race day weather (only when within 7 days and trail linked) */}
+                {isEnabled('weather_forecast') && weatherTrailSlug && (
+                    <Box sx={{ mt: 3 }}>
+                        <Typography variant="h5" fontWeight={700} sx={{ mb: 1 }}>
+                            {t('races.raceDayWeather')}
+                        </Typography>
+                        <WeatherCard weather={weather} loading={weatherLoading} error={weatherError} />
                     </Box>
                 )}
             </Container>

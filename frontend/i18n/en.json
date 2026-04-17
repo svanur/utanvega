@@ -612,7 +612,8 @@
         "scheduleYearly": "Held annually on the {{ordinal}} {{day}} of {{month}}",
         "scheduleFixed": "One-off event on {{date}}",
         "statusCancelled": "Cancelled",
-        "statusUpcoming": "Coming soon"
+        "statusUpcoming": "Coming soon",
+        "raceDayWeather": "Race Day Weather"
     },
     "calendar": {
         "title": "Race Calendar",

@@ -612,7 +612,8 @@
         "scheduleYearly": "Haldið árlega - {{ordinal}} {{day}} í {{month}}",
         "scheduleFixed": "Stakur viðburður: {{date}}",
         "statusCancelled": "Aflýst",
-        "statusUpcoming": "Væntanlegt"
+        "statusUpcoming": "Væntanlegt",
+        "raceDayWeather": "Veður á keppnisdegi"
     },
     "calendar": {
         "title": "Keppnisdagatal",
