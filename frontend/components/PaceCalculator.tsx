@@ -437,6 +437,14 @@ export default function PaceCalculator() {
                             ),
                         }}
                     />
+                    <TimeSlider
+                        value={timeStr}
+                        onChange={handleTimeChange}
+                        min={dist ? Math.max(60, Math.round(dist * 2.5 * 60)) : 300}
+                        max={dist ? Math.round(dist * 12 * 60) : 43200}
+                        step={dist && dist <= 10 ? 5 : 15}
+                        parseTime={parseTime}
+                    />
                 </Box>
             </Paper>
 
@@ -514,6 +522,25 @@ export default function PaceCalculator() {
                                 bgcolor: 'action.hover', borderRadius: 1, p: 1.5,
                                 display: 'flex', flexDirection: 'column', gap: 0.5,
                             }}>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                                    {selectedTrail
+                                        ? t('tools.paceCalc.adjustedSummaryTrail', {
+                                            trail: selectedTrail.name,
+                                            terrain: t(`tools.paceCalc.terrains.${terrain}`).toLowerCase(),
+                                            elevation: elevGainStr || '0',
+                                            elevUnit: unit === 'mi' ? 'ft' : 'm',
+                                            time: trailAdjusted.adjustedTime,
+                                            pace: trailAdjusted.adjustedPace,
+                                        })
+                                        : t('tools.paceCalc.adjustedSummary', {
+                                            terrain: t(`tools.paceCalc.terrains.${terrain}`).toLowerCase(),
+                                            elevation: elevGainStr || '0',
+                                            elevUnit: unit === 'mi' ? 'ft' : 'm',
+                                            time: trailAdjusted.adjustedTime,
+                                            pace: trailAdjusted.adjustedPace,
+                                        })
+                                    }
+                                </Typography>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <Typography variant="body2" color="text.secondary">
                                         {t('tools.paceCalc.adjustedTime')}

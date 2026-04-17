@@ -529,6 +529,8 @@
             "elevGain": "Elevation Gain ({{unit}})",
             "adjustedTime": "Adjusted Time",
             "adjustedPace": "Adjusted Pace",
+            "adjustedSummary": "On {{terrain}} terrain with ↑{{elevation}}{{elevUnit}} climbing, your adjusted time is {{time}} at {{pace}}/km.",
+            "adjustedSummaryTrail": "On {{trail}} ({{terrain}}, ↑{{elevation}}{{elevUnit}}), your adjusted time is {{time}} at {{pace}}/km.",
             "terrainLabel": "terrain",
             "climbLabel": "climb",
             "pickTrail": "Pick a trail",

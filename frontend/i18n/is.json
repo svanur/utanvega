@@ -529,6 +529,8 @@
             "elevGain": "Hækkun ({{unit}})",
             "adjustedTime": "Leiðréttur tími",
             "adjustedPace": "Leiðréttur hraði",
+            "adjustedSummary": "Á {{terrain}} yfirborði með ↑{{elevation}}{{elevUnit}} hækkun, er leiðréttur tími {{time}} á {{pace}}/km.",
+            "adjustedSummaryTrail": "Á {{trail}} ({{terrain}}, ↑{{elevation}}{{elevUnit}}), er leiðréttur tími {{time}} á {{pace}}/km.",
             "terrainLabel": "yfirborð",
             "climbLabel": "klifur",
             "pickTrail": "Veldu leið(ef þú vilt)",
