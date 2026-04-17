@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { Box, TextField, Typography, Paper, InputAdornment, IconButton, useTheme, Slider, Button, Dialog, AppBar, Toolbar } from '@mui/material';
 import { KeyboardArrowUp, KeyboardArrowDown, PrintOutlined, FullscreenOutlined, CloseOutlined } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 
 function parseTime(val: string): number | null {
     const trimmed = val.trim();
@@ -61,9 +62,32 @@ function predictTime(oneKmTime: number, targetKm: number): number {
 export default function PaceChart() {
     const { t } = useTranslation();
     const theme = useTheme();
-    const [searchStr, setSearchStr] = useState('');
+    const [searchParams, setSearchParams] = useSearchParams();
+    const [searchStr, setSearchStr] = useState(() => {
+        const p = searchParams.get('p');
+        return p ? p.replace(/-/g, ':') : '';
+    });
     const [fullscreen, setFullscreen] = useState(false);
     const highlightRef = useRef<HTMLTableRowElement>(null);
+
+    // Sync search string to URL param (use - instead of : to avoid encoding)
+    useEffect(() => {
+        const urlVal = searchStr.replace(/:/g, '-');
+        const current = searchParams.get('p') || '';
+        if (searchStr && urlVal !== current) {
+            setSearchParams(prev => {
+                const next = new URLSearchParams(prev);
+                next.set('p', urlVal);
+                return next;
+            }, { replace: true });
+        } else if (!searchStr && current) {
+            setSearchParams(prev => {
+                const next = new URLSearchParams(prev);
+                next.delete('p');
+                return next;
+            }, { replace: true });
+        }
+    }, [searchStr, searchParams, setSearchParams]);
 
     // Find the closest row to the search input
     const highlightIndex = useMemo(() => {
@@ -195,7 +219,7 @@ h2{margin:0 0 12px;font-size:16px}</style></head><body>
                         onChange={handleSliderChange}
                         min={120}
                         max={540}
-                        step={5}
+                        step={15}
                         valueLabelDisplay="auto"
                         valueLabelFormat={formatSliderLabel}
                         marks={sliderMarks}
@@ -346,7 +370,7 @@ h2{margin:0 0 12px;font-size:16px}</style></head><body>
                                 onChange={handleSliderChange}
                                 min={120}
                                 max={540}
-                                step={5}
+                                step={15}
                                 valueLabelDisplay="auto"
                                 valueLabelFormat={formatSliderLabel}
                                 marks={sliderMarks}
