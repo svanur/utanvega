@@ -107,7 +107,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
     const { tree: locationTree } = useLocationTree();
     const navigate = useNavigate();
     const { isEnabled } = useFeatureFlags();
-    const { competitions: allCompetitions } = useCompetitions();
+    const { competitions: allCompetitions, loading: competitionsLoading } = useCompetitions();
     const { offlineSlugs, isOffline } = useOfflineTrails();
 
     // Extract preset ID from navigation state (e.g. navigating from tag page with preset)
@@ -1049,7 +1049,17 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                                 <TrailCard trail={trail} compact disableGestures />
                             </Box>
                         ))}
-                        {discoveryTab === 'races' && upcomingCompetitions.map(comp => (
+                        {discoveryTab === 'races' && competitionsLoading && (
+                            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', py: 2 }}>
+                                <CircularProgress size={24} color="success" />
+                            </Box>
+                        )}
+                        {discoveryTab === 'races' && !competitionsLoading && upcomingCompetitions.length === 0 && (
+                            <Typography variant="body2" color="text.secondary" sx={{ py: 2, width: '100%', textAlign: 'center' }}>
+                                {t('races.noUpcoming')}
+                            </Typography>
+                        )}
+                        {discoveryTab === 'races' && !competitionsLoading && upcomingCompetitions.map(comp => (
                             <Card
                                 key={comp.id}
                                 onClick={() => navigate(`/races/${comp.slug}`)}
@@ -1079,7 +1089,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                                                     ? t('races.today')
                                                     : t('races.daysUntil', { count: comp.daysUntil })}
                                                 size="small"
-                                                color="success"
+                                                color={comp.daysUntil <= 7 ? 'error' : comp.daysUntil <= 30 ? 'warning' : 'success'}
                                                 sx={{ fontSize: '0.65rem', height: 20 }}
                                             />
                                         )}

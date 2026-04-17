@@ -288,7 +288,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
 
                     {/* Row 6: Action buttons */}
                     {(competition.registrationUrl || competition.organizerWebsite) && (
-                        <Stack direction="row" spacing={1.5} sx={{ mt: 2.5 }}>
+                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mt: 2.5 }}>
                             {competition.registrationUrl && (
                                 <Button
                                     variant="contained"
@@ -325,7 +325,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                 ) : (
                     <Stack spacing={2}>
                         {visibleRaces.map((race: RaceDto) => (
-                            <RaceCard key={race.id} race={race} t={t} />
+                            <RaceCard key={race.id} race={race} t={t} showPredict={isEnabled('tool_trail_predictor')} />
                         ))}
                     </Stack>
                 )}
@@ -402,7 +402,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     );
 }
 
-function RaceCard({ race, t }: { race: RaceDto; t: (key: string, opts?: Record<string, unknown>) => string }) {
+function RaceCard({ race, t, showPredict }: { race: RaceDto; t: (key: string, opts?: Record<string, unknown>) => string; showPredict?: boolean }) {
     const theme = useTheme();
     return (
         <Card variant="outlined" sx={{
@@ -426,17 +426,30 @@ function RaceCard({ race, t }: { race: RaceDto; t: (key: string, opts?: Record<s
                             <Chip label={t('races.statusUpcoming')} size="small" color="info" sx={{ ml: 0.5, fontWeight: 600 }} />
                         )}
                     </Typography>
-                    {race.trailSlug && (
-                        <Button
-                            component={RouterLink}
-                            to={`/trails/${race.trailSlug}`}
-                            size="small"
-                            variant="outlined"
-                            sx={{ textTransform: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}
-                        >
-                            {ACTIVITY_ICONS[race.trailSlug ? 'TrailRunning' : ''] ?? '🗺️'} {t('races.viewTrail')}
-                        </Button>
-                    )}
+                    <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0 }}>
+                        {race.trailSlug && showPredict && (
+                            <Button
+                                component={RouterLink}
+                                to={`/tools/trail-predictor?trail=${encodeURIComponent(race.trailSlug)}`}
+                                size="small"
+                                variant="text"
+                                sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: 'auto' }}
+                            >
+                                🔮 {t('races.predict')}
+                            </Button>
+                        )}
+                        {race.trailSlug && (
+                            <Button
+                                component={RouterLink}
+                                to={`/trails/${race.trailSlug}`}
+                                size="small"
+                                variant="outlined"
+                                sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}
+                            >
+                                {ACTIVITY_ICONS[race.trailSlug ? 'TrailRunning' : ''] ?? '🗺️'} {t('races.viewTrail')}
+                            </Button>
+                        )}
+                    </Stack>
                 </Box>
 
                 {/* Row 2: Chips */}

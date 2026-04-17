@@ -566,7 +566,8 @@
             "difference": "Difference",
             "flatPace": "Flat equivalent pace",
             "comparison": "Trail difference",
-            "method": "Grade-adjusted prediction using Riegel's formula + Naismith's rule"
+            "method": "Grade-adjusted prediction using Riegel's formula + Naismith's rule",
+            "loadError": "Failed to load trails. Please try again."
         },
         "paceChart": {
             "title": "Pace Chart",
@@ -613,11 +614,14 @@
         "scheduleFixed": "One-off event on {{date}}",
         "statusCancelled": "Cancelled",
         "statusUpcoming": "Coming soon",
-        "raceDayWeather": "Race Day Weather"
+        "raceDayWeather": "Race Day Weather",
+        "predict": "Predict",
+        "noUpcoming": "No upcoming races"
     },
     "calendar": {
         "title": "Race Calendar",
         "today": "Today",
+        "noEvents": "No events this month",
         "eventCount_one": "{{count}} event this month",
         "eventCount_other": "{{count}} events this month",
         "eventCount": "{{count}} events this month"

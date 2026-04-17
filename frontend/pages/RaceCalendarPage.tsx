@@ -119,7 +119,7 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
             <Container maxWidth="sm" sx={{ py: 3 }}>
                 {/* Header */}
                 <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-                    <IconButton onClick={() => navigate('/races')} size="small">
+                    <IconButton onClick={() => navigate('/races')} sx={{ minWidth: 44, minHeight: 44 }}>
                         <ArrowBackIcon />
                     </IconButton>
                     <EmojiEventsIcon sx={{ color: theme.palette.warning.main }} />
@@ -137,11 +137,11 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
 
                 {/* Month navigation */}
                 <Stack direction="row" alignItems="center" justifyContent="center" spacing={1} sx={{ mb: 2 }}>
-                    <IconButton onClick={prevMonth} size="small"><ChevronLeftIcon /></IconButton>
-                    <Typography variant="h6" fontWeight={600} sx={{ minWidth: 180, textAlign: 'center' }}>
+                    <IconButton onClick={prevMonth} sx={{ minWidth: 44, minHeight: 44 }}><ChevronLeftIcon /></IconButton>
+                    <Typography variant="h6" fontWeight={600} sx={{ minWidth: { xs: 140, sm: 180 }, textAlign: 'center' }}>
                         {months[month]} {year}
                     </Typography>
-                    <IconButton onClick={nextMonth} size="small"><ChevronRightIcon /></IconButton>
+                    <IconButton onClick={nextMonth} sx={{ minWidth: 44, minHeight: 44 }}><ChevronRightIcon /></IconButton>
                 </Stack>
 
                 {loading && <RunningLoader />}
@@ -179,7 +179,18 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
                                     <Box
                                         key={i}
                                         ref={todayCell ? todayRef : undefined}
+                                        role={hasEvents ? 'button' : undefined}
+                                        tabIndex={hasEvents ? 0 : undefined}
                                         onClick={(e) => day !== null && hasEvents && handleDayClick(day, e)}
+                                        onKeyDown={(e) => {
+                                            if (hasEvents && day !== null && (e.key === 'Enter' || e.key === ' ')) {
+                                                e.preventDefault();
+                                                handleDayClick(day, e as unknown as React.MouseEvent<HTMLElement>);
+                                            }
+                                        }}
+                                        aria-label={day !== null ? (hasEvents
+                                            ? `${day}. ${months[month]}, ${eventCount} ${eventCount === 1 ? 'event' : 'events'}`
+                                            : `${day}. ${months[month]}`) : undefined}
                                         sx={{
                                             position: 'relative',
                                             minHeight: { xs: 48, sm: 64 },
@@ -243,10 +254,15 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
                     </Paper>
                 )}
 
-                {/* Event count summary */}
+                {/* Event count summary or empty state */}
                 {!loading && days.length > 0 && (
                     <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
                         {t('calendar.eventCount', { count: days.reduce((sum, d) => sum + d.events.length, 0) })}
+                    </Typography>
+                )}
+                {!loading && days.length === 0 && (
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
+                        {t('calendar.noEvents')}
                     </Typography>
                 )}
 

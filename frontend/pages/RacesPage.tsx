@@ -117,7 +117,7 @@ export default function RacesPage({ mode, onToggleMode }: RacesPageProps) {
             <Container maxWidth="md" sx={{ py: 3 }}>
                 {/* Header */}
                 <Box sx={{ mb: 3 }}>
-                    <Stack direction="row" alignItems="center" justifyContent="space-between">
+                    <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
                         <Typography variant="h4" fontWeight={800} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <EmojiEventsIcon sx={{ fontSize: 32, color: theme.palette.warning.main }} />
                             {t('races.title')}

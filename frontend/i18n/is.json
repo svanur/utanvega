@@ -566,7 +566,8 @@
             "difference": "Mismunur",
             "flatPace": "Jafngildur hraði á sléttu",
             "comparison": "Munur á stígum",
-            "method": "Hæðarleiðrétt spá með formúlu Riegels + reglu Naismithrs"
+            "method": "Hæðarleiðrétt spá með formúlu Riegels + reglu Naismithrs",
+            "loadError": "Ekki tókst að sækja leiðir. Reyndu aftur."
         },
         "paceChart": {
             "title": "Hraðatafla",
@@ -613,11 +614,14 @@
         "scheduleFixed": "Stakur viðburður: {{date}}",
         "statusCancelled": "Aflýst",
         "statusUpcoming": "Væntanlegt",
-        "raceDayWeather": "Veður á keppnisdegi"
+        "raceDayWeather": "Veður á keppnisdegi",
+        "predict": "Spá",
+        "noUpcoming": "Engar keppnir framundan"
     },
     "calendar": {
         "title": "Keppnisdagatal",
         "today": "Í dag",
+        "noEvents": "Engir viðburðir í þessum mánuði",
         "eventCount_one": "{{count}} viðburður í þessum mánuði",
         "eventCount_other": "{{count}} viðburðir í þessum mánuði",
         "eventCount": "{{count}} viðburðir í þessum mánuði"

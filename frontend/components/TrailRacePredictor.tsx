@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Box, TextField, Typography, Paper, Autocomplete, InputAdornment, IconButton, Divider, Table, TableBody, TableRow, TableCell } from '@mui/material';
+import { Box, TextField, Typography, Paper, Autocomplete, InputAdornment, IconButton, Divider, Table, TableBody, TableRow, TableCell, Alert } from '@mui/material';
 import { KeyboardArrowUp, KeyboardArrowDown, CompareArrows } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { API_URL } from '../hooks/useTrails';
@@ -44,10 +44,11 @@ const CLIMB_FACTOR = 0.5;
 // Riegel's fatigue exponent
 const RIEGEL_EXP = 1.06;
 
-export default function TrailRacePredictor() {
+export default function TrailRacePredictor({ prefilledTrailSlug }: { prefilledTrailSlug?: string }) {
     const { t } = useTranslation();
 
     const [trails, setTrails] = useState<TrailOption[]>([]);
+    const [trailsError, setTrailsError] = useState(false);
     const [trailA, setTrailA] = useState<TrailOption | null>(null);
     const [trailB, setTrailB] = useState<TrailOption | null>(null);
     const [timeStr, setTimeStr] = useState('');
@@ -56,15 +57,29 @@ export default function TrailRacePredictor() {
         fetch(`${API_URL}/api/v1/trails`)
             .then(r => r.json())
             .then((data: { name: string; length: number; elevationGain: number; status: string }[]) => {
-                setTrails(
-                    data
-                        .filter(t => t.status === 'Published')
-                        .map(t => ({ name: t.name, distance: t.length / 1000, elevationGain: t.elevationGain }))
-                        .sort((a, b) => a.name.localeCompare(b.name))
-                );
+                const mapped = data
+                    .filter(t => t.status === 'Published')
+                    .map(t => ({ name: t.name, distance: t.length / 1000, elevationGain: t.elevationGain }))
+                    .sort((a, b) => a.name.localeCompare(b.name));
+                setTrails(mapped);
+                setTrailsError(false);
+            })
+            .catch(() => setTrailsError(true));
+    }, []);
+
+    // Auto-select Trail B when prefilledTrailSlug matches
+    useEffect(() => {
+        if (!prefilledTrailSlug || trails.length === 0) return;
+        // Match by slug-like name comparison (trails don't have slug, match by name)
+        fetch(`${API_URL}/api/v1/trails/${encodeURIComponent(prefilledTrailSlug)}`)
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (!data) return;
+                const match = trails.find(t => t.name === data.name);
+                if (match && !trailB) setTrailB(match);
             })
             .catch(() => {});
-    }, []);
+    }, [prefilledTrailSlug, trails]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const stepTime = (direction: 1 | -1) => {
         const current = parseTime(timeStr) ?? 60;
@@ -109,6 +124,11 @@ export default function TrailRacePredictor() {
     return (
         <Box sx={{ maxWidth: 480, mx: 'auto' }}>
             <Paper sx={{ p: 3 }}>
+                {trailsError && (
+                    <Alert severity="error" sx={{ mb: 2 }}>
+                        {t('tools.trailPredictor.loadError')}
+                    </Alert>
+                )}
                 <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
                     {t('tools.trailPredictor.subtitle')}
                 </Typography>
