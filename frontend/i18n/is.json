@@ -590,21 +590,21 @@
             "fullscreen": "Fylla skjáinn"
         },
         "trainingPaces": {
-            "title": "Æfingahraðar",
+            "title": "Æfingahraði",
             "subtitle": "Sláðu inn nýlegan keppnistíma til að reikna æfingasvæðin þín út frá VDOT líkamsástandi",
             "raceDistance": "Keppnisvegalengd",
-            "yourTime": "Tíminn þinn á {{race}}",
+            "yourTime": "Tíminn þinn í {{race}}",
             "timeHelp": "t.d. 22:00 fyrir 5 km eða 1:45:00 fyrir hálfmaraþon",
             "zonesTitle": "Æfingasvæði",
-            "summaryText": "Miðað við {{race}} tíma {{time}} er VDOT þitt {{vdot}}. Hér eru ráðlagðir æfingahraðar:",
-            "equivalents": "Samsvarandi keppnistímar",
+            "summaryText": "Miðað við {{race}} tíma {{time}} er VDOT þitt {{vdot}}. Hér er ráðlagður æfingahraði:",
+            "equivalents": "Samsvarandi keppnistími",
             "method": "Byggt á VDOT formúlu Jack Daniels — áætlun, leiðréttið eftir aðstæðum.",
             "copy": "Afrita",
             "copied": "Afritað!",
             "zones": {
-                "easy": "Létt / bati",
+                "easy": "Létt / endurheimt",
                 "marathon": "Maraþon",
-                "threshold": "Þröskuld / tempo",
+                "threshold": "Þröskuldshraði / tempo",
                 "interval": "Interval (VO₂max)",
                 "repetition": "Hraðaæfingar"
             },
