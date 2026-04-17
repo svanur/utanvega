@@ -3,7 +3,7 @@ import { Box, Button, Container, Typography, Paper, useTheme, useMediaQuery, Fad
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import confetti from 'canvas-confetti';
-import HikingIcon from '@mui/icons-material/Hiking';
+import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
 import PlaceIcon from '@mui/icons-material/Place';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import BuildIcon from '@mui/icons-material/Build';
@@ -13,7 +13,6 @@ import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
 import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined';
 import StraightenIcon from '@mui/icons-material/Straighten';
 import TerrainIcon from '@mui/icons-material/Terrain';
-import LanguageToggle from '../components/LanguageToggle';
 import { API_URL } from '../hooks/useTrails';
 import type { PaletteMode } from '@mui/material';
 
@@ -92,16 +91,18 @@ function useWelcomeStats() {
     return stats;
 }
 
-function StatItem({ icon, value, label, started }: { icon: React.ReactNode; value: number; label: string; started: boolean }) {
+function StatItem({ icon, value, label, started, delay }: { icon: React.ReactNode; value: number; label: string; started: boolean; delay: number }) {
     const display = useCountUp(value, 1800, started);
     return (
-        <Box sx={{ textAlign: 'center', flex: '1 1 0', minWidth: 80 }}>
-            <Box sx={{ mb: 0.5, color: 'primary.main', '& .MuiSvgIcon-root': { fontSize: 28 } }}>{icon}</Box>
-            <Typography variant="h4" fontWeight={800} sx={{ lineHeight: 1.1 }}>
-                {display.toLocaleString()}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">{label}</Typography>
-        </Box>
+        <Fade in={started} timeout={600} style={{ transitionDelay: `${delay}ms` }}>
+            <Box sx={{ textAlign: 'center', flex: '1 1 0', minWidth: 80 }}>
+                <Box sx={{ mb: 0.5, color: 'primary.main', '& .MuiSvgIcon-root': { fontSize: 28 } }}>{icon}</Box>
+                <Typography variant="h4" fontWeight={800} sx={{ lineHeight: 1.1 }}>
+                    {display.toLocaleString()}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">{label}</Typography>
+            </Box>
+        </Fade>
     );
 }
 
@@ -109,34 +110,51 @@ function StatsBar({ stats }: { stats: StatsData }) {
     const ref = useRef<HTMLDivElement>(null);
     const visible = useOnScreen(ref, 0.3);
     const { t } = useTranslation();
+    const theme = useTheme();
 
     return (
         <Box ref={ref} sx={{ py: 6 }}>
             <Fade in={visible} timeout={800}>
-                <Paper
-                    elevation={0}
+                <Box
                     sx={{
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        justifyContent: 'center',
-                        gap: { xs: 3, sm: 4 },
-                        py: 4,
-                        px: 2,
-                        border: '1px solid',
-                        borderColor: 'divider',
-                        bgcolor: 'background.paper',
+                        position: 'relative',
+                        borderRadius: 3,
+                        p: '2px',
+                        background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
                     }}
                 >
-                    <StatItem icon={<HikingIcon />} value={stats.trailCount} label={t('welcome.stats.trails')} started={visible} />
-                    <StatItem icon={<StraightenIcon />} value={stats.totalKm} label={t('welcome.stats.km')} started={visible} />
-                    <StatItem icon={<TerrainIcon />} value={stats.totalElevation} label={t('welcome.stats.elevation')} started={visible} />
-                    <StatItem icon={<PlaceIcon />} value={stats.locationCount} label={t('welcome.stats.locations')} started={visible} />
-                    <StatItem icon={<EmojiEventsIcon />} value={stats.raceCount} label={t('welcome.stats.races')} started={visible} />
-                </Paper>
+                    <Paper
+                        elevation={0}
+                        sx={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            justifyContent: 'center',
+                            gap: { xs: 3, sm: 4 },
+                            py: 4,
+                            px: 2,
+                            bgcolor: 'background.paper',
+                            borderRadius: 2.7,
+                        }}
+                    >
+                        <StatItem icon={<DirectionsRunIcon />} value={stats.trailCount} label={t('welcome.stats.trails')} started={visible} delay={0} />
+                        <StatItem icon={<StraightenIcon />} value={stats.totalKm} label={t('welcome.stats.km')} started={visible} delay={100} />
+                        <StatItem icon={<TerrainIcon />} value={stats.totalElevation} label={t('welcome.stats.elevation')} started={visible} delay={200} />
+                        <StatItem icon={<PlaceIcon />} value={stats.locationCount} label={t('welcome.stats.locations')} started={visible} delay={300} />
+                        <StatItem icon={<EmojiEventsIcon />} value={stats.raceCount} label={t('welcome.stats.races')} started={visible} delay={400} />
+                    </Paper>
+                </Box>
             </Fade>
         </Box>
     );
 }
+
+const ICON_GRADIENTS = [
+    'linear-gradient(135deg, #1976d2, #42a5f5)',
+    'linear-gradient(135deg, #4caf50, #81c784)',
+    'linear-gradient(135deg, #ff9800, #ffb74d)',
+    'linear-gradient(135deg, #9c27b0, #ce93d8)',
+    'linear-gradient(135deg, #f44336, #ef5350)',
+];
 
 function FeatureSection({ icon, titleKey, descKey, cta, ctaPath, index, tParams }: {
     icon: React.ReactNode;
@@ -183,10 +201,11 @@ function FeatureSection({ icon, titleKey, descKey, cta, ctaPath, index, tParams 
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            bgcolor: 'primary.main',
-                            color: 'primary.contrastText',
+                            background: ICON_GRADIENTS[index % ICON_GRADIENTS.length],
+                            color: '#fff',
                             flexShrink: 0,
                             fontSize: { xs: 32, sm: 40 },
+                            boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
                             '& .MuiSvgIcon-root': { fontSize: 'inherit' },
                         }}
                     >
@@ -258,7 +277,7 @@ export default function WelcomePage({ mode, onToggleMode, forceLang }: Props) {
     }, []);
 
     const features = [
-        { icon: <HikingIcon />, titleKey: 'welcome.trails.title', descKey: 'welcome.trails.desc', cta: 'welcome.trails.cta', ctaPath: '/', tParams: { count: stats.trailCount || '...' } },
+        { icon: <DirectionsRunIcon />, titleKey: 'welcome.trails.title', descKey: 'welcome.trails.desc', cta: 'welcome.trails.cta', ctaPath: '/', tParams: { count: stats.trailCount || '...' } },
         { icon: <PlaceIcon />, titleKey: 'welcome.locations.title', descKey: 'welcome.locations.desc', cta: 'welcome.locations.cta', ctaPath: '/locations' },
         { icon: <EmojiEventsIcon />, titleKey: 'welcome.races.title', descKey: 'welcome.races.desc', cta: 'welcome.races.cta', ctaPath: '/races' },
         { icon: <BuildIcon />, titleKey: 'welcome.tools.title', descKey: 'welcome.tools.desc', cta: 'welcome.tools.cta', ctaPath: '/tools' },
@@ -269,7 +288,6 @@ export default function WelcomePage({ mode, onToggleMode, forceLang }: Props) {
         <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', overflow: 'hidden' }}>
             {/* Top-right controls */}
             <Box sx={{ position: 'fixed', top: 12, right: 12, zIndex: 10, display: 'flex', gap: 0.5 }}>
-                <LanguageToggle />
                 <Tooltip title={mode === 'light' ? t('nav.darkMode') : t('nav.lightMode')}>
                     <IconButton color="inherit" onClick={onToggleMode} size="small">
                         {mode === 'light' ? <DarkModeOutlinedIcon fontSize="small" /> : <LightModeOutlinedIcon fontSize="small" />}
@@ -288,8 +306,42 @@ export default function WelcomePage({ mode, onToggleMode, forceLang }: Props) {
                     textAlign: 'center',
                     px: 3,
                     position: 'relative',
+                    overflow: 'hidden',
                 }}
             >
+                {/* Floating decorative blobs */}
+                <Box
+                    sx={{
+                        position: 'absolute',
+                        width: { xs: 200, sm: 350 },
+                        height: { xs: 200, sm: 350 },
+                        borderRadius: '50%',
+                        background: `radial-gradient(circle, ${theme.palette.primary.main}20, transparent 70%)`,
+                        top: '10%',
+                        left: '-5%',
+                        animation: 'float 8s ease-in-out infinite',
+                        '@keyframes float': {
+                            '0%, 100%': { transform: 'translate(0, 0)' },
+                            '50%': { transform: 'translate(30px, -20px)' },
+                        },
+                    }}
+                />
+                <Box
+                    sx={{
+                        position: 'absolute',
+                        width: { xs: 150, sm: 280 },
+                        height: { xs: 150, sm: 280 },
+                        borderRadius: '50%',
+                        background: `radial-gradient(circle, ${theme.palette.secondary.main}18, transparent 70%)`,
+                        bottom: '15%',
+                        right: '-3%',
+                        animation: 'float2 10s ease-in-out infinite',
+                        '@keyframes float2': {
+                            '0%, 100%': { transform: 'translate(0, 0)' },
+                            '50%': { transform: 'translate(-25px, 15px)' },
+                        },
+                    }}
+                />
                 <Fade in timeout={1000}>
                     <Typography
                         variant="h1"
@@ -322,7 +374,19 @@ export default function WelcomePage({ mode, onToggleMode, forceLang }: Props) {
                             variant="contained"
                             size="large"
                             onClick={() => navigate('/')}
-                            sx={{ borderRadius: 20, px: 4, py: 1.5, fontSize: '1.1rem' }}
+                            sx={{
+                                borderRadius: 20,
+                                px: 4,
+                                py: 1.5,
+                                fontSize: '1.1rem',
+                                background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                                backgroundSize: '200% 200%',
+                                transition: 'background-position 0.4s, transform 0.2s',
+                                '&:hover': {
+                                    backgroundPosition: 'right center',
+                                    transform: 'scale(1.05)',
+                                },
+                            }}
                         >
                             {t('welcome.startExploring')}
                         </Button>
@@ -381,7 +445,19 @@ export default function WelcomePage({ mode, onToggleMode, forceLang }: Props) {
                         variant="contained"
                         size="large"
                         onClick={() => navigate('/')}
-                        sx={{ borderRadius: 20, px: 5, py: 1.5, fontSize: '1.1rem' }}
+                        sx={{
+                            borderRadius: 20,
+                            px: 5,
+                            py: 1.5,
+                            fontSize: '1.1rem',
+                            background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                            backgroundSize: '200% 200%',
+                            transition: 'background-position 0.4s, transform 0.2s',
+                            '&:hover': {
+                                backgroundPosition: 'right center',
+                                transform: 'scale(1.05)',
+                            },
+                        }}
                     >
                         {t('welcome.startExploring')} 🏃‍♂️
                     </Button>

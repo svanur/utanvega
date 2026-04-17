@@ -130,7 +130,7 @@ export default function App() {
                     )}
                     <Route 
                         path="/welcome" 
-                        element={<WelcomePage mode={mode} onToggleMode={handleToggleMode} />} 
+                        element={<WelcomePage mode={mode} onToggleMode={handleToggleMode} forceLang="en" />} 
                     />
                     <Route 
                         path="/velkomin" 

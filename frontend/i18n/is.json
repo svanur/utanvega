@@ -667,30 +667,30 @@
         "eventCount": "{{count}} viðburðir í þessum mánuði"
     },
     "welcome": {
-        "tagline": "Finndu bestu leiðirnar til hlaupaþjálfunar, göngu og hjólreiða á Íslandi",
+        "tagline": "Finndu frábærar leiðir til hlaupa, ganga eða hjóla á Íslandi",
         "startExploring": "Byrja að kanna",
         "whatCanYouDo": "Hvað er hægt að gera hér?",
         "readyToRun": "Tilbúin(n) að leggja af stað?",
         "readyToRunDesc": "Vertu hluti af íslenska útivistarsamfélaginu og finndu næstu ævintýraleið.",
         "trails": {
             "title": "🏔️ Uppgötvaðu leiðir",
-            "desc": "Skoðaðu {{count}} valdar leiðir víðsvegar um Ísland. Síaðu eftir vegalengd, hæðarbreytingu og tegund — og finndu uppáhaldsleiðina þína.",
+            "desc": "Skoðaðu {{count}} valdar leiðir víðsvegar um Ísland. Síaðu eftir vegalengd, hæðarbreytingu og tegund — og finndu uppáhalds leiðina þína.",
             "cta": "Skoða leiðir"
         },
         "locations": {
             "title": "📍 Kannaðu staðsetningar",
-            "desc": "Sjáðu leiðir flokkaðar eftir svæðum. Frá borgarhlaupaleiðum í Reykjavík til afskekktara hálendisleiða — kannaðu Ísland á kortinu.",
+            "desc": "Sjáðu leiðir flokkaðar eftir svæðum. Frá borgarhlaupaleiðum í Reykjavík til afskekktra hálendisleiða — kannaðu Ísland á kortinu.",
             "cta": "Sjá staðsetningar"
         },
         "races": {
             "title": "🏆 Keppnir og mót",
-            "desc": "Fylgstu með komandi keppnum, niðurtalningu, dagatali og veðurspá á keppnisdegi. Spáðu tímanum þínum áður en þú tekur þig til.",
-            "cta": "Sjá keppnir"
+            "desc": "Fylgstu með komandi keppnum, niðurtalningu, dagatali og veðurspá á keppnisdegi. Spáðu fyrir um tímann þinn, áður en þú tekur þig til.",
+            "cta": "Sjá keppnisleiðir"
         },
         "tools": {
-            "title": "🛠️ Verkfæri hlauparans",
-            "desc": "Hraðareiknir, æfingahraði (VDOT), keppnisspá og fleira. Allt sem þú þarft til að skipuleggja næstu met.",
-            "cta": "Opna verkfæri"
+            "title": "🛠️ Tól hlauparans",
+            "desc": "Hraðareiknir, æfingahraði (VDOT), keppnisspá og fleira. Allt sem þú þarft til að skipuleggja næstu ævintýri.",
+            "cta": "Opna hlaupatólin"
         },
         "share": {
             "title": "🔗 Deila og tengjast",
