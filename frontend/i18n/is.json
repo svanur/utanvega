@@ -556,7 +556,7 @@
         },
         "trailPredictor": {
             "title": "Utanvegaspá",
-            "subtitle": "Spáðu fyrir um tíma á nýjum stíg út frá fyrri árangri",
+            "subtitle": "Spá fyrir um tíma á leið eða keppni út frá árangri í fyrri leið eða keppni.",
             "knownRace": "Leið/keppni með þekktum tíma",
             "targetRace": "Finna tíma fyrir aðra leið/keppni",
             "selectTrailA": "Veldu leið",
@@ -570,7 +570,8 @@
             "flatPace": "Jafngildur hraði á sléttu",
             "comparison": "Munur á stígum",
             "method": "Hæðarleiðrétt spá með formúlu Riegels + reglu Naismithrs",
-            "loadError": "Ekki tókst að sækja leiðir. Reyndu aftur."
+            "loadError": "Ekki tókst að sækja leiðir. Reyndu aftur.",
+            "summaryText": "Ef þú hljópst {{knownTrail}} á {{yourTime}}, þá spáum við að þú hlaupir {{targetTrail}} á {{predictedTime}}."
         },
         "paceChart": {
             "title": "Hraðatafla",

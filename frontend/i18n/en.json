@@ -570,7 +570,8 @@
             "flatPace": "Flat equivalent pace",
             "comparison": "Trail difference",
             "method": "Grade-adjusted prediction using Riegel's formula + Naismith's rule",
-            "loadError": "Failed to load trails. Please try again."
+            "loadError": "Failed to load trails. Please try again.",
+            "summaryText": "If you ran {{knownTrail}} in {{yourTime}}, our prediction is that you will run {{targetTrail}} in {{predictedTime}}."
         },
         "paceChart": {
             "title": "Pace Chart",

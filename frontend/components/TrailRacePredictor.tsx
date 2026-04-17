@@ -245,10 +245,18 @@ export default function TrailRacePredictor({ prefilledTrailSlug }: { prefilledTr
             </Paper>
 
             {/* Prediction results */}
-            {prediction && (
+            {prediction && trailA && trailB && (
                 <Paper sx={{ p: 2, mt: 2 }}>
                     <Typography variant="subtitle2" gutterBottom>
                         {t('tools.trailPredictor.prediction')}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        {t('tools.trailPredictor.summaryText', {
+                            knownTrail: trailA.name,
+                            yourTime: timeStr,
+                            targetTrail: trailB.name,
+                            predictedTime: prediction.predictedTime,
+                        })}
                     </Typography>
                     <Table size="small">
                         <TableBody>
