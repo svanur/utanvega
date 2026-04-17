@@ -55,6 +55,7 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
     const [selectedDay, setSelectedDay] = useState<CalendarDay | null>(null);
     const [todayFlash, setTodayFlash] = useState(false);
     const todayRef = useRef<HTMLDivElement>(null);
+    const touchStartX = useRef<number | null>(null);
 
     const months = t('races.months', { returnObjects: true }) as unknown as string[];
     const weekdays = t('races.weekdays', { returnObjects: true }) as unknown as string[];
@@ -148,7 +149,17 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
 
                 {/* Calendar grid */}
                 {!loading && (
-                    <Paper variant="outlined" sx={{ borderRadius: 2, overflow: 'hidden' }}>
+                    <Paper variant="outlined" sx={{ borderRadius: 2, overflow: 'hidden' }}
+                        onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
+                        onTouchEnd={(e) => {
+                            if (touchStartX.current === null) return;
+                            const diff = e.changedTouches[0].clientX - touchStartX.current;
+                            touchStartX.current = null;
+                            if (Math.abs(diff) > 60) {
+                                if (diff > 0) prevMonth(); else nextMonth();
+                            }
+                        }}
+                    >
                         {/* Weekday headers */}
                         <Box sx={{
                             display: 'grid',
