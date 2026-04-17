@@ -112,7 +112,19 @@ export function InlineEditText({ value, onSave, variant = 'body2', fontWeight, m
         >
             <Typography
                 variant={variant}
-                sx={{ fontWeight, maxWidth: effectiveMaxWidth, overflow: 'hidden', textOverflow: 'ellipsis', color: value ? undefined : 'text.disabled', fontStyle: value ? undefined : 'italic' }}
+                sx={{
+                    fontWeight,
+                    maxWidth: effectiveMaxWidth,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    color: value ? undefined : 'text.disabled',
+                    fontStyle: value ? undefined : 'italic',
+                    ...(multiline && {
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                    }),
+                }}
                 noWrap={!multiline}
             >
                 {value || placeholder || '—'}

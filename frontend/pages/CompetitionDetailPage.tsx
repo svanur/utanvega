@@ -281,7 +281,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
 
                     {/* Row 5: Description */}
                     {competition.description && (
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5, whiteSpace: 'pre-line' }}>
                             {competition.description}
                         </Typography>
                     )}
@@ -411,10 +411,10 @@ function RaceCard({ race, t, showPredict }: { race: RaceDto; t: (key: string, op
             ...(race.status === 'Upcoming' && { borderStyle: 'dashed', borderColor: theme.palette.info.main }),
         }}>
             <CardContent sx={{ p: { xs: 2, sm: 2.5 }, '&:last-child': { pb: { xs: 2, sm: 2.5 } } }}>
-                {/* Row 1: Name + View trail button */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1 }}>
+                {/* Header: Name + action buttons — inline on desktop, stacked on mobile */}
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: { xs: 0.5, sm: 1 }, justifyContent: 'space-between' }}>
                     <Typography variant="h6" fontWeight={700} sx={{
-                        display: 'flex', alignItems: 'center', gap: 0.5,
+                        display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap',
                         ...(race.status === 'Cancelled' && { textDecoration: 'line-through' }),
                     }}>
                         <DirectionsRunIcon sx={{ fontSize: 20, color: theme.palette.primary.main }} />
@@ -426,19 +426,19 @@ function RaceCard({ race, t, showPredict }: { race: RaceDto; t: (key: string, op
                             <Chip label={t('races.statusUpcoming')} size="small" color="info" sx={{ ml: 0.5, fontWeight: 600 }} />
                         )}
                     </Typography>
-                    <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0 }}>
-                        {race.trailSlug && showPredict && (
-                            <Button
-                                component={RouterLink}
-                                to={`/tools/trail-predictor?trail=${encodeURIComponent(race.trailSlug)}`}
-                                size="small"
-                                variant="text"
-                                sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: 'auto' }}
-                            >
-                                🔮 {t('races.predict')}
-                            </Button>
-                        )}
-                        {race.trailSlug && (
+                    {race.trailSlug && (
+                        <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0 }}>
+                            {showPredict && (
+                                <Button
+                                    component={RouterLink}
+                                    to={`/tools/trail-predictor?trail=${encodeURIComponent(race.trailSlug)}`}
+                                    size="small"
+                                    variant="text"
+                                    sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: 'auto' }}
+                                >
+                                    🔮 {t('races.predict')}
+                                </Button>
+                            )}
                             <Button
                                 component={RouterLink}
                                 to={`/trails/${race.trailSlug}`}
@@ -448,8 +448,8 @@ function RaceCard({ race, t, showPredict }: { race: RaceDto; t: (key: string, op
                             >
                                 {ACTIVITY_ICONS[race.trailSlug ? 'TrailRunning' : ''] ?? '🗺️'} {t('races.viewTrail')}
                             </Button>
-                        )}
-                    </Stack>
+                        </Stack>
+                    )}
                 </Box>
 
                 {/* Row 2: Chips */}
@@ -470,7 +470,7 @@ function RaceCard({ race, t, showPredict }: { race: RaceDto; t: (key: string, op
 
                 {/* Row 3: Description */}
                 {race.description && (
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1, whiteSpace: 'pre-line' }}>
                         {race.description}
                     </Typography>
                 )}

@@ -387,7 +387,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                     )}
 
                     {trail.description && (
-                        <Typography variant="body1" color="text.secondary" sx={{ mb: 2, lineHeight: 1.7 }}>
+                        <Typography variant="body1" color="text.secondary" sx={{ mb: 2, lineHeight: 1.7, whiteSpace: 'pre-line' }}>
                             {trail.description}
                         </Typography>
                     )}
