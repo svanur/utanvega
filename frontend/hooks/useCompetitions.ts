@@ -105,3 +105,40 @@ export function useCompetitionBySlug(slug: string | undefined) {
 
     return { competition, loading, error };
 }
+
+export interface CalendarEvent {
+    name: string;
+    slug: string;
+    locationName: string | null;
+    raceCount: number;
+}
+
+export interface CalendarDay {
+    date: string;
+    events: CalendarEvent[];
+}
+
+export function useCompetitionCalendar(from: string, to: string) {
+    const [days, setDays] = useState<CalendarDay[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        setLoading(true);
+        fetch(`${API_URL}/api/v1/competitions/calendar?from=${from}&to=${to}`)
+            .then(res => {
+                if (!res.ok) throw new Error('Failed to fetch calendar');
+                return res.json();
+            })
+            .then(data => {
+                setDays(data);
+                setLoading(false);
+            })
+            .catch(err => {
+                setError(err.message);
+                setLoading(false);
+            });
+    }, [from, to]);
+
+    return { days, loading, error };
+}

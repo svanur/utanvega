@@ -38,6 +38,7 @@ using Utanvega.Backend.Application.Weather.Queries;
 using Utanvega.Backend.Core.Services;
 using Utanvega.Backend.Application.Competitions.Queries.GetCompetitions;
 using Utanvega.Backend.Application.Competitions.Queries.GetCompetition;
+using Utanvega.Backend.Application.Competitions.Queries.GetCompetitionCalendar;
 using Utanvega.Backend.Application.Competitions.Commands.CreateCompetition;
 using Utanvega.Backend.Application.Competitions.Commands.UpdateCompetition;
 using Utanvega.Backend.Application.Competitions.Commands.DeleteCompetition;
@@ -1049,6 +1050,16 @@ app.MapGet("/api/v1/competitions", async (IMediator mediator, bool includeHidden
     return Results.Ok(competitions);
 })
 .WithName("GetPublicCompetitions");
+
+app.MapGet("/api/v1/competitions/calendar", async (IMediator mediator, DateOnly? from, DateOnly? to) =>
+{
+    var today = DateOnly.FromDateTime(DateTime.UtcNow);
+    var rangeFrom = from ?? new DateOnly(today.Year, today.Month, 1);
+    var rangeTo = to ?? rangeFrom.AddMonths(1).AddDays(-1);
+    var calendar = await mediator.Send(new GetCompetitionCalendarQuery(rangeFrom, rangeTo));
+    return Results.Ok(calendar);
+})
+.WithName("GetCompetitionCalendar");
 
 app.MapGet("/api/v1/competitions/{slug}", async (string slug, IMediator mediator) =>
 {

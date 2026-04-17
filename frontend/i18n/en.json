@@ -613,5 +613,12 @@
         "scheduleFixed": "One-off event on {{date}}",
         "statusCancelled": "Cancelled",
         "statusUpcoming": "Coming soon"
+    },
+    "calendar": {
+        "title": "Race Calendar",
+        "today": "Today",
+        "eventCount_one": "{{count}} event this month",
+        "eventCount_other": "{{count}} events this month",
+        "eventCount": "{{count}} events this month"
     }
 }

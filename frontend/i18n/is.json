@@ -613,5 +613,12 @@
         "scheduleFixed": "Stakur viðburður: {{date}}",
         "statusCancelled": "Aflýst",
         "statusUpcoming": "Væntanlegt"
+    },
+    "calendar": {
+        "title": "Keppnisdagatal",
+        "today": "Í dag",
+        "eventCount_one": "{{count}} viðburður í þessum mánuði",
+        "eventCount_other": "{{count}} viðburðir í þessum mánuði",
+        "eventCount": "{{count}} viðburðir í þessum mánuði"
     }
 }

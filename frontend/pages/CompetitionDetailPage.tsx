@@ -160,7 +160,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                     <Alert severity="error" sx={{ mb: 2 }}>
                         {error || t('races.notFound')}
                     </Alert>
-                    <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/races')}>
+                    <Button startIcon={<ArrowBackIcon />} onClick={() => navigate(-1)}>
                         {t('races.backToRaces')}
                     </Button>
                 </Container>
@@ -174,7 +174,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                 {/* Back link */}
                 <Button
                     startIcon={<ArrowBackIcon />}
-                    onClick={() => navigate('/races')}
+                    onClick={() => navigate(-1)}
                     size="small"
                     sx={{ mb: 2 }}
                 >

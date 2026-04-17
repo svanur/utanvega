@@ -23,6 +23,7 @@ const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
 const FunPage = lazy(() => import('./pages/FunPage'));
 const ToolsPage = lazy(() => import('./pages/ToolsPage'));
 const RacesPage = lazy(() => import('./pages/RacesPage'));
+const RaceCalendarPage = lazy(() => import('./pages/RaceCalendarPage'));
 const CompetitionDetailPage = lazy(() => import('./pages/CompetitionDetailPage'));
 
 function PageLoader() {
@@ -115,6 +116,10 @@ export default function App() {
                     <Route 
                         path="/races" 
                         element={<RacesPage mode={mode} onToggleMode={handleToggleMode} />} 
+                    />
+                    <Route 
+                        path="/races/calendar" 
+                        element={<RaceCalendarPage mode={mode} onToggleMode={handleToggleMode} />} 
                     />
                     <Route 
                         path="/races/:slug" 

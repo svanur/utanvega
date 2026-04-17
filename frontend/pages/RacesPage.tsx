@@ -117,10 +117,19 @@ export default function RacesPage({ mode, onToggleMode }: RacesPageProps) {
             <Container maxWidth="md" sx={{ py: 3 }}>
                 {/* Header */}
                 <Box sx={{ mb: 3 }}>
-                    <Typography variant="h4" fontWeight={800} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <EmojiEventsIcon sx={{ fontSize: 32, color: theme.palette.warning.main }} />
-                        {t('races.title')}
-                    </Typography>
+                    <Stack direction="row" alignItems="center" justifyContent="space-between">
+                        <Typography variant="h4" fontWeight={800} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <EmojiEventsIcon sx={{ fontSize: 32, color: theme.palette.warning.main }} />
+                            {t('races.title')}
+                        </Typography>
+                        <Chip
+                            icon={<CalendarTodayIcon />}
+                            label={t('calendar.title')}
+                            variant="outlined"
+                            size="small"
+                            onClick={() => navigate('/races/calendar')}
+                        />
+                    </Stack>
                     <Typography variant="body2" color="text.secondary">
                         {t('races.subtitle')}
                     </Typography>
