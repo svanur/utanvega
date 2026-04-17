@@ -588,6 +588,34 @@
             "note": "Hér eru allir kílómetrar jafnir — allir  á sama hraða. Finndu markmiðið, skipuleggðu æfingar og sláðu í gegn í hlaupinu þínu.",
             "print": "Prenta / hlaða niður sem PDF",
             "fullscreen": "Fylla skjáinn"
+        },
+        "trainingPaces": {
+            "title": "Æfingahraðar",
+            "subtitle": "Sláðu inn nýlegan keppnistíma til að reikna æfingasvæðin þín út frá VDOT líkamsástandi",
+            "raceDistance": "Keppnisvegalengd",
+            "yourTime": "Tíminn þinn á {{race}}",
+            "timeHelp": "t.d. 22:00 fyrir 5 km eða 1:45:00 fyrir hálfmaraþon",
+            "zonesTitle": "Æfingasvæði",
+            "summaryText": "Miðað við {{race}} tíma {{time}} er VDOT þitt {{vdot}}. Hér eru ráðlagðir æfingahraðar:",
+            "equivalents": "Samsvarandi keppnistímar",
+            "method": "Byggt á VDOT formúlu Jack Daniels — áætlun, leiðréttið eftir aðstæðum.",
+            "copy": "Afrita",
+            "copied": "Afritað!",
+            "zones": {
+                "easy": "Létt / bati",
+                "marathon": "Maraþon",
+                "threshold": "Þröskuld / tempo",
+                "interval": "Interval (VO₂max)",
+                "repetition": "Hraðaæfingar"
+            },
+            "distances": {
+                "1500m": "1500m",
+                "3k": "3 km",
+                "5k": "5 km",
+                "10k": "10 km",
+                "half": "Hálfmaraþon",
+                "marathon": "Maraþon"
+            }
         }
     },
     "races": {

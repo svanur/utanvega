@@ -588,6 +588,34 @@
             "note": "Even splits — each kilometer at the same pace. Find your goal, plan your race.",
             "print": "Print / download as PDF",
             "fullscreen": "Full screen"
+        },
+        "trainingPaces": {
+            "title": "Training Paces",
+            "subtitle": "Enter a recent race result to calculate your training zones based on VDOT fitness level",
+            "raceDistance": "Race distance",
+            "yourTime": "Your {{race}} time",
+            "timeHelp": "e.g. 22:00 for 5K or 1:45:00 for half marathon",
+            "zonesTitle": "Training Zones",
+            "summaryText": "Based on your {{race}} time of {{time}}, your VDOT is {{vdot}}. Here are your recommended training paces:",
+            "equivalents": "Equivalent Race Times",
+            "method": "Based on Jack Daniels' VDOT formula — estimates only, adjust for conditions and feel.",
+            "copy": "Copy to clipboard",
+            "copied": "Copied!",
+            "zones": {
+                "easy": "Easy / Recovery",
+                "marathon": "Marathon",
+                "threshold": "Threshold / Tempo",
+                "interval": "Interval (VO₂max)",
+                "repetition": "Repetition"
+            },
+            "distances": {
+                "1500m": "1500m",
+                "3k": "3K",
+                "5k": "5K",
+                "10k": "10K",
+                "half": "Half Marathon",
+                "marathon": "Marathon"
+            }
         }
     },
     "races": {
