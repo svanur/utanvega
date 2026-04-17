@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Box, TextField, Typography, Paper, Chip, Table, TableBody, TableRow, TableCell, TableHead, InputAdornment, IconButton } from '@mui/material';
 import { KeyboardArrowUp, KeyboardArrowDown } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
+import TimeSlider from './TimeSlider';
 
 function parseTime(val: string): number | null {
     const trimmed = val.trim();
@@ -129,6 +130,14 @@ export default function RacePredictor() {
                                 </InputAdornment>
                             ),
                         }}
+                    />
+                    <TimeSlider
+                        value={timeStr}
+                        onChange={setTimeStr}
+                        min={Math.round(selectedDist.km * 2.5 * 60)}
+                        max={Math.round(selectedDist.km * 12 * 60)}
+                        step={selectedDist.km <= 10 ? 5 : 15}
+                        parseTime={parseTime}
                     />
                 </Box>
             </Paper>

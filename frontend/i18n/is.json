@@ -1,4 +1,7 @@
 {
+    "common": {
+        "reset": "Hreinsa"
+    },
     "loading": "Hleð leiðum...",
     "nav": {
         "locations": "Staðsetningar",

@@ -3,6 +3,7 @@ import { Box, TextField, Typography, Paper, Autocomplete, InputAdornment, IconBu
 import { KeyboardArrowUp, KeyboardArrowDown, CompareArrows } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { API_URL } from '../hooks/useTrails';
+import TimeSlider from './TimeSlider';
 
 function parseTime(val: string): number | null {
     const trimmed = val.trim();
@@ -191,6 +192,14 @@ export default function TrailRacePredictor({ prefilledTrailSlug }: { prefilledTr
                                 </InputAdornment>
                             ),
                         }}
+                    />
+                    <TimeSlider
+                        value={timeStr}
+                        onChange={setTimeStr}
+                        min={trailA ? Math.round(trailA.distance * 2.5 * 60) : 600}
+                        max={trailA ? Math.round(trailA.distance * 12 * 60) : 43200}
+                        step={trailA && trailA.distance <= 10 ? 5 : 15}
+                        parseTime={parseTime}
                     />
 
                     <Divider>

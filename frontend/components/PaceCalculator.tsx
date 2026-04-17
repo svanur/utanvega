@@ -1,9 +1,10 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Box, TextField, Typography, Paper, ToggleButtonGroup, ToggleButton, Chip, Divider, IconButton, InputAdornment, Table, TableBody, TableRow, TableCell, Collapse, Autocomplete } from '@mui/material';
-import { KeyboardArrowUp, KeyboardArrowDown, Terrain, ExpandMore } from '@mui/icons-material';
+import { KeyboardArrowUp, KeyboardArrowDown, Terrain, ExpandMore, RestartAlt } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { API_URL } from '../hooks/useTrails';
 import { estimateDurationMinutes } from '../utils/estimateDuration';
+import TimeSlider from './TimeSlider';
 
 type Field = 'pace' | 'distance' | 'time';
 
@@ -91,7 +92,7 @@ export default function PaceCalculator() {
     const [elevGainStr, setElevGainStr] = useState('');
     const [terrain, setTerrain] = useState<TerrainType>('trail');
 
-    // Trail picker
+    const [trailInputValue, setTrailInputValue] = useState('');
     const [trailOptions, setTrailOptions] = useState<TrailOption[]>([]);
     const [selectedTrail, setSelectedTrail] = useState<TrailOption | null>(null);
 
@@ -280,6 +281,17 @@ export default function PaceCalculator() {
         }
     }
 
+    const handleReset = () => {
+        setPaceStr('');
+        setDistanceStr('');
+        setTimeStr('');
+        setElevGainStr('');
+        setTerrain('trail');
+        setSelectedTrail(null);
+        setTrailInputValue('');
+        setTrailOpen(false);
+    };
+
     return (
         <Box sx={{ maxWidth: 480, mx: 'auto' }}>
             <Paper sx={{ p: 3 }}>
@@ -287,10 +299,20 @@ export default function PaceCalculator() {
                     <Typography variant="subtitle2" color="text.secondary">
                         {t('tools.paceCalc.subtitle')}
                     </Typography>
-                    <ToggleButtonGroup value={unit} exclusive onChange={handleUnitToggle} size="small">
-                        <ToggleButton value="km">km</ToggleButton>
-                        <ToggleButton value="mi">mi</ToggleButton>
-                    </ToggleButtonGroup>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <IconButton
+                            size="small"
+                            onClick={handleReset}
+                            title={t('common.reset')}
+                            disabled={!paceStr && !distanceStr && !timeStr}
+                        >
+                            <RestartAlt fontSize="small" />
+                        </IconButton>
+                        <ToggleButtonGroup value={unit} exclusive onChange={handleUnitToggle} size="small">
+                            <ToggleButton value="km">km</ToggleButton>
+                            <ToggleButton value="mi">mi</ToggleButton>
+                        </ToggleButtonGroup>
+                    </Box>
                 </Box>
 
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -316,12 +338,22 @@ export default function PaceCalculator() {
                             ),
                         }}
                     />
+                    <TimeSlider
+                        value={paceStr}
+                        onChange={handlePaceChange}
+                        min={120}
+                        max={540}
+                        step={5}
+                        parseTime={parseTime}
+                    />
 
                     {trailOptions.length > 0 && (
                         <Autocomplete
                             options={trailOptions}
                             value={selectedTrail}
                             onChange={handleTrailSelect}
+                            inputValue={trailInputValue}
+                            onInputChange={(_, v) => setTrailInputValue(v)}
                             getOptionLabel={(o) => o.name}
                             renderOption={(props, option) => (
                                 <li {...props} key={option.name}>

@@ -1,4 +1,7 @@
 {
+    "common": {
+        "reset": "Reset"
+    },
     "loading": "Loading trails...",
     "nav": {
         "locations": "Locations",
