@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Box, Typography, Alert, CircularProgress, MenuItem, Paper, Chip, Tabs, Tab, Autocomplete, Checkbox } from '@mui/material';
-import { Add as AddIcon, History as HistoryIcon, Map as MapIcon, LocalOffer as TagIcon, CheckBoxOutlineBlank, CheckBox as CheckBoxIcon } from '@mui/icons-material';
+import { Add as AddIcon, History as HistoryIcon, Map as MapIcon, LocalOffer as TagIcon, CheckBoxOutlineBlank, CheckBox as CheckBoxIcon, UploadFile as UploadFileIcon } from '@mui/icons-material';
 import { MapContainer, TileLayer, Polyline, CircleMarker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -321,7 +321,9 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
                         </Box>
                     ) : <Typography>Trail not found.</Typography>
                 ) : activeTab === 1 ? (
-                    <TrailMapTab trailId={trailId} />
+                    <TrailMapTab trailId={trailId} onGpxReplaced={(stats) => {
+                        if (trail) setTrail({ ...trail, length: stats.length, elevationGain: stats.elevationGain, elevationLoss: stats.elevationLoss, type: stats.detectedType, difficulty: stats.difficulty });
+                    }} />
                 ) : (
                     <ChangeLogList entityName="Trail" entityId={trailId || undefined} title="Trail History" />
                 )}
@@ -346,52 +348,112 @@ function FitBounds({ positions }: { positions: L.LatLngExpression[] }) {
     return null;
 }
 
-function TrailMapTab({ trailId }: { trailId: string | null }) {
+function TrailMapTab({ trailId, onGpxReplaced }: { trailId: string | null; onGpxReplaced?: (stats: { length: number; elevationGain: number; elevationLoss: number; detectedType: string; difficulty: string }) => void }) {
     const [positions, setPositions] = useState<[number, number][]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [uploading, setUploading] = useState(false);
+    const [uploadResult, setUploadResult] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
-    useEffect(() => {
+    const fetchGeometry = async () => {
         if (!trailId) return;
-        (async () => {
-            try {
-                setLoading(true);
-                const geo = await apiFetch<{ coordinates: number[][] }>(`/api/v1/admin/trails/${trailId}/geometry`);
-                if (geo?.coordinates) {
-                    setPositions(geo.coordinates.map((c: number[]) => [c[1], c[0]] as [number, number]));
-                }
-            } catch {
-                setError('No GPX geometry available for this trail.');
-            } finally {
-                setLoading(false);
+        try {
+            setLoading(true);
+            const geo = await apiFetch<{ coordinates: number[][] }>(`/api/v1/admin/trails/${trailId}/geometry`);
+            if (geo?.coordinates) {
+                setPositions(geo.coordinates.map((c: number[]) => [c[1], c[0]] as [number, number]));
             }
-        })();
-    }, [trailId]);
+        } catch {
+            setError('No GPX geometry available for this trail.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => { fetchGeometry(); }, [trailId]);
+
+    const handleGpxReplace = async (file: File) => {
+        if (!trailId) return;
+        if (!confirm('Replace GPX data? This will overwrite the current route, recalculate distance, elevation and trail type.')) return;
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            setUploading(true);
+            setUploadResult(null);
+            setError(null);
+            const result = await apiFetch<{ length: number; elevationGain: number; elevationLoss: number; detectedType: string; difficulty: string }>(
+                `/api/v1/admin/trails/${trailId}/gpx`,
+                { method: 'PUT', body: formData }
+            );
+            setUploadResult(`GPX replaced! ${(result.length / 1000).toFixed(1)} km, ↑${Math.round(result.elevationGain)}m ↓${Math.round(result.elevationLoss)}m, ${result.detectedType}`);
+            onGpxReplaced?.(result);
+            await fetchGeometry();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to replace GPX data.');
+        } finally {
+            setUploading(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
 
     if (loading) return <Box sx={{ p: 3, textAlign: 'center' }}><CircularProgress /></Box>;
-    if (error || positions.length === 0) {
-        return <Alert severity="info" sx={{ mt: 1 }}>{error || 'No geometry data available.'}</Alert>;
-    }
 
-    const start = positions[0];
-    const end = positions[positions.length - 1];
+    const start = positions.length > 0 ? positions[0] : null;
+    const end = positions.length > 0 ? positions[positions.length - 1] : null;
 
     return (
-        <Box sx={{ height: 450, mt: 1 }}>
-            <MapContainer
-                center={start}
-                zoom={13}
-                style={{ height: '100%', width: '100%', borderRadius: 8 }}
-            >
-                <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        <Box sx={{ mt: 1 }}>
+            {error && <Alert severity="error" sx={{ mb: 1 }}>{error}</Alert>}
+            {uploadResult && <Alert severity="success" sx={{ mb: 1 }}>{uploadResult}</Alert>}
+
+            {start && end && (
+                <Box sx={{ height: 400 }}>
+                    <MapContainer
+                        center={start}
+                        zoom={13}
+                        style={{ height: '100%', width: '100%', borderRadius: 8 }}
+                    >
+                        <TileLayer
+                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
+                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        />
+                        <Polyline positions={positions} color="#1976d2" weight={4} />
+                        <CircleMarker center={start} radius={8} pathOptions={{ color: '#2e7d32', fillColor: '#4caf50', fillOpacity: 1 }} />
+                        <CircleMarker center={end} radius={8} pathOptions={{ color: '#c62828', fillColor: '#ef5350', fillOpacity: 1 }} />
+                        <FitBounds positions={positions} />
+                    </MapContainer>
+                </Box>
+            )}
+
+            {!start && !error && <Alert severity="info" sx={{ mb: 1 }}>No geometry data available.</Alert>}
+
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1.5 }}>
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".gpx"
+                    style={{ display: 'none' }}
+                    onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleGpxReplace(file);
+                    }}
                 />
-                <Polyline positions={positions} color="#1976d2" weight={4} />
-                <CircleMarker center={start} radius={8} pathOptions={{ color: '#2e7d32', fillColor: '#4caf50', fillOpacity: 1 }} />
-                <CircleMarker center={end} radius={8} pathOptions={{ color: '#c62828', fillColor: '#ef5350', fillOpacity: 1 }} />
-                <FitBounds positions={positions} />
-            </MapContainer>
+                <Button
+                    variant="outlined"
+                    color="warning"
+                    startIcon={uploading ? <CircularProgress size={16} /> : <UploadFileIcon />}
+                    disabled={uploading}
+                    onClick={() => fileInputRef.current?.click()}
+                >
+                    {uploading ? 'Replacing...' : 'Replace GPX'}
+                </Button>
+                <Typography variant="caption" color="text.secondary">
+                    Upload a new .gpx file to replace the current route data
+                </Typography>
+            </Box>
         </Box>
     );
 }

@@ -17,6 +17,7 @@ using Utanvega.Backend.Application.Trails.Commands.UpdateTrail;
 using Utanvega.Backend.Application.Trails.Commands.DeleteTrail;
 using Utanvega.Backend.Application.Trails.Commands.BulkTrailAction;
 using Utanvega.Backend.Application.Trails.Commands.PatchTrail;
+using Utanvega.Backend.Application.Trails.Commands.UpdateTrailGpx;
 using Utanvega.Backend.Application.Trails.Queries.GetTrails;
 using Utanvega.Backend.Application.Trails.Queries.GetTrailGeometry;
 using Utanvega.Backend.Application.Locations.Queries.GetLocations;
@@ -710,6 +711,28 @@ app.MapPost("/api/v1/admin/trails/upload-gpx", [Authorize] async (string name, I
 })
 .WithName("UploadGpx")
 .DisableAntiforgery(); // Bearer token auth is not vulnerable to CSRF; antiforgery not needed
+
+app.MapPut("/api/v1/admin/trails/{id:guid}/gpx", [Authorize] async (Guid id, IFormFile file, IMediator mediator) =>
+{
+    if (file == null || file.Length == 0) return Results.BadRequest("No file uploaded.");
+
+    using var reader = new StreamReader(file.OpenReadStream());
+    var gpxXml = await reader.ReadToEndAsync();
+
+    try
+    {
+        var result = await mediator.Send(new UpdateTrailGpxCommand(id, gpxXml));
+        if (result == null) return Results.NotFound();
+        return Results.Ok(result);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[ERROR] GPX update failed: {ex}");
+        return Results.Problem("Failed to process GPX file. Ensure it contains valid GPX data.");
+    }
+})
+.WithName("UpdateTrailGpx")
+.DisableAntiforgery();
 
 app.MapPost("/api/v1/admin/trails/check-similarity", [Authorize] async (string? name, IFormFile file, IMediator mediator) =>
 {

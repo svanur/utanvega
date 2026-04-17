@@ -72,6 +72,11 @@ public static class DbContextExtensions
                     foreach (var property in entry.Metadata.GetProperties())
                     {
                         var propName = property.Name;
+
+                        // Skip geometry columns — NTS types have circular references
+                        if (property.ClrType.Namespace?.StartsWith("NetTopologySuite") == true)
+                            continue;
+
                         object? originalValue = null;
                         
                         try 
@@ -91,10 +96,24 @@ public static class DbContextExtensions
                             changes[propName] = new { From = originalValue, To = currentValue };
                         }
                     }
+
+                    // Track geometry changes separately (just note that it changed, don't serialize the object)
+                    foreach (var property in entry.Metadata.GetProperties())
+                    {
+                        if (property.ClrType.Namespace?.StartsWith("NetTopologySuite") != true) continue;
+                        var orig = entry.OriginalValues[property.Name];
+                        var curr = entry.CurrentValues[property.Name];
+                        if (!Equals(orig, curr))
+                            changes[property.Name] = new { From = "(geometry)", To = "(updated geometry)" };
+                    }
                     
                     if (changes.Count > 0)
                     {
-                        auditEntry.Changes = JsonSerializer.Serialize(changes);
+                        var jsonOptions = new JsonSerializerOptions
+                        {
+                            NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals
+                        };
+                        auditEntry.Changes = JsonSerializer.Serialize(changes, jsonOptions);
                         auditEntry.Description = $"Updated {string.Join(", ", changes.Keys)}";
                     }
                     else
