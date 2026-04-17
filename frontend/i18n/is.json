@@ -511,6 +511,7 @@
             "paceHelp": "t.d. 5:30 fyrir 5 mín 30 sek",
             "timeHelp": "t.d. 1:45:00 eða 55:00",
             "splits": "Millitímar",
+            "summaryText": "Á {{pace}}/{{unit}} hraða, muntu hlaupa {{distance}} {{unit}} á {{time}}.",
             "presets": {
                 "5k": "5K",
                 "10k": "10K",

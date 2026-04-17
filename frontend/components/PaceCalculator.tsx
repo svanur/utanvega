@@ -543,10 +543,18 @@ export default function PaceCalculator() {
                 </Collapse>
             </Paper>
 
-            {splits.length > 0 && (
+            {splits.length > 0 && pace && dist && (
                 <Paper sx={{ p: 2, mt: 2 }}>
                     <Typography variant="subtitle2" gutterBottom>
                         {t('tools.paceCalc.splits')}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                        {t('tools.paceCalc.summaryText', {
+                            pace: paceStr,
+                            unit: unit === 'km' ? 'km' : 'mi',
+                            distance: distanceStr,
+                            time: formatTime(pace * dist),
+                        })}
                     </Typography>
                     <Divider sx={{ mb: 1 }} />
                     <Table size="small">

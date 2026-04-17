@@ -511,6 +511,7 @@
             "paceHelp": "e.g. 5:30 for 5 min 30 sec",
             "timeHelp": "e.g. 1:45:00 or 55:00",
             "splits": "Splits",
+            "summaryText": "At a pace of {{pace}}/{{unit}}, you will run {{distance}} {{unit}} in {{time}}.",
             "presets": {
                 "5k": "5K",
                 "10k": "10K",
