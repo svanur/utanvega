@@ -47,7 +47,7 @@ export default function ToolsPage({ mode, onToggleMode }: { mode: PaletteMode; o
 
     return (
         <Layout mode={mode} onToggleMode={onToggleMode}>
-            <Box sx={{ maxWidth: 600, mx: 'auto', px: 2, py: 3 }}>
+            <Box sx={{ maxWidth: tools[activeTab]?.key === 'pace-chart' ? { xs: '100%', md: 960 } : 600, mx: 'auto', px: 2, py: 3, transition: 'max-width 0.3s' }}>
                 <Typography variant="h4" gutterBottom sx={{ fontWeight: 700 }}>
                     🛠️ {t('tools.title')}
                 </Typography>

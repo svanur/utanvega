@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { Box, TextField, Typography, Paper, InputAdornment, IconButton, useTheme, Slider, Button } from '@mui/material';
-import { KeyboardArrowUp, KeyboardArrowDown, PrintOutlined } from '@mui/icons-material';
+import { Box, TextField, Typography, Paper, InputAdornment, IconButton, useTheme, Slider, Button, Dialog, AppBar, Toolbar } from '@mui/material';
+import { KeyboardArrowUp, KeyboardArrowDown, PrintOutlined, FullscreenOutlined, CloseOutlined } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 
 function parseTime(val: string): number | null {
@@ -24,8 +24,6 @@ function formatCompact(minutes: number): string {
     if (m > 0) return `${m}:${String(s).padStart(2, '0')}`;
     return `0:${String(s).padStart(2, '0')}`;
 }
-
-const RIEGEL_EXP = 1.06;
 
 interface DistanceCol {
     key: string;
@@ -57,13 +55,14 @@ function generateRows() {
 const ROWS = generateRows();
 
 function predictTime(oneKmTime: number, targetKm: number): number {
-    return oneKmTime * Math.pow(targetKm / 1, RIEGEL_EXP);
+    return oneKmTime * targetKm;
 }
 
 export default function PaceChart() {
     const { t } = useTranslation();
     const theme = useTheme();
     const [searchStr, setSearchStr] = useState('');
+    const [fullscreen, setFullscreen] = useState(false);
     const highlightRef = useRef<HTMLTableRowElement>(null);
 
     // Find the closest row to the search input
@@ -133,8 +132,36 @@ h2{margin:0 0 12px;font-size:16px}</style></head><body>
     const textPrimary = theme.palette.text.primary;
     const textSecondary = theme.palette.text.secondary;
 
+    const sliderValue = useMemo(() => {
+        const t = parseTime(searchStr);
+        if (!t) return 330;
+        if (t < 15) return Math.round(t * 60);
+        const oneKm = t / 42.195;
+        return Math.round(oneKm * 60);
+    }, [searchStr]);
+
+    const handleSliderChange = (_: unknown, val: number | number[]) => {
+        const secs = val as number;
+        const m = Math.floor(secs / 60);
+        const s = secs % 60;
+        setSearchStr(`${m}:${String(s).padStart(2, '0')}`);
+    };
+
+    const formatSliderLabel = (v: number) => {
+        const m = Math.floor(v / 60);
+        const s = v % 60;
+        return `${m}:${String(s).padStart(2, '0')}/km`;
+    };
+
+    const sliderMarks = [
+        { value: 120, label: '2:00' },
+        { value: 240, label: '4:00' },
+        { value: 360, label: '6:00' },
+        { value: 480, label: '8:00' },
+    ];
+
     return (
-        <Box sx={{ maxWidth: 600, mx: 'auto' }}>
+        <Box sx={{ maxWidth: { xs: '100%', md: 900 }, mx: 'auto' }}>
             <Paper sx={{ p: 2, mb: 2 }}>
                 <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1.5 }}>
                     {t('tools.paceChart.subtitle')}
@@ -164,37 +191,14 @@ h2{margin:0 0 12px;font-size:16px}</style></head><body>
                 />
                 <Box sx={{ px: 1, mt: 1 }}>
                     <Slider
-                        value={(() => {
-                            // Map search to slider: try 1K pace first, then derive from marathon
-                            const t = parseTime(searchStr);
-                            if (!t) return 330; // ~5:30/km default
-                            // If value looks like a 1K pace (< 15 min), use directly
-                            if (t < 15) return Math.round(t * 60);
-                            // Otherwise, reverse Riegel to get 1K pace from marathon time
-                            const oneKm = t / Math.pow(42.195, RIEGEL_EXP);
-                            return Math.round(oneKm * 60);
-                        })()}
-                        onChange={(_, val) => {
-                            const secs = val as number;
-                            const m = Math.floor(secs / 60);
-                            const s = secs % 60;
-                            setSearchStr(`${m}:${String(s).padStart(2, '0')}`);
-                        }}
+                        value={sliderValue}
+                        onChange={handleSliderChange}
                         min={120}
                         max={540}
                         step={5}
                         valueLabelDisplay="auto"
-                        valueLabelFormat={(v) => {
-                            const m = Math.floor(v / 60);
-                            const s = v % 60;
-                            return `${m}:${String(s).padStart(2, '0')}/km`;
-                        }}
-                        marks={[
-                            { value: 120, label: '2:00' },
-                            { value: 240, label: '4:00' },
-                            { value: 360, label: '6:00' },
-                            { value: 480, label: '8:00' },
-                        ]}
+                        valueLabelFormat={formatSliderLabel}
+                        marks={sliderMarks}
                         sx={{ mt: 0.5 }}
                     />
                 </Box>
@@ -270,7 +274,7 @@ h2{margin:0 0 12px;font-size:16px}</style></head><body>
                 {t('tools.paceChart.note')}
             </Typography>
 
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1.5 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mt: 1.5 }}>
                 <Button
                     size="small"
                     variant="outlined"
@@ -279,7 +283,135 @@ h2{margin:0 0 12px;font-size:16px}</style></head><body>
                 >
                     {t('tools.paceChart.print')}
                 </Button>
+                <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<FullscreenOutlined />}
+                    onClick={() => setFullscreen(true)}
+                    sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
+                >
+                    {t('tools.paceChart.fullscreen')}
+                </Button>
             </Box>
+
+            {/* Fullscreen dialog */}
+            <Dialog fullScreen open={fullscreen} onClose={() => setFullscreen(false)}>
+                <AppBar sx={{ position: 'relative' }} color="default" elevation={1}>
+                    <Toolbar variant="dense">
+                        <Typography variant="h6" fontWeight={700} sx={{ flex: 1 }}>
+                            🏃 {t('tools.paceChart.title')}
+                        </Typography>
+                        <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<PrintOutlined />}
+                            onClick={handlePrint}
+                            sx={{ mr: 1 }}
+                        >
+                            {t('tools.paceChart.print')}
+                        </Button>
+                        <IconButton edge="end" onClick={() => setFullscreen(false)} aria-label="close">
+                            <CloseOutlined />
+                        </IconButton>
+                    </Toolbar>
+                </AppBar>
+                <Box sx={{ p: 2, pt: 5, overflow: 'auto', flex: 1 }}>
+                    <Box sx={{ maxWidth: 1200, mx: 'auto', mb: 2, display: 'flex', alignItems: 'flex-end', gap: 3, flexWrap: 'wrap' }}>
+                        <TextField
+                            label={t('tools.paceChart.search')}
+                            placeholder="3:30:00"
+                            value={searchStr}
+                            onChange={(e) => setSearchStr(e.target.value)}
+                            helperText={t('tools.paceChart.searchHelp')}
+                            size="small"
+                            sx={{ maxWidth: 400 }}
+                            InputProps={{
+                                endAdornment: (
+                                    <InputAdornment position="end">
+                                        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                                            <IconButton size="small" onClick={() => stepSearch(-1)} sx={{ p: 0 }}>
+                                                <KeyboardArrowUp sx={{ fontSize: 18 }} />
+                                            </IconButton>
+                                            <IconButton size="small" onClick={() => stepSearch(1)} sx={{ p: 0 }}>
+                                                <KeyboardArrowDown sx={{ fontSize: 18 }} />
+                                            </IconButton>
+                                        </Box>
+                                    </InputAdornment>
+                                ),
+                            }}
+                        />
+                        <Box sx={{ flex: 1, minWidth: 200, maxWidth: 500, pb: 2 }}>
+                            <Slider
+                                value={sliderValue}
+                                onChange={handleSliderChange}
+                                min={120}
+                                max={540}
+                                step={5}
+                                valueLabelDisplay="auto"
+                                valueLabelFormat={formatSliderLabel}
+                                marks={sliderMarks}
+                            />
+                        </Box>
+                    </Box>
+                    <Box sx={{ maxWidth: 1200, mx: 'auto', overflow: 'auto' }}>
+                        <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '0.85rem', color: textPrimary }}>
+                            <thead>
+                                <tr>
+                                    <th style={{
+                                        position: 'sticky', left: 0, top: 0, zIndex: 3,
+                                        padding: '8px 12px', textAlign: 'left', whiteSpace: 'nowrap',
+                                        borderBottom: `2px solid ${borderColor}`,
+                                        fontWeight: 700, minWidth: 60,
+                                        background: bgHeader,
+                                    }}>
+                                        /km
+                                    </th>
+                                    {DISTANCES.map(d => (
+                                        <th key={d.key} style={{
+                                            position: 'sticky', top: 0, zIndex: 2,
+                                            padding: '8px 10px', textAlign: 'right', whiteSpace: 'nowrap',
+                                            borderBottom: `2px solid ${borderColor}`,
+                                            fontWeight: 600, minWidth: 70,
+                                            background: bgHeader,
+                                        }}>
+                                            {d.key}
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {ROWS.map((row, i) => {
+                                    const isHighlight = i === highlightIndex;
+                                    return (
+                                        <tr key={i} style={{ background: isHighlight ? bgHighlight : 'transparent' }}>
+                                            <td style={{
+                                                position: 'sticky', left: 0, zIndex: 1,
+                                                padding: '6px 12px', whiteSpace: 'nowrap',
+                                                fontFamily: 'monospace', fontWeight: isHighlight ? 700 : 600,
+                                                borderBottom: `1px solid ${borderColor}`,
+                                                background: isHighlight ? bgHighlight : bgPaper,
+                                                color: isHighlight ? textPrimary : textSecondary,
+                                            }}>
+                                                {formatCompact(row.pacePerKm)}
+                                            </td>
+                                            {DISTANCES.map(d => (
+                                                <td key={d.key} style={{
+                                                    padding: '6px 10px', textAlign: 'right',
+                                                    fontFamily: 'monospace', whiteSpace: 'nowrap',
+                                                    fontWeight: isHighlight ? 700 : 400,
+                                                    borderBottom: `1px solid ${borderColor}`,
+                                                }}>
+                                                    {formatCompact(predictTime(row.pacePerKm, d.km))}
+                                                </td>
+                                            ))}
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </Box>
+                </Box>
+            </Dialog>
         </Box>
     );
 }

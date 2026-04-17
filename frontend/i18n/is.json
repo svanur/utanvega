@@ -517,7 +517,7 @@
             "trailAdjust": "Utanvegaleiðréttingar",
             "terrain": "Yfirborð",
             "terrains": {
-                "road": "Vegur",
+                "road": "Malbik",
                 "gravel": "Malarvegur",
                 "trail": "Stígur",
                 "technical": "Torfært"
@@ -527,7 +527,7 @@
             "adjustedPace": "Leiðréttur hraði",
             "terrainLabel": "yfirborð",
             "climbLabel": "klifur",
-            "pickTrail": "Veldu leið",
+            "pickTrail": "Veldu leið(ef þú villt)",
             "searchTrail": "Leita að leið..."
         },
         "racePredictor": {
@@ -571,11 +571,12 @@
         },
         "paceChart": {
             "title": "Hraðatafla",
-            "subtitle": "Finndu tíma, t.d. í maraþon dálknum, athugaðu svo aðra dálka til að sjá jafngilda tíma. Fullkomið til að skipuleggja æfingar.",
+            "subtitle": "Finndu tíma í ákveðinni vegalengd, athugaðu svo aðra dálka til að sjá tíma á sama hraða. Fullkomið til að skipuleggja hlaupin þín.",
             "search": "Maraþontími eða 1km hraði",
             "searchHelp": "t.d. 3:30:00 (maraþon) eða 5:00 (1K hraði)",
-            "note": "Tímar reiknaðir með formúlu Riegels. Stuttar vegalengdir eru 'áætluð jafngild áreynsla', ekki viðvarandi hraði.",
-            "print": "Prenta / hlaða niður sem PDF"
+            "note": "Hér eru allir kílómetrar jafnir — allir  á sama hraða. Finndu markmiðið, skipuleggðu æfingar og sláðu í gegn í hlaupinu þínu.",
+            "print": "Prenta / hlaða niður sem PDF",
+            "fullscreen": "Fylla skjáinn"
         }
     },
     "races": {

@@ -571,11 +571,12 @@
         },
         "paceChart": {
             "title": "Pace Chart",
-            "subtitle": "Find your goal time in the Marathon column, then read across for equivalent-effort splits. Perfect for planning interval workouts at your goal pace.",
+            "subtitle": "Find your goal time in the Marathon column, then read across for split times at that pace. Perfect for planning races and workouts.",
             "search": "Marathon time or 1K pace",
             "searchHelp": "e.g. 3:30:00 (marathon) or 5:00 (1K pace)",
-            "note": "Times calculated using Riegel's formula. Short distances approximate equivalent effort, not sustained pace.",
-            "print": "Print / download as PDF"
+            "note": "Even splits — each kilometer at the same pace. Find your goal, plan your race.",
+            "print": "Print / download as PDF",
+            "fullscreen": "Full screen"
         }
     },
     "races": {
