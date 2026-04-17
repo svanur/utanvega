@@ -665,5 +665,44 @@
         "eventCount_one": "{{count}} viðburður í þessum mánuði",
         "eventCount_other": "{{count}} viðburðir í þessum mánuði",
         "eventCount": "{{count}} viðburðir í þessum mánuði"
+    },
+    "welcome": {
+        "tagline": "Finndu bestu leiðirnar til hlaupaþjálfunar, göngu og hjólreiða á Íslandi",
+        "startExploring": "Byrja að kanna",
+        "whatCanYouDo": "Hvað er hægt að gera hér?",
+        "readyToRun": "Tilbúin(n) að leggja af stað?",
+        "readyToRunDesc": "Vertu hluti af íslenska útivistarsamfélaginu og finndu næstu ævintýraleið.",
+        "trails": {
+            "title": "🏔️ Uppgötvaðu leiðir",
+            "desc": "Skoðaðu {{count}} valdar leiðir víðsvegar um Ísland. Síaðu eftir vegalengd, hæðarbreytingu og tegund — og finndu uppáhaldsleiðina þína.",
+            "cta": "Skoða leiðir"
+        },
+        "locations": {
+            "title": "📍 Kannaðu staðsetningar",
+            "desc": "Sjáðu leiðir flokkaðar eftir svæðum. Frá borgarhlaupaleiðum í Reykjavík til afskekktara hálendisleiða — kannaðu Ísland á kortinu.",
+            "cta": "Sjá staðsetningar"
+        },
+        "races": {
+            "title": "🏆 Keppnir og mót",
+            "desc": "Fylgstu með komandi keppnum, niðurtalningu, dagatali og veðurspá á keppnisdegi. Spáðu tímanum þínum áður en þú tekur þig til.",
+            "cta": "Sjá keppnir"
+        },
+        "tools": {
+            "title": "🛠️ Verkfæri hlauparans",
+            "desc": "Hraðareiknir, æfingahraði (VDOT), keppnisspá og fleira. Allt sem þú þarft til að skipuleggja næstu met.",
+            "cta": "Opna verkfæri"
+        },
+        "share": {
+            "title": "🔗 Deila og tengjast",
+            "desc": "Deildu leiðum og staðsetningum með vinum í gegnum beina hlekki. Vistaðu eftirlæti, fylgstu með hvað þú hefur kannað og byggðu upp leiðasafnið þitt.",
+            "cta": "Byrja hér"
+        },
+        "stats": {
+            "trails": "Leiðir",
+            "km": "Samtals km",
+            "elevation": "Hæðaraukning (m)",
+            "locations": "Staðsetningar",
+            "races": "Komandi keppnir"
+        }
     }
 }

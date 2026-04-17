@@ -25,6 +25,7 @@ const ToolsPage = lazy(() => import('./pages/ToolsPage'));
 const RacesPage = lazy(() => import('./pages/RacesPage'));
 const RaceCalendarPage = lazy(() => import('./pages/RaceCalendarPage'));
 const CompetitionDetailPage = lazy(() => import('./pages/CompetitionDetailPage'));
+const WelcomePage = lazy(() => import('./pages/WelcomePage'));
 
 function PageLoader() {
     return (
@@ -127,6 +128,14 @@ export default function App() {
                     />
                     </>
                     )}
+                    <Route 
+                        path="/welcome" 
+                        element={<WelcomePage mode={mode} onToggleMode={handleToggleMode} />} 
+                    />
+                    <Route 
+                        path="/velkomin" 
+                        element={<WelcomePage mode={mode} onToggleMode={handleToggleMode} forceLang="is" />} 
+                    />
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
                 </Suspense>

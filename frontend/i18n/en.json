@@ -665,5 +665,44 @@
         "eventCount_one": "{{count}} event this month",
         "eventCount_other": "{{count}} events this month",
         "eventCount": "{{count}} events this month"
+    },
+    "welcome": {
+        "tagline": "Discover the best trails for running, hiking & cycling in Iceland",
+        "startExploring": "Start Exploring",
+        "whatCanYouDo": "What can you do here?",
+        "readyToRun": "Ready to hit the trails?",
+        "readyToRunDesc": "Join the Icelandic trail community and find your next adventure.",
+        "trails": {
+            "title": "🏔️ Discover Trails",
+            "desc": "Browse {{count}} curated trails across Iceland. Filter by distance, elevation, activity type — and find your next favorite route.",
+            "cta": "Browse Trails"
+        },
+        "locations": {
+            "title": "📍 Explore Locations",
+            "desc": "See trails grouped by region. From Reykjavík city runs to remote highland crossings — explore Iceland on the map.",
+            "cta": "View Locations"
+        },
+        "races": {
+            "title": "🏆 Races & Competitions",
+            "desc": "Stay on top of upcoming races with countdowns, calendar views and race-day weather. Predict your finish time before you toe the line.",
+            "cta": "See Races"
+        },
+        "tools": {
+            "title": "🛠️ Runner Tools",
+            "desc": "Pace calculator, training paces (VDOT), race predictor and more. Everything you need to plan your next PR.",
+            "cta": "Open Tools"
+        },
+        "share": {
+            "title": "🔗 Share & Connect",
+            "desc": "Share trails and locations with friends via direct links. Save favorites, track what you've explored, and build your trail collection.",
+            "cta": "Get Started"
+        },
+        "stats": {
+            "trails": "Trails",
+            "km": "Total km",
+            "elevation": "Elevation gain (m)",
+            "locations": "Locations",
+            "races": "Upcoming Races"
+        }
     }
 }
