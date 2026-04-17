@@ -497,8 +497,8 @@
         "guessTitle": "Hva\u00f0a lei\u00f0 er me\u00f0 \u00feetta h\u00e6\u00f0arsni\u00f0?"
     },
     "tools": {
-        "title": "Verkf\u00e6ri",
-        "noToolsEnabled": "Engin verkf\u00e6ri eru virk.",
+        "title": "Tól",
+        "noToolsEnabled": "Engin hjálpartól eru virk.",
         "paceCalc": {
             "title": "Hraðareiknir",
             "subtitle": "Sláðu inn tvö gildi til að reikna þriðja",
@@ -514,7 +514,7 @@
                 "half": "Hálft",
                 "marathon": "Maraþon"
             },
-            "trailAdjust": "Utanvegaeiðréttingar",
+            "trailAdjust": "Utanvegaleiðréttingar",
             "terrain": "Yfirborð",
             "terrains": {
                 "road": "Vegur",
