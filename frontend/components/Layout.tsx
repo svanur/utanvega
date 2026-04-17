@@ -36,10 +36,10 @@ export default function Layout({ children, mode, onToggleMode }: LayoutProps) {
     const { isEnabled } = useFeatureFlags();
 
     const navItems = [
+        { label: `📍 ${t('nav.locations')}`, path: '/locations', adminOnly: false },
         ...(isEnabled('races_page') ? [{ label: `🏆 ${t('nav.races')}`, path: '/races', adminOnly: false }] : []),
-        ...(isAdmin && isEnabled('game_fun_page') ? [{ label: '🧙‍♂️ Fun', path: '/fun', adminOnly: true }] : []),
         ...(isEnabled('tools_page') ? [{ label: `🛠️ ${t('tools.title')}`, path: '/tools', adminOnly: false }] : []),
-        { label: t('nav.locations'), path: '/locations', adminOnly: false },
+        ...(isAdmin && isEnabled('game_fun_page') ? [{ label: '🧙‍♂️ Fun', path: '/fun', adminOnly: true }] : []),
         { label: t('nav.about'), path: '/about', adminOnly: false },
     ];
 
