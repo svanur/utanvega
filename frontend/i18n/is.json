@@ -328,6 +328,10 @@
         "aiDescription": "Vefurinn er þróaður með aðstoð Claude, gervigreindar- og kóðunarfulltrúa frá Anthropic. Claude hjálpar til við kóðun, prófanir, endurbætur og gæðaeftirlit.",
         "changelogTitle": "Breytingasaga",
         "changelog": {
+            "v2_5": {
+                "title": "Keppni og mót",
+                "description": "Keppni og mót með dagsetningakerfi, keppnisdagatal, tengingar milli leiða og keppna, tímaspá af keppnissíðum, veður á keppnisdegi, rennistikur í verkfærum o deilanleg slóð á hraðatöflu."
+            },
             "v2_4": {
                 "title": "Snjallar forstillingar og deiling",
                 "description": "Tímaháðar síuforstillingar sem breytast yfir daginn — Morgun 5 km, Eftir vinnu, Helgarskoðun og fleira. Open Graph merki með kraftmiklum forskoðunarmyndum leiða fyrir samfélagsmiðla. Nálægt mér forstilling þegar staðsetning er virk. GPX niðurhal á leiðarsíðum."

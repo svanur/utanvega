@@ -328,6 +328,10 @@
         "aiDescription": "Development assisted by Claude, an AI coding agent by Anthropic, used for code generation, refactoring, and quality improvements.",
         "changelogTitle": "Changelog",
         "changelog": {
+            "v2_5": {
+                "title": "Races & competitions",
+                "description": "Competitions and races with recurring schedule engine, race calendar, trail-to-race cross-links, predict-my-time from race pages, race day weather, tool sliders, pace chart URL sharing, and enhanced runner tools with summary text."
+            },
             "v2_4": {
                 "title": "Smart presets & sharing",
                 "description": "Time-aware filter presets that change throughout the day — Morning 5k, After Work, Weekend Explorer, and more. Open Graph meta tags with dynamic trail preview images for rich social media link sharing. Nearby preset when geolocation is active. GPX download button on trail pages."
