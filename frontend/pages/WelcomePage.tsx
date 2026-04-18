@@ -240,6 +240,7 @@ export default function WelcomePage({ mode, onToggleMode, forceLang }: Props) {
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const confettiFired = useRef(false);
     const stats = useWelcomeStats();
+    const statsRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         if (forceLang && i18n.language !== forceLang) {
@@ -373,7 +374,7 @@ export default function WelcomePage({ mode, onToggleMode, forceLang }: Props) {
                         <Button
                             variant="contained"
                             size="large"
-                            onClick={() => navigate('/')}
+                            onClick={() => statsRef.current?.scrollIntoView({ behavior: 'smooth' })}
                             sx={{
                                 borderRadius: 20,
                                 px: 4,
@@ -388,7 +389,7 @@ export default function WelcomePage({ mode, onToggleMode, forceLang }: Props) {
                                 },
                             }}
                         >
-                            {t('welcome.startExploring')}
+                            {t('welcome.discoverMore')} ↓
                         </Button>
                     </Box>
                 </Fade>
@@ -413,7 +414,7 @@ export default function WelcomePage({ mode, onToggleMode, forceLang }: Props) {
             </Box>
 
             {/* Stats bar */}
-            <Container maxWidth="md">
+            <Container ref={statsRef} maxWidth="md">
                 <StatsBar stats={stats} />
             </Container>
 
