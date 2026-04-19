@@ -1,3 +1,5 @@
+using Moq;
+using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Application.Competitions.Commands.CreateCompetition;
 using Utanvega.Backend.Application.Competitions.Commands.UpdateCompetition;
 using Utanvega.Backend.Application.Competitions.Commands.DeleteCompetition;
@@ -15,6 +17,7 @@ public class CompetitionHandlerTests : IDisposable
 {
     private readonly TestDbContextFactory _factory;
     private readonly IScheduleRuleEngine _scheduleEngine = new ScheduleRuleEngine();
+    private readonly ICacheInvalidator _cacheInvalidator = new Mock<ICacheInvalidator>().Object;
 
     public CompetitionHandlerTests()
     {
@@ -66,7 +69,7 @@ public class CompetitionHandlerTests : IDisposable
     public async Task Create_Competition_Succeeds()
     {
         using var ctx = _factory.CreateContext();
-        var handler = new CreateCompetitionCommandHandler(ctx);
+        var handler = new CreateCompetitionCommandHandler(ctx, _cacheInvalidator);
 
         var id = await handler.Handle(new CreateCompetitionCommand(
             Name: "Laugavegur Ultra",
@@ -96,7 +99,7 @@ public class CompetitionHandlerTests : IDisposable
     public async Task Create_Competition_GeneratesSlug_WhenNotProvided()
     {
         using var ctx = _factory.CreateContext();
-        var handler = new CreateCompetitionCommandHandler(ctx);
+        var handler = new CreateCompetitionCommandHandler(ctx, _cacheInvalidator);
 
         var id = await handler.Handle(new CreateCompetitionCommand(
             Name: "Reykjavík Marathon",
@@ -133,7 +136,7 @@ public class CompetitionHandlerTests : IDisposable
 
         using (var ctx = _factory.CreateContext())
         {
-            var handler = new UpdateCompetitionCommandHandler(ctx);
+            var handler = new UpdateCompetitionCommandHandler(ctx, _cacheInvalidator);
             var result = await handler.Handle(new UpdateCompetitionCommand(
                 Id: competition.Id,
                 Name: "Updated Name",
@@ -164,7 +167,7 @@ public class CompetitionHandlerTests : IDisposable
     public async Task Update_NonExistentCompetition_ReturnsFalse()
     {
         using var ctx = _factory.CreateContext();
-        var handler = new UpdateCompetitionCommandHandler(ctx);
+        var handler = new UpdateCompetitionCommandHandler(ctx, _cacheInvalidator);
         var result = await handler.Handle(new UpdateCompetitionCommand(
             Id: Guid.NewGuid(),
             Name: "Nothing",
@@ -196,7 +199,7 @@ public class CompetitionHandlerTests : IDisposable
 
         using (var ctx = _factory.CreateContext())
         {
-            var handler = new DeleteCompetitionCommandHandler(ctx);
+            var handler = new DeleteCompetitionCommandHandler(ctx, _cacheInvalidator);
             var result = await handler.Handle(
                 new DeleteCompetitionCommand(competition.Id), CancellationToken.None);
             Assert.True(result);
@@ -212,7 +215,7 @@ public class CompetitionHandlerTests : IDisposable
     public async Task Delete_NonExistentCompetition_ReturnsFalse()
     {
         using var ctx = _factory.CreateContext();
-        var handler = new DeleteCompetitionCommandHandler(ctx);
+        var handler = new DeleteCompetitionCommandHandler(ctx, _cacheInvalidator);
         var result = await handler.Handle(
             new DeleteCompetitionCommand(Guid.NewGuid()), CancellationToken.None);
         Assert.False(result);
@@ -240,7 +243,7 @@ public class CompetitionHandlerTests : IDisposable
 
         using (var ctx = _factory.CreateContext())
         {
-            var handler = new DeleteCompetitionCommandHandler(ctx);
+            var handler = new DeleteCompetitionCommandHandler(ctx, _cacheInvalidator);
             await handler.Handle(new DeleteCompetitionCommand(competition.Id), CancellationToken.None);
         }
 
@@ -263,7 +266,7 @@ public class CompetitionHandlerTests : IDisposable
         }
 
         using var raceCtx = _factory.CreateContext();
-        var handler = new CreateRaceCommandHandler(raceCtx);
+        var handler = new CreateRaceCommandHandler(raceCtx, _cacheInvalidator);
         var id = await handler.Handle(new CreateRaceCommand(
             CompetitionId: competition.Id,
             TrailId: null,
@@ -307,7 +310,7 @@ public class CompetitionHandlerTests : IDisposable
 
         using (var ctx = _factory.CreateContext())
         {
-            var handler = new UpdateRaceCommandHandler(ctx);
+            var handler = new UpdateRaceCommandHandler(ctx, _cacheInvalidator);
             var result = await handler.Handle(new UpdateRaceCommand(
                 Id: race.Id,
                 TrailId: null,
@@ -334,7 +337,7 @@ public class CompetitionHandlerTests : IDisposable
     public async Task Update_NonExistentRace_ReturnsFalse()
     {
         using var ctx = _factory.CreateContext();
-        var handler = new UpdateRaceCommandHandler(ctx);
+        var handler = new UpdateRaceCommandHandler(ctx, _cacheInvalidator);
         var result = await handler.Handle(new UpdateRaceCommand(
             Id: Guid.NewGuid(),
             TrailId: null,
@@ -372,7 +375,7 @@ public class CompetitionHandlerTests : IDisposable
 
         using (var ctx = _factory.CreateContext())
         {
-            var handler = new DeleteRaceCommandHandler(ctx);
+            var handler = new DeleteRaceCommandHandler(ctx, _cacheInvalidator);
             var result = await handler.Handle(
                 new DeleteRaceCommand(race.Id), CancellationToken.None);
             Assert.True(result);

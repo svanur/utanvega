@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Infrastructure.Persistence;
 
 namespace Utanvega.Backend.Application.Locations.Queries.GetLocationTree;
@@ -14,7 +15,11 @@ public record LocationTreeNodeDto(
     List<LocationTreeNodeDto> Children
 );
 
-public record GetLocationTreeQuery : IRequest<List<LocationTreeNodeDto>>;
+public record GetLocationTreeQuery : IRequest<List<LocationTreeNodeDto>>, ICacheable
+{
+    public string CacheKey => CacheKeys.LocationTree;
+    public TimeSpan CacheDuration => TimeSpan.FromHours(2);
+}
 
 public class GetLocationTreeQueryHandler : IRequestHandler<GetLocationTreeQuery, List<LocationTreeNodeDto>>
 {

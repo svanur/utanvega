@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Core.Services;
 using Utanvega.Backend.Infrastructure.Persistence;
 
@@ -17,7 +18,11 @@ public record CalendarDayDto(
     List<CalendarEventDto> Events
 );
 
-public record GetCompetitionCalendarQuery(DateOnly From, DateOnly To) : IRequest<List<CalendarDayDto>>;
+public record GetCompetitionCalendarQuery(DateOnly From, DateOnly To) : IRequest<List<CalendarDayDto>>, ICacheable
+{
+    public string CacheKey => CacheKeys.Calendar(From, To);
+    public TimeSpan CacheDuration => TimeSpan.FromHours(2);
+}
 
 public class GetCompetitionCalendarQueryHandler : IRequestHandler<GetCompetitionCalendarQuery, List<CalendarDayDto>>
 {

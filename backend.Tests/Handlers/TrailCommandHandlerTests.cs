@@ -1,3 +1,5 @@
+using Moq;
+using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Application.Trails.Commands.UpdateTrail;
 using Utanvega.Backend.Application.Trails.Commands.DeleteTrail;
 using Utanvega.Backend.Core.Entities;
@@ -7,6 +9,7 @@ namespace Utanvega.Backend.Tests.Handlers;
 public class TrailCommandHandlerTests : IDisposable
 {
     private readonly TestDbContextFactory _factory;
+    private readonly ICacheInvalidator _cacheInvalidator = new Mock<ICacheInvalidator>().Object;
 
     public TrailCommandHandlerTests()
     {
@@ -47,7 +50,7 @@ public class TrailCommandHandlerTests : IDisposable
 
         using (var ctx = _factory.CreateContext())
         {
-            var handler = new UpdateTrailCommandHandler(ctx);
+            var handler = new UpdateTrailCommandHandler(ctx, _cacheInvalidator);
             var command = new UpdateTrailCommand(
                 Id: trail.Id,
                 Name: "Updated Name",
@@ -84,7 +87,7 @@ public class TrailCommandHandlerTests : IDisposable
     public async Task Update_NonExistentTrail_ReturnsFalse()
     {
         using var ctx = _factory.CreateContext();
-        var handler = new UpdateTrailCommandHandler(ctx);
+        var handler = new UpdateTrailCommandHandler(ctx, _cacheInvalidator);
         var command = new UpdateTrailCommand(
             Id: Guid.NewGuid(),
             Name: "Doesn't exist",
@@ -122,7 +125,7 @@ public class TrailCommandHandlerTests : IDisposable
         // Update: remove tag1, keep tag2, add tag3
         using (var ctx = _factory.CreateContext())
         {
-            var handler = new UpdateTrailCommandHandler(ctx);
+            var handler = new UpdateTrailCommandHandler(ctx, _cacheInvalidator);
             var command = new UpdateTrailCommand(
                 Id: trail.Id,
                 Name: trail.Name,
@@ -163,7 +166,7 @@ public class TrailCommandHandlerTests : IDisposable
 
         using (var ctx = _factory.CreateContext())
         {
-            var handler = new DeleteTrailCommandHandler(ctx);
+            var handler = new DeleteTrailCommandHandler(ctx, _cacheInvalidator);
             var result = await handler.Handle(new DeleteTrailCommand(trail.Id), CancellationToken.None);
             Assert.True(result);
         }
@@ -180,7 +183,7 @@ public class TrailCommandHandlerTests : IDisposable
     public async Task Delete_NonExistentTrail_ReturnsFalse()
     {
         using var ctx = _factory.CreateContext();
-        var handler = new DeleteTrailCommandHandler(ctx);
+        var handler = new DeleteTrailCommandHandler(ctx, _cacheInvalidator);
         var result = await handler.Handle(new DeleteTrailCommand(Guid.NewGuid()), CancellationToken.None);
         Assert.False(result);
     }
@@ -197,7 +200,7 @@ public class TrailCommandHandlerTests : IDisposable
 
         using (var ctx = _factory.CreateContext())
         {
-            var handler = new DeleteTrailCommandHandler(ctx);
+            var handler = new DeleteTrailCommandHandler(ctx, _cacheInvalidator);
             await handler.Handle(new DeleteTrailCommand(trail.Id), CancellationToken.None);
         }
 

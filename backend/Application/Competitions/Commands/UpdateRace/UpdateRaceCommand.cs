@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Infrastructure.Persistence;
 
@@ -19,10 +20,12 @@ public record UpdateRaceCommand(
 public class UpdateRaceCommandHandler : IRequestHandler<UpdateRaceCommand, bool>
 {
     private readonly UtanvegaDbContext _context;
+    private readonly ICacheInvalidator _cacheInvalidator;
 
-    public UpdateRaceCommandHandler(UtanvegaDbContext context)
+    public UpdateRaceCommandHandler(UtanvegaDbContext context, ICacheInvalidator cacheInvalidator)
     {
         _context = context;
+        _cacheInvalidator = cacheInvalidator;
     }
 
     public async Task<bool> Handle(UpdateRaceCommand request, CancellationToken cancellationToken)
@@ -43,6 +46,7 @@ public class UpdateRaceCommandHandler : IRequestHandler<UpdateRaceCommand, bool>
         race.SortOrder = request.SortOrder;
 
         await _context.SaveChangesAsync(cancellationToken);
+        _cacheInvalidator.InvalidateCompetition();
         return true;
     }
 }

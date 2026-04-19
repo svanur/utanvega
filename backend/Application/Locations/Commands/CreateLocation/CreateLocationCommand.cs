@@ -1,5 +1,6 @@
 using MediatR;
 using NetTopologySuite.Geometries;
+using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Core.Services;
 using Utanvega.Backend.Infrastructure.Persistence;
@@ -21,10 +22,12 @@ public record CreateLocationCommand(
 public class CreateLocationCommandHandler : IRequestHandler<CreateLocationCommand, Guid>
 {
     private readonly UtanvegaDbContext _context;
+    private readonly ICacheInvalidator _cacheInvalidator;
 
-    public CreateLocationCommandHandler(UtanvegaDbContext context)
+    public CreateLocationCommandHandler(UtanvegaDbContext context, ICacheInvalidator cacheInvalidator)
     {
         _context = context;
+        _cacheInvalidator = cacheInvalidator;
     }
 
     public async Task<Guid> Handle(CreateLocationCommand request, CancellationToken cancellationToken)
@@ -54,6 +57,7 @@ public class CreateLocationCommandHandler : IRequestHandler<CreateLocationComman
 
         _context.Locations.Add(location);
         await _context.SaveChangesAsync(cancellationToken);
+        _cacheInvalidator.InvalidateLocation(slug);
 
         return location.Id;
     }

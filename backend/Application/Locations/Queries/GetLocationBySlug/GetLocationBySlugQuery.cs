@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Infrastructure.Persistence;
 using Utanvega.Backend.Application.Locations.Queries.GetLocations;
 using Utanvega.Backend.Core.Entities;
@@ -14,7 +15,11 @@ public record LocationWithTrailsDto(
     List<TrailDto> Trails
 );
 
-public record GetLocationBySlugQuery(string Slug) : IRequest<LocationWithTrailsDto?>;
+public record GetLocationBySlugQuery(string Slug) : IRequest<LocationWithTrailsDto?>, ICacheable
+{
+    public string CacheKey => CacheKeys.Location(Slug);
+    public TimeSpan CacheDuration => TimeSpan.FromMinutes(45);
+}
 
 public class GetLocationBySlugQueryHandler : IRequestHandler<GetLocationBySlugQuery, LocationWithTrailsDto?>
 {

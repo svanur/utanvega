@@ -2,11 +2,16 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Text;
 using System.Xml.Linq;
+using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Infrastructure.Persistence;
 
 namespace Utanvega.Backend.Application.Trails.Queries.GetTrailGpx;
 
-public record GetTrailGpxQuery(string Slug) : IRequest<GpxResponse?>;
+public record GetTrailGpxQuery(string Slug) : IRequest<GpxResponse?>, ICacheable
+{
+    public string CacheKey => CacheKeys.Gpx(Slug);
+    public TimeSpan CacheDuration => TimeSpan.FromHours(24);
+}
 
 public record GpxResponse(string FileName, string Content);
 

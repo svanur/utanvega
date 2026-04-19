@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Infrastructure.Persistence;
 
@@ -14,7 +15,11 @@ public record TrendingTrailDto(
     int ViewCount
 );
 
-public record GetTrendingTrailsQuery(int Count = 10, int Days = 7) : IRequest<List<TrendingTrailDto>>;
+public record GetTrendingTrailsQuery(int Count = 10, int Days = 7) : IRequest<List<TrendingTrailDto>>, ICacheable
+{
+    public string CacheKey => CacheKeys.Trending(Count, Days);
+    public TimeSpan CacheDuration => TimeSpan.FromMinutes(15);
+}
 
 public class GetTrendingTrailsQueryHandler : IRequestHandler<GetTrendingTrailsQuery, List<TrendingTrailDto>>
 {

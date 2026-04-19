@@ -1,12 +1,17 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Application.Competitions.Queries.GetCompetitions;
 using Utanvega.Backend.Core.Services;
 using Utanvega.Backend.Infrastructure.Persistence;
 
 namespace Utanvega.Backend.Application.Competitions.Queries.GetCompetition;
 
-public record GetCompetitionQuery(string Slug) : IRequest<CompetitionDetailDto?>;
+public record GetCompetitionQuery(string Slug) : IRequest<CompetitionDetailDto?>, ICacheable
+{
+    public string CacheKey => CacheKeys.Competition(Slug);
+    public TimeSpan CacheDuration => TimeSpan.FromHours(1);
+}
 
 public record CompetitionDetailDto(
     Guid Id,

@@ -1,5 +1,6 @@
 using MediatR;
 using NetTopologySuite.Geometries;
+using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Core.Services;
 using Utanvega.Backend.Infrastructure.Persistence;
@@ -18,12 +19,14 @@ public class BulkCreateTrailsFromGpxCommandHandler : IRequestHandler<BulkCreateT
     private readonly UtanvegaDbContext _context;
     private readonly CreateTrailFromGpxCommandHandler _singleHandler;
     private readonly LocationDetector _locationDetector;
+    private readonly ICacheInvalidator _cacheInvalidator;
 
-    public BulkCreateTrailsFromGpxCommandHandler(UtanvegaDbContext context, LocationDetector locationDetector)
+    public BulkCreateTrailsFromGpxCommandHandler(UtanvegaDbContext context, LocationDetector locationDetector, ICacheInvalidator cacheInvalidator)
     {
         _context = context;
-        _singleHandler = new CreateTrailFromGpxCommandHandler(context, locationDetector);
+        _singleHandler = new CreateTrailFromGpxCommandHandler(context, locationDetector, cacheInvalidator);
         _locationDetector = locationDetector;
+        _cacheInvalidator = cacheInvalidator;
     }
 
     public async Task<List<Guid>> Handle(BulkCreateTrailsFromGpxCommand request, CancellationToken cancellationToken)
@@ -61,6 +64,7 @@ public class BulkCreateTrailsFromGpxCommandHandler : IRequestHandler<BulkCreateT
         }
 
         await _context.SaveChangesWithAuditAsync("system");
+        _cacheInvalidator.InvalidateTrail();
 
         return resultIds;
     }

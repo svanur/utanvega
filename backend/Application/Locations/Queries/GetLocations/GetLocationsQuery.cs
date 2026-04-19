@@ -1,5 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
+using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Infrastructure.Persistence;
 
 namespace Utanvega.Backend.Application.Locations.Queries.GetLocations;
@@ -9,14 +11,20 @@ public record GetLocationsQuery(Guid? ParentId = null, string? Search = null) : 
 public class GetLocationsQueryHandler : IRequestHandler<GetLocationsQuery, List<LocationDto>>
 {
     private readonly UtanvegaDbContext _context;
+    private readonly IMemoryCache _cache;
 
-    public GetLocationsQueryHandler(UtanvegaDbContext context)
+    public GetLocationsQueryHandler(UtanvegaDbContext context, IMemoryCache cache)
     {
         _context = context;
+        _cache = cache;
     }
 
     public async Task<List<LocationDto>> Handle(GetLocationsQuery request, CancellationToken cancellationToken)
     {
+        // Only cache the no-filter case (public list)
+        var isCacheable = request.ParentId is null && string.IsNullOrWhiteSpace(request.Search);
+        if (isCacheable && _cache.TryGetValue(CacheKeys.LocationsAll, out List<LocationDto>? cached) && cached is not null)
+            return cached;
         var query = _context.Locations
             .AsNoTracking();
 
@@ -38,7 +46,7 @@ public class GetLocationsQueryHandler : IRequestHandler<GetLocationsQuery, List<
             query = query.Where(l => l.Name.ToLower().Contains(search) || l.Slug.ToLower().Contains(search));
         }
 
-        return await query
+        var result = await query
             .OrderBy(l => l.Name)
             .Select(l => new LocationDto(
                 l.Id,
@@ -55,5 +63,10 @@ public class GetLocationsQueryHandler : IRequestHandler<GetLocationsQuery, List<
                 l.TrailLocations.Count
             ))
             .ToListAsync(cancellationToken);
+
+        if (isCacheable)
+            _cache.Set(CacheKeys.LocationsAll, result, TimeSpan.FromHours(1));
+
+        return result;
     }
 }
