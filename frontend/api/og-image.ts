@@ -207,7 +207,7 @@ function defaultImage() {
       color: 'white',
     },
     h('div', { display: 'flex', fontSize: '72px', fontWeight: 800, marginBottom: '16px' }, '⛰️ Utanvega'),
-    h('div', { display: 'flex', fontSize: '28px', color: '#94a3b8' }, 'Trail Discovery in Iceland'),
+    h('div', { display: 'flex', fontSize: '28px', color: '#94a3b8' }, 'Útivistarvefur fyrir Ísendinga'),
   );
 
   return new ImageResponse(image as React.ReactElement, {

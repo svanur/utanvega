@@ -125,11 +125,11 @@ function defaultPage() {
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Utanvega – Trail Discovery in Iceland</title>
-  <meta name="description" content="Explore and discover trails in Iceland for trail running, hiking, and cycling." />
+  <title>Utanvega – Útivistarvefur fyrir Íslendingadingadingadingadingadinga</title>
+  <meta name="description" content="Útivistarvefur til að finna og deila skemmtilegum leiðum, hvort sem þær eru utanvega eða innanbæjar." />
 
-  <meta property="og:title" content="Utanvega – Trail Discovery in Iceland" />
-  <meta property="og:description" content="Explore and discover trails in Iceland for trail running, hiking, and cycling." />
+  <meta property="og:title" content="Utanvega – Útivistarvefur fyrir Íslending" />
+  <meta property="og:description" content="Útivistarvefur til að finna og deila skemmtilegum leiðum, hvort sem þær eru utanvega eða innanbæjar." />
   <meta property="og:url" content="${SITE_URL}" />
   <meta property="og:site_name" content="Utanvega" />
   <meta property="og:type" content="website" />
@@ -138,8 +138,8 @@ function defaultPage() {
   <meta property="og:image:height" content="630" />
 
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Utanvega – Trail Discovery in Iceland" />
-  <meta name="twitter:description" content="Explore and discover trails in Iceland for trail running, hiking, and cycling." />
+  <meta name="twitter:title" content="Utanvega – Útivistarvefur fyrir Íslending" />
+  <meta name="twitter:description" content="Útivistarvefur til að finna og deila skemmtilegum leiðum, hvort sem þær eru utanvega eða innanbæjar." />
   <meta name="twitter:image" content="${SITE_URL}/api/og-image" />
 
   <meta http-equiv="refresh" content="0;url=${SITE_URL}" />

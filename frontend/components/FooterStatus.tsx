@@ -24,7 +24,7 @@ export default function FooterStatus() {
         >
             <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="space-between">
                 <Typography variant="body2" color="text.secondary">
-                    🌄Utanvega🏃‍♂️🏃‍♀️🚴‍
+                    🌄Utanvega
                 </Typography>
                 <MuiLink component={Link} to="/disclaimer" variant="caption" color="text.secondary" underline="hover" sx={{ opacity: 0.7 }}>
                     {t('nav.disclaimer')}
