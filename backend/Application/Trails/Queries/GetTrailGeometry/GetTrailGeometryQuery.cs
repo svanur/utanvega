@@ -1,52 +1,61 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Infrastructure.Persistence;
 using NetTopologySuite.Geometries;
 
 namespace Utanvega.Backend.Application.Trails.Queries.GetTrailGeometry;
 
-public record GetTrailGeometryQuery(Guid? Id = null, string? Slug = null) : IRequest<string?>, ICacheable
-{
-    public string CacheKey => CacheKeys.Geometry(Slug ?? Id?.ToString() ?? "unknown");
-    public TimeSpan CacheDuration => TimeSpan.FromHours(24);
-}
+// Not ICacheable — uses manual caching in the handler so the cache key is always
+// slug-based (normalised) regardless of whether the query arrives by Id or Slug.
+// This ensures CacheInvalidator.InvalidateTrail(slug) always evicts the right entry.
+public record GetTrailGeometryQuery(Guid? Id = null, string? Slug = null) : IRequest<string?>;
 
 public class GetTrailGeometryQueryHandler : IRequestHandler<GetTrailGeometryQuery, string?>
 {
     private readonly UtanvegaDbContext _context;
+    private readonly IMemoryCache _cache;
 
-    public GetTrailGeometryQueryHandler(UtanvegaDbContext context)
+    public GetTrailGeometryQueryHandler(UtanvegaDbContext context, IMemoryCache cache)
     {
         _context = context;
+        _cache = cache;
     }
 
     public async Task<string?> Handle(GetTrailGeometryQuery request, CancellationToken cancellationToken)
     {
-        var query = _context.Trails.AsNoTracking();
-
-        if (request.Id.HasValue)
+        // Resolve the canonical slug first so the cache key is always slug-based.
+        string? slug;
+        if (!string.IsNullOrEmpty(request.Slug))
         {
-            query = query.Where(t => t.Id == request.Id.Value);
+            slug = request.Slug;
         }
-        else if (!string.IsNullOrEmpty(request.Slug))
+        else if (request.Id.HasValue)
         {
-            query = query.Where(t => t.Slug == request.Slug);
+            slug = await _context.Trails.AsNoTracking()
+                .Where(t => t.Id == request.Id.Value)
+                .Select(t => t.Slug)
+                .FirstOrDefaultAsync(cancellationToken);
         }
         else
         {
             return null;
         }
 
-        var geometry = await query
+        if (slug is null) return null;
+
+        var cacheKey = CacheKeys.Geometry(slug);
+        if (_cache.TryGetValue(cacheKey, out string? cached))
+            return cached;
+
+        var geometry = await _context.Trails.AsNoTracking()
+            .Where(t => t.Slug == slug)
             .Select(t => t.GpxData)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (geometry == null) return null;
 
-        // Create a plain Newtonsoft serializer with ONLY a dimension-3 GeometryConverter.
-        // GeoJsonSerializer.Create() adds its own dim-2 converter first, which shadows any
-        // dim-3 converter added afterwards — so we avoid it entirely.
         var factory = new GeometryFactory(new PrecisionModel(), geometry.SRID);
         var settings = new Newtonsoft.Json.JsonSerializerSettings();
         settings.Converters.Add(new NetTopologySuite.IO.Converters.GeometryConverter(factory, 3));
@@ -54,6 +63,9 @@ public class GetTrailGeometryQueryHandler : IRequestHandler<GetTrailGeometryQuer
 
         using var stringWriter = new StringWriter();
         serializer.Serialize(stringWriter, geometry);
-        return stringWriter.ToString();
+        var result = stringWriter.ToString();
+
+        _cache.Set(cacheKey, result, TimeSpan.FromHours(24));
+        return result;
     }
 }
