@@ -23,5 +23,14 @@ public static class CacheKeys
     // Competitions
     public static string Competitions(bool includeHidden) => $"competitions:{includeHidden}";
     public static string Competition(string slug) => $"competition:{slug}";
-    public static string Calendar(DateOnly from, DateOnly to) => $"calendar:{from}:{to}";
+
+    /// <summary>
+    /// Calendar entries include the competition version so bumping the version
+    /// effectively orphans all cached calendar responses without needing key enumeration.
+    /// </summary>
+    public static string Calendar(int version, DateOnly from, DateOnly to) =>
+        $"calendar:{version}:{from:yyyy-MM-dd}:{to:yyyy-MM-dd}";
+
+    /// <summary>Version token that is incremented on every competition/race write.</summary>
+    public static string CompetitionVersion => "competition:version";
 }

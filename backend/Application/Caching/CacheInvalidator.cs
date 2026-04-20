@@ -49,6 +49,19 @@ public class CacheInvalidator : ICacheInvalidator
         _cache.Remove(CacheKeys.Competitions(false));
         _cache.Remove(CacheKeys.Competitions(true));
 
+        // Bump the version token so all cached calendar entries are effectively invalidated.
+        // Calendar keys include the version, so old entries become orphaned and expire via TTL.
+        var current = _cache.GetOrCreate(CacheKeys.CompetitionVersion, e =>
+        {
+            e.Priority = Microsoft.Extensions.Caching.Memory.CacheItemPriority.NeverRemove;
+            return 0;
+        });
+        _cache.Set(CacheKeys.CompetitionVersion, current + 1,
+            new Microsoft.Extensions.Caching.Memory.MemoryCacheEntryOptions
+            {
+                Priority = Microsoft.Extensions.Caching.Memory.CacheItemPriority.NeverRemove
+            });
+
         if (slug is not null)
             _cache.Remove(CacheKeys.Competition(slug));
     }

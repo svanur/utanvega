@@ -46,7 +46,8 @@ public class UpdateTrailCommandHandler : IRequestHandler<UpdateTrailCommand, boo
             .FirstOrDefaultAsync(t => t.Id == request.Id, cancellationToken);
         
         if (trail == null) return false;
-        
+
+        var oldSlug = trail.Slug;
         trail.Name = request.Name;
         
         // Reject if slug is taken by a different non-deleted trail
@@ -155,7 +156,9 @@ public class UpdateTrailCommandHandler : IRequestHandler<UpdateTrailCommand, boo
         }
 
         await _context.SaveChangesWithAuditAsync(request.UpdatedBy);
-        _cacheInvalidator.InvalidateTrail(trail.Slug);
+        _cacheInvalidator.InvalidateTrail(oldSlug);
+        if (oldSlug != request.Slug)
+            _cacheInvalidator.InvalidateTrail(request.Slug);
         return true;
     }
 }
