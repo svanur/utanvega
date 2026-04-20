@@ -1,4 +1,5 @@
 using MediatR;
+using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Infrastructure.Persistence;
 
@@ -18,10 +19,12 @@ public record CreateRaceCommand(
 public class CreateRaceCommandHandler : IRequestHandler<CreateRaceCommand, Guid>
 {
     private readonly UtanvegaDbContext _context;
+    private readonly ICacheInvalidator _cacheInvalidator;
 
-    public CreateRaceCommandHandler(UtanvegaDbContext context)
+    public CreateRaceCommandHandler(UtanvegaDbContext context, ICacheInvalidator cacheInvalidator)
     {
         _context = context;
+        _cacheInvalidator = cacheInvalidator;
     }
 
     public async Task<Guid> Handle(CreateRaceCommand request, CancellationToken cancellationToken)
@@ -42,6 +45,7 @@ public class CreateRaceCommandHandler : IRequestHandler<CreateRaceCommand, Guid>
 
         _context.Races.Add(race);
         await _context.SaveChangesAsync(cancellationToken);
+        _cacheInvalidator.InvalidateCompetition();
 
         return race.Id;
     }

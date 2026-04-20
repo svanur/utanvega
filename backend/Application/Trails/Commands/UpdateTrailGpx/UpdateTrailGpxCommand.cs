@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Core.Services;
 using Utanvega.Backend.Infrastructure.Persistence;
 
@@ -18,10 +19,12 @@ public record UpdateTrailGpxCommand(Guid TrailId, string GpxXml) : IRequest<Upda
 public class UpdateTrailGpxCommandHandler : IRequestHandler<UpdateTrailGpxCommand, UpdateTrailGpxResult?>
 {
     private readonly UtanvegaDbContext _context;
+    private readonly ICacheInvalidator _cacheInvalidator;
 
-    public UpdateTrailGpxCommandHandler(UtanvegaDbContext context)
+    public UpdateTrailGpxCommandHandler(UtanvegaDbContext context, ICacheInvalidator cacheInvalidator)
     {
         _context = context;
+        _cacheInvalidator = cacheInvalidator;
     }
 
     public async Task<UpdateTrailGpxResult?> Handle(UpdateTrailGpxCommand request, CancellationToken cancellationToken)
@@ -43,6 +46,7 @@ public class UpdateTrailGpxCommandHandler : IRequestHandler<UpdateTrailGpxComman
         trail.UpdatedBy = "admin";
 
         await _context.SaveChangesWithAuditAsync("admin");
+        _cacheInvalidator.InvalidateTrail(trail.Slug);
 
         return new UpdateTrailGpxResult(
             trail.Length,

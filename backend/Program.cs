@@ -50,6 +50,7 @@ using MediatR;
 using FluentValidation;
 using Microsoft.Extensions.Caching.Memory;
 using Utanvega.Backend.Application.Validation;
+using Utanvega.Backend.Application.Caching;
 
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -182,11 +183,13 @@ builder.Services.AddMediatR(cfg =>
 {
     cfg.RegisterServicesFromAssembly(typeof(Program).Assembly);
     cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
+    cfg.AddOpenBehavior(typeof(CachingBehavior<,>));
 });
 builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
 builder.Services.AddScoped<CreateTrailFromGpxCommandHandler>();
 builder.Services.AddScoped<LocationDetector>();
 builder.Services.AddSingleton<IScheduleRuleEngine, ScheduleRuleEngine>();
+builder.Services.AddSingleton<ICacheInvalidator, CacheInvalidator>();
 builder.Services.AddHttpClient("OpenMeteo");
 builder.Services.AddMemoryCache();
 

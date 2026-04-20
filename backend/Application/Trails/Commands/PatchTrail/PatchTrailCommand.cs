@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Infrastructure.Persistence;
 
@@ -17,10 +18,12 @@ public record PatchTrailCommand(
 public class PatchTrailCommandHandler : IRequestHandler<PatchTrailCommand, bool>
 {
     private readonly UtanvegaDbContext _context;
+    private readonly ICacheInvalidator _cacheInvalidator;
 
-    public PatchTrailCommandHandler(UtanvegaDbContext context)
+    public PatchTrailCommandHandler(UtanvegaDbContext context, ICacheInvalidator cacheInvalidator)
     {
         _context = context;
+        _cacheInvalidator = cacheInvalidator;
     }
 
     public async Task<bool> Handle(PatchTrailCommand request, CancellationToken cancellationToken)
@@ -48,6 +51,7 @@ public class PatchTrailCommandHandler : IRequestHandler<PatchTrailCommand, bool>
         trail.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync(cancellationToken);
+        _cacheInvalidator.InvalidateTrail(trail.Slug);
         return true;
     }
 }

@@ -1,11 +1,16 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Infrastructure.Persistence;
 using NetTopologySuite.Geometries;
 
 namespace Utanvega.Backend.Application.Trails.Queries.GetTrailGeometry;
 
-public record GetTrailGeometryQuery(Guid? Id = null, string? Slug = null) : IRequest<string?>;
+public record GetTrailGeometryQuery(Guid? Id = null, string? Slug = null) : IRequest<string?>, ICacheable
+{
+    public string CacheKey => CacheKeys.Geometry(Slug ?? Id?.ToString() ?? "unknown");
+    public TimeSpan CacheDuration => TimeSpan.FromHours(24);
+}
 
 public class GetTrailGeometryQueryHandler : IRequestHandler<GetTrailGeometryQuery, string?>
 {

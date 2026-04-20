@@ -1,12 +1,17 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
+using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Infrastructure.Persistence;
 
 namespace Utanvega.Backend.Application.Trails.Queries.GetTrails;
 
-public record GetTrailsQuery(bool IncludeDeleted = false, bool PublishedOnly = false) : IRequest<List<TrailDto>>;
+public record GetTrailsQuery(bool IncludeDeleted = false, bool PublishedOnly = false) : IRequest<List<TrailDto>>, ICacheable
+{
+    public string CacheKey => CacheKeys.Trails(IncludeDeleted, PublishedOnly);
+    public TimeSpan CacheDuration => TimeSpan.FromHours(1);
+}
 
 public record LocationInfoDto(Guid Id, string Name, string Slug, int Order, string Role);
 

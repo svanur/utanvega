@@ -1,11 +1,16 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Core.Services;
 using Utanvega.Backend.Infrastructure.Persistence;
 
 namespace Utanvega.Backend.Application.Competitions.Queries.GetCompetitions;
 
-public record GetCompetitionsQuery(bool IncludeHidden = false) : IRequest<List<CompetitionDto>>;
+public record GetCompetitionsQuery(bool IncludeHidden = false) : IRequest<List<CompetitionDto>>, ICacheable
+{
+    public string CacheKey => CacheKeys.Competitions(IncludeHidden);
+    public TimeSpan CacheDuration => TimeSpan.FromHours(1);
+}
 
 public class GetCompetitionsQueryHandler : IRequestHandler<GetCompetitionsQuery, List<CompetitionDto>>
 {

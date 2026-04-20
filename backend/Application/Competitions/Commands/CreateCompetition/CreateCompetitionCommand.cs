@@ -1,4 +1,5 @@
 using MediatR;
+using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Core.Services;
 using Utanvega.Backend.Infrastructure.Persistence;
@@ -22,10 +23,12 @@ public record CreateCompetitionCommand(
 public class CreateCompetitionCommandHandler : IRequestHandler<CreateCompetitionCommand, Guid>
 {
     private readonly UtanvegaDbContext _context;
+    private readonly ICacheInvalidator _cacheInvalidator;
 
-    public CreateCompetitionCommandHandler(UtanvegaDbContext context)
+    public CreateCompetitionCommandHandler(UtanvegaDbContext context, ICacheInvalidator cacheInvalidator)
     {
         _context = context;
+        _cacheInvalidator = cacheInvalidator;
     }
 
     public async Task<Guid> Handle(CreateCompetitionCommand request, CancellationToken cancellationToken)
@@ -52,6 +55,7 @@ public class CreateCompetitionCommandHandler : IRequestHandler<CreateCompetition
 
         _context.Competitions.Add(competition);
         await _context.SaveChangesAsync(cancellationToken);
+        _cacheInvalidator.InvalidateCompetition(slug);
 
         return competition.Id;
     }

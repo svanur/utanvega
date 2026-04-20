@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Infrastructure.Persistence;
 
@@ -21,10 +22,12 @@ public record BulkTrailActionCommand(
 public class BulkTrailActionCommandHandler : IRequestHandler<BulkTrailActionCommand, int>
 {
     private readonly UtanvegaDbContext _context;
+    private readonly ICacheInvalidator _cacheInvalidator;
 
-    public BulkTrailActionCommandHandler(UtanvegaDbContext context)
+    public BulkTrailActionCommandHandler(UtanvegaDbContext context, ICacheInvalidator cacheInvalidator)
     {
         _context = context;
+        _cacheInvalidator = cacheInvalidator;
     }
 
     public async Task<int> Handle(BulkTrailActionCommand request, CancellationToken cancellationToken)
@@ -69,6 +72,7 @@ public class BulkTrailActionCommandHandler : IRequestHandler<BulkTrailActionComm
         }
 
         await _context.SaveChangesWithAuditAsync("system");
+        _cacheInvalidator.InvalidateTrail();
         
         return trails.Count;
     }

@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
+using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Core.Services;
 using Utanvega.Backend.Infrastructure.Persistence;
@@ -8,7 +9,11 @@ using Utanvega.Backend.Application.Trails.Queries.GetTrails;
 
 namespace Utanvega.Backend.Application.Trails.Queries.GetTrailBySlug;
 
-public record GetTrailBySlugQuery(string Slug) : IRequest<TrailDto?>;
+public record GetTrailBySlugQuery(string Slug) : IRequest<TrailDto?>, ICacheable
+{
+    public string CacheKey => CacheKeys.Trail(Slug);
+    public TimeSpan CacheDuration => TimeSpan.FromMinutes(45);
+}
 
 public class GetTrailBySlugQueryHandler : IRequestHandler<GetTrailBySlugQuery, TrailDto?>
 {

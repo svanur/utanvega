@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
+using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Infrastructure.Persistence;
 
@@ -22,10 +23,12 @@ public record UpdateLocationCommand(
 public class UpdateLocationCommandHandler : IRequestHandler<UpdateLocationCommand>
 {
     private readonly UtanvegaDbContext _context;
+    private readonly ICacheInvalidator _cacheInvalidator;
 
-    public UpdateLocationCommandHandler(UtanvegaDbContext context)
+    public UpdateLocationCommandHandler(UtanvegaDbContext context, ICacheInvalidator cacheInvalidator)
     {
         _context = context;
+        _cacheInvalidator = cacheInvalidator;
     }
 
     public async Task Handle(UpdateLocationCommand request, CancellationToken cancellationToken)
@@ -47,6 +50,7 @@ public class UpdateLocationCommandHandler : IRequestHandler<UpdateLocationComman
             center = new Point(request.Longitude.Value, request.Latitude.Value) { SRID = 4326 };
         }
 
+        var oldSlug = location.Slug;
         location.Name = request.Name;
         location.Slug = request.Slug;
         location.Description = request.Description;
@@ -58,5 +62,8 @@ public class UpdateLocationCommandHandler : IRequestHandler<UpdateLocationComman
         location.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesWithAuditAsync(request.UpdatedBy);
+        _cacheInvalidator.InvalidateLocation(oldSlug);
+        if (oldSlug != request.Slug)
+            _cacheInvalidator.InvalidateLocation(request.Slug);
     }
 }
