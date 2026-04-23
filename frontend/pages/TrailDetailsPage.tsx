@@ -569,7 +569,6 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                             height="100%"
                             mapInstanceRef={dialogMapRef}
                             providedGeometry={geometry}
-                            disableGeolocation
                         />
                     </Box>
                     {geometry && (
