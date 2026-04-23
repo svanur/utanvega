@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useId } from 'react';
 import {
   AreaChart,
   Area,
@@ -27,6 +27,8 @@ interface ElevationChartProps {
   coordinates: number[][]; // [lon, lat, ele]
   onHover: (point: ElevationDataPoint | null) => void;
   activeIndex?: number | null;
+  height?: number;
+  compact?: boolean;
 }
 
 function getGradientColor(gradient: number): string {
@@ -64,9 +66,12 @@ function ChartTooltip({ active, payload }: { active?: boolean; payload?: Array<{
   return null;
 }
 
-const ElevationChart: React.FC<ElevationChartProps> = ({ coordinates, onHover, activeIndex }) => {
+const ElevationChart: React.FC<ElevationChartProps> = ({ coordinates, onHover, activeIndex, height = 220, compact = false }) => {
   const theme = useTheme();
   const { t } = useTranslation();
+  const uid = useId();
+  const strokeGradientId = `steepnessStroke-${uid}`;
+  const fillGradientId = `colorEle-${uid}`;
 
   const chartData = useMemo(() => {
     let totalDistance = 0;
@@ -174,12 +179,14 @@ const ElevationChart: React.FC<ElevationChartProps> = ({ coordinates, onHover, a
   };
 
   return (
-    <Box sx={{ width: '100%', mt: 3 }}>
-      <Typography variant="h6" gutterBottom>
-        {t('elevation.title')}
-      </Typography>
-      <Box sx={{ width: '100%', height: 220, overflow: 'hidden', touchAction: 'none' }}>
-        <ResponsiveContainer width="100%" height={220}>
+    <Box sx={{ width: '100%', mt: compact ? 0 : 3 }}>
+      {!compact && (
+        <Typography variant="h6" gutterBottom>
+          {t('elevation.title')}
+        </Typography>
+      )}
+      <Box sx={{ width: '100%', height, overflow: 'hidden', touchAction: 'none' }}>
+        <ResponsiveContainer width="100%" height={height}>
           <AreaChart
             data={chartData}
             margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
@@ -189,12 +196,12 @@ const ElevationChart: React.FC<ElevationChartProps> = ({ coordinates, onHover, a
             onTouchEnd={() => onHover(null)}
           >
             <defs>
-              <linearGradient id="steepnessStroke" x1="0" y1="0" x2="1" y2="0">
+              <linearGradient id={strokeGradientId} x1="0" y1="0" x2="1" y2="0">
                 {gradientStops.map((s, i) => (
                   <stop key={i} offset={s.offset} stopColor={s.color} />
                 ))}
               </linearGradient>
-              <linearGradient id="colorEle" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id={fillGradientId} x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor={theme.palette.primary.main} stopOpacity={0.8} />
                 <stop offset="95%" stopColor={theme.palette.primary.main} stopOpacity={0} />
               </linearGradient>
@@ -217,10 +224,10 @@ const ElevationChart: React.FC<ElevationChartProps> = ({ coordinates, onHover, a
             <Area
               type="monotone"
               dataKey="elevation"
-              stroke={gradientStops.length > 0 && activeIndex == null ? 'url(#steepnessStroke)' : theme.palette.primary.main}
+              stroke={gradientStops.length > 0 && activeIndex == null ? `url(#${strokeGradientId})` : theme.palette.primary.main}
               strokeWidth={activeIndex == null ? 2 : 1}
               fillOpacity={1}
-              fill="url(#colorEle)"
+              fill={`url(#${fillGradientId})`}
               isAnimationActive={false}
             />
             {activeIndex != null && chartData[activeIndex] && (

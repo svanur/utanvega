@@ -2,6 +2,7 @@ import { MapContainer, TileLayer, Polyline, useMap, Marker, useMapEvents } from 
 import { Box, Typography, Paper, IconButton, useTheme } from '@mui/material';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
 import { useEffect, useState, useMemo } from 'react';
+import type React from 'react';
 import { useTranslation } from 'react-i18next';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -70,6 +71,8 @@ interface TrailMapProps {
     onDataLoaded?: (data: GeoJsonGeometry) => void;
     hoverPoint?: { lat: number; lng: number } | null;
     activityType?: string;
+    height?: string | number;
+    mapInstanceRef?: React.MutableRefObject<L.Map | null>;
 }
 
 const activityEmoji: Record<string, string> = {
@@ -93,7 +96,16 @@ function HoverMarker({ point, activityType }: { point: { lat: number; lng: numbe
     return <Marker position={[point.lat, point.lng]} icon={icon} zIndexOffset={1000} />;
 }
 
-export default function TrailMap({ slug, onDataLoaded, hoverPoint, activityType }: TrailMapProps) {
+function MapRefSetter({ mapInstanceRef }: { mapInstanceRef?: React.MutableRefObject<L.Map | null> }) {
+    const map = useMap();
+    useEffect(() => {
+        if (mapInstanceRef) mapInstanceRef.current = map;
+        return () => { if (mapInstanceRef) mapInstanceRef.current = null; };
+    }, [map, mapInstanceRef]);
+    return null;
+}
+
+export default function TrailMap({ slug, onDataLoaded, hoverPoint, activityType, height, mapInstanceRef }: TrailMapProps) {
     const { t } = useTranslation();
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
@@ -185,7 +197,7 @@ export default function TrailMap({ slug, onDataLoaded, hoverPoint, activityType 
     if (error || !geometry) return <Typography color="error">{t('trail.noGpsData')}</Typography>;
 
     return (
-        <Box sx={{ height: 400, width: '100%', mt: 2, borderRadius: 2, overflow: 'hidden', border: '1px solid #ccc', position: 'relative' }}>
+        <Box sx={{ height: height ?? 400, width: '100%', mt: 2, borderRadius: 2, overflow: 'hidden', border: '1px solid #ccc', position: 'relative' }}>
             <Paper 
                 elevation={3} 
                 sx={{ 
@@ -221,6 +233,7 @@ export default function TrailMap({ slug, onDataLoaded, hoverPoint, activityType 
                 scrollWheelZoom={false}
             >
                 <MapEvents />
+                <MapRefSetter mapInstanceRef={mapInstanceRef} />
                 <TileLayer
                     key={isDark ? 'dark' : 'light'}
                     attribution={isDark
