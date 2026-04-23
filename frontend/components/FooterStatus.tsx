@@ -57,9 +57,6 @@ export default function FooterStatus() {
                             variant="outlined"
                             size="small"
                         />
-                        <Typography variant="caption" color="text.secondary">
-                            {data?.service ?? ''}
-                        </Typography>
                     </Stack>
                 )}
             </Stack>

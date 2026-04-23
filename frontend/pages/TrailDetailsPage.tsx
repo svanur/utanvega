@@ -14,9 +14,14 @@ import {
     IconButton,
     Container,
     CircularProgress,
-    Tooltip
+    Tooltip,
+    Dialog,
+    DialogContent,
+    DialogTitle,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import FullscreenIcon from '@mui/icons-material/Fullscreen';
+import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import RouteIcon from '@mui/icons-material/Route';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
@@ -103,6 +108,8 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     const [geometry, setGeometry] = useState<GeoJsonGeometry | null>(null);
     const [hoverPoint, setHoverPoint] = useState<{ lat: number; lng: number } | null>(null);
     const [playbackIndex, setPlaybackIndex] = useState<number | null>(null);
+    const [fullscreenOpen, setFullscreenOpen] = useState(false);
+    const dialogMapRef = useRef<import('leaflet').Map | null>(null);
 
     // Record trail view for "recently viewed" + server analytics
     React.useEffect(() => {
@@ -431,9 +438,18 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
 
                 <Divider sx={{ mb: 3 }} />
 
-                <Typography variant="h6" gutterBottom>
-                    {t('trail.routeMap')}
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography variant="h6">
+                        {t('trail.routeMap')}
+                    </Typography>
+                    {geometry && (
+                        <Tooltip title={t('trail.fullscreenMap')}>
+                            <IconButton size="small" onClick={() => setFullscreenOpen(true)} aria-label={t('trail.fullscreenMap')}>
+                                <FullscreenIcon />
+                            </IconButton>
+                        </Tooltip>
+                    )}
+                </Box>
                 <TrailMap 
                     slug={trail.slug} 
                     onDataLoaded={setGeometry} 
@@ -510,6 +526,64 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                     </Box>
                 </Box>
             )}
+
+            {/* Fullscreen map + elevation dialog */}
+            <Dialog
+                fullScreen
+                open={fullscreenOpen}
+                onClose={() => {
+                    setHoverPoint(null);
+                    setFullscreenOpen(false);
+                }}
+                TransitionProps={{
+                    onEntered: () => dialogMapRef.current?.invalidateSize(),
+                    onExited: () => setHoverPoint(null),
+                }}
+            >
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', py: 1 }}>
+                    <Typography variant="h6" component="span" noWrap>{trail.name}</Typography>
+                    <IconButton
+                        onClick={() => {
+                            setHoverPoint(null);
+                            setFullscreenOpen(false);
+                        }}
+                        aria-label={t('trail.closeFullscreen')}
+                    >
+                        <FullscreenExitIcon />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent
+                    sx={{
+                        p: 0,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        height: '100%',
+                        overflow: 'hidden',
+                    }}
+                >
+                    <Box sx={{ flex: '6 1 0', minHeight: 0 }}>
+                        <TrailMap
+                            slug={trail.slug}
+                            hoverPoint={hoverPoint}
+                            activityType={trail.activityType}
+                            height="100%"
+                            mapInstanceRef={dialogMapRef}
+                            providedGeometry={geometry}
+                            disableGeolocation
+                        />
+                    </Box>
+                    {geometry && (
+                        <Box sx={{ flex: '4 1 0', minHeight: 0, overflow: 'auto', px: 2, pb: 1 }}>
+                            <ElevationChart
+                                coordinates={geometry.coordinates}
+                                onHover={(point) => setHoverPoint(point ? { lat: point.lat, lng: point.lng } : null)}
+                                activeIndex={playbackIndex}
+                                compact
+                            />
+                        </Box>
+                    )}
+                </DialogContent>
+            </Dialog>
         </Layout>
     );
 }

@@ -52,6 +52,8 @@
         "type": "Type",
         "estTime": "Est. time",
         "routeMap": "Route Map",
+        "fullscreenMap": "Fullscreen map",
+        "closeFullscreen": "Close fullscreen",
         "getDirections": "Get directions to trailhead",
         "downloadGpx": "Download GPX file",
         "relatedTrails": "Related Trails",
