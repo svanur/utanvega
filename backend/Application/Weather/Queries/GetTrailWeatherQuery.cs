@@ -69,6 +69,7 @@ public class GetTrailWeatherQueryHandler : IRequestHandler<GetTrailWeatherQuery,
     private readonly UtanvegaDbContext _context;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IMemoryCache _cache;
+    private readonly ILogger<GetTrailWeatherQueryHandler> _logger;
 
     private const int ElevationThresholdMeters = 300;
     private const int HighlandElevationThreshold = 200;
@@ -78,11 +79,13 @@ public class GetTrailWeatherQueryHandler : IRequestHandler<GetTrailWeatherQuery,
     public GetTrailWeatherQueryHandler(
         UtanvegaDbContext context,
         IHttpClientFactory httpClientFactory,
-        IMemoryCache cache)
+        IMemoryCache cache,
+        ILogger<GetTrailWeatherQueryHandler> logger)
     {
         _context = context;
         _httpClientFactory = httpClientFactory;
         _cache = cache;
+        _logger = logger;
     }
 
     public async Task<WeatherDto?> Handle(GetTrailWeatherQuery request, CancellationToken cancellationToken)
@@ -183,7 +186,7 @@ public class GetTrailWeatherQueryHandler : IRequestHandler<GetTrailWeatherQuery,
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[WARN] Open-Meteo API call failed: {ex.Message}");
+            _logger.LogWarning(ex, "Open-Meteo API call failed for coordinates ({Lat}, {Lon})", lat, lon);
             return null;
         }
     }

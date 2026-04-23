@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text.Encodings.Web;
+using Serilog;
+using Serilog.Events;
 using Utanvega.Backend.Infrastructure.Persistence;
 using Utanvega.Backend.Core.Entities;
 using Microsoft.AspNetCore.Authentication;
@@ -58,7 +60,25 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Threading.RateLimiting;
 
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
+    .CreateBootstrapLogger();
+
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseSerilog((ctx, services, config) =>
+{
+    config
+        .MinimumLevel.Information()
+        .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+        .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
+        .Enrich.FromLogContext();
+
+    if (ctx.HostingEnvironment.IsDevelopment())
+        config.WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}");
+    else
+        config.WriteTo.Console(new Serilog.Formatting.Json.JsonFormatter());
+});
 
 // Allow large multipart uploads (90+ GPX files in bulk)
 builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = 200 * 1024 * 1024); // 200 MB
@@ -77,8 +97,8 @@ var rawConnectionString = builder.Configuration.GetConnectionString("DefaultConn
 var connectionString = rawConnectionString;
 if (!string.IsNullOrEmpty(rawConnectionString) && rawConnectionString.Contains("://"))
 {
-    Console.WriteLine($"[INFO] Found Connection String with scheme: {rawConnectionString.Split(':')[0]}");
-    try 
+    Log.Information("Found connection string with scheme {Scheme}", rawConnectionString.Split(':')[0]);
+    try
     {
         // Using manual string splitting instead of Uri class to avoid issues with special characters in passwords
         // Format: postgresql://user:password@host:port/database
@@ -106,25 +126,21 @@ if (!string.IsNullOrEmpty(rawConnectionString) && rawConnectionString.Contains("
         string port = hostAndPort.Length > 1 ? hostAndPort[1] : "5432";
 
         connectionString = $"Host={host};Port={port};Database={database};Username={user};Password={password};Include Error Detail=true";
-        Console.WriteLine($"[INFO] Successfully parsed Connection String. Host={host}, Port={port}, Database={database}");
+        Log.Information("Successfully parsed connection string. Host={Host}, Port={Port}, Database={Database}", host, port, database);
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"[CRITICAL] Failed to parse connection string: {ex.Message}");
+        Log.Fatal(ex, "Failed to parse connection string");
     }
 }
 else if (!string.IsNullOrEmpty(rawConnectionString))
 {
-    Console.WriteLine("[INFO] Using raw Connection String (already in Npgsql format).");
+    Log.Information("Using raw connection string (already in Npgsql format)");
 }
 
-if (builder.Environment.IsDevelopment())
+if (string.IsNullOrEmpty(connectionString))
 {
-    Console.WriteLine($"[DEBUG_LOG] Using ConnectionString starting with: {connectionString?.Substring(0, Math.Min(connectionString?.Length ?? 0, 15))}...");
-}
-else if (string.IsNullOrEmpty(connectionString))
-{
-    Console.WriteLine("[CRITICAL] No connection string found! Check DATABASE_URL or DefaultConnection secret.");
+    Log.Fatal("No connection string found. Check DATABASE_URL or DefaultConnection secret");
 }
 
 // Supabase Auth Configuration
@@ -132,7 +148,7 @@ var supabaseUrl = builder.Configuration["SUPABASE_URL"];
 if (string.IsNullOrEmpty(supabaseUrl))
 {
     if (builder.Environment.IsDevelopment())
-        Console.WriteLine("[WARN] SUPABASE_URL not set, Supabase auth will not work.");
+        Log.Warning("SUPABASE_URL not set; Supabase auth will not work");
     else
         throw new InvalidOperationException("SUPABASE_URL must be configured in production.");
 }
@@ -144,7 +160,7 @@ if (string.IsNullOrEmpty(jwtSecret) && !builder.Environment.IsDevelopment())
 }
 else if (!string.IsNullOrEmpty(jwtSecret))
 {
-    Console.WriteLine($"[INFO] SUPABASE_JWT_SECRET found (Length: {jwtSecret.Length})");
+    Log.Information("SUPABASE_JWT_SECRET found (length: {Length})", jwtSecret.Length);
 }
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -202,7 +218,7 @@ builder.Services.AddCors(options =>
     {
         var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? ["http://localhost:5173", "http://localhost:5174"];
         
-        Console.WriteLine($"[INFO] Allowed Origins: {string.Join(", ", allowedOrigins)}");
+        Log.Information("Allowed Origins: {Origins}", string.Join(", ", allowedOrigins));
         
         policy.WithOrigins(allowedOrigins)
               .AllowAnyHeader()
@@ -236,13 +252,23 @@ builder.Services.AddRateLimiter(options =>
 
 var app = builder.Build();
 
-Console.WriteLine("[INFO] Application built. Starting up...");
+Log.Information("Application built. Starting up...");
+
+var middlewareLogger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("App");
 
 // app.UseSwagger();
 // app.UseSwaggerUI();
 
 app.UseCors("Frontend");
 app.UseRateLimiter();
+
+app.UseSerilogRequestLogging(opts =>
+{
+    opts.GetLevel = (ctx, elapsed, ex) =>
+        ctx.Request.Path.StartsWithSegments("/api/v1/health")
+            ? LogEventLevel.Debug
+            : LogEventLevel.Information;
+});
 
 // Security headers
 app.Use(async (context, next) =>
@@ -279,7 +305,7 @@ app.Use(async (context, next) =>
     {
         if (!context.Response.HasStarted)
         {
-            Console.WriteLine($"[ERROR] Unhandled exception: {ex}");
+            middlewareLogger.LogError(ex, "Unhandled exception for {Method} {Path}", context.Request.Method, context.Request.Path);
             context.Response.StatusCode = 500;
             context.Response.ContentType = "application/json";
             await context.Response.WriteAsJsonAsync(new { title = "An unexpected error occurred." });
@@ -297,16 +323,16 @@ using (var scope = app.Services.CreateScope())
     try 
     {
         var db = scope.ServiceProvider.GetRequiredService<UtanvegaDbContext>();
-        Console.WriteLine("[INFO] Applying database migrations...");
+        Log.Information("Applying database migrations...");
         db.Database.Migrate();
-        Console.WriteLine("[INFO] Migrations applied successfully.");
+        Log.Information("Migrations applied successfully.");
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"[ERROR] Database migration failed: {ex.Message}");
+        Log.Error(ex, "Database migration failed");
         if (ex.InnerException != null)
         {
-            Console.WriteLine($"[ERROR] Inner exception: {ex.InnerException.Message}");
+            Log.Error(ex.InnerException, "Database migration inner exception");
         }
         // We don't throw here to allow the app to start even if migrations fail, 
         // which helps in identifying if the issue is DB-related or App-related.
@@ -671,7 +697,7 @@ app.MapGet("/api/v1/admin/trails/{idOrSlug}/geometry", [Authorize] async (string
 })
 .WithName("GetTrailGeometry");
 
-app.MapPost("/api/v1/admin/trails/upload-gpx", [Authorize] async (string name, IFormFile file, IMediator mediator, string? activityType) =>
+app.MapPost("/api/v1/admin/trails/upload-gpx", [Authorize] async (string name, IFormFile file, IMediator mediator, string? activityType, ILogger<Program> logger) =>
 {
     if (file == null || file.Length == 0) return Results.BadRequest("No file uploaded.");
     
@@ -718,14 +744,14 @@ app.MapPost("/api/v1/admin/trails/upload-gpx", [Authorize] async (string name, I
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"[ERROR] GPX upload failed: {ex}");
+        logger.LogError(ex, "GPX upload failed for trail {TrailName}", name);
         return Results.Problem("Failed to process GPX file. Ensure it contains valid GPX data.");
     }
 })
 .WithName("UploadGpx")
 .DisableAntiforgery(); // Bearer token auth is not vulnerable to CSRF; antiforgery not needed
 
-app.MapPut("/api/v1/admin/trails/{id:guid}/gpx", [Authorize] async (Guid id, IFormFile file, IMediator mediator) =>
+app.MapPut("/api/v1/admin/trails/{id:guid}/gpx", [Authorize] async (Guid id, IFormFile file, IMediator mediator, ILogger<Program> logger) =>
 {
     if (file == null || file.Length == 0) return Results.BadRequest("No file uploaded.");
 
@@ -740,14 +766,14 @@ app.MapPut("/api/v1/admin/trails/{id:guid}/gpx", [Authorize] async (Guid id, IFo
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"[ERROR] GPX update failed: {ex}");
+        logger.LogError(ex, "GPX update failed for trail {TrailId}", id);
         return Results.Problem("Failed to process GPX file. Ensure it contains valid GPX data.");
     }
 })
 .WithName("UpdateTrailGpx")
 .DisableAntiforgery();
 
-app.MapPost("/api/v1/admin/trails/check-similarity", [Authorize] async (string? name, IFormFile file, IMediator mediator) =>
+app.MapPost("/api/v1/admin/trails/check-similarity", [Authorize] async (string? name, IFormFile file, IMediator mediator, ILogger<Program> logger) =>
 {
     if (file == null || file.Length == 0) return Results.BadRequest("No file uploaded.");
     
@@ -770,14 +796,14 @@ app.MapPost("/api/v1/admin/trails/check-similarity", [Authorize] async (string? 
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"[ERROR] Similarity check failed: {ex}");
+        logger.LogError(ex, "Similarity check failed for {TrailName}", name);
         return Results.Problem("Failed to check trail similarity. Ensure the GPX data is valid.");
     }
 })
 .WithName("CheckTrailSimilarity")
 .DisableAntiforgery(); // Bearer token auth is not vulnerable to CSRF; antiforgery not needed
 
-app.MapPost("/api/v1/admin/trails/bulk-check-similarity", [Authorize] async (HttpContext context, IMediator mediator) =>
+app.MapPost("/api/v1/admin/trails/bulk-check-similarity", [Authorize] async (HttpContext context, IMediator mediator, ILogger<Program> logger) =>
 {
     var form = await context.Request.ReadFormAsync();
     var files = form.Files.GetFiles("files");
@@ -817,14 +843,14 @@ app.MapPost("/api/v1/admin/trails/bulk-check-similarity", [Authorize] async (Htt
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"[ERROR] Bulk similarity check failed: {ex}");
+        logger.LogError(ex, "Bulk similarity check failed for {FileCount} files", gpxFiles.Count);
         return Results.Problem("Failed to check trail similarity. Ensure the GPX files contain valid data.");
     }
 })
 .WithName("BulkCheckTrailSimilarity")
 .DisableAntiforgery(); // Bearer token auth is not vulnerable to CSRF; antiforgery not needed
 
-app.MapPost("/api/v1/admin/trails/bulk-upload-gpx", [Authorize] async (HttpContext context, IMediator mediator) =>
+app.MapPost("/api/v1/admin/trails/bulk-upload-gpx", [Authorize] async (HttpContext context, IMediator mediator, ILogger<Program> logger) =>
 {
     var form = await context.Request.ReadFormAsync();
     var files = form.Files.GetFiles("files");
@@ -852,7 +878,7 @@ app.MapPost("/api/v1/admin/trails/bulk-upload-gpx", [Authorize] async (HttpConte
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"[ERROR] Bulk GPX upload failed: {ex}");
+        logger.LogError(ex, "Bulk GPX upload failed for {FileCount} files", gpxFiles.Count);
         return Results.Problem("Failed to upload GPX files. Ensure they contain valid GPX data.");
     }
 })
@@ -882,7 +908,7 @@ app.MapPut("/api/v1/admin/locations/{id}", [Authorize] async (Guid id, UpdateLoc
 })
 .WithName("UpdateLocation");
 
-app.MapDelete("/api/v1/admin/locations/{id}", [Authorize] async (Guid id, IMediator mediator) =>
+app.MapDelete("/api/v1/admin/locations/{id}", [Authorize] async (Guid id, IMediator mediator, ILogger<Program> logger) =>
 {
     try 
     {
@@ -895,7 +921,7 @@ app.MapDelete("/api/v1/admin/locations/{id}", [Authorize] async (Guid id, IMedia
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"[ERROR] Location delete failed: {ex}");
+        logger.LogError(ex, "Location delete failed for {LocationId}", id);
         return Results.Problem("Failed to delete location.");
     }
 })
@@ -1158,7 +1184,14 @@ app.MapDelete("/api/v1/admin/races/{id}", [Authorize] async (Guid id, IMediator 
 })
 .WithName("DeleteRace");
 
-app.Run();
+try
+{
+    app.Run();
+}
+finally
+{
+    Log.CloseAndFlush();
+}
 
 public record TagCreateDto(string Name, string? Color);
 public record BulkAddTagRequest(List<Guid> TrailIds, Guid TagId);

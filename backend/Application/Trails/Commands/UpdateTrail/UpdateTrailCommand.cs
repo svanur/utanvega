@@ -67,7 +67,6 @@ public class UpdateTrailCommandHandler : IRequestHandler<UpdateTrailCommand, boo
         }
         else
         {
-            Console.WriteLine($"[DEBUG_LOG] Failed to parse ActivityType: '{request.ActivityType}'");
             // If the value is "TrailRunnin" or similar, we want to match it to TrailRunning
             if (request.ActivityType.StartsWith("TrailRunnin", StringComparison.OrdinalIgnoreCase))
             {

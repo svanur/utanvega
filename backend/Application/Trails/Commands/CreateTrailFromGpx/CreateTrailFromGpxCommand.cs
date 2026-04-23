@@ -68,16 +68,12 @@ public class CreateTrailFromGpxCommandHandler : IRequestHandler<CreateTrailFromG
         var buffer = trail.GpxData.Buffer(0.0002); 
         
         var trailLength = trail.GpxData.Length;
-        Console.WriteLine($"[DEBUG_LOG] Similarity check for '{trail.Name}'. New Trail GpxData Length: {trailLength:F6}");
-        
         if (trailLength > 0)
         {
             var existingTrails = await _context.Trails
                 .Where(t => t.GpxData != null && t.GpxData.Intersects(buffer))
                 .Select(t => new { t.Id, t.Name, t.GpxData })
                 .ToListAsync(cancellationToken);
-
-            Console.WriteLine($"[DEBUG_LOG] Found {existingTrails.Count} existing trails intersecting with buffer.");
 
             foreach (var existing in existingTrails)
             {
@@ -87,8 +83,6 @@ public class CreateTrailFromGpxCommandHandler : IRequestHandler<CreateTrailFromG
                 // Intersection(existing, buffer) / trail.GpxData.Length (percentage of NEW trail that's in existing)
                 var intersection = existing.GpxData.Intersection(buffer);
                 var matchPercentage = (intersection.Length / trailLength) * 100;
-
-                Console.WriteLine($"[DEBUG_LOG] Candidate '{existing.Name}': Intersection Length: {intersection.Length:F6}, Match: {matchPercentage:F1}%");
 
                 if (matchPercentage > 5) // Threshold to report match
                 {
