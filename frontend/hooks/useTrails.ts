@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { estimateDurationMinutes } from '../utils/estimateDuration';
 
 export interface LocationInfo {
@@ -92,16 +93,12 @@ export const DEFAULT_FILTERS: FilterState = {
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 export function useTrails() {
-    const [trails, setTrails] = useState<Trail[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
-    const [error, setError] = useState<string | null>(null);
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
     const [locationDenied, setLocationDenied] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
 
-    const requestLocation = () => {
+    const requestLocation = useCallback(() => {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
@@ -120,43 +117,33 @@ export function useTrails() {
                 }
             );
         }
-    };
-
-    const fetchTrails = (isRefreshing = false) => {
-        if (isRefreshing) {
-            setRefreshing(true);
-        } else {
-            setLoading(true);
-        }
-        setError(null);
-
-        // Get user location
-        requestLocation();
-
-        // Fetch trails
-        return fetch(`${API_URL}/api/v1/trails`)
-            .then(res => {
-                if (!res.ok) throw new Error('Failed to fetch trails');
-                return res.json();
-            })
-            .then(data => {
-                setTrails(data);
-                setLoading(false);
-                setRefreshing(false);
-            })
-            .catch(err => {
-                setError(err.message);
-                setLoading(false);
-                setRefreshing(false);
-            });
-    };
-
-    useEffect(() => {
-        fetchTrails();
     }, []);
 
+    // Request location on mount
+    useEffect(() => { requestLocation(); }, [requestLocation]);
+
+    const {
+        data: trails = [],
+        isPending: loading,
+        isFetching,
+        refetch,
+        error: queryError,
+    } = useQuery<Trail[]>({
+        queryKey: ['trails'],
+        queryFn: () => fetch(`${API_URL}/api/v1/trails`)
+            .then(res => {
+                if (!res.ok) throw new Error('Failed to fetch trails');
+                return res.json() as Promise<Trail[]>;
+            }),
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const refreshing = isFetching && !loading;
+    const error = queryError instanceof Error ? queryError.message : queryError ? String(queryError) : null;
+
     const refresh = () => {
-        return fetchTrails(true);
+        requestLocation();
+        refetch();
     };
 
     // Calculate distance and sort
@@ -289,56 +276,31 @@ export function useTrails() {
 }
 
 export function useTrail(id?: string) {
-    const [trail, setTrail] = useState<Trail | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        if (!id) return;
-
-        fetch(`${API_URL}/api/v1/trails/${id}`)
+    const { data: trail = null, isPending, error: queryError } = useQuery<Trail | null>({
+        queryKey: ['trail', id],
+        queryFn: () => fetch(`${API_URL}/api/v1/trails/${id}`)
             .then(res => {
                 if (!res.ok) throw new Error('Failed to fetch trail');
-                return res.json();
-            })
-            .then(data => {
-                setTrail(data);
-                setLoading(false);
-            })
-            .catch(err => {
-                setError(err.message);
-                setLoading(false);
-            });
-    }, [id]);
-
+                return res.json() as Promise<Trail>;
+            }),
+        enabled: !!id,
+        staleTime: 5 * 60 * 1000,
+    });
+    const loading = isPending && !!id;
+    const error = queryError instanceof Error ? queryError.message : queryError ? String(queryError) : null;
     return { trail, loading, error };
 }
 
 export function useTrailBySlug(slug?: string) {
-    const [trail, setTrail] = useState<Trail | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [isFromCache, setIsFromCache] = useState(false);
-
-    useEffect(() => {
-        if (!slug) return;
-
-        setLoading(true);
-        setError(null);
-        setTrail(null);
-        setIsFromCache(false);
-
-        fetch(`${API_URL}/api/v1/trails/${slug}`)
-            .then(res => {
+    const { data, isPending, error: queryError } = useQuery<{ trail: Trail; isFromCache: boolean } | null>({
+        queryKey: ['trail', slug],
+        queryFn: async () => {
+            try {
+                const res = await fetch(`${API_URL}/api/v1/trails/${slug}`);
                 if (!res.ok) throw new Error('Failed to fetch trail');
-                return res.json();
-            })
-            .then(data => {
-                setTrail(data);
-                setLoading(false);
-            })
-            .catch(async (err) => {
-                // Try offline fallback from IndexedDB
+                return { trail: await res.json() as Trail, isFromCache: false };
+            } catch (fetchError) {
+                // Try offline IndexedDB fallback
                 try {
                     const db = await new Promise<IDBDatabase>((resolve, reject) => {
                         const req = indexedDB.open('utanvega-offline', 1);
@@ -348,25 +310,26 @@ export function useTrailBySlug(slug?: string) {
                     const tx = db.transaction('trails', 'readonly');
                     const store = tx.objectStore('trails');
                     const item = await new Promise<{ trail: Trail } | undefined>((resolve, reject) => {
-                        const req = store.get(slug);
+                        const req = store.get(slug!);
                         req.onsuccess = () => resolve(req.result);
                         req.onerror = () => reject(req.error);
                     });
                     if (item?.trail) {
-                        setTrail(item.trail as Trail);
-                        setIsFromCache(true);
-                        setLoading(false);
-                        return;
+                        return { trail: item.trail, isFromCache: true };
                     }
                 } catch {
                     // IndexedDB not available
                 }
-                setError(err.message);
-                setLoading(false);
-            });
-    }, [slug]);
-
-    return { trail, loading, error, isFromCache };
+                throw fetchError;
+            }
+        },
+        enabled: !!slug,
+        staleTime: 5 * 60 * 1000,
+        retry: 1,
+    });
+    const loading = isPending && !!slug;
+    const error = queryError instanceof Error ? queryError.message : queryError ? String(queryError) : null;
+    return { trail: data?.trail ?? null, loading, error, isFromCache: data?.isFromCache ?? false };
 }
 
 export interface TrailSuggestion {
@@ -378,26 +341,14 @@ export interface TrailSuggestion {
 }
 
 export function useTrailSuggestions(slug?: string, enabled = false) {
-    const [suggestions, setSuggestions] = useState<TrailSuggestion[]>([]);
-    const [loading, setLoading] = useState(false);
-
-    useEffect(() => {
-        if (!slug || !enabled) return;
-
-        setLoading(true);
-        fetch(`${API_URL}/api/v1/trails/suggestions?slug=${encodeURIComponent(slug)}`)
-            .then(res => res.ok ? res.json() : [])
-            .then(data => {
-                setSuggestions(data);
-                setLoading(false);
-            })
-            .catch(() => {
-                setSuggestions([]);
-                setLoading(false);
-            });
-    }, [slug, enabled]);
-
-    return { suggestions, loading };
+    const { data: suggestions = [], isPending } = useQuery<TrailSuggestion[]>({
+        queryKey: ['suggestions', slug],
+        queryFn: () => fetch(`${API_URL}/api/v1/trails/suggestions?slug=${encodeURIComponent(slug!)}`)
+            .then(res => res.ok ? res.json() as Promise<TrailSuggestion[]> : []),
+        enabled: !!slug && enabled,
+        staleTime: 10 * 60 * 1000,
+    });
+    return { suggestions, loading: isPending && !!slug && enabled };
 }
 
 // Haversine formula to calculate distance between two points in km
@@ -431,22 +382,12 @@ export interface TrendingTrail {
 }
 
 export function useTrendingTrails(count = 10, days = 7) {
-    const [trending, setTrending] = useState<TrendingTrail[]>([]);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        fetch(`${API_URL}/api/v1/trails/trending?count=${count}&days=${days}`)
-            .then(res => res.ok ? res.json() : [])
-            .then(data => {
-                setTrending(data);
-                setLoading(false);
-            })
-            .catch(() => {
-                setTrending([]);
-                setLoading(false);
-            });
-    }, [count, days]);
-
+    const { data: trending = [], isPending: loading } = useQuery<TrendingTrail[]>({
+        queryKey: ['trending', count, days],
+        queryFn: () => fetch(`${API_URL}/api/v1/trails/trending?count=${count}&days=${days}`)
+            .then(res => res.ok ? res.json() as Promise<TrendingTrail[]> : []),
+        staleTime: 15 * 60 * 1000, // trending data changes slowly
+    });
     return { trending, loading };
 }
 
@@ -495,31 +436,17 @@ export interface TrailWeather {
 }
 
 export function useTrailWeather(slug?: string) {
-    const [weather, setWeather] = useState<TrailWeather | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        if (!slug) return;
-
-        setLoading(true);
-        setError(null);
-
-        fetch(`${API_URL}/api/v1/trails/${slug}/weather`)
+    const { data: weather = null, isPending, error: queryError } = useQuery<TrailWeather | null>({
+        queryKey: ['weather', slug],
+        queryFn: () => fetch(`${API_URL}/api/v1/trails/${slug}/weather`)
             .then(res => {
                 if (!res.ok) throw new Error('Weather unavailable');
-                return res.json();
-            })
-            .then(data => {
-                setWeather(data);
-                setLoading(false);
-            })
-            .catch(err => {
-                setError(err.message);
-                setWeather(null);
-                setLoading(false);
-            });
-    }, [slug]);
-
+                return res.json() as Promise<TrailWeather>;
+            }),
+        enabled: !!slug,
+        staleTime: 10 * 60 * 1000,
+    });
+    const loading = isPending && !!slug;
+    const error = queryError instanceof Error ? queryError.message : queryError ? String(queryError) : null;
     return { weather, loading, error };
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { API_URL } from './useTrails';
 
 export interface TrailGeometryFeature {
@@ -7,29 +7,16 @@ export interface TrailGeometryFeature {
     coordinates: [number, number][]; // [lat, lng]
 }
 
-let cachedGeometries: TrailGeometryFeature[] | null = null;
-
 export function useTrailGeometries() {
-    const [geometries, setGeometries] = useState<TrailGeometryFeature[]>(cachedGeometries ?? []);
-    const [loading, setLoading] = useState(!cachedGeometries);
-
-    useEffect(() => {
-        if (cachedGeometries) return;
-
-        fetch(`${API_URL}/api/v1/trails/geometries`)
+    const { data: geometries = [], isPending: loading } = useQuery<TrailGeometryFeature[]>({
+        queryKey: ['geometries'],
+        queryFn: () => fetch(`${API_URL}/api/v1/trails/geometries`)
             .then(res => {
                 if (!res.ok) throw new Error('Failed to fetch geometries');
-                return res.json();
-            })
-            .then((data: TrailGeometryFeature[]) => {
-                cachedGeometries = data;
-                setGeometries(data);
-                setLoading(false);
-            })
-            .catch(() => {
-                setLoading(false);
-            });
-    }, []);
-
+                return res.json() as Promise<TrailGeometryFeature[]>;
+            }),
+        staleTime: 30 * 60 * 1000,
+        gcTime: 2 * 60 * 60 * 1000,
+    });
     return { geometries, loading };
 }
