@@ -290,7 +290,7 @@ export function LocationList({ onNotify }: LocationListProps) {
                                         <Chip size="small" label={loc.type} color={typeColors[loc.type] || 'default'} variant="outlined" />
                                     </TableCell>
                                     <TableCell>
-                                        {loc.latitude && loc.longitude ? (
+                                        {loc.latitude != null && loc.longitude != null ? (
                                             <Typography variant="caption">
                                                 {loc.latitude.toFixed(4)}, {loc.longitude.toFixed(4)}
                                                 {loc.radius ? ` · R: ${loc.radius >= 1000 ? `${(loc.radius / 1000).toFixed(1)}km` : `${loc.radius}m`}` : ''}
