@@ -101,7 +101,12 @@ public class LocationDetector
                 info.Id, info.Name, info.Type, role, Math.Round(info.MinDistance, 0)));
         }
 
-        return results.OrderBy(r => r.Role).ThenBy(r => r.DistanceMeters).ToList();
+        // Prune broad container locations (e.g. Ísland) when a more specific child location
+        // (e.g. Hafnarfjörður) was also detected on the same route.
+        var parentMap = locations.ToDictionary(l => l.Id, l => l.ParentId);
+        var pruned = PruneAncestorLocations(results, parentMap);
+
+        return pruned.OrderBy(r => r.Role).ThenBy(r => r.DistanceMeters).ToList();
     }
 
     /// <summary>
@@ -193,16 +198,50 @@ public class LocationDetector
         return R * 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
     }
 
+    /// <summary>
+    /// Remove any location from the set that is an ancestor (parent/grandparent)
+    /// of another location in the same set. Keeps the most specific leaf locations.
+    /// Example: if both Hafnarfjörður and Ísland are detected, Ísland is removed
+    /// because Hafnarfjörður (its descendant) was also detected.
+    /// </summary>
+    internal static List<DetectedLocationWithRole> PruneAncestorLocations(
+        List<DetectedLocationWithRole> detected,
+        Dictionary<Guid, Guid?> parentMap)
+    {
+        if (detected.Count <= 1)
+            return detected;
+
+        var detectedIds = detected.Select(d => d.Id).ToHashSet();
+        var toRemove = new HashSet<Guid>();
+
+        foreach (var loc in detected)
+        {
+            // Walk up the ancestor chain from this location (visited set guards against cyclic parent data)
+            var current = loc.Id;
+            var visited = new HashSet<Guid> { current };
+            while (parentMap.TryGetValue(current, out var parentId) && parentId.HasValue)
+            {
+                current = parentId.Value;
+                if (!visited.Add(current))
+                    break; // cycle detected — stop traversal
+                if (detectedIds.Contains(current))
+                    toRemove.Add(current); // This ancestor is also detected — it's too broad, remove it
+            }
+        }
+
+        return detected.Where(d => !toRemove.Contains(d.Id)).ToList();
+    }
+
     private async Task<List<LocationCenter>> GetAllLocationCenters(CancellationToken ct)
     {
         return await _context.Locations
             .AsNoTracking()
             .Where(l => l.Center != null && l.Radius != null && l.Radius > 0)
-            .Select(l => new LocationCenter(l.Id, l.Name, l.Type, l.Center!.Y, l.Center!.X, l.Radius!.Value))
+            .Select(l => new LocationCenter(l.Id, l.Name, l.Type, l.Center!.Y, l.Center!.X, l.Radius!.Value, l.ParentId))
             .ToListAsync(ct);
     }
 
-    private record LocationCenter(Guid Id, string Name, LocationType Type, double CenterY, double CenterX, double Radius);
+    private record LocationCenter(Guid Id, string Name, LocationType Type, double CenterY, double CenterX, double Radius, Guid? ParentId);
 
     private class LocationHitInfo
     {

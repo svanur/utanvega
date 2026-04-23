@@ -1,5 +1,6 @@
 import { Paper, TextField, InputAdornment, MenuItem, Select, FormControl, InputLabel, Tooltip, IconButton } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
 import FilterAltOffIcon from '@mui/icons-material/FilterAltOff';
 
 interface TrailFilterBarProps {
@@ -51,6 +52,13 @@ export default function TrailFilterBar({
               <SearchIcon />
             </InputAdornment>
           ),
+          endAdornment: search ? (
+            <InputAdornment position="end">
+              <IconButton size="small" aria-label="Clear search" onClick={() => onSearchChange('')}>
+                <ClearIcon fontSize="small" />
+              </IconButton>
+            </InputAdornment>
+          ) : undefined,
         }}
       />
       <FormControl size="small" sx={{ minWidth: 150 }}>

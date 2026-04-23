@@ -1,3 +1,4 @@
+using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Core.Services;
 
 namespace Utanvega.Backend.Tests.Services;
@@ -119,5 +120,120 @@ public class LocationDetectorTests
         Assert.Equal(5, result.Count);
         Assert.Equal((coords[0].Y, coords[0].X), result[0]);
         Assert.Equal((coords[^1].Y, coords[^1].X), result[^1]);
+    }
+
+    // ─── PruneAncestorLocations ───
+
+    private static DetectedLocationWithRole MakeDetected(Guid id, string name, TrailLocationRole role = TrailLocationRole.BelongsTo)
+        => new(id, name, "region", role, 0);
+
+    [Fact]
+    public void PruneAncestors_SingleItem_ReturnedUnchanged()
+    {
+        var id = Guid.NewGuid();
+        var detected = new List<DetectedLocationWithRole> { MakeDetected(id, "Ísland") };
+        var parentMap = new Dictionary<Guid, Guid?> { [id] = null };
+        var result = LocationDetector.PruneAncestorLocations(detected, parentMap);
+        Assert.Single(result);
+        Assert.Equal(id, result[0].Id);
+    }
+
+    [Fact]
+    public void PruneAncestors_ParentAndChild_RemovesParent()
+    {
+        // Hafnarfjörður (child) → Ísland (parent)
+        var parentId = Guid.NewGuid();
+        var childId = Guid.NewGuid();
+        var detected = new List<DetectedLocationWithRole>
+        {
+            MakeDetected(parentId, "Ísland"),
+            MakeDetected(childId, "Hafnarfjörður"),
+        };
+        var parentMap = new Dictionary<Guid, Guid?>
+        {
+            [parentId] = null,
+            [childId] = parentId,
+        };
+        var result = LocationDetector.PruneAncestorLocations(detected, parentMap);
+        Assert.Single(result);
+        Assert.Equal(childId, result[0].Id);
+    }
+
+    [Fact]
+    public void PruneAncestors_GrandparentChain_RemovesBothAncestors()
+    {
+        // City → Region → Country: only City survives
+        var countryId = Guid.NewGuid();
+        var regionId = Guid.NewGuid();
+        var cityId = Guid.NewGuid();
+        var detected = new List<DetectedLocationWithRole>
+        {
+            MakeDetected(countryId, "Ísland"),
+            MakeDetected(regionId, "Suðurnes"),
+            MakeDetected(cityId, "Hafnarfjörður"),
+        };
+        var parentMap = new Dictionary<Guid, Guid?>
+        {
+            [countryId] = null,
+            [regionId] = countryId,
+            [cityId] = regionId,
+        };
+        var result = LocationDetector.PruneAncestorLocations(detected, parentMap);
+        Assert.Single(result);
+        Assert.Equal(cityId, result[0].Id);
+    }
+
+    [Fact]
+    public void PruneAncestors_TwoCitiesSameCountry_BothSurvive()
+    {
+        // Hafnarfjörður (Start) and Reykjavík (End) share parent Ísland
+        // — Ísland removed, both cities survive
+        var countryId = Guid.NewGuid();
+        var city1Id = Guid.NewGuid();
+        var city2Id = Guid.NewGuid();
+        var detected = new List<DetectedLocationWithRole>
+        {
+            MakeDetected(countryId, "Ísland"),
+            MakeDetected(city1Id, "Hafnarfjörður", TrailLocationRole.Start),
+            MakeDetected(city2Id, "Reykjavík", TrailLocationRole.End),
+        };
+        var parentMap = new Dictionary<Guid, Guid?>
+        {
+            [countryId] = null,
+            [city1Id] = countryId,
+            [city2Id] = countryId,
+        };
+        var result = LocationDetector.PruneAncestorLocations(detected, parentMap);
+        Assert.Equal(2, result.Count);
+        Assert.DoesNotContain(result, r => r.Id == countryId);
+        Assert.Contains(result, r => r.Id == city1Id);
+        Assert.Contains(result, r => r.Id == city2Id);
+    }
+
+    [Fact]
+    public void PruneAncestors_NoParentRelationship_NothingRemoved()
+    {
+        // Two sibling cities with no common detected ancestor
+        var city1Id = Guid.NewGuid();
+        var city2Id = Guid.NewGuid();
+        var detected = new List<DetectedLocationWithRole>
+        {
+            MakeDetected(city1Id, "Hafnarfjörður"),
+            MakeDetected(city2Id, "Reykjavík"),
+        };
+        var parentMap = new Dictionary<Guid, Guid?>
+        {
+            [city1Id] = null,
+            [city2Id] = null,
+        };
+        var result = LocationDetector.PruneAncestorLocations(detected, parentMap);
+        Assert.Equal(2, result.Count);
+    }
+
+    [Fact]
+    public void PruneAncestors_EmptyList_ReturnsEmpty()
+    {
+        var result = LocationDetector.PruneAncestorLocations([], []);
+        Assert.Empty(result);
     }
 }

@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     Paper, Button, Typography, Box, CircularProgress, IconButton, Chip,
-    Tooltip
+    Tooltip, TextField, InputAdornment
 } from '@mui/material';
 import {
     Add as AddIcon,
@@ -11,7 +11,9 @@ import {
     ExpandMore as ExpandMoreIcon,
     ChevronRight as ChevronRightIcon,
     FolderOpen as FolderOpenIcon,
-    LocationOn as LocationOnIcon
+    LocationOn as LocationOnIcon,
+    Search as SearchIcon,
+    Clear as ClearIcon,
 } from '@mui/icons-material';
 import { useLocations, LocationDto } from '../hooks/useLocations';
 import { LocationDialog } from '../components/LocationDialog';
@@ -155,8 +157,32 @@ export function LocationList({ onNotify }: LocationListProps) {
     const [selectedLocation, setSelectedLocation] = useState<LocationDto | undefined>();
     const [dialogOpen, setDialogOpen] = useState(false);
     const [expanded, setExpanded] = useState<Set<string>>(new Set());
+    const [searchQuery, setSearchQuery] = useState('');
 
     const tree = useMemo(() => buildTree(locations), [locations]);
+
+    // Flat search results with parent name for context
+    const searchResults = useMemo(() => {
+        if (!searchQuery.trim()) return [];
+        const q = searchQuery.toLowerCase();
+        const byId = new Map(locations.map(l => [l.id, l]));
+        const parentMap = new Map<string, string>();
+        for (const loc of locations) {
+            if (loc.parentId) {
+                const parent = byId.get(loc.parentId);
+                if (parent) parentMap.set(loc.id, parent.name);
+            }
+        }
+        return locations
+            .filter(loc =>
+                loc.name.toLowerCase().includes(q) ||
+                loc.type.toLowerCase().includes(q)
+            )
+            .map(loc => ({ loc, parentName: parentMap.get(loc.id) ?? null }))
+            .sort((a, b) => a.loc.name.localeCompare(b.loc.name));
+    }, [locations, searchQuery]);
+
+    const isSearching = searchQuery.trim().length > 0;
 
     const toggleExpand = (id: string) => {
         setExpanded(prev => {
@@ -197,11 +223,34 @@ export function LocationList({ onNotify }: LocationListProps) {
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Typography variant="h4">Locations</Typography>
-                    <Chip label={locations.length} size="small" />
+                    <Chip label={isSearching ? `${searchResults.length} / ${locations.length}` : locations.length} size="small" />
                 </Box>
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Button size="small" onClick={expandAll}>Expand All</Button>
-                    <Button size="small" onClick={collapseAll}>Collapse All</Button>
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                    <TextField
+                        size="small"
+                        placeholder="Search locations…"
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        sx={{ width: 220 }}
+                        InputProps={{
+                            startAdornment: (
+                                <InputAdornment position="start">
+                                    <SearchIcon fontSize="small" />
+                                </InputAdornment>
+                            ),
+                            endAdornment: searchQuery ? (
+                                <InputAdornment position="end">
+                                    <IconButton size="small" aria-label="Clear search" onClick={() => setSearchQuery('')}>
+                                        <ClearIcon fontSize="small" />
+                                    </IconButton>
+                                </InputAdornment>
+                            ) : undefined,
+                        }}
+                    />
+                    {!isSearching && <>
+                        <Button size="small" onClick={expandAll}>Expand All</Button>
+                        <Button size="small" onClick={collapseAll}>Collapse All</Button>
+                    </>}
                     <Button
                         variant="contained"
                         startIcon={<AddIcon />}
@@ -224,21 +273,72 @@ export function LocationList({ onNotify }: LocationListProps) {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {tree.map(node => (
-                            <LocationTreeRow
-                                key={node.id}
-                                node={node}
-                                depth={0}
-                                onEdit={handleEdit}
-                                onDelete={handleDelete}
-                                expanded={expanded}
-                                toggleExpand={toggleExpand}
-                            />
-                        ))}
-                        {tree.length === 0 && (
-                            <TableRow>
-                                <TableCell colSpan={5} align="center">No locations found</TableCell>
-                            </TableRow>
+                        {isSearching ? (
+                            searchResults.length > 0 ? searchResults.map(({ loc, parentName }) => (
+                                <TableRow key={loc.id} hover>
+                                    <TableCell>
+                                        <Box>
+                                            <Typography variant="body2">{loc.name}</Typography>
+                                            {parentName && (
+                                                <Typography variant="caption" color="text.secondary">
+                                                    in {parentName}
+                                                </Typography>
+                                            )}
+                                        </Box>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Chip size="small" label={loc.type} color={typeColors[loc.type] || 'default'} variant="outlined" />
+                                    </TableCell>
+                                    <TableCell>
+                                        {loc.latitude != null && loc.longitude != null ? (
+                                            <Typography variant="caption">
+                                                {loc.latitude.toFixed(4)}, {loc.longitude.toFixed(4)}
+                                                {loc.radius ? ` · R: ${loc.radius >= 1000 ? `${(loc.radius / 1000).toFixed(1)}km` : `${loc.radius}m`}` : ''}
+                                            </Typography>
+                                        ) : (
+                                            <Typography variant="caption" color="text.disabled">No coordinates</Typography>
+                                        )}
+                                    </TableCell>
+                                    <TableCell align="center">
+                                        <Chip size="small" label={loc.childrenCount} variant="outlined" />
+                                    </TableCell>
+                                    <TableCell align="right">
+                                        <Tooltip title="Edit">
+                                            <IconButton size="small" onClick={() => handleEdit(loc)} color="primary">
+                                                <EditIcon fontSize="small" />
+                                            </IconButton>
+                                        </Tooltip>
+                                        <Tooltip title="Delete">
+                                            <IconButton size="small" onClick={() => handleDelete(loc.id)} color="error">
+                                                <DeleteIcon fontSize="small" />
+                                            </IconButton>
+                                        </Tooltip>
+                                    </TableCell>
+                                </TableRow>
+                            )) : (
+                                <TableRow>
+                                    <TableCell colSpan={5} align="center">No locations match "{searchQuery}"</TableCell>
+                                </TableRow>
+                            )
+                        ) : (
+                            <>
+                                {tree.map(node => (
+                                    <LocationTreeRow
+                                        key={node.id}
+                                        node={node}
+                                        depth={0}
+                                        onEdit={handleEdit}
+                                        onDelete={handleDelete}
+                                        expanded={expanded}
+                                        toggleExpand={toggleExpand}
+                                    />
+                                ))}
+                                {tree.length === 0 && (
+                                    <TableRow>
+                                        <TableCell colSpan={5} align="center">No locations found</TableCell>
+                                    </TableRow>
+                                )}
+                            </>
                         )}
                     </TableBody>
                 </Table>
