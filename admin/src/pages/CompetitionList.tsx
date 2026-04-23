@@ -5,7 +5,7 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress,
   MenuItem, Select, FormControl, InputLabel, Tooltip, Collapse,
   List, ListItem, ListItemText, ListItemSecondaryAction, Divider,
-  Autocomplete, Alert,
+  Autocomplete, Alert, InputAdornment,
 } from '@mui/material';
 import {
   Delete as DeleteIcon,
@@ -16,6 +16,8 @@ import {
   EmojiEvents as TrophyIcon,
   SortByAlpha as SortByAlphaIcon,
   Schedule as ScheduleIcon,
+  Search as SearchIcon,
+  Clear as ClearIcon,
 } from '@mui/icons-material';
 import { useCompetitions, type CompetitionDto, type ScheduleRule, type RaceDto, type CompetitionDetailDto } from '../hooks/useCompetitions';
 import { useLocations } from '../hooks/useLocations';
@@ -77,6 +79,7 @@ export default function CompetitionList({ onNotify }: CompetitionListProps) {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [saving, setSaving] = useState(false);
   const [sortBy, setSortBy] = useState<'name' | 'nextDate'>('name');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Form state
   const [name, setName] = useState('');
@@ -314,7 +317,13 @@ export default function CompetitionList({ onNotify }: CompetitionListProps) {
 
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>;
 
-  const sortedCompetitions = [...competitions].sort((a, b) => {
+  const sortedCompetitions = [...competitions]
+    .filter(c => {
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase();
+      return c.name.toLowerCase().includes(q) || c.locationName?.toLowerCase().includes(q);
+    })
+    .sort((a, b) => {
     if (sortBy === 'nextDate') {
       if (!a.nextDate && !b.nextDate) return a.name.localeCompare(b.name);
       if (!a.nextDate) return 1;
@@ -330,16 +339,33 @@ export default function CompetitionList({ onNotify }: CompetitionListProps) {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <TrophyIcon color="primary" />
           <Typography variant="h5">Competitions</Typography>
-          <Chip label={competitions.length} size="small" color="primary" />
+          <Chip label={searchQuery.trim() ? `${sortedCompetitions.length} / ${competitions.length}` : competitions.length} size="small" color="primary" />
           <Tooltip title={sortBy === 'name' ? 'Sort by next date' : 'Sort by name'}>
             <IconButton size="small" onClick={() => setSortBy(s => s === 'name' ? 'nextDate' : 'name')}>
               {sortBy === 'name' ? <SortByAlphaIcon fontSize="small" /> : <ScheduleIcon fontSize="small" />}
             </IconButton>
           </Tooltip>
         </Box>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
-          New Competition
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+          <TextField
+            size="small"
+            placeholder="Search competitions…"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            sx={{ width: 220 }}
+            InputProps={{
+              startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment>,
+              endAdornment: searchQuery ? (
+                <InputAdornment position="end">
+                  <IconButton size="small" onClick={() => setSearchQuery('')}><ClearIcon fontSize="small" /></IconButton>
+                </InputAdornment>
+              ) : undefined,
+            }}
+          />
+          <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
+            New Competition
+          </Button>
+        </Box>
       </Box>
 
       <TableContainer component={Paper}>
@@ -509,11 +535,11 @@ export default function CompetitionList({ onNotify }: CompetitionListProps) {
                 </TableRow>
               </React.Fragment>
             ))}
-            {competitions.length === 0 && (
+            {sortedCompetitions.length === 0 && (
               <TableRow>
                 <TableCell colSpan={8} align="center">
                   <Typography color="text.secondary" sx={{ py: 4 }}>
-                    No competitions yet. Click "New Competition" to get started.
+                    {searchQuery.trim() ? `No competitions match "${searchQuery}"` : 'No competitions yet. Click "New Competition" to get started.'}
                   </Typography>
                 </TableCell>
               </TableRow>
