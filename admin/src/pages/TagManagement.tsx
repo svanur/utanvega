@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Box, Typography, Paper, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, IconButton, Button, TextField, Chip, Dialog,
-  DialogTitle, DialogContent, DialogActions, CircularProgress
+  DialogTitle, DialogContent, DialogActions, CircularProgress, InputAdornment
 } from '@mui/material';
-import { Delete as DeleteIcon, Edit as EditIcon, Add as AddIcon } from '@mui/icons-material';
+import { Delete as DeleteIcon, Edit as EditIcon, Add as AddIcon, Search as SearchIcon, Clear as ClearIcon } from '@mui/icons-material';
 import { useTags, TagDto } from '../hooks/useTags';
 import { apiFetch } from '../hooks/api';
 
@@ -21,6 +21,13 @@ export default function TagManagement({ onNotify }: TagManagementProps) {
   const { tags, loading, refresh } = useTags();
   const [editTag, setEditTag] = useState<{ id?: string; name: string; color: string | null } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredTags = useMemo(() => {
+    if (!searchQuery.trim()) return tags;
+    const q = searchQuery.toLowerCase();
+    return tags.filter(t => t.name.toLowerCase().includes(q) || t.slug.toLowerCase().includes(q));
+  }, [tags, searchQuery]);
 
   const handleSave = async () => {
     if (!editTag || !editTag.name.trim()) return;
@@ -66,14 +73,34 @@ export default function TagManagement({ onNotify }: TagManagementProps) {
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h5" fontWeight="bold">Tags</Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => setEditTag({ name: '', color: PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)] })}
-        >
-          New Tag
-        </Button>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Typography variant="h5" fontWeight="bold">Tags</Typography>
+          <Chip label={searchQuery.trim() ? `${filteredTags.length} / ${tags.length}` : tags.length} size="small" />
+        </Box>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+          <TextField
+            size="small"
+            placeholder="Search tags…"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            sx={{ width: 200 }}
+            InputProps={{
+              startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment>,
+              endAdornment: searchQuery ? (
+                <InputAdornment position="end">
+                  <IconButton size="small" onClick={() => setSearchQuery('')}><ClearIcon fontSize="small" /></IconButton>
+                </InputAdornment>
+              ) : undefined,
+            }}
+          />
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setEditTag({ name: '', color: PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)] })}
+          >
+            New Tag
+          </Button>
+        </Box>
       </Box>
 
       <TableContainer component={Paper} variant="outlined">
@@ -87,7 +114,7 @@ export default function TagManagement({ onNotify }: TagManagementProps) {
             </TableRow>
           </TableHead>
           <TableBody>
-            {tags.map(tag => (
+            {filteredTags.map(tag => (
               <TableRow key={tag.id}>
                 <TableCell>
                   <Chip
@@ -108,11 +135,11 @@ export default function TagManagement({ onNotify }: TagManagementProps) {
                 </TableCell>
               </TableRow>
             ))}
-            {tags.length === 0 && (
+            {filteredTags.length === 0 && (
               <TableRow>
                 <TableCell colSpan={4} align="center">
                   <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
-                    No tags yet. Create your first tag!
+                    {searchQuery.trim() ? `No tags match "${searchQuery}"` : 'No tags yet. Create your first tag!'}
                   </Typography>
                 </TableCell>
               </TableRow>
