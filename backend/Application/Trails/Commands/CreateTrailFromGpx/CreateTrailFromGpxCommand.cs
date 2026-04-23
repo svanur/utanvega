@@ -84,7 +84,7 @@ public class CreateTrailFromGpxCommandHandler : IRequestHandler<CreateTrailFromG
                 var intersection = existing.GpxData.Intersection(buffer);
                 var matchPercentage = (intersection.Length / trailLength) * 100;
 
-                if (matchPercentage > 5)// Threshold to report match
+                if (matchPercentage > 5) // Threshold to report match
                 {
                     matches.Add(new TrailSimilarityMatch(
                         existing.Id,
