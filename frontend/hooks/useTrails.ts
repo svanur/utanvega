@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { estimateDurationMinutes } from '../utils/estimateDuration';
 
@@ -98,7 +98,7 @@ export function useTrails() {
     const [searchQuery, setSearchQuery] = useState('');
     const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
 
-    const requestLocation = () => {
+    const requestLocation = useCallback(() => {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
@@ -117,10 +117,10 @@ export function useTrails() {
                 }
             );
         }
-    };
+    }, []);
 
     // Request location on mount
-    useEffect(() => { requestLocation(); }, []);
+    useEffect(() => { requestLocation(); }, [requestLocation]);
 
     const {
         data: trails = [],
