@@ -564,6 +564,8 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                     <Box sx={{ flex: '6 1 0', minHeight: 0 }}>
                         <TrailMap
                             slug={trail.slug}
+                            geometry={geometry as GeoJsonGeometry | undefined}
+                            enableGeolocation={false}
                             hoverPoint={hoverPoint}
                             activityType={trail.activityType}
                             height="100%"
