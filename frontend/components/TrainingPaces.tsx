@@ -91,6 +91,17 @@ const ZONES: TrainingZone[] = [
     { key: 'repetition', emoji: '⚡', pctLow: 1.05, pctHigh: 1.10 },
 ];
 
+// Returns equivalent race time in minutes for a given VDOT and distance
+function equivalentTimeMinutes(vdot: number, meters: number): number {
+    let lo = 1, hi = 1440;
+    for (let i = 0; i < 50; i++) {
+        const mid = (lo + hi) / 2;
+        if (calculateVDOT(meters, mid) > vdot) lo = mid;
+        else hi = mid;
+    }
+    return (lo + hi) / 2;
+}
+
 interface DistancePreset {
     key: string;
     meters: number;
@@ -118,6 +129,7 @@ export default function TrainingPaces() {
         return PRESETS.find(p => p.key === d) ?? PRESETS[2]; // default 5K
     });
     const [copied, setCopied] = useState(false);
+    const [copiedWorkout, setCopiedWorkout] = useState(false);
 
     // Sync to URL
     useEffect(() => {
@@ -157,23 +169,21 @@ export default function TrainingPaces() {
             paceHigh: formatPace(paceFromVdot(vdot, z.pctLow)),
         }));
 
-        // Also compute equivalent race times
+        // Equivalent race times
         const equivalents = PRESETS
             .filter(p => p.key !== selectedPreset.key)
-            .map(p => {
-                // Find time for this distance at the runner's VDOT
-                // Binary search for time where calculateVDOT(dist, t) ≈ vdot
-                let lo = 1, hi = 1440; // 1 min to 24 hours
-                for (let iter = 0; iter < 50; iter++) {
-                    const mid = (lo + hi) / 2;
-                    const v = calculateVDOT(p.meters, mid);
-                    if (v > vdot) lo = mid;
-                    else hi = mid;
-                }
-                return { key: p.key, time: formatTime((lo + hi) / 2) };
-            });
+            .map(p => ({ key: p.key, time: formatTime(equivalentTimeMinutes(vdot, p.meters)) }));
 
-        return { vdot: Math.round(vdot * 10) / 10, zones, equivalents };
+        // Road segments run at threshold/tempo pace; track segments at race pace for that distance
+        const thresholdZone = zones.find(z => z.key === 'threshold')!;
+        const workoutPaces = [
+            { key: 'roadTempo', emoji: '🟠', pace: `${thresholdZone.paceLow} – ${thresholdZone.paceHigh}`, isRange: true },
+            { key: 'track10k', emoji: '🔵', pace: formatPace(equivalentTimeMinutes(vdot, 10000) / 10), isRange: false },
+            { key: 'track5k',  emoji: '🟣', pace: formatPace(equivalentTimeMinutes(vdot, 5000)  / 5),  isRange: false },
+            { key: 'track3k',  emoji: '⚡', pace: formatPace(equivalentTimeMinutes(vdot, 3000)  / 3),  isRange: false },
+        ];
+
+        return { vdot: Math.round(vdot * 10) / 10, zones, equivalents, workoutPaces };
     }, [timeStr, selectedPreset]);
 
     const handleCopy = () => {
@@ -185,6 +195,17 @@ export default function TrainingPaces() {
         navigator.clipboard.writeText(text);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
+    };
+
+    const handleCopyWorkout = () => {
+        if (!result) return;
+        const lines = result.workoutPaces.map(p =>
+            `${t(`tools.trainingPaces.workout.${p.key}`)}: ${p.pace} /km`
+        );
+        const text = `${t('tools.trainingPaces.workout.title')} (VDOT ${result.vdot})\n${lines.join('\n')}`;
+        navigator.clipboard.writeText(text);
+        setCopiedWorkout(true);
+        setTimeout(() => setCopiedWorkout(false), 2000);
     };
 
     return (
@@ -289,6 +310,46 @@ export default function TrainingPaces() {
                                     <TableCell align="right" sx={{ py: 0.75, pr: 1 }}>
                                         <Typography variant="body2" fontFamily="monospace" fontWeight={600}>
                                             {z.paceLow} – {z.paceHigh}
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary">
+                                            /km
+                                        </Typography>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </Paper>
+            )}
+
+            {/* Workout paces */}
+            {result && (
+                <Paper sx={{ p: 2, mt: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                        <Typography variant="subtitle2">
+                            🎯 {t('tools.trainingPaces.workout.title')}
+                        </Typography>
+                        <Tooltip title={copiedWorkout ? t('tools.trainingPaces.copied') : t('tools.trainingPaces.copy')}>
+                            <IconButton size="small" onClick={handleCopyWorkout}>
+                                <ContentCopy sx={{ fontSize: 16 }} />
+                            </IconButton>
+                        </Tooltip>
+                    </Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                        {t('tools.trainingPaces.workout.description')}
+                    </Typography>
+                    <Table size="small">
+                        <TableBody>
+                            {result.workoutPaces.map(p => (
+                                <TableRow key={p.key}>
+                                    <TableCell sx={{ py: 0.75, pl: 1 }}>
+                                        <Typography variant="body2">
+                                            {p.emoji} {t(`tools.trainingPaces.workout.${p.key}`)}
+                                        </Typography>
+                                    </TableCell>
+                                    <TableCell align="right" sx={{ py: 0.75, pr: 1 }}>
+                                        <Typography variant="body2" fontFamily="monospace" fontWeight={600}>
+                                            {p.pace}
                                         </Typography>
                                         <Typography variant="caption" color="text.secondary">
                                             /km

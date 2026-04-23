@@ -615,6 +615,14 @@
                 "10k": "10K",
                 "half": "Half Marathon",
                 "marathon": "Marathon"
+            },
+            "workout": {
+                "title": "Workout Paces",
+                "description": "Key paces for structured sessions mixing segments with fast and faster paces.",
+                "roadTempo": "Tempo",
+                "track10k": "10K pace",
+                "track5k": "5K pace",
+                "track3k": "3K pace"
             }
         }
     },
