@@ -39,7 +39,7 @@ public class GetTrailBySlugQueryHandler : IRequestHandler<GetTrailBySlugQuery, T
         if (trail == null)
             return null;
 
-        var today= DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var linkedRaces = await _context.Races
             .Include(r => r.Competition)
             .AsNoTracking()
