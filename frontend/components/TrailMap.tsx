@@ -197,7 +197,7 @@ export default function TrailMap({ slug, onDataLoaded, hoverPoint, activityType,
     if (error || !geometry) return <Typography color="error">{t('trail.noGpsData')}</Typography>;
 
     return (
-        <Box sx={{ height: height ?? 400, width: '100%', mt: 2, borderRadius: 2, overflow: 'hidden', border: '1px solid #ccc', position: 'relative' }}>
+        <Box sx={{ height: height ?? 400, width: '100%', mt: height === '100%' ? 0 : 2, borderRadius: 2, overflow: 'hidden', border: '1px solid #ccc', position: 'relative' }}>
             <Paper 
                 elevation={3} 
                 sx={{ 
