@@ -14,7 +14,7 @@ public record TrailSimilarityMatch(Guid TrailId, string TrailName, double MatchP
 
 public record DetectedLocationResult(Guid Id, string Name, string Type, string Role, double DistanceMeters);
 
-public record CreateTrailFromGpxCommand(string? Name, string GpxXml) : IRequest<CreateTrailFromGpxResult>;
+public record CreateTrailFromGpxCommand(string? Name, string GpxXml, ActivityType ActivityType = ActivityType.TrailRunning) : IRequest<CreateTrailFromGpxResult>;
 
 public class CreateTrailFromGpxCommandHandler : IRequestHandler<CreateTrailFromGpxCommand, CreateTrailFromGpxResult>
 {
@@ -31,7 +31,7 @@ public class CreateTrailFromGpxCommandHandler : IRequestHandler<CreateTrailFromG
 
     public async Task<CreateTrailFromGpxResult> Handle(CreateTrailFromGpxCommand request, CancellationToken cancellationToken)
     {
-        var trail = ProcessGpx(request.Name, request.GpxXml);
+        var trail = ProcessGpx(request.Name, request.GpxXml, request.ActivityType);
 
         var matches = await CheckSimilarityAsync(trail, cancellationToken);
 
@@ -104,7 +104,7 @@ public class CreateTrailFromGpxCommandHandler : IRequestHandler<CreateTrailFromG
         return matches;
     }
 
-    public Trail ProcessGpx(string? name, string gpxXml)
+    public Trail ProcessGpx(string? name, string gpxXml, ActivityType activityType = ActivityType.TrailRunning)
     {
         var result = GpxProcessor.Process(gpxXml, name);
         var finalName = name ?? result.ExtractedName ?? "Unnamed Trail";
@@ -120,6 +120,7 @@ public class CreateTrailFromGpxCommandHandler : IRequestHandler<CreateTrailFromG
             ElevationLoss = result.ElevationLoss,
             Type = result.DetectedType,
             Difficulty = result.Difficulty,
+            ActivityTypeId = activityType,
             Status = TrailStatus.Draft,
             CreatedAt = DateTime.UtcNow
         };

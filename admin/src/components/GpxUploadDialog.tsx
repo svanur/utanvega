@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Box, Typography, Alert, CircularProgress } from '@mui/material';
+import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Box, Typography, Alert, CircularProgress, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 
 import { supabase } from '../hooks/supabase';
@@ -21,8 +21,16 @@ interface DetectedLocation {
     distanceMeters: number;
 }
 
+const ACTIVITY_TYPES = [
+  { value: 'TrailRunning', label: 'Trail Running' },
+  { value: 'Running', label: 'Running' },
+  { value: 'Cycling', label: 'Cycling' },
+  { value: 'Hiking', label: 'Hiking' },
+] as const;
+
 export default function GpxUploadDialog({ open, onClose, onUploadSuccess }: { open: boolean, onClose: () => void, onUploadSuccess: (trail?: { id: string, slug: string, name: string }, detectedLocations?: DetectedLocation[]) => void }) {
     const [name, setName] = useState('');
+    const [activityType, setActivityType] = useState('TrailRunning');
     const [file, setFile] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
     const [checking, setChecking] = useState(false);
@@ -125,7 +133,7 @@ export default function GpxUploadDialog({ open, onClose, onUploadSuccess }: { op
                 headers['Authorization'] = `Bearer ${token}`;
             }
 
-            const response = await fetch(`${API_URL}/api/v1/admin/trails/upload-gpx?name=${encodeURIComponent(name)}`, {
+            const response = await fetch(`${API_URL}/api/v1/admin/trails/upload-gpx?name=${encodeURIComponent(name)}&activityType=${encodeURIComponent(activityType)}`, {
                 method: 'POST',
                 headers,
                 body: formData,
@@ -153,6 +161,7 @@ export default function GpxUploadDialog({ open, onClose, onUploadSuccess }: { op
 
     const handleClose = () => {
         setName('');
+        setActivityType('TrailRunning');
         setFile(null);
         setMatches([]);
         setError(null);
@@ -213,6 +222,18 @@ export default function GpxUploadDialog({ open, onClose, onUploadSuccess }: { op
                         onChange={(e) => setName(e.target.value)}
                         required
                     />
+                    <FormControl fullWidth>
+                        <InputLabel>Activity Type</InputLabel>
+                        <Select
+                            value={activityType}
+                            label="Activity Type"
+                            onChange={(e) => setActivityType(e.target.value)}
+                        >
+                            {ACTIVITY_TYPES.map(at => (
+                                <MenuItem key={at.value} value={at.value}>{at.label}</MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
                     <Button
                         variant="outlined"
                         component="label"

@@ -671,16 +671,18 @@ app.MapGet("/api/v1/admin/trails/{idOrSlug}/geometry", [Authorize] async (string
 })
 .WithName("GetTrailGeometry");
 
-app.MapPost("/api/v1/admin/trails/upload-gpx", [Authorize] async (string name, IFormFile file, IMediator mediator) =>
+app.MapPost("/api/v1/admin/trails/upload-gpx", [Authorize] async (string name, IFormFile file, IMediator mediator, string? activityType) =>
 {
     if (file == null || file.Length == 0) return Results.BadRequest("No file uploaded.");
     
     using var reader = new StreamReader(file.OpenReadStream());
     var gpxXml = await reader.ReadToEndAsync();
     
+    var parsedActivityType = Enum.TryParse<ActivityType>(activityType, ignoreCase: true, out var at) ? at : ActivityType.TrailRunning;
+    
     try 
     {
-        var command = new CreateTrailFromGpxCommand(name, gpxXml);
+        var command = new CreateTrailFromGpxCommand(name, gpxXml, parsedActivityType);
         var result = await mediator.Send(command);
         
         var response = new 
