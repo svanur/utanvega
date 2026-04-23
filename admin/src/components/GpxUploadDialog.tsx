@@ -172,7 +172,7 @@ export default function GpxUploadDialog({ open, onClose, onUploadSuccess }: { op
 
     return (
         <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
-            <DialogTitle>Create Trail by uploading GPX Trail</DialogTitle>
+            <DialogTitle>Create trail from GPX</DialogTitle>
             <DialogContent>
                 <Box sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
                     {error && <Alert severity="error">{error}</Alert>}
