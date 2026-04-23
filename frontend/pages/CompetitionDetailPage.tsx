@@ -222,7 +222,22 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             <Chip
                                 label={getCountdownLabel(competition.daysUntil, t)}
                                 color={getCountdownColor(competition.daysUntil)}
-                                sx={{ fontWeight: 700, fontSize: '1rem', px: 1.5, py: 0.5, height: 'auto', flexShrink: 0 }}
+                                variant="filled"
+                                sx={{
+                                    fontWeight: 700,
+                                    fontSize: '1rem',
+                                    px: 1.5,
+                                    py: 0.5,
+                                    height: 'auto',
+                                    flexShrink: 0,
+                                    ...(competition.daysUntil === 0 && {
+                                        animation: 'pulse 1.5s ease-in-out infinite',
+                                        '@keyframes pulse': {
+                                            '0%, 100%': { transform: 'scale(1)', boxShadow: 'none' },
+                                            '50%': { transform: 'scale(1.06)', boxShadow: `0 0 8px ${alpha(theme.palette.error.main, 0.6)}` },
+                                        },
+                                    }),
+                                }}
                             />
                         )}
                     </Box>

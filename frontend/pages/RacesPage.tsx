@@ -259,14 +259,19 @@ export default function RacesPage({ mode, onToggleMode }: RacesPageProps) {
                                                 <Chip
                                                     label={getCountdownLabel(comp.daysUntil, t)}
                                                     color={getCountdownColor(comp.daysUntil)}
+                                                    variant="filled"
                                                     size="medium"
                                                     sx={{
                                                         fontWeight: 700,
                                                         fontSize: '0.9rem',
                                                         px: 1,
-                                                        bgcolor: comp.daysUntil !== null && comp.daysUntil <= 7
-                                                            ? alpha(theme.palette.error.main, 0.15)
-                                                            : undefined,
+                                                        ...(comp.daysUntil === 0 && {
+                                                            animation: 'pulse 1.5s ease-in-out infinite',
+                                                            '@keyframes pulse': {
+                                                                '0%, 100%': { transform: 'scale(1)', boxShadow: 'none' },
+                                                                '50%': { transform: 'scale(1.06)', boxShadow: `0 0 8px ${alpha(theme.palette.error.main, 0.6)}` },
+                                                            },
+                                                        }),
                                                     }}
                                                 />
                                             )}
