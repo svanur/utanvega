@@ -2,6 +2,7 @@ import { MapContainer, TileLayer, Polyline, useMap, Marker, useMapEvents } from 
 import { Box, Typography, Paper, IconButton, useTheme } from '@mui/material';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
 import { useEffect, useState, useMemo } from 'react';
+import type React from 'react';
 import { useTranslation } from 'react-i18next';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -70,6 +71,10 @@ interface TrailMapProps {
     onDataLoaded?: (data: GeoJsonGeometry) => void;
     hoverPoint?: { lat: number; lng: number } | null;
     activityType?: string;
+    height?: string | number;
+    mapInstanceRef?: React.MutableRefObject<L.Map | null>;
+    providedGeometry?: GeoJsonGeometry | null;
+    disableGeolocation?: boolean;
 }
 
 const activityEmoji: Record<string, string> = {
@@ -93,32 +98,40 @@ function HoverMarker({ point, activityType }: { point: { lat: number; lng: numbe
     return <Marker position={[point.lat, point.lng]} icon={icon} zIndexOffset={1000} />;
 }
 
-export default function TrailMap({ slug, onDataLoaded, hoverPoint, activityType }: TrailMapProps) {
+function MapRefSetter({ mapInstanceRef }: { mapInstanceRef?: React.MutableRefObject<L.Map | null> }) {
+    const map = useMap();
+    useEffect(() => {
+        if (mapInstanceRef) mapInstanceRef.current = map;
+        return () => { if (mapInstanceRef) mapInstanceRef.current = null; };
+    }, [map, mapInstanceRef]);
+    return null;
+}
+
+export default function TrailMap({ slug, onDataLoaded, hoverPoint, activityType, height, mapInstanceRef, providedGeometry, disableGeolocation }: TrailMapProps) {
     const { t } = useTranslation();
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
-    const [geometry, setGeometry] = useState<GeoJsonGeometry | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [geometry, setGeometry] = useState<GeoJsonGeometry | null>(providedGeometry ?? null);
+    const [loading, setLoading] = useState(!providedGeometry);
     const [error, setError] = useState<string | null>(null);
     const [followMe, setFollowMe] = useState(false);
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
 
-    // Get user location for this component specifically
+    // Get user location — skipped when disableGeolocation is true (e.g., fullscreen dialog that shares parent's state)
     useEffect(() => {
-        if (navigator.geolocation) {
-            const watchId = navigator.geolocation.watchPosition(
-                (position) => {
-                    setUserLocation({
-                        lat: position.coords.latitude,
-                        lng: position.coords.longitude
-                    });
-                },
-                (err) => console.warn('Geolocation failed in TrailMap:', err),
-                { enableHighAccuracy: true }
-            );
-            return () => navigator.geolocation.clearWatch(watchId);
-        }
-    }, []);
+        if (disableGeolocation || !navigator.geolocation) return;
+        const watchId = navigator.geolocation.watchPosition(
+            (position) => {
+                setUserLocation({
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                });
+            },
+            (err) => console.warn('Geolocation failed in TrailMap:', err),
+            { enableHighAccuracy: true }
+        );
+        return () => navigator.geolocation.clearWatch(watchId);
+    }, [disableGeolocation]);
 
     const handleFollowMeClick = () => {
         setFollowMe(prev => !prev);
@@ -140,6 +153,7 @@ export default function TrailMap({ slug, onDataLoaded, hoverPoint, activityType 
     );
 
     useEffect(() => {
+        if (providedGeometry) return; // geometry already provided, skip fetch
         const fetchGeometry = async () => {
             try {
                 setLoading(true);
@@ -177,15 +191,15 @@ export default function TrailMap({ slug, onDataLoaded, hoverPoint, activityType 
             }
         };
         fetchGeometry();
-    // onDataLoaded is a callback that may change on every render; only re-fetch when slug changes
+    // onDataLoaded is a callback that may change on every render; only re-fetch when slug or providedGeometry changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [slug]);
+    }, [slug, providedGeometry]);
 
     if (loading) return <Typography>{t('trail.loadingMap')}</Typography>;
     if (error || !geometry) return <Typography color="error">{t('trail.noGpsData')}</Typography>;
 
     return (
-        <Box sx={{ height: 400, width: '100%', mt: 2, borderRadius: 2, overflow: 'hidden', border: '1px solid #ccc', position: 'relative' }}>
+        <Box sx={{ height: height ?? 400, width: '100%', mt: height === '100%' ? 0 : 2, borderRadius: 2, overflow: 'hidden', border: '1px solid #ccc', position: 'relative' }}>
             <Paper 
                 elevation={3} 
                 sx={{ 
@@ -221,6 +235,7 @@ export default function TrailMap({ slug, onDataLoaded, hoverPoint, activityType 
                 scrollWheelZoom={false}
             >
                 <MapEvents />
+                <MapRefSetter mapInstanceRef={mapInstanceRef} />
                 <TileLayer
                     key={isDark ? 'dark' : 'light'}
                     attribution={isDark
