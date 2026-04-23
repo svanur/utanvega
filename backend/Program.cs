@@ -678,7 +678,15 @@ app.MapPost("/api/v1/admin/trails/upload-gpx", [Authorize] async (string name, I
     using var reader = new StreamReader(file.OpenReadStream());
     var gpxXml = await reader.ReadToEndAsync();
     
-    var parsedActivityType = Enum.TryParse<ActivityType>(activityType, ignoreCase: true, out var at) ? at : ActivityType.TrailRunning;
+    ActivityType parsedActivityType;
+    if (activityType is null)
+    {
+        parsedActivityType = ActivityType.TrailRunning;
+    }
+    else if (!Enum.TryParse<ActivityType>(activityType, ignoreCase: true, out parsedActivityType))
+    {
+        return Results.BadRequest($"Invalid activityType '{activityType}'. Valid values: {string.Join(", ", Enum.GetNames<ActivityType>())}");
+    }
     
     try 
     {
