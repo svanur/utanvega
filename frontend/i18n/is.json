@@ -65,6 +65,7 @@
         "noGpsData": "Engin GPS gögn tiltæk fyrir þessa leið.",
         "wereYouLookingFor": "Varstu kannski að leita að einni af þessum?",
         "partOfRace": "Hluti af keppni: {{competition}}",
+        "partOfRaceDistances": "Hluti af keppni: {{competition}} ({{count}} vegalengdir)",
         "role": {
             "Start": "Upphaf",
             "End": "Endir",
@@ -121,8 +122,8 @@
     "difficulty": {
         "easy": "Auðveld",
         "moderate": "Miðlungs erfið",
-        "hard": "Erfið",
-        "expert": "Snúin",
+        "hard": "Krefjandi",
+        "expert": "Erfið",
         "extreme": "Mjög erfið",
         "dialogTitle": "Skilyrði erfiðleikamats",
         "explanation": "Erfiðleiki er reiknaður út frá **álagsvegalengd**: vegalengd leiðarinnar að viðbættri hækkun deilt með 100. Fyrir hlaupaleiðir á vegi er eingöngu vegalengd notuð. Viðmið eru mismunandi eftir tegund.",
@@ -183,7 +184,12 @@
         "statsTrails": "Leiðir",
         "statsDistance": "Heildarvegalengd",
         "statsElevGain": "Hækkun",
-        "statsElevLoss": "Lækkun"
+        "statsElevLoss": "Lækkun",
+        "typeCountry": "Land",
+        "typeArea": "Svæði",
+        "typeRegion": "Héraðssvæði",
+        "typeMunicipality": "Sveitarfélag",
+        "typePlace": "Staður"
     },
     "qr": {
         "showQR": "Sýna QR kóða",

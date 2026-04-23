@@ -64,7 +64,8 @@
         "loadingMap": "Loading Map...",
         "noGpsData": "No GPS data available for this trail.",
         "wereYouLookingFor": "Were you looking for one of these?",
-        "partOfRace": "Part of {{competition}} ({{race}})",
+        "partOfRace": "Part of {{competition}}",
+        "partOfRaceDistances": "Part of {{competition}} ({{count}} distances)",
         "role": {
             "Start": "Start",
             "End": "Finish",
@@ -183,7 +184,12 @@
         "statsTrails": "Trails",
         "statsDistance": "Total distance",
         "statsElevGain": "Elevation gain",
-        "statsElevLoss": "Elevation loss"
+        "statsElevLoss": "Elevation loss",
+        "typeCountry": "Country",
+        "typeArea": "Area",
+        "typeRegion": "Region",
+        "typeMunicipality": "Municipality",
+        "typePlace": "Place"
     },
     "qr": {
         "showQR": "Show QR Code",

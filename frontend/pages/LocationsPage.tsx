@@ -352,7 +352,7 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
 
                                                 {/* Type & Parent */}
                                                 <Stack direction="row" spacing={0.5} mb={1} flexWrap="wrap">
-                                                    <Chip label={loc.type} size="small" variant="outlined" color="secondary" />
+                                                    <Chip label={t(`locations.type${loc.type}`)} size="small" variant="outlined" color="secondary" />
                                                     {loc.parentName && (
                                                         <Chip label={loc.parentName} size="small" variant="outlined" />
                                                     )}

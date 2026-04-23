@@ -61,7 +61,7 @@ export default function DifficultyInfo({ difficulty, activityType }: DifficultyI
     return (
         <>
             <Chip
-                label={difficulty}
+                label={t(`difficulty.${difficulty.toLowerCase()}`)}
                 size="small"
                 color={difficultyColors[difficulty] || 'info'}
                 onClick={(e) => { e.stopPropagation(); setOpen(true); }}
@@ -103,7 +103,7 @@ export default function DifficultyInfo({ difficulty, activityType }: DifficultyI
                                     >
                                         <TableCell>
                                             <Chip
-                                                label={row.level}
+                                                label={t(`difficulty.${row.level.toLowerCase()}`)}
                                                 size="small"
                                                 color={difficultyColors[row.level]}
                                                 variant={row.level === difficulty ? 'filled' : 'outlined'}

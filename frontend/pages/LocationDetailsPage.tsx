@@ -47,6 +47,9 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
     const activityEmoji: Record<string, string> = {
         trailrunning: '🏃', running: '🏃‍♂️', hiking: '🥾', cycling: '🚴', walking: '🚶',
     };
+    const activityI18nKey: Record<string, string> = {
+        trailrunning: 'trailRunning', running: 'running', hiking: 'hiking', cycling: 'cycling', walking: 'walking',
+    };
 
     // Compute location trail statistics
     const stats = useMemo(() => {
@@ -171,7 +174,7 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
                     </Stack>
                     
                     <Stack direction="row" spacing={1} mb={2}>
-                        <Chip label={location.type} color="secondary" variant="outlined" size="small" />
+                        <Chip label={t(`locations.type${location.type}`)} color="secondary" variant="outlined" size="small" />
                     </Stack>
 
                     {location.description && (
@@ -220,7 +223,7 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
                                 {Object.entries(stats.activities).map(([act, n]) => (
                                     <Chip
                                         key={act}
-                                        label={`${activityEmoji[act] || '🏞️'} ${act.charAt(0).toUpperCase() + act.slice(1)} (${n})`}
+                                        label={`${activityEmoji[act] || '🏞️'} ${t(`difficulty.${activityI18nKey[act] ?? act}`)} (${n})`}
                                         size="small"
                                         variant="outlined"
                                     />
@@ -229,11 +232,12 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
 
                             {/* Trail type + difficulty breakdown */}
                             <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
-                                {Object.entries(stats.trailTypes).map(([type, n]) => (
-                                    <Chip key={type} label={`${type} (${n})`} size="small" color="info" variant="outlined" />
-                                ))}
+                                {Object.entries(stats.trailTypes).map(([type, n]) => {
+                                    const typeLabel = ({ OutAndBack: t('trail.outAndBack'), Loop: t('trail.loop'), PointToPoint: t('trail.pointToPoint') } as Record<string, string>)[type] ?? type;
+                                    return <Chip key={type} label={`${typeLabel} (${n})`} size="small" color="info" variant="outlined" />;
+                                })}
                                 {Object.entries(stats.difficulties).map(([diff, n]) => (
-                                    <Chip key={diff} label={`${diff} (${n})`} size="small" color="warning" variant="outlined" />
+                                    <Chip key={diff} label={`${t(`difficulty.${diff.toLowerCase()}`)} (${n})`} size="small" color="warning" variant="outlined" />
                                 ))}
                             </Stack>
                         </>
@@ -261,7 +265,7 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
                                                     </Typography>
                                                 </Stack>
                                                 <Stack direction="row" spacing={1} mt={1}>
-                                                    <Chip label={child.type} size="small" variant="outlined" />
+                                                    <Chip label={t(`locations.type${child.type}`)} size="small" variant="outlined" />
                                                     <Chip 
                                                         label={t('locations.trailCount', { count: child.trailsCount })}
                                                         size="small"

@@ -216,7 +216,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                                 </Typography>
                                                 <Stack direction="row" spacing={1} mt={0.5}>
                                                     <Chip label={`${(s.length / 1000).toFixed(1)} km`} size="small" variant="outlined" />
-                                                    <Chip label={s.activityType} size="small" variant="outlined" />
+                                                    <Chip label={t(`difficulty.${s.activityType.charAt(0).toLowerCase() + s.activityType.slice(1)}`)} size="small" variant="outlined" />
                                                     <Chip label={s.trailType} size="small" color="info" variant="outlined" />
                                                 </Stack>
                                             </Box>
@@ -274,7 +274,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                         )}
                         <Chip 
                             icon={getActivityIcon(trail.activityType)} 
-                            label={trail.activityType} 
+                            label={t(`difficulty.${trail.activityType.charAt(0).toLowerCase() + trail.activityType.slice(1)}`)} 
                             color="primary" 
                             variant="outlined" 
                             size="small"
@@ -351,47 +351,68 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                         )}
                     </Stack>
 
-                    {/* Linked races banner */}
-                    {trail.linkedRaces && trail.linkedRaces.length > 0 && isEnabled('races_page') && (
-                        <Box sx={{ mb: 2 }}>
-                            {trail.linkedRaces.map((race, i) => (
-                                <Paper
-                                    key={i}
-                                    component={RouterLink}
-                                    to={`/races/${race.competitionSlug}`}
-                                    elevation={0}
-                                    sx={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 1,
-                                        px: 2,
-                                        py: 1,
-                                        mb: 0.5,
-                                        borderRadius: 2,
-                                        bgcolor: 'action.hover',
-                                        textDecoration: 'none',
-                                        color: 'inherit',
-                                        transition: 'background-color 0.2s',
-                                        '&:hover': { bgcolor: 'action.selected' },
-                                    }}
-                                >
-                                    <Typography variant="body2" sx={{ flexGrow: 1 }}>
-                                        🏆 {t('trail.partOfRace', { competition: race.competitionName, race: race.distanceLabel || race.raceName })}
-                                    </Typography>
-                                    {race.daysUntil != null && race.daysUntil >= 0 && (
-                                        <Chip
-                                            label={race.daysUntil === 0
-                                                ? t('races.today')
-                                                : t('races.daysUntil', { count: race.daysUntil })}
-                                            size="small"
-                                            color="success"
-                                            sx={{ fontSize: '0.7rem', height: 22 }}
-                                        />
-                                    )}
-                                </Paper>
-                            ))}
-                        </Box>
-                    )}
+                    {/* Linked races banner — grouped by competition */}
+                    {trail.linkedRaces && trail.linkedRaces.length > 0 && isEnabled('races_page') && (() => {
+                        // Group races by competition slug
+                        const byCompetition = trail.linkedRaces!.reduce<Record<string, typeof trail.linkedRaces[0][]>>(
+                            (acc, race) => {
+                                (acc[race.competitionSlug] ??= []).push(race);
+                                return acc;
+                            },
+                            {}
+                        );
+                        return (
+                            <Box sx={{ mb: 2 }}>
+                                {Object.values(byCompetition).map((races) => {
+                                    const rep = races[0];
+                                    const label = races.length > 1
+                                        ? t('trail.partOfRaceDistances', { competition: rep.competitionName, count: races.length })
+                                        : t('trail.partOfRace', { competition: rep.competitionName });
+                                    // Use the nearest upcoming occurrence across all linked races
+                                    const daysUntil = races.reduce<number | null>((min, r) => {
+                                        if (r.daysUntil == null || r.daysUntil < 0) return min;
+                                        return min == null ? r.daysUntil : Math.min(min, r.daysUntil);
+                                    }, null);
+                                    return (
+                                        <Paper
+                                            key={rep.competitionSlug}
+                                            component={RouterLink}
+                                            to={`/races/${rep.competitionSlug}`}
+                                            elevation={0}
+                                            sx={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 1,
+                                                px: 2,
+                                                py: 1,
+                                                mb: 0.5,
+                                                borderRadius: 2,
+                                                bgcolor: 'action.hover',
+                                                textDecoration: 'none',
+                                                color: 'inherit',
+                                                transition: 'background-color 0.2s',
+                                                '&:hover': { bgcolor: 'action.selected' },
+                                            }}
+                                        >
+                                            <Typography variant="body2" sx={{ flexGrow: 1 }}>
+                                                🏆 {label}
+                                            </Typography>
+                                            {daysUntil != null && (
+                                                <Chip
+                                                    label={daysUntil === 0
+                                                        ? t('races.today')
+                                                        : t('races.daysUntil', { count: daysUntil })}
+                                                    size="small"
+                                                    color="success"
+                                                    sx={{ fontSize: '0.7rem', height: 22 }}
+                                                />
+                                            )}
+                                        </Paper>
+                                    );
+                                })}
+                            </Box>
+                        );
+                    })()}
 
                     {trail.description && (
                         <Typography variant="body1" color="text.secondary" sx={{ mb: 2, lineHeight: 1.7, whiteSpace: 'pre-line' }}>

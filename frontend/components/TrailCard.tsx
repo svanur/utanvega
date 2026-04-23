@@ -320,7 +320,7 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                         )}
                         <Chip 
                             icon={getActivityIcon(trail.activityType)} 
-                            label={trail.activityType} 
+                            label={t(`difficulty.${trail.activityType.charAt(0).toLowerCase() + trail.activityType.slice(1)}`)} 
                             size="small" 
                             variant="outlined" 
                             color="primary"
