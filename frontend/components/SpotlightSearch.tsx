@@ -16,14 +16,16 @@ import {
 import SearchIcon from '@mui/icons-material/Search';
 import HikingIcon from '@mui/icons-material/Hiking';
 import PlaceIcon from '@mui/icons-material/Place';
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import KeyboardReturnIcon from '@mui/icons-material/KeyboardReturn';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { API_URL, Trail } from '../hooks/useTrails';
 import { Location } from '../hooks/useLocations';
+import { CompetitionSummary } from '../hooks/useCompetitions';
 
 interface SearchResult {
-    type: 'trail' | 'location';
+    type: 'trail' | 'location' | 'competition';
     name: string;
     slug: string;
     subtitle?: string;
@@ -69,6 +71,7 @@ export default function SpotlightSearch() {
     const [activeIndex, setActiveIndex] = useState(0);
     const [trails, setTrails] = useState<Trail[]>([]);
     const [locations, setLocations] = useState<Location[]>([]);
+    const [competitions, setCompetitions] = useState<CompetitionSummary[]>([]);
     const [loaded, setLoaded] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
     const listRef = useRef<HTMLUListElement>(null);
@@ -98,9 +101,11 @@ export default function SpotlightSearch() {
         Promise.all([
             fetch(`${API_URL}/api/v1/trails`).then(r => r.json()),
             fetch(`${API_URL}/api/v1/locations`).then(r => r.json()),
-        ]).then(([trailData, locationData]) => {
+            fetch(`${API_URL}/api/v1/competitions`).then(r => r.json()),
+        ]).then(([trailData, locationData, competitionData]) => {
             setTrails(trailData);
             setLocations(locationData);
+            setCompetitions(competitionData);
             setLoaded(true);
         }).catch(() => {
             setLoaded(true);
@@ -133,8 +138,21 @@ export default function SpotlightSearch() {
             .filter(r => r.score > 0)
             .sort((a, b) => b.score - a.score);
 
-        return [...trailResults.slice(0, 5), ...locationResults.slice(0, 3)];
-    }, [query, trails, locations, t]);
+        const competitionResults: (SearchResult & { score: number })[] = competitions
+            .map(comp => ({
+                type: 'competition' as const,
+                name: comp.name,
+                slug: comp.slug,
+                subtitle: comp.nextDate
+                    ? new Date(comp.nextDate).toLocaleDateString()
+                    : (comp.organizerName ?? comp.locationName ?? undefined),
+                score: scoreMatch(q, comp.name),
+            }))
+            .filter(r => r.score > 0)
+            .sort((a, b) => b.score - a.score);
+
+        return [...trailResults.slice(0, 5), ...locationResults.slice(0, 3), ...competitionResults.slice(0, 3)];
+    }, [query, trails, locations, competitions, t]);
 
     useEffect(() => {
         setActiveIndex(0);
@@ -145,8 +163,10 @@ export default function SpotlightSearch() {
         setQuery('');
         if (result.type === 'trail') {
             navigate(`/trails/${result.slug}`);
-        } else {
+        } else if (result.type === 'location') {
             navigate(`/locations/${result.slug}`);
+        } else {
+            navigate(`/races/${result.slug}`);
         }
     }, [navigate]);
 
@@ -178,6 +198,7 @@ export default function SpotlightSearch() {
     // Group results for display
     const trailResults = results.filter(r => r.type === 'trail');
     const locationResults = results.filter(r => r.type === 'location');
+    const competitionResults = results.filter(r => r.type === 'competition');
 
     return (
         <Dialog
@@ -276,6 +297,41 @@ export default function SpotlightSearch() {
                                     >
                                         <ListItemIcon sx={{ minWidth: 36 }}>
                                             <PlaceIcon fontSize="small" />
+                                        </ListItemIcon>
+                                        <ListItemText
+                                            primary={result.name}
+                                            secondary={result.subtitle}
+                                            primaryTypographyProps={{ noWrap: true }}
+                                            secondaryTypographyProps={{ noWrap: true, variant: 'caption' }}
+                                        />
+                                        {activeIndex === globalIndex && (
+                                            <KeyboardReturnIcon fontSize="small" sx={{ color: 'text.secondary', ml: 1 }} />
+                                        )}
+                                    </ListItemButton>
+                                );
+                            })}
+                        </>
+                    )}
+
+                    {(locationResults.length > 0 || trailResults.length > 0) && competitionResults.length > 0 && <Divider />}
+
+                    {competitionResults.length > 0 && (
+                        <>
+                            <Typography variant="caption" sx={{ px: 2, pt: 1, pb: 0.5, display: 'block', color: 'text.secondary', fontWeight: 600 }}>
+                                {t('spotlight.racesSection')}
+                            </Typography>
+                            {competitionResults.map((result, i) => {
+                                const globalIndex = trailResults.length + locationResults.length + i;
+                                return (
+                                    <ListItemButton
+                                        key={`comp-${result.slug}`}
+                                        data-index={globalIndex}
+                                        selected={activeIndex === globalIndex}
+                                        onClick={() => handleSelect(result)}
+                                        sx={{ py: 0.5 }}
+                                    >
+                                        <ListItemIcon sx={{ minWidth: 36 }}>
+                                            <EmojiEventsIcon fontSize="small" />
                                         </ListItemIcon>
                                         <ListItemText
                                             primary={result.name}
