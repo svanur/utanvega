@@ -3,9 +3,9 @@ import {
   Box, Typography, Paper, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, IconButton, Button, TextField, Switch, Chip,
   Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress,
-  Tooltip,
+  Tooltip, InputAdornment,
 } from '@mui/material';
-import { Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
+import { Delete as DeleteIcon, Add as AddIcon, Search as SearchIcon, Clear as ClearIcon } from '@mui/icons-material';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 
 interface FeatureFlagsPageProps {
@@ -20,6 +20,14 @@ export default function FeatureFlagsPage({ onNotify }: FeatureFlagsPageProps) {
   const [saving, setSaving] = useState(false);
   const [editDescId, setEditDescId] = useState<string | null>(null);
   const [editDescValue, setEditDescValue] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredFlags = searchQuery.trim()
+    ? flags.filter(f =>
+        f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        f.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : flags;
 
   const handleToggle = async (id: string, current: boolean) => {
     try {
@@ -73,11 +81,28 @@ export default function FeatureFlagsPage({ onNotify }: FeatureFlagsPageProps) {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Typography variant="h5">Feature Flags</Typography>
-          <Chip label={flags.length} size="small" color="primary" />
+          <Chip label={searchQuery.trim() ? `${filteredFlags.length} / ${flags.length}` : flags.length} size="small" color="primary" />
         </Box>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={() => setShowCreate(true)}>
-          New Flag
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+          <TextField
+            size="small"
+            placeholder="Search flags…"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            sx={{ width: 200 }}
+            InputProps={{
+              startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment>,
+              endAdornment: searchQuery ? (
+                <InputAdornment position="end">
+                  <IconButton size="small" onClick={() => setSearchQuery('')}><ClearIcon fontSize="small" /></IconButton>
+                </InputAdornment>
+              ) : undefined,
+            }}
+          />
+          <Button variant="contained" startIcon={<AddIcon />} onClick={() => setShowCreate(true)}>
+            New Flag
+          </Button>
+        </Box>
       </Box>
 
       <TableContainer component={Paper}>
@@ -93,7 +118,7 @@ export default function FeatureFlagsPage({ onNotify }: FeatureFlagsPageProps) {
             </TableRow>
           </TableHead>
           <TableBody>
-            {flags.map(flag => (
+            {filteredFlags.map(flag => (
               <TableRow key={flag.id}>
                 <TableCell>
                   <Typography variant="body2" fontWeight="bold" fontFamily="monospace">
@@ -157,11 +182,11 @@ export default function FeatureFlagsPage({ onNotify }: FeatureFlagsPageProps) {
                 </TableCell>
               </TableRow>
             ))}
-            {flags.length === 0 && (
+            {filteredFlags.length === 0 && (
               <TableRow>
                 <TableCell colSpan={6} align="center">
                   <Typography color="text.secondary" sx={{ py: 4 }}>
-                    No feature flags yet. Click "New Flag" to create one.
+                    {searchQuery.trim() ? `No flags match "${searchQuery}"` : 'No feature flags yet. Click "New Flag" to create one.'}
                   </Typography>
                 </TableCell>
               </TableRow>
