@@ -165,10 +165,11 @@ export function LocationList({ onNotify }: LocationListProps) {
     const searchResults = useMemo(() => {
         if (!searchQuery.trim()) return [];
         const q = searchQuery.toLowerCase();
+        const byId = new Map(locations.map(l => [l.id, l]));
         const parentMap = new Map<string, string>();
         for (const loc of locations) {
             if (loc.parentId) {
-                const parent = locations.find(l => l.id === loc.parentId);
+                const parent = byId.get(loc.parentId);
                 if (parent) parentMap.set(loc.id, parent.name);
             }
         }
