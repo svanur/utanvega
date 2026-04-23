@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
     Dialog, DialogTitle, DialogContent, DialogActions,
-    Button, TextField, MenuItem, Box, Alert, Typography, Slider,
+    Button, TextField, Box, Alert, Typography, Slider,
     Tabs, Tab, Autocomplete, CircularProgress
 } from '@mui/material';
 import { History as HistoryIcon, AutoFixHigh as WikiIcon } from '@mui/icons-material';
@@ -374,31 +374,25 @@ export function LocationDialog({ open, onClose, onSaveSuccess, onNotify, locatio
                                         Wiki
                                     </Button>
                                 </Box>
-                                <TextField
-                                    select
-                                    label="Type"
+                                <Autocomplete
+                                    options={LOCATION_TYPES}
                                     value={type}
-                                    onChange={(e) => setType(e.target.value as LocationType)}
-                                    fullWidth
-                                >
-                                    {LOCATION_TYPES.map((t) => (
-                                        <MenuItem key={t} value={t}>{t}</MenuItem>
-                                    ))}
-                                </TextField>
-                                <TextField
-                                    select
-                                    label="Parent Location"
-                                    value={parentId}
-                                    onChange={(e) => setParentId(e.target.value)}
-                                    fullWidth
-                                >
-                                    <MenuItem value=""><em>None</em></MenuItem>
-                                    {allLocations
-                                        .filter(l => l.id !== location?.id) // Prevent self-parenting
-                                        .map((l) => (
-                                            <MenuItem key={l.id} value={l.id}>{l.name} ({l.type})</MenuItem>
-                                        ))}
-                                </TextField>
+                                    onChange={(_e, val) => setType((val ?? 'Place') as LocationType)}
+                                    disableClearable
+                                    renderInput={(params) => (
+                                        <TextField {...params} label="Type" fullWidth />
+                                    )}
+                                />
+                                <Autocomplete
+                                    options={allLocations.filter(l => l.id !== location?.id)}
+                                    getOptionLabel={(opt) => typeof opt === 'string' ? opt : `${opt.name} (${opt.type})`}
+                                    value={allLocations.find(l => l.id === parentId) ?? null}
+                                    onChange={(_e, val) => setParentId(val?.id ?? '')}
+                                    isOptionEqualToValue={(opt, val) => opt.id === val.id}
+                                    renderInput={(params) => (
+                                        <TextField {...params} label="Parent Location" fullWidth />
+                                    )}
+                                />
                                 <Box sx={{ display: 'flex', gap: 2 }}>
                                     <TextField
                                         label="Paste coordinates"
