@@ -24,6 +24,6 @@ export function useHealth() {
     return {
         data,
         loading: isPending,
-        error: queryError instanceof Error ? queryError.message : queryError ? 'Unknown error' : null,
+        error: queryError instanceof Error ? queryError.message : queryError ? String(queryError) : null,
     };
 }
