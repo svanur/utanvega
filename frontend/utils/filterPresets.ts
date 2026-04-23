@@ -113,19 +113,42 @@ const ALL_PRESETS: FilterPreset[] = [
     },
 
     // === Late night / early morning (21+ or 0–5) ===
+    // "Plan Tomorrow" — filters based on what day tomorrow is
     {
-        id: 'plan-tomorrow',
+        id: 'plan-tomorrow-weekday',
         emoji: '📋',
         nameKey: 'presets.planTomorrow',
-        filters: { minLength: 15, sortBy: 'longest' },
-        schedule: { hours: [21, 24] },
+        filters: { minLength: 5, maxLength: 15, maxDuration: 90 },
+        schedule: { hours: [21, 24], days: [0, 1, 2, 3, 4] }, // Sun–Thu evening → tomorrow is Mon–Fri
     },
     {
-        id: 'cant-sleep',
+        id: 'plan-tomorrow-saturday',
+        emoji: '📋',
+        nameKey: 'presets.planTomorrow',
+        filters: { minLength: 15, maxLength: 42, sortBy: 'longest' },
+        schedule: { hours: [21, 24], days: [5] }, // Friday evening → tomorrow is Saturday (long run day)
+    },
+    {
+        id: 'plan-tomorrow-sunday',
+        emoji: '📋',
+        nameKey: 'presets.planTomorrow',
+        filters: { minLength: 8, maxLength: 25, sortBy: 'longest' },
+        schedule: { hours: [21, 24], days: [6] }, // Saturday evening → tomorrow is Sunday (recovery/medium)
+    },
+    // "Can't Sleep" — also day-aware (planning for later today)
+    {
+        id: 'cant-sleep-weekday',
         emoji: '🌙',
         nameKey: 'presets.cantSleep',
-        filters: { minLength: 15 },
-        schedule: { hours: [0, 5] },
+        filters: { minLength: 5, maxLength: 15, maxDuration: 90 },
+        schedule: { hours: [0, 5], days: [1, 2, 3, 4, 5] }, // Mon–Fri overnight → run later today (weekday)
+    },
+    {
+        id: 'cant-sleep-weekend',
+        emoji: '🌙',
+        nameKey: 'presets.cantSleep',
+        filters: { minLength: 15, maxLength: 42, sortBy: 'longest' },
+        schedule: { hours: [0, 5], days: [0, 6] }, // Sat/Sun overnight → can do a long one today
     },
 
     // === Always available ===
