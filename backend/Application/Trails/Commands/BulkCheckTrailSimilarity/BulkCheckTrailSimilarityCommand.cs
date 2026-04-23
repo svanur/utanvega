@@ -12,10 +12,12 @@ public record GpxFileInfo(string? Name, string GpxXml, string FileName);
 public class BulkCheckTrailSimilarityCommandHandler : IRequestHandler<BulkCheckTrailSimilarityCommand, List<BulkCheckTrailSimilarityResult>>
 {
     private readonly CreateTrailFromGpxCommandHandler _singleHandler;
+    private readonly ILogger<BulkCheckTrailSimilarityCommandHandler> _logger;
 
-    public BulkCheckTrailSimilarityCommandHandler(CreateTrailFromGpxCommandHandler singleHandler)
+    public BulkCheckTrailSimilarityCommandHandler(CreateTrailFromGpxCommandHandler singleHandler, ILogger<BulkCheckTrailSimilarityCommandHandler> logger)
     {
         _singleHandler = singleHandler;
+        _logger = logger;
     }
 
     public async Task<List<BulkCheckTrailSimilarityResult>> Handle(BulkCheckTrailSimilarityCommand request, CancellationToken cancellationToken)
@@ -32,7 +34,7 @@ public class BulkCheckTrailSimilarityCommandHandler : IRequestHandler<BulkCheckT
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[ERROR] Failed to process GPX file for similarity check '{file.FileName}': {ex.Message}");
+                _logger.LogError(ex, "Similarity check failed for file {FileName}", file.FileName);
                 // We add an empty result or error info for this file so we don't block the whole batch
                 results.Add(new BulkCheckTrailSimilarityResult(file.FileName, file.Name, new List<TrailSimilarityMatch>()));
             }

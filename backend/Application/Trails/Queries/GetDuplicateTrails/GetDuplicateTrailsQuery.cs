@@ -11,10 +11,12 @@ public record GetDuplicateTrailsQuery(double Threshold = 95) : IRequest<List<Dup
 public class GetDuplicateTrailsQueryHandler : IRequestHandler<GetDuplicateTrailsQuery, List<DuplicatePair>>
 {
     private readonly UtanvegaDbContext _context;
+    private readonly ILogger<GetDuplicateTrailsQueryHandler> _logger;
 
-    public GetDuplicateTrailsQueryHandler(UtanvegaDbContext context)
+    public GetDuplicateTrailsQueryHandler(UtanvegaDbContext context, ILogger<GetDuplicateTrailsQueryHandler> logger)
     {
         _context = context;
+        _logger = logger;
     }
 
     public async Task<List<DuplicatePair>> Handle(GetDuplicateTrailsQuery request, CancellationToken cancellationToken)
@@ -24,7 +26,7 @@ public class GetDuplicateTrailsQueryHandler : IRequestHandler<GetDuplicateTrails
             .Select(t => new { t.Id, t.Name, t.GpxData, t.Length })
             .ToListAsync(cancellationToken);
 
-        Console.WriteLine($"[INFO] Duplicate check: {trails.Count} trails, threshold={request.Threshold}%");
+        _logger.LogInformation("Duplicate check: {TrailCount} trails, threshold={Threshold}%", trails.Count, request.Threshold);
 
         var duplicates = new List<DuplicatePair>();
         var seen = new HashSet<string>();
@@ -82,7 +84,7 @@ public class GetDuplicateTrailsQueryHandler : IRequestHandler<GetDuplicateTrails
             }
         }
 
-        Console.WriteLine($"[INFO] Found {duplicates.Count} duplicate pairs");
+        _logger.LogInformation("Found {DuplicateCount} duplicate pairs", duplicates.Count);
         return duplicates.OrderByDescending(d => d.MatchPercentage).ToList();
     }
 }

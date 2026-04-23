@@ -37,14 +37,9 @@ public class GetTrailBySlugQueryHandler : IRequestHandler<GetTrailBySlugQuery, T
             .FirstOrDefaultAsync(t => t.Slug == request.Slug && t.Status == TrailStatus.Published, cancellationToken);
 
         if (trail == null)
-        {
-            Console.WriteLine($"[DEBUG_LOG] Trail with slug '{request.Slug}' not found or not published.");
             return null;
-        }
 
-        Console.WriteLine($"[DEBUG_LOG] Trail found: {trail.Name}. Gain: {trail.ElevationGain}, Length: {trail.Length}");
-
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today= DateOnly.FromDateTime(DateTime.UtcNow);
         var linkedRaces = await _context.Races
             .Include(r => r.Competition)
             .AsNoTracking()

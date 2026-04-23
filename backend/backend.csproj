@@ -11,6 +11,7 @@
         <InternalsVisibleTo Include="backend.Tests" />
     </ItemGroup>
     <ItemGroup>
+        <PackageReference Include="Serilog.AspNetCore" Version="8.*" />
         <PackageReference Include="FluentValidation" Version="11.*" />
         <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.*" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.0" />

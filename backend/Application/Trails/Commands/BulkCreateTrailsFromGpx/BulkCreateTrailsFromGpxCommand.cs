@@ -20,13 +20,15 @@ public class BulkCreateTrailsFromGpxCommandHandler : IRequestHandler<BulkCreateT
     private readonly CreateTrailFromGpxCommandHandler _singleHandler;
     private readonly LocationDetector _locationDetector;
     private readonly ICacheInvalidator _cacheInvalidator;
+    private readonly ILogger<BulkCreateTrailsFromGpxCommandHandler> _logger;
 
-    public BulkCreateTrailsFromGpxCommandHandler(UtanvegaDbContext context, LocationDetector locationDetector, ICacheInvalidator cacheInvalidator)
+    public BulkCreateTrailsFromGpxCommandHandler(UtanvegaDbContext context, LocationDetector locationDetector, ICacheInvalidator cacheInvalidator, ILogger<BulkCreateTrailsFromGpxCommandHandler> logger)
     {
         _context = context;
         _singleHandler = new CreateTrailFromGpxCommandHandler(context, locationDetector, cacheInvalidator);
         _locationDetector = locationDetector;
         _cacheInvalidator = cacheInvalidator;
+        _logger = logger;
     }
 
     public async Task<List<Guid>> Handle(BulkCreateTrailsFromGpxCommand request, CancellationToken cancellationToken)
@@ -58,7 +60,7 @@ public class BulkCreateTrailsFromGpxCommandHandler : IRequestHandler<BulkCreateT
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[ERROR] Failed to process GPX file '{file.Name ?? "Unnamed"}': {ex.Message}");
+                _logger.LogError(ex, "Failed to process GPX file {FileName}", file.Name ?? "Unnamed");
                 throw; 
             }
         }
