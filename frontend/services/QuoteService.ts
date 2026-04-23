@@ -88,6 +88,7 @@ export class QuoteService {
         { text: "Where there's a will, there's a way.", author: "William Hazlitt" },
         { text: "Ég get verið alveg fáránlega hress.", author: "Prins Póló" },
         { text: "Ég hleyp og hleyp og hleyp og hleyp og hleyp. Ég er alinn upp á malbiki.", author: "Emmsjé Gauti" },
+        { text: "Þetta reddast :)", author: "Allir Íslendingar, (nánast) alltaf..." },
     ];
 
     static getRandomQuote(): Quote {
