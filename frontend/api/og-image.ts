@@ -3,6 +3,9 @@ import type React from 'react';
 
 export const config = { runtime: 'edge' };
 
+// Edge Functions run in a Node-like environment that provides process.env
+declare const process: { env: Record<string, string | undefined> };
+
 const BACKEND_URL =
   process.env.VITE_API_URL ||
   process.env.API_URL ||

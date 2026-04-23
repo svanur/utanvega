@@ -20,7 +20,7 @@
           "value": ".*(facebookexternalhit|Twitterbot|WhatsApp|LinkedInBot|Slackbot|TelegramBot|Discordbot|Googlebot|bingbot|Baiduspider|yandex|pinterest|vkShare).*"
         }
       ],
-      "destination": "/api/og"
+      "destination": "/api/og?path=:path*"
     },
     {
       "source": "/(.*)",

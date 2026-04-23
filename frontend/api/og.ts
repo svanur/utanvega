@@ -1,5 +1,8 @@
 export const config = { runtime: 'edge' };
 
+// Edge Functions run in a Node-like environment that provides process.env
+declare const process: { env: Record<string, string | undefined> };
+
 const BACKEND_URL =
   process.env.VITE_API_URL ||
   process.env.API_URL ||
@@ -46,9 +49,10 @@ interface TrailResponse {
 export default async function handler(request: Request) {
   const url = new URL(request.url);
   const slug = url.searchParams.get('slug');
+  const path = url.searchParams.get('path');
 
   if (!slug) {
-    return defaultPage();
+    return defaultPage(path ? `/${path}` : '');
   }
 
   try {
@@ -120,7 +124,8 @@ export default async function handler(request: Request) {
   }
 }
 
-function defaultPage() {
+function defaultPage(path: string = '') {
+  const canonicalUrl = path ? `${SITE_URL}${path}` : SITE_URL;
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -130,7 +135,7 @@ function defaultPage() {
 
   <meta property="og:title" content="Utanvega – Hlaupaleiðir á Íslandi" />
   <meta property="og:description" content="Vefur til að finna og deila skemmtilegum leiðum, hvort sem þær eru utanvega eða innanbæjar." />
-  <meta property="og:url" content="${SITE_URL}" />
+  <meta property="og:url" content="${canonicalUrl}" />
   <meta property="og:site_name" content="Utanvega" />
   <meta property="og:type" content="website" />
   <meta property="og:image" content="${SITE_URL}/api/og-image" />
@@ -142,10 +147,10 @@ function defaultPage() {
   <meta name="twitter:description" content="Vefur til að finna og deila skemmtilegum leiðum, hvort sem þær eru utanvega eða innanbæjar." />
   <meta name="twitter:image" content="${SITE_URL}/api/og-image" />
 
-  <meta http-equiv="refresh" content="0;url=${SITE_URL}" />
+  <meta http-equiv="refresh" content="0;url=${canonicalUrl}" />
 </head>
 <body>
-  <p>Redirecting to <a href="${SITE_URL}">Utanvega</a>…</p>
+  <p>Redirecting to <a href="${canonicalUrl}">Utanvega</a>…</p>
 </body>
 </html>`;
 
