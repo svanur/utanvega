@@ -73,6 +73,8 @@ interface TrailMapProps {
     activityType?: string;
     height?: string | number;
     mapInstanceRef?: React.MutableRefObject<L.Map | null>;
+    providedGeometry?: GeoJsonGeometry | null;
+    disableGeolocation?: boolean;
 }
 
 const activityEmoji: Record<string, string> = {
@@ -105,32 +107,31 @@ function MapRefSetter({ mapInstanceRef }: { mapInstanceRef?: React.MutableRefObj
     return null;
 }
 
-export default function TrailMap({ slug, onDataLoaded, hoverPoint, activityType, height, mapInstanceRef }: TrailMapProps) {
+export default function TrailMap({ slug, onDataLoaded, hoverPoint, activityType, height, mapInstanceRef, providedGeometry, disableGeolocation }: TrailMapProps) {
     const { t } = useTranslation();
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
-    const [geometry, setGeometry] = useState<GeoJsonGeometry | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [geometry, setGeometry] = useState<GeoJsonGeometry | null>(providedGeometry ?? null);
+    const [loading, setLoading] = useState(!providedGeometry);
     const [error, setError] = useState<string | null>(null);
     const [followMe, setFollowMe] = useState(false);
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
 
-    // Get user location for this component specifically
+    // Get user location — skipped when disableGeolocation is true (e.g., fullscreen dialog that shares parent's state)
     useEffect(() => {
-        if (navigator.geolocation) {
-            const watchId = navigator.geolocation.watchPosition(
-                (position) => {
-                    setUserLocation({
-                        lat: position.coords.latitude,
-                        lng: position.coords.longitude
-                    });
-                },
-                (err) => console.warn('Geolocation failed in TrailMap:', err),
-                { enableHighAccuracy: true }
-            );
-            return () => navigator.geolocation.clearWatch(watchId);
-        }
-    }, []);
+        if (disableGeolocation || !navigator.geolocation) return;
+        const watchId = navigator.geolocation.watchPosition(
+            (position) => {
+                setUserLocation({
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                });
+            },
+            (err) => console.warn('Geolocation failed in TrailMap:', err),
+            { enableHighAccuracy: true }
+        );
+        return () => navigator.geolocation.clearWatch(watchId);
+    }, [disableGeolocation]);
 
     const handleFollowMeClick = () => {
         setFollowMe(prev => !prev);
@@ -152,6 +153,7 @@ export default function TrailMap({ slug, onDataLoaded, hoverPoint, activityType,
     );
 
     useEffect(() => {
+        if (providedGeometry) return; // geometry already provided, skip fetch
         const fetchGeometry = async () => {
             try {
                 setLoading(true);
@@ -189,9 +191,9 @@ export default function TrailMap({ slug, onDataLoaded, hoverPoint, activityType,
             }
         };
         fetchGeometry();
-    // onDataLoaded is a callback that may change on every render; only re-fetch when slug changes
+    // onDataLoaded is a callback that may change on every render; only re-fetch when slug or providedGeometry changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [slug]);
+    }, [slug, providedGeometry]);
 
     if (loading) return <Typography>{t('trail.loadingMap')}</Typography>;
     if (error || !geometry) return <Typography color="error">{t('trail.noGpsData')}</Typography>;
