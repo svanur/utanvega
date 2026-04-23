@@ -531,12 +531,24 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
             <Dialog
                 fullScreen
                 open={fullscreenOpen}
-                onClose={() => setFullscreenOpen(false)}
-                TransitionProps={{ onEntered: () => dialogMapRef.current?.invalidateSize() }}
+                onClose={() => {
+                    setHoverPoint(null);
+                    setFullscreenOpen(false);
+                }}
+                TransitionProps={{
+                    onEntered: () => dialogMapRef.current?.invalidateSize(),
+                    onExited: () => setHoverPoint(null),
+                }}
             >
                 <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', py: 1 }}>
                     <Typography variant="h6" component="span" noWrap>{trail.name}</Typography>
-                    <IconButton onClick={() => setFullscreenOpen(false)} aria-label={t('trail.closeFullscreen')}>
+                    <IconButton
+                        onClick={() => {
+                            setHoverPoint(null);
+                            setFullscreenOpen(false);
+                        }}
+                        aria-label={t('trail.closeFullscreen')}
+                    >
                         <FullscreenExitIcon />
                     </IconButton>
                 </DialogTitle>
