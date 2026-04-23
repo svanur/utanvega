@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { API_URL } from './useTrails';
 
 export interface ScheduleRule {
@@ -53,57 +53,30 @@ export interface CompetitionDetail extends CompetitionSummary {
 }
 
 export function useCompetitions() {
-    const [competitions, setCompetitions] = useState<CompetitionSummary[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        fetch(`${API_URL}/api/v1/competitions`)
+    const { data: competitions = [], isPending, error: queryError } = useQuery<CompetitionSummary[]>({
+        queryKey: ['competitions'],
+        queryFn: () => fetch(`${API_URL}/api/v1/competitions`)
             .then(res => {
                 if (!res.ok) throw new Error('Failed to fetch competitions');
-                return res.json();
-            })
-            .then(data => {
-                setCompetitions(data);
-                setLoading(false);
-            })
-            .catch(err => {
-                setError(err.message);
-                setLoading(false);
-            });
-    }, []);
-
-    return { competitions, loading, error };
+                return res.json() as Promise<CompetitionSummary[]>;
+            }),
+        staleTime: 5 * 60 * 1000,
+    });
+    return { competitions, loading: isPending, error: queryError instanceof Error ? queryError.message : null };
 }
 
 export function useCompetitionBySlug(slug: string | undefined) {
-    const [competition, setCompetition] = useState<CompetitionDetail | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        if (!slug) {
-            setLoading(false);
-            return;
-        }
-
-        setLoading(true);
-        fetch(`${API_URL}/api/v1/competitions/${encodeURIComponent(slug)}`)
+    const { data: competition = null, isPending, error: queryError } = useQuery<CompetitionDetail | null>({
+        queryKey: ['competition', slug],
+        queryFn: () => fetch(`${API_URL}/api/v1/competitions/${encodeURIComponent(slug!)}`)
             .then(res => {
                 if (!res.ok) throw new Error('Competition not found');
-                return res.json();
-            })
-            .then(data => {
-                setCompetition(data);
-                setLoading(false);
-            })
-            .catch(err => {
-                setError(err.message);
-                setLoading(false);
-            });
-    }, [slug]);
-
-    return { competition, loading, error };
+                return res.json() as Promise<CompetitionDetail>;
+            }),
+        enabled: !!slug,
+        staleTime: 5 * 60 * 1000,
+    });
+    return { competition, loading: isPending && !!slug, error: queryError instanceof Error ? queryError.message : null };
 }
 
 export interface CalendarEvent {
@@ -119,26 +92,15 @@ export interface CalendarDay {
 }
 
 export function useCompetitionCalendar(from: string, to: string) {
-    const [days, setDays] = useState<CalendarDay[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        setLoading(true);
-        fetch(`${API_URL}/api/v1/competitions/calendar?from=${from}&to=${to}`)
+    const { data: days = [], isPending, error: queryError } = useQuery<CalendarDay[]>({
+        queryKey: ['competition-calendar', from, to],
+        queryFn: () => fetch(`${API_URL}/api/v1/competitions/calendar?from=${from}&to=${to}`)
             .then(res => {
                 if (!res.ok) throw new Error('Failed to fetch calendar');
-                return res.json();
-            })
-            .then(data => {
-                setDays(data);
-                setLoading(false);
-            })
-            .catch(err => {
-                setError(err.message);
-                setLoading(false);
-            });
-    }, [from, to]);
-
-    return { days, loading, error };
+                return res.json() as Promise<CalendarDay[]>;
+            }),
+        staleTime: 5 * 60 * 1000,
+        enabled: !!from && !!to,
+    });
+    return { days, loading: isPending, error: queryError instanceof Error ? queryError.message : null };
 }

@@ -127,7 +127,7 @@
         "level": "Stig",
         "trailRunning": "Utanvegahlaup",
         "running": "Hlaup",
-        "hiking": "Fjallganga",
+        "hiking": "Ganga",
         "cycling": "Hjólreiðar",
         "formula": "**Álagsvegalengd** = vegalengd (km) + hækkun (m) ÷ 100. Til dæmis, 15 km leið með 800 m hækkun = 23 km álag."
     },

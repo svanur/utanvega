@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { API_URL, Trail } from './useTrails';
 
 export interface Location {
@@ -33,79 +33,56 @@ export interface LocationWithTrails {
 }
 
 export function useLocations() {
-    const [locations, setLocations] = useState<Location[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        fetch(`${API_URL}/api/v1/locations`)
+    const { data: locations = [], isPending, error: queryError } = useQuery<Location[]>({
+        queryKey: ['locations'],
+        queryFn: () => fetch(`${API_URL}/api/v1/locations`)
             .then(res => {
                 if (!res.ok) throw new Error('Failed to fetch locations');
-                return res.json();
-            })
-            .then(data => {
-                setLocations(data);
-                setLoading(false);
-            })
-            .catch(err => {
-                setError(err.message);
-                setLoading(false);
-            });
-    }, []);
-
-    return { locations, loading, error };
+                return res.json() as Promise<Location[]>;
+            }),
+        staleTime: 10 * 60 * 1000,
+    });
+    return {
+        locations,
+        loading: isPending,
+        error: queryError instanceof Error ? queryError.message : null,
+    };
 }
 
 export function useLocationTree() {
-    const [tree, setTree] = useState<LocationTreeNode[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        fetch(`${API_URL}/api/v1/locations/tree`)
+    const { data: tree = [], isPending, error: queryError } = useQuery<LocationTreeNode[]>({
+        queryKey: ['location-tree'],
+        queryFn: () => fetch(`${API_URL}/api/v1/locations/tree`)
             .then(res => {
                 if (!res.ok) throw new Error('Failed to fetch location tree');
-                return res.json();
-            })
-            .then(data => {
-                setTree(data);
-                setLoading(false);
-            })
-            .catch(err => {
-                setError(err.message);
-                setLoading(false);
-            });
-    }, []);
-
-    return { tree, loading, error };
+                return res.json() as Promise<LocationTreeNode[]>;
+            }),
+        staleTime: 10 * 60 * 1000,
+    });
+    return {
+        tree,
+        loading: isPending,
+        error: queryError instanceof Error ? queryError.message : null,
+    };
 }
 
 export function useLocationBySlug(slug: string | undefined) {
-    const [locationWithTrails, setLocationWithTrails] = useState<LocationWithTrails | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        if (!slug) return;
-
-        setLoading(true);
-        fetch(`${API_URL}/api/v1/locations/${slug}`)
+    const { data: locationWithTrails = null, isPending, error: queryError } = useQuery<LocationWithTrails | null>({
+        queryKey: ['location', slug],
+        queryFn: () => fetch(`${API_URL}/api/v1/locations/${slug}`)
             .then(res => {
                 if (!res.ok) {
                     if (res.status === 404) throw new Error('Location not found');
                     throw new Error('Failed to fetch location');
                 }
-                return res.json();
-            })
-            .then(data => {
-                setLocationWithTrails(data);
-                setLoading(false);
-            })
-            .catch(err => {
-                setError(err.message);
-                setLoading(false);
-            });
-    }, [slug]);
-
-    return { ...locationWithTrails, loading, error };
+                return res.json() as Promise<LocationWithTrails>;
+            }),
+        enabled: !!slug,
+        staleTime: 5 * 60 * 1000,
+    });
+    return {
+        ...locationWithTrails,
+        loading: isPending && !!slug,
+        error: queryError instanceof Error ? queryError.message : null,
+    };
 }
