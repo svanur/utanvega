@@ -240,7 +240,7 @@ export function LocationList({ onNotify }: LocationListProps) {
                             ),
                             endAdornment: searchQuery ? (
                                 <InputAdornment position="end">
-                                    <IconButton size="small" onClick={() => setSearchQuery('')}>
+                                    <IconButton size="small" aria-label="Clear search" onClick={() => setSearchQuery('')}>
                                         <ClearIcon fontSize="small" />
                                     </IconButton>
                                 </InputAdornment>

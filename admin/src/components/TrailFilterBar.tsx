@@ -54,7 +54,7 @@ export default function TrailFilterBar({
           ),
           endAdornment: search ? (
             <InputAdornment position="end">
-              <IconButton size="small" onClick={() => onSearchChange('')}>
+              <IconButton size="small" aria-label="Clear search" onClick={() => onSearchChange('')}>
                 <ClearIcon fontSize="small" />
               </IconButton>
             </InputAdornment>

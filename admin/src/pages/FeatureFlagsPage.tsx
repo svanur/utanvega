@@ -94,7 +94,7 @@ export default function FeatureFlagsPage({ onNotify }: FeatureFlagsPageProps) {
               startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment>,
               endAdornment: searchQuery ? (
                 <InputAdornment position="end">
-                  <IconButton size="small" onClick={() => setSearchQuery('')}><ClearIcon fontSize="small" /></IconButton>
+                  <IconButton size="small" aria-label="Clear search" onClick={() => setSearchQuery('')}><ClearIcon fontSize="small" /></IconButton>
                 </InputAdornment>
               ) : undefined,
             }}
