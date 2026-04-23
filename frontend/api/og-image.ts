@@ -1,4 +1,5 @@
 import { ImageResponse } from '@vercel/og';
+import type React from 'react';
 
 export const config = { runtime: 'edge' };
 
@@ -73,7 +74,7 @@ export default async function handler(request: Request) {
       return defaultImage();
     }
 
-    const trail: TrailResponse = await res.json();
+    const trail = await res.json() as TrailResponse;
     const distance = (trail.length / 1000).toFixed(1);
     const gain = Math.round(trail.elevationGain);
     const activity = ACTIVITY_LABELS[trail.activityType] || trail.activityType;
@@ -180,7 +181,7 @@ export default async function handler(request: Request) {
       ),
     );
 
-    return new ImageResponse(image as React.ReactElement, {
+  return new ImageResponse(image as unknown as React.ReactElement, {
       width: 1200,
       height: 630,
       headers: {
@@ -207,10 +208,11 @@ function defaultImage() {
       color: 'white',
     },
     h('div', { display: 'flex', fontSize: '72px', fontWeight: 800, marginBottom: '16px' }, '⛰️ Utanvega'),
-    h('div', { display: 'flex', fontSize: '28px', color: '#94a3b8' }, 'Útivistarvefur fyrir Ísendinga'),
+    h('div', { display: 'flex', fontSize: '28px', color: '#94a3b8' }, 'Hlaupaleiðir á Íslandi'),
   );
 
-  return new ImageResponse(image as React.ReactElement, {
+  return new ImageResponse(image as unknown as React.ReactElement, {
+
     width: 1200,
     height: 630,
     headers: {

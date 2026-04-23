@@ -61,7 +61,7 @@ export default async function handler(request: Request) {
       return defaultPage();
     }
 
-    const trail: TrailResponse = await res.json();
+    const trail = await res.json() as TrailResponse;
     const title = esc(trail.name);
     const distance = fmtDistance(trail.length);
     const gain = Math.round(trail.elevationGain);
@@ -125,11 +125,11 @@ function defaultPage() {
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Utanvega – Útivistarvefur fyrir Íslendingadingadingadingadingadinga</title>
-  <meta name="description" content="Útivistarvefur til að finna og deila skemmtilegum leiðum, hvort sem þær eru utanvega eða innanbæjar." />
+  <title>Utanvega – Hlaupaleiðir á Íslandi</title>
+  <meta name="description" content="Vefur til að finna og deila skemmtilegum leiðum, hvort sem þær eru utanvega eða innanbæjar." />
 
-  <meta property="og:title" content="Utanvega – Útivistarvefur fyrir Íslending" />
-  <meta property="og:description" content="Útivistarvefur til að finna og deila skemmtilegum leiðum, hvort sem þær eru utanvega eða innanbæjar." />
+  <meta property="og:title" content="Utanvega – Hlaupaleiðir á Íslandi" />
+  <meta property="og:description" content="Vefur til að finna og deila skemmtilegum leiðum, hvort sem þær eru utanvega eða innanbæjar." />
   <meta property="og:url" content="${SITE_URL}" />
   <meta property="og:site_name" content="Utanvega" />
   <meta property="og:type" content="website" />
@@ -138,8 +138,8 @@ function defaultPage() {
   <meta property="og:image:height" content="630" />
 
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Utanvega – Útivistarvefur fyrir Íslending" />
-  <meta name="twitter:description" content="Útivistarvefur til að finna og deila skemmtilegum leiðum, hvort sem þær eru utanvega eða innanbæjar." />
+  <meta name="twitter:title" content="Utanvega – Hlaupaleiðir á Íslandi" />
+  <meta name="twitter:description" content="Vefur til að finna og deila skemmtilegum leiðum, hvort sem þær eru utanvega eða innanbæjar." />
   <meta name="twitter:image" content="${SITE_URL}/api/og-image" />
 
   <meta http-equiv="refresh" content="0;url=${SITE_URL}" />
