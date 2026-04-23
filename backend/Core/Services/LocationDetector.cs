@@ -216,11 +216,14 @@ public class LocationDetector
 
         foreach (var loc in detected)
         {
-            // Walk up the ancestor chain from this location
+            // Walk up the ancestor chain from this location (visited set guards against cyclic parent data)
             var current = loc.Id;
+            var visited = new HashSet<Guid> { current };
             while (parentMap.TryGetValue(current, out var parentId) && parentId.HasValue)
             {
                 current = parentId.Value;
+                if (!visited.Add(current))
+                    break; // cycle detected — stop traversal
                 if (detectedIds.Contains(current))
                     toRemove.Add(current); // This ancestor is also detected — it's too broad, remove it
             }
