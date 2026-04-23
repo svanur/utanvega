@@ -35,7 +35,7 @@ const ALL_PRESETS: FilterPreset[] = [
         id: 'quick-trail',
         emoji: '⚡',
         nameKey: 'presets.quickTrail',
-        filters: { maxDuration: 30, maxDistance: 40 },
+        filters: { maxLength: 5, maxDuration: 30, maxDistance: 40 },
         schedule: { hours: [9, 12], days: [1, 2, 3, 4, 5] },
     },
     {
@@ -51,7 +51,7 @@ const ALL_PRESETS: FilterPreset[] = [
         id: 'saturday-long-run',
         emoji: '🏔️',
         nameKey: 'presets.saturdayLongRun',
-        filters: { minLength: 20, selectedActivityTypes: ['TrailRunning', 'Running'], sortBy: 'longest' },
+        filters: { minLength: 20, maxLength: 42, selectedActivityTypes: ['TrailRunning', 'Running'], sortBy: 'longest' },
         schedule: { hours: [6, 14], days: [6] },
     },
 
@@ -76,7 +76,7 @@ const ALL_PRESETS: FilterPreset[] = [
         id: 'weekend-explorer',
         emoji: '🗺️',
         nameKey: 'presets.weekendExplorer',
-        filters: { minDuration: 120, maxDuration: 300, sortBy: 'longest' },
+        filters: { minDuration: 120, maxDuration: 300, maxLength: 40, sortBy: 'longest' },
         schedule: { hours: [8, 16], days: [0, 6] },
     },
 
@@ -101,7 +101,7 @@ const ALL_PRESETS: FilterPreset[] = [
         id: 'after-work',
         emoji: '🌆',
         nameKey: 'presets.afterWork',
-        filters: { maxDuration: 45, maxDistance: 40 },
+        filters: { maxLength: 10, maxDuration: 45, maxDistance: 40 },
         schedule: { hours: [16, 21], days: [1, 2, 3, 4, 5] },
     },
     {
