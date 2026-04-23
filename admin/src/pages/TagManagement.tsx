@@ -88,7 +88,7 @@ export default function TagManagement({ onNotify }: TagManagementProps) {
               startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment>,
               endAdornment: searchQuery ? (
                 <InputAdornment position="end">
-                  <IconButton size="small" onClick={() => setSearchQuery('')}><ClearIcon fontSize="small" /></IconButton>
+                  <IconButton aria-label="Clear search" size="small" onClick={() => setSearchQuery('')}><ClearIcon fontSize="small" /></IconButton>
                 </InputAdornment>
               ) : undefined,
             }}
