@@ -23,6 +23,7 @@ import { useTranslation } from 'react-i18next';
 import { API_URL, Trail } from '../hooks/useTrails';
 import { Location } from '../hooks/useLocations';
 import { CompetitionSummary } from '../hooks/useCompetitions';
+import { useFeatureFlags } from '../hooks/useFeatureFlags';
 
 interface SearchResult {
     type: 'trail' | 'location' | 'competition';
@@ -77,6 +78,8 @@ export default function SpotlightSearch() {
     const listRef = useRef<HTMLUListElement>(null);
     const navigate = useNavigate();
     const { t } = useTranslation();
+    const { isEnabled } = useFeatureFlags();
+    const racesEnabled = isEnabled('races_page');
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -98,19 +101,22 @@ export default function SpotlightSearch() {
     // Fetch data on first open
     useEffect(() => {
         if (!open || loaded) return;
-        Promise.all([
+        const fetches: Promise<unknown>[] = [
             fetch(`${API_URL}/api/v1/trails`).then(r => r.json()),
             fetch(`${API_URL}/api/v1/locations`).then(r => r.json()),
-            fetch(`${API_URL}/api/v1/competitions`).then(r => r.json()),
-        ]).then(([trailData, locationData, competitionData]) => {
-            setTrails(trailData);
-            setLocations(locationData);
-            setCompetitions(competitionData);
+        ];
+        if (racesEnabled) {
+            fetches.push(fetch(`${API_URL}/api/v1/competitions`).then(r => r.json()));
+        }
+        Promise.all(fetches).then(([trailData, locationData, competitionData]) => {
+            setTrails(trailData as Trail[]);
+            setLocations(locationData as Location[]);
+            if (racesEnabled && competitionData) setCompetitions(competitionData as CompetitionSummary[]);
             setLoaded(true);
         }).catch(() => {
             setLoaded(true);
         });
-    }, [open, loaded]);
+    }, [open, loaded, racesEnabled]);
 
     const results = useMemo((): SearchResult[] => {
         if (!query.trim()) return [];
@@ -138,21 +144,23 @@ export default function SpotlightSearch() {
             .filter(r => r.score > 0)
             .sort((a, b) => b.score - a.score);
 
-        const competitionResults: (SearchResult & { score: number })[] = competitions
-            .map(comp => ({
-                type: 'competition' as const,
-                name: comp.name,
-                slug: comp.slug,
-                subtitle: comp.nextDate
-                    ? new Date(comp.nextDate).toLocaleDateString()
-                    : (comp.organizerName ?? comp.locationName ?? undefined),
-                score: scoreMatch(q, comp.name),
-            }))
-            .filter(r => r.score > 0)
-            .sort((a, b) => b.score - a.score);
+        const competitionResults: (SearchResult & { score: number })[] = racesEnabled
+            ? competitions
+                .map(comp => ({
+                    type: 'competition' as const,
+                    name: comp.name,
+                    slug: comp.slug,
+                    subtitle: comp.nextDate
+                        ? new Date(comp.nextDate).toLocaleDateString()
+                        : (comp.organizerName ?? comp.locationName ?? undefined),
+                    score: scoreMatch(q, comp.name),
+                }))
+                .filter(r => r.score > 0)
+                .sort((a, b) => b.score - a.score)
+            : [];
 
         return [...trailResults.slice(0, 5), ...locationResults.slice(0, 3), ...competitionResults.slice(0, 3)];
-    }, [query, trails, locations, competitions, t]);
+    }, [query, trails, locations, competitions, racesEnabled, t]);
 
     useEffect(() => {
         setActiveIndex(0);
