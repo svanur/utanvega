@@ -117,6 +117,18 @@ const ElevationChart: React.FC<ElevationChartProps> = ({ coordinates, onHover, a
     return data;
   }, [coordinates]);
 
+  const yDomain = useMemo((): [number, number] => {
+    if (chartData.length === 0) return [0, 100];
+    const elevations = chartData.map(p => p.elevation);
+    const dataMin = Math.min(...elevations);
+    const dataMax = Math.max(...elevations);
+    const dataRange = dataMax - dataMin;
+    const MIN_SPAN = 100;
+    const span = Math.max(dataRange * 1.2, MIN_SPAN); // 20% padding or min 100m
+    const mid = (dataMin + dataMax) / 2;
+    return [Math.max(0, Math.round(mid - span / 2)), Math.round(mid + span / 2)];
+  }, [chartData]);
+
   const { minPoint, maxPoint } = useMemo(() => {
     if (chartData.length === 0) return { minPoint: null, maxPoint: null };
     let min = chartData[0], max = chartData[0];
@@ -216,7 +228,7 @@ const ElevationChart: React.FC<ElevationChartProps> = ({ coordinates, onHover, a
             />
             <YAxis
               dataKey="elevation"
-              domain={['auto', 'auto']}
+              domain={yDomain}
               tickFormatter={(value: number) => `${value} m`}
               fontSize={12}
             />
