@@ -15,12 +15,13 @@
         "switchToIcelandic": "Switch to Icelandic"
     },
     "spotlight": {
-        "placeholder": "Search trails and locations...",
+        "placeholder": "Search trails, locations and races...",
         "trailsSection": "Trails",
         "locationsSection": "Locations",
+        "racesSection": "Races",
         "trails": "trails",
         "noResults": "No results found",
-        "hint": "Start typing to search trails and locations",
+        "hint": "Start typing to search trails, locations and races",
         "shortcutHint": "Search (Ctrl+K)"
     },
     "home": {

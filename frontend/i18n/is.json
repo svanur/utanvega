@@ -15,12 +15,13 @@
         "switchToIcelandic": "Skipta yfir á íslensku"
     },
     "spotlight": {
-        "placeholder": "Leita að leiðum og stöðum...",
+        "placeholder": "Leita að leiðum, stöðum og keppnum...",
         "trailsSection": "Leiðir",
         "locationsSection": "Staðir",
+        "racesSection": "Keppni",
         "trails": "leiðir",
         "noResults": "Ekkert fannst",
-        "hint": "Byrjaðu að skrifa til að leita að leiðum og stöðum",
+        "hint": "Byrjaðu að skrifa til að leita að leiðum, stöðum og keppnum",
         "shortcutHint": "Leita (Ctrl+K)"
     },
     "home": {
@@ -672,7 +673,7 @@
         "statusUpcoming": "Væntanlegt",
         "raceDayWeather": "Veður á keppnisdegi",
         "predict": "Spá",
-        "noUpcoming": "Engar keppnir framundan"
+        "noUpcoming": "Engin keppni framundan"
     },
     "calendar": {
         "title": "Keppnisdagatal",
@@ -700,8 +701,8 @@
             "cta": "Sjá staðsetningar"
         },
         "races": {
-            "title": "🏆 Keppnir og mót",
-            "desc": "Fylgstu með komandi keppnum, niðurtalningu, dagatali og veðurspá á keppnisdegi. Spáðu fyrir um tímann þinn, áður en þú tekur þig til.",
+            "title": "🏆 Keppnishlaup",
+            "desc": "Fylgstu með komandi hlaupum, niðurtalningu, dagatali og veðurspá á keppnisdegi. Spáðu fyrir um tímann þinn, áður en þú tekur þig til.",
             "cta": "Sjá keppnisleiðir"
         },
         "tools": {
@@ -719,7 +720,7 @@
             "km": "Samtals km",
             "elevation": "Hæðaraukning (m)",
             "locations": "Staðsetningar",
-            "races": "Komandi keppnir"
+            "races": "Komandi keppni"
         }
     }
 }
