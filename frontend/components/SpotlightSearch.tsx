@@ -77,7 +77,7 @@ export default function SpotlightSearch() {
     const inputRef = useRef<HTMLInputElement>(null);
     const listRef = useRef<HTMLUListElement>(null);
     const navigate = useNavigate();
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const { isEnabled } = useFeatureFlags();
     const racesEnabled = isEnabled('races_page');
     const theme = useTheme();
@@ -151,7 +151,7 @@ export default function SpotlightSearch() {
                     name: comp.name,
                     slug: comp.slug,
                     subtitle: comp.nextDate
-                        ? new Date(comp.nextDate).toLocaleDateString()
+                        ? new Date(comp.nextDate + 'T00:00:00').toLocaleDateString(i18n.language === 'is' ? 'is-IS' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })
                         : (comp.organizerName ?? comp.locationName ?? undefined),
                     score: scoreMatch(q, comp.name),
                 }))
@@ -160,7 +160,7 @@ export default function SpotlightSearch() {
             : [];
 
         return [...trailResults.slice(0, 5), ...locationResults.slice(0, 3), ...competitionResults.slice(0, 3)];
-    }, [query, trails, locations, competitions, racesEnabled, t]);
+    }, [query, trails, locations, competitions, racesEnabled, i18n.language, t]);
 
     useEffect(() => {
         setActiveIndex(0);
