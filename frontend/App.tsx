@@ -26,6 +26,7 @@ const RacesPage = lazy(() => import('./pages/RacesPage'));
 const RaceCalendarPage = lazy(() => import('./pages/RaceCalendarPage'));
 const CompetitionDetailPage = lazy(() => import('./pages/CompetitionDetailPage'));
 const WelcomePage = lazy(() => import('./pages/WelcomePage'));
+const TrailComparePage = lazy(() => import('./pages/TrailComparePage'));
 
 function PageLoader() {
     return (
@@ -132,6 +133,12 @@ export default function App() {
                         path="/welcome" 
                         element={<WelcomePage mode={mode} onToggleMode={handleToggleMode} forceLang="en" />} 
                     />
+                    {isEnabled('trail_comparison') && (
+                    <Route 
+                        path="/compare" 
+                        element={<TrailComparePage mode={mode} onToggleMode={handleToggleMode} />} 
+                    />
+                    )}
                     <Route 
                         path="/velkomin" 
                         element={<WelcomePage mode={mode} onToggleMode={handleToggleMode} forceLang="is" />} 

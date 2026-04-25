@@ -41,6 +41,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
+import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import Layout from '../components/Layout';
 import { useTrailBySlug, useTrails, useTrailSuggestions, useTrailWeather, recordTrailView, API_URL } from '../hooks/useTrails';
@@ -332,6 +333,16 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                 download
                             >
                                 <FileDownloadIcon fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                        )}
+                        {isEnabled('trail_comparison') && (
+                        <Tooltip title={t('compare.compareButton')} arrow>
+                            <IconButton
+                                size="small"
+                                onClick={() => navigate(`/compare?a=${trail.slug}`)}
+                            >
+                                <CompareArrowsIcon fontSize="small" />
                             </IconButton>
                         </Tooltip>
                         )}
