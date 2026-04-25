@@ -487,6 +487,8 @@
         "activity": "Hreyfing",
         "diff": "Mismunur",
         "diffTooltip": "Sýnir hvaða leið (A eða B) er hærri og um hve mikið",
+        "distFromMe": "Fjarlægð frá mér",
+        "myLocation": "Staðsetning mín",
         "same": "Eins",
         "map": "Kort",
         "elevation": "Hæðarsnið",

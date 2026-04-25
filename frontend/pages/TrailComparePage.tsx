@@ -329,14 +329,17 @@ function CompareMap({
     nameA,
     nameB,
     hoverPct,
+    userPos,
 }: {
     coordsA: number[][] | null;
     coordsB: number[][] | null;
     nameA: string | null;
     nameB: string | null;
     hoverPct: number | null;
+    userPos: [number, number] | null;
 }) {
     const theme = useTheme();
+    const { t } = useTranslation();
 
     // Convert [lon, lat, ele] → [lat, lng] for Leaflet
     const latLngA = useMemo((): [number, number][] => {
@@ -433,10 +436,23 @@ function CompareMap({
                         }}
                     />
                 )}
+                {userPos && (
+                    <CircleMarker
+                        center={userPos}
+                        radius={8}
+                        pathOptions={{
+                            color: '#fff',
+                            fillColor: '#4caf50',
+                            fillOpacity: 0.9,
+                            opacity: 1,
+                            weight: 2,
+                        }}
+                    />
+                )}
             </MapContainer>
             {/* Legend */}
-            {(nameA || nameB) && (
-                <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
+            {(nameA || nameB || userPos) && (
+                <Stack direction="row" spacing={2} flexWrap="wrap" sx={{ mt: 1 }}>
                     {nameA && (
                         <Stack direction="row" spacing={0.5} alignItems="center">
                             <Box sx={{ width: 20, height: 3, bgcolor: COLOR_A, borderRadius: 1 }} />
@@ -447,6 +463,12 @@ function CompareMap({
                         <Stack direction="row" spacing={0.5} alignItems="center">
                             <Box sx={{ width: 20, height: 3, bgcolor: COLOR_B, borderRadius: 1 }} />
                             <Typography variant="caption" color="text.secondary">{nameB}</Typography>
+                        </Stack>
+                    )}
+                    {userPos && (
+                        <Stack direction="row" spacing={0.5} alignItems="center">
+                            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#4caf50', border: '2px solid #fff', boxShadow: '0 0 0 1px #4caf50' }} />
+                            <Typography variant="caption" color="text.secondary">{t('compare.myLocation')}</Typography>
                         </Stack>
                     )}
                 </Stack>
@@ -636,6 +658,16 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
     const { coordinates: coordsB, loading: geoLoadingB } = useTrailGeometry(slugB || undefined);
 
     const [hoverPct, setHoverPct] = useState<number | null>(null);
+    const [userPos, setUserPos] = useState<[number, number] | null>(null);
+
+    useEffect(() => {
+        if (!navigator.geolocation) return;
+        navigator.geolocation.getCurrentPosition(
+            pos => setUserPos([pos.coords.latitude, pos.coords.longitude]),
+            () => { /* permission denied or unavailable — silently ignore */ },
+            { timeout: 8000, maximumAge: 60_000 }
+        );
+    }, []);
 
     const setSlug = useCallback((key: 'a' | 'b', slug: string | null) => {
         const next = new URLSearchParams(searchParams);
@@ -661,6 +693,17 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
         if (!coordsB) return null;
         return Math.max(...coordsB.map(c => c.length > 2 ? c[2] : 0));
     }, [coordsB]);
+
+    // Distance from user's location to trail start (in km)
+    const distToTrailA = useMemo(() => {
+        if (!userPos || !coordsA || coordsA.length === 0) return null;
+        return haversineMeters(userPos[0], userPos[1], coordsA[0][1], coordsA[0][0]) / 1000;
+    }, [userPos, coordsA]);
+
+    const distToTrailB = useMemo(() => {
+        if (!userPos || !coordsB || coordsB.length === 0) return null;
+        return haversineMeters(userPos[0], userPos[1], coordsB[0][1], coordsB[0][0]) / 1000;
+    }, [userPos, coordsB]);
 
     const bothLoading = loadingA || loadingB;
     const hasBoth = !!trailA && !!trailB;
@@ -866,6 +909,20 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
                                         valB={trailB ? <Typography variant="body2">{trailB.activityType}</Typography> : null}
                                         loading={bothLoading}
                                     />
+                                    {userPos && (
+                                        <StatRow
+                                            label={t('compare.distFromMe')}
+                                            valA={distToTrailA != null
+                                                ? <Typography variant="body2">{fmtKm(distToTrailA * 1000)}</Typography>
+                                                : (geoLoadingA ? <CircularProgress size={14} /> : <Typography variant="body2" color="text.disabled">—</Typography>)}
+                                            diff={distToTrailA != null && distToTrailB != null
+                                                ? numDiff(distToTrailA * 1000, distToTrailB * 1000, v => fmtKm(v))
+                                                : <Typography variant="body2" color="text.disabled">—</Typography>}
+                                            valB={distToTrailB != null
+                                                ? <Typography variant="body2">{fmtKm(distToTrailB * 1000)}</Typography>
+                                                : (geoLoadingB ? <CircularProgress size={14} /> : <Typography variant="body2" color="text.disabled">—</Typography>)}
+                                        />
+                                    )}
                                 </TableBody>
                             </Table>
                         </Box>
@@ -890,6 +947,7 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
                                     nameA={trailA?.name ?? null}
                                     nameB={trailB?.name ?? null}
                                     hoverPct={hoverPct}
+                                    userPos={userPos}
                                 />
                                 {(coordsA || coordsB) && (
                                     <>
