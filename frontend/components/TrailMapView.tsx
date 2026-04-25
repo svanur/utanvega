@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, useMapEvents, LayersControl } from 'react-leaflet';
 import MarkerClusterGroup from '@changey/react-leaflet-markercluster';
 import L from 'leaflet';
 import { Box, Typography, Button, IconButton, Paper, Tooltip, useTheme } from '@mui/material';
@@ -302,15 +302,27 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
                 >
                     <MapInvalidateSize />
                     <MapDragHandler onDrag={handleDrag} onMapClick={handleMapClick} ignoreClickRef={ignoreMapClick} />
-                <TileLayer
-                    key={isDark ? 'dark' : 'light'}
-                    attribution={isDark
-                        ? '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>'
-                        : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}
-                    url={isDark
-                        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-                        : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'}
-                />
+                <LayersControl key={isDark ? 'dark' : 'light'} position="topleft">
+                        <LayersControl.BaseLayer checked={!isDark} name={t('map.street')}>
+                            <TileLayer
+                                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                            />
+                        </LayersControl.BaseLayer>
+                        <LayersControl.BaseLayer checked={isDark} name={t('map.dark')}>
+                            <TileLayer
+                                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>'
+                                url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                            />
+                        </LayersControl.BaseLayer>
+                        <LayersControl.BaseLayer name={t('map.topo')}>
+                            <TileLayer
+                                url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
+                                attribution='&copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
+                                maxZoom={17}
+                            />
+                        </LayersControl.BaseLayer>
+                    </LayersControl>
                 
                 {userLocation && (
                     <Marker position={[userLocation.lat, userLocation.lng]} icon={userLocationIcon}>

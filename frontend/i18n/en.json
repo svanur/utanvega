@@ -161,7 +161,10 @@
         "youAreHere": "You are here",
         "viewDetails": "View Details",
         "showTracks": "Show trail tracks",
-        "hideTracks": "Hide trail tracks"
+        "hideTracks": "Hide trail tracks",
+        "topo": "Topographic",
+        "street": "Street",
+        "dark": "Dark"
     },
     "locations": {
         "title": "Explore by Location",

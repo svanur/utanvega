@@ -161,7 +161,10 @@
         "youAreHere": "Þú ert hér",
         "viewDetails": "Skoða nánar",
         "showTracks": "Sýna leiðir á korti",
-        "hideTracks": "Fela leiðir á korti"
+        "hideTracks": "Fela leiðir á korti",
+        "topo": "Landslagskort",
+        "street": "Vegakort",
+        "dark": "Dökkt"
     },
     "locations": {
         "title": "Skoða eftir staðsetningu",
