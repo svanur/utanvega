@@ -9,6 +9,7 @@ import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import BuildIcon from '@mui/icons-material/Build';
 import ShareIcon from '@mui/icons-material/Share';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
 import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined';
 import StraightenIcon from '@mui/icons-material/Straighten';
@@ -106,7 +107,7 @@ function StatItem({ icon, value, label, started, delay }: { icon: React.ReactNod
     );
 }
 
-function StatsBar({ stats }: { stats: StatsData }) {
+function StatsBar({ stats, onScrollDown }: { stats: StatsData; onScrollDown?: () => void }) {
     const ref = useRef<HTMLDivElement>(null);
     const visible = useOnScreen(ref, 0.3);
     const { t } = useTranslation();
@@ -144,6 +145,7 @@ function StatsBar({ stats }: { stats: StatsData }) {
                     </Paper>
                 </Box>
             </Fade>
+            {onScrollDown && <ScrollDownButton onClick={onScrollDown} label={t('welcome.discoverMore')} />}
         </Box>
     );
 }
@@ -156,7 +158,32 @@ const ICON_GRADIENTS = [
     'linear-gradient(135deg, #f44336, #ef5350)',
 ];
 
-function FeatureSection({ icon, titleKey, descKey, cta, ctaPath, index, tParams }: {
+/** Subtle "scroll within page" button — visually distinct from page-navigation buttons */
+function ScrollDownButton({ onClick, label }: { onClick: () => void; label: string }) {
+    return (
+        <Box sx={{ textAlign: 'center', mt: 2, mb: 2 }}>
+            <Button
+                variant="text"
+                size="small"
+                onClick={onClick}
+                endIcon={<KeyboardArrowDownIcon />}
+                sx={{
+                    color: 'text.disabled',
+                    fontSize: '0.75rem',
+                    letterSpacing: '0.05em',
+                    textTransform: 'uppercase',
+                    opacity: 0.7,
+                    transition: 'opacity 0.2s, color 0.2s',
+                    '&:hover': { opacity: 1, color: 'text.secondary', bgcolor: 'transparent' },
+                }}
+            >
+                {label}
+            </Button>
+        </Box>
+    );
+}
+
+function FeatureSection({ icon, titleKey, descKey, cta, ctaPath, index, tParams, sectionId, onScrollDown }: {
     icon: React.ReactNode;
     titleKey: string;
     descKey: string;
@@ -164,6 +191,8 @@ function FeatureSection({ icon, titleKey, descKey, cta, ctaPath, index, tParams 
     ctaPath: string;
     index: number;
     tParams?: Record<string, string | number>;
+    sectionId?: string;
+    onScrollDown?: () => void;
 }) {
     const ref = useRef<HTMLDivElement>(null);
     const visible = useOnScreen(ref);
@@ -173,7 +202,7 @@ function FeatureSection({ icon, titleKey, descKey, cta, ctaPath, index, tParams 
     const isEven = index % 2 === 0;
 
     return (
-        <Box ref={ref} sx={{ mb: 6 }}>
+        <Box ref={ref} id={sectionId} sx={{ mb: onScrollDown ? 2 : 6 }}>
             <Fade in={visible} timeout={800} style={{ transitionDelay: '100ms' }}>
                 <Paper
                     elevation={0}
@@ -229,6 +258,7 @@ function FeatureSection({ icon, titleKey, descKey, cta, ctaPath, index, tParams 
                     </Box>
                 </Paper>
             </Fade>
+            {onScrollDown && <ScrollDownButton onClick={onScrollDown} label={t('welcome.discoverMore')} />}
         </Box>
     );
 }
@@ -414,12 +444,12 @@ export default function WelcomePage({ mode, onToggleMode, forceLang }: Props) {
             </Box>
 
             {/* Stats bar */}
-            <Container ref={statsRef} maxWidth="md">
-                <StatsBar stats={stats} />
+            <Container ref={statsRef} maxWidth="md" id="section-stats">
+                <StatsBar stats={stats} onScrollDown={() => document.getElementById('section-feature-0')?.scrollIntoView({ behavior: 'smooth' })} />
             </Container>
 
             {/* Feature sections */}
-            <Container maxWidth="md" sx={{ py: 4 }}>
+            <Container maxWidth="md" sx={{ py: 4 }} id="section-features">
                 <Fade in timeout={800}>
                     <Typography
                         variant="h4"
@@ -431,11 +461,20 @@ export default function WelcomePage({ mode, onToggleMode, forceLang }: Props) {
                 </Fade>
 
                 {features.map((f, i) => (
-                    <FeatureSection key={f.titleKey} {...f} index={i} />
+                    <FeatureSection
+                        key={f.titleKey}
+                        {...f}
+                        index={i}
+                        sectionId={`section-feature-${i}`}
+                        onScrollDown={i < features.length - 1
+                            ? () => document.getElementById(`section-feature-${i + 1}`)?.scrollIntoView({ behavior: 'smooth' })
+                            : () => document.getElementById('section-cta')?.scrollIntoView({ behavior: 'smooth' })
+                        }
+                    />
                 ))}
 
                 {/* Final CTA */}
-                <Box sx={{ textAlign: 'center', py: 6 }}>
+                <Box id="section-cta" sx={{ textAlign: 'center', py: 6 }}>
                     <Typography variant="h5" fontWeight={700} gutterBottom>
                         {t('welcome.readyToRun')}
                     </Typography>
