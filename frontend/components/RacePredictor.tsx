@@ -50,6 +50,7 @@ const DISTANCES: RaceDistance[] = [
     { key: 'marathon', km: 42.195 },
     { key: '50k', km: 50 },
     { key: '100k', km: 100 },
+    { key: '100m', km: 160.934 },
 ];
 
 export default function RacePredictor() {
@@ -93,8 +94,7 @@ export default function RacePredictor() {
                         <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
                             {t('tools.racePredictor.knownDistance')}
                         </Typography>
-                        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                            {DISTANCES.map(d => (
+                        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'nowrap', overflowX: 'auto', pb: 0.5 }}>                            {DISTANCES.map(d => (
                                 <Chip
                                     key={d.key}
                                     label={t(`tools.racePredictor.distances.${d.key}`)}

@@ -48,6 +48,8 @@ const PRESETS = [
     { key: '10k', km: 10 },
     { key: 'half', km: 21.0975 },
     { key: 'marathon', km: 42.195 },
+    { key: '100k', km: 100 },
+    { key: '100m', km: 160.934 },
 ];
 
 const MI_TO_KM = 1.60934;
@@ -401,7 +403,7 @@ export default function PaceCalculator() {
                                 ),
                             }}
                         />
-                        <Box sx={{ display: 'flex', gap: 0.5, mt: 1, flexWrap: 'wrap' }}>
+                        <Box sx={{ display: 'flex', gap: 0.5, mt: 1, flexWrap: 'nowrap', overflowX: 'auto', pb: 0.5 }}>
                             {PRESETS.map(p => (
                                 <Chip
                                     key={p.key}

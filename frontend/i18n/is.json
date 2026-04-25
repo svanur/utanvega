@@ -529,9 +529,11 @@
                 "5k": "5K",
                 "10k": "10K",
                 "half": "Hálft",
-                "marathon": "Maraþon"
+                "marathon": "Maraþon",
+                "100k": "100K",
+                "100m": "100M"
             },
-            "trailAdjust": "Utanvegaleiðréttingar",
+            "trailAdjust":"Utanvegaleiðréttingar",
             "terrain": "Yfirborð",
             "terrains": {
                 "road": "Malbik",
@@ -567,10 +569,11 @@
                 "half": "Hálfmaraþon",
                 "marathon": "Maraþon",
                 "50k": "50K",
-                "100k": "100K"
+                "100k": "100K",
+                "100m": "100M"
             }
         },
-        "trailPredictor": {
+        "trailPredictor":{
             "title": "Utanvegaspá",
             "subtitle": "Spá fyrir um tíma á leið eða keppni út frá árangri í fyrri leið eða keppni.",
             "knownRace": "Leið/keppni með þekktum tíma",
@@ -623,7 +626,9 @@
                 "5k": "5 km",
                 "10k": "10 km",
                 "half": "Hálfmaraþon",
-                "marathon": "Maraþon"
+                "marathon": "Maraþon",
+                "100k": "100K",
+                "100m": "100M"
             },
             "workout": {
                 "title": "Æfingahraði",

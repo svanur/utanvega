@@ -114,6 +114,8 @@ const PRESETS: DistancePreset[] = [
     { key: '10k', meters: 10000 },
     { key: 'half', meters: 21097.5 },
     { key: 'marathon', meters: 42195 },
+    { key: '100k', meters: 100000 },
+    { key: '100m', meters: 160934 },
 ];
 
 export default function TrainingPaces() {
@@ -221,8 +223,7 @@ export default function TrainingPaces() {
                         <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
                             {t('tools.trainingPaces.raceDistance')}
                         </Typography>
-                        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                            {PRESETS.map(p => (
+                        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'nowrap', overflowX: 'auto', pb: 0.5 }}>                            {PRESETS.map(p => (
                                 <Chip
                                     key={p.key}
                                     label={t(`tools.trainingPaces.distances.${p.key}`)}
