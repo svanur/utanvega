@@ -103,7 +103,7 @@ export default function App() {
                     />
                     {isAdmin && isEnabled('game_fun_page') && (
                     <Route 
-                        path="/fun" 
+                        path="/fun/:game?" 
                         element={<FunPage mode={mode} onToggleMode={handleToggleMode} />} 
                     />
                     )}
