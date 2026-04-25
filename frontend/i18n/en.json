@@ -494,7 +494,19 @@
         "trailA": "Trail A",
         "trailB": "Trail B",
         "viewTrail": "View",
-        "compareButton": "Compare"
+        "compareButton": "Compare",
+        "filters": {
+            "distance": "Distance",
+            "elevation": "Elevation",
+            "short": "Short <5km",
+            "medium": "5–21km",
+            "half": "Half 21–42km",
+            "marathon": "Marathon 42–50km",
+            "ultra": "Ultra 50km+",
+            "flat": "Flat <300m",
+            "hilly": "Hilly 300–800m",
+            "mountain": "Mountain 800m+"
+        }
     },
     "fun": {
         "guessTheTrail": "Guess the Trail",

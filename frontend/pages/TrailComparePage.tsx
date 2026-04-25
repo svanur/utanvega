@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useCallback } from 'react';
+import React, { useMemo, useEffect, useCallback, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -52,6 +52,7 @@ interface TrailOption {
     slug: string;
     activityType: string;
     length: number;
+    elevationGain: number;
 }
 
 // ─── Elevation helpers ────────────────────────────────────────────────────────
@@ -467,9 +468,65 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
     });
 
     const options: TrailOption[] = useMemo(
-        () => allTrails.map(t => ({ name: t.name, slug: t.slug, activityType: t.activityType, length: t.length })),
+        () => allTrails.map(t => ({
+            name: t.name,
+            slug: t.slug,
+            activityType: t.activityType,
+            length: t.length,
+            elevationGain: t.elevationGain,
+        })),
         [allTrails]
     );
+
+    // Filter pills state
+    const [filterDist, setFilterDist] = useState<string | null>(null);
+    const [filterElev, setFilterElev] = useState<string | null>(null);
+
+    const matchesFilters = useCallback((o: TrailOption, dist: string | null, elev: string | null) => {
+        const km = o.length / 1000;
+        if (dist === 'short' && km >= 5) return false;
+        if (dist === 'medium' && (km < 5 || km >= 21.1)) return false;
+        if (dist === 'half' && (km < 21.1 || km >= 42.2)) return false;
+        if (dist === 'marathon' && (km < 42.2 || km >= 50)) return false;
+        if (dist === 'ultra' && km < 50) return false;
+        const gain = o.elevationGain;
+        if (elev === 'flat' && gain >= 300) return false;
+        if (elev === 'hilly' && (gain < 300 || gain >= 800)) return false;
+        if (elev === 'mountain' && gain < 800) return false;
+        return true;
+    }, []);
+
+    const filteredOptions = useMemo(
+        () => options.filter(o => matchesFilters(o, filterDist, filterElev)),
+        [options, filterDist, filterElev, matchesFilters]
+    );
+
+    // Clear URL selections that no longer match the new filter
+    const applyFilter = useCallback((newDist: string | null, newElev: string | null) => {
+        const slugMap = new Map(options.map(o => [o.slug, o]));
+        const next = new URLSearchParams(searchParams);
+        if (slugA) {
+            const trail = slugMap.get(slugA);
+            if (!trail || !matchesFilters(trail, newDist, newElev)) next.delete('a');
+        }
+        if (slugB) {
+            const trail = slugMap.get(slugB);
+            if (!trail || !matchesFilters(trail, newDist, newElev)) next.delete('b');
+        }
+        setSearchParams(next, { replace: true });
+    }, [options, searchParams, slugA, slugB, setSearchParams, matchesFilters]);
+
+    const toggleDistFilter = useCallback((key: string) => {
+        const next = filterDist === key ? null : key;
+        setFilterDist(next);
+        applyFilter(next, filterElev);
+    }, [filterDist, filterElev, applyFilter]);
+
+    const toggleElevFilter = useCallback((key: string) => {
+        const next = filterElev === key ? null : key;
+        setFilterElev(next);
+        applyFilter(filterDist, next);
+    }, [filterDist, filterElev, applyFilter]);
 
     const selectedA = useMemo(() => options.find(o => o.slug === slugA) ?? null, [options, slugA]);
     const selectedB = useMemo(() => options.find(o => o.slug === slugB) ?? null, [options, slugB]);
@@ -527,7 +584,7 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
                     </Typography>
                 </Stack>
 
-                {/* Trail pickers */}
+                {/* Trail pickers + filter pills */}
                 <Paper elevation={2} sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
                     <Stack
                         direction={{ xs: 'column', sm: 'row' }}
@@ -538,7 +595,7 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
                             <TrailPicker
                                 value={selectedA}
                                 onChange={v => setSlug('a', v?.slug ?? null)}
-                                options={options}
+                                options={filteredOptions}
                                 label={t('compare.pickTrailA')}
                                 color={COLOR_A}
                                 exclude={slugB}
@@ -560,13 +617,47 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
                             <TrailPicker
                                 value={selectedB}
                                 onChange={v => setSlug('b', v?.slug ?? null)}
-                                options={options}
+                                options={filteredOptions}
                                 label={t('compare.pickTrailB')}
                                 color={COLOR_B}
                                 exclude={slugA}
                             />
                         </Box>
                     </Stack>
+
+                    {/* Filter pills */}
+                    <Box sx={{ mt: 2 }}>
+                        <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                            <Typography variant="caption" color="text.secondary" sx={{ mr: 0.5, flexShrink: 0 }}>
+                                {t('compare.filters.distance')}:
+                            </Typography>
+                            {(['short', 'medium', 'half', 'marathon', 'ultra'] as const).map(key => (
+                                <Chip
+                                    key={key}
+                                    label={t(`compare.filters.${key}`)}
+                                    size="small"
+                                    onClick={() => toggleDistFilter(key)}
+                                    variant={filterDist === key ? 'filled' : 'outlined'}
+                                    color={filterDist === key ? 'primary' : 'default'}
+                                />
+                            ))}
+                        </Stack>
+                        <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap sx={{ mt: 1 }}>
+                            <Typography variant="caption" color="text.secondary" sx={{ mr: 0.5, flexShrink: 0 }}>
+                                {t('compare.filters.elevation')}:
+                            </Typography>
+                            {(['flat', 'hilly', 'mountain'] as const).map(key => (
+                                <Chip
+                                    key={key}
+                                    label={t(`compare.filters.${key}`)}
+                                    size="small"
+                                    onClick={() => toggleElevFilter(key)}
+                                    variant={filterElev === key ? 'filled' : 'outlined'}
+                                    color={filterElev === key ? 'primary' : 'default'}
+                                />
+                            ))}
+                        </Stack>
+                    </Box>
                 </Paper>
 
                 {/* Prompt when trails not selected */}
@@ -586,7 +677,7 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
                         <Box sx={{ overflowX: 'auto' }}>
                             <Table size="small" sx={{ minWidth: 380 }}>
                                 <TableHead>
-                                    <TableRow sx={{ bgcolor: alpha(theme.palette.action.hover, 0.5) }}>
+                                    <TableRow sx={{ bgcolor: alpha(theme.palette.action.hover, 0.25), borderBottom: `1px solid ${theme.palette.divider}` }}>
                                         <TableCell sx={{ fontWeight: 700, width: '30%' }}></TableCell>
                                         <TableCell sx={{ fontWeight: 700, color: COLOR_A, width: '25%' }}>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>

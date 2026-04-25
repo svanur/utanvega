@@ -490,11 +490,23 @@
         "map": "Kort",
         "elevation": "Hæðarsnið",
         "swapTrails": "Skipta leiðum",
-        "selectTrails": "Veldu tvær leiðir til að byrja samanburð",
+        "selectTrails": "Veldu tvær leiðir sem þú vilt bera saman",
         "trailA": "Leið A",
         "trailB": "Leið B",
         "viewTrail": "Skoða",
-        "compareButton": "Bera saman"
+        "compareButton": "Bera saman",
+        "filters": {
+            "distance": "Vegalengd",
+            "elevation": "H\u00e6\u00f0armunur",
+            "short": "Stutt <5km",
+            "medium": "5\u201321km",
+            "half": "Hálf\u00fer\u00f0 21\u201342km",
+            "marathon": "Maraþon 42\u201350km",
+            "ultra": "Ultra 50km+",
+            "flat": "Sl\u00e9tt <300m",
+            "hilly": "H\u00e6\u00f0g\u00f3\u00f0ar 300\u2013800m",
+            "mountain": "Fj\u00f6ll 800m+"
+        }
     },
     "fun": {
         "guessTheTrail": "Giska \u00e1 lei\u00f0ina",
