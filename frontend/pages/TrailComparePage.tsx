@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useCallback, useState } from 'react';
+import React, { useMemo, useEffect, useCallback, useState, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -27,7 +27,7 @@ import {
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { MapContainer, TileLayer, Polyline, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Polyline, CircleMarker, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import type L from 'leaflet';
 import {
@@ -41,6 +41,7 @@ import {
     ResponsiveContainer,
 } from 'recharts';
 import Layout from '../components/Layout';
+import ShareButtons from '../components/ShareButtons';
 import { useTrailBySlug, Trail, API_URL } from '../hooks/useTrails';
 import { useTrailGeometry } from '../hooks/useTrailGeometries';
 import { estimateDuration } from '../utils/estimateDuration';
@@ -93,6 +94,32 @@ function sampleElevAtPct(pts: ElevPt[], pct: number): number {
     return pts[lo].elevation + t * (pts[hi].elevation - pts[lo].elevation);
 }
 
+/** Returns [lat, lng] at the given fraction (0–1) along the coords array */
+function sampleCoordAtPct(coords: number[][], pct: number): [number, number] | null {
+    if (!coords.length) return null;
+    if (pct <= 0) return [coords[0][1], coords[0][0]];
+    if (pct >= 1) return [coords[coords.length - 1][1], coords[coords.length - 1][0]];
+    // Build cumulative distances
+    const dists: number[] = [0];
+    for (let i = 1; i < coords.length; i++) {
+        dists.push(dists[i - 1] + haversineMeters(coords[i][1], coords[i][0], coords[i - 1][1], coords[i - 1][0]));
+    }
+    const total = dists[dists.length - 1];
+    if (total === 0) return [coords[0][1], coords[0][0]];
+    const target = pct * total;
+    let lo = 0, hi = dists.length - 1;
+    while (lo < hi - 1) {
+        const mid = (lo + hi) >> 1;
+        if (dists[mid] <= target) lo = mid; else hi = mid;
+    }
+    const span = dists[hi] - dists[lo];
+    const t = span > 0 ? (target - dists[lo]) / span : 0;
+    return [
+        coords[lo][1] + t * (coords[hi][1] - coords[lo][1]),
+        coords[lo][0] + t * (coords[hi][0] - coords[lo][0]),
+    ];
+}
+
 // ─── Compare Elevation Chart ─────────────────────────────────────────────────
 
 interface MergedPt { pct: number; elevA?: number; elevB?: number; distA?: number; distB?: number }
@@ -121,14 +148,17 @@ function CompareElevationChart({
     coordsB,
     nameA,
     nameB,
+    onHoverPct,
 }: {
     coordsA: number[][] | null;
     coordsB: number[][] | null;
     nameA: string | null;
     nameB: string | null;
+    onHoverPct?: (pct: number | null) => void;
 }) {
     const theme = useTheme();
     const SAMPLES = 201;
+    const chartRef = useRef<HTMLDivElement>(null);
 
     const ptsA = useMemo(() => coordsA ? buildElevPts(coordsA) : [], [coordsA]);
     const ptsB = useMemo(() => coordsB ? buildElevPts(coordsB) : [], [coordsB]);
@@ -162,10 +192,27 @@ function CompareElevationChart({
 
     if (!mergedData.length) return null;
 
+    const YAXIS_WIDTH = 45;
+    const RIGHT_MARGIN = 8;
+
     return (
-        <Box sx={{ width: '100%', height: 220, mt: 1 }}>
+        <Box
+            ref={chartRef}
+            sx={{ width: '100%', height: 280, mt: 1, cursor: 'crosshair' }}
+            onMouseMove={(e) => {
+                if (!chartRef.current) return;
+                const rect = chartRef.current.getBoundingClientRect();
+                const usable = rect.width - YAXIS_WIDTH - RIGHT_MARGIN;
+                const x = e.clientX - rect.left - YAXIS_WIDTH;
+                if (usable > 0) onHoverPct?.(Math.max(0, Math.min(1, x / usable)));
+            }}
+            onMouseLeave={() => onHoverPct?.(null)}
+        >
             <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={mergedData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                <LineChart
+                    data={mergedData}
+                    margin={{ top: 8, right: RIGHT_MARGIN, left: 0, bottom: 0 }}
+                >
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis
                         dataKey="pct"
@@ -227,13 +274,26 @@ function fmtM(m: number) {
 
 function numDiff(a: number, b: number, fmt: (n: number) => string): React.ReactNode {
     const diff = b - a;
-    if (diff === 0) return <Typography variant="body2" color="text.secondary">—</Typography>;
-    const color = diff > 0 ? 'success.main' : 'error.main';
-    const sign = diff > 0 ? '+' : '';
+    if (Math.abs(diff) < 0.001) return <Typography variant="body2" color="text.secondary">—</Typography>;
+    // Color + label by the "winner" (the trail with the larger value)
+    const winnerIsB = diff > 0;
+    const color = winnerIsB ? COLOR_B : COLOR_A;
+    const label = winnerIsB ? 'B' : 'A';
     return (
-        <Typography variant="body2" fontWeight={600} color={color}>
-            {sign}{fmt(Math.abs(diff))}
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <Box sx={{
+                width: 16, height: 16, borderRadius: '4px',
+                bgcolor: color, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0,
+            }}>
+                <Typography variant="caption" sx={{ color: '#fff', fontWeight: 700, fontSize: '0.6rem', lineHeight: 1 }}>
+                    {label}
+                </Typography>
+            </Box>
+            <Typography variant="body2" fontWeight={600} sx={{ color }}>
+                +{fmt(Math.abs(diff))}
+            </Typography>
+        </Box>
     );
 }
 
@@ -268,11 +328,13 @@ function CompareMap({
     coordsB,
     nameA,
     nameB,
+    hoverPct,
 }: {
     coordsA: number[][] | null;
     coordsB: number[][] | null;
     nameA: string | null;
     nameB: string | null;
+    hoverPct: number | null;
 }) {
     const theme = useTheme();
 
@@ -288,6 +350,15 @@ function CompareMap({
     }, [coordsB]);
 
     const hasAny = latLngA.length > 0 || latLngB.length > 0;
+
+    const hoverPosA = useMemo(
+        () => (hoverPct != null && coordsA ? sampleCoordAtPct(coordsA, hoverPct) : null),
+        [hoverPct, coordsA]
+    );
+    const hoverPosB = useMemo(
+        () => (hoverPct != null && coordsB ? sampleCoordAtPct(coordsB, hoverPct) : null),
+        [hoverPct, coordsB]
+    );
 
     if (!hasAny) {
         return (
@@ -305,6 +376,7 @@ function CompareMap({
             </Box>
         );
     }
+
 
     const initialCenter: [number, number] = latLngA.length > 0
         ? latLngA[Math.floor(latLngA.length / 2)]
@@ -333,6 +405,32 @@ function CompareMap({
                     <Polyline
                         positions={latLngB}
                         pathOptions={{ color: COLOR_B, weight: 3, opacity: 0.9 }}
+                    />
+                )}
+                {coordsA && (
+                    <CircleMarker
+                        center={hoverPosA ?? (coordsA.length ? [coordsA[0][1], coordsA[0][0]] : [0, 0])}
+                        radius={7}
+                        pathOptions={{
+                            color: '#fff',
+                            fillColor: COLOR_A,
+                            fillOpacity: hoverPosA ? 1 : 0,
+                            opacity: hoverPosA ? 1 : 0,
+                            weight: 2,
+                        }}
+                    />
+                )}
+                {coordsB && (
+                    <CircleMarker
+                        center={hoverPosB ?? (coordsB.length ? [coordsB[0][1], coordsB[0][0]] : [0, 0])}
+                        radius={7}
+                        pathOptions={{
+                            color: '#fff',
+                            fillColor: COLOR_B,
+                            fillOpacity: hoverPosB ? 1 : 0,
+                            opacity: hoverPosB ? 1 : 0,
+                            weight: 2,
+                        }}
                     />
                 )}
             </MapContainer>
@@ -537,6 +635,8 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
     const { coordinates: coordsA, loading: geoLoadingA } = useTrailGeometry(slugA || undefined);
     const { coordinates: coordsB, loading: geoLoadingB } = useTrailGeometry(slugB || undefined);
 
+    const [hoverPct, setHoverPct] = useState<number | null>(null);
+
     const setSlug = useCallback((key: 'a' | 'b', slug: string | null) => {
         const next = new URLSearchParams(searchParams);
         if (slug) next.set(key, slug);
@@ -579,9 +679,15 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
                 {/* Page header */}
                 <Stack direction="row" alignItems="center" spacing={1} mb={3}>
                     <CompareArrowsIcon color="primary" />
-                    <Typography variant="h5" fontWeight="bold">
+                    <Typography variant="h5" fontWeight="bold" sx={{ flex: 1 }}>
                         {t('compare.title')}
                     </Typography>
+                    {(slugA || slugB) && (
+                        <ShareButtons
+                            title={[trailA?.name, trailB?.name].filter(Boolean).join(' vs ')}
+                            url={window.location.href}
+                        />
+                    )}
                 </Stack>
 
                 {/* Trail pickers + filter pills */}
@@ -688,7 +794,11 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
                                             </Box>
                                         </TableCell>
                                         <TableCell sx={{ fontWeight: 700, textAlign: 'center', width: '20%', color: 'text.secondary' }}>
-                                            {t('compare.diff')}
+                                            <Tooltip title={t('compare.diffTooltip')} placement="top" arrow>
+                                                <Box component="span" sx={{ cursor: 'help', borderBottom: '1px dashed', borderColor: 'text.disabled' }}>
+                                                    {t('compare.diff')}
+                                                </Box>
+                                            </Tooltip>
                                         </TableCell>
                                         <TableCell sx={{ fontWeight: 700, color: COLOR_B, width: '25%' }}>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -762,39 +872,41 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
                     </Paper>
                 )}
 
-                {/* Map */}
+                {/* Map + Elevation stacked */}
                 {(coordsA || coordsB || geoLoadingA || geoLoadingB) && (
                     <Paper elevation={2} sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
-                        <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-                            {t('compare.map')}
-                        </Typography>
                         {(geoLoadingA || geoLoadingB) && !coordsA && !coordsB ? (
                             <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
                                 <CircularProgress size={32} />
                             </Box>
                         ) : (
-                            <CompareMap
-                                coordsA={coordsA}
-                                coordsB={coordsB}
-                                nameA={trailA?.name ?? null}
-                                nameB={trailB?.name ?? null}
-                            />
+                            <>
+                                <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+                                    {t('compare.map')}
+                                </Typography>
+                                <CompareMap
+                                    coordsA={coordsA}
+                                    coordsB={coordsB}
+                                    nameA={trailA?.name ?? null}
+                                    nameB={trailB?.name ?? null}
+                                    hoverPct={hoverPct}
+                                />
+                                {(coordsA || coordsB) && (
+                                    <>
+                                        <Typography variant="subtitle2" fontWeight="bold" sx={{ mt: 3 }} gutterBottom>
+                                            {t('compare.elevation')}
+                                        </Typography>
+                                        <CompareElevationChart
+                                            coordsA={coordsA}
+                                            coordsB={coordsB}
+                                            nameA={trailA?.name ?? null}
+                                            nameB={trailB?.name ?? null}
+                                            onHoverPct={setHoverPct}
+                                        />
+                                    </>
+                                )}
+                            </>
                         )}
-                    </Paper>
-                )}
-
-                {/* Elevation profiles */}
-                {(coordsA || coordsB) && (
-                    <Paper elevation={2} sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
-                        <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-                            {t('compare.elevation')}
-                        </Typography>
-                        <CompareElevationChart
-                            coordsA={coordsA}
-                            coordsB={coordsB}
-                            nameA={trailA?.name ?? null}
-                            nameB={trailB?.name ?? null}
-                        />
                     </Paper>
                 )}
 

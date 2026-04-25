@@ -486,6 +486,7 @@
         "difficulty": "Erfiðleiki",
         "activity": "Hreyfing",
         "diff": "Mismunur",
+        "diffTooltip": "Sýnir hvaða leið (A eða B) er hærri og um hve mikið",
         "same": "Eins",
         "map": "Kort",
         "elevation": "Hæðarsnið",
@@ -727,7 +728,7 @@
     "welcome": {
         "tagline": "Finndu leiðir til að hlaupa, ganga eða hjóla á Íslandi",
         "discoverMore": "Sjá meira",
-        "startExploring": "Byrja að kanna",
+        "startExploring": "Kíkjum á þetta",
         "whatCanYouDo": "Hvað er hægt að gera hér?",
         "readyToRun": "Tilbúin(n) að leggja af stað?",
         "readyToRunDesc": "Vertu hluti af íslenska útivistarsamfélaginu og finndu næstu ævintýraleið.",

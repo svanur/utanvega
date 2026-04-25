@@ -486,6 +486,7 @@
         "difficulty": "Difficulty",
         "activity": "Activity",
         "diff": "Diff",
+        "diffTooltip": "Shows which trail (A or B) has the higher value and by how much",
         "same": "Same",
         "map": "Map",
         "elevation": "Elevation Profiles",
