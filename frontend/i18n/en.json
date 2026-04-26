@@ -193,7 +193,11 @@
         "typeArea": "Area",
         "typeRegion": "Region",
         "typeMunicipality": "Municipality",
-        "typePlace": "Place"
+        "typePlace": "Place",
+        "filterShowing": "Showing {{count}} of {{total}} trails",
+        "clearFilters": "Clear filters",
+        "noTrailsMatchFilter": "No trails match the selected filters.",
+        "filterHint": "Tap a chip to filter the trail list"
     },
     "qr": {
         "showQR": "Show QR Code",

@@ -193,7 +193,11 @@
         "typeArea": "Svæði",
         "typeRegion": "Héraðssvæði",
         "typeMunicipality": "Sveitarfélag",
-        "typePlace": "Staður"
+        "typePlace": "Staður",
+        "filterShowing": "Sýni {{count}} af {{total}} leiðum",
+        "clearFilters": "Hreinsa síur",
+        "noTrailsMatchFilter": "Engar leiðir passa við valdar síur.",
+        "filterHint": "Smelltu á flís til að uppfæra listann"
     },
     "qr": {
         "showQR": "Sýna QR kóða",

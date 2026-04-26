@@ -45,12 +45,75 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
     const { location, childLocations, trails, loading, error } = useLocationBySlug(slug);
     const { tree: locationTree } = useLocationTree();
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+    const [activeActivity, setActiveActivity] = useState<string | null>(null);
+    const [activeTrailType, setActiveTrailType] = useState<string | null>(null);
+    const [activeDifficulty, setActiveDifficulty] = useState<string | null>(null);
 
     const activityEmoji: Record<string, string> = {
         trailrunning: '🏃', running: '🏃‍♂️', hiking: '🥾', cycling: '🚴', walking: '🚶',
     };
     const activityI18nKey: Record<string, string> = {
         trailrunning: 'trailRunning', running: 'running', hiking: 'hiking', cycling: 'cycling', walking: 'walking',
+    };
+
+    // Reset filters when navigating to a different location
+    useEffect(() => {
+        setActiveActivity(null);
+        setActiveTrailType(null);
+        setActiveDifficulty(null);
+    }, [slug]);
+
+    const filteredTrails = useMemo(() => {
+        if (!trails) return [];
+        return trails.filter(trail => {
+            if (activeActivity && trail.activityType?.toLowerCase() !== activeActivity) return false;
+            if (activeTrailType && trail.trailType !== activeTrailType) return false;
+            if (activeDifficulty && trail.difficulty !== activeDifficulty) return false;
+            return true;
+        });
+    }, [trails, activeActivity, activeTrailType, activeDifficulty]);
+
+    // Faceted counts — each category excludes its own filter so selected chip always stays visible
+    const activityCounts = useMemo(() => {
+        if (!trails) return {} as Record<string, number>;
+        const result: Record<string, number> = {};
+        for (const trail of trails) {
+            if (activeTrailType && trail.trailType !== activeTrailType) continue;
+            if (activeDifficulty && trail.difficulty !== activeDifficulty) continue;
+            const act = trail.activityType?.toLowerCase() || 'unknown';
+            result[act] = (result[act] || 0) + 1;
+        }
+        return result;
+    }, [trails, activeTrailType, activeDifficulty]);
+
+    const trailTypeCounts = useMemo(() => {
+        if (!trails) return {} as Record<string, number>;
+        const result: Record<string, number> = {};
+        for (const trail of trails) {
+            if (activeActivity && trail.activityType?.toLowerCase() !== activeActivity) continue;
+            if (activeDifficulty && trail.difficulty !== activeDifficulty) continue;
+            if (trail.trailType) result[trail.trailType] = (result[trail.trailType] || 0) + 1;
+        }
+        return result;
+    }, [trails, activeActivity, activeDifficulty]);
+
+    const difficultyCounts = useMemo(() => {
+        if (!trails) return {} as Record<string, number>;
+        const result: Record<string, number> = {};
+        for (const trail of trails) {
+            if (activeActivity && trail.activityType?.toLowerCase() !== activeActivity) continue;
+            if (activeTrailType && trail.trailType !== activeTrailType) continue;
+            if (trail.difficulty) result[trail.difficulty] = (result[trail.difficulty] || 0) + 1;
+        }
+        return result;
+    }, [trails, activeActivity, activeTrailType]);
+
+    const hasActiveFilters = activeActivity !== null || activeTrailType !== null || activeDifficulty !== null;
+
+    const clearFilters = () => {
+        setActiveActivity(null);
+        setActiveTrailType(null);
+        setActiveDifficulty(null);
     };
 
     // Compute location trail statistics
@@ -222,26 +285,60 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
 
                             {/* Activity breakdown */}
                             <Stack direction="row" spacing={1} sx={{ mb: 1, flexWrap: 'wrap', gap: 0.5 }}>
-                                {Object.entries(stats.activities).map(([act, n]) => (
-                                    <Chip
-                                        key={act}
-                                        label={`${activityEmoji[act] || '🏞️'} ${t(`difficulty.${activityI18nKey[act] ?? act}`)} (${n})`}
-                                        size="small"
-                                        variant="outlined"
-                                    />
-                                ))}
+                                {Object.entries(stats.activities).map(([act]) => {
+                                    const n = activityCounts[act] ?? 0;
+                                    if (n === 0 && activeActivity !== act) return null;
+                                    return (
+                                        <Chip
+                                            key={act}
+                                            label={`${activityEmoji[act] || '🏞️'} ${t(`difficulty.${activityI18nKey[act] ?? act}`)} (${n})`}
+                                            size="small"
+                                            variant={activeActivity === act ? 'filled' : 'outlined'}
+                                            onClick={() => setActiveActivity(prev => prev === act ? null : act)}
+                                            clickable
+                                        />
+                                    );
+                                })}
                             </Stack>
 
                             {/* Trail type + difficulty breakdown */}
                             <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
-                                {Object.entries(stats.trailTypes).map(([type, n]) => {
+                                {Object.entries(stats.trailTypes).map(([type]) => {
+                                    const n = trailTypeCounts[type] ?? 0;
+                                    if (n === 0 && activeTrailType !== type) return null;
                                     const typeLabel = ({ OutAndBack: t('trail.outAndBack'), Loop: t('trail.loop'), PointToPoint: t('trail.pointToPoint') } as Record<string, string>)[type] ?? type;
-                                    return <Chip key={type} label={`${typeLabel} (${n})`} size="small" color="info" variant="outlined" />;
+                                    return (
+                                        <Chip
+                                            key={type}
+                                            label={`${typeLabel} (${n})`}
+                                            size="small"
+                                            color="info"
+                                            variant={activeTrailType === type ? 'filled' : 'outlined'}
+                                            onClick={() => setActiveTrailType(prev => prev === type ? null : type)}
+                                            clickable
+                                        />
+                                    );
                                 })}
-                                {Object.entries(stats.difficulties).map(([diff, n]) => (
-                                    <Chip key={diff} label={`${t(`difficulty.${diff.toLowerCase()}`)} (${n})`} size="small" color="warning" variant="outlined" />
-                                ))}
+                                {Object.entries(stats.difficulties).map(([diff]) => {
+                                    const n = difficultyCounts[diff] ?? 0;
+                                    if (n === 0 && activeDifficulty !== diff) return null;
+                                    return (
+                                        <Chip
+                                            key={diff}
+                                            label={`${t(`difficulty.${diff.toLowerCase()}`)} (${n})`}
+                                            size="small"
+                                            color="warning"
+                                            variant={activeDifficulty === diff ? 'filled' : 'outlined'}
+                                            onClick={() => setActiveDifficulty(prev => prev === diff ? null : diff)}
+                                            clickable
+                                        />
+                                    );
+                                })}
                             </Stack>
+
+                            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                                {t('locations.filterHint')}
+                            </Typography>
                         </>
                     )}
                 </Paper>
@@ -284,26 +381,49 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
                     </Box>
                 )}
 
-                <Typography variant="h5" fontWeight="bold" gutterBottom>
-                    {t('locations.trailsIn', { name: location.name, count: trails?.length || 0 })}
-                </Typography>
+                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: hasActiveFilters ? 0.5 : 2 }}>
+                    <Typography variant="h5" fontWeight="bold">
+                        {t('locations.trailsIn', { name: location.name, count: trails?.length || 0 })}
+                    </Typography>
+                    {hasActiveFilters && (
+                        <Button size="small" onClick={clearFilters} color="inherit">
+                            {t('locations.clearFilters')}
+                        </Button>
+                    )}
+                </Stack>
+                {hasActiveFilters && (
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        {t('locations.filterShowing', { count: filteredTrails.length, total: trails?.length || 0 })}
+                    </Typography>
+                )}
 
                 {trails && trails.length > 0 ? (
-                    <Box mt={2}>
-                        <Box sx={{ mb: 4, height: '400px', borderRadius: '16px', overflow: 'hidden' }}>
-                           <TrailMapView trails={trails} userLocation={userLocation} />
-                        </Box>
-                        
-                        <Divider sx={{ mb: 4 }} />
+                    filteredTrails.length > 0 ? (
+                        <Box mt={2}>
+                            <Box sx={{ mb: 4, height: '400px', borderRadius: '16px', overflow: 'hidden' }}>
+                               <TrailMapView trails={filteredTrails} userLocation={userLocation} />
+                            </Box>
+                            
+                            <Divider sx={{ mb: 4 }} />
 
-                        <Grid container spacing={1}>
-                            {trails.map(trail => (
-                                <Grid item xs={12} key={trail.id}>
-                                    <TrailCard trail={trail} />
-                                </Grid>
-                            ))}
-                        </Grid>
-                    </Box>
+                            <Grid container spacing={1}>
+                                {filteredTrails.map(trail => (
+                                    <Grid item xs={12} key={trail.id}>
+                                        <TrailCard trail={trail} />
+                                    </Grid>
+                                ))}
+                            </Grid>
+                        </Box>
+                    ) : (
+                        <Box textAlign="center" py={4}>
+                            <Typography color="text.secondary" gutterBottom>
+                                {t('locations.noTrailsMatchFilter')}
+                            </Typography>
+                            <Button onClick={clearFilters} variant="outlined" size="small">
+                                {t('locations.clearFilters')}
+                            </Button>
+                        </Box>
+                    )
                 ) : (
                     <Box textAlign="center" py={8}>
                         <Typography color="text.secondary">
