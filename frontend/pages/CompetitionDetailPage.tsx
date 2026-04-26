@@ -407,10 +407,13 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                 {/* Race day weather (only when within 7 days and trail linked) */}
                 {isEnabled('weather_forecast') && weatherTrailSlug && (
                     <Box sx={{ mt: 3 }}>
-                        <Typography variant="h5" fontWeight={700} sx={{ mb: 1 }}>
+                        <Typography variant="h5" fontWeight={700} sx={{ mb: 0.5 }}>
                             {t('races.raceDayWeather')}
                         </Typography>
-                        <WeatherCard weather={weather} loading={weatherLoading} error={weatherError} />
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                            {t('races.raceDayWeatherDesc')}
+                        </Typography>
+                        <WeatherCard weather={weather} loading={weatherLoading} error={weatherError} raceDate={competition.nextDate} />
                     </Box>
                 )}
             </Container>

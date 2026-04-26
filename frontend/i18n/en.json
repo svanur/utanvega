@@ -235,7 +235,7 @@
         "reload": "Reload page"
     },
     "weather": {
-        "title": "Weather forecast",
+        "title": "Today's Weather Forecast",
         "now": "Now",
         "today": "Today",
         "tomorrow": "Tomorrow",
@@ -245,7 +245,9 @@
         "precipitation": "Precipitation",
         "cloudCover": "Cloud cover",
         "hourly": "Hourly",
-        "daily": "5-Day forecast",
+        "hourlyToday": "Today – Hourly",
+        "daily": "7-Day forecast",
+        "raceDay": "Race day",
         "atStart": "At trailhead",
         "atSummit": "At summit",
         "elevation": "{{elevation}}m",
@@ -718,7 +720,8 @@
         "scheduleFixed": "One-off event on {{date}}",
         "statusCancelled": "Cancelled",
         "statusUpcoming": "Coming soon",
-        "raceDayWeather": "Race Day Weather",
+        "raceDayWeather": "Trail Weather – Race Forecast",
+        "raceDayWeatherDesc": "Current conditions and 7-day forecast at the race route. Race day is highlighted.",
         "predict": "Predict",
         "noUpcoming": "No upcoming races"
     },

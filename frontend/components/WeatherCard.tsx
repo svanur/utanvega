@@ -25,6 +25,7 @@ interface WeatherCardProps {
     weather: TrailWeather | null;
     loading: boolean;
     error: string | null;
+    raceDate?: string | null;
 }
 
 function getWeatherIcon(code: number): string {
@@ -135,7 +136,7 @@ function HourlyStrip({ hourly, t }: { hourly: HourlyForecastDto[]; t: (key: stri
     return (
         <Box>
             <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1 }}>
-                {t('weather.hourly')}
+                {t('weather.hourlyToday')}
             </Typography>
             <Box sx={{ position: 'relative' }}>
                 <IconButton
@@ -209,20 +210,30 @@ function HourlyStrip({ hourly, t }: { hourly: HourlyForecastDto[]; t: (key: stri
     );
 }
 
-function DailyForecast({ daily, t, locale }: { daily: DailyForecastDto[]; t: (key: string) => string; locale: string }) {
+function DailyForecast({ daily, t, locale, raceDate }: { daily: DailyForecastDto[]; t: (key: string) => string; locale: string; raceDate?: string | null }) {
     return (
         <Box>
             <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1 }}>
                 {t('weather.daily')}
             </Typography>
             <Stack spacing={0.5}>
-                {daily.map((d, i) => (
+                {daily.map((d, i) => {
+                    const isRaceDay = raceDate && d.date === raceDate;
+                    return (
                     <Stack
                         key={i}
                         direction="row"
                         alignItems="center"
                         spacing={1}
-                        sx={{ py: 0.5, flexWrap: 'wrap' }}
+                        sx={{
+                            py: 0.5, flexWrap: 'wrap',
+                            ...(isRaceDay && {
+                                bgcolor: 'action.selected',
+                                borderRadius: 1,
+                                px: 0.75,
+                                mx: -0.75,
+                            }),
+                        }}
                     >
                         <Typography variant="body2" sx={{ minWidth: { xs: 60, sm: 70 } }}>
                             {formatDay(d.date, t, locale)}
@@ -252,14 +263,18 @@ function DailyForecast({ daily, t, locale }: { daily: DailyForecastDto[]; t: (ke
                                 </Typography>
                             </Stack>
                         )}
+                        {isRaceDay && (
+                            <Chip label={`🏁 ${t('weather.raceDay')}`} size="small" color="warning" variant="filled" sx={{ ml: 'auto', fontWeight: 700, fontSize: '0.7rem' }} />
+                        )}
                     </Stack>
-                ))}
+                    );
+                })}
             </Stack>
         </Box>
     );
 }
 
-export default function WeatherCard({ weather, loading, error }: WeatherCardProps) {
+export default function WeatherCard({ weather, loading, error, raceDate }: WeatherCardProps) {
     const { t, i18n } = useTranslation();
     const [expanded, setExpanded] = useState(false);
     const locale = i18n.language === 'is' ? 'is-IS' : 'en-US';
@@ -355,7 +370,7 @@ export default function WeatherCard({ weather, loading, error }: WeatherCardProp
                     <Divider sx={{ my: 2 }} />
 
                     {/* Daily forecast */}
-                    <DailyForecast daily={weather.daily} t={t} locale={locale} />
+                    <DailyForecast daily={weather.daily} t={t} locale={locale} raceDate={raceDate} />
                 </Box>
             </Collapse>
         </Paper>

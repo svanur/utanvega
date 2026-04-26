@@ -177,7 +177,7 @@ public class GetTrailWeatherQueryHandler : IRequestHandler<GetTrailWeatherQuery,
                   "&current=temperature_2m,apparent_temperature,wind_speed_10m,wind_gusts_10m,precipitation,weather_code,cloud_cover" +
                   "&hourly=temperature_2m,apparent_temperature,wind_speed_10m,wind_gusts_10m,precipitation,weather_code,cloud_cover" +
                   "&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max,wind_gusts_10m_max,weather_code" +
-                  "&forecast_days=5&timezone=Atlantic/Reykjavik&wind_speed_unit=ms";
+                  "&forecast_days=7&timezone=Atlantic/Reykjavik&wind_speed_unit=ms";
 
         try
         {

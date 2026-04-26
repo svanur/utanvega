@@ -235,7 +235,7 @@
         "reload": "Endurhlaða síðu"
     },
     "weather": {
-        "title": "Veðurspá",
+        "title": "Veðurspáin í dag",
         "now": "Núna",
         "today": "Í dag",
         "tomorrow": "Á morgun",
@@ -245,7 +245,9 @@
         "precipitation": "Úrkoma",
         "cloudCover": "Skýjahula",
         "hourly": "Næstu klukkutímar",
-        "daily": "5 daga spá",
+        "hourlyToday": "Í dag – Næstu klukkutímar",
+        "daily": "7 daga spá",
+        "raceDay": "Keppnisdagur",
         "atStart": "Við upphaf leiðar",
         "atSummit": "Á toppi",
         "elevation": "{{elevation}}m",
@@ -718,7 +720,8 @@
         "scheduleFixed": "Stakur viðburður: {{date}}",
         "statusCancelled": "Aflýst",
         "statusUpcoming": "Væntanlegt",
-        "raceDayWeather": "Veður á keppnisdegi",
+        "raceDayWeather": "Veður á keppnisleiðinni",
+        "raceDayWeatherDesc": "Núverandi veður og 7 daga spá. Keppnisdagurinn er auðkenndur.",
         "predict": "Spá",
         "noUpcoming": "Engin keppni framundan"
     },
