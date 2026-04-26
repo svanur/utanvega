@@ -76,6 +76,7 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
     const navigate = useNavigate();
     const { t } = useTranslation();
     const { isEnabled } = useFeatureFlags();
+    const locationsPageEnabled = isEnabled('locations_page');
     const { isFavorite, toggleFavorite } = useFavorites();
     const { hideTrail } = useHiddenTrails();
     const [swipeOffset, setSwipeOffset] = useState(0);
@@ -336,9 +337,9 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                                 sx={{ fontSize: '0.7rem' }}
                             />
                         )}
-                        {[...trail.locations]
+                        {locationsPageEnabled && [...trail.locations]
                             .sort((a, b) => a.order - b.order)
-                            .map(loc => isEnabled('locations_page') ? (
+                            .map(loc => (
                                 <Chip
                                     key={loc.slug}
                                     label={loc.name}
@@ -349,13 +350,6 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                                         navigate(`/locations/${loc.slug}`);
                                     }}
                                     sx={{ cursor: 'pointer' }}
-                                />
-                            ) : (
-                                <Chip
-                                    key={loc.slug}
-                                    label={loc.name}
-                                    size="small"
-                                    variant="outlined"
                                 />
                             ))}
                         {trail.tags && trail.tags.length > 0 && trail.tags

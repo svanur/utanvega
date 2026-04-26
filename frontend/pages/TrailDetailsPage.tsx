@@ -102,6 +102,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     const { trail, loading, error } = useTrailBySlug(slug);
     const { weather, loading: weatherLoading, error: weatherError } = useTrailWeather(slug);
     const { isEnabled } = useFeatureFlags();
+    const locationsPageEnabled = isEnabled('locations_page');
     const { trails: allTrails } = useTrails();
     const { isFavorite, toggleFavorite } = useFavorites();
     const { addRecent } = useRecentlyViewed();
@@ -280,7 +281,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                             variant="outlined" 
                             size="small"
                         />
-                        {trail.locations && trail.locations.length > 0 && trail.locations.map((loc) => {
+                        {locationsPageEnabled && trail.locations && trail.locations.length > 0 && trail.locations.map((loc) => {
                             const roleIcon = {
                                 Start: <FlagIcon sx={{ fontSize: '1rem' }} />,
                                 End: <SportsScoreIcon sx={{ fontSize: '1rem' }} />,
@@ -293,7 +294,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                 ? `${loc.name} · ${t(`trail.role.${loc.role}`)}`
                                 : loc.name;
 
-                            return isEnabled('locations_page') ? (
+                            return (
                                 <Chip 
                                     key={loc.slug}
                                     icon={roleIcon} 
@@ -303,15 +304,6 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                     component={RouterLink}
                                     to={`/locations/${loc.slug}`}
                                     clickable
-                                    size="small"
-                                />
-                            ) : (
-                                <Chip
-                                    key={loc.slug}
-                                    icon={roleIcon}
-                                    label={roleLabel}
-                                    variant="outlined"
-                                    color="secondary"
                                     size="small"
                                 />
                             );
