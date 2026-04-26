@@ -135,6 +135,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     const navigate = useNavigate();
     const theme = useTheme();
     const { isEnabled } = useFeatureFlags();
+    const locationsEnabled = isEnabled('locations_page');
 
     const visibleRaces = useMemo(() => {
         if (!competition) return [];
@@ -244,7 +245,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
 
                     {/* Row 2: Chips */}
                     <Stack direction="row" spacing={1} sx={{ mt: 1.5, flexWrap: 'wrap', gap: 0.5 }}>
-                        {competition.locationName && (
+                        {competition.locationName && locationsEnabled && (
                             <Chip icon={<LocationOnIcon />} label={competition.locationName} size="small" variant="outlined" />
                         )}
                         {competition.organizerName && (

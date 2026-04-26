@@ -24,6 +24,7 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 import Layout from '../components/Layout';
 import RunningLoader from '../components/RunningLoader';
 import { useCompetitions } from '../hooks/useCompetitions';
+import { useFeatureFlags } from '../hooks/useFeatureFlags';
 
 type RacesPageProps = {
     mode: PaletteMode;
@@ -58,6 +59,8 @@ function getCountdownLabel(daysUntil: number | null, t: (key: string, opts?: Rec
 export default function RacesPage({ mode, onToggleMode }: RacesPageProps) {
     const { t } = useTranslation();
     const { competitions, loading, error } = useCompetitions();
+    const { isEnabled } = useFeatureFlags();
+    const locationsEnabled = isEnabled('locations_page');
     const navigate = useNavigate();
     const theme = useTheme();
     const [search, setSearch] = useState('');
@@ -190,7 +193,7 @@ export default function RacesPage({ mode, onToggleMode }: RacesPageProps) {
 
                                                 {/* Location + organizer */}
                                                 <Stack direction="row" spacing={1} sx={{ mt: 0.5, flexWrap: 'wrap' }}>
-                                                    {comp.locationName && (
+                                                    {locationsEnabled && comp.locationName && (
                                                         <Chip
                                                             icon={<LocationOnIcon />}
                                                             label={comp.locationName}
