@@ -582,6 +582,7 @@
                 "100m": "100M"
             },
             "trailAdjust": "Trail Adjustments",
+            "trailAdjustDesc": "Based on your flat road pace above, estimate how terrain type and elevation gain will affect your finish time on a trail.",
             "terrain": "Terrain",
             "terrains": {
                 "road": "Road",

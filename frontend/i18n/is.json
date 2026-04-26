@@ -581,7 +581,8 @@
                 "100k": "100K",
                 "100m": "100M"
             },
-            "trailAdjust":"Utanvegaleiðréttingar",
+            "trailAdjust":"Leiðrétting fyrir utanvegahlaup",
+            "trailAdjustDesc": "Miðað við 'flatan vegahraða' þinn hér að ofan, áætlaðu hvernig yfirborð stíga og hækkun á leiðinni hafa áhrif á lokatíma þinn í utanvegahlaupi.",
             "terrain": "Yfirborð",
             "terrains": {
                 "road": "Malbik",

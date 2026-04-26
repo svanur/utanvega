@@ -471,6 +471,9 @@ export default function PaceCalculator() {
                 </Box>
                 <Collapse in={trailOpen}>
                     <Box sx={{ px: 2, pb: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <Typography variant="body2" color="text.secondary">
+                            {t('tools.paceCalc.trailAdjustDesc')}
+                        </Typography>
                         {/* Terrain type */}
                         <Box>
                             <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
