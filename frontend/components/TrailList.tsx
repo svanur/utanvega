@@ -107,6 +107,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
     const { tree: locationTree } = useLocationTree();
     const navigate = useNavigate();
     const { isEnabled } = useFeatureFlags();
+    const locationsPageEnabled = isEnabled('locations_page');
     const { competitions: allCompetitions, loading: competitionsLoading } = useCompetitions();
     const { offlineSlugs, isOffline } = useOfflineTrails();
 
@@ -827,6 +828,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                             </FormControl>
                         </Grid>
 
+                        {locationsPageEnabled && (
                         <Grid item xs={4}>
                             <FormControl fullWidth size="small">
                                 <InputLabel>{t('filters.location')}</InputLabel>
@@ -871,6 +873,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                                 </Select>
                             </FormControl>
                         </Grid>
+                        )}
 
                         <Grid item xs={12} sm={6}>
                             <FormControlLabel
@@ -1077,7 +1080,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                                     <Typography variant="subtitle2" noWrap fontWeight="bold">
                                         {comp.name}
                                     </Typography>
-                                    {comp.locationName && (
+                                    {locationsPageEnabled && comp.locationName && (
                                         <Typography variant="caption" color="text.secondary" noWrap>
                                             📍 {comp.locationName}
                                         </Typography>

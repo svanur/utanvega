@@ -121,11 +121,11 @@
         "closeFilters": "Loka"
     },
     "difficulty": {
-        "easy": "Auðveld",
-        "moderate": "Miðlungs erfið",
+        "easy": "Auðvelt",
+        "moderate": "Miðlungs erfitt",
         "hard": "Krefjandi",
-        "expert": "Erfið",
-        "extreme": "Mjög erfið",
+        "expert": "Erfitt",
+        "extreme": "Mjög erfitt",
         "dialogTitle": "Skilyrði erfiðleikamats",
         "explanation": "Erfiðleiki er reiknaður út frá **álagsvegalengd**: vegalengd leiðarinnar að viðbættri hækkun deilt með 100. Fyrir hlaupaleiðir á vegi er eingöngu vegalengd notuð. Viðmið eru mismunandi eftir tegund.",
         "level": "Stig",
