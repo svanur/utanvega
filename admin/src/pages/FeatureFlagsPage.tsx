@@ -22,12 +22,14 @@ export default function FeatureFlagsPage({ onNotify }: FeatureFlagsPageProps) {
   const [editDescValue, setEditDescValue] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredFlags = searchQuery.trim()
-    ? flags.filter(f =>
-        f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        f.description?.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : flags;
+  const [showDisabledOnly, setShowDisabledOnly] = useState(false);
+
+  const filteredFlags = flags.filter(f => {
+    if (showDisabledOnly && f.enabled) return false;
+    if (!searchQuery.trim()) return true;
+    return f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      f.description?.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
   const disabledCount = flags.filter(f => !f.enabled).length;
 
@@ -83,9 +85,19 @@ export default function FeatureFlagsPage({ onNotify }: FeatureFlagsPageProps) {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Typography variant="h5">Feature Flags</Typography>
-          <Chip label={searchQuery.trim() ? `${filteredFlags.length} / ${flags.length}` : flags.length} size="small" color="primary" />
+          <Chip label={(searchQuery.trim() || showDisabledOnly) ? `${filteredFlags.length} / ${flags.length}` : flags.length} size="small" color="primary" />
           {disabledCount > 0 && (
-            <Chip label={`${disabledCount} disabled`} size="small" sx={{ bgcolor: 'error.main', color: 'error.contrastText' }} />
+            <Chip
+              label={`${disabledCount} disabled`}
+              size="small"
+              onClick={() => setShowDisabledOnly(v => !v)}
+              sx={{
+                cursor: 'pointer',
+                bgcolor: showDisabledOnly ? 'error.main' : 'error.light',
+                color: 'error.contrastText',
+                '&:hover': { bgcolor: 'error.main' },
+              }}
+            />
           )}
         </Box>
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
