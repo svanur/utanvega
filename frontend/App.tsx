@@ -81,14 +81,14 @@ export default function App() {
                         path="/trails/:slug" 
                         element={<TrailDetailsPage mode={mode} onToggleMode={handleToggleMode} />} 
                     />
-                    <Route 
+                    {isEnabled('locations_page') && <Route 
                         path="/locations" 
                         element={<LocationsPage mode={mode} onToggleMode={handleToggleMode} />} 
-                    />
-                    <Route 
+                    />}
+                    {isEnabled('locations_page') && <Route 
                         path="/locations/:slug" 
                         element={<LocationDetailsPage mode={mode} onToggleMode={handleToggleMode} />} 
-                    />
+                    />}
                     <Route 
                         path="/about" 
                         element={<AboutPage mode={mode} onToggleMode={handleToggleMode} />} 

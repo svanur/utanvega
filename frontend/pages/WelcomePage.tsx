@@ -108,7 +108,7 @@ function StatItem({ icon, value, label, started, delay }: { icon: React.ReactNod
     );
 }
 
-function StatsBar({ stats, showRaces, onScrollDown }: { stats: StatsData; showRaces: boolean; onScrollDown?: () => void }) {
+function StatsBar({ stats, showRaces, showLocations, onScrollDown }: { stats: StatsData; showRaces: boolean; showLocations: boolean; onScrollDown?: () => void }) {
     const ref = useRef<HTMLDivElement>(null);
     const visible = useOnScreen(ref, 0.3);
     const { t } = useTranslation();
@@ -141,7 +141,7 @@ function StatsBar({ stats, showRaces, onScrollDown }: { stats: StatsData; showRa
                         <StatItem icon={<DirectionsRunIcon />} value={stats.trailCount} label={t('welcome.stats.trails')} started={visible} delay={0} />
                         <StatItem icon={<StraightenIcon />} value={stats.totalKm} label={t('welcome.stats.km')} started={visible} delay={100} />
                         <StatItem icon={<TerrainIcon />} value={stats.totalElevation} label={t('welcome.stats.elevation')} started={visible} delay={200} />
-                        <StatItem icon={<PlaceIcon />} value={stats.locationCount} label={t('welcome.stats.locations')} started={visible} delay={300} />
+                        {showLocations && <StatItem icon={<PlaceIcon />} value={stats.locationCount} label={t('welcome.stats.locations')} started={visible} delay={300} />}
                         {showRaces && <StatItem icon={<EmojiEventsIcon />} value={stats.raceCount} label={t('welcome.stats.races')} started={visible} delay={400} />}
                     </Paper>
                 </Box>
@@ -311,7 +311,7 @@ export default function WelcomePage({ mode, onToggleMode, forceLang }: Props) {
 
     const allFeatures = [
         { icon: <DirectionsRunIcon />, titleKey: 'welcome.trails.title', descKey: 'welcome.trails.desc', cta: 'welcome.trails.cta', ctaPath: '/', tParams: { count: stats.trailCount || '...' }, flag: null },
-        { icon: <PlaceIcon />, titleKey: 'welcome.locations.title', descKey: 'welcome.locations.desc', cta: 'welcome.locations.cta', ctaPath: '/locations', flag: null },
+        { icon: <PlaceIcon />, titleKey: 'welcome.locations.title', descKey: 'welcome.locations.desc', cta: 'welcome.locations.cta', ctaPath: '/locations', flag: 'locations_page' },
         { icon: <EmojiEventsIcon />, titleKey: 'welcome.races.title', descKey: 'welcome.races.desc', cta: 'welcome.races.cta', ctaPath: '/races', flag: 'races_page' },
         { icon: <BuildIcon />, titleKey: 'welcome.tools.title', descKey: 'welcome.tools.desc', cta: 'welcome.tools.cta', ctaPath: '/tools', flag: 'tools_page' },
         { icon: <ShareIcon />, titleKey: 'welcome.share.title', descKey: 'welcome.share.desc', cta: 'welcome.share.cta', ctaPath: '/', flag: 'share_trail' },
@@ -448,7 +448,7 @@ export default function WelcomePage({ mode, onToggleMode, forceLang }: Props) {
 
             {/* Stats bar */}
             <Container ref={statsRef} maxWidth="md" id="section-stats">
-                <StatsBar stats={stats} showRaces={isEnabled('races_page')} onScrollDown={() => document.getElementById('section-feature-0')?.scrollIntoView({ behavior: 'smooth' })} />
+                <StatsBar stats={stats} showRaces={isEnabled('races_page')} showLocations={isEnabled('locations_page')} onScrollDown={() => document.getElementById('section-feature-0')?.scrollIntoView({ behavior: 'smooth' })} />
             </Container>
 
             {/* Feature sections */}

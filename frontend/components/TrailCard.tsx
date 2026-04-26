@@ -26,6 +26,7 @@ import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Trail } from '../hooks/useTrails';
+import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { estimateDuration } from '../utils/estimateDuration';
 import { useFavorites } from '../hooks/useFavorites';
 import { useHiddenTrails } from '../hooks/useHiddenTrails';
@@ -74,6 +75,7 @@ const trailTypeI18nKey = (type: string) => {
 export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, onHide, onTagClick, isHiding, isFavorited: isFavoritedProp, compact, disableGestures }) => {
     const navigate = useNavigate();
     const { t } = useTranslation();
+    const { isEnabled } = useFeatureFlags();
     const { isFavorite, toggleFavorite } = useFavorites();
     const { hideTrail } = useHiddenTrails();
     const [swipeOffset, setSwipeOffset] = useState(0);
@@ -336,7 +338,7 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                         )}
                         {[...trail.locations]
                             .sort((a, b) => a.order - b.order)
-                            .map(loc => (
+                            .map(loc => isEnabled('locations_page') ? (
                                 <Chip
                                     key={loc.slug}
                                     label={loc.name}
@@ -347,6 +349,13 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                                         navigate(`/locations/${loc.slug}`);
                                     }}
                                     sx={{ cursor: 'pointer' }}
+                                />
+                            ) : (
+                                <Chip
+                                    key={loc.slug}
+                                    label={loc.name}
+                                    size="small"
+                                    variant="outlined"
                                 />
                             ))}
                         {trail.tags && trail.tags.length > 0 && trail.tags

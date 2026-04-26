@@ -80,6 +80,7 @@ export default function SpotlightSearch() {
     const { t, i18n } = useTranslation();
     const { isEnabled } = useFeatureFlags();
     const racesEnabled = isEnabled('races_page');
+    const locationsEnabled = isEnabled('locations_page');
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -103,20 +104,22 @@ export default function SpotlightSearch() {
         if (!open || loaded) return;
         const fetches: Promise<unknown>[] = [
             fetch(`${API_URL}/api/v1/trails`).then(r => r.json()),
-            fetch(`${API_URL}/api/v1/locations`).then(r => r.json()),
         ];
+        if (locationsEnabled) {
+            fetches.push(fetch(`${API_URL}/api/v1/locations`).then(r => r.json()));
+        }
         if (racesEnabled) {
             fetches.push(fetch(`${API_URL}/api/v1/competitions`).then(r => r.json()));
         }
         Promise.all(fetches).then(([trailData, locationData, competitionData]) => {
             setTrails(trailData as Trail[]);
-            setLocations(locationData as Location[]);
+            if (locationsEnabled && locationData) setLocations(locationData as Location[]);
             if (racesEnabled && competitionData) setCompetitions(competitionData as CompetitionSummary[]);
             setLoaded(true);
         }).catch(() => {
             setLoaded(true);
         });
-    }, [open, loaded, racesEnabled]);
+    }, [open, loaded, racesEnabled, locationsEnabled]);
 
     const results = useMemo((): SearchResult[] => {
         if (!query.trim()) return [];

@@ -293,7 +293,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                 ? `${loc.name} · ${t(`trail.role.${loc.role}`)}`
                                 : loc.name;
 
-                            return (
+                            return isEnabled('locations_page') ? (
                                 <Chip 
                                     key={loc.slug}
                                     icon={roleIcon} 
@@ -303,6 +303,15 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                     component={RouterLink}
                                     to={`/locations/${loc.slug}`}
                                     clickable
+                                    size="small"
+                                />
+                            ) : (
+                                <Chip
+                                    key={loc.slug}
+                                    icon={roleIcon}
+                                    label={roleLabel}
+                                    variant="outlined"
+                                    color="secondary"
                                     size="small"
                                 />
                             );
