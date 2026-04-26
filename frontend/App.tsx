@@ -73,10 +73,10 @@ export default function App() {
                         path="/" 
                         element={<HomePage mode={mode} onToggleMode={handleToggleMode} />} 
                     />
-                    <Route 
+    {isEnabled('tags_page') && <Route 
                         path="/tags/:slug" 
                         element={<TagPage mode={mode} onToggleMode={handleToggleMode} />} 
-                    />
+                    />}
                     <Route 
                         path="/trails/:slug" 
                         element={<TrailDetailsPage mode={mode} onToggleMode={handleToggleMode} />} 

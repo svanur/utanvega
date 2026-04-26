@@ -103,6 +103,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     const { weather, loading: weatherLoading, error: weatherError } = useTrailWeather(slug);
     const { isEnabled } = useFeatureFlags();
     const locationsPageEnabled = isEnabled('locations_page');
+    const tagsEnabled = isEnabled('tags_page');
     const { trails: allTrails } = useTrails();
     const { isFavorite, toggleFavorite } = useFavorites();
     const { addRecent } = useRecentlyViewed();
@@ -308,7 +309,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                 />
                             );
                         })}
-                        {trail.tags && trail.tags.length > 0 && trail.tags.map((tag) => (
+                        {tagsEnabled && trail.tags && trail.tags.length > 0 && trail.tags.map((tag) => (
                             <Chip
                                 key={tag.slug}
                                 label={tag.name}

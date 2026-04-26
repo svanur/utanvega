@@ -25,6 +25,7 @@ import { useTranslation } from 'react-i18next';
 import { Trail, API_URL } from '../hooks/useTrails';
 import { estimateDuration } from '../utils/estimateDuration';
 import DifficultyInfo from './DifficultyInfo';
+import { useFeatureFlags } from '../hooks/useFeatureFlags';
 
 // Mini SVG elevation silhouette for background
 function ElevationSilhouette({ coordinates, color }: { coordinates: number[][]; color: string }) {
@@ -127,6 +128,8 @@ export const TrailQuickView: React.FC<TrailQuickViewProps> = ({ trail, open, onC
     const theme = useTheme();
     const navigate = useNavigate();
     const { t, i18n } = useTranslation();
+    const { isEnabled } = useFeatureFlags();
+    const tagsEnabled = isEnabled('tags_page');
     const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
     const [coordinates, setCoordinates] = useState<number[][] | null>(null);
 
@@ -246,7 +249,7 @@ export const TrailQuickView: React.FC<TrailQuickViewProps> = ({ trail, open, onC
                     {trail.locations.map(loc => (
                         <Chip key={loc.slug} label={loc.name} size="small" variant="outlined" />
                     ))}
-                    {trail.tags?.map(tag => (
+                    {tagsEnabled && trail.tags?.map(tag => (
                         <Chip
                             key={tag.slug}
                             label={tag.name}

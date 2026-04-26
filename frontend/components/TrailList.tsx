@@ -108,6 +108,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
     const navigate = useNavigate();
     const { isEnabled } = useFeatureFlags();
     const locationsPageEnabled = isEnabled('locations_page');
+    const tagsEnabled = isEnabled('tags_page');
     const { competitions: allCompetitions, loading: competitionsLoading } = useCompetitions();
     const { offlineSlugs, isOffline } = useOfflineTrails();
 
@@ -906,7 +907,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                         </Grid>
                         )}
 
-                        {availableTags.length > 0 && (
+                        {tagsEnabled && availableTags.length > 0 && (
                             <Grid item xs={12}>
                                 <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>{t('filters.tags')}</Typography>
                                 <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
@@ -1210,12 +1211,12 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                                 onHide={handleHideTrail}
                                 onToggleFavorite={toggleFavorite}
                                 isFavorited={favorites.includes(trail.slug)}
-                                onTagClick={(tagSlug) => {
+                                onTagClick={tagsEnabled ? (tagSlug) => {
                                     const next = filters.selectedTags.includes(tagSlug)
                                         ? filters.selectedTags.filter(s => s !== tagSlug)
                                         : [...filters.selectedTags, tagSlug];
                                     handleFilterChange('selectedTags', next);
-                                }}
+                                } : undefined}
                                 isHiding={hidingSlugs.includes(trail.slug)}
                             />
                         </Collapse>
