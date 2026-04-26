@@ -58,6 +58,7 @@ export default function Layout({ children, mode, onToggleMode }: LayoutProps) {
 
                     {isMobile ? (
                         <>
+                            {isEnabled('spotlight_search') && (
                             <IconButton
                                 color="inherit"
                                 onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
@@ -66,6 +67,7 @@ export default function Layout({ children, mode, onToggleMode }: LayoutProps) {
                             >
                                 <SearchIcon />
                             </IconButton>
+                            )}
                             <IconButton
                                 color="inherit"
                                 onClick={(e) => setAnchorEl(e.currentTarget)}
@@ -112,7 +114,7 @@ export default function Layout({ children, mode, onToggleMode }: LayoutProps) {
 
                     <LanguageToggle />
 
-                    {!isMobile && (
+                    {!isMobile && isEnabled('spotlight_search') && (
                         <Tooltip title={t('spotlight.shortcutHint')}>
                             <IconButton
                                 color="inherit"
