@@ -4,7 +4,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import { useTranslation } from 'react-i18next';
 import { QuoteService } from '../services/QuoteService';
 
-export default function Header() {
+export default function RandomQuote() {
     const [isVisible, setIsVisible] = useState(false);
     const [dontShowAgain, setDontShowAgain] = useState(false);
     const { t } = useTranslation();
