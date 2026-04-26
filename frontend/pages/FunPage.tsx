@@ -90,7 +90,7 @@ export default function FunPage({ mode, onToggleMode }: FunPageProps) {
                             ))}
                         </Tabs>
                         <Box sx={{ position: 'absolute', right: 0 }}>
-                            <ShareButtons title={enabledGames[tab >= enabledGames.length ? 0 : tab]?.label ?? ''} />
+                            {isEnabled('share_trail') && <ShareButtons title={enabledGames[tab >= enabledGames.length ? 0 : tab]?.label ?? ''} />}
                         </Box>
                     </Stack>
 

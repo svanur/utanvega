@@ -2,6 +2,7 @@ import React, { useMemo, useEffect, useCallback, useState, useRef } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import {
     Box,
     Typography,
@@ -590,6 +591,7 @@ type Props = { mode: PaletteMode; onToggleMode: () => void };
 
 export default function TrailComparePage({ mode, onToggleMode }: Props) {
     const { t } = useTranslation();
+    const { isEnabled } = useFeatureFlags();
     const theme = useTheme();
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
@@ -743,7 +745,7 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
                     <Typography variant="h5" fontWeight="bold" sx={{ flex: 1 }}>
                         {t('compare.title')}
                     </Typography>
-                    {(slugA || slugB) && (
+                    {(slugA || slugB) && isEnabled('share_trail') && (
                         <ShareButtons
                             title={[trailA?.name, trailB?.name].filter(Boolean).join(' vs ')}
                             url={window.location.href}

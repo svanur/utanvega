@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { 
     Box, 
     Typography, 
@@ -38,6 +39,7 @@ type LocationDetailsPageProps = {
 
 export default function LocationDetailsPage({ mode, onToggleMode }: LocationDetailsPageProps) {
     const { t } = useTranslation();
+    const { isEnabled } = useFeatureFlags();
     const { slug } = useParams<{ slug: string }>();
     const navigate = useNavigate();
     const { location, childLocations, trails, loading, error } = useLocationBySlug(slug);
@@ -170,7 +172,7 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
                         <Typography variant="h4" component="h1" fontWeight="bold" sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' }, flex: 1 }}>
                             {location.name}
                         </Typography>
-                        <ShareButtons title={location.name} />
+                        {isEnabled('share_trail') && <ShareButtons title={location.name} />}
                     </Stack>
                     
                     <Stack direction="row" spacing={1} mb={2}>
