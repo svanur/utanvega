@@ -3,7 +3,7 @@ import {
   Box, Typography, Paper, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, IconButton, Button, TextField, Switch, Chip,
   Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress,
-  Tooltip, InputAdornment,
+  Tooltip, InputAdornment, TableSortLabel,
 } from '@mui/material';
 import { Delete as DeleteIcon, Add as AddIcon, Search as SearchIcon, Clear as ClearIcon } from '@mui/icons-material';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
@@ -23,12 +23,29 @@ export default function FeatureFlagsPage({ onNotify }: FeatureFlagsPageProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const [showDisabledOnly, setShowDisabledOnly] = useState(false);
+  const [sortField, setSortField] = useState<'name' | 'enabled' | 'updatedAt'>('name');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+  const handleSort = (field: 'name' | 'enabled' | 'updatedAt') => {
+    if (sortField === field) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDir('asc');
+    }
+  };
 
   const filteredFlags = flags.filter(f => {
     if (showDisabledOnly && f.enabled) return false;
     if (!searchQuery.trim()) return true;
     return f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       f.description?.toLowerCase().includes(searchQuery.toLowerCase());
+  }).slice().sort((a, b) => {
+    let cmp = 0;
+    if (sortField === 'name') cmp = a.name.localeCompare(b.name);
+    else if (sortField === 'enabled') cmp = Number(b.enabled) - Number(a.enabled);
+    else if (sortField === 'updatedAt') cmp = new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
+    return sortDir === 'asc' ? cmp : -cmp;
   });
 
   const disabledCount = flags.filter(f => !f.enabled).length;
@@ -126,11 +143,23 @@ export default function FeatureFlagsPage({ onNotify }: FeatureFlagsPageProps) {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Name</TableCell>
+              <TableCell sortDirection={sortField === 'name' ? sortDir : false}>
+                <TableSortLabel active={sortField === 'name'} direction={sortField === 'name' ? sortDir : 'asc'} onClick={() => handleSort('name')}>
+                  Name
+                </TableSortLabel>
+              </TableCell>
               <TableCell>Description</TableCell>
-              <TableCell align="center">Status</TableCell>
+              <TableCell align="center" sortDirection={sortField === 'enabled' ? sortDir : false}>
+                <TableSortLabel active={sortField === 'enabled'} direction={sortField === 'enabled' ? sortDir : 'asc'} onClick={() => handleSort('enabled')}>
+                  Status
+                </TableSortLabel>
+              </TableCell>
               <TableCell align="center">Toggle</TableCell>
-              <TableCell>Updated</TableCell>
+              <TableCell sortDirection={sortField === 'updatedAt' ? sortDir : false}>
+                <TableSortLabel active={sortField === 'updatedAt'} direction={sortField === 'updatedAt' ? sortDir : 'asc'} onClick={() => handleSort('updatedAt')}>
+                  Updated
+                </TableSortLabel>
+              </TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
