@@ -805,9 +805,11 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                                     onChange={(e) => handleFilterChange('trailType', e.target.value)}
                                 >
                                     <MenuItem value="All">{t('filters.allTypes')}</MenuItem>
-                                    {trailTypes.map(type => (
-                                        <MenuItem key={type} value={type}>{type}</MenuItem>
-                                    ))}
+                                    {trailTypes.map(type => {
+                                        const key = type.charAt(0).toLowerCase() + type.slice(1);
+                                        const label = t(`trail.${key}`, { defaultValue: '' }) || t(`difficulty.${key}`, { defaultValue: type });
+                                        return <MenuItem key={type} value={type}>{label}</MenuItem>;
+                                    })}
                                 </Select>
                             </FormControl>
                         </Grid>
@@ -821,8 +823,8 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                                     onChange={(e) => handleFilterChange('difficulty', e.target.value)}
                                 >
                                     <MenuItem value="All">{t('filters.allLevels')}</MenuItem>
-                                    {['Easy', 'Moderate', 'Hard', 'Expert', 'Extreme'].map(d => (
-                                        <MenuItem key={d} value={d}>{d}</MenuItem>
+                                    {(['Easy', 'Moderate', 'Hard', 'Expert', 'Extreme'] as const).map(d => (
+                                        <MenuItem key={d} value={d}>{t(`difficulty.${d.toLowerCase()}`)}</MenuItem>
                                     ))}
                                 </Select>
                             </FormControl>
