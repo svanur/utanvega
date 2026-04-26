@@ -29,6 +29,8 @@ export default function FeatureFlagsPage({ onNotify }: FeatureFlagsPageProps) {
       )
     : flags;
 
+  const disabledCount = flags.filter(f => !f.enabled).length;
+
   const handleToggle = async (id: string, current: boolean) => {
     try {
       await toggleFlag(id, !current);
@@ -82,6 +84,9 @@ export default function FeatureFlagsPage({ onNotify }: FeatureFlagsPageProps) {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Typography variant="h5">Feature Flags</Typography>
           <Chip label={searchQuery.trim() ? `${filteredFlags.length} / ${flags.length}` : flags.length} size="small" color="primary" />
+          {disabledCount > 0 && (
+            <Chip label={`${disabledCount} disabled`} size="small" sx={{ bgcolor: 'error.main', color: 'error.contrastText' }} />
+          )}
         </Box>
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
           <TextField
