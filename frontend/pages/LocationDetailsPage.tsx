@@ -110,6 +110,21 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
 
     const hasActiveFilters = activeActivity !== null || activeTrailType !== null || activeDifficulty !== null;
 
+    const filteredStats = useMemo(() => {
+        let totalKm = 0, totalGain = 0, totalLoss = 0;
+        for (const trail of filteredTrails) {
+            totalKm += trail.length / 1000;
+            totalGain += trail.elevationGain;
+            totalLoss += trail.elevationLoss;
+        }
+        return {
+            count: filteredTrails.length,
+            totalKm: Math.round(totalKm * 10) / 10,
+            totalGain: Math.round(totalGain),
+            totalLoss: Math.round(totalLoss),
+        };
+    }, [filteredTrails]);
+
     const clearFilters = () => {
         setActiveActivity(null);
         setActiveTrailType(null);
@@ -256,28 +271,28 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
                                 <Grid item xs={6} sm={3}>
                                     <Stack alignItems="center" spacing={0.5}>
                                         <RouteIcon color="primary" />
-                                        <Typography variant="h6" fontWeight="bold">{stats.count}</Typography>
+                                        <Typography variant="h6" fontWeight="bold">{filteredStats.count}</Typography>
                                         <Typography variant="caption" color="text.secondary">{t('locations.statsTrails')}</Typography>
                                     </Stack>
                                 </Grid>
                                 <Grid item xs={6} sm={3}>
                                     <Stack alignItems="center" spacing={0.5}>
                                         <StraightenIcon color="primary" />
-                                        <Typography variant="h6" fontWeight="bold">{stats.totalKm} km</Typography>
+                                        <Typography variant="h6" fontWeight="bold">{filteredStats.totalKm} km</Typography>
                                         <Typography variant="caption" color="text.secondary">{t('locations.statsDistance')}</Typography>
                                     </Stack>
                                 </Grid>
                                 <Grid item xs={6} sm={3}>
                                     <Stack alignItems="center" spacing={0.5}>
                                         <TerrainIcon color="success" />
-                                        <Typography variant="h6" fontWeight="bold">↑ {stats.totalGain} m</Typography>
+                                        <Typography variant="h6" fontWeight="bold">↑ {filteredStats.totalGain} m</Typography>
                                         <Typography variant="caption" color="text.secondary">{t('locations.statsElevGain')}</Typography>
                                     </Stack>
                                 </Grid>
                                 <Grid item xs={6} sm={3}>
                                     <Stack alignItems="center" spacing={0.5}>
                                         <TerrainIcon color="error" />
-                                        <Typography variant="h6" fontWeight="bold">↓ {stats.totalLoss} m</Typography>
+                                        <Typography variant="h6" fontWeight="bold">↓ {filteredStats.totalLoss} m</Typography>
                                         <Typography variant="caption" color="text.secondary">{t('locations.statsElevLoss')}</Typography>
                                     </Stack>
                                 </Grid>
