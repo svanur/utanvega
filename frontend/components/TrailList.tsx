@@ -1211,12 +1211,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                                 onHide={handleHideTrail}
                                 onToggleFavorite={toggleFavorite}
                                 isFavorited={favorites.includes(trail.slug)}
-                                onTagClick={tagsEnabled ? (tagSlug) => {
-                                    const next = filters.selectedTags.includes(tagSlug)
-                                        ? filters.selectedTags.filter(s => s !== tagSlug)
-                                        : [...filters.selectedTags, tagSlug];
-                                    handleFilterChange('selectedTags', next);
-                                } : undefined}
+                                onTagClick={tagsEnabled ? (tagSlug) => navigate(`/tags/${tagSlug}`) : undefined}
                                 isHiding={hidingSlugs.includes(trail.slug)}
                             />
                         </Collapse>
