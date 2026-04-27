@@ -21,8 +21,9 @@
         "racesSection": "Keppni",
         "trails": "leiðir",
         "noResults": "Ekkert fannst",
-        "hint": "Byrjaðu að skrifa til að leita að leiðum, stöðum og keppnum",
-        "shortcutHint": "Leita (Ctrl+K)"
+        "hint": "Byrjaðu að skrifa til að að fá leitarniðurstöður…",
+        "shortcutHint": "Leita (Ctrl+K)",
+        "loading": "Augnablik á meðan leiðir hlaðast inn…"
     },
     "home": {
         "nearbyTrails": "Leiðir í nágrenninu",

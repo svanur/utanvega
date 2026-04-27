@@ -22,7 +22,8 @@
         "trails": "trails",
         "noResults": "No results found",
         "hint": "Start typing to search trails, locations and races",
-        "shortcutHint": "Search (Ctrl+K)"
+        "shortcutHint": "Search (Ctrl+K)",
+        "loading": "Loading search data…"
     },
     "home": {
         "nearbyTrails": "Nearby Trails",

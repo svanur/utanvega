@@ -10,6 +10,7 @@ import {
     Box,
     Chip,
     Divider,
+    CircularProgress,
     useTheme,
     useMediaQuery,
 } from '@mui/material';
@@ -254,7 +255,12 @@ export default function SpotlightSearch() {
             </Box>
 
             {/* Results */}
-            {results.length > 0 ? (
+            {!loaded ? (
+                <Box sx={{ p: 3, textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5 }}>
+                    <CircularProgress size={18} />
+                    <Typography color="text.secondary" variant="body2">{t('spotlight.loading')}</Typography>
+                </Box>
+            ) : results.length > 0 ? (
                 <List ref={listRef} dense sx={{ py: 0, maxHeight: '45vh', overflow: 'auto' }}>
                     {trailResults.length > 0 && (
                         <>
