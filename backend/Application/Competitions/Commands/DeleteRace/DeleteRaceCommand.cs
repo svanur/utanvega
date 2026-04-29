@@ -21,13 +21,14 @@ public class DeleteRaceCommandHandler : IRequestHandler<DeleteRaceCommand, bool>
     public async Task<bool> Handle(DeleteRaceCommand request, CancellationToken cancellationToken)
     {
         var race = await _context.Races
+            .Include(r => r.Competition)
             .FirstOrDefaultAsync(r => r.Id == request.Id, cancellationToken);
 
         if (race == null) return false;
 
         _context.Races.Remove(race);
         await _context.SaveChangesAsync(cancellationToken);
-        _cacheInvalidator.InvalidateCompetition();
+        _cacheInvalidator.InvalidateCompetition(race.Competition?.Slug);
         return true;
     }
 }

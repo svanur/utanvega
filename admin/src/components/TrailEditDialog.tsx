@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Box, Typography, Alert, CircularProgress, MenuItem, Paper, Chip, Tabs, Tab, Autocomplete, Checkbox } from '@mui/material';
-import { Add as AddIcon, History as HistoryIcon, Map as MapIcon, LocalOffer as TagIcon, CheckBoxOutlineBlank, CheckBox as CheckBoxIcon, UploadFile as UploadFileIcon } from '@mui/icons-material';
+import { Add as AddIcon, History as HistoryIcon, Map as MapIcon, LocalOffer as TagIcon, CheckBoxOutlineBlank, CheckBox as CheckBoxIcon, UploadFile as UploadFileIcon, EmojiEvents as RaceIcon } from '@mui/icons-material';
 import { MapContainer, TileLayer, Polyline, CircleMarker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { apiFetch } from '../hooks/api';
 import { useLocations } from '../hooks/useLocations';
 import { useTags } from '../hooks/useTags';
+import type { RaceAdminDto, CompetitionDto } from '../hooks/useCompetitions';
 import ChangeLogList from './ChangeLogList';
 import { generateSlug } from '../utils/slugify';
 
@@ -89,21 +90,33 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
     const [newLocId, setNewLocId] = useState('');
     const [newLocRole, setNewLocRole] = useState<'Start' | 'End' | 'BelongsTo' | 'PassingThrough'>('BelongsTo');
     const [activeTab, setActiveTab] = useState(0);
+    const [allRaces, setAllRaces] = useState<RaceAdminDto[]>([]);
+    const [racesLoading, setRacesLoading] = useState(false);
+    const [allCompetitions, setAllCompetitions] = useState<CompetitionDto[]>([]);
+    const [selectedCompToLink, setSelectedCompToLink] = useState<CompetitionDto | null>(null);
 
     useEffect(() => {
         if (open && trailId) {
-            const fetchTrail = async () => {
+            const fetchData = async () => {
                 try {
                     setLoading(true);
-                    const data = await apiFetch<TrailDetail>(`/api/v1/admin/trails/${trailId}`);
+                    setRacesLoading(true);
+                    const [data, races, competitions] = await Promise.all([
+                        apiFetch<TrailDetail>(`/api/v1/admin/trails/${trailId}`),
+                        apiFetch<RaceAdminDto[]>('/api/v1/admin/races'),
+                        apiFetch<CompetitionDto[]>('/api/v1/admin/competitions'),
+                    ]);
                     setTrail(data);
+                    setAllRaces(races);
+                    setAllCompetitions(competitions);
                 } catch (_err) {
                     setError('Failed to load trail details.');
                 } finally {
                     setLoading(false);
+                    setRacesLoading(false);
                 }
             };
-            fetchTrail();
+            fetchData();
         }
     }, [open, trailId]);
 
@@ -165,6 +178,51 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
         if (!trail) return;
         const updatedLocations = trail.locations.filter(l => l.locationId !== locId);
         setTrail({ ...trail, locations: updatedLocations });
+    };
+
+    const handleLinkCompetition = async () => {
+        if (!trail || !selectedCompToLink) return;
+        try {
+            const distanceKm = Math.round(trail.length / 1000);
+            const raceName = `${selectedCompToLink.name} - ${distanceKm}km`;
+            const existingSortOrder = allRaces.filter(r => r.competitionId === selectedCompToLink.id).length + 1;
+            const result = await apiFetch<{ id: string }>(`/api/v1/admin/competitions/${selectedCompToLink.id}/races`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    competitionId: selectedCompToLink.id,
+                    trailId: trail.id,
+                    name: raceName,
+                    status: 'Active',
+                    sortOrder: existingSortOrder,
+                }),
+            });
+            const newRace: RaceAdminDto = {
+                id: result.id,
+                name: raceName,
+                trailId: trail.id,
+                competitionId: selectedCompToLink.id,
+                competitionName: selectedCompToLink.name,
+                competitionSlug: selectedCompToLink.slug,
+                distanceLabel: null,
+                cutoffMinutes: null,
+                description: null,
+                status: 'Active',
+                sortOrder: existingSortOrder,
+            };
+            setAllRaces(prev => [...prev, newRace]);
+            setSelectedCompToLink(null);
+        } catch (_err) {
+            setError('Failed to link competition.');
+        }
+    };
+
+    const handleUnlinkRace = async (race: RaceAdminDto) => {
+        try {
+            await apiFetch(`/api/v1/admin/races/${race.id}`, { method: 'DELETE' });
+            setAllRaces(prev => prev.filter(r => r.id !== race.id));
+        } catch (_err) {
+            setError('Failed to unlink race.');
+        }
     };
 
     return (
@@ -318,6 +376,52 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
                                     }
                                     renderInput={(params) => <TextField {...params} label="Tags" placeholder="Search tags..." />}
                                 />
+                            </Paper>
+
+                            <Typography variant="subtitle1" sx={{ mt: 2 }}>
+                                <RaceIcon sx={{ fontSize: 18, mr: 0.5, verticalAlign: 'text-bottom' }} />
+                                Add trail to competition
+                            </Typography>
+                            <Paper variant="outlined" sx={{ p: 2 }}>
+                                {racesLoading ? <CircularProgress size={20} /> : (
+                                    <>
+                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                                            {allRaces.filter(r => r.trailId === trail.id).map(race => (
+                                                <Chip
+                                                    key={race.id}
+                                                    label={`${race.competitionName} — ${race.name}${race.distanceLabel ? ` (${race.distanceLabel})` : ''}`}
+                                                    onDelete={() => handleUnlinkRace(race)}
+                                                    color="secondary"
+                                                    variant="outlined"
+                                                />
+                                            ))}
+                                            {allRaces.filter(r => r.trailId === trail.id).length === 0 && (
+                                                <Typography variant="body2" color="text.secondary">No races linked.</Typography>
+                                            )}
+                                        </Box>
+                                        <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+                                            <Autocomplete
+                                                size="small"
+                                                sx={{ flexGrow: 1 }}
+                                                options={allCompetitions}
+                                                getOptionLabel={(opt) => opt.name}
+                                                value={selectedCompToLink}
+                                                onChange={(_e, val) => setSelectedCompToLink(val)}
+                                                renderInput={(params) => <TextField {...params} label="Link Competition" placeholder="Search competitions..." />}
+                                                isOptionEqualToValue={(opt, val) => opt.id === val.id}
+                                            />
+                                            <Button
+                                                variant="outlined"
+                                                startIcon={<AddIcon />}
+                                                onClick={handleLinkCompetition}
+                                                disabled={!selectedCompToLink}
+                                                sx={{ mt: 0.5 }}
+                                            >
+                                                Link
+                                            </Button>
+                                        </Box>
+                                    </>
+                                )}
                             </Paper>
                         </Box>
                     ) : <Typography>Trail not found.</Typography>

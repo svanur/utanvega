@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Infrastructure.Persistence;
@@ -45,7 +46,14 @@ public class CreateRaceCommandHandler : IRequestHandler<CreateRaceCommand, Guid>
 
         _context.Races.Add(race);
         await _context.SaveChangesAsync(cancellationToken);
-        _cacheInvalidator.InvalidateCompetition();
+
+        var slug = await _context.Competitions
+            .AsNoTracking()
+            .Where(c => c.Id == request.CompetitionId)
+            .Select(c => c.Slug)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        _cacheInvalidator.InvalidateCompetition(slug);
 
         return race.Id;
     }

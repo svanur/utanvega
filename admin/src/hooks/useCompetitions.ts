@@ -67,6 +67,20 @@ export interface CreateCompetitionInput {
     scheduleRule?: ScheduleRule | null;
 }
 
+export interface RaceAdminDto {
+    id: string;
+    name: string;
+    trailId: string | null;
+    competitionId: string;
+    competitionName: string;
+    competitionSlug: string;
+    distanceLabel: string | null;
+    cutoffMinutes: number | null;
+    description: string | null;
+    status: string;
+    sortOrder: number;
+}
+
 export interface CreateRaceInput {
     competitionId: string;
     trailId?: string | null;
@@ -145,6 +159,10 @@ export function useCompetitions() {
         await apiFetch(`/api/v1/admin/races/${id}`, { method: 'DELETE' });
     };
 
+    const getAllRaces = async (): Promise<RaceAdminDto[]> => {
+        return apiFetch<RaceAdminDto[]>('/api/v1/admin/races');
+    };
+
     return {
         competitions,
         loading,
@@ -157,5 +175,6 @@ export function useCompetitions() {
         createRace,
         updateRace,
         deleteRace,
+        getAllRaces,
     };
 }

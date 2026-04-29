@@ -1184,6 +1184,33 @@ app.MapDelete("/api/v1/admin/races/{id}", [Authorize] async (Guid id, IMediator 
 })
 .WithName("DeleteRace");
 
+app.MapGet("/api/v1/admin/races", [Authorize] async (UtanvegaDbContext context) =>
+{
+    var races = await context.Races
+        .Include(r => r.Competition)
+        .AsNoTracking()
+        .OrderBy(r => r.Competition.Name)
+        .ThenBy(r => r.SortOrder)
+        .Select(r => new
+        {
+            r.Id,
+            r.Name,
+            r.TrailId,
+            r.CompetitionId,
+            CompetitionName = r.Competition.Name,
+            CompetitionSlug = r.Competition.Slug,
+            r.DistanceLabel,
+            r.CutoffMinutes,
+            r.Description,
+            Status = r.Status.ToString(),
+            r.SortOrder,
+        })
+        .ToListAsync();
+
+    return Results.Ok(races);
+})
+.WithName("GetAllAdminRaces");
+
 try
 {
     app.Run();

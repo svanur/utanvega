@@ -31,6 +31,7 @@ public class UpdateRaceCommandHandler : IRequestHandler<UpdateRaceCommand, bool>
     public async Task<bool> Handle(UpdateRaceCommand request, CancellationToken cancellationToken)
     {
         var race = await _context.Races
+            .Include(r => r.Competition)
             .FirstOrDefaultAsync(r => r.Id == request.Id, cancellationToken);
 
         if (race == null) return false;
@@ -46,7 +47,7 @@ public class UpdateRaceCommandHandler : IRequestHandler<UpdateRaceCommand, bool>
         race.SortOrder = request.SortOrder;
 
         await _context.SaveChangesAsync(cancellationToken);
-        _cacheInvalidator.InvalidateCompetition();
+        _cacheInvalidator.InvalidateCompetition(race.Competition?.Slug);
         return true;
     }
 }
