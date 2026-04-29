@@ -1,22 +1,15 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Box, Button, Stack, Typography, Collapse, IconButton, FormControlLabel, Checkbox, Paper } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { useTranslation } from 'react-i18next';
 import { QuoteService } from '../services/QuoteService';
 
 export default function RandomQuote() {
-    const [isVisible, setIsVisible] = useState(false);
+    const [isVisible, setIsVisible] = useState(() => localStorage.getItem('hideSplash') !== 'true');
     const [dontShowAgain, setDontShowAgain] = useState(false);
     const { t } = useTranslation();
 
     const quote = useMemo(() => QuoteService.getRandomQuote(), []);
-
-    useEffect(() => {
-        const hideSplash = localStorage.getItem('hideSplash');
-        if (hideSplash !== 'true') {
-            setIsVisible(true);
-        }
-    }, []);
 
     const handleClose = () => {
         if (dontShowAgain) {
