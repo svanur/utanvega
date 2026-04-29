@@ -92,6 +92,27 @@ export const DEFAULT_FILTERS: FilterState = {
 
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
+const TRAILS_CACHE_KEY = 'utanvega-trails-v1';
+
+function readTrailsCache(): Trail[] | undefined {
+    try {
+        const raw = localStorage.getItem(TRAILS_CACHE_KEY);
+        if (!raw) return undefined;
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? (parsed as Trail[]) : undefined;
+    } catch {
+        return undefined;
+    }
+}
+
+function writeTrailsCache(trails: Trail[]): void {
+    try {
+        localStorage.setItem(TRAILS_CACHE_KEY, JSON.stringify(trails));
+    } catch {
+        // Ignore write failures (storage full, private mode, etc.)
+    }
+}
+
 export function useTrails() {
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
     const [locationDenied, setLocationDenied] = useState(false);
@@ -130,12 +151,16 @@ export function useTrails() {
         error: queryError,
     } = useQuery<Trail[]>({
         queryKey: ['trails'],
-        queryFn: () => fetch(`${API_URL}/api/v1/trails`)
-            .then(res => {
-                if (!res.ok) throw new Error('Failed to fetch trails');
-                return res.json() as Promise<Trail[]>;
-            }),
+        queryFn: async () => {
+            const res = await fetch(`${API_URL}/api/v1/trails`);
+            if (!res.ok) throw new Error('Failed to fetch trails');
+            const data = await res.json() as Trail[];
+            writeTrailsCache(data);
+            return data;
+        },
         staleTime: 5 * 60 * 1000,
+        initialData: readTrailsCache,
+        initialDataUpdatedAt: 0,
     });
 
     const refreshing = isFetching && !loading;
