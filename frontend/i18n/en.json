@@ -508,6 +508,8 @@
         "trailB": "Trail B",
         "viewTrail": "View",
         "compareButton": "Compare",
+        "chartModePercentTip": "Normalized – both trails span the full chart width",
+        "chartModeDistanceTip": "Actual distance – shorter trail ends earlier",
         "filters": {
             "distance": "Distance",
             "elevation": "Elevation",

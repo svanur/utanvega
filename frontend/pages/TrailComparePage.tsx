@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useCallback, useState, useRef } from 'react';
+import React, { useMemo, useEffect, useCallback, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -22,6 +22,8 @@ import {
     Tooltip,
     PaletteMode,
     Button,
+    ToggleButton,
+    ToggleButtonGroup,
     useTheme,
     alpha,
 } from '@mui/material';
@@ -95,6 +97,23 @@ function sampleElevAtPct(pts: ElevPt[], pct: number): number {
     return pts[lo].elevation + t * (pts[hi].elevation - pts[lo].elevation);
 }
 
+/** Returns elevation at a given distance in km, or undefined if past trail end. */
+function sampleElevAtDist(pts: ElevPt[], km: number): number | undefined {
+    if (!pts.length) return undefined;
+    const total = pts[pts.length - 1].distance;
+    if (km > total + 0.001) return undefined;
+    if (km <= 0) return pts[0].elevation;
+    if (km >= total) return pts[pts.length - 1].elevation;
+    let lo = 0, hi = pts.length - 1;
+    while (lo < hi - 1) {
+        const mid = (lo + hi) >> 1;
+        if (pts[mid].distance <= km) lo = mid; else hi = mid;
+    }
+    const span = pts[hi].distance - pts[lo].distance;
+    const t = span > 0 ? (km - pts[lo].distance) / span : 0;
+    return pts[lo].elevation + t * (pts[hi].elevation - pts[lo].elevation);
+}
+
 /** Returns [lat, lng] at the given fraction (0–1) along the coords array */
 function sampleCoordAtPct(coords: number[][], pct: number): [number, number] | null {
     if (!coords.length) return null;
@@ -123,18 +142,26 @@ function sampleCoordAtPct(coords: number[][], pct: number): [number, number] | n
 
 // ─── Compare Elevation Chart ─────────────────────────────────────────────────
 
-interface MergedPt { pct: number; elevA?: number; elevB?: number; distA?: number; distB?: number }
+interface MergedPt { pct?: number; km?: number; elevA?: number; elevB?: number }
 
-function ElevTooltip({ active, payload, nameA, nameB }: {
+function ElevTooltip({ active, payload, label, nameA, nameB, mode }: {
     active?: boolean;
     payload?: Array<{ value: number; name: string; color: string }>;
+    label?: number;
     nameA: string | null;
     nameB: string | null;
+    mode: 'percent' | 'distance';
 }) {
     const theme = useTheme();
     if (!active || !payload || !payload.length) return null;
+    const posLabel = mode === 'distance'
+        ? `${(label ?? 0).toFixed(1)} km`
+        : `${Math.round(label ?? 0)}%`;
     return (
         <Paper sx={{ p: 1.5, border: `1px solid ${theme.palette.divider}` }}>
+            <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>
+                {posLabel}
+            </Typography>
             {payload.map((entry, i) => (
                 <Typography key={i} variant="body2" sx={{ color: entry.color }}>
                     {i === 0 ? (nameA ?? 'A') : (nameB ?? 'B')}: {Math.round(entry.value)} m
@@ -149,17 +176,18 @@ function CompareElevationChart({
     coordsB,
     nameA,
     nameB,
-    onHoverPct,
+    mode,
+    onHoverChange,
 }: {
     coordsA: number[][] | null;
     coordsB: number[][] | null;
     nameA: string | null;
     nameB: string | null;
-    onHoverPct?: (pct: number | null) => void;
+    mode: 'percent' | 'distance';
+    onHoverChange?: (pctA: number | null, pctB: number | null) => void;
 }) {
     const theme = useTheme();
-    const SAMPLES = 201;
-    const chartRef = useRef<HTMLDivElement>(null);
+    const SAMPLES = 200;
 
     const ptsA = useMemo(() => coordsA ? buildElevPts(coordsA) : [], [coordsA]);
     const ptsB = useMemo(() => coordsB ? buildElevPts(coordsB) : [], [coordsB]);
@@ -168,14 +196,41 @@ function CompareElevationChart({
         if (!ptsA.length && !ptsB.length) return [];
         const totalA = ptsA.length ? ptsA[ptsA.length - 1].distance : 0;
         const totalB = ptsB.length ? ptsB[ptsB.length - 1].distance : 0;
-        return Array.from({ length: SAMPLES }, (_, i) => {
-            const pct = i / (SAMPLES - 1);
+
+        if (mode === 'distance') {
+            const maxKm = Math.max(totalA, totalB);
+            if (maxKm <= 0) return [];
+            // Uniform grid + exact endpoints to avoid early trail cutoff
+            const uniformKms = Array.from({ length: SAMPLES + 1 }, (_, i) => (i / SAMPLES) * maxKm);
+            const extras = [
+                ...(ptsA.length ? [totalA] : []),
+                ...(ptsB.length ? [totalB] : []),
+            ];
+            const allKms = [...new Set([...uniformKms, ...extras].map(v => parseFloat(v.toFixed(3))))]
+                .sort((a, b) => a - b);
+            return allKms.map(km => {
+                const pt: MergedPt = { km };
+                if (ptsA.length) {
+                    const e = sampleElevAtDist(ptsA, km);
+                    if (e !== undefined) pt.elevA = e;
+                }
+                if (ptsB.length) {
+                    const e = sampleElevAtDist(ptsB, km);
+                    if (e !== undefined) pt.elevB = e;
+                }
+                return pt;
+            });
+        }
+
+        // Percent mode: 201 uniform points across 0–100%
+        return Array.from({ length: SAMPLES + 1 }, (_, i) => {
+            const pct = i / SAMPLES;
             const pt: MergedPt = { pct: Math.round(pct * 100) };
-            if (ptsA.length) { pt.elevA = sampleElevAtPct(ptsA, pct); pt.distA = pct * totalA; }
-            if (ptsB.length) { pt.elevB = sampleElevAtPct(ptsB, pct); pt.distB = pct * totalB; }
+            if (ptsA.length) pt.elevA = sampleElevAtPct(ptsA, pct);
+            if (ptsB.length) pt.elevB = sampleElevAtPct(ptsB, pct);
             return pt;
         });
-    }, [ptsA, ptsB]);
+    }, [ptsA, ptsB, mode]);
 
     const yDomain = useMemo((): [number, number] => {
         if (!mergedData.length) return [0, 100];
@@ -193,33 +248,44 @@ function CompareElevationChart({
 
     if (!mergedData.length) return null;
 
-    const YAXIS_WIDTH = 45;
-    const RIGHT_MARGIN = 8;
+    const handleMouseMove = (state: { isTooltipActive?: boolean; activeLabel?: string | number }) => {
+        if (!onHoverChange) return;
+        if (!state.isTooltipActive || state.activeLabel == null) {
+            onHoverChange(null, null);
+            return;
+        }
+        const label = Number(state.activeLabel);
+        if (mode === 'percent') {
+            const fraction = label / 100;
+            onHoverChange(fraction, fraction);
+        } else {
+            const totalA = ptsA.length ? ptsA[ptsA.length - 1].distance : 0;
+            const totalB = ptsB.length ? ptsB[ptsB.length - 1].distance : 0;
+            const pctA = totalA > 0 ? Math.min(1, label / totalA) : null;
+            const pctB = totalB > 0 ? (label <= totalB + 0.001 ? Math.min(1, label / totalB) : null) : null;
+            onHoverChange(pctA, pctB);
+        }
+    };
 
     return (
-        <Box
-            ref={chartRef}
-            sx={{ width: '100%', height: 280, mt: 1, cursor: 'crosshair' }}
-            onMouseMove={(e) => {
-                if (!chartRef.current) return;
-                const rect = chartRef.current.getBoundingClientRect();
-                const usable = rect.width - YAXIS_WIDTH - RIGHT_MARGIN;
-                const x = e.clientX - rect.left - YAXIS_WIDTH;
-                if (usable > 0) onHoverPct?.(Math.max(0, Math.min(1, x / usable)));
-            }}
-            onMouseLeave={() => onHoverPct?.(null)}
-        >
+        <Box sx={{ width: '100%', height: 280, mt: 1, cursor: 'crosshair' }}>
             <ResponsiveContainer width="100%" height="100%">
                 <LineChart
                     data={mergedData}
-                    margin={{ top: 8, right: RIGHT_MARGIN, left: 0, bottom: 0 }}
+                    margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+                    onMouseMove={handleMouseMove}
+                    onMouseLeave={() => onHoverChange?.(null, null)}
                 >
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis
-                        dataKey="pct"
-                        tickFormatter={(v: number) => `${v}%`}
+                        dataKey={mode === 'percent' ? 'pct' : 'km'}
+                        tickFormatter={mode === 'percent'
+                            ? (v: number) => `${v}%`
+                            : (v: number) => `${v.toFixed(0)} km`}
                         fontSize={11}
                         interval="preserveStartEnd"
+                        type="number"
+                        domain={['dataMin', 'dataMax']}
                     />
                     <YAxis
                         domain={yDomain}
@@ -228,7 +294,7 @@ function CompareElevationChart({
                         width={45}
                     />
                     <RechartsTooltip
-                        content={<ElevTooltip nameA={nameA} nameB={nameB} />}
+                        content={<ElevTooltip nameA={nameA} nameB={nameB} mode={mode} />}
                     />
                     <Legend
                         formatter={(_value, entry) => (
@@ -245,6 +311,7 @@ function CompareElevationChart({
                             strokeWidth={2}
                             dot={false}
                             isAnimationActive={false}
+                            connectNulls={false}
                         />
                     )}
                     {ptsB.length > 0 && (
@@ -255,6 +322,7 @@ function CompareElevationChart({
                             strokeWidth={2}
                             dot={false}
                             isAnimationActive={false}
+                            connectNulls={false}
                         />
                     )}
                 </LineChart>
@@ -329,16 +397,18 @@ function CompareMap({
     coordsB,
     nameA,
     nameB,
-    hoverPct,
+    hoverPctA,
+    hoverPctB,
     userPos,
 }: {
     coordsA: number[][] | null;
     coordsB: number[][] | null;
     nameA: string | null;
     nameB: string | null;
-    hoverPct: number | null;
+    hoverPctA: number | null;
+    hoverPctB: number | null;
     userPos: [number, number] | null;
-}) {
+}){
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
     const { t } = useTranslation();
@@ -357,12 +427,12 @@ function CompareMap({
     const hasAny = latLngA.length > 0 || latLngB.length > 0;
 
     const hoverPosA = useMemo(
-        () => (hoverPct != null && coordsA ? sampleCoordAtPct(coordsA, hoverPct) : null),
-        [hoverPct, coordsA]
+        () => (hoverPctA != null && coordsA ? sampleCoordAtPct(coordsA, hoverPctA) : null),
+        [hoverPctA, coordsA]
     );
     const hoverPosB = useMemo(
-        () => (hoverPct != null && coordsB ? sampleCoordAtPct(coordsB, hoverPct) : null),
-        [hoverPct, coordsB]
+        () => (hoverPctB != null && coordsB ? sampleCoordAtPct(coordsB, hoverPctB) : null),
+        [hoverPctB, coordsB]
     );
 
     if (!hasAny) {
@@ -677,7 +747,9 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
     const { coordinates: coordsA, loading: geoLoadingA } = useTrailGeometry(slugA || undefined);
     const { coordinates: coordsB, loading: geoLoadingB } = useTrailGeometry(slugB || undefined);
 
-    const [hoverPct, setHoverPct] = useState<number | null>(null);
+    const [hoverPctA, setHoverPctA] = useState<number | null>(null);
+    const [hoverPctB, setHoverPctB] = useState<number | null>(null);
+    const [elevChartMode, setElevChartMode] = useState<'percent' | 'distance'>('percent');
     const [userPos, setUserPos] = useState<[number, number] | null>(null);
 
     useEffect(() => {
@@ -966,20 +1038,41 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
                                     coordsB={coordsB}
                                     nameA={trailA?.name ?? null}
                                     nameB={trailB?.name ?? null}
-                                    hoverPct={hoverPct}
+                                    hoverPctA={hoverPctA}
+                                    hoverPctB={hoverPctB}
                                     userPos={userPos}
                                 />
                                 {(coordsA || coordsB) && (
                                     <>
-                                        <Typography variant="subtitle2" fontWeight="bold" sx={{ mt: 3 }} gutterBottom>
-                                            {t('compare.elevation')}
-                                        </Typography>
+                                        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mt: 3 }}>
+                                            <Typography variant="subtitle2" fontWeight="bold">
+                                                {t('compare.elevation')}
+                                            </Typography>
+                                            <ToggleButtonGroup
+                                                value={elevChartMode}
+                                                exclusive
+                                                onChange={(_e, val) => { if (val) setElevChartMode(val); }}
+                                                size="small"
+                                            >
+                                                <Tooltip title={t('compare.chartModePercentTip')} arrow placement="top">
+                                                    <ToggleButton value="percent" sx={{ px: 1.5, py: 0.5, fontSize: '0.75rem' }}>
+                                                        %
+                                                    </ToggleButton>
+                                                </Tooltip>
+                                                <Tooltip title={t('compare.chartModeDistanceTip')} arrow placement="top">
+                                                    <ToggleButton value="distance" sx={{ px: 1.5, py: 0.5, fontSize: '0.75rem' }}>
+                                                        km
+                                                    </ToggleButton>
+                                                </Tooltip>
+                                            </ToggleButtonGroup>
+                                        </Stack>
                                         <CompareElevationChart
                                             coordsA={coordsA}
                                             coordsB={coordsB}
                                             nameA={trailA?.name ?? null}
                                             nameB={trailB?.name ?? null}
-                                            onHoverPct={setHoverPct}
+                                            mode={elevChartMode}
+                                            onHoverChange={(pA, pB) => { setHoverPctA(pA); setHoverPctB(pB); }}
                                         />
                                     </>
                                 )}

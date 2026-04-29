@@ -508,6 +508,8 @@
         "trailB": "Leið B",
         "viewTrail": "Skoða",
         "compareButton": "Bera saman",
+        "chartModePercentTip": "Hlutfallslegt – báðar leiðir fylla út í breiddina",
+        "chartModeDistanceTip": "Raunverulegir km – styttri leið endar fyrr",
         "filters": {
             "distance": "Vegalengd",
             "elevation": "Hæðarmunur",
