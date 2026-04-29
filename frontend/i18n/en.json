@@ -510,6 +510,7 @@
         "compareButton": "Compare",
         "chartModePercentTip": "Normalized – both trails span the full chart width",
         "chartModeDistanceTip": "Actual distance – shorter trail ends earlier",
+        "sharedRoute": "Shared Route",
         "filters": {
             "distance": "Distance",
             "elevation": "Elevation",

@@ -510,6 +510,7 @@
         "compareButton": "Bera saman",
         "chartModePercentTip": "Hlutfallslegt – báðar leiðir fylla út í breiddina",
         "chartModeDistanceTip": "Raunverulegir km – styttri leið endar fyrr",
+        "sharedRoute": "Samnýtt leið",
         "filters": {
             "distance": "Vegalengd",
             "elevation": "Hæðarmunur",

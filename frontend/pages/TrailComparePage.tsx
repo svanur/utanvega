@@ -341,6 +341,83 @@ function fmtM(m: number) {
     return `${Math.round(m)} m`;
 }
 
+function fmtPct(v: number) {
+    return `${Math.round(v)}%`;
+}
+
+// ─── Route similarity ─────────────────────────────────────────────────────────
+
+interface CoordPt { km: number; lat: number; lon: number }
+
+function buildCoordPts(coords: number[][]): CoordPt[] {
+    let d = 0;
+    return coords.map((c, i) => {
+        if (i > 0) d += haversineMeters(c[1], c[0], coords[i - 1][1], coords[i - 1][0]) / 1000;
+        return { km: d, lat: c[1], lon: c[0] };
+    });
+}
+
+function sampleLatLonAtKm(pts: CoordPt[], km: number): [number, number] {
+    if (!pts.length) return [0, 0];
+    if (km <= 0) return [pts[0].lat, pts[0].lon];
+    const total = pts[pts.length - 1].km;
+    if (km >= total) return [pts[pts.length - 1].lat, pts[pts.length - 1].lon];
+    let lo = 0, hi = pts.length - 1;
+    while (lo < hi - 1) {
+        const mid = (lo + hi) >> 1;
+        if (pts[mid].km <= km) lo = mid; else hi = mid;
+    }
+    const span = pts[hi].km - pts[lo].km;
+    const t = span > 0 ? (km - pts[lo].km) / span : 0;
+    return [
+        pts[lo].lat + t * (pts[hi].lat - pts[lo].lat),
+        pts[lo].lon + t * (pts[hi].lon - pts[lo].lon),
+    ];
+}
+
+/**
+ * Returns what fraction of each trail's sampled points are within `thresholdM`
+ * metres of any sampled point on the other trail.
+ * Samples every 100 m for reasonable performance (~1000 pts per 100 km).
+ */
+function computeRouteSimilarity(
+    coordsA: number[][],
+    coordsB: number[][],
+    thresholdM = 25,
+): { coverageA: number; coverageB: number } {
+    const ptsA = buildCoordPts(coordsA);
+    const ptsB = buildCoordPts(coordsB);
+    const totalA = ptsA.length ? ptsA[ptsA.length - 1].km : 0;
+    const totalB = ptsB.length ? ptsB[ptsB.length - 1].km : 0;
+    if (totalA === 0 || totalB === 0) return { coverageA: 0, coverageB: 0 };
+
+    const INTERVAL_KM = 0.1;
+    const nA = Math.max(10, Math.round(totalA / INTERVAL_KM));
+    const nB = Math.max(10, Math.round(totalB / INTERVAL_KM));
+
+    const samplesA = Array.from({ length: nA + 1 }, (_, i) => sampleLatLonAtKm(ptsA, (i / nA) * totalA));
+    const samplesB = Array.from({ length: nB + 1 }, (_, i) => sampleLatLonAtKm(ptsB, (i / nB) * totalB));
+
+    let hitA = 0;
+    for (const [latA, lonA] of samplesA) {
+        for (const [latB, lonB] of samplesB) {
+            if (haversineMeters(latA, lonA, latB, lonB) < thresholdM) { hitA++; break; }
+        }
+    }
+
+    let hitB = 0;
+    for (const [latB, lonB] of samplesB) {
+        for (const [latA, lonA] of samplesA) {
+            if (haversineMeters(latB, lonB, latA, lonA) < thresholdM) { hitB++; break; }
+        }
+    }
+
+    return {
+        coverageA: hitA / samplesA.length,
+        coverageB: hitB / samplesB.length,
+    };
+}
+
 function numDiff(a: number, b: number, fmt: (n: number) => string): React.ReactNode {
     const diff = b - a;
     if (Math.abs(diff) < 0.001) return <Typography variant="body2" color="text.secondary">—</Typography>;
@@ -749,7 +826,7 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
 
     const [hoverPctA, setHoverPctA] = useState<number | null>(null);
     const [hoverPctB, setHoverPctB] = useState<number | null>(null);
-    const [elevChartMode, setElevChartMode] = useState<'percent' | 'distance'>('percent');
+    const [elevChartMode, setElevChartMode] = useState<'percent' | 'distance'>('distance');
     const [userPos, setUserPos] = useState<[number, number] | null>(null);
 
     useEffect(() => {
@@ -796,6 +873,12 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
         if (!userPos || !coordsB || coordsB.length === 0) return null;
         return haversineMeters(userPos[0], userPos[1], coordsB[0][1], coordsB[0][0]) / 1000;
     }, [userPos, coordsB]);
+
+    // Route similarity: fraction of each trail's route within 25m of the other
+    const similarity = useMemo(() => {
+        if (!coordsA || !coordsB) return null;
+        return computeRouteSimilarity(coordsA, coordsB);
+    }, [coordsA, coordsB]);
 
     const bothLoading = loadingA || loadingB;
     const hasBoth = !!trailA && !!trailB;
@@ -1015,6 +1098,18 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
                                                 : (geoLoadingB ? <CircularProgress size={14} /> : <Typography variant="body2" color="text.disabled">—</Typography>)}
                                         />
                                     )}
+                                    <StatRow
+                                        label={t('compare.sharedRoute')}
+                                        valA={similarity
+                                            ? <Typography variant="body2">{fmtPct(similarity.coverageA * 100)}</Typography>
+                                            : (geoLoadingA || geoLoadingB ? <CircularProgress size={14} /> : <Typography variant="body2" color="text.disabled">—</Typography>)}
+                                        diff={similarity
+                                            ? numDiff(similarity.coverageA * 100, similarity.coverageB * 100, fmtPct)
+                                            : <Typography variant="body2" color="text.disabled">—</Typography>}
+                                        valB={similarity
+                                            ? <Typography variant="body2">{fmtPct(similarity.coverageB * 100)}</Typography>
+                                            : (geoLoadingA || geoLoadingB ? <CircularProgress size={14} /> : <Typography variant="body2" color="text.disabled">—</Typography>)}
+                                    />
                                 </TableBody>
                             </Table>
                         </Box>
