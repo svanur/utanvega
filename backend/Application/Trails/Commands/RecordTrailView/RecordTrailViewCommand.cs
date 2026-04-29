@@ -20,7 +20,7 @@ public class RecordTrailViewCommandHandler : IRequestHandler<RecordTrailViewComm
     public async Task<bool> Handle(RecordTrailViewCommand request, CancellationToken cancellationToken)
     {
         var trailId = await _context.Trails
-            .Where(t => t.Slug == request.Slug && t.Status == TrailStatus.Published)
+            .Where(t => t.Slug == request.Slug && (t.Status == TrailStatus.Published || t.Status == TrailStatus.RaceOnly))
             .Select(t => t.Id)
             .FirstOrDefaultAsync(cancellationToken);
 

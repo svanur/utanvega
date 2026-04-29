@@ -55,6 +55,7 @@ const trailStatuses = [
     { value: 'Flagged', label: 'Flagged' },
     { value: 'Archived', label: 'Archived' },
     { value: 'Deleted', label: 'Deleted' },
+    { value: 'RaceOnly', label: 'Race Only' },
 ];
 
 const difficulties = [

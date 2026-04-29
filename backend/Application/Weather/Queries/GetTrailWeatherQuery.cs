@@ -96,7 +96,7 @@ public class GetTrailWeatherQueryHandler : IRequestHandler<GetTrailWeatherQuery,
 
         var trail = await _context.Trails
             .AsNoTracking()
-            .FirstOrDefaultAsync(t => t.Slug == request.Slug && t.Status == TrailStatus.Published, cancellationToken);
+            .FirstOrDefaultAsync(t => t.Slug == request.Slug && (t.Status == TrailStatus.Published || t.Status == TrailStatus.RaceOnly), cancellationToken);
 
         if (trail?.GpxData == null)
             return null;

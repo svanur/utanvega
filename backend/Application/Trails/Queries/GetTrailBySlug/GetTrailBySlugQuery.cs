@@ -34,7 +34,7 @@ public class GetTrailBySlugQueryHandler : IRequestHandler<GetTrailBySlugQuery, T
             .Include(t => t.TrailTags)
                 .ThenInclude(tt => tt.Tag)
             .AsNoTracking()
-            .FirstOrDefaultAsync(t => t.Slug == request.Slug && t.Status == TrailStatus.Published, cancellationToken);
+            .FirstOrDefaultAsync(t => t.Slug == request.Slug && (t.Status == TrailStatus.Published || t.Status == TrailStatus.RaceOnly), cancellationToken);
 
         if (trail == null)
             return null;
