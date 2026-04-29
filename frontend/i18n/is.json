@@ -715,6 +715,7 @@
         "noRaces": "Engin hlaup skráð enn fyrir þessa keppni.",
         "notFound": "Keppni fannst ekki",
         "backToRaces": "Til baka í keppni",
+        "wereYouLookingFor": "Varstu að leita að einhverju af þessum?",
         "viewTrail": "Skoða leið",
         "cutoffHours_one": "{{count}} klukkustund hámark",
         "cutoffHours_other": "{{count}} klukkustundir hámark",

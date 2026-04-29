@@ -715,6 +715,7 @@
         "noRaces": "No races listed yet for this competition.",
         "notFound": "Competition not found",
         "backToRaces": "Back to races",
+        "wereYouLookingFor": "Were you looking for one of these?",
         "viewTrail": "View trail",
         "cutoffHours_one": "{{count}} hour cutoff",
         "cutoffHours_other": "{{count}} hours cutoff",

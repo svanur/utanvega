@@ -180,7 +180,11 @@ function LostRunnerSvg() {
     );
 }
 
-export default function LostRunner() {
+export default function LostRunner({ message, buttonLabel, onBack }: {
+    message?: string;
+    buttonLabel?: string;
+    onBack?: () => void;
+}) {
     const navigate = useNavigate();
     const { i18n, t } = useTranslation();
 
@@ -218,16 +222,16 @@ export default function LostRunner() {
                 color="text.disabled"
                 sx={{ mt: 1 }}
             >
-                {t('trail.notFound')}
+                {message ?? t('trail.notFound')}
             </Typography>
 
             <Button
                 variant="contained"
                 startIcon={<HomeIcon />}
-                onClick={() => navigate('/')}
+                onClick={() => onBack ? onBack() : navigate('/')}
                 sx={{ mt: 3, borderRadius: 3, textTransform: 'none', px: 3 }}
             >
-                {t('trail.backToTrails')}
+                {buttonLabel ?? t('trail.backToTrails')}
             </Button>
         </Box>
     );

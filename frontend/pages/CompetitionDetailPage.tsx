@@ -32,8 +32,9 @@ import TerrainIcon from '@mui/icons-material/Terrain';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
 import Layout from '../components/Layout';
 import RunningLoader from '../components/RunningLoader';
+import LostRunner from '../components/LostRunner';
 import WeatherCard from '../components/WeatherCard';
-import { useCompetitionBySlug } from '../hooks/useCompetitions';
+import { useCompetitions, useCompetitionBySlug } from '../hooks/useCompetitions';
 import type { RaceDto, ScheduleRule } from '../hooks/useCompetitions';
 import { useTrailWeather } from '../hooks/useTrails';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
@@ -132,6 +133,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     const { slug } = useParams<{ slug: string }>();
     const { t } = useTranslation();
     const { competition, loading, error } = useCompetitionBySlug(slug);
+    const { competitions, loading: competitionsLoading } = useCompetitions();
     const navigate = useNavigate();
     const theme = useTheme();
     const { isEnabled } = useFeatureFlags();
@@ -168,16 +170,55 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     }
 
     if (error || !competition) {
+        const normalize = (s: string) =>
+            s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+        const slugWords = (slug ?? '').split('-').filter(w => w.length > 2);
+        const suggestions = competitionsLoading ? [] : competitions
+            .filter(c => c.status !== 'Hidden' && slugWords.some(w => normalize(c.name).includes(w)))
+            .slice(0, 6);
+
         return (
             <Layout mode={mode} onToggleMode={onToggleMode}>
-                <Container maxWidth="md" sx={{ py: 4 }}>
-                    <Alert severity="error" sx={{ mb: 2 }}>
-                        {error || t('races.notFound')}
-                    </Alert>
-                    <Button startIcon={<ArrowBackIcon />} onClick={() => navigate(-1)}>
-                        {t('races.backToRaces')}
-                    </Button>
-                </Container>
+                <LostRunner
+                    message={t('races.notFound')}
+                    buttonLabel={t('races.backToRaces')}
+                    onBack={() => navigate('/races')}
+                />
+                {suggestions.length > 0 && (
+                    <Container maxWidth="md" sx={{ mt: 2, mb: 4 }}>
+                        <Typography variant="h6" gutterBottom sx={{ textAlign: 'center' }}>
+                            {t('races.wereYouLookingFor')}
+                        </Typography>
+                        <Stack spacing={1}>
+                            {suggestions.map(c => (
+                                <Paper
+                                    key={c.id}
+                                    elevation={1}
+                                    sx={{
+                                        p: 2,
+                                        cursor: 'pointer',
+                                        '&:hover': { bgcolor: 'action.hover' },
+                                        borderRadius: 2,
+                                    }}
+                                    onClick={() => navigate(`/races/${c.slug}`)}
+                                >
+                                    <Stack direction="row" alignItems="center" justifyContent="space-between">
+                                        <Box>
+                                            <Typography variant="subtitle1" fontWeight="bold">{c.name}</Typography>
+                                            <Stack direction="row" spacing={1} mt={0.5} flexWrap="wrap">
+                                                {c.locationName && (
+                                                    <Chip label={c.locationName} size="small" variant="outlined" />
+                                                )}
+                                                <Chip label={t('races.raceCount', { count: c.raceCount })} size="small" color="primary" variant="outlined" />
+                                            </Stack>
+                                        </Box>
+                                        <Typography variant="body2" color="primary">→</Typography>
+                                    </Stack>
+                                </Paper>
+                            ))}
+                        </Stack>
+                    </Container>
+                )}
             </Layout>
         );
     }
