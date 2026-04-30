@@ -30,6 +30,7 @@ import TimerIcon from '@mui/icons-material/Timer';
 import StraightenIcon from '@mui/icons-material/Straighten';
 import TerrainIcon from '@mui/icons-material/Terrain';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
+import ShareButtons from '../components/ShareButtons';
 import Layout from '../components/Layout';
 import RunningLoader from '../components/RunningLoader';
 import LostRunner from '../components/LostRunner';
@@ -344,32 +345,31 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                     )}
 
                     {/* Row 6: Action buttons */}
-                    {(competition.registrationUrl || competition.organizerWebsite) && (
-                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mt: 2.5 }}>
-                            {competition.registrationUrl && (
-                                <Button
-                                    variant="contained"
-                                    color="primary"
-                                    endIcon={<OpenInNewIcon />}
-                                    onClick={() => window.open(competition.registrationUrl!, '_blank', 'noopener')}
-                                    sx={{ textTransform: 'none' }}
-                                >
-                                    {t('races.register')}
-                                </Button>
-                            )}
-                            {competition.organizerWebsite && (
-                                <Button
-                                    variant="outlined"
-                                    size="small"
-                                    endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
-                                    onClick={() => window.open(competition.organizerWebsite!, '_blank', 'noopener')}
-                                    sx={{ textTransform: 'none' }}
-                                >
-                                    {t('races.organizerSite')}
-                                </Button>
-                            )}
-                        </Stack>
-                    )}
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mt: 2.5 }} alignItems={{ sm: 'center' }}>
+                        {competition.registrationUrl && (
+                            <Button
+                                variant="contained"
+                                color="primary"
+                                endIcon={<OpenInNewIcon />}
+                                onClick={() => window.open(competition.registrationUrl!, '_blank', 'noopener')}
+                                sx={{ textTransform: 'none' }}
+                            >
+                                {t('races.register')}
+                            </Button>
+                        )}
+                        {competition.organizerWebsite && (
+                            <Button
+                                variant="outlined"
+                                size="small"
+                                endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
+                                onClick={() => window.open(competition.organizerWebsite!, '_blank', 'noopener')}
+                                sx={{ textTransform: 'none' }}
+                            >
+                                {t('races.organizerSite')}
+                            </Button>
+                        )}
+                        {isEnabled('share_trail') && <ShareButtons title={competition.name} />}
+                    </Stack>
                 </Paper>
 
                 {/* Races section */}
