@@ -637,7 +637,7 @@
             "timeHelp": "t.d. 1:30:00 eða 55:00",
             "prediction": "Spá",
             "predictedTime": "Lokatími",
-            "predictedPace": "Lokahraði",
+            "predictedPace": "Meðalraði(pace)",
             "difference": "Mismunur",
             "flatPace": "Jafngildur hraði á sléttu",
             "comparison": "Munur á stígum",

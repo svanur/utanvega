@@ -55,6 +55,9 @@ const PRESETS = [
 const MI_TO_KM = 1.60934;
 const FT_TO_M = 0.3048;
 
+/** Accept both '.' and ',' as decimal separator (common on Icelandic/European keyboards). */
+const parseDecimal = (s: string): number => parseFloat(s.replace(',', '.'));
+
 type TerrainType = 'road' | 'gravel' | 'trail' | 'technical';
 
 const TERRAIN_FACTORS: Record<TerrainType, number> = {
@@ -114,7 +117,7 @@ export default function PaceCalculator() {
 
     const compute = useCallback((changed: Field, pVal: string, dVal: string, tVal: string) => {
         const pace = parseTime(pVal);
-        const dist = parseFloat(dVal) || null;
+        const dist = parseDecimal(dVal) || null;
         const time = parseTime(tVal);
 
         if (changed === 'time' || changed === 'pace') {
@@ -157,7 +160,7 @@ export default function PaceCalculator() {
     const handleUnitToggle = (_: React.MouseEvent<HTMLElement>, newUnit: 'km' | 'mi' | null) => {
         if (!newUnit) return;
         const pace = parseTime(paceStr);
-        const dist = parseFloat(distanceStr) || null;
+        const dist = parseDecimal(distanceStr) || null;
 
         if (newUnit === 'mi' && unit === 'km') {
             if (dist) setDistanceStr((dist / MI_TO_KM).toFixed(2));
@@ -219,7 +222,7 @@ export default function PaceCalculator() {
     };
 
     const stepDistance = (direction: 1 | -1) => {
-        const current = parseFloat(distanceStr) || 0;
+        const current = parseDecimal(distanceStr) || 0;
         const stepped = Math.max(0, current + direction);
         const newDist = stepped % 1 === 0 ? stepped.toString() : stepped.toFixed(2);
         setDistanceStr(newDist);
@@ -244,7 +247,7 @@ export default function PaceCalculator() {
     // Trail-adjusted time calculation
     const trailAdjusted = useMemo(() => {
         const flatTime = parseTime(timeStr);
-        const dist = parseFloat(distanceStr) || null;
+        const dist = parseDecimal(distanceStr) || null;
         const elevGain = parseInt(elevGainStr) || 0;
         const elevGainMeters = unit === 'mi' ? elevGain * FT_TO_M : elevGain;
 
@@ -269,7 +272,7 @@ export default function PaceCalculator() {
 
     // Computed splits display
     const pace = parseTime(paceStr);
-    const dist = parseFloat(distanceStr) || null;
+    const dist = parseDecimal(distanceStr) || null;
     const splits: { label: string; time: string }[] = [];
     if (pace && dist && dist > 1) {
         const marathonKm = unit === 'mi' ? 42.195 / MI_TO_KM : 42.195;
