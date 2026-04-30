@@ -30,6 +30,16 @@ import {
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import StraightenIcon from '@mui/icons-material/Straighten';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import TrendingDownIcon from '@mui/icons-material/TrendingDown';
+import TerrainIcon from '@mui/icons-material/Terrain';
+import TimerIcon from '@mui/icons-material/Timer';
+import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
+import NatureIcon from '@mui/icons-material/Nature';
+import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
+import MyLocationIcon from '@mui/icons-material/MyLocation';
+import JoinInnerIcon from '@mui/icons-material/JoinInner';
 import { MapContainer, TileLayer, Polyline, CircleMarker, useMap, LayersControl } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import type L from 'leaflet';
@@ -647,12 +657,14 @@ function CompareMap({
 
 function StatRow({
     label,
+    icon,
     valA,
     diff,
     valB,
     loading,
 }: {
     label: string;
+    icon?: React.ReactNode;
     valA: React.ReactNode;
     diff: React.ReactNode;
     valB: React.ReactNode;
@@ -662,18 +674,33 @@ function StatRow({
     if (loading) {
         return (
             <TableRow>
-                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.8rem' }}>{label}</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.8rem', display: { xs: 'none', sm: 'table-cell' } }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, '& svg': { fontSize: 15, opacity: 0.7 } }}>
+                        {icon}{label}
+                    </Box>
+                </TableCell>
                 <TableCell><CircularProgress size={14} /></TableCell>
-                <TableCell />
+                <TableCell sx={{ textAlign: 'center' }}>
+                    <Box sx={{ display: { xs: 'flex', sm: 'none' }, justifyContent: 'center', color: 'text.secondary' }}>{icon}</Box>
+                </TableCell>
                 <TableCell><CircularProgress size={14} /></TableCell>
             </TableRow>
         );
     }
     return (
         <TableRow sx={{ '&:last-child td': { border: 0 }, '&:hover': { bgcolor: alpha(theme.palette.action.hover, 0.5) } }}>
-            <TableCell sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.8rem', py: 1 }}>{label}</TableCell>
+            {/* Label — desktop only */}
+            <TableCell sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.8rem', py: 1, display: { xs: 'none', sm: 'table-cell' } }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, '& svg': { fontSize: 15, opacity: 0.7 } }}>
+                    {icon}{label}
+                </Box>
+            </TableCell>
             <TableCell sx={{ py: 1 }}>{valA}</TableCell>
-            <TableCell sx={{ py: 1, textAlign: 'center' }}>{diff}</TableCell>
+            {/* Diff on desktop, icon on mobile */}
+            <TableCell sx={{ py: 1, textAlign: 'center', width: { xs: 32, sm: 'auto' } }}>
+                <Box sx={{ display: { xs: 'none', sm: 'block' } }}>{diff}</Box>
+                <Box sx={{ display: { xs: 'flex', sm: 'none' }, justifyContent: 'center', color: 'text.secondary', '& svg': { fontSize: 16 } }}>{icon}</Box>
+            </TableCell>
             <TableCell sx={{ py: 1 }}>{valB}</TableCell>
         </TableRow>
     );
@@ -999,26 +1026,30 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
                             {t('compare.stats')}
                         </Typography>
                         <Box sx={{ overflowX: 'auto' }}>
-                            <Table size="small" sx={{ minWidth: 380 }}>
+                            <Table size="small" sx={{ minWidth: { xs: 0, sm: 380 } }}>
                                 <TableHead>
                                     <TableRow sx={{ bgcolor: alpha(theme.palette.action.hover, 0.25), borderBottom: `1px solid ${theme.palette.divider}` }}>
-                                        <TableCell sx={{ fontWeight: 700, width: '30%' }}></TableCell>
-                                        <TableCell sx={{ fontWeight: 700, color: COLOR_A, width: '25%' }}>
+                                        {/* Label col — desktop only */}
+                                        <TableCell sx={{ fontWeight: 700, width: '30%', display: { xs: 'none', sm: 'table-cell' } }}></TableCell>
+                                        <TableCell sx={{ fontWeight: 700, color: COLOR_A, width: { xs: '44%', sm: '25%' } }}>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                                 <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: COLOR_A, flexShrink: 0 }} />
-                                                <Typography variant="body2" fontWeight={700} noWrap sx={{ maxWidth: 140 }}>
+                                                <Typography variant="body2" fontWeight={700} noWrap sx={{ maxWidth: { xs: 100, sm: 140 } }}>
                                                     {slugA ? (trailA?.name ?? '…') : t('compare.trailA')}
                                                 </Typography>
                                             </Box>
                                         </TableCell>
-                                        <TableCell sx={{ fontWeight: 700, textAlign: 'center', width: '20%', color: 'text.secondary' }}>
-                                            <Tooltip title={t('compare.diffTooltip')} placement="top" arrow>
-                                                <Box component="span" sx={{ cursor: 'help', borderBottom: '1px dashed', borderColor: 'text.disabled' }}>
-                                                    {t('compare.diff')}
-                                                </Box>
-                                            </Tooltip>
+                                        {/* Diff header on desktop, compact spacer on mobile */}
+                                        <TableCell sx={{ fontWeight: 700, textAlign: 'center', width: { xs: '12%', sm: '20%' }, color: 'text.secondary' }}>
+                                            <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+                                                <Tooltip title={t('compare.diffTooltip')} placement="top" arrow>
+                                                    <Box component="span" sx={{ cursor: 'help', borderBottom: '1px dashed', borderColor: 'text.disabled' }}>
+                                                        {t('compare.diff')}
+                                                    </Box>
+                                                </Tooltip>
+                                            </Box>
                                         </TableCell>
-                                        <TableCell sx={{ fontWeight: 700, color: COLOR_B, width: '25%' }}>
+                                        <TableCell sx={{ fontWeight: 700, color: COLOR_B, width: { xs: '44%', sm: '25%' } }}>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                                 <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: COLOR_B, flexShrink: 0 }} />
                                                 <Typography variant="body2" fontWeight={700} noWrap sx={{ maxWidth: 140 }}>
@@ -1031,6 +1062,7 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
                                 <TableBody>
                                     <StatRow
                                         label={t('compare.distance')}
+                                        icon={<StraightenIcon />}
                                         valA={trailA ? <Typography variant="body2">{fmtKm(trailA.length)}</Typography> : null}
                                         diff={trailA && trailB ? numDiff(trailA.length, trailB.length, v => fmtKm(v)) : null}
                                         valB={trailB ? <Typography variant="body2">{fmtKm(trailB.length)}</Typography> : null}
@@ -1038,6 +1070,7 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
                                     />
                                     <StatRow
                                         label={t('compare.elevationGain')}
+                                        icon={<TrendingUpIcon />}
                                         valA={trailA ? <Typography variant="body2">{fmtM(trailA.elevationGain)}</Typography> : null}
                                         diff={trailA && trailB ? numDiff(trailA.elevationGain, trailB.elevationGain, fmtM) : null}
                                         valB={trailB ? <Typography variant="body2">{fmtM(trailB.elevationGain)}</Typography> : null}
@@ -1045,6 +1078,7 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
                                     />
                                     <StatRow
                                         label={t('compare.elevationLoss')}
+                                        icon={<TrendingDownIcon />}
                                         valA={trailA ? <Typography variant="body2">{fmtM(trailA.elevationLoss)}</Typography> : null}
                                         diff={trailA && trailB ? numDiff(trailA.elevationLoss, trailB.elevationLoss, fmtM) : null}
                                         valB={trailB ? <Typography variant="body2">{fmtM(trailB.elevationLoss)}</Typography> : null}
@@ -1052,12 +1086,14 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
                                     />
                                     <StatRow
                                         label={t('compare.maxElevation')}
+                                        icon={<TerrainIcon />}
                                         valA={maxEleA != null ? <Typography variant="body2">{fmtM(maxEleA)}</Typography> : (geoLoadingA ? <CircularProgress size={14} /> : <Typography variant="body2" color="text.disabled">—</Typography>)}
                                         diff={maxEleA != null && maxEleB != null ? numDiff(maxEleA, maxEleB, fmtM) : <Typography variant="body2" color="text.disabled">—</Typography>}
                                         valB={maxEleB != null ? <Typography variant="body2">{fmtM(maxEleB)}</Typography> : (geoLoadingB ? <CircularProgress size={14} /> : <Typography variant="body2" color="text.disabled">—</Typography>)}
                                     />
                                     <StatRow
                                         label={t('compare.estTime')}
+                                        icon={<TimerIcon />}
                                         valA={trailA ? <Typography variant="body2">{estimateDuration(trailA.length, trailA.elevationGain, trailA.activityType)}</Typography> : null}
                                         diff={<Typography variant="body2" color="text.disabled">—</Typography>}
                                         valB={trailB ? <Typography variant="body2">{estimateDuration(trailB.length, trailB.elevationGain, trailB.activityType)}</Typography> : null}
@@ -1065,6 +1101,7 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
                                     />
                                     <StatRow
                                         label={t('compare.difficulty')}
+                                        icon={<FitnessCenterIcon />}
                                         valA={trailA ? <Chip label={trailA.difficulty} size="small" variant="outlined" /> : null}
                                         diff={trailA && trailB ? catDiff(trailA.difficulty, trailB.difficulty, t) : null}
                                         valB={trailB ? <Chip label={trailB.difficulty} size="small" variant="outlined" /> : null}
@@ -1072,6 +1109,7 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
                                     />
                                     <StatRow
                                         label={t('compare.trailType')}
+                                        icon={<NatureIcon />}
                                         valA={trailA ? <Typography variant="body2">{t(`trail.${trailA.trailType.charAt(0).toLowerCase() + trailA.trailType.slice(1)}`) || trailA.trailType}</Typography> : null}
                                         diff={trailA && trailB ? catDiff(trailA.trailType, trailB.trailType, t) : null}
                                         valB={trailB ? <Typography variant="body2">{t(`trail.${trailB.trailType.charAt(0).toLowerCase() + trailB.trailType.slice(1)}`) || trailB.trailType}</Typography> : null}
@@ -1079,6 +1117,7 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
                                     />
                                     <StatRow
                                         label={t('compare.activity')}
+                                        icon={<DirectionsRunIcon />}
                                         valA={trailA ? <Typography variant="body2">{trailA.activityType}</Typography> : null}
                                         diff={trailA && trailB ? catDiff(trailA.activityType, trailB.activityType, t) : null}
                                         valB={trailB ? <Typography variant="body2">{trailB.activityType}</Typography> : null}
@@ -1087,6 +1126,7 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
                                     {userPos && (
                                         <StatRow
                                             label={t('compare.distFromMe')}
+                                            icon={<MyLocationIcon />}
                                             valA={distToTrailA != null
                                                 ? <Typography variant="body2">{fmtKm(distToTrailA * 1000)}</Typography>
                                                 : (geoLoadingA ? <CircularProgress size={14} /> : <Typography variant="body2" color="text.disabled">—</Typography>)}
@@ -1100,6 +1140,7 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
                                     )}
                                     <StatRow
                                         label={t('compare.sharedRoute')}
+                                        icon={<JoinInnerIcon />}
                                         valA={similarity
                                             ? <Typography variant="body2">{fmtPct(similarity.coverageA * 100)}</Typography>
                                             : (geoLoadingA || geoLoadingB ? <CircularProgress size={14} /> : <Typography variant="body2" color="text.disabled">—</Typography>)}
