@@ -782,5 +782,58 @@
             "locations": "Staðsetningar",
             "races": "Komandi keppni"
         }
+    },
+    "common": {
+        "reset": "Núllstilla",
+        "cancel": "Hætta",
+        "delete": "Eyða",
+        "actions": "Aðgerðir",
+        "save": "Vista"
+    },
+    "activity": {
+        "logActivity": "Skrá æfingu",
+        "selectTrail": "Veldu leið",
+        "time": "Tími",
+        "notes": "Skýringar",
+        "notesPlaceholder": "Hvernig gekk? Einhverjar skýringar fyrir næst?",
+        "makePublic": "Gera opinbera",
+        "public": "Opin",
+        "private": "Einka",
+        "trail": "Leið",
+        "visibility": "Sýnileiki",
+        "confirmDelete": "Eyða æfingu?",
+        "deleteWarning": "Þessi æfing verður eytt til frambúðar.",
+        "invalidTime": "Ógildur tímasnið",
+        "save": "Vista æfingu"
+    },
+    "activities": {
+        "title": "Æfingar",
+        "noActivities": "Engar æfingar skráðar ennþá. Skráðu fyrstu æfinguna þína!"
+    },
+    "profile": {
+        "title": "Prófíll",
+        "recentActivities": "Nýlegar æfingar",
+        "viewAll": "Sjá allt",
+        "signedInAs": "Skráð(ur) inn sem {{name}}",
+        "tickedTrails": "Markverðar leiðir",
+        "noTicks": "Engar markverðar leiðir ennþá"
+    },
+    "auth": {
+        "signIn": "Skrá inn",
+        "signOut": "Skrá út",
+        "continueWithGoogle": "Halda áfram með Google",
+        "orEmail": "Eða nota tölvupóst",
+        "emailPlaceholder": "Sláðu inn netfangið þitt",
+        "sendMagicLink": "Senda galdurhlekk",
+        "magicLinkSent": "Athugaðu tölvupóstinn þinn fyrir galdurhlekk til að skrá þig inn",
+        "close": "Loka"
+    },
+    "trail": {
+        "backToTrails": "Til baka til leiða",
+        "backToProfile": "Til baka til prófíls",
+        "tick": "Marka sem markverða",
+        "ticked": "Markverð",
+        "untick": "Afmarka sem markverða",
+        "personalBest": "PB"
     }
 }

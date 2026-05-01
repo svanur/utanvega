@@ -12,6 +12,7 @@ import { useFeatureFlags } from './hooks/useFeatureFlags';
 import InstallBanner from './components/InstallBanner';
 import { useAdminMode } from './hooks/useAdminMode';
 import GandalfEntrance from './components/GandalfEntrance';
+import { AuthProvider } from './hooks/useAuth';
 
 // Lazy-loaded pages (not needed on initial load)
 const TrailDetailsPage = lazy(() => import('./pages/TrailDetailsPage'));
@@ -27,10 +28,12 @@ const RaceCalendarPage = lazy(() => import('./pages/RaceCalendarPage'));
 const CompetitionDetailPage = lazy(() => import('./pages/CompetitionDetailPage'));
 const WelcomePage = lazy(() => import('./pages/WelcomePage'));
 const TrailComparePage = lazy(() => import('./pages/TrailComparePage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const ActivitiesPage = lazy(() => import('./pages/ActivitiesPage'));
 
 function PageLoader() {
     return (
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
             <CircularProgress />
         </Box>
     );
@@ -66,8 +69,9 @@ export default function App() {
         <ThemeProvider theme={theme}>
             <CssBaseline />
             <ErrorBoundary>
-            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-                <Suspense fallback={<PageLoader />}>
+                <AuthProvider>
+                    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                        <Suspense fallback={<PageLoader />}>
                 <Routes>
                     <Route 
                         path="/" 
@@ -143,12 +147,21 @@ export default function App() {
                         path="/velkomin" 
                         element={<WelcomePage mode={mode} onToggleMode={handleToggleMode} forceLang="is" />} 
                     />
+                    {isEnabled('user_login', false) && <Route
+                        path="/profile"
+                        element={<ProfilePage mode={mode} onToggleMode={handleToggleMode} />}
+                    />}
+                    {isEnabled('trail_activities', false) && <Route
+                        path="/activities"
+                        element={<ActivitiesPage mode={mode} onToggleMode={handleToggleMode} />}
+                    />}
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
                 </Suspense>
                 {isEnabled('spotlight_search') && <SpotlightSearch />}
                 <InstallBanner />
-            </BrowserRouter>
+                    </BrowserRouter>
+                </AuthProvider>
             </ErrorBoundary>
             <EasterEggs activeEgg={activeEgg} onComplete={clearEgg} />
             <GandalfEntrance quote={gandalfQuote} onClose={dismissGandalf} />

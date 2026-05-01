@@ -782,5 +782,58 @@
             "locations": "Locations",
             "races": "Upcoming Races"
         }
+    },
+    "common": {
+        "reset": "Reset",
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "actions": "Actions",
+        "save": "Save"
+    },
+    "activity": {
+        "logActivity": "Log Activity",
+        "selectTrail": "Select trail",
+        "time": "Time",
+        "notes": "Notes",
+        "notesPlaceholder": "How did it go? Any notes for next time?",
+        "makePublic": "Make public",
+        "public": "Public",
+        "private": "Private",
+        "trail": "Trail",
+        "visibility": "Visibility",
+        "confirmDelete": "Delete activity?",
+        "deleteWarning": "This activity will be permanently deleted.",
+        "invalidTime": "Invalid time format",
+        "save": "Save activity"
+    },
+    "activities": {
+        "title": "Activities",
+        "noActivities": "No activities logged yet. Log your first trail activity!"
+    },
+    "profile": {
+        "title": "Profile",
+        "recentActivities": "Recent Activities",
+        "viewAll": "View all",
+        "signedInAs": "Signed in as {{name}}",
+        "tickedTrails": "Ticked Trails",
+        "noTicks": "No trails ticked yet"
+    },
+    "auth": {
+        "signIn": "Sign In",
+        "signOut": "Sign Out",
+        "continueWithGoogle": "Continue with Google",
+        "orEmail": "Or use email",
+        "emailPlaceholder": "Enter your email",
+        "sendMagicLink": "Send magic link",
+        "magicLinkSent": "Check your email for a magic link to sign in",
+        "close": "Close"
+    },
+    "trail": {
+        "backToTrails": "Back to Trails",
+        "backToProfile": "Back to Profile",
+        "tick": "Mark as ticked",
+        "ticked": "Ticked",
+        "untick": "Mark as unticked",
+        "personalBest": "PB"
     }
 }
