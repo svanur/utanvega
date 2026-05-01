@@ -2,6 +2,22 @@
     "common": {
         "reset": "Hreinsa"
     },
+    "auth": {
+        "signIn": "Skrá inn",
+        "signOut": "Skrá út",
+        "continueWithGoogle": "Halda áfram með Google",
+        "orEmail": "eða",
+        "emailPlaceholder": "Netfang",
+        "sendMagicLink": "Senda innskráningartengil",
+        "magicLinkSent": "Athugaðu tölvupóstinn! Við höfum sent þér innskráningartengil.",
+        "close": "Loka"
+    },
+    "profile": {
+        "title": "Prófíll",
+        "tickedTrails": "Kláraðar leiðir",
+        "noTicks": "Engar kláraðar leiðir enn. Merktu leiðir sem kláraðar á upplýsingasíðu þeirra.",
+        "signedInAs": "Innskráð/ur sem {{email}}"
+    },
     "loading": "Hleð leiðum...",
     "nav": {
         "locations": "Staðsetningar",
@@ -48,6 +64,9 @@
     "trail": {
         "backToTrails": "Til baka",
         "notFound": "Leið fannst ekki",
+        "tick": "Merkja sem kláraða ✓",
+        "ticked": "Klárað ✓",
+        "untick": "Afmerkja sem kláraða",
         "distance": "Vegalengd",
         "gain": "Hækkun",
         "loss": "Lækkun",
@@ -569,7 +588,7 @@
         "noToolsEnabled": "Engin hjálpartól eru virk.",
         "paceCalc": {
             "title": "Hraðareiknir",
-            "subtitle": "Sláðu inn tvö gildi til að reikna þriðja",
+            "subtitle": "Sláðu inn tvö gildi til að reikna það þriðja",
             "pace": "Hraði (mín/{{unit}})",
             "distance": "Vegalengd ({{unit}})",
             "time": "Tími",
@@ -601,7 +620,7 @@
             "adjustedSummaryTrail": "Á {{trail}} ({{terrain}}, ↑{{elevation}}{{elevUnit}}), er leiðréttur tími {{time}} á {{pace}}/km.",
             "terrainLabel": "yfirborð",
             "climbLabel": "klifur",
-            "pickTrail": "Veldu leið(ef þú vilt)",
+            "pickTrail": "Veldu leið (ef þú vilt)",
             "searchTrail": "Leita að leið..."
         },
         "racePredictor": {

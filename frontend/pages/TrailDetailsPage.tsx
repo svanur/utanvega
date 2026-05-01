@@ -40,6 +40,8 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
@@ -61,6 +63,9 @@ import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import WeatherCard from '../components/WeatherCard';
 import OfflineButton from '../components/OfflineButton';
 import { TrailCard } from '../components/TrailCard';
+import { useAuth } from '../hooks/useAuth';
+import { useTickedTrails } from '../hooks/useTickedTrails';
+import LoginModal from '../components/LoginModal';
 
 const getActivityIcon = (type: string) => {
     switch (type.toLowerCase()) {
@@ -107,6 +112,9 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     const { trails: allTrails } = useTrails();
     const { isFavorite, toggleFavorite } = useFavorites();
     const { addRecent } = useRecentlyViewed();
+    const { user } = useAuth();
+    const { isTicked, toggleTick } = useTickedTrails();
+    const [loginModalOpen, setLoginModalOpen] = useState(false);
     const { suggestions, loading: suggestionsLoading } = useTrailSuggestions(slug, !!error || (!loading && !trail));
     const [geometry, setGeometry] = useState<GeoJsonGeometry | null>(null);
     const [hoverPoint, setHoverPoint] = useState<{ lat: number; lng: number } | null>(null);
@@ -261,6 +269,17 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                         >
                             {isFavorite(trail.slug) ? <StarIcon /> : <StarBorderIcon />}
                         </IconButton>
+                        {isEnabled('user_login') && (
+                        <Tooltip title={isTicked(trail.slug) ? t('trail.untick') : t('trail.tick')}>
+                            <IconButton
+                                onClick={() => user ? toggleTick(trail.slug) : setLoginModalOpen(true)}
+                                color="success"
+                                sx={{ mt: 0.5 }}
+                            >
+                                {isTicked(trail.slug) ? <CheckCircleIcon /> : <CheckCircleOutlineIcon />}
+                            </IconButton>
+                        </Tooltip>
+                        )}
                     </Box>
                     
                     <Stack 
@@ -617,6 +636,9 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                     )}
                 </DialogContent>
             </Dialog>
+            {isEnabled('user_login') && (
+            <LoginModal open={loginModalOpen} onClose={() => setLoginModalOpen(false)} />
+            )}
         </Layout>
     );
 }

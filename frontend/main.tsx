@@ -26,14 +26,12 @@ const ReactQueryDevtools = import.meta.env.DEV
     : null;
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-    <React.StrictMode>
-        <QueryClientProvider client={queryClient}>
-            <App />
-            {ReactQueryDevtools && (
-                <React.Suspense fallback={null}>
-                    <ReactQueryDevtools initialIsOpen={false} />
-                </React.Suspense>
-            )}
-        </QueryClientProvider>
-    </React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+        <App />
+        {ReactQueryDevtools && (
+            <React.Suspense fallback={null}>
+                <ReactQueryDevtools initialIsOpen={false} />
+            </React.Suspense>
+        )}
+    </QueryClientProvider>
 );

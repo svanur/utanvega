@@ -12,6 +12,7 @@ import { useFeatureFlags } from './hooks/useFeatureFlags';
 import InstallBanner from './components/InstallBanner';
 import { useAdminMode } from './hooks/useAdminMode';
 import GandalfEntrance from './components/GandalfEntrance';
+import { AuthProvider } from './hooks/useAuth';
 
 // Lazy-loaded pages (not needed on initial load)
 const TrailDetailsPage = lazy(() => import('./pages/TrailDetailsPage'));
@@ -27,6 +28,7 @@ const RaceCalendarPage = lazy(() => import('./pages/RaceCalendarPage'));
 const CompetitionDetailPage = lazy(() => import('./pages/CompetitionDetailPage'));
 const WelcomePage = lazy(() => import('./pages/WelcomePage'));
 const TrailComparePage = lazy(() => import('./pages/TrailComparePage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 
 function PageLoader() {
     return (
@@ -65,6 +67,7 @@ export default function App() {
     return (
         <ThemeProvider theme={theme}>
             <CssBaseline />
+            <AuthProvider>
             <ErrorBoundary>
             <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                 <Suspense fallback={<PageLoader />}>
@@ -139,6 +142,12 @@ export default function App() {
                         element={<TrailComparePage mode={mode} onToggleMode={handleToggleMode} />} 
                     />
                     )}
+                    {isEnabled('user_login') && (
+                    <Route
+                        path="/profile"
+                        element={<ProfilePage mode={mode} onToggleMode={handleToggleMode} />}
+                    />
+                    )}
                     <Route 
                         path="/velkomin" 
                         element={<WelcomePage mode={mode} onToggleMode={handleToggleMode} forceLang="is" />} 
@@ -152,6 +161,7 @@ export default function App() {
             </ErrorBoundary>
             <EasterEggs activeEgg={activeEgg} onComplete={clearEgg} />
             <GandalfEntrance quote={gandalfQuote} onClose={dismissGandalf} />
+            </AuthProvider>
         </ThemeProvider>
     );
 }
