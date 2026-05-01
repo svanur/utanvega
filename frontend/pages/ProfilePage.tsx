@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Box, Typography, Button, Paper, Stack, Divider, Avatar,
@@ -20,7 +20,7 @@ export default function ProfilePage({ mode, onToggleMode }: Props) {
   const { t } = useTranslation();
   const { user, signOut, loading: authLoading } = useAuth();
   const { tickedSlugs, loading: tickLoading } = useTickedTrails();
-  const { trails } = useTrails();
+  const { trails } = useTrails(true); // Skip geolocation on profile page
 
   if (authLoading) {
     return (
@@ -33,8 +33,7 @@ export default function ProfilePage({ mode, onToggleMode }: Props) {
   }
 
   if (!user) {
-    navigate('/');
-    return null;
+    return <Navigate to="/" replace />;
   }
 
   const displayName = user.user_metadata?.full_name || user.email || '';

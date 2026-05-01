@@ -113,13 +113,14 @@ function writeTrailsCache(trails: Trail[]): void {
     }
 }
 
-export function useTrails() {
+export function useTrails(disableLocation?: boolean) {
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
     const [locationDenied, setLocationDenied] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
 
     const requestLocation = useCallback(() => {
+        if (disableLocation) return;
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
@@ -138,7 +139,7 @@ export function useTrails() {
                 }
             );
         }
-    }, []);
+    }, [disableLocation]);
 
     // Request location on mount
     useEffect(() => { requestLocation(); }, [requestLocation]);

@@ -142,7 +142,7 @@ export default function Layout({ children, mode, onToggleMode }: LayoutProps) {
                         </IconButton>
                     </Tooltip>
 
-                    {isEnabled('user_login') && <UserAvatar />}
+                    {isEnabled('user_login', false) && <UserAvatar />}
                 </Toolbar>
             </DynamicHeader>
 

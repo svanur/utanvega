@@ -17,8 +17,12 @@ export function useTickedTrails() {
       .from('UserTickedTrails')
       .select('TrailSlug')
       .eq('UserId', user.id)
-      .then(({ data }) => {
-        setTickedSlugs(new Set((data ?? []).map((r: { TrailSlug: string }) => r.TrailSlug)));
+      .then(({ data, error }) => {
+        if (error) {
+          console.error('Failed to fetch ticked trails:', error);
+        } else {
+          setTickedSlugs(new Set((data ?? []).map((r: { TrailSlug: string }) => r.TrailSlug)));
+        }
         setLoading(false);
       });
   }, [user]);
@@ -27,18 +31,29 @@ export function useTickedTrails() {
 
   const toggleTick = useCallback(async (slug: string) => {
     if (!user) return;
-    if (tickedSlugs.has(slug)) {
-      setTickedSlugs(prev => { const next = new Set(prev); next.delete(slug); return next; });
-      await supabase
-        .from('UserTickedTrails')
-        .delete()
-        .eq('UserId', user.id)
-        .eq('TrailSlug', slug);
-    } else {
-      setTickedSlugs(prev => new Set(prev).add(slug));
-      await supabase
-        .from('UserTickedTrails')
-        .insert({ UserId: user.id, TrailSlug: slug });
+    const wasTickedBefore = tickedSlugs.has(slug);
+    const previousSet = new Set(tickedSlugs);
+    
+    try {
+      if (wasTickedBefore) {
+        setTickedSlugs(prev => { const next = new Set(prev); next.delete(slug); return next; });
+        const { error } = await supabase
+          .from('UserTickedTrails')
+          .delete()
+          .eq('UserId', user.id)
+          .eq('TrailSlug', slug);
+        if (error) throw error;
+      } else {
+        setTickedSlugs(prev => new Set(prev).add(slug));
+        const { error } = await supabase
+          .from('UserTickedTrails')
+          .insert({ UserId: user.id, TrailSlug: slug });
+        if (error) throw error;
+      }
+    } catch (error) {
+      console.error('Failed to toggle tick:', error);
+      setTickedSlugs(previousSet); // Rollback on error
+      throw error;
     }
   }, [user, tickedSlugs]);
 

@@ -23,12 +23,15 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
   const handleGoogle = async () => {
     setLoadingGoogle(true);
     setError(null);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.origin },
-    });
-    if (error) {
-      setError(error.message);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: window.location.origin },
+      });
+      if (error) {
+        setError(error.message);
+      }
+    } finally {
       setLoadingGoogle(false);
     }
   };

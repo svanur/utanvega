@@ -269,7 +269,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                         >
                             {isFavorite(trail.slug) ? <StarIcon /> : <StarBorderIcon />}
                         </IconButton>
-                        {isEnabled('user_login') && (
+                        {isEnabled('user_login', false) && (
                         <Tooltip title={isTicked(trail.slug) ? t('trail.untick') : t('trail.tick')}>
                             <IconButton
                                 onClick={() => user ? toggleTick(trail.slug) : setLoginModalOpen(true)}
@@ -636,7 +636,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                     )}
                 </DialogContent>
             </Dialog>
-            {isEnabled('user_login') && (
+            {isEnabled('user_login', false) && (
             <LoginModal open={loginModalOpen} onClose={() => setLoginModalOpen(false)} />
             )}
         </Layout>

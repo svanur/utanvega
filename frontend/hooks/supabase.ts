@@ -7,4 +7,9 @@ if (!supabaseAnonKey) {
   console.warn('VITE_SUPABASE_ANON_KEY is missing. Please add it to your .env file.');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey || 'placeholder-key');
+export const supabase = createClient(supabaseUrl, supabaseAnonKey || 'placeholder-key', {
+  auth: {
+    detectSessionInUrl: true, // Let Supabase grab the hash before React Router clears it
+    persistSession: true,
+  },
+});

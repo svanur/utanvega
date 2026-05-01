@@ -57,7 +57,7 @@ export class QuoteService {
         { text: "Þar sem er vilji, þar er vegur." },
         { text: "The first one now, will later be last.", author: "Bob Dylan" },
         { text: "The present now will later be past.", author: "Bob Dylan" },
-        { text: "It's another day for you and me in paradise.", author: "Phil Colling" },
+        { text: "It's another day for you and me in paradise.", author: "Phil Collins" },
         { text: "Ekkert mál.", author: "Grýlurnar :)" },
         { text: "Sterkur og stór til fjalla fór." },
         { text: "Skjótur varstu vinur og vaskur í för." },

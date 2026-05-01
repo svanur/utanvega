@@ -142,7 +142,7 @@ export default function App() {
                         element={<TrailComparePage mode={mode} onToggleMode={handleToggleMode} />} 
                     />
                     )}
-                    {isEnabled('user_login') && (
+                    {isEnabled('user_login', false) && (
                     <Route
                         path="/profile"
                         element={<ProfilePage mode={mode} onToggleMode={handleToggleMode} />}
