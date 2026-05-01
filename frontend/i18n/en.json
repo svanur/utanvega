@@ -2,6 +2,22 @@
     "common": {
         "reset": "Reset"
     },
+    "auth": {
+        "signIn": "Sign in",
+        "signOut": "Sign out",
+        "continueWithGoogle": "Continue with Google",
+        "orEmail": "or",
+        "emailPlaceholder": "Email address",
+        "sendMagicLink": "Send magic link",
+        "magicLinkSent": "Check your email! We've sent you a magic link to sign in.",
+        "close": "Close"
+    },
+    "profile": {
+        "title": "Profile",
+        "tickedTrails": "Completed trails",
+        "noTicks": "No completed trails yet. Mark trails as done on their detail page.",
+        "signedInAs": "Signed in as {{email}}"
+    },
     "loading": "Loading trails...",
     "nav": {
         "locations": "Locations",
@@ -48,6 +64,9 @@
     "trail": {
         "backToTrails": "Back to Trails",
         "notFound": "Trail not found",
+        "tick": "Mark as done ✓",
+        "ticked": "Done ✓",
+        "untick": "Mark as not done",
         "distance": "Distance",
         "gain": "Gain",
         "loss": "Loss",

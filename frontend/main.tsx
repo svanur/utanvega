@@ -4,6 +4,22 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
 import { registerSW } from 'virtual:pwa-register';
 import './i18n/i18n';
+import { supabase } from './hooks/supabase';
+
+// Extract OAuth redirect tokens from hash before React Router clears it.
+// This allows Supabase to persist the session during client initialization.
+const hash = window.location.hash;
+if (hash.includes('access_token')) {
+  const params = new URLSearchParams(hash.substring(1));
+  const access_token = params.get('access_token');
+  const refresh_token = params.get('refresh_token') ?? '';
+  if (access_token) {
+    supabase.auth.setSession({ access_token, refresh_token }).then(({ error }) => {
+      if (error) console.error('[Auth] setSession error:', error);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    });
+  }
+}
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -26,14 +42,12 @@ const ReactQueryDevtools = import.meta.env.DEV
     : null;
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-    <React.StrictMode>
-        <QueryClientProvider client={queryClient}>
-            <App />
-            {ReactQueryDevtools && (
-                <React.Suspense fallback={null}>
-                    <ReactQueryDevtools initialIsOpen={false} />
-                </React.Suspense>
-            )}
-        </QueryClientProvider>
-    </React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+        <App />
+        {ReactQueryDevtools && (
+            <React.Suspense fallback={null}>
+                <ReactQueryDevtools initialIsOpen={false} />
+            </React.Suspense>
+        )}
+    </QueryClientProvider>
 );
