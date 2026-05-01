@@ -1,6 +1,10 @@
 {
     "common": {
-        "reset": "Hreinsa"
+        "reset": "Hreinsa",
+        "edit": "Breyta",
+        "delete": "Eyða",
+        "cancel": "Hætta við",
+        "actions": "Aðgerðir"
     },
     "auth": {
         "signIn": "Skrá inn",
@@ -16,13 +20,21 @@
         "title": "Prófíll",
         "tickedTrails": "Kláraðar leiðir",
         "noTicks": "Engar kláraðar leiðir enn. Merktu leiðir sem kláraðar á upplýsingasíðu þeirra.",
-        "signedInAs": "Innskráð/ur sem {{email}}"
+        "signedInAs": "Innskráð/ur sem {{email}}",
+        "manageTrails": "Stjórna mínum leiðum",
+        "myTrails": "Mínar leiðir",
+        "noTickedTrails": "Þú hefur ekki merkrt neinar leiðir enn.",
+        "addResults": "Bæta við niðurstöðu",
+        "editResults": "Breyta niðurstöðu",
+        "deleteResults": "Eyða niðurstöðu",
+        "confirmDelete": "Ertu viss um að þú viljir eyða þessari niðurstöðu?"
     },
     "loading": "Hleð leiðum...",
     "nav": {
         "locations": "Staðsetningar",
         "about": "Um",
         "races": "Keppni",
+        "activities": "Athöfn",
         "disclaimer": "Fyrirvari",
         "privacy": "Persónuvernd",
         "darkMode": "Skipta yfir í dimmt þema",

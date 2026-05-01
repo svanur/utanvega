@@ -28,8 +28,8 @@ const RaceCalendarPage = lazy(() => import('./pages/RaceCalendarPage'));
 const CompetitionDetailPage = lazy(() => import('./pages/CompetitionDetailPage'));
 const WelcomePage = lazy(() => import('./pages/WelcomePage'));
 const TrailComparePage = lazy(() => import('./pages/TrailComparePage'));
-const ProfilePage = lazy(() => import('./pages/ProfilePage'));
-const ActivitiesPage = lazy(() => import('./pages/ActivitiesPage'));
+const MyProfilePage = lazy(() => import('./pages/MyProfilePage'));
+const MyTrailsPage = lazy(() => import('./pages/MyTrailsPage'));
 
 function PageLoader() {
     return (
@@ -148,12 +148,12 @@ export default function App() {
                         element={<WelcomePage mode={mode} onToggleMode={handleToggleMode} forceLang="is" />} 
                     />
                     {isEnabled('user_login', false) && <Route
-                        path="/profile"
-                        element={<ProfilePage mode={mode} onToggleMode={handleToggleMode} />}
+                        path="/my/profile"
+                        element={<MyProfilePage mode={mode} onToggleMode={handleToggleMode} />}
                     />}
                     {isEnabled('trail_activities', false) && <Route
-                        path="/activities"
-                        element={<ActivitiesPage mode={mode} onToggleMode={handleToggleMode} />}
+                        path="/my/trails"
+                        element={<MyTrailsPage mode={mode} onToggleMode={handleToggleMode} />}
                     />}
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>

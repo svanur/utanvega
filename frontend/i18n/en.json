@@ -1,6 +1,10 @@
 {
     "common": {
-        "reset": "Reset"
+        "reset": "Reset",
+        "edit": "Edit",
+        "delete": "Delete",
+        "cancel": "Cancel",
+        "actions": "Actions"
     },
     "auth": {
         "signIn": "Sign in",
@@ -16,13 +20,21 @@
         "title": "Profile",
         "tickedTrails": "Completed trails",
         "noTicks": "No completed trails yet. Mark trails as done on their detail page.",
-        "signedInAs": "Signed in as {{email}}"
+        "signedInAs": "Signed in as {{email}}",
+        "manageTrails": "Manage My Trails",
+        "myTrails": "My Trails",
+        "noTickedTrails": "You haven't ticked any trails yet.",
+        "addResults": "Add Results",
+        "editResults": "Edit Results",
+        "deleteResults": "Delete Results",
+        "confirmDelete": "Are you sure you want to delete this result?"
     },
     "loading": "Loading trails...",
     "nav": {
         "locations": "Locations",
         "about": "About",
         "races": "Races",
+        "activities": "Activities",
         "disclaimer": "Disclaimer",
         "privacy": "Privacy",
         "darkMode": "Switch to dark mode",

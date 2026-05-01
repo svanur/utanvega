@@ -24,7 +24,7 @@ export default function UserAvatar() {
   };
 
   const handleProfile = () => {
-    navigate('/profile');
+    navigate('/my/profile');
     handleCloseMenu();
   };
 

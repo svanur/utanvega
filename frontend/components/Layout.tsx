@@ -115,8 +115,6 @@ export default function Layout({ children, mode, onToggleMode }: LayoutProps) {
 
                     <LanguageToggle />
 
-                    {isEnabled('user_login', false) && <UserAvatar />}
-
                     {!isMobile && isEnabled('spotlight_search') && (
                         <Tooltip title={t('spotlight.shortcutHint')}>
                             <IconButton
