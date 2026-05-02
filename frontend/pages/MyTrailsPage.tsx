@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Box, Button, Container, Paper, Stack, Typography, Table, TableBody, TableCell, TableContainer,
@@ -46,26 +46,28 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
     return map;
   }, [trails]);
 
-  // Get ticked trails with all their activities - call before any early returns
+  // Get ticked trails with their most recent activity - call before any early returns
   const tickedTrailsWithActivities = useMemo(() => {
     const trails = Array.from(tickedSlugs).map(slug => ({
       slug,
       name: trailNameMap[slug] || slug,
-      activities: activities.filter(a => a.TrailSlug === slug),
+      activities: activities.filter(a => a.TrailSlug === slug).sort((a, b) => {
+        const dateA = a.LogDate ? new Date(a.LogDate).getTime() : new Date(a.CreatedAt).getTime();
+        const dateB = b.LogDate ? new Date(b.LogDate).getTime() : new Date(b.CreatedAt).getTime();
+        return dateB - dateA; // Most recent first
+      }),
     })).sort((a, b) => a.name.localeCompare(b.name));
     
-    // Flatten to activity rows with trail info
-    const activityRows: Array<{ slug: string; name: string; activity: any }> = [];
+    // Show one row per trail with most recent activity
+    const activityRows: Array<{ slug: string; name: string; activity: any; activityCount: number }> = [];
     trails.forEach(trail => {
-      if (trail.activities.length === 0) {
-        // No activities yet - show one row with "Add Results" button
-        activityRows.push({ slug: trail.slug, name: trail.name, activity: null });
-      } else {
-        // Show one row per activity
-        trail.activities.forEach(act => {
-          activityRows.push({ slug: trail.slug, name: trail.name, activity: act });
-        });
-      }
+      const mostRecent = trail.activities.length > 0 ? trail.activities[0] : null;
+      activityRows.push({ 
+        slug: trail.slug, 
+        name: trail.name, 
+        activity: mostRecent,
+        activityCount: trail.activities.length
+      });
     });
     
     return activityRows;
@@ -187,20 +189,36 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
                 <TableHead>
                   <TableRow sx={{ bgcolor: 'action.hover' }}>
                     <TableCell>{t('activity.trail')}</TableCell>
+                    <TableCell align="center">{t('activity.date')}</TableCell>
                     <TableCell align="right">{t('activity.time')}</TableCell>
-                    <TableCell>{t('activity.notes')}</TableCell>
+                    <TableCell align="right">{t('activity.distance')}</TableCell>
+                    <TableCell align="right">{t('activity.elevationGain')}</TableCell>
                     <TableCell align="center">{t('common.actions')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {tickedTrailsWithActivities.map((item, idx) => (
                     <TableRow key={`${item.slug}-${idx}`}>
-                      <TableCell sx={{ fontWeight: 500 }}>{item.name}</TableCell>
+                      <TableCell sx={{ fontWeight: 500 }}>
+                        {item.activity && item.activityCount > 1 ? (
+                          <Link to={`/my/trails/${item.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                            {item.name} <Typography component="span" sx={{ fontSize: '0.8em', color: 'text.secondary' }}>({item.activityCount})</Typography>
+                          </Link>
+                        ) : (
+                          item.name
+                        )}
+                      </TableCell>
+                      <TableCell align="center">
+                        {item.activity?.LogDate || '-'}
+                      </TableCell>
                       <TableCell align="right" sx={{ fontFamily: 'monospace' }}>
                         {item.activity ? formatSeconds(item.activity.Time) : '-'}
                       </TableCell>
-                      <TableCell sx={{ maxWidth: 200, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {item.activity?.Notes || '-'}
+                      <TableCell align="right">
+                        {item.activity?.Distance ? `${item.activity.Distance.toFixed(1)} km` : '-'}
+                      </TableCell>
+                      <TableCell align="right">
+                        {item.activity?.ElevationGain ? `${item.activity.ElevationGain} m` : '-'}
                       </TableCell>
                       <TableCell align="center">
                         <Stack direction="row" spacing={0.5} justifyContent="center">
@@ -268,6 +286,14 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
             />
 
             <TextField
+              label={t('activity.date')}
+              type="date"
+              value={formLogDate}
+              onChange={(e) => setFormLogDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
+
+            <TextField
               label={t('activity.time')}
               value={formTimeStr}
               onChange={(e) => setFormTimeStr(e.target.value)}
@@ -291,14 +317,6 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
               value={formElevationGain !== null ? formElevationGain : ''}
               onChange={(e) => setFormElevationGain(e.target.value ? parseInt(e.target.value) : null)}
               helperText={t('activity.elevationUnit')}
-            />
-
-            <TextField
-              label={t('activity.date')}
-              type="date"
-              value={formLogDate}
-              onChange={(e) => setFormLogDate(e.target.value)}
-              InputLabelProps={{ shrink: true }}
             />
 
             <TextField
