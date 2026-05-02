@@ -1302,11 +1302,22 @@ app.MapDelete("/api/v1/user/activities/{id}", [Authorize] async (Guid id, IMedia
 
 app.MapGet("/api/v1/user/activities", [Authorize] async (IMediator mediator, HttpContext context) =>
 {
-    var userId = Guid.Parse(context.User.FindFirst("sub")?.Value ?? throw new UnauthorizedAccessException("User ID not found in token"));
-    
-    var query = new GetUserTrailActivitiesQuery(userId);
-    var result = await mediator.Send(query);
-    return Results.Ok(result.Activities);
+    try
+    {
+        var userId = Guid.Parse(context.User.FindFirst("sub")?.Value ?? throw new UnauthorizedAccessException("User ID not found in token"));
+        
+        var query = new GetUserTrailActivitiesQuery(userId);
+        var result = await mediator.Send(query);
+        return Results.Ok(result.Activities);
+    }
+    catch (UnauthorizedAccessException)
+    {
+        return Results.Forbid();
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.NotFound(new { message = ex.Message });
+    }
 })
 .WithName("GetUserActivities");
 
