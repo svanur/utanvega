@@ -11,6 +11,7 @@ import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import Layout from '../components/Layout';
+import TimePickerInput from '../components/TimePickerInput';
 import { useAuth } from '../hooks/useAuth';
 import { useTickedTrails } from '../hooks/useTickedTrails';
 import { useTrails } from '../hooks/useTrails';
@@ -293,12 +294,11 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
               InputLabelProps={{ shrink: true }}
             />
 
-            <TextField
+            <TimePickerInput
               label={t('activity.time')}
               value={formTimeStr}
-              onChange={(e) => setFormTimeStr(e.target.value)}
-              placeholder="HH:MM:SS"
-              helperText="Format: HH:MM:SS or MM:SS"
+              onChange={setFormTimeStr}
+              helperText="Use arrow keys ↑↓ to adjust hours/minutes/seconds"
             />
 
             <TextField
