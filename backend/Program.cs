@@ -1218,21 +1218,32 @@ app.MapGet("/api/v1/admin/races", [Authorize] async (UtanvegaDbContext context) 
 // User Trail Activities Endpoints
 app.MapPost("/api/v1/user/activities", [Authorize] async (IMediator mediator, HttpContext context, CreateUserTrailActivityDto dto) =>
 {
-    var userId = Guid.Parse(context.User.FindFirst("sub")?.Value ?? throw new UnauthorizedAccessException("User ID not found in token"));
-    
-    var command = new CreateUserTrailActivityCommand(
-        userId,
-        dto.TrailSlug,
-        dto.Time,
-        dto.Distance,
-        dto.ElevationGain,
-        dto.LogDate,
-        dto.Notes,
-        dto.IsPublic
-    );
+    try
+    {
+        var userId = Guid.Parse(context.User.FindFirst("sub")?.Value ?? throw new UnauthorizedAccessException("User ID not found in token"));
+        
+        var command = new CreateUserTrailActivityCommand(
+            userId,
+            dto.TrailSlug,
+            dto.Time,
+            dto.Distance,
+            dto.ElevationGain,
+            dto.LogDate,
+            dto.Notes,
+            dto.IsPublic
+        );
 
-    var result = await mediator.Send(command);
-    return Results.Created($"/api/v1/user/activities/{result.Id}", result);
+        var result = await mediator.Send(command);
+        return Results.Created($"/api/v1/user/activities/{result.Id}", result);
+    }
+    catch (UnauthorizedAccessException)
+    {
+        return Results.Forbid();
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.NotFound(new { message = ex.Message });
+    }
 })
 .WithName("CreateActivity");
 
