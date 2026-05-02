@@ -7,6 +7,9 @@ export interface TrailActivity {
   UserId: string;
   TrailSlug: string;
   Time: number; // seconds
+  Distance?: number; // km
+  ElevationGain?: number; // meters
+  LogDate?: string; // DATE (YYYY-MM-DD)
   Notes?: string;
   IsPublic: boolean;
   LoggedAt: string; // ISO timestamp
@@ -17,6 +20,9 @@ export interface TrailActivity {
 interface CreateActivityInput {
   TrailSlug: string;
   Time: number;
+  Distance?: number;
+  ElevationGain?: number;
+  LogDate?: string;
   Notes?: string;
   IsPublic?: boolean;
   LoggedAt?: string;
@@ -24,6 +30,9 @@ interface CreateActivityInput {
 
 interface UpdateActivityInput {
   Time?: number;
+  Distance?: number;
+  ElevationGain?: number;
+  LogDate?: string;
   Notes?: string;
   IsPublic?: boolean;
   LoggedAt?: string;

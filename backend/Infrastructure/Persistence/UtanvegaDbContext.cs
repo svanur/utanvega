@@ -20,6 +20,7 @@ public class UtanvegaDbContext : DbContext
     public DbSet<FeatureFlag> FeatureFlags => Set<FeatureFlag>();
     public DbSet<Competition> Competitions => Set<Competition>();
     public DbSet<Race> Races => Set<Race>();
+    public DbSet<UserTrailActivity> UserTrailActivities => Set<UserTrailActivity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -187,6 +188,25 @@ public class UtanvegaDbContext : DbContext
                   .OnDelete(DeleteBehavior.SetNull);
 
             entity.HasIndex(e => e.CompetitionId);
+        });
+
+        modelBuilder.Entity<UserTrailActivity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired();
+            entity.Property(e => e.TrailSlug).IsRequired().HasMaxLength(250);
+            entity.Property(e => e.Time).IsRequired();
+            entity.Property(e => e.Distance).HasPrecision(8, 2);
+            entity.Property(e => e.LogDate).HasColumnType("date");
+            entity.Property(e => e.Notes).HasMaxLength(500);
+            entity.Property(e => e.LoggedAt).IsRequired();
+            entity.Property(e => e.CreatedAt).IsRequired();
+            
+            // Indexes for querying user activities
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => new { e.UserId, e.TrailSlug });
+            entity.HasIndex(e => e.LogDate);
+            entity.HasIndex(e => e.CreatedAt);
         });
     }
 }

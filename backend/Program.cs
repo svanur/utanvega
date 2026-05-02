@@ -48,6 +48,10 @@ using Utanvega.Backend.Application.Competitions.Commands.DeleteCompetition;
 using Utanvega.Backend.Application.Competitions.Commands.CreateRace;
 using Utanvega.Backend.Application.Competitions.Commands.UpdateRace;
 using Utanvega.Backend.Application.Competitions.Commands.DeleteRace;
+using Utanvega.Backend.Application.Activities.Commands.CreateUserTrailActivity;
+using Utanvega.Backend.Application.Activities.Commands.UpdateUserTrailActivity;
+using Utanvega.Backend.Application.Activities.Commands.DeleteUserTrailActivity;
+using Utanvega.Backend.Application.Activities.Queries.GetUserTrailActivities;
 using MediatR;
 using FluentValidation;
 using Microsoft.Extensions.Caching.Memory;
@@ -1211,6 +1215,90 @@ app.MapGet("/api/v1/admin/races", [Authorize] async (UtanvegaDbContext context) 
 })
 .WithName("GetAllAdminRaces");
 
+// User Trail Activities Endpoints
+app.MapPost("/api/v1/user/activities", [Authorize] async (IMediator mediator, HttpContext context, CreateUserTrailActivityDto dto) =>
+{
+    var userId = Guid.Parse(context.User.FindFirst("sub")?.Value ?? throw new UnauthorizedAccessException("User ID not found in token"));
+    
+    var command = new CreateUserTrailActivityCommand(
+        userId,
+        dto.TrailSlug,
+        dto.Time,
+        dto.Distance,
+        dto.ElevationGain,
+        dto.LogDate,
+        dto.Notes,
+        dto.IsPublic
+    );
+
+    var result = await mediator.Send(command);
+    return Results.Created($"/api/v1/user/activities/{result.Id}", result);
+})
+.WithName("CreateActivity");
+
+app.MapPut("/api/v1/user/activities/{id}", [Authorize] async (Guid id, IMediator mediator, HttpContext context, UpdateUserTrailActivityDto dto) =>
+{
+    var userId = Guid.Parse(context.User.FindFirst("sub")?.Value ?? throw new UnauthorizedAccessException("User ID not found in token"));
+    
+    var command = new UpdateUserTrailActivityCommand(
+        id,
+        userId,
+        dto.Time,
+        dto.Distance,
+        dto.ElevationGain,
+        dto.LogDate,
+        dto.Notes,
+        dto.IsPublic
+    );
+
+    try
+    {
+        var result = await mediator.Send(command);
+        return Results.Ok(result);
+    }
+    catch (UnauthorizedAccessException)
+    {
+        return Results.Forbid();
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.NotFound(new { message = ex.Message });
+    }
+})
+.WithName("UpdateActivity");
+
+app.MapDelete("/api/v1/user/activities/{id}", [Authorize] async (Guid id, IMediator mediator, HttpContext context) =>
+{
+    var userId = Guid.Parse(context.User.FindFirst("sub")?.Value ?? throw new UnauthorizedAccessException("User ID not found in token"));
+    
+    var command = new DeleteUserTrailActivityCommand(id, userId);
+
+    try
+    {
+        await mediator.Send(command);
+        return Results.NoContent();
+    }
+    catch (UnauthorizedAccessException)
+    {
+        return Results.Forbid();
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.NotFound(new { message = ex.Message });
+    }
+})
+.WithName("DeleteActivity");
+
+app.MapGet("/api/v1/user/activities", [Authorize] async (IMediator mediator, HttpContext context) =>
+{
+    var userId = Guid.Parse(context.User.FindFirst("sub")?.Value ?? throw new UnauthorizedAccessException("User ID not found in token"));
+    
+    var query = new GetUserTrailActivitiesQuery(userId);
+    var result = await mediator.Send(query);
+    return Results.Ok(result.Activities);
+})
+.WithName("GetUserActivities");
+
 try
 {
     app.Run();
@@ -1225,3 +1313,20 @@ public record BulkAddTagRequest(List<Guid> TrailIds, Guid TagId);
 public record TrailLocationAddRequest(Guid LocationId, string? Role);
 public record FeatureFlagCreateDto(string Name, bool Enabled = true, string? Description = null);
 public record FeatureFlagUpdateDto(bool? Enabled, string? Description);
+public record CreateUserTrailActivityDto(
+    string TrailSlug,
+    int Time,
+    decimal? Distance,
+    int? ElevationGain,
+    DateOnly? LogDate,
+    string? Notes,
+    bool IsPublic
+);
+public record UpdateUserTrailActivityDto(
+    int Time,
+    decimal? Distance,
+    int? ElevationGain,
+    DateOnly? LogDate,
+    string? Notes,
+    bool IsPublic
+);
