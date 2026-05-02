@@ -30,6 +30,7 @@ const WelcomePage = lazy(() => import('./pages/WelcomePage'));
 const TrailComparePage = lazy(() => import('./pages/TrailComparePage'));
 const MyProfilePage = lazy(() => import('./pages/MyProfilePage'));
 const MyTrailsPage = lazy(() => import('./pages/MyTrailsPage'));
+const MyTrailDetailsPage = lazy(() => import('./pages/MyTrailDetailsPage'));
 
 function PageLoader() {
     return (
@@ -154,6 +155,10 @@ export default function App() {
                     {isEnabled('trail_activities', false) && <Route
                         path="/my/trails"
                         element={<MyTrailsPage mode={mode} onToggleMode={handleToggleMode} />}
+                    />}
+                    {isEnabled('trail_activities', false) && <Route
+                        path="/my/trails/:slug"
+                        element={<MyTrailDetailsPage mode={mode} onToggleMode={handleToggleMode} />}
                     />}
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
