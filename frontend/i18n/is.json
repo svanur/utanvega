@@ -28,7 +28,9 @@
         "addResults": "Bæta við niðurstöðu",
         "editResults": "Breyta niðurstöðu",
         "deleteResults": "Eyða niðurstöðu",
-        "confirmDelete": "Ertu viss um að þú viljir eyða þessari niðurstöðu?"
+        "confirmDelete": "Ertu viss um að þú viljir eyða þessari niðurstöðu?",
+        "recentActivities": "Nýlegar æfingar",
+        "viewAll": "Sjá allt"
     },
     "loading": "Hleð leiðum...",
     "nav": {
@@ -846,14 +848,6 @@
     "activities": {
         "title": "Æfingar",
         "noActivities": "Engar æfingar skráðar ennþá. Skráðu fyrstu æfinguna þína!"
-    },
-    "profile": {
-        "title": "Prófíll",
-        "recentActivities": "Nýlegar æfingar",
-        "viewAll": "Sjá allt",
-        "signedInAs": "Skráð(ur) inn sem {{name}}",
-        "tickedTrails": "Markverðar leiðir",
-        "noTicks": "Engar markverðar leiðir ennþá"
     },
     "auth": {
         "signIn": "Skrá inn",
