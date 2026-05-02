@@ -63,7 +63,7 @@ namespace Utanvega.Backend.Migrations
 
                     b.HasIndex("EntityName");
 
-                    b.ToTable("ChangeLogs");
+                    b.ToTable("ChangeLogs", (string)null);
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.Competition", b =>
@@ -132,7 +132,7 @@ namespace Utanvega.Backend.Migrations
                     b.HasIndex("Slug")
                         .IsUnique();
 
-                    b.ToTable("Competitions");
+                    b.ToTable("Competitions", (string)null);
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.FeatureFlag", b =>
@@ -161,7 +161,7 @@ namespace Utanvega.Backend.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("FeatureFlags");
+                    b.ToTable("FeatureFlags", (string)null);
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.Location", b =>
@@ -215,7 +215,7 @@ namespace Utanvega.Backend.Migrations
                     b.HasIndex("Slug")
                         .IsUnique();
 
-                    b.ToTable("Locations");
+                    b.ToTable("Locations", (string)null);
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.Race", b =>
@@ -258,7 +258,7 @@ namespace Utanvega.Backend.Migrations
 
                     b.HasIndex("TrailId");
 
-                    b.ToTable("Races");
+                    b.ToTable("Races", (string)null);
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.Tag", b =>
@@ -289,7 +289,7 @@ namespace Utanvega.Backend.Migrations
                     b.HasIndex("Slug")
                         .IsUnique();
 
-                    b.ToTable("Tags");
+                    b.ToTable("Tags", (string)null);
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.Trail", b =>
@@ -360,7 +360,7 @@ namespace Utanvega.Backend.Migrations
                     b.HasIndex("Slug")
                         .IsUnique();
 
-                    b.ToTable("Trails");
+                    b.ToTable("Trails", (string)null);
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.TrailLocation", b =>
@@ -388,7 +388,7 @@ namespace Utanvega.Backend.Migrations
 
                     b.HasIndex("TrailId");
 
-                    b.ToTable("TrailLocations");
+                    b.ToTable("TrailLocations", (string)null);
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.TrailTag", b =>
@@ -410,7 +410,7 @@ namespace Utanvega.Backend.Migrations
                     b.HasIndex("TrailId", "TagId")
                         .IsUnique();
 
-                    b.ToTable("TrailTags");
+                    b.ToTable("TrailTags", (string)null);
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.TrailView", b =>
@@ -437,7 +437,7 @@ namespace Utanvega.Backend.Migrations
 
                     b.HasIndex("TrailId", "IpHash", "ViewedAtUtc");
 
-                    b.ToTable("TrailViews");
+                    b.ToTable("TrailViews", (string)null);
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.Competition", b =>
