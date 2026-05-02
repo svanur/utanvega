@@ -33,6 +33,9 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
   // Form state
   const [formTrailSlug, setFormTrailSlug] = useState<string | null>(null);
   const [formTimeStr, setFormTimeStr] = useState('00:00:00');
+  const [formDistance, setFormDistance] = useState<number | null>(null);
+  const [formElevationGain, setFormElevationGain] = useState<number | null>(null);
+  const [formLogDate, setFormLogDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [formNotes, setFormNotes] = useState('');
   const [formIsPublic, setFormIsPublic] = useState(false);
 
@@ -57,8 +60,12 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
   }
 
   const handleAddResults = (slug: string) => {
+    const trail = trails.find(t => t.slug === slug);
     setFormTrailSlug(slug);
     setFormTimeStr('00:00:00');
+    setFormDistance(trail?.length || null);
+    setFormElevationGain(trail?.elevationGain || null);
+    setFormLogDate(new Date().toISOString().split('T')[0]);
     setFormNotes('');
     setFormIsPublic(false);
     setEditingActivityId(null);
@@ -70,6 +77,9 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
     if (activity) {
       setFormTrailSlug(activity.TrailSlug);
       setFormTimeStr(formatSeconds(activity.Time));
+      setFormDistance(activity.Distance || null);
+      setFormElevationGain(activity.ElevationGain || null);
+      setFormLogDate(activity.LogDate || new Date().toISOString().split('T')[0]);
       setFormNotes(activity.Notes || '');
       setFormIsPublic(activity.IsPublic);
       setEditingActivityId(activityId);
@@ -91,6 +101,9 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
         // Update existing activity
         await updateActivity(editingActivityId, {
           Time: time,
+          Distance: formDistance || undefined,
+          ElevationGain: formElevationGain || undefined,
+          LogDate: formLogDate,
           Notes: formNotes,
           IsPublic: formIsPublic,
         });
@@ -99,6 +112,9 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
         await createActivity({
           TrailSlug: formTrailSlug,
           Time: time,
+          Distance: formDistance || undefined,
+          ElevationGain: formElevationGain || undefined,
+          LogDate: formLogDate,
           Notes: formNotes,
           IsPublic: formIsPublic,
         });
@@ -114,6 +130,9 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
     setEditingActivityId(null);
     setFormTrailSlug(null);
     setFormTimeStr('00:00:00');
+    setFormDistance(null);
+    setFormElevationGain(null);
+    setFormLogDate(new Date().toISOString().split('T')[0]);
     setFormNotes('');
     setFormIsPublic(false);
   };
@@ -230,6 +249,32 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
               onChange={(e) => setFormTimeStr(e.target.value)}
               placeholder="HH:MM:SS"
               helperText="Format: HH:MM:SS or MM:SS"
+            />
+
+            <TextField
+              label={t('activity.distance')}
+              type="number"
+              inputProps={{ step: '0.1', min: '0' }}
+              value={formDistance !== null ? formDistance : ''}
+              onChange={(e) => setFormDistance(e.target.value ? parseFloat(e.target.value) : null)}
+              helperText={t('activity.distanceUnit')}
+            />
+
+            <TextField
+              label={t('activity.elevationGain')}
+              type="number"
+              inputProps={{ step: '1', min: '0' }}
+              value={formElevationGain !== null ? formElevationGain : ''}
+              onChange={(e) => setFormElevationGain(e.target.value ? parseInt(e.target.value) : null)}
+              helperText={t('activity.elevationUnit')}
+            />
+
+            <TextField
+              label={t('activity.date')}
+              type="date"
+              value={formLogDate}
+              onChange={(e) => setFormLogDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
             />
 
             <TextField
