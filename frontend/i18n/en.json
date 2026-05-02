@@ -4,7 +4,8 @@
         "edit": "Edit",
         "delete": "Delete",
         "cancel": "Cancel",
-        "actions": "Actions"
+        "actions": "Actions",
+        "add": "Add"
     },
     "auth": {
         "signIn": "Sign in",

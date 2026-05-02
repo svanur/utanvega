@@ -4,7 +4,8 @@
         "edit": "Breyta",
         "delete": "Eyða",
         "cancel": "Hætta við",
-        "actions": "Aðgerðir"
+        "actions": "Aðgerðir",
+        "add": "Bæta við"
     },
     "auth": {
         "signIn": "Skrá inn",

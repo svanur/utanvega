@@ -46,13 +46,29 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
     return map;
   }, [trails]);
 
-  // Get ticked trails with their activities - call before any early returns
+  // Get ticked trails with all their activities - call before any early returns
   const tickedTrailsWithActivities = useMemo(() => {
-    return Array.from(tickedSlugs).map(slug => ({
+    const trails = Array.from(tickedSlugs).map(slug => ({
       slug,
       name: trailNameMap[slug] || slug,
-      activity: activities.find(a => a.TrailSlug === slug),
+      activities: activities.filter(a => a.TrailSlug === slug),
     })).sort((a, b) => a.name.localeCompare(b.name));
+    
+    // Flatten to activity rows with trail info
+    const activityRows: Array<{ slug: string; name: string; activity: any }> = [];
+    trails.forEach(trail => {
+      if (trail.activities.length === 0) {
+        // No activities yet - show one row with "Add Results" button
+        activityRows.push({ slug: trail.slug, name: trail.name, activity: null });
+      } else {
+        // Show one row per activity
+        trail.activities.forEach(act => {
+          activityRows.push({ slug: trail.slug, name: trail.name, activity: act });
+        });
+      }
+    });
+    
+    return activityRows;
   }, [tickedSlugs, trailNameMap, activities]);
 
   if (!user) {
@@ -177,8 +193,8 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {tickedTrailsWithActivities.map(item => (
-                    <TableRow key={item.slug}>
+                  {tickedTrailsWithActivities.map((item, idx) => (
+                    <TableRow key={`${item.slug}-${idx}`}>
                       <TableCell sx={{ fontWeight: 500 }}>{item.name}</TableCell>
                       <TableCell align="right" sx={{ fontFamily: 'monospace' }}>
                         {item.activity ? formatSeconds(item.activity.Time) : '-'}
@@ -205,6 +221,14 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
                               >
                                 <DeleteIcon fontSize="small" />
                               </IconButton>
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                startIcon={<AddIcon />}
+                                onClick={() => handleAddResults(item.slug)}
+                              >
+                                {t('common.add')}
+                              </Button>
                             </>
                           ) : (
                             <Button
