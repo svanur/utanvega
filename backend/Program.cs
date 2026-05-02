@@ -1304,19 +1304,41 @@ app.MapGet("/api/v1/user/activities", [Authorize] async (IMediator mediator, Htt
 {
     try
     {
-        var userId = Guid.Parse(context.User.FindFirst("sub")?.Value ?? throw new UnauthorizedAccessException("User ID not found in token"));
+        // Debug: Log all claims in the token
+        var claims = context.User.Claims.ToList();
+        Log.Debug("User claims count: {ClaimCount}", claims.Count);
+        foreach (var claim in claims)
+        {
+            Log.Debug("Claim: {ClaimType} = {ClaimValue}", claim.Type, claim.Value);
+        }
+        
+        // Try multiple claim names (Supabase uses "sub")
+        var userIdClaim = context.User.FindFirst("sub")
+            ?? context.User.FindFirst("user_id")
+            ?? context.User.FindFirst("uid");
+        
+        if (userIdClaim?.Value is null)
+            throw new UnauthorizedAccessException("User ID not found in token. Available claims: " + string.Join(", ", claims.Select(c => c.Type)));
+        
+        var userId = Guid.Parse(userIdClaim.Value);
         
         var query = new GetUserTrailActivitiesQuery(userId);
         var result = await mediator.Send(query);
         return Results.Ok(result.Activities);
     }
-    catch (UnauthorizedAccessException)
+    catch (UnauthorizedAccessException ex)
     {
+        Log.Warning("Unauthorized access to activities: {Message}", ex.Message);
         return Results.Forbid();
     }
     catch (InvalidOperationException ex)
     {
         return Results.NotFound(new { message = ex.Message });
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Error fetching activities");
+        return Results.Problem("Internal server error");
     }
 })
 .WithName("GetUserActivities");
