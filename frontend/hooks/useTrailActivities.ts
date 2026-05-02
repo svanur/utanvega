@@ -2,6 +2,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { supabase } from './supabase';
 import { useAuth } from './useAuth';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+
 export interface TrailActivity {
   Id: string;
   UserId: string;
@@ -43,7 +45,16 @@ export function useTrailActivities(trailSlug?: string) {
   const [activities, setActivities] = useState<TrailActivity[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Fetch user's activities (optionally filtered by trail)
+  // Get auth token from Supabase session
+  const getAuthToken = useCallback(async () => {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error || !session?.access_token) {
+      throw new Error('No auth token available');
+    }
+    return session.access_token;
+  }, []);
+
+  // Fetch user's activities from backend API
   const fetchActivities = useCallback(async () => {
     if (!user) {
       setActivities([]);
@@ -51,25 +62,22 @@ export function useTrailActivities(trailSlug?: string) {
     }
     setLoading(true);
     try {
-      let query = supabase
-        .from('UserTrailActivities')
-        .select('*')
-        .eq('UserId', user.id)
-        .order('LoggedAt', { ascending: false });
-
-      if (trailSlug) {
-        query = query.eq('TrailSlug', trailSlug);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      setActivities((data ?? []) as TrailActivity[]);
+      const token = await getAuthToken();
+      const response = await fetch(`${API_URL}/api/v1/user/activities`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!response.ok) throw new Error(`Failed to fetch activities: ${response.statusText}`);
+      const data = await response.json();
+      setActivities(data as TrailActivity[]);
     } catch (error) {
       console.error('Failed to fetch activities:', error);
     } finally {
       setLoading(false);
     }
-  }, [user, trailSlug]);
+  }, [user, getAuthToken]);
 
   useEffect(() => {
     fetchActivities();
@@ -78,55 +86,71 @@ export function useTrailActivities(trailSlug?: string) {
   const createActivity = useCallback(async (input: CreateActivityInput) => {
     if (!user) return;
     try {
-      const { data, error } = await supabase
-        .from('UserTrailActivities')
-        .insert({
-          UserId: user.id,
-          ...input,
+      const token = await getAuthToken();
+      const response = await fetch(`${API_URL}/api/v1/user/activities`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          TrailSlug: input.TrailSlug,
+          Time: input.Time,
+          Distance: input.Distance,
+          ElevationGain: input.ElevationGain,
+          LogDate: input.LogDate,
+          Notes: input.Notes,
           IsPublic: input.IsPublic ?? false,
-          LoggedAt: input.LoggedAt ?? new Date().toISOString(),
-        })
-        .select()
-        .single();
-      if (error) throw error;
+        }),
+      });
+      if (!response.ok) throw new Error(`Failed to create activity: ${response.statusText}`);
+      const data = await response.json();
       setActivities(prev => [data as TrailActivity, ...prev]);
       return data;
     } catch (error) {
       console.error('Failed to create activity:', error);
       throw error;
     }
-  }, [user]);
+  }, [user, getAuthToken]);
 
   const updateActivity = useCallback(async (activityId: string, updates: UpdateActivityInput) => {
     try {
-      const { data, error } = await supabase
-        .from('UserTrailActivities')
-        .update({ ...updates, UpdatedAt: new Date().toISOString() })
-        .eq('Id', activityId)
-        .select()
-        .single();
-      if (error) throw error;
+      const token = await getAuthToken();
+      const response = await fetch(`${API_URL}/api/v1/user/activities/${activityId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updates),
+      });
+      if (!response.ok) throw new Error(`Failed to update activity: ${response.statusText}`);
+      const data = await response.json();
       setActivities(prev => prev.map(a => a.Id === activityId ? (data as TrailActivity) : a));
       return data;
     } catch (error) {
       console.error('Failed to update activity:', error);
       throw error;
     }
-  }, []);
+  }, [getAuthToken]);
 
   const deleteActivity = useCallback(async (activityId: string) => {
     try {
-      const { error } = await supabase
-        .from('UserTrailActivities')
-        .delete()
-        .eq('Id', activityId);
-      if (error) throw error;
+      const token = await getAuthToken();
+      const response = await fetch(`${API_URL}/api/v1/user/activities/${activityId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!response.ok) throw new Error(`Failed to delete activity: ${response.statusText}`);
       setActivities(prev => prev.filter(a => a.Id !== activityId));
     } catch (error) {
       console.error('Failed to delete activity:', error);
       throw error;
     }
-  }, []);
+  }, [getAuthToken]);
 
   return { activities, loading, createActivity, updateActivity, deleteActivity, refetch: fetchActivities };
 }
