@@ -80,10 +80,13 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
 
   const handleAddResults = (slug: string) => {
     const trail = trails.find(t => t.slug === slug);
+    const defaultElevation = typeof trail?.elevationGain === 'number' && Number.isFinite(trail.elevationGain)
+      ? Math.round(trail.elevationGain)
+      : null;
     setFormTrailSlug(slug);
     setFormTimeStr('00:00:00');
     setFormDistance(trail?.length || null);
-    setFormElevationGain(trail?.elevationGain || null);
+    setFormElevationGain(defaultElevation);
     setFormLogDate(new Date().toISOString().split('T')[0]);
     setFormNotes('');
     setFormIsPublic(false);
@@ -116,12 +119,18 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
     }
 
     try {
+      // Ensure numeric fields are properly typed
+      const distance = formDistance && !isNaN(formDistance) ? Number(formDistance) : null;
+      const elevation = formElevationGain !== null && Number.isFinite(formElevationGain)
+        ? Math.round(formElevationGain)
+        : null;
+
       if (editingActivityId) {
         // Update existing activity
         await updateActivity(editingActivityId, {
           Time: time,
-          Distance: formDistance || undefined,
-          ElevationGain: formElevationGain || undefined,
+          Distance: distance || undefined,
+          ElevationGain: elevation || undefined,
           LogDate: formLogDate,
           Notes: formNotes,
           IsPublic: formIsPublic,
@@ -131,8 +140,8 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
         await createActivity({
           TrailSlug: formTrailSlug,
           Time: time,
-          Distance: formDistance || undefined,
-          ElevationGain: formElevationGain || undefined,
+          Distance: distance || undefined,
+          ElevationGain: elevation || undefined,
           LogDate: formLogDate,
           Notes: formNotes,
           IsPublic: formIsPublic,

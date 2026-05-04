@@ -106,7 +106,15 @@ export default function TimePickerInput({
     else if (cursorPos <= 5) segment = 'minutes';
     else segment = 'seconds';
 
+    // Call handleKeyDown and restore cursor position after state update
     handleKeyDown(e, segment);
+    
+    // Use setTimeout to restore cursor position after React re-renders
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.setSelectionRange(cursorPos, cursorPos);
+      }
+    }, 0);
   };
 
   return (

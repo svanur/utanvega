@@ -41,6 +41,23 @@ interface UpdateActivityInput {
 }
 
 export function useTrailActivities(trailSlug?: string) {
+      const buildError = async (response: Response, fallback: string) => {
+        try {
+          const contentType = response.headers.get('content-type') || '';
+          if (contentType.includes('application/json')) {
+            const body = await response.json() as { detail?: string; message?: string; title?: string };
+            const detail = body.detail || body.message || body.title;
+            if (detail) return new Error(`${fallback}: ${detail}`);
+          } else {
+            const text = (await response.text()).trim();
+            if (text) return new Error(`${fallback}: ${text}`);
+          }
+        } catch {
+          // Ignore parse errors and fall back to status text.
+        }
+        return new Error(`${fallback}: ${response.statusText}`);
+      };
+
   const { user } = useAuth();
   const [activities, setActivities] = useState<TrailActivity[]>([]);
   const [loading, setLoading] = useState(false);
@@ -69,7 +86,7 @@ export function useTrailActivities(trailSlug?: string) {
           'Content-Type': 'application/json',
         },
       });
-      if (!response.ok) throw new Error(`Failed to fetch activities: ${response.statusText}`);
+      if (!response.ok) throw await buildError(response, 'Failed to fetch activities');
       const data = await response.json();
       setActivities(data as TrailActivity[]);
     } catch (error) {
@@ -87,6 +104,10 @@ export function useTrailActivities(trailSlug?: string) {
     if (!user) return;
     try {
       const token = await getAuthToken();
+      const normalizedElevationGain =
+        typeof input.ElevationGain === 'number' && Number.isFinite(input.ElevationGain)
+          ? Math.max(0, Math.min(2147483647, Math.round(input.ElevationGain)))
+          : undefined;
       const response = await fetch(`${API_URL}/api/v1/user/activities`, {
         method: 'POST',
         headers: {
@@ -97,13 +118,13 @@ export function useTrailActivities(trailSlug?: string) {
           TrailSlug: input.TrailSlug,
           Time: input.Time,
           Distance: input.Distance,
-          ElevationGain: input.ElevationGain,
+          ElevationGain: normalizedElevationGain,
           LogDate: input.LogDate,
           Notes: input.Notes,
           IsPublic: input.IsPublic ?? false,
         }),
       });
-      if (!response.ok) throw new Error(`Failed to create activity: ${response.statusText}`);
+      if (!response.ok) throw await buildError(response, 'Failed to create activity');
       const data = await response.json();
       setActivities(prev => [data as TrailActivity, ...prev]);
       return data;
@@ -116,15 +137,22 @@ export function useTrailActivities(trailSlug?: string) {
   const updateActivity = useCallback(async (activityId: string, updates: UpdateActivityInput) => {
     try {
       const token = await getAuthToken();
+      const normalizedElevationGain =
+        typeof updates.ElevationGain === 'number' && Number.isFinite(updates.ElevationGain)
+          ? Math.max(0, Math.min(2147483647, Math.round(updates.ElevationGain)))
+          : undefined;
       const response = await fetch(`${API_URL}/api/v1/user/activities/${activityId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(updates),
+        body: JSON.stringify({
+          ...updates,
+          ElevationGain: normalizedElevationGain,
+        }),
       });
-      if (!response.ok) throw new Error(`Failed to update activity: ${response.statusText}`);
+      if (!response.ok) throw await buildError(response, 'Failed to update activity');
       const data = await response.json();
       setActivities(prev => prev.map(a => a.Id === activityId ? (data as TrailActivity) : a));
       return data;
@@ -144,7 +172,7 @@ export function useTrailActivities(trailSlug?: string) {
           'Content-Type': 'application/json',
         },
       });
-      if (!response.ok) throw new Error(`Failed to delete activity: ${response.statusText}`);
+      if (!response.ok) throw await buildError(response, 'Failed to delete activity');
       setActivities(prev => prev.filter(a => a.Id !== activityId));
     } catch (error) {
       console.error('Failed to delete activity:', error);

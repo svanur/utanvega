@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
+using System.Data;
 using System.Text.Encodings.Web;
 using Serilog;
 using Serilog.Events;
@@ -63,6 +64,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Threading.RateLimiting;
+using Npgsql;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
@@ -183,6 +185,26 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 : null,
             ValidateIssuerSigningKey = !string.IsNullOrEmpty(jwtSecret)
         };
+        
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = context =>
+            {
+                Log.Information("JWT token validated successfully for user");
+                return Task.CompletedTask;
+            },
+            OnAuthenticationFailed = context =>
+            {
+                Log.Warning("JWT authentication failed: {Exception}", context.Exception?.Message);
+                return Task.CompletedTask;
+            },
+            OnChallenge = context =>
+            {
+                Log.Warning("JWT challenge issued: {Error} {Description}", 
+                    context.Error, context.ErrorDescription);
+                return Task.CompletedTask;
+            }
+        };
     });
 
 builder.Services.AddAuthorization(options =>
@@ -220,7 +242,8 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
     {
-        var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? ["http://localhost:5173", "http://localhost:5174"];
+        var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() 
+            ?? ["http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:5176", "http://localhost:5177", "http://localhost:5178", "http://localhost:5179", "http://localhost:5180"];
         
         Log.Information("Allowed Origins: {Origins}", string.Join(", ", allowedOrigins));
         
@@ -259,6 +282,39 @@ var app = builder.Build();
 Log.Information("Application built. Starting up...");
 
 var middlewareLogger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("App");
+
+try
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<UtanvegaDbContext>();
+    var conn = db.Database.GetDbConnection();
+
+    if (conn.State != ConnectionState.Open)
+        await conn.OpenAsync();
+
+    await using var cmd = conn.CreateCommand();
+    cmd.CommandText = @"
+SELECT column_name, data_type, is_nullable
+FROM information_schema.columns
+WHERE table_schema = 'public' AND table_name = 'UserTrailActivities'
+ORDER BY ordinal_position;";
+
+    var columns = new List<string>();
+    await using var reader = await cmd.ExecuteReaderAsync();
+    while (await reader.ReadAsync())
+    {
+        columns.Add($"{reader.GetString(0)}:{reader.GetString(1)}:nullable={reader.GetString(2)}");
+    }
+
+    if (columns.Count == 0)
+        Log.Warning("Schema check: table public.UserTrailActivities not found");
+    else
+        Log.Information("Schema check: public.UserTrailActivities columns => {Columns}", string.Join(", ", columns));
+}
+catch (Exception ex)
+{
+    Log.Warning(ex, "Schema check for public.UserTrailActivities failed");
+}
 
 // app.UseSwagger();
 // app.UseSwaggerUI();
@@ -1220,7 +1276,19 @@ app.MapPost("/api/v1/user/activities", [Authorize] async (IMediator mediator, Ht
 {
     try
     {
-        var userId = Guid.Parse(context.User.FindFirst("sub")?.Value ?? throw new UnauthorizedAccessException("User ID not found in token"));
+        // Try multiple claim names (Supabase uses "nameidentifier" from JWT "sub")
+        var userIdClaim = context.User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")
+            ?? context.User.FindFirst("sub")
+            ?? context.User.FindFirst("user_id")
+            ?? context.User.FindFirst("uid");
+        
+        if (userIdClaim?.Value is null)
+        {
+            var claims = string.Join(", ", context.User.Claims.Select(c => $"{c.Type}={c.Value}"));
+            throw new UnauthorizedAccessException($"User ID not found in token. Available claims: {claims}");
+        }
+        
+        var userId = Guid.Parse(userIdClaim.Value);
         
         var command = new CreateUserTrailActivityCommand(
             userId,
@@ -1236,34 +1304,72 @@ app.MapPost("/api/v1/user/activities", [Authorize] async (IMediator mediator, Ht
         var result = await mediator.Send(command);
         return Results.Created($"/api/v1/user/activities/{result.Id}", result);
     }
-    catch (UnauthorizedAccessException)
+    catch (UnauthorizedAccessException ex)
     {
+        Log.Warning("Unauthorized access to create activity: {Message}", ex.Message);
         return Results.Forbid();
     }
     catch (InvalidOperationException ex)
     {
+        Log.Error("Invalid operation creating activity: {Message}", ex.Message);
         return Results.NotFound(new { message = ex.Message });
+    }
+    catch (FormatException ex)
+    {
+        Log.Error("Format error creating activity: {Message}", ex.Message);
+        return Results.BadRequest(new { message = "Invalid input format" });
+    }
+    catch (DbUpdateException ex) when (ex.InnerException is PostgresException pg)
+    {
+        Log.Error(ex, "Database error creating activity. SqlState={SqlState} Detail={Detail}", pg.SqlState, pg.Detail);
+        return Results.Problem(
+            title: "Failed to create activity",
+            detail: $"Database error ({pg.SqlState}): {pg.MessageText}",
+            statusCode: StatusCodes.Status500InternalServerError);
+    }
+    catch (DbUpdateException ex)
+    {
+        Log.Error(ex, "Database update error creating activity");
+        return Results.Problem(
+            title: "Failed to create activity",
+            detail: ex.InnerException?.Message ?? ex.Message,
+            statusCode: StatusCodes.Status500InternalServerError);
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Unexpected error creating activity");
+        return Results.Problem("Internal server error");
     }
 })
 .WithName("CreateActivity");
 
 app.MapPut("/api/v1/user/activities/{id}", [Authorize] async (Guid id, IMediator mediator, HttpContext context, UpdateUserTrailActivityDto dto) =>
 {
-    var userId = Guid.Parse(context.User.FindFirst("sub")?.Value ?? throw new UnauthorizedAccessException("User ID not found in token"));
-    
-    var command = new UpdateUserTrailActivityCommand(
-        id,
-        userId,
-        dto.Time,
-        dto.Distance,
-        dto.ElevationGain,
-        dto.LogDate,
-        dto.Notes,
-        dto.IsPublic
-    );
-
     try
     {
+        var userIdClaim = context.User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")
+            ?? context.User.FindFirst("sub")
+            ?? context.User.FindFirst("user_id")
+            ?? context.User.FindFirst("uid");
+        
+        if (userIdClaim?.Value is null)
+        {
+            throw new UnauthorizedAccessException("User ID not found in token");
+        }
+        
+        var userId = Guid.Parse(userIdClaim.Value);
+        
+        var command = new UpdateUserTrailActivityCommand(
+            id,
+            userId,
+            dto.Time,
+            dto.Distance,
+            dto.ElevationGain,
+            dto.LogDate,
+            dto.Notes,
+            dto.IsPublic
+        );
+
         var result = await mediator.Send(command);
         return Results.Ok(result);
     }
@@ -1280,12 +1386,22 @@ app.MapPut("/api/v1/user/activities/{id}", [Authorize] async (Guid id, IMediator
 
 app.MapDelete("/api/v1/user/activities/{id}", [Authorize] async (Guid id, IMediator mediator, HttpContext context) =>
 {
-    var userId = Guid.Parse(context.User.FindFirst("sub")?.Value ?? throw new UnauthorizedAccessException("User ID not found in token"));
-    
-    var command = new DeleteUserTrailActivityCommand(id, userId);
-
     try
     {
+        var userIdClaim = context.User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")
+            ?? context.User.FindFirst("sub")
+            ?? context.User.FindFirst("user_id")
+            ?? context.User.FindFirst("uid");
+        
+        if (userIdClaim?.Value is null)
+        {
+            throw new UnauthorizedAccessException("User ID not found in token");
+        }
+        
+        var userId = Guid.Parse(userIdClaim.Value);
+        
+        var command = new DeleteUserTrailActivityCommand(id, userId);
+
         await mediator.Send(command);
         return Results.NoContent();
     }
@@ -1304,26 +1420,34 @@ app.MapGet("/api/v1/user/activities", [Authorize] async (IMediator mediator, Htt
 {
     try
     {
-        // Debug: Log all claims in the token
-        var claims = context.User.Claims.ToList();
-        Log.Debug("User claims count: {ClaimCount}", claims.Count);
-        foreach (var claim in claims)
-        {
-            Log.Debug("Claim: {ClaimType} = {ClaimValue}", claim.Type, claim.Value);
-        }
-        
-        // Try multiple claim names (Supabase uses "sub")
-        var userIdClaim = context.User.FindFirst("sub")
+        // Try multiple claim names (Supabase uses "nameidentifier" which maps from JWT "sub")
+        var userIdClaim = context.User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")
+            ?? context.User.FindFirst("sub")
             ?? context.User.FindFirst("user_id")
             ?? context.User.FindFirst("uid");
         
         if (userIdClaim?.Value is null)
-            throw new UnauthorizedAccessException("User ID not found in token. Available claims: " + string.Join(", ", claims.Select(c => c.Type)));
+        {
+            var claims = string.Join(", ", context.User.Claims.Select(c => $"{c.Type}={c.Value}"));
+            Log.Warning("User ID not found in token. Available claims: {Claims}", claims);
+            throw new UnauthorizedAccessException($"User ID not found in token. Available claims: {claims}");
+        }
         
-        var userId = Guid.Parse(userIdClaim.Value);
+        Log.Information("Found user ID claim: {ClaimType} = {ClaimValue}", userIdClaim.Type, userIdClaim.Value);
+        if (!Guid.TryParse(userIdClaim.Value, out var userId))
+        {
+            Log.Warning("User ID claim value is not a valid GUID: {Value}", userIdClaim.Value);
+            return Results.Forbid();
+        }
+        Log.Information("Parsed userId: {UserId}", userId);
         
+        Log.Information("Creating GetUserTrailActivitiesQuery for userId: {UserId}", userId);
         var query = new GetUserTrailActivitiesQuery(userId);
+        
+        Log.Information("Sending query via MediatR");
         var result = await mediator.Send(query);
+        
+        Log.Information("Successfully fetched {Count} activities for user {UserId}", result.Activities.Count(), userId);
         return Results.Ok(result.Activities);
     }
     catch (UnauthorizedAccessException ex)
@@ -1333,11 +1457,12 @@ app.MapGet("/api/v1/user/activities", [Authorize] async (IMediator mediator, Htt
     }
     catch (InvalidOperationException ex)
     {
+        Log.Error(ex, "Invalid operation fetching activities: {Message}", ex.Message);
         return Results.NotFound(new { message = ex.Message });
     }
     catch (Exception ex)
     {
-        Log.Error(ex, "Error fetching activities");
+        Log.Error(ex, "Unexpected error fetching activities: {Message}", ex.Message);
         return Results.Problem("Internal server error");
     }
 })

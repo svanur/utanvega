@@ -193,14 +193,20 @@ public class UtanvegaDbContext : DbContext
         modelBuilder.Entity<UserTrailActivity>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.UserId).IsRequired();
-            entity.Property(e => e.TrailSlug).IsRequired().HasMaxLength(250);
-            entity.Property(e => e.Time).IsRequired();
-            entity.Property(e => e.Distance).HasPrecision(8, 2);
-            entity.Property(e => e.LogDate).HasColumnType("date");
-            entity.Property(e => e.Notes).HasMaxLength(500);
-            entity.Property(e => e.LoggedAt).IsRequired();
-            entity.Property(e => e.CreatedAt).IsRequired();
+            entity.ToTable("UserTrailActivities");
+            
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.UserId).IsRequired().HasColumnName("user_id");
+            entity.Property(e => e.TrailSlug).IsRequired().HasMaxLength(250).HasColumnName("trail_slug");
+            entity.Property(e => e.Time).IsRequired().HasColumnName("time");
+            entity.Property(e => e.Distance).HasPrecision(8, 2).HasColumnName("distance");
+            entity.Property(e => e.ElevationGain).HasColumnName("elevation_gain");
+            entity.Property(e => e.LogDate).HasColumnType("date").HasColumnName("log_date");
+            entity.Property(e => e.Notes).HasMaxLength(500).HasColumnName("notes");
+            entity.Property(e => e.IsPublic).HasColumnName("is_public");
+            entity.Property(e => e.LoggedAt).IsRequired().HasColumnName("logged_at");
+            entity.Property(e => e.CreatedAt).IsRequired().HasColumnName("created_at");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
             
             // Indexes for querying user activities
             entity.HasIndex(e => e.UserId);
