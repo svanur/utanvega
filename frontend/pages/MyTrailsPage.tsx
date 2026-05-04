@@ -39,6 +39,7 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
   const [formLogDate, setFormLogDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [formNotes, setFormNotes] = useState('');
   const [formIsPublic, setFormIsPublic] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   // Map slug to trail name - call before any early returns
   const trailNameMap = useMemo(() => {
@@ -119,6 +120,7 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
     }
 
     try {
+      setFormError(null);
       // Ensure numeric fields are properly typed
       const distance = formDistance && !isNaN(formDistance) ? Number(formDistance) : null;
       const elevation = formElevationGain !== null && Number.isFinite(formElevationGain)
@@ -150,6 +152,8 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
       handleCloseForm();
     } catch (error) {
       console.error('Failed to save activity:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save activity';
+      setFormError(errorMessage);
     }
   };
 
@@ -163,6 +167,7 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
     setFormLogDate(new Date().toISOString().split('T')[0]);
     setFormNotes('');
     setFormIsPublic(false);
+    setFormError(null);
   };
 
   const handleDelete = async () => {
@@ -289,6 +294,18 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
             {editingActivityId ? t('profile.editResults') : t('profile.addResults')}
           </DialogTitle>
           <DialogContent sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {formError && (
+              <Box sx={{ 
+                p: 1.5, 
+                bgcolor: 'error.light', 
+                color: 'error.dark', 
+                borderRadius: 1,
+                border: '1px solid',
+                borderColor: 'error.main'
+              }}>
+                <Typography variant="body2">{formError}</Typography>
+              </Box>
+            )}
             <Autocomplete
               options={trails}
               getOptionLabel={(option) => option.name}
