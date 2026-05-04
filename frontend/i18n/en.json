@@ -20,6 +20,7 @@
     "profile": {
         "title": "Profile",
         "tickedTrails": "Completed trails",
+        "loadingTicks": "Loading your completed trails...",
         "noTicks": "No completed trails yet. Mark trails as done on their detail page.",
         "signedInAs": "Signed in as {{email}}",
         "manageTrails": "Manage My Trails",

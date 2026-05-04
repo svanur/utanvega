@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Box, Button, Container, Paper, Stack, Typography, PaletteMode, Divider } from '@mui/material';
+import { Box, Button, CircularProgress, Container, Paper, Stack, Typography, PaletteMode, Divider } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import LogoutIcon from '@mui/icons-material/Logout';
 import ManageIcon from '@mui/icons-material/ManageAccounts';
@@ -14,7 +14,7 @@ type Props = { mode: PaletteMode; onToggleMode: () => void };
 export default function MyProfilePage({ mode, onToggleMode }: Props) {
   const { t } = useTranslation();
   const { user, signOut } = useAuth();
-  const { tickedSlugs } = useTickedTrails();
+  const { tickedSlugs, loading } = useTickedTrails();
   const [signingOut, setSigningOut] = React.useState(false);
 
   if (!user) {
@@ -65,11 +65,20 @@ export default function MyProfilePage({ mode, onToggleMode }: Props) {
               <Typography variant="h6" fontWeight="bold" sx={{ mb: 1 }}>
                 {t('profile.tickedTrails')}
               </Typography>
-              <Typography color="text.secondary" sx={{ mb: 2 }}>
-                {tickedSlugs.size > 0 
-                  ? `${tickedSlugs.size} ${t('profile.tickedTrails').toLowerCase()}` 
-                  : t('profile.noTicks')}
-              </Typography>
+              {loading ? (
+                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 2 }}>
+                  <CircularProgress size={18} />
+                  <Typography color="text.secondary">
+                    {t('profile.loadingTicks')}
+                  </Typography>
+                </Stack>
+              ) : (
+                <Typography color="text.secondary" sx={{ mb: 2 }}>
+                  {tickedSlugs.size > 0
+                    ? `${tickedSlugs.size} ${t('profile.tickedTrails').toLowerCase()}`
+                    : t('profile.noTicks')}
+                </Typography>
+              )}
               {tickedSlugs.size > 0 && (
                 <Button
                   variant="contained"

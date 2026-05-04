@@ -20,6 +20,7 @@
     "profile": {
         "title": "Prófíll",
         "tickedTrails": "Kláraðar leiðir",
+        "loadingTicks": "Sæki kláraðar leiðir...",
         "noTicks": "Engar kláraðar leiðir enn. Merktu leiðir sem kláraðar á upplýsingasíðu þeirra.",
         "signedInAs": "Innskráð/ur sem {{email}}",
         "manageTrails": "Stjórna mínum leiðum",

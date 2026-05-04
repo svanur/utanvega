@@ -2,9 +2,9 @@ import React, { useState, useMemo } from 'react';
 import { Navigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-  Box, Button, Container, Paper, Stack, Typography, Table, TableBody, TableCell, TableContainer,
+  Box, Button, CircularProgress, Container, Paper, Stack, Typography, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, PaletteMode, Divider, Autocomplete, Checkbox, FormControlLabel,
+  TextField, PaletteMode, Autocomplete, Checkbox, FormControlLabel,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AddIcon from '@mui/icons-material/Add';
@@ -23,7 +23,7 @@ type Props = { mode: PaletteMode; onToggleMode: () => void };
 export default function MyTrailsPage({ mode, onToggleMode }: Props) {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const { tickedSlugs } = useTickedTrails();
+  const { tickedSlugs, loading } = useTickedTrails();
   const { trails } = useTrails(true);
   const { activities, createActivity, updateActivity, deleteActivity } = useTrailActivities();
 
@@ -189,7 +189,12 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
             {t('profile.myTrails')}
           </Typography>
 
-          {tickedTrailsWithActivities.length === 0 ? (
+          {loading ? (
+            <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="center" sx={{ py: 4 }}>
+              <CircularProgress size={20} />
+              <Typography color="text.secondary">{t('profile.loadingTicks')}</Typography>
+            </Stack>
+          ) : tickedTrailsWithActivities.length === 0 ? (
             <Typography color="text.secondary" align="center" sx={{ py: 4 }}>
               {t('profile.noTickedTrails')}
             </Typography>

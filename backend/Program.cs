@@ -1,15 +1,10 @@
-using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Data;
-using System.Text.Encodings.Web;
 using Serilog;
 using Serilog.Events;
 using Utanvega.Backend.Infrastructure.Persistence;
 using Utanvega.Backend.Core.Entities;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.Extensions.Options;
-
 using Microsoft.EntityFrameworkCore;
 
 using Utanvega.Backend.Application.Trails.Commands.CreateTrailFromGpx;
@@ -573,7 +568,7 @@ app.MapGet("/api/v1/admin/trails/{idOrSlug}", [Authorize] async (string idOrSlug
 })
 .WithName("GetAdminTrail");
 
-app.MapPut("/api/v1/admin/trails/{id}", [Authorize] async (Guid id, UpdateTrailCommand command, IMediator mediator) =>
+app.MapPut("/api/v1/admin/trails/{id:guid}", [Authorize] async (Guid id, UpdateTrailCommand command, IMediator mediator) =>
 {
     if (id != command.Id) return Results.BadRequest("ID mismatch");
     try
@@ -588,7 +583,7 @@ app.MapPut("/api/v1/admin/trails/{id}", [Authorize] async (Guid id, UpdateTrailC
 })
 .WithName("UpdateTrail");
 
-app.MapPatch("/api/v1/admin/trails/{id}", [Authorize] async (Guid id, PatchTrailCommand command, IMediator mediator) =>
+app.MapPatch("/api/v1/admin/trails/{id:guid}", [Authorize] async (Guid id, PatchTrailCommand command, IMediator mediator) =>
 {
     if (id != command.Id) return Results.BadRequest("ID mismatch");
     var success = await mediator.Send(command);
@@ -596,7 +591,7 @@ app.MapPatch("/api/v1/admin/trails/{id}", [Authorize] async (Guid id, PatchTrail
 })
 .WithName("PatchTrail");
 
-app.MapDelete("/api/v1/admin/trails/{id}", [Authorize] async (Guid id, IMediator mediator) =>
+app.MapDelete("/api/v1/admin/trails/{id:guid}", [Authorize] async (Guid id, IMediator mediator) =>
 {
     var success = await mediator.Send(new DeleteTrailCommand(id));
     return success ? Results.NoContent() : Results.NotFound();
@@ -654,7 +649,7 @@ app.MapDelete("/api/v1/admin/trails/{trailId}/locations/{locationId}", [Authoriz
 })
 .WithName("RemoveTrailLocation");
 
-app.MapPatch("/api/v1/admin/trails/{id}/status", [Authorize] async (Guid id, [Microsoft.AspNetCore.Mvc.FromBody] string status, UtanvegaDbContext context) =>
+app.MapPatch("/api/v1/admin/trails/{id:guid}/status", [Authorize] async (Guid id, [Microsoft.AspNetCore.Mvc.FromBody] string status, UtanvegaDbContext context) =>
 {
     var trail = await context.Trails.FindAsync(id);
     if (trail == null) return Results.NotFound();
@@ -960,7 +955,7 @@ app.MapPost("/api/v1/admin/locations", [Authorize] async (CreateLocationCommand 
 })
 .WithName("CreateLocation");
 
-app.MapPut("/api/v1/admin/locations/{id}", [Authorize] async (Guid id, UpdateLocationCommand command, IMediator mediator) =>
+app.MapPut("/api/v1/admin/locations/{id:guid}", [Authorize] async (Guid id, UpdateLocationCommand command, IMediator mediator) =>
 {
     if (id != command.Id) return Results.BadRequest("ID mismatch");
     await mediator.Send(command);
@@ -968,7 +963,7 @@ app.MapPut("/api/v1/admin/locations/{id}", [Authorize] async (Guid id, UpdateLoc
 })
 .WithName("UpdateLocation");
 
-app.MapDelete("/api/v1/admin/locations/{id}", [Authorize] async (Guid id, IMediator mediator, ILogger<Program> logger) =>
+app.MapDelete("/api/v1/admin/locations/{id:guid}", [Authorize] async (Guid id, IMediator mediator, ILogger<Program> logger) =>
 {
     try 
     {
@@ -1013,7 +1008,7 @@ app.MapPost("/api/v1/admin/tags", [Authorize] async (TagCreateDto dto, UtanvegaD
 })
 .WithName("CreateTag");
 
-app.MapPut("/api/v1/admin/tags/{id}", [Authorize] async (Guid id, TagCreateDto dto, UtanvegaDbContext context) =>
+app.MapPut("/api/v1/admin/tags/{id:guid}", [Authorize] async (Guid id, TagCreateDto dto, UtanvegaDbContext context) =>
 {
     var tag = await context.Tags.FindAsync(id);
     if (tag == null) return Results.NotFound();
@@ -1025,7 +1020,7 @@ app.MapPut("/api/v1/admin/tags/{id}", [Authorize] async (Guid id, TagCreateDto d
 })
 .WithName("UpdateTag");
 
-app.MapDelete("/api/v1/admin/tags/{id}", [Authorize] async (Guid id, UtanvegaDbContext context) =>
+app.MapDelete("/api/v1/admin/tags/{id:guid}", [Authorize] async (Guid id, UtanvegaDbContext context) =>
 {
     var tag = await context.Tags.Include(t => t.TrailTags).FirstOrDefaultAsync(t => t.Id == id);
     if (tag == null) return Results.NotFound();
@@ -1137,7 +1132,7 @@ app.MapPost("/api/v1/admin/features", [Authorize] async (FeatureFlagCreateDto bo
 })
 .WithName("CreateFeatureFlag");
 
-app.MapPatch("/api/v1/admin/features/{id}", [Authorize] async (Guid id, FeatureFlagUpdateDto body, UtanvegaDbContext context, IMemoryCache cache) =>
+app.MapPatch("/api/v1/admin/features/{id:guid}", [Authorize] async (Guid id, FeatureFlagUpdateDto body, UtanvegaDbContext context, IMemoryCache cache) =>
 {
     var flag = await context.FeatureFlags.FindAsync(id);
     if (flag == null) return Results.NotFound();
@@ -1152,7 +1147,7 @@ app.MapPatch("/api/v1/admin/features/{id}", [Authorize] async (Guid id, FeatureF
 })
 .WithName("UpdateFeatureFlag");
 
-app.MapDelete("/api/v1/admin/features/{id}", [Authorize] async (Guid id, UtanvegaDbContext context, IMemoryCache cache) =>
+app.MapDelete("/api/v1/admin/features/{id:guid}", [Authorize] async (Guid id, UtanvegaDbContext context, IMemoryCache cache) =>
 {
     var flag = await context.FeatureFlags.FindAsync(id);
     if (flag == null) return Results.NotFound();
@@ -1205,7 +1200,7 @@ app.MapPost("/api/v1/admin/competitions", [Authorize] async (CreateCompetitionCo
 })
 .WithName("CreateCompetition");
 
-app.MapPut("/api/v1/admin/competitions/{id}", [Authorize] async (Guid id, UpdateCompetitionCommand command, IMediator mediator) =>
+app.MapPut("/api/v1/admin/competitions/{id:guid}", [Authorize] async (Guid id, UpdateCompetitionCommand command, IMediator mediator) =>
 {
     if (id != command.Id) return Results.BadRequest("ID mismatch");
     var success = await mediator.Send(command);
@@ -1213,7 +1208,7 @@ app.MapPut("/api/v1/admin/competitions/{id}", [Authorize] async (Guid id, Update
 })
 .WithName("UpdateCompetition");
 
-app.MapDelete("/api/v1/admin/competitions/{id}", [Authorize] async (Guid id, IMediator mediator) =>
+app.MapDelete("/api/v1/admin/competitions/{id:guid}", [Authorize] async (Guid id, IMediator mediator) =>
 {
     var success = await mediator.Send(new DeleteCompetitionCommand(id));
     return success ? Results.NoContent() : Results.NotFound();
@@ -1229,7 +1224,7 @@ app.MapPost("/api/v1/admin/competitions/{competitionId}/races", [Authorize] asyn
 })
 .WithName("CreateRace");
 
-app.MapPut("/api/v1/admin/races/{id}", [Authorize] async (Guid id, UpdateRaceCommand command, IMediator mediator) =>
+app.MapPut("/api/v1/admin/races/{id:guid}", [Authorize] async (Guid id, UpdateRaceCommand command, IMediator mediator) =>
 {
     if (id != command.Id) return Results.BadRequest("ID mismatch");
     var success = await mediator.Send(command);
@@ -1237,7 +1232,7 @@ app.MapPut("/api/v1/admin/races/{id}", [Authorize] async (Guid id, UpdateRaceCom
 })
 .WithName("UpdateRace");
 
-app.MapDelete("/api/v1/admin/races/{id}", [Authorize] async (Guid id, IMediator mediator) =>
+app.MapDelete("/api/v1/admin/races/{id:guid}", [Authorize] async (Guid id, IMediator mediator) =>
 {
     var success = await mediator.Send(new DeleteRaceCommand(id));
     return success ? Results.NoContent() : Results.NotFound();
@@ -1343,7 +1338,7 @@ app.MapPost("/api/v1/user/activities", [Authorize] async (IMediator mediator, Ht
 })
 .WithName("CreateActivity");
 
-app.MapPut("/api/v1/user/activities/{id}", [Authorize] async (Guid id, IMediator mediator, HttpContext context, UpdateUserTrailActivityDto dto) =>
+app.MapPut("/api/v1/user/activities/{id:guid}", [Authorize] async (Guid id, IMediator mediator, HttpContext context, UpdateUserTrailActivityDto dto) =>
 {
     try
     {
@@ -1384,7 +1379,7 @@ app.MapPut("/api/v1/user/activities/{id}", [Authorize] async (Guid id, IMediator
 })
 .WithName("UpdateActivity");
 
-app.MapDelete("/api/v1/user/activities/{id}", [Authorize] async (Guid id, IMediator mediator, HttpContext context) =>
+app.MapDelete("/api/v1/user/activities/{id:guid}", [Authorize] async (Guid id, IMediator mediator, HttpContext context) =>
 {
     try
     {
