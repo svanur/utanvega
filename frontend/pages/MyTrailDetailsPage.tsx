@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-  Button, Container, Paper, Stack, Typography, Table, TableBody, TableCell, TableContainer,
+  Box, Button, Container, Paper, Stack, Typography, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, PaletteMode, Autocomplete,
 } from '@mui/material';
@@ -27,6 +27,7 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
   const [formOpen, setFormOpen] = React.useState(false);
   const [editingActivityId, setEditingActivityId] = React.useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = React.useState<string | null>(null);
+  const [formError, setFormError] = React.useState<string | null>(null);
   
   // Form state
   const [formTimeStr, setFormTimeStr] = React.useState('00:00:00');
@@ -76,10 +77,11 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
     
     const time = parseTimeString(formTimeStr);
     if (time === 0) {
-      alert(t('activity.invalidTime') || 'Invalid time format');
+      setFormError(t('activity.invalidTime') || 'Invalid time format');
       return;
     }
 
+    setFormError(null);
     try {
       await updateActivity(editingActivityId, {
         TimeInSeconds: time,
@@ -92,13 +94,14 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
       setFormOpen(false);
       setEditingActivityId(null);
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to update activity');
+      setFormError(error instanceof Error ? error.message : 'Failed to update activity');
     }
   };
 
   const handleCloseForm = () => {
     setFormOpen(false);
     setEditingActivityId(null);
+    setFormError(null);
   };
 
   const handleDeleteConfirm = async () => {
@@ -107,7 +110,8 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
         await deleteActivity(deleteConfirmId);
         setDeleteConfirmId(null);
       } catch (error) {
-        alert(error instanceof Error ? error.message : 'Failed to delete activity');
+        const errorMessage = error instanceof Error ? error.message : 'Failed to delete activity';
+        setFormError(errorMessage);
       }
     }
   };
@@ -185,6 +189,18 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
         <Dialog open={formOpen} onClose={handleCloseForm} maxWidth="sm" fullWidth>
           <DialogTitle>{t('profile.editResults')}</DialogTitle>
           <DialogContent sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {formError && (
+              <Box sx={{ 
+                p: 1.5, 
+                bgcolor: 'error.light', 
+                color: 'error.dark', 
+                borderRadius: 1,
+                border: '1px solid',
+                borderColor: 'error.main'
+              }}>
+                <Typography variant="body2">{formError}</Typography>
+              </Box>
+            )}
             <TextField
               label={t('activity.date')}
               type="date"
