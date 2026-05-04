@@ -115,7 +115,7 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
     
     const timeInSeconds = parseTimeString(formTimeStr);
     if (timeInSeconds === 0) {
-      alert(t('activity.invalidTime') || 'Invalid time format');
+      setFormError(t('activity.invalidTime') || 'Invalid time format');
       return;
     }
 
