@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Navigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-  Box, Button, CircularProgress, Container, Paper, Stack, Typography, Table, TableBody, TableCell, TableContainer,
+  Alert, Button, CircularProgress, Container, Paper, Stack, Typography, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, PaletteMode, Autocomplete, Checkbox, FormControlLabel,
 } from '@mui/material';
@@ -295,16 +295,7 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
           </DialogTitle>
           <DialogContent sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
             {formError && (
-              <Box sx={{ 
-                p: 1.5, 
-                bgcolor: 'error.light', 
-                color: 'error.dark', 
-                borderRadius: 1,
-                border: '1px solid',
-                borderColor: 'error.main'
-              }}>
-                <Typography variant="body2">{formError}</Typography>
-              </Box>
+              <Alert severity="error">{formError}</Alert>
             )}
             <Autocomplete
               options={trails}
