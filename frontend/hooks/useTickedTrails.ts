@@ -2,6 +2,22 @@ import { useState, useEffect } from 'react';
 import { supabase } from './supabase';
 import { useAuth } from './useAuth';
 
+const TICKED_TRAILS_CACHE_TTL_MS = 60_000;
+
+type TickedTrailsCacheEntry = {
+  slugs: string[];
+  fetchedAt: number;
+};
+
+const tickedTrailsCache = new Map<string, TickedTrailsCacheEntry>();
+
+const setTickedTrailsCache = (userId: string, slugs: Set<string>) => {
+  tickedTrailsCache.set(userId, {
+    slugs: Array.from(slugs),
+    fetchedAt: Date.now(),
+  });
+};
+
 export function useTickedTrails() {
   const { user } = useAuth();
   const [tickedSlugs, setTickedSlugs] = useState<Set<string>>(new Set());
@@ -10,14 +26,27 @@ export function useTickedTrails() {
   // Fetch ticked trails on mount or when user changes
   useEffect(() => {
     if (!user) {
+      tickedTrailsCache.clear();
       setTickedSlugs(new Set());
       setLoading(false);
       return;
     }
 
+    const cached = tickedTrailsCache.get(user.id);
+    const hasFreshCache =
+      !!cached && Date.now() - cached.fetchedAt < TICKED_TRAILS_CACHE_TTL_MS;
+
+    if (cached) {
+      setTickedSlugs(new Set(cached.slugs));
+      if (hasFreshCache) {
+        setLoading(false);
+        return;
+      }
+    }
+
     const fetchTickedTrails = async () => {
       try {
-        setLoading(true);
+        setLoading(!cached);
         const { data, error } = await supabase
           .from('UserTickedTrails')
           .select('TrailSlug')
@@ -25,7 +54,9 @@ export function useTickedTrails() {
 
         if (error) throw error;
 
-        setTickedSlugs(new Set((data ?? []).map((r: { TrailSlug: string }) => r.TrailSlug)));
+        const nextSlugs = new Set((data ?? []).map((r: { TrailSlug: string }) => r.TrailSlug));
+        setTickedSlugs(nextSlugs);
+        setTickedTrailsCache(user.id, nextSlugs);
       } catch (error) {
         console.error('Error fetching ticked trails:', error);
       } finally {
@@ -42,22 +73,23 @@ export function useTickedTrails() {
 
     const wasTicked = tickedSlugs.has(slug);
     const previousSlugs = new Set(tickedSlugs);
+    const optimisticSlugs = new Set(tickedSlugs);
 
     try {
       // Optimistic update
       if (wasTicked) {
-        setTickedSlugs(prev => {
-          const next = new Set(prev);
-          next.delete(slug);
-          return next;
-        });
+        optimisticSlugs.delete(slug);
+        setTickedSlugs(optimisticSlugs);
+        setTickedTrailsCache(user.id, optimisticSlugs);
         await supabase
           .from('UserTickedTrails')
           .delete()
           .eq('UserId', user.id)
           .eq('TrailSlug', slug);
       } else {
-        setTickedSlugs(prev => new Set(prev).add(slug));
+        optimisticSlugs.add(slug);
+        setTickedSlugs(optimisticSlugs);
+        setTickedTrailsCache(user.id, optimisticSlugs);
         await supabase
           .from('UserTickedTrails')
           .insert({ UserId: user.id, TrailSlug: slug });
@@ -65,6 +97,7 @@ export function useTickedTrails() {
     } catch (error) {
       // Rollback on error
       setTickedSlugs(previousSlugs);
+      setTickedTrailsCache(user.id, previousSlugs);
       console.error('Error toggling trail:', error);
       throw error;
     }

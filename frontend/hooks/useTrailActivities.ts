@@ -3,6 +3,7 @@ import { supabase } from './supabase';
 import { useAuth } from './useAuth';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+const USER_ACTIVITIES_CACHE_TTL_MS = 60_000;
 
 export interface TrailActivity {
   Id: string;
@@ -40,6 +41,22 @@ interface UpdateActivityInput {
   LoggedAt?: string;
 }
 
+type ActivitiesCacheEntry = {
+  activities: TrailActivity[];
+  fetchedAt: number;
+};
+
+const userActivitiesCache = new Map<string, ActivitiesCacheEntry>();
+
+const cloneActivities = (activities: TrailActivity[]) => activities.map(a => ({ ...a }));
+
+const setUserActivitiesCache = (userId: string, activities: TrailActivity[]) => {
+  userActivitiesCache.set(userId, {
+    activities: cloneActivities(activities),
+    fetchedAt: Date.now(),
+  });
+};
+
 export function useTrailActivities(trailSlug?: string) {
       const buildError = async (response: Response, fallback: string) => {
         try {
@@ -72,12 +89,27 @@ export function useTrailActivities(trailSlug?: string) {
   }, []);
 
   // Fetch user's activities from backend API
-  const fetchActivities = useCallback(async () => {
+  const fetchActivities = useCallback(async (options?: { force?: boolean }) => {
     if (!user) {
+      userActivitiesCache.clear();
       setActivities([]);
+      setLoading(false);
       return;
     }
-    setLoading(true);
+
+    const force = options?.force === true;
+    const cached = userActivitiesCache.get(user.id);
+    const hasFreshCache = !!cached && Date.now() - cached.fetchedAt < USER_ACTIVITIES_CACHE_TTL_MS;
+
+    if (cached) {
+      setActivities(cloneActivities(cached.activities));
+      if (hasFreshCache && !force) {
+        setLoading(false);
+        return;
+      }
+    }
+
+    setLoading(!cached || force);
     try {
       const token = await getAuthToken();
       const response = await fetch(`${API_URL}/api/v1/user/activities`, {
@@ -87,8 +119,9 @@ export function useTrailActivities(trailSlug?: string) {
         },
       });
       if (!response.ok) throw await buildError(response, 'Failed to fetch activities');
-      const data = await response.json();
-      setActivities(data as TrailActivity[]);
+      const data = await response.json() as TrailActivity[];
+      setActivities(data);
+      setUserActivitiesCache(user.id, data);
     } catch (error) {
       console.error('Failed to fetch activities:', error);
     } finally {
@@ -125,8 +158,12 @@ export function useTrailActivities(trailSlug?: string) {
         }),
       });
       if (!response.ok) throw await buildError(response, 'Failed to create activity');
-      const data = await response.json();
-      setActivities(prev => [data as TrailActivity, ...prev]);
+      const data = await response.json() as TrailActivity;
+      setActivities(prev => {
+        const next = [data, ...prev];
+        setUserActivitiesCache(user.id, next);
+        return next;
+      });
       return data;
     } catch (error) {
       console.error('Failed to create activity:', error);
@@ -153,8 +190,14 @@ export function useTrailActivities(trailSlug?: string) {
         }),
       });
       if (!response.ok) throw await buildError(response, 'Failed to update activity');
-      const data = await response.json();
-      setActivities(prev => prev.map(a => a.Id === activityId ? (data as TrailActivity) : a));
+      const data = await response.json() as TrailActivity;
+      setActivities(prev => {
+        const next = prev.map(a => a.Id === activityId ? data : a);
+        if (user?.id) {
+          setUserActivitiesCache(user.id, next);
+        }
+        return next;
+      });
       return data;
     } catch (error) {
       console.error('Failed to update activity:', error);
@@ -173,12 +216,25 @@ export function useTrailActivities(trailSlug?: string) {
         },
       });
       if (!response.ok) throw await buildError(response, 'Failed to delete activity');
-      setActivities(prev => prev.filter(a => a.Id !== activityId));
+      setActivities(prev => {
+        const next = prev.filter(a => a.Id !== activityId);
+        if (user?.id) {
+          setUserActivitiesCache(user.id, next);
+        }
+        return next;
+      });
     } catch (error) {
       console.error('Failed to delete activity:', error);
       throw error;
     }
-  }, [getAuthToken]);
+  }, [getAuthToken, user?.id]);
 
-  return { activities, loading, createActivity, updateActivity, deleteActivity, refetch: fetchActivities };
+  return {
+    activities,
+    loading,
+    createActivity,
+    updateActivity,
+    deleteActivity,
+    refetch: () => fetchActivities({ force: true }),
+  };
 }
