@@ -60,17 +60,27 @@ export function useTrailActivities(trailSlug?: string) {
         try {
           const contentType = response.headers.get('content-type') || '';
           if (contentType.includes('application/json')) {
-            const body = await response.json() as { detail?: string; message?: string; title?: string };
-            const detail = body.detail || body.message || body.title;
-            if (detail) return new Error(`${fallback}: ${detail}`);
+            const body = await response.json() as { 
+              detail?: string; 
+              message?: string; 
+              messageIs?: string;
+              title?: string 
+            };
+            // Try to use the appropriate language message
+            const currentLang = localStorage.getItem('utanvega-lang') || 'en';
+            const detail = (currentLang === 'is' ? body.messageIs : body.message) 
+              || body.message 
+              || body.detail 
+              || body.title;
+            if (detail) return new Error(detail);
           } else {
             const text = (await response.text()).trim();
-            if (text) return new Error(`${fallback}: ${text}`);
+            if (text) return new Error(text);
           }
         } catch {
           // Ignore parse errors and fall back to status text.
         }
-        return new Error(`${fallback}: ${response.statusText}`);
+        return new Error(fallback);
       };
 
   const { user } = useAuth();
@@ -167,7 +177,7 @@ export function useTrailActivities(trailSlug?: string) {
       console.error('Failed to create activity:', error);
       throw error;
     }
-  }, [user, getAuthToken]);
+  }, [user?.id, getAuthToken]);
 
   const updateActivity = useCallback(async (activityId: string, updates: UpdateActivityInput) => {
     try {
@@ -201,7 +211,7 @@ export function useTrailActivities(trailSlug?: string) {
       console.error('Failed to update activity:', error);
       throw error;
     }
-  }, [getAuthToken]);
+  }, [user?.id, getAuthToken]);
 
   const deleteActivity = useCallback(async (activityId: string) => {
     try {

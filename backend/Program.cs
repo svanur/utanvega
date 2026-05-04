@@ -1317,6 +1317,17 @@ app.MapPost("/api/v1/user/activities", [Authorize] async (IMediator mediator, Ht
     catch (DbUpdateException ex) when (ex.InnerException is PostgresException pg)
     {
         Log.Error(ex, "Database error creating activity. SqlState={SqlState} Detail={Detail}", pg.SqlState, pg.Detail);
+        
+        // Handle unique constraint violation (SQL state 23505)
+        if (pg.SqlState == "23505" && pg.MessageText.Contains("IX_UserTrailActivities_UserId_TrailSlug_LogDate"))
+        {
+            return Results.Conflict(new 
+            { 
+                message = "You already have an activity logged for this trail on this date. Please edit the existing activity or choose a different date.",
+                messageIs = "Þú hefur þegar skráð æfingu fyrir þessa leið á þessum degi. Vinsamlegast breyttu núverandi æfingu eða veldu aðra dagsetningu."
+            });
+        }
+        
         return Results.Problem(
             title: "Failed to create activity",
             detail: $"Database error ({pg.SqlState}): {pg.MessageText}",
@@ -1375,6 +1386,30 @@ app.MapPut("/api/v1/user/activities/{id:guid}", [Authorize] async (Guid id, IMed
     catch (InvalidOperationException ex)
     {
         return Results.NotFound(new { message = ex.Message });
+    }
+    catch (DbUpdateException ex) when (ex.InnerException is PostgresException pg)
+    {
+        Log.Error(ex, "Database error updating activity. SqlState={SqlState}", pg.SqlState);
+        
+        // Handle unique constraint violation (SQL state 23505)
+        if (pg.SqlState == "23505" && pg.MessageText.Contains("IX_UserTrailActivities_UserId_TrailSlug_LogDate"))
+        {
+            return Results.Conflict(new 
+            { 
+                message = "You already have an activity logged for this trail on this date. Please choose a different date.",
+                messageIs = "Þú hefur þegar skráð æfingu fyrir þessa leið á þessum degi. Vinsamlegast veldu aðra dagsetningu."
+            });
+        }
+
+        return Results.Problem(
+            title: "Failed to update activity",
+            detail: "Database error occurred while updating the activity",
+            statusCode: StatusCodes.Status500InternalServerError);
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Unexpected error updating activity");
+        return Results.Problem("Internal server error");
     }
 })
 .WithName("UpdateActivity");
