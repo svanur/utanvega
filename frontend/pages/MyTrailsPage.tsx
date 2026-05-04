@@ -98,7 +98,7 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
     const activity = activities.find(a => a.Id === activityId);
     if (activity) {
       setFormTrailSlug(activity.TrailSlug);
-      setFormTimeStr(formatSeconds(activity.Time));
+      setFormTimeStr(formatSeconds(activity.TimeInSeconds));
       setFormDistance(activity.Distance || null);
       setFormElevationGain(activity.ElevationGain || null);
       setFormLogDate(activity.LogDate || new Date().toISOString().split('T')[0]);
@@ -112,8 +112,8 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
   const handleFormSubmit = async () => {
     if (!formTrailSlug || !formTimeStr.trim()) return;
     
-    const time = parseTimeString(formTimeStr);
-    if (time === 0) {
+    const timeInSeconds = parseTimeString(formTimeStr);
+    if (timeInSeconds === 0) {
       alert(t('activity.invalidTime') || 'Invalid time format');
       return;
     }
@@ -128,10 +128,10 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
       if (editingActivityId) {
         // Update existing activity
         await updateActivity(editingActivityId, {
-          Time: time,
+          LogDate: formLogDate,
+          TimeInSeconds: timeInSeconds,
           Distance: distance || undefined,
           ElevationGain: elevation || undefined,
-          LogDate: formLogDate,
           Notes: formNotes,
           IsPublic: formIsPublic,
         });
@@ -139,10 +139,10 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
         // Create new activity
         await createActivity({
           TrailSlug: formTrailSlug,
-          Time: time,
+          LogDate: formLogDate,
+          TimeInSeconds: timeInSeconds,
           Distance: distance || undefined,
           ElevationGain: elevation || undefined,
-          LogDate: formLogDate,
           Notes: formNotes,
           IsPublic: formIsPublic,
         });
@@ -227,7 +227,7 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
                         {item.activity?.LogDate || '-'}
                       </TableCell>
                       <TableCell align="right" sx={{ fontFamily: 'monospace' }}>
-                        {item.activity ? formatSeconds(item.activity.Time) : '-'}
+                        {item.activity ? formatSeconds(item.activity.TimeInSeconds) : '-'}
                       </TableCell>
                       <TableCell align="right">
                         {item.activity?.Distance ? `${item.activity.Distance.toFixed(1)} km` : '-'}

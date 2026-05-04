@@ -21,10 +21,10 @@ public class UpdateUserTrailActivityHandler : IRequestHandler<UpdateUserTrailAct
         if (activity.UserId != request.UserId)
             throw new UnauthorizedAccessException("You do not have permission to update this activity");
 
-        activity.Time = request.Time;
+        activity.LogDate = request.LogDate;
+        activity.TimeInSeconds = request.TimeInSeconds;
         activity.Distance = request.Distance;
         activity.ElevationGain = request.ElevationGain;
-        activity.LogDate = request.LogDate;
         activity.Notes = request.Notes;
         activity.IsPublic = request.IsPublic;
         activity.UpdatedAt = DateTimeOffset.UtcNow;
@@ -36,15 +36,15 @@ public class UpdateUserTrailActivityHandler : IRequestHandler<UpdateUserTrailAct
             activity.Id,
             activity.UserId,
             activity.TrailSlug,
-            activity.Time,
+            activity.LogDate,
+            activity.TimeInSeconds,
             activity.Distance,
             activity.ElevationGain,
-            activity.LogDate,
             activity.Notes,
             activity.IsPublic,
             activity.LoggedAt,
-            activity.CreatedAt,
-            activity.UpdatedAt
+            activity.UpdatedAt,
+            activity.CreatedAt
         );
     }
 }

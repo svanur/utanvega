@@ -8,15 +8,15 @@ public record UserTrailActivityDto(
     Guid Id,
     Guid UserId,
     string TrailSlug,
-    int Time,
+    DateOnly? LogDate,
+    int TimeInSeconds,
     decimal? Distance,
     int? ElevationGain,
-    DateOnly? LogDate,
     string? Notes,
     bool IsPublic,
     DateTimeOffset LoggedAt,
-    DateTimeOffset CreatedAt,
-    DateTimeOffset? UpdatedAt
+    DateTimeOffset? UpdatedAt,
+    DateTimeOffset CreatedAt
 );
 
 public record GetUserTrailActivitiesResponse(

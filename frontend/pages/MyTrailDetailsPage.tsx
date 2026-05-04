@@ -60,7 +60,7 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
   const handleEditActivity = (activityId: string) => {
     const activity = trailActivities.find(a => a.Id === activityId);
     if (activity) {
-      setFormTimeStr(formatSeconds(activity.Time));
+      setFormTimeStr(formatSeconds(activity.TimeInSeconds));
       setFormDistance(activity.Distance || null);
       setFormElevationGain(activity.ElevationGain || null);
       setFormLogDate(activity.LogDate || new Date().toISOString().split('T')[0]);
@@ -82,7 +82,7 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
 
     try {
       await updateActivity(editingActivityId, {
-        Time: time,
+        TimeInSeconds: time,
         Distance: formDistance || undefined,
         ElevationGain: formElevationGain || undefined,
         LogDate: formLogDate,
@@ -144,7 +144,7 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
                   <TableRow key={activity.Id}>
                     <TableCell align="center">{activity.LogDate || '-'}</TableCell>
                     <TableCell align="right" sx={{ fontFamily: 'monospace' }}>
-                      {formatSeconds(activity.Time)}
+                      {formatSeconds(activity.TimeInSeconds)}
                     </TableCell>
                     <TableCell align="right">
                       {activity.Distance ? `${activity.Distance.toFixed(1)} km` : '-'}

@@ -53,7 +53,7 @@ export default function ActivitiesPage({ mode, onToggleMode }: Props) {
     try {
       await createActivity({
         TrailSlug: data.trailSlug,
-        Time: data.time,
+        TimeInSeconds: data.time,
         Notes: data.notes,
         IsPublic: data.isPublic,
       });
@@ -72,7 +72,7 @@ export default function ActivitiesPage({ mode, onToggleMode }: Props) {
     setFormError(null);
     try {
       await updateActivity(editingId, {
-        Time: data.time,
+        TimeInSeconds: data.time,
         Notes: data.notes,
         IsPublic: data.isPublic,
       });
@@ -148,7 +148,7 @@ export default function ActivitiesPage({ mode, onToggleMode }: Props) {
                     <TableRow key={activity.Id}>
                       <TableCell>{trailNameMap[activity.TrailSlug] || activity.TrailSlug}</TableCell>
                       <TableCell align="right" sx={{ fontFamily: 'monospace' }}>
-                        {formatSeconds(activity.Time)}
+                        {formatSeconds(activity.TimeInSeconds)}
                       </TableCell>
                       <TableCell sx={{ maxWidth: 200, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {activity.Notes || '-'}
@@ -199,7 +199,7 @@ export default function ActivitiesPage({ mode, onToggleMode }: Props) {
         }}
         onSubmit={editingId ? handleEditSubmit : handleCreateSubmit}
         initialTrailSlug={editingActivity?.TrailSlug}
-        initialTime={editingActivity?.Time}
+        initialTime={editingActivity?.TimeInSeconds}
         initialNotes={editingActivity?.Notes}
         initialIsPublic={editingActivity?.IsPublic}
         isLoading={formLoading}

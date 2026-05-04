@@ -9,36 +9,34 @@ export interface TrailActivity {
   Id: string;
   UserId: string;
   TrailSlug: string;
-  Time: number; // seconds
+  LogDate?: string; // DATE (YYYY-MM-DD)
+  TimeInSeconds: number; // total seconds
   Distance?: number; // km
   ElevationGain?: number; // meters
-  LogDate?: string; // DATE (YYYY-MM-DD)
   Notes?: string;
   IsPublic: boolean;
   LoggedAt: string; // ISO timestamp
+  UpdatedAt?: string;
   CreatedAt: string;
-  UpdatedAt: string;
 }
 
 interface CreateActivityInput {
   TrailSlug: string;
-  Time: number;
+  LogDate?: string;
+  TimeInSeconds: number;
   Distance?: number;
   ElevationGain?: number;
-  LogDate?: string;
   Notes?: string;
   IsPublic?: boolean;
-  LoggedAt?: string;
 }
 
 interface UpdateActivityInput {
-  Time?: number;
+  LogDate?: string;
+  TimeInSeconds?: number;
   Distance?: number;
   ElevationGain?: number;
-  LogDate?: string;
   Notes?: string;
   IsPublic?: boolean;
-  LoggedAt?: string;
 }
 
 type ActivitiesCacheEntry = {
@@ -149,7 +147,7 @@ export function useTrailActivities(trailSlug?: string) {
         },
         body: JSON.stringify({
           TrailSlug: input.TrailSlug,
-          Time: input.Time,
+          TimeInSeconds: input.TimeInSeconds,
           Distance: input.Distance,
           ElevationGain: normalizedElevationGain,
           LogDate: input.LogDate,

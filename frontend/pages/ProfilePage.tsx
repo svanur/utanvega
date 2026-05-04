@@ -111,7 +111,7 @@ export default function ProfilePage({ mode, onToggleMode }: Props) {
                       )}
                     </Box>
                     <Typography variant="body2" sx={{ fontFamily: 'monospace', ml: 2 }}>
-                      {formatSeconds(activity.Time)}
+                      {formatSeconds(activity.TimeInSeconds)}
                     </Typography>
                   </Stack>
                 </Box>

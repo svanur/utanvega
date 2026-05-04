@@ -1288,10 +1288,10 @@ app.MapPost("/api/v1/user/activities", [Authorize] async (IMediator mediator, Ht
         var command = new CreateUserTrailActivityCommand(
             userId,
             dto.TrailSlug,
-            dto.Time,
+            dto.LogDate,
+            dto.TimeInSeconds,
             dto.Distance,
             dto.ElevationGain,
-            dto.LogDate,
             dto.Notes,
             dto.IsPublic
         );
@@ -1357,10 +1357,10 @@ app.MapPut("/api/v1/user/activities/{id:guid}", [Authorize] async (Guid id, IMed
         var command = new UpdateUserTrailActivityCommand(
             id,
             userId,
-            dto.Time,
+            dto.LogDate,
+            dto.TimeInSeconds,
             dto.Distance,
             dto.ElevationGain,
-            dto.LogDate,
             dto.Notes,
             dto.IsPublic
         );
@@ -1479,18 +1479,18 @@ public record FeatureFlagCreateDto(string Name, bool Enabled = true, string? Des
 public record FeatureFlagUpdateDto(bool? Enabled, string? Description);
 public record CreateUserTrailActivityDto(
     string TrailSlug,
-    int Time,
+    DateOnly? LogDate,
+    int TimeInSeconds,
     decimal? Distance,
     int? ElevationGain,
-    DateOnly? LogDate,
     string? Notes,
     bool IsPublic
 );
 public record UpdateUserTrailActivityDto(
-    int Time,
+    DateOnly? LogDate,
+    int TimeInSeconds,
     decimal? Distance,
     int? ElevationGain,
-    DateOnly? LogDate,
     string? Notes,
     bool IsPublic
 );

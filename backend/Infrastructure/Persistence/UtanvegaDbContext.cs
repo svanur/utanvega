@@ -195,22 +195,24 @@ public class UtanvegaDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.ToTable("UserTrailActivities");
             
-            entity.Property(e => e.Id).HasColumnName("id");
-            entity.Property(e => e.UserId).IsRequired().HasColumnName("user_id");
-            entity.Property(e => e.TrailSlug).IsRequired().HasMaxLength(250).HasColumnName("trail_slug");
-            entity.Property(e => e.Time).IsRequired().HasColumnName("time");
-            entity.Property(e => e.Distance).HasPrecision(8, 2).HasColumnName("distance");
-            entity.Property(e => e.ElevationGain).HasColumnName("elevation_gain");
-            entity.Property(e => e.LogDate).HasColumnType("date").HasColumnName("log_date");
-            entity.Property(e => e.Notes).HasMaxLength(500).HasColumnName("notes");
-            entity.Property(e => e.IsPublic).HasColumnName("is_public");
-            entity.Property(e => e.LoggedAt).IsRequired().HasColumnName("logged_at");
-            entity.Property(e => e.CreatedAt).IsRequired().HasColumnName("created_at");
-            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+            entity.Property(e => e.Id).HasColumnName("Id");
+            entity.Property(e => e.UserId).IsRequired().HasColumnName("UserId");
+            entity.Property(e => e.TrailSlug).IsRequired().HasMaxLength(250).HasColumnName("TrailSlug");
+            entity.Property(e => e.LogDate).HasColumnType("date").HasColumnName("LogDate");
+            entity.Property(e => e.TimeInSeconds).IsRequired().HasColumnName("TimeInSeconds");
+            entity.Property(e => e.Distance).HasPrecision(8, 2).HasColumnName("Distance");
+            entity.Property(e => e.ElevationGain).HasColumnName("ElevationGain");
+            entity.Property(e => e.Notes).HasMaxLength(500).HasColumnName("Notes");
+            entity.Property(e => e.IsPublic).HasColumnName("IsPublic");
+            entity.Property(e => e.LoggedAt).IsRequired().HasColumnName("LoggedAt");
+            entity.Property(e => e.UpdatedAt).HasColumnName("UpdatedAt");
+            entity.Property(e => e.CreatedAt).IsRequired().HasColumnName("CreatedAt");
             
-            // Indexes for querying user activities
+            // Unique constraint: one activity per user per trail per day
+            entity.HasIndex(e => new { e.UserId, e.TrailSlug, e.LogDate }).IsUnique();
+            
+            // Indexes for querying
             entity.HasIndex(e => e.UserId);
-            entity.HasIndex(e => new { e.UserId, e.TrailSlug });
             entity.HasIndex(e => e.LogDate);
             entity.HasIndex(e => e.CreatedAt);
         });

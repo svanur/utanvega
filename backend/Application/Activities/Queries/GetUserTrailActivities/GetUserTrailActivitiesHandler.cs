@@ -22,15 +22,15 @@ public class GetUserTrailActivitiesHandler : IRequestHandler<GetUserTrailActivit
                 a.Id,
                 a.UserId,
                 a.TrailSlug,
-                a.Time,
+                a.LogDate,
+                a.TimeInSeconds,
                 a.Distance,
                 a.ElevationGain,
-                a.LogDate,
                 a.Notes,
                 a.IsPublic,
                 a.LoggedAt,
-                a.CreatedAt,
-                a.UpdatedAt
+                a.UpdatedAt,
+                a.CreatedAt
             ))
             .ToListAsync(cancellationToken);
 
