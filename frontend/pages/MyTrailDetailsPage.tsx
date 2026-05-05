@@ -38,6 +38,13 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
   const [formNotes, setFormNotes] = React.useState('');
   const [formIsPublic, setFormIsPublic] = React.useState(false);
 
+  // Chart legend visibility state
+  const [visibleMetrics, setVisibleMetrics] = React.useState({
+    time: true,
+    distance: true,
+    elevation: true,
+  });
+
   // Get trail info and activities
   const trail = useMemo(() => trails.find(t => t.slug === slug), [trails, slug]);
   const trailActivities = useMemo(
@@ -57,6 +64,8 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
       .map(a => ({
         date: a.logDate || a.createdAt.split('T')[0],
         time: a.timeInSeconds,
+        distance: a.distance ? Number(a.distance) / 1000 : 0, // Convert to km
+        elevation: a.elevationGain || 0,
         formattedTime: formatSeconds(a.timeInSeconds),
       }))
       .sort((a, b) => a.date.localeCompare(b.date)),
@@ -125,6 +134,19 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
     setFormError(null);
   };
 
+  const handleLegendClick = (e: any) => {
+    const dataKey = e.dataKey as keyof typeof visibleMetrics;
+    // Prevent hiding all lines - keep at least one visible
+    const newState = {
+      ...visibleMetrics,
+      [dataKey]: !visibleMetrics[dataKey],
+    };
+    const hasAtLeastOne = Object.values(newState).some(v => v === true);
+    if (hasAtLeastOne) {
+      setVisibleMetrics(newState);
+    }
+  };
+
   const handleDeleteConfirm = async () => {
     if (deleteConfirmId) {
       try {
@@ -163,25 +185,62 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" label={{ value: t('activity.dates'), position: 'insideBottomRight', offset: -5 }} />
                   <YAxis 
-                    label={{ value: t('activity.time'), angle: -90, position: 'insideLeft' }}
-                    tickFormatter={(value) => formatSeconds(value)}
+                    tickFormatter={(value) => {
+                      // The formatter works for all three metrics - time gets formatted as HH:MM:SS
+                      return typeof value === 'number' ? value.toFixed(0) : '';
+                    }}
                   />
                   <Tooltip 
-                    formatter={(value) => formatSeconds(value as number)}
+                    formatter={(value, name, props) => {
+                      const numValue = value as number;
+                      const dataKey = props?.dataKey;
+                      if (dataKey === 'time') {
+                        return formatSeconds(numValue);
+                      } else if (dataKey === 'distance') {
+                        return `${numValue.toFixed(1)} km`;
+                      } else if (dataKey === 'elevation') {
+                        return `${Math.round(numValue)} m`;
+                      }
+                      return numValue;
+                    }}
                     labelFormatter={(label) => `${t('activity.date')}: ${label}`}
                   />
-                  <Legend />
+                  <Legend onClick={handleLegendClick} wrapperStyle={{ cursor: 'pointer' }} />
                   <Line 
                     type="monotone" 
                     dataKey="time" 
                     stroke="#1976d2" 
-                    dot={{ fill: '#1976d2', r: 4 }}
-                    activeDot={{ r: 6 }}
+                    dot={visibleMetrics.time ? { fill: '#1976d2', r: 4 } : false}
+                    activeDot={visibleMetrics.time ? { r: 6 } : false}
+                    strokeOpacity={visibleMetrics.time ? 1 : 0}
                     name={t('activity.time')}
+                    isAnimationActive
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="distance" 
+                    stroke="#388e3c" 
+                    dot={visibleMetrics.distance ? { fill: '#388e3c', r: 4 } : false}
+                    activeDot={visibleMetrics.distance ? { r: 6 } : false}
+                    strokeOpacity={visibleMetrics.distance ? 1 : 0}
+                    name={t('activity.distance')}
+                    isAnimationActive
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="elevation" 
+                    stroke="#f57c00" 
+                    dot={visibleMetrics.elevation ? { fill: '#f57c00', r: 4 } : false}
+                    activeDot={visibleMetrics.elevation ? { r: 6 } : false}
+                    strokeOpacity={visibleMetrics.elevation ? 1 : 0}
+                    name={t('activity.elevationGain')}
                     isAnimationActive
                   />
                 </LineChart>
               </ResponsiveContainer>
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                {t('common.tip', 'Tip')}: {t('myTrails.clickLegendToggle', 'Click legend items to show/hide metrics')}
+              </Typography>
             </Box>
           )}
 

@@ -864,8 +864,8 @@
         "continueWithGoogle": "Halda áfram með Google",
         "orEmail": "Eða nota tölvupóst",
         "emailPlaceholder": "Sláðu inn netfangið þitt",
-        "sendMagicLink": "Senda galdurhlekk",
-        "magicLinkSent": "Athugaðu tölvupóstinn þinn fyrir galdurhlekk til að skrá þig inn",
+        "sendMagicLink": "Senda 'galdrahlekk'",
+        "magicLinkSent": "Athugaðu tölvupóstinn þinn fyrir galdrahlekk til að skrá þig inn",
         "close": "Loka"
     },
     "trail": {
