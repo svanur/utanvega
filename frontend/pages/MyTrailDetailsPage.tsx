@@ -6,6 +6,7 @@ import {
   TableHead, TableRow, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, PaletteMode, Autocomplete,
 } from '@mui/material';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -50,9 +51,17 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
     [activities, slug]
   );
 
-  if (!user) {
-    return <Navigate to="/" replace />;
-  }
+  // Prepare chart data - sort by date ascending for display
+  const chartData = useMemo(
+    () => trailActivities
+      .map(a => ({
+        date: a.logDate || a.createdAt.split('T')[0],
+        time: a.timeInSeconds,
+        formattedTime: formatSeconds(a.timeInSeconds),
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date)),
+    [trailActivities]
+  );
 
   // Wait for data to load
   if (trailsLoading || activitiesLoading) {
@@ -142,6 +151,39 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
             {trailActivities.length} {trailActivities.length === 1 ? 'activity' : 'activities'} logged
           </Typography>
+
+          {/* Time Results Chart */}
+          {chartData.length > 1 && (
+            <Box sx={{ mb: 3, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
+              <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 'bold' }}>
+                {t('myTrails.timeProgress')}
+              </Typography>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={chartData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" label={{ value: t('activity.dates'), position: 'insideBottomRight', offset: -5 }} />
+                  <YAxis 
+                    label={{ value: t('activity.time'), angle: -90, position: 'insideLeft' }}
+                    tickFormatter={(value) => formatSeconds(value)}
+                  />
+                  <Tooltip 
+                    formatter={(value) => formatSeconds(value as number)}
+                    labelFormatter={(label) => `${t('activity.date')}: ${label}`}
+                  />
+                  <Legend />
+                  <Line 
+                    type="monotone" 
+                    dataKey="time" 
+                    stroke="#1976d2" 
+                    dot={{ fill: '#1976d2', r: 4 }}
+                    activeDot={{ r: 6 }}
+                    name={t('activity.time')}
+                    isAnimationActive
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </Box>
+          )}
 
           <TableContainer>
             <Table size="small">

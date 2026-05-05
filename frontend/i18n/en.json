@@ -830,6 +830,7 @@
         "logActivity": "Log Activity",
         "selectTrail": "Select trail",
         "time": "Time",
+        "dates": "Dates",
         "distance": "Distance",
         "distanceUnit": "km (editable)",
         "elevationGain": "Elevation Gain",
@@ -854,7 +855,8 @@
     },
     "myTrails": {
         "mostRecent": "Most Recent",
-        "bestResults": "Best Results"
+        "bestResults": "Best Results",
+        "timeProgress": "Time Progress Over Dates"
     },
     "auth": {
         "signIn": "Sign In",

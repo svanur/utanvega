@@ -830,12 +830,13 @@
         "logActivity": "Skrá æfingu",
         "selectTrail": "Veldu leið",
         "time": "Tími",
-        "distance": "Fjarlægð",
+        "dates": "Dagsetningar",
+        "distance": "Vegalengd",
         "distanceUnit": "km (breytanleg)",
         "elevationGain": "Hækkun",
         "elevationUnit": "m (breytanleg)",
         "date": "Dagsetning",
-        "notes": "Skýringar",
+        "notes": "Athugasemdir",
         "notesPlaceholder": "Hvernig gekk? Einhverjar skýringar fyrir næst?",
         "makePublic": "Gera opinbera",
         "public": "Opin",
@@ -843,8 +844,8 @@
         "trail": "Leið",
         "visibility": "Sýnileiki",
         "confirmDelete": "Eyða æfingu?",
-        "deleteWarning": "Þessi æfing verður eytt til frambúðar.",
-        "invalidTime": "Ógildur tímasnið",
+        "deleteWarning": "Þessari æfingu verður eytt endanlega.",
+        "invalidTime": "Ógildur tími",
         "save": "Vista æfingu",
         "activities": "Æfingar"
     },
@@ -854,7 +855,8 @@
     },
     "myTrails": {
         "mostRecent": "Nýjustu",
-        "bestResults": "Bestu niðurstöður"
+        "bestResults": "Bestu niðurstöður",
+        "timeProgress": "Yfirlit yfir tímana þína"
     },
     "auth": {
         "signIn": "Skrá inn",
@@ -868,7 +870,7 @@
     },
     "trail": {
         "backToTrails": "Til baka til leiða",
-        "backToProfile": "Til baka til prófíls",
+        "backToProfile": "Til baka í prófíl",
         "tick": "Marka sem markverða",
         "ticked": "Markverð",
         "untick": "Afmarka sem markverða",
