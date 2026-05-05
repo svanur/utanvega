@@ -856,7 +856,11 @@
     "myTrails": {
         "mostRecent": "Nýjustu",
         "bestResults": "Bestu niðurstöður",
-        "timeProgress": "Yfirlit yfir tímana þína"
+        "timeProgress": "Yfirlit yfir tímana þína",
+        "bestTime": "Besti tími",
+        "averageTime": "Meðaltími",
+        "worstTime": "Versti tími",
+        "totalDistance": "Heildarfjarlægð"
     },
     "auth": {
         "signIn": "Skrá inn",

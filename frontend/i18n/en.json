@@ -856,7 +856,11 @@
     "myTrails": {
         "mostRecent": "Most Recent",
         "bestResults": "Best Results",
-        "timeProgress": "Time Progress Over Dates"
+        "timeProgress": "Time Progress Over Dates",
+        "bestTime": "Best Time",
+        "averageTime": "Average Time",
+        "worstTime": "Worst Time",
+        "totalDistance": "Total Distance"
     },
     "auth": {
         "signIn": "Sign In",

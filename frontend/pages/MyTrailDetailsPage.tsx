@@ -3,7 +3,7 @@ import { Navigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Alert, Box, Button, CircularProgress, Container, Paper, Stack, Typography, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
+  TableHead, TableRow, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Grid,
   TextField, PaletteMode, Autocomplete,
 } from '@mui/material';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -23,7 +23,7 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
   const { slug } = useParams<{ slug: string }>();
   const { user } = useAuth();
   const { trails, loading: trailsLoading } = useTrails(true);
-  const { activities, loading: activitiesLoading, updateActivity, deleteActivity } = useTrailActivities();
+  const { activities, loading: activitiesLoading, createActivity, updateActivity, deleteActivity } = useTrailActivities();
 
   const [formOpen, setFormOpen] = React.useState(false);
   const [editingActivityId, setEditingActivityId] = React.useState<string | null>(null);
@@ -72,6 +72,37 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
     [trailActivities]
   );
 
+  // Calculate statistics
+  const statistics = useMemo(() => {
+    if (trailActivities.length === 0) {
+      return {
+        totalActivities: 0,
+        averageTime: 0,
+        bestTime: 0,
+        worstTime: 0,
+        totalDistance: 0,
+        averageDistance: 0,
+        totalElevation: 0,
+        averageElevation: 0,
+      };
+    }
+
+    const times = trailActivities.map(a => a.timeInSeconds);
+    const distances = trailActivities.filter(a => a.distance).map(a => Number(a.distance) / 1000);
+    const elevations = trailActivities.filter(a => a.elevationGain).map(a => a.elevationGain as number);
+
+    return {
+      totalActivities: trailActivities.length,
+      averageTime: Math.round(times.reduce((a, b) => a + b, 0) / times.length),
+      bestTime: Math.min(...times),
+      worstTime: Math.max(...times),
+      totalDistance: distances.length > 0 ? distances.reduce((a, b) => (a ?? 0) + (b ?? 0), 0) : 0,
+      averageDistance: distances.length > 0 ? distances.reduce((a, b) => (a ?? 0) + (b ?? 0), 0) / distances.length : 0,
+      totalElevation: elevations.length > 0 ? elevations.reduce((a, b) => (a ?? 0) + (b ?? 0), 0) : 0,
+      averageElevation: elevations.length > 0 ? Math.round(elevations.reduce((a, b) => (a ?? 0) + (b ?? 0), 0) / elevations.length) : 0,
+    };
+  }, [trailActivities]);
+
   // Wait for data to load
   if (trailsLoading || activitiesLoading) {
     return (
@@ -103,7 +134,7 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
   };
 
   const handleFormSubmit = async () => {
-    if (!formTimeStr.trim() || !editingActivityId) return;
+    if (!formTimeStr.trim()) return;
     
     const time = parseTimeString(formTimeStr);
     if (time === 0) {
@@ -113,18 +144,32 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
 
     setFormError(null);
     try {
-      await updateActivity(editingActivityId, {
-        TimeInSeconds: time,
-        Distance: formDistance || undefined,
-        ElevationGain: formElevationGain || undefined,
-        LogDate: formLogDate,
-        Notes: formNotes,
-        IsPublic: formIsPublic,
-      });
+      if (editingActivityId) {
+        // Update existing activity
+        await updateActivity(editingActivityId, {
+          TimeInSeconds: time,
+          Distance: formDistance || undefined,
+          ElevationGain: formElevationGain || undefined,
+          LogDate: formLogDate,
+          Notes: formNotes,
+          IsPublic: formIsPublic,
+        });
+      } else {
+        // Create new activity
+        await createActivity({
+          TrailSlug: slug || '',
+          TimeInSeconds: time,
+          Distance: formDistance || undefined,
+          ElevationGain: formElevationGain || undefined,
+          LogDate: formLogDate,
+          Notes: formNotes,
+          IsPublic: formIsPublic,
+        });
+      }
       setFormOpen(false);
       setEditingActivityId(null);
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : 'Failed to update activity');
+      setFormError(error instanceof Error ? error.message : editingActivityId ? 'Failed to update activity' : 'Failed to create activity');
     }
   };
 
@@ -132,6 +177,18 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
     setFormOpen(false);
     setEditingActivityId(null);
     setFormError(null);
+  };
+
+  const handleOpenNewActivityForm = () => {
+    setEditingActivityId(null);
+    setFormTimeStr('00:00:00');
+    setFormDistance(null);
+    setFormElevationGain(null);
+    setFormLogDate(new Date().toISOString().split('T')[0]);
+    setFormNotes('');
+    setFormIsPublic(false);
+    setFormError(null);
+    setFormOpen(true);
   };
 
   const handleLegendClick = (e: any) => {
@@ -173,6 +230,52 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
             {trailActivities.length} {trailActivities.length === 1 ? 'activity' : 'activities'} logged
           </Typography>
+
+          {/* KPI Statistics */}
+          {chartData.length > 1 && (
+            <Grid container spacing={2} sx={{ mb: 3 }}>
+              <Grid item xs={6} sm={3}>
+                <Paper sx={{ p: 2, textAlign: 'center' }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                    {t('myTrails.bestTime', 'Best Time')}
+                  </Typography>
+                  <Typography variant="h6" sx={{ fontFamily: 'monospace', fontWeight: 'bold' }}>
+                    {formatSeconds(statistics.bestTime)}
+                  </Typography>
+                </Paper>
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <Paper sx={{ p: 2, textAlign: 'center' }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                    {t('myTrails.averageTime', 'Average Time')}
+                  </Typography>
+                  <Typography variant="h6" sx={{ fontFamily: 'monospace', fontWeight: 'bold' }}>
+                    {formatSeconds(statistics.averageTime)}
+                  </Typography>
+                </Paper>
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <Paper sx={{ p: 2, textAlign: 'center' }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                    {t('myTrails.worstTime', 'Worst Time')}
+                  </Typography>
+                  <Typography variant="h6" sx={{ fontFamily: 'monospace', fontWeight: 'bold' }}>
+                    {formatSeconds(statistics.worstTime)}
+                  </Typography>
+                </Paper>
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <Paper sx={{ p: 2, textAlign: 'center' }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                    {t('myTrails.totalDistance', 'Total Distance')}
+                  </Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                    {statistics.totalDistance.toFixed(1)} km
+                  </Typography>
+                </Paper>
+              </Grid>
+            </Grid>
+          )}
 
           {/* Time Results Chart */}
           {chartData.length > 1 && (
@@ -296,11 +399,22 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
               </TableBody>
             </Table>
           </TableContainer>
+
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+            <Button 
+              variant="contained" 
+              onClick={handleOpenNewActivityForm}
+            >
+              {t('common.add')} {t('activity.activities')}
+            </Button>
+          </Box>
         </Paper>
 
-        {/* Edit Activity Dialog */}
+        {/* Edit/Create Activity Dialog */}
         <Dialog open={formOpen} onClose={handleCloseForm} maxWidth="sm" fullWidth>
-          <DialogTitle>{t('profile.editResults')}</DialogTitle>
+          <DialogTitle>
+            {editingActivityId ? t('profile.editResults') : t('activity.logActivity')}
+          </DialogTitle>
           <DialogContent sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
             {formError && (
               <Alert severity="error">{formError}</Alert>
