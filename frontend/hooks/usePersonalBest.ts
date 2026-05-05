@@ -10,7 +10,7 @@ export function usePersonalBest(trailSlug: string) {
 
   return useMemo(() => {
     if (!activities || activities.length === 0) return null;
-    const bestTime = Math.min(...activities.map(a => a.TimeInSeconds));
+    const bestTime = Math.min(...activities.map(a => a.timeInSeconds));
     return bestTime;
   }, [activities]);
 }

@@ -90,7 +90,7 @@ export default function ProfilePage({ mode, onToggleMode }: Props) {
             <Stack spacing={2}>
               {recentActivities.map(activity => (
                 <Box
-                  key={activity.Id}
+                  key={activity.id}
                   sx={{
                     p: 2,
                     border: '1px solid',
@@ -102,16 +102,16 @@ export default function ProfilePage({ mode, onToggleMode }: Props) {
                   <Stack direction="row" justifyContent="space-between" alignItems="start">
                     <Box flex={1}>
                       <Typography variant="body2" fontWeight="bold">
-                        {activity.TrailSlug}
+                        {activity.trailSlug}
                       </Typography>
-                      {activity.Notes && (
+                      {activity.notes && (
                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                          {activity.Notes}
+                          {activity.notes}
                         </Typography>
                       )}
                     </Box>
                     <Typography variant="body2" sx={{ fontFamily: 'monospace', ml: 2 }}>
-                      {formatSeconds(activity.TimeInSeconds)}
+                      {formatSeconds(activity.timeInSeconds)}
                     </Typography>
                   </Stack>
                 </Box>

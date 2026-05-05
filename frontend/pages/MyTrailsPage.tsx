@@ -4,12 +4,10 @@ import { useTranslation } from 'react-i18next';
 import {
   Alert, Button, CircularProgress, Container, Paper, Stack, Typography, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, PaletteMode, Autocomplete, Checkbox, FormControlLabel,
+  TextField, PaletteMode, Autocomplete, Checkbox, FormControlLabel, ToggleButton, ToggleButtonGroup,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AddIcon from '@mui/icons-material/Add';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
 import Layout from '../components/Layout';
 import TimePickerInput from '../components/TimePickerInput';
 import { useAuth } from '../hooks/useAuth';
@@ -17,6 +15,7 @@ import { useTickedTrails } from '../hooks/useTickedTrails';
 import { useTrails } from '../hooks/useTrails';
 import { useTrailActivities } from '../hooks/useTrailActivities';
 import { formatSeconds, parseTimeString } from '../utils/timeFormat';
+import { aggregateTrailActivities } from '../utils/trailActivityAggregator';
 
 type Props = { mode: PaletteMode; onToggleMode: () => void };
 
@@ -25,11 +24,12 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
   const { user } = useAuth();
   const { tickedSlugs, loading } = useTickedTrails();
   const { trails } = useTrails(true);
-  const { activities, createActivity, updateActivity, deleteActivity } = useTrailActivities();
+  const { activities, loading: activitiesLoading, createActivity, updateActivity, deleteActivity } = useTrailActivities();
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingActivityId, setEditingActivityId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'recent' | 'best'>('recent');
   
   // Form state
   const [formTrailSlug, setFormTrailSlug] = useState<string | null>(null);
@@ -49,31 +49,9 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
   }, [trails]);
 
   // Get ticked trails with their most recent activity - call before any early returns
-  const tickedTrailsWithActivities = useMemo(() => {
-    const trails = Array.from(tickedSlugs).map(slug => ({
-      slug,
-      name: trailNameMap[slug] || slug,
-      activities: activities.filter(a => a.TrailSlug === slug).sort((a, b) => {
-        const dateA = a.LogDate ? new Date(a.LogDate).getTime() : new Date(a.CreatedAt).getTime();
-        const dateB = b.LogDate ? new Date(b.LogDate).getTime() : new Date(b.CreatedAt).getTime();
-        return dateB - dateA; // Most recent first
-      }),
-    })).sort((a, b) => a.name.localeCompare(b.name));
-    
-    // Show one row per trail with most recent activity
-    const activityRows: Array<{ slug: string; name: string; activity: any; activityCount: number }> = [];
-    trails.forEach(trail => {
-      const mostRecent = trail.activities.length > 0 ? trail.activities[0] : null;
-      activityRows.push({ 
-        slug: trail.slug, 
-        name: trail.name, 
-        activity: mostRecent,
-        activityCount: trail.activities.length
-      });
-    });
-    
-    return activityRows;
-  }, [tickedSlugs, trailNameMap, activities]);
+  const aggregatedTrails = useMemo(() => {
+    return aggregateTrailActivities(tickedSlugs, activities, trailNameMap);
+  }, [tickedSlugs, activities, trailNameMap]);
 
   if (!user) {
     return <Navigate to="/" replace />;
@@ -96,15 +74,15 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
   };
 
   const handleEditActivity = (activityId: string) => {
-    const activity = activities.find(a => a.Id === activityId);
+    const activity = activities.find(a => a.id === activityId);
     if (activity) {
-      setFormTrailSlug(activity.TrailSlug);
-      setFormTimeStr(formatSeconds(activity.TimeInSeconds));
-      setFormDistance(activity.Distance || null);
-      setFormElevationGain(activity.ElevationGain || null);
-      setFormLogDate(activity.LogDate || new Date().toISOString().split('T')[0]);
-      setFormNotes(activity.Notes || '');
-      setFormIsPublic(activity.IsPublic);
+      setFormTrailSlug(activity.trailSlug);
+      setFormTimeStr(formatSeconds(activity.timeInSeconds));
+      setFormDistance(activity.distance || null);
+      setFormElevationGain(activity.elevationGain || null);
+      setFormLogDate(activity.logDate || new Date().toISOString().split('T')[0]);
+      setFormNotes(activity.notes || '');
+      setFormIsPublic(activity.isPublic);
       setEditingActivityId(activityId);
       setFormOpen(true);
     }
@@ -194,17 +172,35 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
             {t('profile.myTrails')}
           </Typography>
 
-          {loading ? (
+          {loading || activitiesLoading ? (
             <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="center" sx={{ py: 4 }}>
               <CircularProgress size={20} />
               <Typography color="text.secondary">{t('profile.loadingTicks')}</Typography>
             </Stack>
-          ) : tickedTrailsWithActivities.length === 0 ? (
+          ) : aggregatedTrails.length === 0 ? (
             <Typography color="text.secondary" align="center" sx={{ py: 4 }}>
               {t('profile.noTickedTrails')}
             </Typography>
           ) : (
-            <TableContainer>
+            <>
+              <Stack direction="row" spacing={1} sx={{ mb: 2, justifyContent: 'space-between', alignItems: 'center' }}>
+                <ToggleButtonGroup
+                  value={viewMode}
+                  exclusive
+                  onChange={(_, newValue) => {
+                    if (newValue !== null) setViewMode(newValue);
+                  }}
+                  size="small"
+                >
+                  <ToggleButton value="recent">
+                    {t('myTrails.mostRecent')}
+                  </ToggleButton>
+                  <ToggleButton value="best">
+                    {t('myTrails.bestResults')}
+                  </ToggleButton>
+                </ToggleButtonGroup>
+              </Stack>
+              <TableContainer>
               <Table size="small">
                 <TableHead>
                   <TableRow sx={{ bgcolor: 'action.hover' }}>
@@ -217,48 +213,42 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {tickedTrailsWithActivities.map((item, idx) => (
-                    <TableRow key={`${item.slug}-${idx}`}>
-                      <TableCell sx={{ fontWeight: 500 }}>
-                        {item.activity && item.activityCount > 1 ? (
-                          <Link to={`/my/trails/${item.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                            {item.name} <Typography component="span" sx={{ fontSize: '0.8em', color: 'text.secondary' }}>({item.activityCount})</Typography>
-                          </Link>
-                        ) : (
-                          item.name
-                        )}
-                      </TableCell>
-                      <TableCell align="center">
-                        {item.activity?.LogDate || '-'}
-                      </TableCell>
-                      <TableCell align="right" sx={{ fontFamily: 'monospace' }}>
-                        {item.activity ? formatSeconds(item.activity.TimeInSeconds) : '-'}
-                      </TableCell>
-                      <TableCell align="right">
-                        {item.activity?.Distance ? `${item.activity.Distance.toFixed(1)} km` : '-'}
-                      </TableCell>
-                      <TableCell align="right">
-                        {item.activity?.ElevationGain ? `${item.activity.ElevationGain} m` : '-'}
-                      </TableCell>
-                      <TableCell align="center">
-                        <Stack direction="row" spacing={0.5} justifyContent="center">
-                          {item.activity ? (
-                            <>
-                              <IconButton
+                  {aggregatedTrails.map((item, idx) => {
+                    const displayActivity = viewMode === 'recent' ? item.mostRecentActivity : item.bestActivity;
+                    return (
+                      <TableRow key={`${item.slug}-${idx}`}>
+                        <TableCell sx={{ fontWeight: 500 }}>
+                          {item.activityCount > 1 ? (
+                            <Link to={`/my/trails/${item.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                              {item.name} <Typography component="span" sx={{ fontSize: '0.8em', color: 'text.secondary' }}>({item.activityCount})</Typography>
+                            </Link>
+                          ) : (
+                            item.name
+                          )}
+                        </TableCell>
+                        <TableCell align="center">
+                          {displayActivity?.logDate || '-'}
+                        </TableCell>
+                        <TableCell align="right" sx={{ fontFamily: 'monospace' }}>
+                          {displayActivity ? formatSeconds(displayActivity.timeInSeconds) : '-'}
+                        </TableCell>
+                        <TableCell align="right">
+                          {displayActivity?.distance ? `${Number(displayActivity.distance).toFixed(1)} km` : '-'}
+                        </TableCell>
+                        <TableCell align="right">
+                          {displayActivity?.elevationGain ? `${displayActivity.elevationGain} m` : '-'}
+                        </TableCell>
+                        <TableCell align="center">
+                          {displayActivity ? (
+                            <Stack direction="row" spacing={0.5} justifyContent="center">
+                              <Button
                                 size="small"
-                                onClick={() => handleEditActivity(item.activity!.Id)}
-                                title={t('common.edit')}
+                                variant="outlined"
+                                component={Link}
+                                to={`/my/trails/${item.slug}`}
                               >
-                                <EditIcon fontSize="small" />
-                              </IconButton>
-                              <IconButton
-                                size="small"
-                                color="error"
-                                onClick={() => setDeleteConfirmId(item.activity!.Id)}
-                                title={t('common.delete')}
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
+                                {t('common.view')} {t('activity.activities')}
+                              </Button>
                               <Button
                                 size="small"
                                 variant="outlined"
@@ -267,7 +257,7 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
                               >
                                 {t('common.add')}
                               </Button>
-                            </>
+                            </Stack>
                           ) : (
                             <Button
                               size="small"
@@ -278,13 +268,14 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
                               {t('profile.addResults')}
                             </Button>
                           )}
-                        </Stack>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </TableContainer>
+            </>
           )}
         </Paper>
 

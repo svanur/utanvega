@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, Box, Button, Container, Paper, Stack, Typography, Table, TableBody, TableCell, TableContainer,
+  Alert, Box, Button, CircularProgress, Container, Paper, Stack, Typography, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, PaletteMode, Autocomplete,
 } from '@mui/material';
@@ -21,8 +21,8 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
   const { t } = useTranslation();
   const { slug } = useParams<{ slug: string }>();
   const { user } = useAuth();
-  const { trails } = useTrails(true);
-  const { activities, updateActivity, deleteActivity } = useTrailActivities();
+  const { trails, loading: trailsLoading } = useTrails(true);
+  const { activities, loading: activitiesLoading, updateActivity, deleteActivity } = useTrailActivities();
 
   const [formOpen, setFormOpen] = React.useState(false);
   const [editingActivityId, setEditingActivityId] = React.useState<string | null>(null);
@@ -41,10 +41,10 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
   const trail = useMemo(() => trails.find(t => t.slug === slug), [trails, slug]);
   const trailActivities = useMemo(
     () => activities
-      .filter(a => a.TrailSlug === slug)
+      .filter(a => a.trailSlug === slug)
       .sort((a, b) => {
-        const dateA = a.LogDate ? new Date(a.LogDate).getTime() : new Date(a.CreatedAt).getTime();
-        const dateB = b.LogDate ? new Date(b.LogDate).getTime() : new Date(b.CreatedAt).getTime();
+        const dateA = a.logDate ? new Date(a.logDate).getTime() : new Date(a.createdAt).getTime();
+        const dateB = b.logDate ? new Date(b.logDate).getTime() : new Date(b.createdAt).getTime();
         return dateB - dateA;
       }),
     [activities, slug]
@@ -54,19 +54,31 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
     return <Navigate to="/" replace />;
   }
 
+  // Wait for data to load
+  if (trailsLoading || activitiesLoading) {
+    return (
+      <Layout mode={mode} onToggleMode={onToggleMode}>
+        <Container maxWidth="md" sx={{ py: 3, textAlign: 'center' }}>
+          <CircularProgress />
+        </Container>
+      </Layout>
+    );
+  }
+
+  // Only redirect if data has loaded and trail/activities don't exist
   if (!trail || trailActivities.length === 0) {
     return <Navigate to="/my/trails" replace />;
   }
 
   const handleEditActivity = (activityId: string) => {
-    const activity = trailActivities.find(a => a.Id === activityId);
+    const activity = trailActivities.find(a => a.id === activityId);
     if (activity) {
-      setFormTimeStr(formatSeconds(activity.TimeInSeconds));
-      setFormDistance(activity.Distance || null);
-      setFormElevationGain(activity.ElevationGain || null);
-      setFormLogDate(activity.LogDate || new Date().toISOString().split('T')[0]);
-      setFormNotes(activity.Notes || '');
-      setFormIsPublic(activity.IsPublic);
+      setFormTimeStr(formatSeconds(activity.timeInSeconds));
+      setFormDistance(activity.distance || null);
+      setFormElevationGain(activity.elevationGain || null);
+      setFormLogDate(activity.logDate || new Date().toISOString().split('T')[0]);
+      setFormNotes(activity.notes || '');
+      setFormIsPublic(activity.isPublic);
       setEditingActivityId(activityId);
       setFormOpen(true);
     }
@@ -145,25 +157,25 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
               </TableHead>
               <TableBody>
                 {trailActivities.map(activity => (
-                  <TableRow key={activity.Id}>
-                    <TableCell align="center">{activity.LogDate || '-'}</TableCell>
+                  <TableRow key={activity.id}>
+                    <TableCell align="center">{activity.logDate || '-'}</TableCell>
                     <TableCell align="right" sx={{ fontFamily: 'monospace' }}>
-                      {formatSeconds(activity.TimeInSeconds)}
+                      {formatSeconds(activity.timeInSeconds)}
                     </TableCell>
                     <TableCell align="right">
-                      {activity.Distance ? `${activity.Distance.toFixed(1)} km` : '-'}
+                      {activity.distance ? `${Number(activity.distance).toFixed(1)} km` : '-'}
                     </TableCell>
                     <TableCell align="right">
-                      {activity.ElevationGain ? `${activity.ElevationGain} m` : '-'}
+                      {activity.elevationGain ? `${activity.elevationGain} m` : '-'}
                     </TableCell>
                     <TableCell sx={{ maxWidth: 300, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {activity.Notes || '-'}
+                      {activity.notes || '-'}
                     </TableCell>
                     <TableCell align="center">
                       <Stack direction="row" spacing={0.5} justifyContent="center">
                         <IconButton
                           size="small"
-                          onClick={() => handleEditActivity(activity.Id)}
+                          onClick={() => handleEditActivity(activity.id)}
                           title={t('common.edit')}
                         >
                           <EditIcon fontSize="small" />
@@ -171,7 +183,7 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
                         <IconButton
                           size="small"
                           color="error"
-                          onClick={() => setDeleteConfirmId(activity.Id)}
+                          onClick={() => setDeleteConfirmId(activity.id)}
                           title={t('common.delete')}
                         >
                           <DeleteIcon fontSize="small" />

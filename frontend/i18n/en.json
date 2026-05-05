@@ -5,7 +5,8 @@
         "delete": "Delete",
         "cancel": "Cancel",
         "actions": "Actions",
-        "add": "Add"
+        "add": "Add",
+        "view": "View"
     },
     "auth": {
         "signIn": "Sign in",
@@ -844,11 +845,16 @@
         "confirmDelete": "Delete activity?",
         "deleteWarning": "This activity will be permanently deleted.",
         "invalidTime": "Invalid time format",
-        "save": "Save activity"
+        "save": "Save activity",
+        "activities": "Activities"
     },
     "activities": {
         "title": "Activities",
         "noActivities": "No activities logged yet. Log your first trail activity!"
+    },
+    "myTrails": {
+        "mostRecent": "Most Recent",
+        "bestResults": "Best Results"
     },
     "auth": {
         "signIn": "Sign In",

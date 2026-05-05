@@ -5,7 +5,8 @@
         "delete": "Eyða",
         "cancel": "Hætta við",
         "actions": "Aðgerðir",
-        "add": "Bæta við"
+        "add": "Bæta við",
+        "view": "Skoða"
     },
     "auth": {
         "signIn": "Skrá inn",
@@ -844,11 +845,16 @@
         "confirmDelete": "Eyða æfingu?",
         "deleteWarning": "Þessi æfing verður eytt til frambúðar.",
         "invalidTime": "Ógildur tímasnið",
-        "save": "Vista æfingu"
+        "save": "Vista æfingu",
+        "activities": "Æfingar"
     },
     "activities": {
         "title": "Æfingar",
         "noActivities": "Engar æfingar skráðar ennþá. Skráðu fyrstu æfinguna þína!"
+    },
+    "myTrails": {
+        "mostRecent": "Nýjustu",
+        "bestResults": "Bestu niðurstöður"
     },
     "auth": {
         "signIn": "Skrá inn",

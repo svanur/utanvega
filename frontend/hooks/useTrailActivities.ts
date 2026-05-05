@@ -6,18 +6,18 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 const USER_ACTIVITIES_CACHE_TTL_MS = 60_000;
 
 export interface TrailActivity {
-  Id: string;
-  UserId: string;
-  TrailSlug: string;
-  LogDate?: string; // DATE (YYYY-MM-DD)
-  TimeInSeconds: number; // total seconds
-  Distance?: number; // km
-  ElevationGain?: number; // meters
-  Notes?: string;
-  IsPublic: boolean;
-  LoggedAt: string; // ISO timestamp
-  UpdatedAt?: string;
-  CreatedAt: string;
+  id: string;
+  userId: string;
+  trailSlug: string;
+  logDate?: string; // DATE (YYYY-MM-DD)
+  timeInSeconds: number; // total seconds
+  distance?: number; // km
+  elevationGain?: number; // meters
+  notes?: string;
+  isPublic: boolean;
+  loggedAt: string; // ISO timestamp
+  updatedAt?: string;
+  createdAt: string;
 }
 
 interface CreateActivityInput {
@@ -85,7 +85,7 @@ export function useTrailActivities(trailSlug?: string) {
 
   const { user } = useAuth();
   const [activities, setActivities] = useState<TrailActivity[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // Get auth token from Supabase session
   const getAuthToken = useCallback(async () => {
@@ -200,7 +200,7 @@ export function useTrailActivities(trailSlug?: string) {
       if (!response.ok) throw await buildError(response, 'Failed to update activity');
       const data = await response.json() as TrailActivity;
       setActivities(prev => {
-        const next = prev.map(a => a.Id === activityId ? data : a);
+        const next = prev.map(a => a.id === activityId ? data : a);
         if (user?.id) {
           setUserActivitiesCache(user.id, next);
         }
@@ -225,7 +225,7 @@ export function useTrailActivities(trailSlug?: string) {
       });
       if (!response.ok) throw await buildError(response, 'Failed to delete activity');
       setActivities(prev => {
-        const next = prev.filter(a => a.Id !== activityId);
+        const next = prev.filter(a => a.id !== activityId);
         if (user?.id) {
           setUserActivitiesCache(user.id, next);
         }

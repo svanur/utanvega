@@ -45,7 +45,7 @@ export default function ActivitiesPage({ mode, onToggleMode }: Props) {
     return null;
   }
 
-  const editingActivity = editingId ? activities.find(a => a.Id === editingId) : null;
+  const editingActivity = editingId ? activities.find(a => a.id === editingId) : null;
 
   const handleCreateSubmit = async (data: { trailSlug: string; time: number; notes: string; isPublic: boolean }) => {
     setFormLoading(true);
@@ -97,7 +97,7 @@ export default function ActivitiesPage({ mode, onToggleMode }: Props) {
 
   const handleTogglePublic = async (activity: typeof activities[0]) => {
     try {
-      await updateActivity(activity.Id, { IsPublic: !activity.IsPublic });
+      await updateActivity(activity.id, { IsPublic: !activity.isPublic });
     } catch (error) {
       console.error('Toggle public error:', error);
     }
@@ -145,20 +145,20 @@ export default function ActivitiesPage({ mode, onToggleMode }: Props) {
                 </TableHead>
                 <TableBody>
                   {activities.map(activity => (
-                    <TableRow key={activity.Id}>
-                      <TableCell>{trailNameMap[activity.TrailSlug] || activity.TrailSlug}</TableCell>
+                    <TableRow key={activity.id}>
+                      <TableCell>{trailNameMap[activity.trailSlug] || activity.trailSlug}</TableCell>
                       <TableCell align="right" sx={{ fontFamily: 'monospace' }}>
-                        {formatSeconds(activity.TimeInSeconds)}
+                        {formatSeconds(activity.timeInSeconds)}
                       </TableCell>
                       <TableCell sx={{ maxWidth: 200, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {activity.Notes || '-'}
+                        {activity.notes || '-'}
                       </TableCell>
                       <TableCell align="center">
                         <Chip
-                          icon={activity.IsPublic ? <VisibilityIcon /> : <VisibilityOffIcon />}
-                          label={activity.IsPublic ? t('activity.public') : t('activity.private')}
+                          icon={activity.isPublic ? <VisibilityIcon /> : <VisibilityOffIcon />}
+                          label={activity.isPublic ? t('activity.public') : t('activity.private')}
                           size="small"
-                          variant={activity.IsPublic ? 'filled' : 'outlined'}
+                          variant={activity.isPublic ? 'filled' : 'outlined'}
                           onClick={() => handleTogglePublic(activity)}
                           clickable
                         />
@@ -167,7 +167,7 @@ export default function ActivitiesPage({ mode, onToggleMode }: Props) {
                         <IconButton
                           size="small"
                           onClick={() => {
-                            setEditingId(activity.Id);
+                            setEditingId(activity.id);
                             setFormOpen(true);
                           }}
                         >
@@ -176,7 +176,7 @@ export default function ActivitiesPage({ mode, onToggleMode }: Props) {
                         <IconButton
                           size="small"
                           color="error"
-                          onClick={() => setDeleteConfirmId(activity.Id)}
+                          onClick={() => setDeleteConfirmId(activity.id)}
                         >
                           <DeleteIcon fontSize="small" />
                         </IconButton>
@@ -198,10 +198,10 @@ export default function ActivitiesPage({ mode, onToggleMode }: Props) {
           setFormError(null);
         }}
         onSubmit={editingId ? handleEditSubmit : handleCreateSubmit}
-        initialTrailSlug={editingActivity?.TrailSlug}
-        initialTime={editingActivity?.TimeInSeconds}
-        initialNotes={editingActivity?.Notes}
-        initialIsPublic={editingActivity?.IsPublic}
+        initialTrailSlug={editingActivity?.trailSlug}
+        initialTime={editingActivity?.timeInSeconds}
+        initialNotes={editingActivity?.notes}
+        initialIsPublic={editingActivity?.isPublic}
         isLoading={formLoading}
         error={formError ?? undefined}
       />
