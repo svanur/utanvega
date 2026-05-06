@@ -860,7 +860,8 @@
         "bestTime": "Besti tími",
         "averageTime": "Meðaltími",
         "worstTime": "Versti tími",
-        "totalDistance": "Heildarfjarlægð"
+        "totalDistance": "Heildarfjarlægð",
+        "fasterThanFirst": "Besti vs fyrsti"
     },
     "auth": {
         "signIn": "Skrá inn",

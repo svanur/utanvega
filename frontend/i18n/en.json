@@ -860,7 +860,8 @@
         "bestTime": "Best Time",
         "averageTime": "Average Time",
         "worstTime": "Worst Time",
-        "totalDistance": "Total Distance"
+        "totalDistance": "Total Distance",
+        "fasterThanFirst": "Best vs First"
     },
     "auth": {
         "signIn": "Sign In",

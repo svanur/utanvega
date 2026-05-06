@@ -64,7 +64,7 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
       .map(a => ({
         date: a.logDate || a.createdAt.split('T')[0],
         time: a.timeInSeconds,
-        distance: a.distance ? Number(a.distance) / 1000 : 0, // Convert to km
+        distance: a.distance ? Number(a.distance) : 0, // Already in km from database
         elevation: a.elevationGain || 0,
         formattedTime: formatSeconds(a.timeInSeconds),
       }))
@@ -76,32 +76,30 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
   const statistics = useMemo(() => {
     if (trailActivities.length === 0) {
       return {
-        totalActivities: 0,
         averageTime: 0,
         bestTime: 0,
         worstTime: 0,
-        totalDistance: 0,
-        averageDistance: 0,
-        totalElevation: 0,
-        averageElevation: 0,
+        fasterThanFirstDelta: 0,
       };
     }
 
     const times = trailActivities.map(a => a.timeInSeconds);
-    const distances = trailActivities.filter(a => a.distance).map(a => Number(a.distance) / 1000);
-    const elevations = trailActivities.filter(a => a.elevationGain).map(a => a.elevationGain as number);
+    const firstAttemptTime = trailActivities[trailActivities.length - 1]?.timeInSeconds ?? times[0];
+    const bestTime = Math.min(...times);
 
     return {
-      totalActivities: trailActivities.length,
       averageTime: Math.round(times.reduce((a, b) => a + b, 0) / times.length),
-      bestTime: Math.min(...times),
+      bestTime,
       worstTime: Math.max(...times),
-      totalDistance: distances.length > 0 ? distances.reduce((a, b) => (a ?? 0) + (b ?? 0), 0) : 0,
-      averageDistance: distances.length > 0 ? distances.reduce((a, b) => (a ?? 0) + (b ?? 0), 0) / distances.length : 0,
-      totalElevation: elevations.length > 0 ? elevations.reduce((a, b) => (a ?? 0) + (b ?? 0), 0) : 0,
-      averageElevation: elevations.length > 0 ? Math.round(elevations.reduce((a, b) => (a ?? 0) + (b ?? 0), 0) / elevations.length) : 0,
+      fasterThanFirstDelta: bestTime - firstAttemptTime,
     };
   }, [trailActivities]);
+
+  const formatSignedTimeDelta = (seconds: number) => {
+    if (seconds === 0) return formatSeconds(0);
+    const sign = seconds < 0 ? '-' : '+';
+    return `${sign}${formatSeconds(Math.abs(seconds))}`;
+  };
 
   // Wait for data to load
   if (trailsLoading || activitiesLoading) {
@@ -267,10 +265,22 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
               <Grid item xs={6} sm={3}>
                 <Paper sx={{ p: 2, textAlign: 'center' }}>
                   <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                    {t('myTrails.totalDistance', 'Total Distance')}
+                    {t('myTrails.fasterThanFirst', 'Best vs First')}
                   </Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                    {statistics.totalDistance.toFixed(1)} km
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      fontFamily: 'monospace',
+                      fontWeight: 'bold',
+                      color:
+                        statistics.fasterThanFirstDelta < 0
+                          ? 'success.main'
+                          : statistics.fasterThanFirstDelta > 0
+                            ? 'error.main'
+                            : 'text.primary',
+                    }}
+                  >
+                    {formatSignedTimeDelta(statistics.fasterThanFirstDelta)}
                   </Typography>
                 </Paper>
               </Grid>
@@ -289,8 +299,13 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
                   <XAxis dataKey="date" label={{ value: t('activity.dates'), position: 'insideBottomRight', offset: -5 }} />
                   <YAxis 
                     tickFormatter={(value) => {
-                      // The formatter works for all three metrics - time gets formatted as HH:MM:SS
-                      return typeof value === 'number' ? value.toFixed(0) : '';
+                      // Format based on the metric - time values are in seconds, others in raw units
+                      if (typeof value === 'number') {
+                        // Check if this looks like a time value (typically > 60 for meaningful time)
+                        // If we have time line visible, format as HH:MM:SS; otherwise as number
+                        return visibleMetrics.time ? formatSeconds(value) : value.toFixed(0);
+                      }
+                      return '';
                     }}
                   />
                   <Tooltip 
@@ -313,7 +328,21 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
                     type="monotone" 
                     dataKey="time" 
                     stroke="#1976d2" 
-                    dot={visibleMetrics.time ? { fill: '#1976d2', r: 4 } : false}
+                    dot={visibleMetrics.time
+                      ? (dotProps: any) => {
+                          const isBestPoint = dotProps?.payload?.time === statistics.bestTime;
+                          return (
+                            <circle
+                              cx={dotProps.cx}
+                              cy={dotProps.cy}
+                              r={isBestPoint ? 8 : 5}
+                              fill={isBestPoint ? '#2e7d32' : '#1976d2'}
+                              stroke={isBestPoint ? '#ffffff' : 'none'}
+                              strokeWidth={isBestPoint ? 2 : 0}
+                            />
+                          );
+                        }
+                      : false}
                     activeDot={visibleMetrics.time ? { r: 6 } : false}
                     strokeOpacity={visibleMetrics.time ? 1 : 0}
                     name={t('activity.time')}
