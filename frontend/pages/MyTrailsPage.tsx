@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Alert, Button, CircularProgress, Container, Paper, Stack, Typography, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, PaletteMode, Autocomplete, Checkbox, FormControlLabel, ToggleButton, ToggleButtonGroup,
+  TextField, PaletteMode, Autocomplete, Checkbox, FormControlLabel, ToggleButton, ToggleButtonGroup, TableSortLabel,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AddIcon from '@mui/icons-material/Add';
@@ -18,6 +18,7 @@ import { formatDateWithMonths, formatSeconds, parseTimeString } from '../utils/t
 import { aggregateTrailActivities } from '../utils/trailActivityAggregator';
 
 type Props = { mode: PaletteMode; onToggleMode: () => void };
+type MyTrailsSortKey = 'trail' | 'date' | 'time' | 'distance' | 'elevation';
 
 export default function MyTrailsPage({ mode, onToggleMode }: Props) {
   const { t, i18n } = useTranslation();
@@ -31,6 +32,8 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
   const [editingActivityId, setEditingActivityId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'recent' | 'best'>('recent');
+  const [sortBy, setSortBy] = useState<MyTrailsSortKey>('date');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   
   // Form state
   const [formTrailSlug, setFormTrailSlug] = useState<string | null>(null);
@@ -53,6 +56,45 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
   const aggregatedTrails = useMemo(() => {
     return aggregateTrailActivities(tickedSlugs, activities, trailNameMap);
   }, [tickedSlugs, activities, trailNameMap]);
+
+  const sortedAggregatedTrails = useMemo(() => {
+    const sorted = [...aggregatedTrails];
+    const dir = sortDirection === 'asc' ? 1 : -1;
+
+    sorted.sort((a, b) => {
+      const activityA = viewMode === 'recent' ? a.mostRecentActivity : a.bestActivity;
+      const activityB = viewMode === 'recent' ? b.mostRecentActivity : b.bestActivity;
+
+      switch (sortBy) {
+        case 'trail':
+          return a.name.localeCompare(b.name) * dir;
+        case 'date': {
+          const dateA = activityA?.logDate ?? activityA?.createdAt ?? '';
+          const dateB = activityB?.logDate ?? activityB?.createdAt ?? '';
+          return dateA.localeCompare(dateB) * dir;
+        }
+        case 'time': {
+          const valueA = activityA?.timeInSeconds ?? 0;
+          const valueB = activityB?.timeInSeconds ?? 0;
+          return (valueA - valueB) * dir;
+        }
+        case 'distance': {
+          const valueA = Number(activityA?.distance ?? 0);
+          const valueB = Number(activityB?.distance ?? 0);
+          return (valueA - valueB) * dir;
+        }
+        case 'elevation': {
+          const valueA = activityA?.elevationGain ?? 0;
+          const valueB = activityB?.elevationGain ?? 0;
+          return (valueA - valueB) * dir;
+        }
+        default:
+          return 0;
+      }
+    });
+
+    return sorted;
+  }, [aggregatedTrails, sortBy, sortDirection, viewMode]);
 
   if (!user) {
     return <Navigate to="/" replace />;
@@ -168,6 +210,16 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
 
   const selectedTrail = trails.find(t => t.slug === formTrailSlug);
 
+  const handleSort = (key: MyTrailsSortKey) => {
+    if (sortBy === key) {
+      setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+
+    setSortBy(key);
+    setSortDirection(key === 'trail' ? 'asc' : 'desc');
+  };
+
   return (
     <Layout mode={mode} onToggleMode={onToggleMode}>
       <Container maxWidth="md" sx={{ py: 3 }}>
@@ -212,16 +264,56 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
               <Table size="small">
                 <TableHead>
                   <TableRow sx={{ bgcolor: 'action.hover' }}>
-                    <TableCell>{t('activity.trail')}</TableCell>
-                    <TableCell align="center">{t('activity.date')}</TableCell>
-                    <TableCell align="right">{t('activity.time')}</TableCell>
-                    <TableCell align="right">{t('activity.distance')}</TableCell>
-                    <TableCell align="right">{t('activity.elevationGain')}</TableCell>
+                    <TableCell>
+                      <TableSortLabel
+                        active={sortBy === 'trail'}
+                        direction={sortBy === 'trail' ? sortDirection : 'asc'}
+                        onClick={() => handleSort('trail')}
+                      >
+                        {t('activity.trail')}
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell align="center">
+                      <TableSortLabel
+                        active={sortBy === 'date'}
+                        direction={sortBy === 'date' ? sortDirection : 'asc'}
+                        onClick={() => handleSort('date')}
+                      >
+                        {t('activity.date')}
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell align="right">
+                      <TableSortLabel
+                        active={sortBy === 'time'}
+                        direction={sortBy === 'time' ? sortDirection : 'asc'}
+                        onClick={() => handleSort('time')}
+                      >
+                        {t('activity.time')}
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell align="right">
+                      <TableSortLabel
+                        active={sortBy === 'distance'}
+                        direction={sortBy === 'distance' ? sortDirection : 'asc'}
+                        onClick={() => handleSort('distance')}
+                      >
+                        {t('activity.distance')}
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell align="right">
+                      <TableSortLabel
+                        active={sortBy === 'elevation'}
+                        direction={sortBy === 'elevation' ? sortDirection : 'asc'}
+                        onClick={() => handleSort('elevation')}
+                      >
+                        {t('activity.elevationGain')}
+                      </TableSortLabel>
+                    </TableCell>
                     <TableCell align="center">{t('common.actions')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {aggregatedTrails.map((item, idx) => {
+                  {sortedAggregatedTrails.map((item, idx) => {
                     const displayActivity = viewMode === 'recent' ? item.mostRecentActivity : item.bestActivity;
                     return (
                       <TableRow key={`${item.slug}-${idx}`}>

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Alert, Box, Button, CircularProgress, Container, Paper, Stack, Typography, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Grid,
-  TextField, PaletteMode, Autocomplete,
+  TextField, PaletteMode, Autocomplete, TableSortLabel,
 } from '@mui/material';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -18,6 +18,7 @@ import { useTrailActivities } from '../hooks/useTrailActivities';
 import { formatDateWithMonths, formatSeconds, parseTimeString } from '../utils/timeFormat';
 
 type Props = { mode: PaletteMode; onToggleMode: () => void };
+type TrailDetailsSortKey = 'date' | 'time' | 'distance' | 'elevation' | 'notes';
 
 export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
   const { t, i18n } = useTranslation();
@@ -39,6 +40,8 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
   const [formLogDate, setFormLogDate] = React.useState<string>(new Date().toISOString().split('T')[0]);
   const [formNotes, setFormNotes] = React.useState('');
   const [formIsPublic, setFormIsPublic] = React.useState(false);
+  const [tableSortBy, setTableSortBy] = React.useState<TrailDetailsSortKey>('date');
+  const [tableSortDirection, setTableSortDirection] = React.useState<'asc' | 'desc'>('desc');
 
   // Chart legend visibility state
   const [visibleMetrics, setVisibleMetrics] = React.useState({
@@ -59,6 +62,33 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
       }),
     [activities, slug]
   );
+
+  const sortedTableActivities = useMemo(() => {
+    const sorted = [...trailActivities];
+    const dir = tableSortDirection === 'asc' ? 1 : -1;
+
+    sorted.sort((a, b) => {
+      switch (tableSortBy) {
+        case 'date': {
+          const dateA = a.logDate ?? a.createdAt;
+          const dateB = b.logDate ?? b.createdAt;
+          return dateA.localeCompare(dateB) * dir;
+        }
+        case 'time':
+          return (a.timeInSeconds - b.timeInSeconds) * dir;
+        case 'distance':
+          return (Number(a.distance ?? 0) - Number(b.distance ?? 0)) * dir;
+        case 'elevation':
+          return ((a.elevationGain ?? 0) - (b.elevationGain ?? 0)) * dir;
+        case 'notes':
+          return (a.notes ?? '').localeCompare(b.notes ?? '') * dir;
+        default:
+          return 0;
+      }
+    });
+
+    return sorted;
+  }, [trailActivities, tableSortBy, tableSortDirection]);
 
   // Prepare chart data - sort by date ascending for display
   const chartData = useMemo(
@@ -206,6 +236,16 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
     if (hasAtLeastOne) {
       setVisibleMetrics(newState);
     }
+  };
+
+  const handleTableSort = (key: TrailDetailsSortKey) => {
+    if (tableSortBy === key) {
+      setTableSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+
+    setTableSortBy(key);
+    setTableSortDirection(key === 'notes' ? 'asc' : 'desc');
   };
 
   const handleDeleteConfirm = async () => {
@@ -384,18 +424,58 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
 
           <TableContainer>
             <Table size="small">
-              <TableHead>
+                <TableHead>
                 <TableRow sx={{ bgcolor: 'action.hover' }}>
-                  <TableCell align="center">{t('activity.date')}</TableCell>
-                  <TableCell align="right">{t('activity.time')}</TableCell>
-                  <TableCell align="right">{t('activity.distance')}</TableCell>
-                  <TableCell align="right">{t('activity.elevationGain')}</TableCell>
-                  <TableCell>{t('activity.notes')}</TableCell>
+                  <TableCell align="center">
+                    <TableSortLabel
+                      active={tableSortBy === 'date'}
+                      direction={tableSortBy === 'date' ? tableSortDirection : 'asc'}
+                      onClick={() => handleTableSort('date')}
+                    >
+                      {t('activity.date')}
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell align="right">
+                    <TableSortLabel
+                      active={tableSortBy === 'time'}
+                      direction={tableSortBy === 'time' ? tableSortDirection : 'asc'}
+                      onClick={() => handleTableSort('time')}
+                    >
+                      {t('activity.time')}
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell align="right">
+                    <TableSortLabel
+                      active={tableSortBy === 'distance'}
+                      direction={tableSortBy === 'distance' ? tableSortDirection : 'asc'}
+                      onClick={() => handleTableSort('distance')}
+                    >
+                      {t('activity.distance')}
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell align="right">
+                    <TableSortLabel
+                      active={tableSortBy === 'elevation'}
+                      direction={tableSortBy === 'elevation' ? tableSortDirection : 'asc'}
+                      onClick={() => handleTableSort('elevation')}
+                    >
+                      {t('activity.elevationGain')}
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell>
+                    <TableSortLabel
+                      active={tableSortBy === 'notes'}
+                      direction={tableSortBy === 'notes' ? tableSortDirection : 'asc'}
+                      onClick={() => handleTableSort('notes')}
+                    >
+                      {t('activity.notes')}
+                    </TableSortLabel>
+                  </TableCell>
                   <TableCell align="center">{t('common.actions')}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {trailActivities.map(activity => (
+                {sortedTableActivities.map(activity => (
                   <TableRow key={activity.id}>
                     <TableCell align="center">
                       {formatDateWithMonths(activity.logDate, months, i18n.language === 'is')}
