@@ -821,9 +821,12 @@
     },
     "common": {
         "reset": "Reset",
+        "edit": "Edit",
         "cancel": "Cancel",
         "delete": "Delete",
         "actions": "Actions",
+        "add": "Add",
+        "view": "View",
         "save": "Save"
     },
     "activity": {

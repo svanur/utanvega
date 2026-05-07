@@ -11,15 +11,17 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import Layout from '../components/Layout';
+import TimePickerInput from '../components/TimePickerInput';
 import { useAuth } from '../hooks/useAuth';
 import { useTrails } from '../hooks/useTrails';
 import { useTrailActivities } from '../hooks/useTrailActivities';
-import { formatSeconds, parseTimeString } from '../utils/timeFormat';
+import { formatDateWithMonths, formatSeconds, parseTimeString } from '../utils/timeFormat';
 
 type Props = { mode: PaletteMode; onToggleMode: () => void };
 
 export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const months = t('races.months', { returnObjects: true }) as unknown as string[];
   const { slug } = useParams<{ slug: string }>();
   const { user } = useAuth();
   const { trails, loading: trailsLoading } = useTrails(true);
@@ -62,14 +64,14 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
   const chartData = useMemo(
     () => trailActivities
       .map(a => ({
-        date: a.logDate || a.createdAt.split('T')[0],
+        dateIso: a.logDate || a.createdAt.split('T')[0],
+        dateLabel: formatDateWithMonths(a.logDate || a.createdAt.split('T')[0], months, i18n.language === 'is'),
         time: a.timeInSeconds,
         distance: a.distance ? Number(a.distance) : 0, // Already in km from database
         elevation: a.elevationGain || 0,
-        formattedTime: formatSeconds(a.timeInSeconds),
       }))
-      .sort((a, b) => a.date.localeCompare(b.date)),
-    [trailActivities]
+      .sort((a, b) => a.dateIso.localeCompare(b.dateIso)),
+    [trailActivities, i18n.language, months]
   );
 
   // Calculate statistics
@@ -121,7 +123,11 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
     const activity = trailActivities.find(a => a.id === activityId);
     if (activity) {
       setFormTimeStr(formatSeconds(activity.timeInSeconds));
-      setFormDistance(activity.distance || null);
+      setFormDistance(
+        activity.distance != null
+          ? Math.round(Number(activity.distance) * 10) / 10
+          : null
+      );
       setFormElevationGain(activity.elevationGain || null);
       setFormLogDate(activity.logDate || new Date().toISOString().split('T')[0]);
       setFormNotes(activity.notes || '');
@@ -296,7 +302,7 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={chartData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" label={{ value: t('activity.dates'), position: 'insideBottomRight', offset: -5 }} />
+                  <XAxis dataKey="dateLabel" label={{ value: t('activity.dates'), position: 'insideBottomRight', offset: -5 }} />
                   <YAxis 
                     tickFormatter={(value) => {
                       // Format based on the metric - time values are in seconds, others in raw units
@@ -391,7 +397,9 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
               <TableBody>
                 {trailActivities.map(activity => (
                   <TableRow key={activity.id}>
-                    <TableCell align="center">{activity.logDate || '-'}</TableCell>
+                    <TableCell align="center">
+                      {formatDateWithMonths(activity.logDate, months, i18n.language === 'is')}
+                    </TableCell>
                     <TableCell align="right" sx={{ fontFamily: 'monospace' }}>
                       {formatSeconds(activity.timeInSeconds)}
                     </TableCell>
@@ -453,17 +461,17 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
               type="date"
               value={formLogDate}
               onChange={(e) => setFormLogDate(e.target.value)}
+              inputProps={{ lang: i18n.language === 'is' ? 'is-IS' : 'en-GB' }}
+              helperText={formatDateWithMonths(formLogDate, months, i18n.language === 'is')}
               InputLabelProps={{ shrink: true }}
               fullWidth
             />
 
-            <TextField
+            <TimePickerInput
               label={t('activity.time')}
               value={formTimeStr}
-              onChange={(e) => setFormTimeStr(e.target.value)}
-              placeholder="HH:MM:SS"
-              helperText="Format: HH:MM:SS or MM:SS"
-              fullWidth
+              onChange={setFormTimeStr}
+              helperText="Use arrow keys ↑↓ to adjust hours/minutes/seconds"
             />
 
             <TextField

@@ -14,13 +14,14 @@ import { useAuth } from '../hooks/useAuth';
 import { useTickedTrails } from '../hooks/useTickedTrails';
 import { useTrails } from '../hooks/useTrails';
 import { useTrailActivities } from '../hooks/useTrailActivities';
-import { formatSeconds, parseTimeString } from '../utils/timeFormat';
+import { formatDateWithMonths, formatSeconds, parseTimeString } from '../utils/timeFormat';
 import { aggregateTrailActivities } from '../utils/trailActivityAggregator';
 
 type Props = { mode: PaletteMode; onToggleMode: () => void };
 
 export default function MyTrailsPage({ mode, onToggleMode }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const months = t('races.months', { returnObjects: true }) as unknown as string[];
   const { user } = useAuth();
   const { tickedSlugs, loading } = useTickedTrails();
   const { trails } = useTrails(true);
@@ -59,12 +60,15 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
 
   const handleAddResults = (slug: string) => {
     const trail = trails.find(t => t.slug === slug);
+    const defaultDistanceKm = typeof trail?.length === 'number' && Number.isFinite(trail.length)
+      ? Math.round((trail.length / 1000) * 10) / 10
+      : null;
     const defaultElevation = typeof trail?.elevationGain === 'number' && Number.isFinite(trail.elevationGain)
       ? Math.round(trail.elevationGain)
       : null;
     setFormTrailSlug(slug);
     setFormTimeStr('00:00:00');
-    setFormDistance(trail?.length || null);
+    setFormDistance(defaultDistanceKm);
     setFormElevationGain(defaultElevation);
     setFormLogDate(new Date().toISOString().split('T')[0]);
     setFormNotes('');
@@ -78,7 +82,11 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
     if (activity) {
       setFormTrailSlug(activity.trailSlug);
       setFormTimeStr(formatSeconds(activity.timeInSeconds));
-      setFormDistance(activity.distance || null);
+      setFormDistance(
+        activity.distance != null
+          ? Math.round(Number(activity.distance) * 10) / 10
+          : null
+      );
       setFormElevationGain(activity.elevationGain || null);
       setFormLogDate(activity.logDate || new Date().toISOString().split('T')[0]);
       setFormNotes(activity.notes || '');
@@ -227,7 +235,7 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
                           )}
                         </TableCell>
                         <TableCell align="center">
-                          {displayActivity?.logDate || '-'}
+                          {formatDateWithMonths(displayActivity?.logDate, months, i18n.language === 'is')}
                         </TableCell>
                         <TableCell align="right" sx={{ fontFamily: 'monospace' }}>
                           {displayActivity ? formatSeconds(displayActivity.timeInSeconds) : '-'}
@@ -304,6 +312,8 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
               type="date"
               value={formLogDate}
               onChange={(e) => setFormLogDate(e.target.value)}
+              inputProps={{ lang: i18n.language === 'is' ? 'is-IS' : 'en-GB' }}
+              helperText={formatDateWithMonths(formLogDate, months, i18n.language === 'is')}
               InputLabelProps={{ shrink: true }}
             />
 

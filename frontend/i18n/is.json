@@ -821,9 +821,12 @@
     },
     "common": {
         "reset": "Núllstilla",
+        "edit": "Breyta",
         "cancel": "Hætta",
         "delete": "Eyða",
         "actions": "Aðgerðir",
+        "add": "Bæta við",
+        "view": "Skoða",
         "save": "Vista"
     },
     "activity": {

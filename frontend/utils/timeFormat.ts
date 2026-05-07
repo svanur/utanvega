@@ -29,3 +29,50 @@ export function parseTimeString(timeStr: string): number {
   }
   return 0;
 }
+
+/**
+ * Format an ISO date (YYYY-MM-DD) to a localized date string.
+ */
+export function formatDateForDisplay(dateStr?: string, locale = 'en-GB'): string {
+  if (!dateStr) return '-';
+  const [year, month, day] = dateStr.split('-');
+  if (!year || !month || !day) return dateStr;
+
+  const yearNum = Number(year);
+  const monthNum = Number(month);
+  const dayNum = Number(day);
+  if (!Number.isFinite(yearNum) || !Number.isFinite(monthNum) || !Number.isFinite(dayNum)) {
+    return dateStr;
+  }
+
+  const utcDate = new Date(Date.UTC(yearNum, monthNum - 1, dayNum));
+  return new Intl.DateTimeFormat(locale, {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(utcDate);
+}
+
+/**
+ * Format an ISO date (YYYY-MM-DD) with i18n month names.
+ * Icelandic: "4. maí 2026"
+ * English: "May 4, 2026"
+ */
+export function formatDateWithMonths(dateStr: string | undefined, months: string[], isIcelandic: boolean): string {
+  if (!dateStr) return '-';
+  const [year, month, day] = dateStr.split('-');
+  if (!year || !month || !day) return dateStr;
+
+  const yearNum = Number(year);
+  const monthNum = Number(month);
+  const dayNum = Number(day);
+  if (!Number.isFinite(yearNum) || !Number.isFinite(monthNum) || !Number.isFinite(dayNum)) {
+    return dateStr;
+  }
+
+  const monthName = months[monthNum - 1] ?? month;
+  return isIcelandic
+    ? `${dayNum}. ${monthName} ${yearNum}`
+    : `${monthName} ${dayNum}, ${yearNum}`;
+}
