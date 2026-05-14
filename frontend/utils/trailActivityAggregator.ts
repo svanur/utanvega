@@ -9,16 +9,29 @@ export interface AggregatedTrailActivity {
   activityCount: number;
 }
 
+export function getCompletedTrailSlugs(
+  tickedSlugs: Set<string>,
+  activities: TrailActivity[]
+): Set<string> {
+  return new Set([...tickedSlugs, ...activities.map(a => a.trailSlug)]);
+}
+
+export function getCompletedTrailCount(
+  tickedSlugs: Set<string>,
+  activities: TrailActivity[]
+): number {
+  return getCompletedTrailSlugs(tickedSlugs, activities).size;
+}
+
 export function aggregateTrailActivities(
   tickedSlugs: Set<string>,
   activities: TrailActivity[],
   trailNameMap: Record<string, string>
 ): AggregatedTrailActivity[] {
-  const activityTrailSlugs = new Set(activities.map(a => a.trailSlug));
-  const allTrailSlugs = new Set([...tickedSlugs, ...activityTrailSlugs]);
+  const completedTrailSlugs = getCompletedTrailSlugs(tickedSlugs, activities);
 
   // Group activities by trail slug
-  const trailGroups = Array.from(allTrailSlugs).map(slug => {
+  const trailGroups = Array.from(completedTrailSlugs).map(slug => {
     const trailActivities = activities
       .filter(a => a.trailSlug === slug)
       .sort((a, b) => {

@@ -9,6 +9,7 @@ import Layout from '../components/Layout';
 import { useAuth } from '../hooks/useAuth';
 import { useTickedTrails } from '../hooks/useTickedTrails';
 import { useTrailActivities } from '../hooks/useTrailActivities';
+import { getCompletedTrailCount } from '../utils/trailActivityAggregator';
 
 type Props = { mode: PaletteMode; onToggleMode: () => void };
 
@@ -19,7 +20,7 @@ export default function MyProfilePage({ mode, onToggleMode }: Props) {
   const { activities } = useTrailActivities();
   const [signingOut, setSigningOut] = React.useState(false);
   const completedTrailCount = React.useMemo(
-    () => new Set([...tickedSlugs, ...activities.map(a => a.trailSlug)]).size,
+    () => getCompletedTrailCount(tickedSlugs, activities),
     [activities, tickedSlugs]
   );
 

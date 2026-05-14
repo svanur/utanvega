@@ -20,6 +20,10 @@ function mapRow(row: Record<string, unknown>): UserProfile {
   };
 }
 
+function getDefaultDisplayName(userId: string): string {
+  return `Runner-${userId.replace(/-/g, '').slice(0, 6)}`;
+}
+
 export function useProfile() {
   const { user } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -43,8 +47,8 @@ export function useProfile() {
       .single();
 
     if (fetchError?.code === 'PGRST116') {
-      // Profile doesn't exist yet — auto-create with email prefix as display name
-      const displayName = user.email?.split('@')[0] ?? 'Runner';
+      // Profile doesn't exist yet — auto-create with a non-email-derived display name
+      const displayName = getDefaultDisplayName(user.id);
       const { data: created, error: createError } = await supabase
         .from('Profiles')
         .insert({ UserId: user.id, DisplayName: displayName })
