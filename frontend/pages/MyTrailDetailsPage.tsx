@@ -133,6 +133,9 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
     return `${sign}${formatSeconds(Math.abs(seconds))}`;
   };
 
+  // Auth guard — must be after all hooks
+  if (!user) return <Navigate to="/" replace />;
+
   // Wait for data to load
   if (trailsLoading || activitiesLoading) {
     return (
