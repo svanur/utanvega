@@ -174,5 +174,37 @@ internal class TestDbContext : UtanvegaDbContext
                   .HasForeignKey(e => e.TrailId)
                   .OnDelete(DeleteBehavior.SetNull);
         });
+
+        modelBuilder.Entity<Core.Entities.UserTrailActivity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired();
+            entity.Property(e => e.TrailSlug).IsRequired().HasMaxLength(250);
+            entity.Property(e => e.Time).IsRequired();
+            entity.Property(e => e.Notes).HasMaxLength(500);
+            // SQLite doesn't support DateTimeOffset in ORDER BY — store as ticks
+            entity.Property(e => e.LoggedAt)
+                  .IsRequired()
+                  .HasConversion(v => v.UtcTicks, v => new DateTimeOffset(v, TimeSpan.Zero));
+            entity.Property(e => e.CreatedAt)
+                  .IsRequired()
+                  .HasConversion(v => v.UtcTicks, v => new DateTimeOffset(v, TimeSpan.Zero));
+            entity.Property(e => e.UpdatedAt)
+                  .HasConversion(
+                      v => v.HasValue ? (long?)v.Value.UtcTicks : null,
+                      v => v.HasValue ? (DateTimeOffset?)new DateTimeOffset(v.Value, TimeSpan.Zero) : null);
+            // SQLite has no native DateOnly — convert to int
+            entity.Property(e => e.LogDate)
+                  .HasConversion(
+                      v => v.HasValue ? (int?)v.Value.DayNumber : null,
+                      v => v.HasValue ? (DateOnly?)DateOnly.FromDayNumber(v.Value) : null);
+            // SQLite has no numeric(8,2) — convert to double
+            entity.Property(e => e.Distance)
+                  .HasConversion(
+                      v => v.HasValue ? (double?)((double)v.Value) : null,
+                      v => v.HasValue ? (decimal?)((decimal)v.Value) : null);
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => new { e.UserId, e.TrailSlug });
+        });
     }
 }

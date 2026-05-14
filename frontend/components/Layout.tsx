@@ -14,6 +14,7 @@ import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import FooterStatus from './FooterStatus';
 import LanguageToggle from './LanguageToggle';
 import DynamicHeader from './DynamicHeader';
+import UserAvatar from './UserAvatar';
 import { useHeaderWeather } from '../hooks/useHeaderWeather';
 import { useInstallPrompt } from '../hooks/useInstallPrompt';
 import { useAdminMode } from '../hooks/useAdminMode';
@@ -140,6 +141,8 @@ export default function Layout({ children, mode, onToggleMode }: LayoutProps) {
                             )}
                         </IconButton>
                     </Tooltip>
+
+                    {isEnabled('user_login', false) && <UserAvatar />}
                 </Toolbar>
             </DynamicHeader>
 

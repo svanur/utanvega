@@ -1,14 +1,10 @@
-using System.Security.Claims;
 using System.Security.Cryptography;
-using System.Text.Encodings.Web;
+using System.Data;
 using Serilog;
 using Serilog.Events;
 using Utanvega.Backend.Infrastructure.Persistence;
 using Utanvega.Backend.Core.Entities;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.Extensions.Options;
-
 using Microsoft.EntityFrameworkCore;
 
 using Utanvega.Backend.Application.Trails.Commands.CreateTrailFromGpx;
@@ -48,6 +44,10 @@ using Utanvega.Backend.Application.Competitions.Commands.DeleteCompetition;
 using Utanvega.Backend.Application.Competitions.Commands.CreateRace;
 using Utanvega.Backend.Application.Competitions.Commands.UpdateRace;
 using Utanvega.Backend.Application.Competitions.Commands.DeleteRace;
+using Utanvega.Backend.Application.Activities.Commands.CreateUserTrailActivity;
+using Utanvega.Backend.Application.Activities.Commands.UpdateUserTrailActivity;
+using Utanvega.Backend.Application.Activities.Commands.DeleteUserTrailActivity;
+using Utanvega.Backend.Application.Activities.Queries.GetUserTrailActivities;
 using MediatR;
 using FluentValidation;
 using Microsoft.Extensions.Caching.Memory;
@@ -59,6 +59,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Threading.RateLimiting;
+using Npgsql;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
@@ -179,6 +180,26 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 : null,
             ValidateIssuerSigningKey = !string.IsNullOrEmpty(jwtSecret)
         };
+        
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = context =>
+            {
+                Log.Information("JWT token validated successfully for user");
+                return Task.CompletedTask;
+            },
+            OnAuthenticationFailed = context =>
+            {
+                Log.Warning("JWT authentication failed: {Exception}", context.Exception?.Message);
+                return Task.CompletedTask;
+            },
+            OnChallenge = context =>
+            {
+                Log.Warning("JWT challenge issued: {Error} {Description}", 
+                    context.Error, context.ErrorDescription);
+                return Task.CompletedTask;
+            }
+        };
     });
 
 builder.Services.AddAuthorization(options =>
@@ -216,7 +237,8 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
     {
-        var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? ["http://localhost:5173", "http://localhost:5174"];
+        var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() 
+            ?? ["http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:5176", "http://localhost:5177", "http://localhost:5178", "http://localhost:5179", "http://localhost:5180"];
         
         Log.Information("Allowed Origins: {Origins}", string.Join(", ", allowedOrigins));
         
@@ -255,6 +277,39 @@ var app = builder.Build();
 Log.Information("Application built. Starting up...");
 
 var middlewareLogger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("App");
+
+try
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<UtanvegaDbContext>();
+    var conn = db.Database.GetDbConnection();
+
+    if (conn.State != ConnectionState.Open)
+        await conn.OpenAsync();
+
+    await using var cmd = conn.CreateCommand();
+    cmd.CommandText = @"
+SELECT column_name, data_type, is_nullable
+FROM information_schema.columns
+WHERE table_schema = 'public' AND table_name = 'UserTrailActivities'
+ORDER BY ordinal_position;";
+
+    var columns = new List<string>();
+    await using var reader = await cmd.ExecuteReaderAsync();
+    while (await reader.ReadAsync())
+    {
+        columns.Add($"{reader.GetString(0)}:{reader.GetString(1)}:nullable={reader.GetString(2)}");
+    }
+
+    if (columns.Count == 0)
+        Log.Warning("Schema check: table public.UserTrailActivities not found");
+    else
+        Log.Information("Schema check: public.UserTrailActivities columns => {Columns}", string.Join(", ", columns));
+}
+catch (Exception ex)
+{
+    Log.Warning(ex, "Schema check for public.UserTrailActivities failed");
+}
 
 // app.UseSwagger();
 // app.UseSwaggerUI();
@@ -513,7 +568,7 @@ app.MapGet("/api/v1/admin/trails/{idOrSlug}", [Authorize] async (string idOrSlug
 })
 .WithName("GetAdminTrail");
 
-app.MapPut("/api/v1/admin/trails/{id}", [Authorize] async (Guid id, UpdateTrailCommand command, IMediator mediator) =>
+app.MapPut("/api/v1/admin/trails/{id:guid}", [Authorize] async (Guid id, UpdateTrailCommand command, IMediator mediator) =>
 {
     if (id != command.Id) return Results.BadRequest("ID mismatch");
     try
@@ -528,7 +583,7 @@ app.MapPut("/api/v1/admin/trails/{id}", [Authorize] async (Guid id, UpdateTrailC
 })
 .WithName("UpdateTrail");
 
-app.MapPatch("/api/v1/admin/trails/{id}", [Authorize] async (Guid id, PatchTrailCommand command, IMediator mediator) =>
+app.MapPatch("/api/v1/admin/trails/{id:guid}", [Authorize] async (Guid id, PatchTrailCommand command, IMediator mediator) =>
 {
     if (id != command.Id) return Results.BadRequest("ID mismatch");
     var success = await mediator.Send(command);
@@ -536,7 +591,7 @@ app.MapPatch("/api/v1/admin/trails/{id}", [Authorize] async (Guid id, PatchTrail
 })
 .WithName("PatchTrail");
 
-app.MapDelete("/api/v1/admin/trails/{id}", [Authorize] async (Guid id, IMediator mediator) =>
+app.MapDelete("/api/v1/admin/trails/{id:guid}", [Authorize] async (Guid id, IMediator mediator) =>
 {
     var success = await mediator.Send(new DeleteTrailCommand(id));
     return success ? Results.NoContent() : Results.NotFound();
@@ -594,7 +649,7 @@ app.MapDelete("/api/v1/admin/trails/{trailId}/locations/{locationId}", [Authoriz
 })
 .WithName("RemoveTrailLocation");
 
-app.MapPatch("/api/v1/admin/trails/{id}/status", [Authorize] async (Guid id, [Microsoft.AspNetCore.Mvc.FromBody] string status, UtanvegaDbContext context) =>
+app.MapPatch("/api/v1/admin/trails/{id:guid}/status", [Authorize] async (Guid id, [Microsoft.AspNetCore.Mvc.FromBody] string status, UtanvegaDbContext context) =>
 {
     var trail = await context.Trails.FindAsync(id);
     if (trail == null) return Results.NotFound();
@@ -900,7 +955,7 @@ app.MapPost("/api/v1/admin/locations", [Authorize] async (CreateLocationCommand 
 })
 .WithName("CreateLocation");
 
-app.MapPut("/api/v1/admin/locations/{id}", [Authorize] async (Guid id, UpdateLocationCommand command, IMediator mediator) =>
+app.MapPut("/api/v1/admin/locations/{id:guid}", [Authorize] async (Guid id, UpdateLocationCommand command, IMediator mediator) =>
 {
     if (id != command.Id) return Results.BadRequest("ID mismatch");
     await mediator.Send(command);
@@ -908,7 +963,7 @@ app.MapPut("/api/v1/admin/locations/{id}", [Authorize] async (Guid id, UpdateLoc
 })
 .WithName("UpdateLocation");
 
-app.MapDelete("/api/v1/admin/locations/{id}", [Authorize] async (Guid id, IMediator mediator, ILogger<Program> logger) =>
+app.MapDelete("/api/v1/admin/locations/{id:guid}", [Authorize] async (Guid id, IMediator mediator, ILogger<Program> logger) =>
 {
     try 
     {
@@ -953,7 +1008,7 @@ app.MapPost("/api/v1/admin/tags", [Authorize] async (TagCreateDto dto, UtanvegaD
 })
 .WithName("CreateTag");
 
-app.MapPut("/api/v1/admin/tags/{id}", [Authorize] async (Guid id, TagCreateDto dto, UtanvegaDbContext context) =>
+app.MapPut("/api/v1/admin/tags/{id:guid}", [Authorize] async (Guid id, TagCreateDto dto, UtanvegaDbContext context) =>
 {
     var tag = await context.Tags.FindAsync(id);
     if (tag == null) return Results.NotFound();
@@ -965,7 +1020,7 @@ app.MapPut("/api/v1/admin/tags/{id}", [Authorize] async (Guid id, TagCreateDto d
 })
 .WithName("UpdateTag");
 
-app.MapDelete("/api/v1/admin/tags/{id}", [Authorize] async (Guid id, UtanvegaDbContext context) =>
+app.MapDelete("/api/v1/admin/tags/{id:guid}", [Authorize] async (Guid id, UtanvegaDbContext context) =>
 {
     var tag = await context.Tags.Include(t => t.TrailTags).FirstOrDefaultAsync(t => t.Id == id);
     if (tag == null) return Results.NotFound();
@@ -1077,7 +1132,7 @@ app.MapPost("/api/v1/admin/features", [Authorize] async (FeatureFlagCreateDto bo
 })
 .WithName("CreateFeatureFlag");
 
-app.MapPatch("/api/v1/admin/features/{id}", [Authorize] async (Guid id, FeatureFlagUpdateDto body, UtanvegaDbContext context, IMemoryCache cache) =>
+app.MapPatch("/api/v1/admin/features/{id:guid}", [Authorize] async (Guid id, FeatureFlagUpdateDto body, UtanvegaDbContext context, IMemoryCache cache) =>
 {
     var flag = await context.FeatureFlags.FindAsync(id);
     if (flag == null) return Results.NotFound();
@@ -1092,7 +1147,7 @@ app.MapPatch("/api/v1/admin/features/{id}", [Authorize] async (Guid id, FeatureF
 })
 .WithName("UpdateFeatureFlag");
 
-app.MapDelete("/api/v1/admin/features/{id}", [Authorize] async (Guid id, UtanvegaDbContext context, IMemoryCache cache) =>
+app.MapDelete("/api/v1/admin/features/{id:guid}", [Authorize] async (Guid id, UtanvegaDbContext context, IMemoryCache cache) =>
 {
     var flag = await context.FeatureFlags.FindAsync(id);
     if (flag == null) return Results.NotFound();
@@ -1145,7 +1200,7 @@ app.MapPost("/api/v1/admin/competitions", [Authorize] async (CreateCompetitionCo
 })
 .WithName("CreateCompetition");
 
-app.MapPut("/api/v1/admin/competitions/{id}", [Authorize] async (Guid id, UpdateCompetitionCommand command, IMediator mediator) =>
+app.MapPut("/api/v1/admin/competitions/{id:guid}", [Authorize] async (Guid id, UpdateCompetitionCommand command, IMediator mediator) =>
 {
     if (id != command.Id) return Results.BadRequest("ID mismatch");
     var success = await mediator.Send(command);
@@ -1153,7 +1208,7 @@ app.MapPut("/api/v1/admin/competitions/{id}", [Authorize] async (Guid id, Update
 })
 .WithName("UpdateCompetition");
 
-app.MapDelete("/api/v1/admin/competitions/{id}", [Authorize] async (Guid id, IMediator mediator) =>
+app.MapDelete("/api/v1/admin/competitions/{id:guid}", [Authorize] async (Guid id, IMediator mediator) =>
 {
     var success = await mediator.Send(new DeleteCompetitionCommand(id));
     return success ? Results.NoContent() : Results.NotFound();
@@ -1169,7 +1224,7 @@ app.MapPost("/api/v1/admin/competitions/{competitionId}/races", [Authorize] asyn
 })
 .WithName("CreateRace");
 
-app.MapPut("/api/v1/admin/races/{id}", [Authorize] async (Guid id, UpdateRaceCommand command, IMediator mediator) =>
+app.MapPut("/api/v1/admin/races/{id:guid}", [Authorize] async (Guid id, UpdateRaceCommand command, IMediator mediator) =>
 {
     if (id != command.Id) return Results.BadRequest("ID mismatch");
     var success = await mediator.Send(command);
@@ -1177,7 +1232,7 @@ app.MapPut("/api/v1/admin/races/{id}", [Authorize] async (Guid id, UpdateRaceCom
 })
 .WithName("UpdateRace");
 
-app.MapDelete("/api/v1/admin/races/{id}", [Authorize] async (Guid id, IMediator mediator) =>
+app.MapDelete("/api/v1/admin/races/{id:guid}", [Authorize] async (Guid id, IMediator mediator) =>
 {
     var success = await mediator.Send(new DeleteRaceCommand(id));
     return success ? Results.NoContent() : Results.NotFound();
@@ -1211,6 +1266,238 @@ app.MapGet("/api/v1/admin/races", [Authorize] async (UtanvegaDbContext context) 
 })
 .WithName("GetAllAdminRaces");
 
+// User Trail Activities Endpoints
+app.MapPost("/api/v1/user/activities", [Authorize] async (IMediator mediator, HttpContext context, CreateUserTrailActivityDto dto) =>
+{
+    try
+    {
+        // Try multiple claim names (Supabase uses "nameidentifier" from JWT "sub")
+        var userIdClaim = context.User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")
+            ?? context.User.FindFirst("sub")
+            ?? context.User.FindFirst("user_id")
+            ?? context.User.FindFirst("uid");
+        
+        if (userIdClaim?.Value is null)
+        {
+            var claims = string.Join(", ", context.User.Claims.Select(c => $"{c.Type}={c.Value}"));
+            throw new UnauthorizedAccessException($"User ID not found in token. Available claims: {claims}");
+        }
+        
+        var userId = Guid.Parse(userIdClaim.Value);
+        
+        var command = new CreateUserTrailActivityCommand(
+            userId,
+            dto.TrailSlug,
+            dto.LogDate,
+            dto.TimeInSeconds,
+            dto.Distance,
+            dto.ElevationGain,
+            dto.Notes,
+            dto.IsPublic
+        );
+
+        var result = await mediator.Send(command);
+        return Results.Created($"/api/v1/user/activities/{result.Id}", result);
+    }
+    catch (UnauthorizedAccessException ex)
+    {
+        Log.Warning("Unauthorized access to create activity: {Message}", ex.Message);
+        return Results.Forbid();
+    }
+    catch (InvalidOperationException ex)
+    {
+        Log.Error("Invalid operation creating activity: {Message}", ex.Message);
+        return Results.NotFound(new { message = ex.Message });
+    }
+    catch (FormatException ex)
+    {
+        Log.Error("Format error creating activity: {Message}", ex.Message);
+        return Results.BadRequest(new { message = "Invalid input format" });
+    }
+    catch (DbUpdateException ex) when (ex.InnerException is PostgresException pg)
+    {
+        Log.Error(ex, "Database error creating activity. SqlState={SqlState} Detail={Detail}", pg.SqlState, pg.Detail);
+        
+        // Handle unique constraint violation (SQL state 23505)
+        if (pg.SqlState == "23505" && pg.MessageText.Contains("IX_UserTrailActivities_UserId_TrailSlug_LogDate"))
+        {
+            return Results.Conflict(new 
+            { 
+                message = "You already have an activity logged for this trail on this date. Please edit the existing activity or choose a different date.",
+                messageIs = "Þú hefur þegar skráð æfingu fyrir þessa leið á þessum degi. Vinsamlegast breyttu núverandi æfingu eða veldu aðra dagsetningu."
+            });
+        }
+        
+        return Results.Problem(
+            title: "Failed to create activity",
+            detail: $"Database error ({pg.SqlState}): {pg.MessageText}",
+            statusCode: StatusCodes.Status500InternalServerError);
+    }
+    catch (DbUpdateException ex)
+    {
+        Log.Error(ex, "Database update error creating activity");
+        return Results.Problem(
+            title: "Failed to create activity",
+            detail: ex.InnerException?.Message ?? ex.Message,
+            statusCode: StatusCodes.Status500InternalServerError);
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Unexpected error creating activity");
+        return Results.Problem("Internal server error");
+    }
+})
+.WithName("CreateActivity");
+
+app.MapPut("/api/v1/user/activities/{id:guid}", [Authorize] async (Guid id, IMediator mediator, HttpContext context, UpdateUserTrailActivityDto dto) =>
+{
+    try
+    {
+        var userIdClaim = context.User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")
+            ?? context.User.FindFirst("sub")
+            ?? context.User.FindFirst("user_id")
+            ?? context.User.FindFirst("uid");
+        
+        if (userIdClaim?.Value is null)
+        {
+            throw new UnauthorizedAccessException("User ID not found in token");
+        }
+        
+        var userId = Guid.Parse(userIdClaim.Value);
+        
+        var command = new UpdateUserTrailActivityCommand(
+            id,
+            userId,
+            dto.LogDate,
+            dto.TimeInSeconds,
+            dto.Distance,
+            dto.ElevationGain,
+            dto.Notes,
+            dto.IsPublic
+        );
+
+        var result = await mediator.Send(command);
+        return Results.Ok(result);
+    }
+    catch (UnauthorizedAccessException)
+    {
+        return Results.Forbid();
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.NotFound(new { message = ex.Message });
+    }
+    catch (DbUpdateException ex) when (ex.InnerException is PostgresException pg)
+    {
+        Log.Error(ex, "Database error updating activity. SqlState={SqlState}", pg.SqlState);
+        
+        // Handle unique constraint violation (SQL state 23505)
+        if (pg.SqlState == "23505" && pg.MessageText.Contains("IX_UserTrailActivities_UserId_TrailSlug_LogDate"))
+        {
+            return Results.Conflict(new 
+            { 
+                message = "You already have an activity logged for this trail on this date. Please choose a different date.",
+                messageIs = "Þú hefur þegar skráð æfingu fyrir þessa leið á þessum degi. Vinsamlegast veldu aðra dagsetningu."
+            });
+        }
+
+        return Results.Problem(
+            title: "Failed to update activity",
+            detail: "Database error occurred while updating the activity",
+            statusCode: StatusCodes.Status500InternalServerError);
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Unexpected error updating activity");
+        return Results.Problem("Internal server error");
+    }
+})
+.WithName("UpdateActivity");
+
+app.MapDelete("/api/v1/user/activities/{id:guid}", [Authorize] async (Guid id, IMediator mediator, HttpContext context) =>
+{
+    try
+    {
+        var userIdClaim = context.User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")
+            ?? context.User.FindFirst("sub")
+            ?? context.User.FindFirst("user_id")
+            ?? context.User.FindFirst("uid");
+        
+        if (userIdClaim?.Value is null)
+        {
+            throw new UnauthorizedAccessException("User ID not found in token");
+        }
+        
+        var userId = Guid.Parse(userIdClaim.Value);
+        
+        var command = new DeleteUserTrailActivityCommand(id, userId);
+
+        await mediator.Send(command);
+        return Results.NoContent();
+    }
+    catch (UnauthorizedAccessException)
+    {
+        return Results.Forbid();
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.NotFound(new { message = ex.Message });
+    }
+})
+.WithName("DeleteActivity");
+
+app.MapGet("/api/v1/user/activities", [Authorize] async (IMediator mediator, HttpContext context) =>
+{
+    try
+    {
+        // Try multiple claim names (Supabase uses "nameidentifier" which maps from JWT "sub")
+        var userIdClaim = context.User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")
+            ?? context.User.FindFirst("sub")
+            ?? context.User.FindFirst("user_id")
+            ?? context.User.FindFirst("uid");
+        
+        if (userIdClaim?.Value is null)
+        {
+            var claims = string.Join(", ", context.User.Claims.Select(c => $"{c.Type}={c.Value}"));
+            Log.Warning("User ID not found in token. Available claims: {Claims}", claims);
+            throw new UnauthorizedAccessException($"User ID not found in token. Available claims: {claims}");
+        }
+        
+        Log.Information("Found user ID claim: {ClaimType} = {ClaimValue}", userIdClaim.Type, userIdClaim.Value);
+        if (!Guid.TryParse(userIdClaim.Value, out var userId))
+        {
+            Log.Warning("User ID claim value is not a valid GUID: {Value}", userIdClaim.Value);
+            return Results.Forbid();
+        }
+        Log.Information("Parsed userId: {UserId}", userId);
+        
+        Log.Information("Creating GetUserTrailActivitiesQuery for userId: {UserId}", userId);
+        var query = new GetUserTrailActivitiesQuery(userId);
+        
+        Log.Information("Sending query via MediatR");
+        var result = await mediator.Send(query);
+        
+        Log.Information("Successfully fetched {Count} activities for user {UserId}", result.Activities.Count(), userId);
+        return Results.Ok(result.Activities);
+    }
+    catch (UnauthorizedAccessException ex)
+    {
+        Log.Warning("Unauthorized access to activities: {Message}", ex.Message);
+        return Results.Forbid();
+    }
+    catch (InvalidOperationException ex)
+    {
+        Log.Error(ex, "Invalid operation fetching activities: {Message}", ex.Message);
+        return Results.NotFound(new { message = ex.Message });
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Unexpected error fetching activities: {Message}", ex.Message);
+        return Results.Problem("Internal server error");
+    }
+})
+.WithName("GetUserActivities");
+
 try
 {
     app.Run();
@@ -1225,3 +1512,20 @@ public record BulkAddTagRequest(List<Guid> TrailIds, Guid TagId);
 public record TrailLocationAddRequest(Guid LocationId, string? Role);
 public record FeatureFlagCreateDto(string Name, bool Enabled = true, string? Description = null);
 public record FeatureFlagUpdateDto(bool? Enabled, string? Description);
+public record CreateUserTrailActivityDto(
+    string TrailSlug,
+    DateOnly? LogDate,
+    int TimeInSeconds,
+    decimal? Distance,
+    int? ElevationGain,
+    string? Notes,
+    bool IsPublic
+);
+public record UpdateUserTrailActivityDto(
+    DateOnly? LogDate,
+    int TimeInSeconds,
+    decimal? Distance,
+    int? ElevationGain,
+    string? Notes,
+    bool IsPublic
+);

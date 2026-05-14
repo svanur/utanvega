@@ -57,7 +57,7 @@ export class QuoteService {
         { text: "Þar sem er vilji, þar er vegur." },
         { text: "The first one now, will later be last.", author: "Bob Dylan" },
         { text: "The present now will later be past.", author: "Bob Dylan" },
-        { text: "It's another day for you and me in paradise.", author: "Phil Colling" },
+        { text: "It's another day for you and me in paradise.", author: "Phil Collins" },
         { text: "Ekkert mál.", author: "Grýlurnar :)" },
         { text: "Sterkur og stór til fjalla fór." },
         { text: "Skjótur varstu vinur og vaskur í för." },
@@ -89,6 +89,7 @@ export class QuoteService {
         { text: "Ég get verið alveg fáránlega hress.", author: "Prins Póló" },
         { text: "Ég hleyp og hleyp og hleyp og hleyp og hleyp. Ég er alinn upp á malbiki.", author: "Emmsjé Gauti" },
         { text: "Þetta reddast :)", author: "Allir Íslendingar, (nánast) alltaf..." },
+        { text: "Gerum bara eitthvað gott og gerum það saman, mér er alveg sama hvað, bara ef það er gaman", author: "Friðrik Dór, Dönsum eins og hálfvitar" },
     ];
 
     static getRandomQuote(): Quote {

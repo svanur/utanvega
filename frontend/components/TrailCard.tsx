@@ -23,6 +23,7 @@ import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
 import StarIcon from '@mui/icons-material/Star';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Trail } from '../hooks/useTrails';
@@ -30,6 +31,7 @@ import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { estimateDuration } from '../utils/estimateDuration';
 import { useFavorites } from '../hooks/useFavorites';
 import { useHiddenTrails } from '../hooks/useHiddenTrails';
+import { useTickedTrails } from '../hooks/useTickedTrails';
 import { TrailQuickView } from './TrailQuickView';
 import DifficultyInfo from './DifficultyInfo';
 
@@ -78,8 +80,10 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
     const { isEnabled } = useFeatureFlags();
     const locationsPageEnabled = isEnabled('locations_page');
     const tagsEnabled = isEnabled('tags_page');
+    const tickEnabled = isEnabled('user_login', false);
     const { isFavorite, toggleFavorite } = useFavorites();
     const { hideTrail } = useHiddenTrails();
+    const { tickedSlugs } = useTickedTrails();
     const [swipeOffset, setSwipeOffset] = useState(0);
     const touchStart = useRef<number | null>(null);
     const touchYStart = useRef<number | null>(null);
@@ -269,7 +273,12 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                             >
                                 {trail.name}
                             </Typography>
-                            {isFavorited && <StarIcon color="warning" sx={{ fontSize: compact ? 14 : 20 }} />}
+                            <Box display="flex" alignItems="center" gap={0.25}>
+                                {tickEnabled && tickedSlugs.has(trail.slug) && (
+                                    <CheckCircleIcon color="success" sx={{ fontSize: compact ? 14 : 20 }} />
+                                )}
+                                {isFavorited && <StarIcon color="warning" sx={{ fontSize: compact ? 14 : 20 }} />}
+                            </Box>
                         </Box>
 
                         {/* Description snippet — hidden in compact mode */}

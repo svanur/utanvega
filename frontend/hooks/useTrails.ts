@@ -113,32 +113,31 @@ function writeTrailsCache(trails: Trail[]): void {
     }
 }
 
-export function useTrails() {
+export function useTrails(disableGeolocation = false) {
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
     const [locationDenied, setLocationDenied] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
 
     const requestLocation = useCallback(() => {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    setUserLocation({
-                        lat: position.coords.latitude,
-                        lng: position.coords.longitude
-                    });
-                    setLocationDenied(false);
-                    try { sessionStorage.setItem('utanvega-user-loc', JSON.stringify({ lat: position.coords.latitude, lng: position.coords.longitude })); } catch { /* ignore */ }
-                },
-                (err) => {
-                    console.warn('Geolocation failed:', err.message);
-                    if (err.code === GeolocationPositionError.PERMISSION_DENIED) {
-                        setLocationDenied(true);
-                    }
+        if (disableGeolocation || !navigator.geolocation) return;
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                setUserLocation({
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                });
+                setLocationDenied(false);
+                try { sessionStorage.setItem('utanvega-user-loc', JSON.stringify({ lat: position.coords.latitude, lng: position.coords.longitude })); } catch { /* ignore */ }
+            },
+            (err) => {
+                console.warn('Geolocation failed:', err.message);
+                if (err.code === GeolocationPositionError.PERMISSION_DENIED) {
+                    setLocationDenied(true);
                 }
-            );
-        }
-    }, []);
+            }
+        );
+    }, [disableGeolocation]);
 
     // Request location on mount
     useEffect(() => { requestLocation(); }, [requestLocation]);
