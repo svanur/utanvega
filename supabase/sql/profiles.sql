@@ -3,6 +3,7 @@
 --
 -- Stores a public display name and optional avatar for each user.
 -- Referenced by leaderboards, check-ins, and group runs.
+-- Canonical source for Profiles schema, defaults, triggers, and RLS policies.
 
 CREATE TABLE IF NOT EXISTS "Profiles" (
     "UserId"      UUID        PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
