@@ -27,6 +27,9 @@ export function useProfile() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchOrCreate = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
     if (!user) {
       setProfile(null);
       setLoading(false);
@@ -75,7 +78,6 @@ export function useProfile() {
         .update({
           ...(updates.displayName !== undefined && { DisplayName: updates.displayName }),
           ...(updates.avatarUrl !== undefined && { AvatarUrl: updates.avatarUrl }),
-          UpdatedAt: new Date().toISOString(),
         })
         .eq('UserId', user.id)
         .select()
