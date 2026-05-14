@@ -859,6 +859,7 @@
     "myTrails": {
         "mostRecent": "Most Recent",
         "bestResults": "Best Results",
+        "searchPlaceholder": "Search trails",
         "timeProgress": "Time Progress Over Dates",
         "bestTime": "Best Time",
         "averageTime": "Average Time",

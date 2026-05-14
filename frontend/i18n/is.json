@@ -24,7 +24,7 @@
         "loadingTicks": "Sæki kláraðar leiðir...",
         "noTicks": "Engar kláraðar leiðir enn. Merktu leiðir sem kláraðar á upplýsingasíðu þeirra.",
         "signedInAs": "Innskráð/ur sem {{email}}",
-        "manageTrails": "Stjórna mínum leiðum",
+        "manageTrails": "Skoða leiðirnar mínar",
         "myTrails": "Mínar leiðir",
         "noTickedTrails": "Þú hefur ekki merkrt neinar leiðir enn.",
         "addResults": "Bæta við niðurstöðu",
@@ -857,8 +857,9 @@
         "noActivities": "Engar æfingar skráðar ennþá. Skráðu fyrstu æfinguna þína!"
     },
     "myTrails": {
-        "mostRecent": "Nýjustu",
-        "bestResults": "Bestu niðurstöður",
+        "mostRecent": "Nýjustu skráningar",
+        "bestResults": "Besti tími",
+        "searchPlaceholder": "Leita í leiðum",
         "timeProgress": "Yfirlit yfir tímana þína",
         "bestTime": "Besti tími",
         "averageTime": "Meðaltími",
@@ -877,11 +878,11 @@
         "close": "Loka"
     },
     "trail": {
-        "backToTrails": "Til baka til leiða",
-        "backToProfile": "Til baka í prófíl",
-        "tick": "Marka sem markverða",
+        "backToTrails": "Til baka",
+        "backToProfile": "Til baka",
+        "tick": "Merkja sem markverða",
         "ticked": "Markverð",
-        "untick": "Afmarka sem markverða",
+        "untick": "Afmerkja sem markverða",
         "personalBest": "PB"
     }
 }

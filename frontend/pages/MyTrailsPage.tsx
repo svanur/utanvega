@@ -4,10 +4,11 @@ import { useTranslation } from 'react-i18next';
 import {
   Alert, Button, CircularProgress, Container, Paper, Stack, Typography, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, PaletteMode, Autocomplete, Checkbox, FormControlLabel, ToggleButton, ToggleButtonGroup, TableSortLabel,
+  TextField, PaletteMode, Autocomplete, Checkbox, FormControlLabel, ToggleButton, ToggleButtonGroup, TableSortLabel, InputAdornment,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AddIcon from '@mui/icons-material/Add';
+import CloseIcon from '@mui/icons-material/Close';
 import Layout from '../components/Layout';
 import TimePickerInput from '../components/TimePickerInput';
 import { useAuth } from '../hooks/useAuth';
@@ -34,6 +35,7 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
   const [viewMode, setViewMode] = useState<'recent' | 'best'>('recent');
   const [sortBy, setSortBy] = useState<MyTrailsSortKey>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [searchQuery, setSearchQuery] = useState('');
   
   // Form state
   const [formTrailSlug, setFormTrailSlug] = useState<string | null>(null);
@@ -95,6 +97,14 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
 
     return sorted;
   }, [aggregatedTrails, sortBy, sortDirection, viewMode]);
+
+  const visibleAggregatedTrails = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return sortedAggregatedTrails;
+    return sortedAggregatedTrails.filter(item =>
+      item.name.toLowerCase().includes(query) || item.slug.toLowerCase().includes(query)
+    );
+  }, [sortedAggregatedTrails, searchQuery]);
 
   if (!user) {
     return <Navigate to="/" replace />;
@@ -259,6 +269,26 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
                     {t('myTrails.bestResults')}
                   </ToggleButton>
                 </ToggleButtonGroup>
+                <TextField
+                  size="small"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={t('myTrails.searchPlaceholder', 'Search trails')}
+                  InputProps={{
+                    endAdornment: searchQuery ? (
+                      <InputAdornment position="end">
+                        <IconButton
+                          size="small"
+                          onClick={() => setSearchQuery('')}
+                          aria-label={t('common.clear', 'Clear search')}
+                        >
+                          <CloseIcon fontSize="small" />
+                        </IconButton>
+                      </InputAdornment>
+                    ) : undefined,
+                  }}
+                  sx={{ minWidth: 220 }}
+                />
               </Stack>
               <TableContainer>
               <Table size="small">
@@ -313,7 +343,7 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {sortedAggregatedTrails.map((item, idx) => {
+                  {visibleAggregatedTrails.map((item, idx) => {
                     const displayActivity = viewMode === 'recent' ? item.mostRecentActivity : item.bestActivity;
                     return (
                       <TableRow key={`${item.slug}-${idx}`}>
@@ -372,6 +402,13 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
                       </TableRow>
                     );
                   })}
+                  {visibleAggregatedTrails.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} align="center" sx={{ py: 3, color: 'text.secondary' }}>
+                        {t('spotlight.noResults')}
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </TableContainer>

@@ -89,6 +89,7 @@ export class QuoteService {
         { text: "Ég get verið alveg fáránlega hress.", author: "Prins Póló" },
         { text: "Ég hleyp og hleyp og hleyp og hleyp og hleyp. Ég er alinn upp á malbiki.", author: "Emmsjé Gauti" },
         { text: "Þetta reddast :)", author: "Allir Íslendingar, (nánast) alltaf..." },
+        { text: "Gerum bara eitthvað gott og gerum það saman, mér er alveg sama hvað, bara ef það er gaman", author: "Friðrik Dór, Dönsum eins og hálfvitar" },
     ];
 
     static getRandomQuote(): Quote {
