@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Button, Container, Paper, Stack, Typography, Dialog, DialogTitle,
@@ -41,8 +41,7 @@ export default function ActivitiesPage({ mode, onToggleMode }: Props) {
   }, [trails]);
 
   if (!user) {
-    navigate('/');
-    return null;
+    return <Navigate to="/" replace />;
   }
 
   const editingActivity = editingId ? activities.find(a => a.id === editingId) : null;
