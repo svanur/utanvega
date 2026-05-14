@@ -190,7 +190,7 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
       handleCloseForm();
     } catch (error) {
       console.error('Failed to save activity:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to save activity';
+      const errorMessage = error instanceof Error ? error.message : t('activity.saveFailed');
       setFormError(errorMessage);
     }
   };
@@ -450,7 +450,7 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
               label={t('activity.time')}
               value={formTimeStr}
               onChange={setFormTimeStr}
-              helperText="Use arrow keys ↑↓ to adjust hours/minutes/seconds"
+              helperText={t('activity.timeInputHint')}
             />
 
             <TextField

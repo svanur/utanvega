@@ -827,7 +827,9 @@
         "actions": "Actions",
         "add": "Add",
         "view": "View",
-        "save": "Save"
+        "save": "Save",
+        "clear": "Clear",
+        "tip": "Tip"
     },
     "activity": {
         "logActivity": "Log Activity",
@@ -850,7 +852,12 @@
         "deleteWarning": "This activity will be permanently deleted.",
         "invalidTime": "Invalid time format",
         "save": "Save activity",
-        "activities": "Activities"
+        "activities": "Activities",
+        "timeInputHint": "Use arrow keys ↑↓ to adjust hours/minutes/seconds",
+        "saveFailed": "Failed to save activity",
+        "createFailed": "Failed to create activity",
+        "updateFailed": "Failed to update activity",
+        "deleteFailed": "Failed to delete activity"
     },
     "activities": {
         "title": "Activities",
@@ -861,6 +868,9 @@
         "bestResults": "Best Results",
         "searchPlaceholder": "Search trails",
         "timeProgress": "Time Progress Over Dates",
+        "clickLegendToggle": "Click legend items to show/hide metrics",
+        "loggedCount_one": "{{count}} activity logged",
+        "loggedCount_other": "{{count}} activities logged",
         "bestTime": "Best Time",
         "averageTime": "Average Time",
         "worstTime": "Worst Time",

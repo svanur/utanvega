@@ -827,7 +827,9 @@
         "actions": "Aðgerðir",
         "add": "Bæta við",
         "view": "Skoða",
-        "save": "Vista"
+        "save": "Vista",
+        "clear": "Hreinsa",
+        "tip": "Ábending"
     },
     "activity": {
         "logActivity": "Skrá æfingu",
@@ -850,7 +852,12 @@
         "deleteWarning": "Þessari æfingu verður eytt endanlega.",
         "invalidTime": "Ógildur tími",
         "save": "Vista æfingu",
-        "activities": "Æfingar"
+        "activities": "Æfingar",
+        "timeInputHint": "Notaðu örvarnar ↑↓ til að breyta klst/mín/sek",
+        "saveFailed": "Mistókst að vista æfingu",
+        "createFailed": "Mistókst að búa til æfingu",
+        "updateFailed": "Mistókst að uppfæra æfingu",
+        "deleteFailed": "Mistókst að eyða æfingu"
     },
     "activities": {
         "title": "Æfingar",
@@ -861,6 +868,9 @@
         "bestResults": "Besti tími",
         "searchPlaceholder": "Leita í leiðum",
         "timeProgress": "Yfirlit yfir tímana þína",
+        "clickLegendToggle": "Smelltu á atriði í skýringum til að sýna/fela mælikvarða",
+        "loggedCount_one": "{{count}} æfing skráð",
+        "loggedCount_other": "{{count}} æfingar skráðar",
         "bestTime": "Besti tími",
         "averageTime": "Meðaltími",
         "worstTime": "Versti tími",

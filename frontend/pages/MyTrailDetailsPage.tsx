@@ -203,7 +203,13 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
       setFormOpen(false);
       setEditingActivityId(null);
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : editingActivityId ? 'Failed to update activity' : 'Failed to create activity');
+      setFormError(
+        error instanceof Error
+          ? error.message
+          : editingActivityId
+            ? t('activity.updateFailed')
+            : t('activity.createFailed')
+      );
     }
   };
 
@@ -254,7 +260,7 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
         await deleteActivity(deleteConfirmId);
         setDeleteConfirmId(null);
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Failed to delete activity';
+        const errorMessage = error instanceof Error ? error.message : t('activity.deleteFailed');
         setFormError(errorMessage);
       }
     }
@@ -272,7 +278,7 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
             {trail.name}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            {trailActivities.length} {trailActivities.length === 1 ? 'activity' : 'activities'} logged
+            {t('myTrails.loggedCount', { count: trailActivities.length })}
           </Typography>
 
           {/* KPI Statistics */}
@@ -551,7 +557,7 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
               label={t('activity.time')}
               value={formTimeStr}
               onChange={setFormTimeStr}
-              helperText="Use arrow keys ↑↓ to adjust hours/minutes/seconds"
+              helperText={t('activity.timeInputHint')}
             />
 
             <TextField
