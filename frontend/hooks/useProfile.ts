@@ -14,7 +14,7 @@ function mapRow(row: Record<string, unknown>): UserProfile {
   return {
     userId: row['UserId'] as string,
     displayName: row['DisplayName'] as string,
-    avatarUrl: row['AvatarUrl'] as string | undefined,
+    avatarUrl: (row['AvatarUrl'] as string | null) ?? undefined,
     createdAt: row['CreatedAt'] as string,
     updatedAt: row['UpdatedAt'] as string,
   };
