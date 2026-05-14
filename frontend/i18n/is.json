@@ -1,21 +1,24 @@
 {
     "common": {
-        "reset": "Hreinsa",
+        "reset": "Núllstilla",
         "edit": "Breyta",
         "delete": "Eyða",
-        "cancel": "Hætta við",
+        "cancel": "Hætta",
         "actions": "Aðgerðir",
         "add": "Bæta við",
-        "view": "Skoða"
+        "view": "Skoða",
+        "save": "Vista",
+        "clear": "Hreinsa",
+        "tip": "Ábending"
     },
     "auth": {
         "signIn": "Skrá inn",
         "signOut": "Skrá út",
         "continueWithGoogle": "Halda áfram með Google",
-        "orEmail": "eða",
-        "emailPlaceholder": "Netfang",
-        "sendMagicLink": "Senda innskráningartengil",
-        "magicLinkSent": "Athugaðu tölvupóstinn! Við höfum sent þér innskráningartengil.",
+        "orEmail": "Eða nota tölvupóst",
+        "emailPlaceholder": "Sláðu inn netfangið þitt",
+        "sendMagicLink": "Senda 'galdrahlekk'",
+        "magicLinkSent": "Athugaðu tölvupóstinn þinn fyrir galdrahlekk til að skrá þig inn",
         "close": "Loka"
     },
     "profile": {
@@ -81,9 +84,9 @@
     "trail": {
         "backToTrails": "Til baka",
         "notFound": "Leið fannst ekki",
-        "tick": "Merkja sem kláraða ✓",
-        "ticked": "Klárað ✓",
-        "untick": "Afmerkja sem kláraða",
+        "tick": "Merkja sem markverða",
+        "ticked": "Markverð",
+        "untick": "Afmerkja sem markverða",
         "distance": "Vegalengd",
         "gain": "Hækkun",
         "loss": "Lækkun",
@@ -109,7 +112,9 @@
             "End": "Endir",
             "PassingThrough": "Í gegn",
             "Near": "Nálægt"
-        }
+        },
+        "backToProfile": "Til baka",
+        "personalBest": "PB"
     },
     "trailCard": {
         "removeFavorite": "Fjarlægja úr eftirlætum",
@@ -473,7 +478,7 @@
         "title": "Settu upp Utanvega",
         "description": "Bættu við á heimaskjáinn fyrir skjótan aðgang.",
         "button": "Setja upp",
-        "iosHint": "Ýttu á Deila, svo \u201ESetja á heimaskjá\u201C",
+        "iosHint": "Ýttu á Deila, svo „Setja á heimaskjá“",
         "iosAction": "Deila → Heimaskjár",
         "menuItem": "Setja upp appið"
     },
@@ -551,12 +556,12 @@
             "distance": "Vegalengd",
             "elevation": "Hæðarmunur",
             "short": "Stutt <5km",
-            "medium": "5\u201321km",
-            "half": "Hálfþrð 21\u201342km",
-            "marathon": "Maraþon 42\u201350km",
+            "medium": "5–21km",
+            "half": "Hálfþrð 21–42km",
+            "marathon": "Maraþon 42–50km",
             "ultra": "Ultra 50km+",
             "flat": "Slétt <300m",
-            "hilly": "Hæðgóðar 300\u2013800m",
+            "hilly": "Hæðgóðar 300–800m",
             "mountain": "Fjöll 800m+"
         }
     },
@@ -592,10 +597,10 @@
         "gameOver": "Leik lokið!",
         "finalScore": "Stig: {{score}} / {{max}}",
         "playAgain": "Spila aftur",
-        "resultBullseye": "Alveg rétt hjá þér! þú þekkir landið eins og handabakið á þér! \ud83c\udfaf",
+        "resultBullseye": "Alveg rétt hjá þér! þú þekkir landið eins og handabakið á þér! 🎯",
         "resultClose": "Mjög nálægt! þú hefur greinilega fylgst með!",
         "resultFar": "Ekki svo langt! Haltu áfram að kanna Ísland!",
-        "resultWayOff": "Langt frá! Tími til að rifja aðeins upp landafræðina! \ud83d\ude05"
+        "resultWayOff": "Langt frá! Tími til að rifja aðeins upp landafræðina! 😅"
     },
     "elevationGame": {
         "guessTitle": "Hvaða leið er með þetta hæðarsnið?"
@@ -621,7 +626,7 @@
                 "100k": "100K",
                 "100m": "100M"
             },
-            "trailAdjust":"Leiðrétting fyrir utanvegahlaup",
+            "trailAdjust": "Leiðrétting fyrir utanvegahlaup",
             "trailAdjustDesc": "Miðað við 'flatan vegahraða' þinn hér að ofan, áætlaðu hvernig yfirborð stíga og hækkun á leiðinni hafa áhrif á lokatíma þinn í utanvegahlaupi.",
             "terrain": "Yfirborð",
             "terrains": {
@@ -662,7 +667,7 @@
                 "100m": "100M"
             }
         },
-        "trailPredictor":{
+        "trailPredictor": {
             "title": "Utanvegaspá",
             "subtitle": "Spá fyrir um tíma á leið eða keppni út frá árangri í fyrri leið eða keppni.",
             "knownRace": "Leið/keppni með þekktum tíma",
@@ -757,9 +762,36 @@
         "cutoffHours_other": "{{count}} klukkustundir hámark",
         "cutoffHours": "{{count}}klst hámark",
         "dateLocale": "is",
-        "months": ["janúar", "febrúar", "mars", "apríl", "maí", "júní", "júlí", "ágúst", "september", "október", "nóvember", "desember"],
-        "weekdays": ["sunnudagur", "mánudagur", "þriðjudagur", "miðvikudagur", "fimmtudagur", "föstudagur", "laugardagur"],
-        "ordinals": ["", "1.", "2.", "3.", "4."],
+        "months": [
+            "janúar",
+            "febrúar",
+            "mars",
+            "apríl",
+            "maí",
+            "júní",
+            "júlí",
+            "ágúst",
+            "september",
+            "október",
+            "nóvember",
+            "desember"
+        ],
+        "weekdays": [
+            "sunnudagur",
+            "mánudagur",
+            "þriðjudagur",
+            "miðvikudagur",
+            "fimmtudagur",
+            "föstudagur",
+            "laugardagur"
+        ],
+        "ordinals": [
+            "",
+            "1.",
+            "2.",
+            "3.",
+            "4."
+        ],
         "ordinalLast": "síðasta",
         "scheduleSeasonal": "{{count}} hlaup - {{ordinal}} {{day}} í mánuði frá {{monthStart}} til {{monthEnd}}",
         "scheduleYearly": "Haldið árlega - {{ordinal}} {{day}} í {{month}}",
@@ -819,18 +851,6 @@
             "races": "Komandi keppni"
         }
     },
-    "common": {
-        "reset": "Núllstilla",
-        "edit": "Breyta",
-        "cancel": "Hætta",
-        "delete": "Eyða",
-        "actions": "Aðgerðir",
-        "add": "Bæta við",
-        "view": "Skoða",
-        "save": "Vista",
-        "clear": "Hreinsa",
-        "tip": "Ábending"
-    },
     "activity": {
         "logActivity": "Skrá æfingu",
         "selectTrail": "Veldu leið",
@@ -876,23 +896,5 @@
         "worstTime": "Versti tími",
         "totalDistance": "Heildarfjarlægð",
         "fasterThanFirst": "Besti vs fyrsti"
-    },
-    "auth": {
-        "signIn": "Skrá inn",
-        "signOut": "Skrá út",
-        "continueWithGoogle": "Halda áfram með Google",
-        "orEmail": "Eða nota tölvupóst",
-        "emailPlaceholder": "Sláðu inn netfangið þitt",
-        "sendMagicLink": "Senda 'galdrahlekk'",
-        "magicLinkSent": "Athugaðu tölvupóstinn þinn fyrir galdrahlekk til að skrá þig inn",
-        "close": "Loka"
-    },
-    "trail": {
-        "backToTrails": "Til baka",
-        "backToProfile": "Til baka",
-        "tick": "Merkja sem markverða",
-        "ticked": "Markverð",
-        "untick": "Afmerkja sem markverða",
-        "personalBest": "PB"
     }
 }

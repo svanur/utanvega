@@ -6,16 +6,19 @@
         "cancel": "Cancel",
         "actions": "Actions",
         "add": "Add",
-        "view": "View"
+        "view": "View",
+        "save": "Save",
+        "clear": "Clear",
+        "tip": "Tip"
     },
     "auth": {
-        "signIn": "Sign in",
-        "signOut": "Sign out",
+        "signIn": "Sign In",
+        "signOut": "Sign Out",
         "continueWithGoogle": "Continue with Google",
-        "orEmail": "or",
-        "emailPlaceholder": "Email address",
+        "orEmail": "Or use email",
+        "emailPlaceholder": "Enter your email",
         "sendMagicLink": "Send magic link",
-        "magicLinkSent": "Check your email! We've sent you a magic link to sign in.",
+        "magicLinkSent": "Check your email for a magic link to sign in",
         "close": "Close"
     },
     "profile": {
@@ -81,9 +84,9 @@
     "trail": {
         "backToTrails": "Back to Trails",
         "notFound": "Trail not found",
-        "tick": "Mark as done ✓",
-        "ticked": "Done ✓",
-        "untick": "Mark as not done",
+        "tick": "Mark as ticked",
+        "ticked": "Ticked",
+        "untick": "Mark as unticked",
         "distance": "Distance",
         "gain": "Gain",
         "loss": "Loss",
@@ -109,7 +112,9 @@
             "End": "Finish",
             "PassingThrough": "Passing through",
             "Near": "Nearby"
-        }
+        },
+        "backToProfile": "Back to Profile",
+        "personalBest": "PB"
     },
     "trailCard": {
         "removeFavorite": "Remove Favorite",
@@ -757,9 +762,36 @@
         "cutoffHours_other": "{{count}} hours cutoff",
         "cutoffHours": "{{count}}h cutoff",
         "dateLocale": "en",
-        "months": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
-        "weekdays": ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
-        "ordinals": ["", "1st", "2nd", "3rd", "4th"],
+        "months": [
+            "January",
+            "February",
+            "March",
+            "April",
+            "May",
+            "June",
+            "July",
+            "August",
+            "September",
+            "October",
+            "November",
+            "December"
+        ],
+        "weekdays": [
+            "Sunday",
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday"
+        ],
+        "ordinals": [
+            "",
+            "1st",
+            "2nd",
+            "3rd",
+            "4th"
+        ],
         "ordinalLast": "last",
         "scheduleSeasonal": "{{count}} races, every {{ordinal}} {{day}} from {{monthStart}} to {{monthEnd}}",
         "scheduleYearly": "Held annually on the {{ordinal}} {{day}} of {{month}}",
@@ -819,18 +851,6 @@
             "races": "Upcoming Races"
         }
     },
-    "common": {
-        "reset": "Reset",
-        "edit": "Edit",
-        "cancel": "Cancel",
-        "delete": "Delete",
-        "actions": "Actions",
-        "add": "Add",
-        "view": "View",
-        "save": "Save",
-        "clear": "Clear",
-        "tip": "Tip"
-    },
     "activity": {
         "logActivity": "Log Activity",
         "selectTrail": "Select trail",
@@ -876,23 +896,5 @@
         "worstTime": "Worst Time",
         "totalDistance": "Total Distance",
         "fasterThanFirst": "Best vs First"
-    },
-    "auth": {
-        "signIn": "Sign In",
-        "signOut": "Sign Out",
-        "continueWithGoogle": "Continue with Google",
-        "orEmail": "Or use email",
-        "emailPlaceholder": "Enter your email",
-        "sendMagicLink": "Send magic link",
-        "magicLinkSent": "Check your email for a magic link to sign in",
-        "close": "Close"
-    },
-    "trail": {
-        "backToTrails": "Back to Trails",
-        "backToProfile": "Back to Profile",
-        "tick": "Mark as ticked",
-        "ticked": "Ticked",
-        "untick": "Mark as unticked",
-        "personalBest": "PB"
     }
 }
