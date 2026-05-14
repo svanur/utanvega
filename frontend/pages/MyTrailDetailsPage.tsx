@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Alert, Box, Button, CircularProgress, Container, Paper, Stack, Typography, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Grid,
-  TextField, PaletteMode, Autocomplete, TableSortLabel,
+  TextField, PaletteMode, TableSortLabel,
 } from '@mui/material';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
