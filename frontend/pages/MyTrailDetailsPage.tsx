@@ -4,12 +4,14 @@ import { useTranslation } from 'react-i18next';
 import {
   Alert, Box, Button, CircularProgress, Container, Paper, Stack, Typography, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Grid,
-  TextField, PaletteMode, TableSortLabel,
+  TextField, PaletteMode, TableSortLabel, Checkbox, FormControlLabel, Tooltip as MuiTooltip,
 } from '@mui/material';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import LockIcon from '@mui/icons-material/Lock';
+import PublicIcon from '@mui/icons-material/Public';
 import Layout from '../components/Layout';
 import TimePickerInput from '../components/TimePickerInput';
 import { useAuth } from '../hooks/useAuth';
@@ -503,6 +505,14 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
                     </TableCell>
                     <TableCell align="center">
                       <Stack direction="row" spacing={0.5} justifyContent="center">
+                        <MuiTooltip title={activity.isPublic ? t('activity.public') : t('activity.private')}>
+                          <span>
+                            {activity.isPublic
+                              ? <PublicIcon fontSize="small" color="primary" />
+                              : <LockIcon fontSize="small" sx={{ color: 'text.disabled' }} />
+                            }
+                          </span>
+                        </MuiTooltip>
                         <IconButton
                           size="small"
                           onClick={() => handleEditActivity(activity.id)}
@@ -591,6 +601,16 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
               multiline
               rows={3}
               fullWidth
+            />
+
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={formIsPublic}
+                  onChange={(e) => setFormIsPublic(e.target.checked)}
+                />
+              }
+              label={t('activity.makePublic')}
             />
           </DialogContent>
           <DialogActions>

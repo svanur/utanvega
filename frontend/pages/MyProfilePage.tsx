@@ -8,6 +8,7 @@ import ManageIcon from '@mui/icons-material/ManageAccounts';
 import Layout from '../components/Layout';
 import { useAuth } from '../hooks/useAuth';
 import { useTickedTrails } from '../hooks/useTickedTrails';
+import { useTrailActivities } from '../hooks/useTrailActivities';
 
 type Props = { mode: PaletteMode; onToggleMode: () => void };
 
@@ -15,7 +16,12 @@ export default function MyProfilePage({ mode, onToggleMode }: Props) {
   const { t } = useTranslation();
   const { user, signOut } = useAuth();
   const { tickedSlugs, loading } = useTickedTrails();
+  const { activities } = useTrailActivities();
   const [signingOut, setSigningOut] = React.useState(false);
+  const completedTrailCount = React.useMemo(
+    () => new Set([...tickedSlugs, ...activities.map(a => a.trailSlug)]).size,
+    [activities, tickedSlugs]
+  );
 
   if (!user) {
     return <Navigate to="/" replace />;
@@ -74,12 +80,12 @@ export default function MyProfilePage({ mode, onToggleMode }: Props) {
                 </Stack>
               ) : (
                 <Typography color="text.secondary" sx={{ mb: 2 }}>
-                  {tickedSlugs.size > 0
-                    ? `${tickedSlugs.size} ${t('profile.tickedTrails').toLowerCase()}`
+                  {completedTrailCount > 0
+                    ? `${completedTrailCount} ${t('profile.tickedTrails').toLowerCase()}`
                     : t('profile.noTicks')}
                 </Typography>
               )}
-              {tickedSlugs.size > 0 && (
+              {completedTrailCount > 0 && (
                 <Button
                   variant="contained"
                   startIcon={<ManageIcon />}

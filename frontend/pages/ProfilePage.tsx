@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Box, Button, Container, Paper, Stack, Typography, PaletteMode, Divider } from '@mui/material';
@@ -18,6 +18,10 @@ export default function ProfilePage({ mode, onToggleMode }: Props) {
   const { tickedSlugs } = useTickedTrails();
   const { activities } = useTrailActivities();
   const [signingOut, setSigningOut] = useState(false);
+  const completedTrailCount = useMemo(
+    () => new Set([...tickedSlugs, ...activities.map(a => a.trailSlug)]).size,
+    [activities, tickedSlugs]
+  );
 
   if (!user) {
     return <Navigate to="/" replace />;
@@ -68,7 +72,7 @@ export default function ProfilePage({ mode, onToggleMode }: Props) {
             {t('profile.tickedTrails')}
           </Typography>
           <Typography color="text.secondary" sx={{ mb: 3 }}>
-            {tickedSlugs.size > 0 ? `${tickedSlugs.size} ${t('profile.tickedTrails').toLowerCase()}` : t('profile.noTicks')}
+            {completedTrailCount > 0 ? `${completedTrailCount} ${t('profile.tickedTrails').toLowerCase()}` : t('profile.noTicks')}
           </Typography>
 
           <Divider sx={{ my: 3 }} />

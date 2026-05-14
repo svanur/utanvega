@@ -14,8 +14,11 @@ export function aggregateTrailActivities(
   activities: TrailActivity[],
   trailNameMap: Record<string, string>
 ): AggregatedTrailActivity[] {
+  const activityTrailSlugs = new Set(activities.map(a => a.trailSlug));
+  const allTrailSlugs = new Set([...tickedSlugs, ...activityTrailSlugs]);
+
   // Group activities by trail slug
-  const trailGroups = Array.from(tickedSlugs).map(slug => {
+  const trailGroups = Array.from(allTrailSlugs).map(slug => {
     const trailActivities = activities
       .filter(a => a.trailSlug === slug)
       .sort((a, b) => {
