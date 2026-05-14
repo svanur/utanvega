@@ -48,7 +48,7 @@ export default function ProfilePage({ mode, onToggleMode }: Props) {
                 {t('profile.title')}
               </Typography>
               <Typography color="text.secondary" variant="body2" sx={{ mt: 1 }}>
-                {t('profile.signedInAs', { name: user.email })}
+                {t('profile.signedInAs', { email: user.email })}
               </Typography>
             </Box>
             <Button
