@@ -77,12 +77,23 @@ export function useProfile() {
     async (updates: { displayName?: string; avatarUrl?: string | null }) => {
       if (!user) throw new Error('Not authenticated');
 
+      const updatePayload: Record<string, unknown> = {};
+      if (updates.displayName !== undefined) {
+        updatePayload.DisplayName = updates.displayName;
+      }
+      if (updates.avatarUrl !== undefined) {
+        updatePayload.AvatarUrl = updates.avatarUrl;
+      }
+
+      if (Object.keys(updatePayload).length === 0) {
+        // No fields to update; return current profile unchanged
+        if (!profile) throw new Error('Profile not loaded');
+        return profile;
+      }
+
       const { data, error: updateError } = await supabase
         .from('Profiles')
-        .update({
-          ...(updates.displayName !== undefined && { DisplayName: updates.displayName }),
-          ...(updates.avatarUrl !== undefined && { AvatarUrl: updates.avatarUrl }),
-        })
+        .update(updatePayload)
         .eq('UserId', user.id)
         .select()
         .single();
@@ -90,7 +101,7 @@ export function useProfile() {
       if (updateError) throw updateError;
       setProfile(mapRow(data as Record<string, unknown>));
     },
-    [user]
+    [user, profile]
   );
 
   return { profile, loading, error, updateProfile };
