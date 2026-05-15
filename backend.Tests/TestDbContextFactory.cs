@@ -219,5 +219,24 @@ internal class TestDbContext : UtanvegaDbContext
                   .IsRequired()
                   .HasConversion(v => v.UtcTicks, v => new DateTimeOffset(v, TimeSpan.Zero));
         });
+
+        modelBuilder.Entity<Core.Entities.TrailCheckIn>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TrailId).IsRequired();
+            entity.Property(e => e.UserId).IsRequired();
+            entity.Property(e => e.CreatedAt)
+                  .IsRequired()
+                  .HasConversion(v => v.UtcTicks, v => new DateTimeOffset(v, TimeSpan.Zero));
+            entity.Property(e => e.UpdatedAt)
+                  .IsRequired()
+                  .HasConversion(v => v.UtcTicks, v => new DateTimeOffset(v, TimeSpan.Zero));
+            entity.Property(e => e.ExpiresAt)
+                  .IsRequired()
+                  .HasConversion(v => v.UtcTicks, v => new DateTimeOffset(v, TimeSpan.Zero));
+            entity.HasIndex(e => new { e.TrailId, e.UserId }).IsUnique();
+            entity.HasIndex(e => new { e.TrailId, e.ExpiresAt });
+            entity.HasIndex(e => new { e.UserId, e.ExpiresAt });
+        });
     }
 }

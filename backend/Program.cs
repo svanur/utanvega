@@ -49,6 +49,9 @@ using Utanvega.Backend.Application.Activities.Commands.UpdateUserTrailActivity;
 using Utanvega.Backend.Application.Activities.Commands.DeleteUserTrailActivity;
 using Utanvega.Backend.Application.Activities.Queries.GetUserTrailActivities;
 using Utanvega.Backend.Application.Activities.Queries.GetTrailLeaderboard;
+using Utanvega.Backend.Application.TrailCheckIns.Commands.CheckInToTrail;
+using Utanvega.Backend.Application.TrailCheckIns.Commands.CheckOutFromTrail;
+using Utanvega.Backend.Application.TrailCheckIns.Queries.GetTrailCheckIns;
 using MediatR;
 using FluentValidation;
 using Microsoft.Extensions.Caching.Memory;
@@ -372,29 +375,22 @@ app.Use(async (context, next) =>
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Auto-migration on startup (optional, but helpful for initial setup)
-/*
-using (var scope = app.Services.CreateScope())
+// Auto-apply pending migrations in development to keep schema aligned with code.
+if (app.Environment.IsDevelopment())
 {
-    try 
+    using var migrationScope = app.Services.CreateScope();
+    try
     {
-        var db = scope.ServiceProvider.GetRequiredService<UtanvegaDbContext>();
+        var db = migrationScope.ServiceProvider.GetRequiredService<UtanvegaDbContext>();
         Log.Information("Applying database migrations...");
-        db.Database.Migrate();
+        await db.Database.MigrateAsync();
         Log.Information("Migrations applied successfully.");
     }
     catch (Exception ex)
     {
         Log.Error(ex, "Database migration failed");
-        if (ex.InnerException != null)
-        {
-            Log.Error(ex.InnerException, "Database migration inner exception");
-        }
-        // We don't throw here to allow the app to start even if migrations fail, 
-        // which helps in identifying if the issue is DB-related or App-related.
     }
 }
-*/
 
 app.MapGet("/api/v1/trails", async (IMediator mediator) =>
 {
@@ -481,6 +477,68 @@ app.MapGet("/api/v1/trails/{slug}/leaderboard", async (string slug, int? limit, 
     return Results.Ok(leaderboard);
 })
 .WithName("GetTrailLeaderboard");
+
+app.MapGet("/api/v1/trails/{slug}/checkins", async (string slug, IMediator mediator) =>
+{
+    try
+    {
+        var checkIns = await mediator.Send(new GetTrailCheckInsQuery(slug));
+        return Results.Ok(checkIns);
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.NotFound(new { message = ex.Message });
+    }
+})
+.WithName("GetTrailCheckIns");
+
+app.MapPost("/api/v1/trails/{slug}/checkins", [Authorize] async (string slug, IMediator mediator, HttpContext context) =>
+{
+    try
+    {
+        var userIdClaim = context.User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")
+            ?? context.User.FindFirst("sub")
+            ?? context.User.FindFirst("user_id")
+            ?? context.User.FindFirst("uid");
+
+        if (userIdClaim?.Value is null || !Guid.TryParse(userIdClaim.Value, out var userId))
+        {
+            return Results.Forbid();
+        }
+
+        var result = await mediator.Send(new CheckInToTrailCommand(userId, slug));
+        return Results.Ok(result);
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.NotFound(new { message = ex.Message });
+    }
+})
+.WithName("CheckInToTrail");
+
+app.MapDelete("/api/v1/trails/{slug}/checkins/me", [Authorize] async (string slug, IMediator mediator, HttpContext context) =>
+{
+    try
+    {
+        var userIdClaim = context.User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")
+            ?? context.User.FindFirst("sub")
+            ?? context.User.FindFirst("user_id")
+            ?? context.User.FindFirst("uid");
+
+        if (userIdClaim?.Value is null || !Guid.TryParse(userIdClaim.Value, out var userId))
+        {
+            return Results.Forbid();
+        }
+
+        await mediator.Send(new CheckOutFromTrailCommand(userId, slug));
+        return Results.NoContent();
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.NotFound(new { message = ex.Message });
+    }
+})
+.WithName("CheckOutFromTrail");
 
 app.MapGet("/api/v1/locations", async (IMediator mediator) =>
 {

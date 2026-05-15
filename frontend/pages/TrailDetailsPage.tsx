@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { 
@@ -18,6 +18,11 @@ import {
     Dialog,
     DialogContent,
     DialogTitle,
+    Avatar,
+    Collapse,
+    TextField,
+    Snackbar,
+    Alert,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
@@ -45,6 +50,9 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import GroupsIcon from '@mui/icons-material/Groups';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import Layout from '../components/Layout';
 import { useTrailBySlug, useTrails, useTrailSuggestions, useTrailWeather, useTrailLeaderboard, recordTrailView, API_URL } from '../hooks/useTrails';
 import { estimateDuration } from '../utils/estimateDuration';
@@ -67,6 +75,8 @@ import { useAuth } from '../hooks/useAuth';
 import { useTickedTrails } from '../hooks/useTickedTrails';
 import LoginModal from '../components/LoginModal';
 import TrailLeaderboardCard from '../components/TrailLeaderboardCard';
+import { useTrailCheckIns } from '../hooks/useTrailCheckIns';
+import { getAvatarFallbackText, getAvatarImageSrc } from '../utils/avatarPresets';
 
 const getActivityIcon = (type: string) => {
     switch (type.toLowerCase()) {
@@ -101,6 +111,11 @@ type TrailDetailsPageProps = {
     onToggleMode: () => void;
 };
 
+const CHECK_IN_SEARCH_THRESHOLD = 10;
+const CHECK_IN_NEARBY_RADIUS_KM = 0.8;
+const CHECK_IN_JUST_ARRIVED_MINUTES = 10;
+const CHECK_IN_LEAVING_SOON_MINUTES = 30;
+
 export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPageProps) {
     const { slug } = useParams<{ slug: string }>();
     const navigate = useNavigate();
@@ -111,13 +126,31 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     const locationsPageEnabled = isEnabled('locations_page');
     const tagsEnabled = isEnabled('tags_page');
     const leaderboardEnabled = isEnabled('trail_leaderboard', false);
+    const checkInEnabled = isEnabled('trail_checkin', false);
     const { leaderboard, totalEntries, loading: leaderboardLoading, error: leaderboardError } = useTrailLeaderboard(slug, 3, leaderboardEnabled);
+    const {
+        entries: checkIns,
+        totalActive: totalCheckIns,
+        loading: checkInLoading,
+        error: checkInQueryError,
+        isCheckedIn,
+        checkIn,
+        checkOut,
+        saving: checkInSaving,
+    } = useTrailCheckIns(slug, checkInEnabled);
     const { trails: allTrails } = useTrails();
     const { isFavorite, toggleFavorite } = useFavorites();
     const { addRecent } = useRecentlyViewed();
     const { user } = useAuth();
     const { tickedSlugs, toggleTick } = useTickedTrails();
     const [loginModalOpen, setLoginModalOpen] = useState(false);
+    const [checkInError, setCheckInError] = useState<string | null>(null);
+    const [checkInExpanded, setCheckInExpanded] = useState(false);
+    const [checkInSearch, setCheckInSearch] = useState('');
+    const [toastMessage, setToastMessage] = useState<string | null>(null);
+    const [nearbyPromptVisible, setNearbyPromptVisible] = useState(false);
+    const previousCheckInCountRef = useRef<number | null>(null);
+    const suppressRealtimeToastUntilRef = useRef<number>(0);
     const { suggestions, loading: suggestionsLoading } = useTrailSuggestions(slug, !!error || (!loading && !trail));
     const [geometry, setGeometry] = useState<GeoJsonGeometry | null>(null);
     const [hoverPoint, setHoverPoint] = useState<{ lat: number; lng: number } | null>(null);
@@ -174,6 +207,137 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
         : [];
 
     const scrollRef = useRef<HTMLDivElement>(null);
+
+    const formatCheckedInText = (checkedInAt: string) => {
+        const minutes = Math.max(0, Math.floor((Date.now() - Date.parse(checkedInAt)) / 60000));
+        if (minutes <= 0) return t('trail.checkInJustNow');
+        return t('trail.checkInMinutesAgo', { count: minutes });
+    };
+
+    const formatExpiresInText = (expiresAt: string) => {
+        const totalMinutes = Math.max(0, Math.ceil((Date.parse(expiresAt) - Date.now()) / 60000));
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        const time = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+        return t('trail.checkInExpiresInTime', { time });
+    };
+
+    const getCrowdSignal = (count: number) => {
+        if (count <= 3) return { label: t('trail.checkInCrowdQuiet'), color: 'success' as const };
+        if (count <= 10) return { label: t('trail.checkInCrowdModerate'), color: 'warning' as const };
+        return { label: t('trail.checkInCrowdBusy'), color: 'error' as const };
+    };
+
+    const crowdSignal = getCrowdSignal(totalCheckIns);
+
+    const isLeavingSoon = (expiresAt: string) => Date.parse(expiresAt) - Date.now() <= CHECK_IN_LEAVING_SOON_MINUTES * 60 * 1000;
+    const isJustArrived = (checkedInAt: string) => Date.now() - Date.parse(checkedInAt) <= CHECK_IN_JUST_ARRIVED_MINUTES * 60 * 1000;
+
+    const sortedCheckIns = useMemo(() => {
+        const sorted = [...checkIns].sort((a, b) => Date.parse(b.checkedInAt) - Date.parse(a.checkedInAt));
+        if (!user) return sorted;
+        const meIndex = sorted.findIndex((entry) => entry.userId === user.id);
+        if (meIndex <= 0) return sorted;
+        const [me] = sorted.splice(meIndex, 1);
+        sorted.unshift(me);
+        return sorted;
+    }, [checkIns, user]);
+
+    const filteredCheckIns = useMemo(() => {
+        const query = checkInSearch.trim().toLowerCase();
+        if (!query) return sortedCheckIns;
+        return sortedCheckIns.filter((entry) => entry.displayName.toLowerCase().includes(query));
+    }, [sortedCheckIns, checkInSearch]);
+
+    const shouldShowCheckInSearch = totalCheckIns > CHECK_IN_SEARCH_THRESHOLD;
+
+    const handleToggleCheckIn = async () => {
+        if (!user) {
+            setLoginModalOpen(true);
+            return;
+        }
+
+        setCheckInError(null);
+        try {
+            suppressRealtimeToastUntilRef.current = Date.now() + 2000;
+            if (isCheckedIn) {
+                await checkOut();
+                setToastMessage(t('trail.checkInToastCheckedOut'));
+            } else {
+                await checkIn();
+                setToastMessage(t('trail.checkInToastCheckedIn'));
+            }
+        } catch (error) {
+            setCheckInError(error instanceof Error ? error.message : t('trail.checkInActionFailed'));
+        }
+    };
+
+    const handleStillHere = async () => {
+        if (!user) return;
+        setCheckInError(null);
+        try {
+            suppressRealtimeToastUntilRef.current = Date.now() + 2000;
+            await checkIn();
+            setToastMessage(t('trail.checkInToastRefreshed'));
+        } catch (error) {
+            setCheckInError(error instanceof Error ? error.message : t('trail.checkInActionFailed'));
+        }
+    };
+
+    useEffect(() => {
+        if (!checkInEnabled) return;
+        const previousCount = previousCheckInCountRef.current;
+        if (previousCount === null) {
+            previousCheckInCountRef.current = totalCheckIns;
+            return;
+        }
+        if (Date.now() < suppressRealtimeToastUntilRef.current) {
+            previousCheckInCountRef.current = totalCheckIns;
+            return;
+        }
+        if (totalCheckIns > previousCount) {
+            setToastMessage(t('trail.checkInToastJoined', { count: totalCheckIns - previousCount }));
+        } else if (totalCheckIns < previousCount) {
+            setToastMessage(t('trail.checkInToastLeft', { count: previousCount - totalCheckIns }));
+        }
+        previousCheckInCountRef.current = totalCheckIns;
+    }, [totalCheckIns, checkInEnabled, t]);
+
+    useEffect(() => {
+        if (!checkInEnabled || !trail || !user || isCheckedIn) {
+            setNearbyPromptVisible(false);
+            return;
+        }
+        if (trail.startLatitude === null || trail.startLongitude === null || !navigator.geolocation) {
+            setNearbyPromptVisible(false);
+            return;
+        }
+
+        const toRad = (deg: number) => (deg * Math.PI) / 180;
+        const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+            const R = 6371;
+            const dLat = toRad(lat2 - lat1);
+            const dLon = toRad(lon2 - lon1);
+            const a =
+                Math.sin(dLat / 2) ** 2 +
+                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+            return 2 * R * Math.asin(Math.sqrt(a));
+        };
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const distanceKm = haversineKm(
+                    position.coords.latitude,
+                    position.coords.longitude,
+                    trail.startLatitude!,
+                    trail.startLongitude!
+                );
+                setNearbyPromptVisible(distanceKm <= CHECK_IN_NEARBY_RADIUS_KM);
+            },
+            () => setNearbyPromptVisible(false),
+            { enableHighAccuracy: false, timeout: 5000, maximumAge: 300000 }
+        );
+    }, [checkInEnabled, trail, user, isCheckedIn]);
 
     const scroll = (direction: 'left' | 'right') => {
         if (scrollRef.current) {
@@ -545,6 +709,141 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                     trailSlug={trail.slug}
                 />
             )}
+
+            {checkInEnabled && (
+                <Paper elevation={1} sx={{ p: { xs: 2, sm: 3 }, mb: 3, borderRadius: 2 }}>
+                    <Stack
+                        direction="row"
+                        alignItems="center"
+                        justifyContent="space-between"
+                        onClick={() => setCheckInExpanded((prev) => !prev)}
+                        sx={{ cursor: 'pointer', userSelect: 'none' }}
+                    >
+                        <Stack direction="row" alignItems="center" spacing={1}>
+                            <GroupsIcon color="primary" />
+                            <Typography variant="h6" fontWeight="bold">
+                                {t('trail.checkInTitle')}
+                            </Typography>
+                            {!checkInExpanded && (
+                                <Typography variant="body2" color="text.secondary">
+                                    {t('trail.checkInActiveCount', { count: totalCheckIns })}
+                                </Typography>
+                            )}
+                        </Stack>
+                        <Stack direction="row" alignItems="center" spacing={0.5}>
+                            <Chip color="primary" variant="outlined" label={t('trail.checkInActiveCount', { count: totalCheckIns })} size="small" />
+                            <Chip color={crowdSignal.color} variant="outlined" label={crowdSignal.label} size="small" />
+                            <IconButton size="small" sx={{ ml: 0.5 }}>
+                                {checkInExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                            </IconButton>
+                        </Stack>
+                    </Stack>
+
+                    <Collapse in={checkInExpanded}>
+                        <Box sx={{ mt: 1.5 }}>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                {t('trail.checkInDescription')}
+                            </Typography>
+
+                            {nearbyPromptVisible && (
+                                <Alert severity="info" sx={{ mb: 1.5 }}>
+                                    {t('trail.checkInNearbyPrompt')}
+                                </Alert>
+                            )}
+
+                            <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1.5 }}>
+                                <Button
+                                    variant={isCheckedIn ? 'outlined' : 'contained'}
+                                    onClick={handleToggleCheckIn}
+                                    disabled={checkInLoading || checkInSaving}
+                                >
+                                    {isCheckedIn ? t('trail.checkOut') : t('trail.checkIn')}
+                                </Button>
+                                {isCheckedIn && (
+                                    <Button
+                                        variant="text"
+                                        onClick={handleStillHere}
+                                        disabled={checkInLoading || checkInSaving}
+                                    >
+                                        {t('trail.checkInStillHere')}
+                                    </Button>
+                                )}
+                                {(checkInLoading || checkInSaving) && <CircularProgress size={18} />}
+                            </Stack>
+
+                            {(checkInError || checkInQueryError) && (
+                                <Typography variant="body2" color="error" sx={{ mb: 1.5 }}>
+                                    {checkInError || checkInQueryError}
+                                </Typography>
+                            )}
+
+                            {shouldShowCheckInSearch && (
+                                <TextField
+                                    size="small"
+                                    fullWidth
+                                    value={checkInSearch}
+                                    onChange={(event) => setCheckInSearch(event.target.value)}
+                                    placeholder={t('trail.checkInSearchPlaceholder')}
+                                    sx={{ mb: 1.5 }}
+                                />
+                            )}
+
+                            {filteredCheckIns.length === 0 ? (
+                                <Typography variant="body2" color="text.secondary">
+                                    {checkIns.length === 0 ? t('trail.checkInNoActive') : t('trail.checkInNoMatches')}
+                                </Typography>
+                            ) : (
+                                <Stack spacing={1}>
+                                    {filteredCheckIns.map((entry) => (
+                                        <Stack
+                                            key={entry.id}
+                                            direction="row"
+                                            spacing={1.5}
+                                            alignItems="center"
+                                            sx={{
+                                                p: 1,
+                                                borderRadius: 1.5,
+                                                bgcolor: user?.id === entry.userId ? 'action.selected' : 'action.hover',
+                                            }}
+                                        >
+                                            <Avatar
+                                                src={getAvatarImageSrc(entry.avatarUrl)}
+                                                sx={{ width: 30, height: 30, fontSize: '0.85rem' }}
+                                            >
+                                                {getAvatarFallbackText(entry.avatarUrl, entry.displayName.charAt(0).toUpperCase())}
+                                            </Avatar>
+                                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                                                <Typography variant="body2" fontWeight={600} noWrap>
+                                                    {entry.displayName}
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    {formatCheckedInText(entry.checkedInAt)} · {formatExpiresInText(entry.expiresAt)}
+                                                </Typography>
+                                            </Box>
+                                            <Stack direction="row" spacing={0.5}>
+                                                {user?.id === entry.userId && <Chip size="small" label={t('trail.checkInBadgeYou')} color="primary" variant="filled" />}
+                                                {isJustArrived(entry.checkedInAt) && <Chip size="small" label={t('trail.checkInBadgeJustArrived')} variant="outlined" />}
+                                                {isLeavingSoon(entry.expiresAt) && <Chip size="small" label={t('trail.checkInBadgeLeavingSoon')} color="warning" variant="outlined" />}
+                                            </Stack>
+                                        </Stack>
+                                    ))}
+                                </Stack>
+                            )}
+                        </Box>
+                    </Collapse>
+                </Paper>
+            )}
+
+            <Snackbar
+                open={Boolean(toastMessage)}
+                autoHideDuration={3000}
+                onClose={() => setToastMessage(null)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                <Alert severity="info" variant="filled" onClose={() => setToastMessage(null)}>
+                    {toastMessage}
+                </Alert>
+            </Snackbar>
 
             {isEnabled('related_trails') && relatedTrails.length > 0 && (
                 <Box mt={4} mb={6}>
