@@ -40,8 +40,9 @@ export default function TrailLeaderboardPage({ mode, onToggleMode }: Props) {
     const { isEnabled } = useFeatureFlags();
     const { user } = useAuth();
     const locale = i18n.language === 'is' ? 'is-IS' : 'en-GB';
+    const leaderboardEnabled = isEnabled('trail_leaderboard', false);
     const { trail, loading: trailLoading } = useTrailBySlug(slug);
-    const { leaderboard, loading: leaderboardLoading, error } = useTrailLeaderboard(slug, 1000, true);
+    const { leaderboard, loading: leaderboardLoading, error } = useTrailLeaderboard(slug, 1000, leaderboardEnabled);
     const [searchQuery, setSearchQuery] = useState('');
     const [sortBy, setSortBy] = useState<SortKey>('rank');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -108,9 +109,10 @@ export default function TrailLeaderboardPage({ mode, onToggleMode }: Props) {
         return <Navigate to="/" replace />;
     }
 
-    if (!isEnabled('trail_leaderboard', false)) {
+    if (!leaderboardEnabled) {
         return <Navigate to={`/trails/${slug}`} replace />;
     }
+
 
     return (
         <Layout mode={mode} onToggleMode={onToggleMode}>
