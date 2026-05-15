@@ -471,6 +471,11 @@ app.MapGet("/api/v1/trails/{slug}/weather", async (string slug, IMediator mediat
 
 app.MapGet("/api/v1/trails/{slug}/leaderboard", async (string slug, int? limit, IMediator mediator) =>
 {
+    if (limit is <= 0 or > 1000)
+    {
+        return Results.BadRequest("Invalid limit. Must be between 1 and 1000.");
+    }
+
     var query = new GetTrailLeaderboardQuery(slug, limit ?? 10);
     var leaderboard = await mediator.Send(query);
     return Results.Ok(leaderboard);
