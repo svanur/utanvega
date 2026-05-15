@@ -74,7 +74,7 @@ export function useProfile() {
   }, [fetchOrCreate]);
 
   const updateProfile = useCallback(
-    async (updates: { displayName?: string; avatarUrl?: string | null }) => {
+    async (updates: { displayName?: string; avatarUrl?: string | null }): Promise<UserProfile> => {
       if (!user) throw new Error('Not authenticated');
 
       const updatePayload: Record<string, unknown> = {};
@@ -99,7 +99,9 @@ export function useProfile() {
         .single();
 
       if (updateError) throw updateError;
-      setProfile(mapRow(data as Record<string, unknown>));
+      const updatedProfile = mapRow(data as Record<string, unknown>);
+      setProfile(updatedProfile);
+      return updatedProfile;
     },
     [user, profile]
   );
