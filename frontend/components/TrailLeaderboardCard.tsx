@@ -38,7 +38,7 @@ export default function TrailLeaderboardCard({ leaderboard, totalEntries, loadin
     };
 
     const getBehindTime = (entry: TrailLeaderboardEntry) => {
-        if (!topEntry || (entry.rank !== 2 && entry.rank !== 3)) {
+        if (!topEntry || entry.userId === topEntry.userId) {
             return null;
         }
 
