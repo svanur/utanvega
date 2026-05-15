@@ -23,6 +23,7 @@ import {
   getAvatarFallbackText,
   getAvatarImageSrc,
   getAvatarPreset,
+  isAllowedAvatarValue,
   toAvatarPresetValue,
 } from '../utils/avatarPresets';
 
@@ -35,6 +36,7 @@ export default function MyProfileSettingsPage({ mode, onToggleMode }: Props) {
   const [displayName, setDisplayName] = React.useState('');
   const [avatarUrl, setAvatarUrl] = React.useState('');
   const [displayNameError, setDisplayNameError] = React.useState<string | null>(null);
+  const [avatarUrlError, setAvatarUrlError] = React.useState<string | null>(null);
   const [displayNameSaved, setDisplayNameSaved] = React.useState(false);
   const [savingDisplayName, setSavingDisplayName] = React.useState(false);
   const selectedPreset = React.useMemo(() => getAvatarPreset(avatarUrl), [avatarUrl]);
@@ -42,6 +44,7 @@ export default function MyProfileSettingsPage({ mode, onToggleMode }: Props) {
   React.useEffect(() => {
     setDisplayName(profile?.displayName ?? '');
     setAvatarUrl(profile?.avatarUrl ?? '');
+    setAvatarUrlError(null);
   }, [profile?.avatarUrl, profile?.displayName]);
 
   if (!user) {
@@ -53,14 +56,20 @@ export default function MyProfileSettingsPage({ mode, onToggleMode }: Props) {
     const trimmedAvatarUrl = avatarUrl.trim();
     const currentDisplayName = profile?.displayName ?? '';
     const currentAvatarUrl = (profile?.avatarUrl ?? '').trim();
+    const avatarChanged = trimmedAvatarUrl !== currentAvatarUrl;
     setDisplayNameSaved(false);
 
     if (!trimmed) {
       setDisplayNameError(t('profile.displayNameRequired'));
       return;
     }
+    if (avatarChanged && trimmedAvatarUrl && !isAllowedAvatarValue(trimmedAvatarUrl)) {
+      setAvatarUrlError(t('profile.avatarUrlInvalid'));
+      return;
+    }
+    setAvatarUrlError(null);
 
-    if (trimmed === currentDisplayName && trimmedAvatarUrl === currentAvatarUrl) {
+    if (trimmed === currentDisplayName && !avatarChanged) {
       setDisplayNameError(null);
       return;
     }
@@ -70,7 +79,7 @@ export default function MyProfileSettingsPage({ mode, onToggleMode }: Props) {
     try {
       await updateProfile({
         displayName: trimmed,
-        avatarUrl: trimmedAvatarUrl ? trimmedAvatarUrl : null,
+        avatarUrl: avatarChanged ? (trimmedAvatarUrl ? trimmedAvatarUrl : null) : undefined,
       });
       setDisplayNameSaved(true);
     } catch {
@@ -146,13 +155,15 @@ export default function MyProfileSettingsPage({ mode, onToggleMode }: Props) {
                 value={avatarUrl}
                 onChange={(event) => {
                   setAvatarUrl(event.target.value);
+                  setAvatarUrlError(null);
                   setDisplayNameSaved(false);
                 }}
                 fullWidth
                 size="small"
                 placeholder="https://..."
                 disabled={profileLoading || savingDisplayName}
-                helperText={t('profile.avatarUrlHelper')}
+                error={Boolean(avatarUrlError)}
+                helperText={avatarUrlError ?? t('profile.avatarUrlHelper')}
               />
             </Stack>
 
@@ -168,6 +179,7 @@ export default function MyProfileSettingsPage({ mode, onToggleMode }: Props) {
                 variant="text"
                 onClick={() => {
                   setAvatarUrl('');
+                  setAvatarUrlError(null);
                   setDisplayNameSaved(false);
                 }}
                 disabled={profileLoading || savingDisplayName}

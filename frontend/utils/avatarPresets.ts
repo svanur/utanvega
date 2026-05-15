@@ -5,6 +5,18 @@ export type AvatarPreset = {
 };
 
 const AVATAR_PRESET_PREFIX = 'preset:';
+const DEFAULT_ALLOWED_AVATAR_HOSTS = [
+  'avatars.githubusercontent.com',
+  'secure.gravatar.com',
+  'images.unsplash.com',
+  'i.imgur.com',
+];
+const ALLOWED_AVATAR_HOSTS = new Set(
+  (import.meta.env.VITE_ALLOWED_AVATAR_HOSTS ?? DEFAULT_ALLOWED_AVATAR_HOSTS.join(','))
+    .split(',')
+    .map((host: string) => host.trim().toLowerCase())
+    .filter(Boolean)
+);
 
 export const AVATAR_PRESETS: AvatarPreset[] = [
   { id: 'running-man', emoji: '🏃‍♂️', labelKey: 'profile.avatarPresetRunningMan' },
@@ -28,8 +40,21 @@ export function getAvatarPreset(avatarValue?: string | null): AvatarPreset | und
   return AVATAR_PRESETS.find(preset => preset.id === presetId);
 }
 
-export function getAvatarImageSrc(avatarValue?: string | null): string | undefined {
+export function isAllowedAvatarValue(avatarValue?: string | null): boolean {
   if (!avatarValue || getAvatarPreset(avatarValue)) {
+    return true;
+  }
+
+  try {
+    const parsed = new URL(avatarValue);
+    return parsed.protocol === 'https:' && ALLOWED_AVATAR_HOSTS.has(parsed.hostname.toLowerCase());
+  } catch {
+    return false;
+  }
+}
+
+export function getAvatarImageSrc(avatarValue?: string | null): string | undefined {
+  if (!avatarValue || getAvatarPreset(avatarValue) || !isAllowedAvatarValue(avatarValue)) {
     return undefined;
   }
   return avatarValue;
