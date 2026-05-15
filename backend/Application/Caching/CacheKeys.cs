@@ -15,6 +15,9 @@ public static class CacheKeys
     public static string Gpx(string slug) => $"gpx:{slug}";
     public static string Trending(int count, int days) => $"trending:{count}:{days}";
 
+    // Activities
+    public static string Leaderboard(string trailSlug, int limit) => $"leaderboard:{trailSlug}:{limit}";
+
     // Locations
     public static string LocationsAll => "locations:all";
     public static string LocationTree => "locations:tree";

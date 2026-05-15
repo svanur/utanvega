@@ -1,18 +1,19 @@
 namespace Utanvega.Backend.Application.Activities.Commands.CreateUserTrailActivity;
 
 using MediatR;
+using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Infrastructure.Persistence;
 
 public class CreateUserTrailActivityHandler : IRequestHandler<CreateUserTrailActivityCommand, CreateUserTrailActivityResponse>
 {
     private readonly UtanvegaDbContext _dbContext;
-    private readonly IMediator _mediator;
+    private readonly ICacheInvalidator _cacheInvalidator;
 
-    public CreateUserTrailActivityHandler(UtanvegaDbContext dbContext, IMediator mediator)
+    public CreateUserTrailActivityHandler(UtanvegaDbContext dbContext, ICacheInvalidator cacheInvalidator)
     {
         _dbContext = dbContext;
-        _mediator = mediator;
+        _cacheInvalidator = cacheInvalidator;
     }
 
     public async Task<CreateUserTrailActivityResponse> Handle(CreateUserTrailActivityCommand request, CancellationToken cancellationToken)
@@ -36,6 +37,12 @@ public class CreateUserTrailActivityHandler : IRequestHandler<CreateUserTrailAct
 
         _dbContext.UserTrailActivities.Add(activity);
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        // Invalidate leaderboard cache if activity is public
+        if (activity.IsPublic)
+        {
+            _cacheInvalidator.InvalidateLeaderboard(activity.TrailSlug);
+        }
 
         return new CreateUserTrailActivityResponse(
             activity.Id,

@@ -1,8 +1,13 @@
 namespace Utanvega.Backend.Application.Activities.Queries.GetTrailLeaderboard;
 
 using MediatR;
+using Utanvega.Backend.Application.Caching;
 
-public record GetTrailLeaderboardQuery(string TrailSlug, int Limit = 10) : IRequest<GetTrailLeaderboardResponse>;
+public record GetTrailLeaderboardQuery(string TrailSlug, int Limit = 10) : IRequest<GetTrailLeaderboardResponse>, ICacheable
+{
+    public string CacheKey => CacheKeys.Leaderboard(TrailSlug, Limit);
+    public TimeSpan CacheDuration => TimeSpan.FromHours(1);
+}
 
 public record TrailLeaderboardEntryDto(
     int Rank,

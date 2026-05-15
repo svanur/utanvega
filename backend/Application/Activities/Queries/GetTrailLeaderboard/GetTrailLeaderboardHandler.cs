@@ -18,29 +18,32 @@ public class GetTrailLeaderboardHandler : IRequestHandler<GetTrailLeaderboardQue
         var normalizedSlug = request.TrailSlug.Trim().ToLowerInvariant();
         var limit = Math.Clamp(request.Limit, 1, 1000);
 
-        var publicActivities = await _dbContext.UserTrailActivities
+        // Use window function to efficiently get per-user best time without loading all activities
+        var bestByUserAll = await _dbContext.UserTrailActivities
+            .FromSqlInterpolated($@"
+                SELECT DISTINCT ON (""UserId"")
+                    ""UserId"",
+                    ""TimeInSeconds"",
+                    ""LogDate"",
+                    ""CreatedAt""
+                FROM ""UserTrailActivities""
+                WHERE ""TrailSlug"" = {normalizedSlug} AND ""IsPublic"" = true
+                ORDER BY ""UserId"",
+                    ""TimeInSeconds"" ASC,
+                    ""LogDate"" DESC NULLS LAST,
+                    ""CreatedAt"" DESC")
             .AsNoTracking()
-            .Where(a => a.TrailSlug == normalizedSlug && a.IsPublic)
             .Select(a => new
             {
                 a.UserId,
                 a.TimeInSeconds,
                 a.LogDate,
-                a.CreatedAt,
+                a.CreatedAt
             })
-            .ToListAsync(cancellationToken);
-
-        var bestByUserAll = publicActivities
-            .GroupBy(a => a.UserId)
-            .Select(g => g
-                .OrderBy(a => a.TimeInSeconds)
-                .ThenByDescending(a => a.LogDate ?? DateOnly.MinValue)
-                .ThenByDescending(a => a.CreatedAt)
-                .First())
             .OrderBy(a => a.TimeInSeconds)
             .ThenByDescending(a => a.LogDate ?? DateOnly.MinValue)
             .ThenByDescending(a => a.CreatedAt)
-            .ToList();
+            .ToListAsync(cancellationToken);
 
         var totalEntries = bestByUserAll.Count;
         var bestByUser = bestByUserAll.Take(limit).ToList();

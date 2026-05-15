@@ -65,4 +65,16 @@ public class CacheInvalidator : ICacheInvalidator
         if (slug is not null)
             _cache.Remove(CacheKeys.Competition(slug));
     }
+
+    public void InvalidateLeaderboard(string slug)
+    {
+        // Leaderboard cache keys include the limit value, which varies per request.
+        // We can't enumerate all possible cache keys, so we'd need a prefix-based removal,
+        // which isn't directly supported by IMemoryCache. For now, remove common limit values.
+        // A more robust solution would be a cache version token similar to competitions.
+        _cache.Remove(CacheKeys.Leaderboard(slug, 10));
+        _cache.Remove(CacheKeys.Leaderboard(slug, 50));
+        _cache.Remove(CacheKeys.Leaderboard(slug, 100));
+        _cache.Remove(CacheKeys.Leaderboard(slug, 1000));
+    }
 }

@@ -180,7 +180,7 @@ internal class TestDbContext : UtanvegaDbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).IsRequired();
             entity.Property(e => e.TrailSlug).IsRequired().HasMaxLength(250);
-            entity.Property(e => e.Time).IsRequired();
+            entity.Property(e => e.TimeInSeconds).IsRequired();
             entity.Property(e => e.Notes).HasMaxLength(500);
             // SQLite doesn't support DateTimeOffset in ORDER BY — store as ticks
             entity.Property(e => e.LoggedAt)
@@ -205,6 +205,19 @@ internal class TestDbContext : UtanvegaDbContext
                       v => v.HasValue ? (decimal?)((decimal)v.Value) : null);
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => new { e.UserId, e.TrailSlug });
+        });
+
+        modelBuilder.Entity<Core.Entities.Profile>(entity =>
+        {
+            entity.HasKey(e => e.UserId);
+            entity.Property(e => e.DisplayName).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.AvatarUrl).HasMaxLength(500);
+            entity.Property(e => e.CreatedAt)
+                  .IsRequired()
+                  .HasConversion(v => v.UtcTicks, v => new DateTimeOffset(v, TimeSpan.Zero));
+            entity.Property(e => e.UpdatedAt)
+                  .IsRequired()
+                  .HasConversion(v => v.UtcTicks, v => new DateTimeOffset(v, TimeSpan.Zero));
         });
     }
 }
