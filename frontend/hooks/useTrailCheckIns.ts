@@ -126,11 +126,12 @@ export function useTrailCheckIns(trailSlug?: string, enabled = true) {
 
   const activeEntries = query.data?.entries ?? [];
   const currentUserEntry = user ? activeEntries.find((entry) => entry.userId === user.id) : undefined;
+  const loading = query.isPending && !!trailSlug && enabled;
 
   return {
     entries: activeEntries,
     totalActive: query.data?.totalActive ?? activeEntries.length,
-    loading: query.isPending,
+    loading,
     error: query.error instanceof Error ? query.error.message : query.error ? String(query.error) : null,
     isCheckedIn: !!currentUserEntry,
     currentUserEntry,
