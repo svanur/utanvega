@@ -9,8 +9,8 @@ const AVATAR_PRESET_PREFIX = 'preset:';
 export const AVATAR_PRESETS: AvatarPreset[] = [
   { id: 'running-man', emoji: '🏃‍♂️', labelKey: 'profile.avatarPresetRunningMan' },
   { id: 'running-woman', emoji: '🏃‍♀️', labelKey: 'profile.avatarPresetRunningWoman' },
-  { id: 'trail-runner-man', emoji: '🏔️', labelKey: 'profile.avatarPresetTrailRunnerMan' },
-  { id: 'trail-runner-woman', emoji: '🧗‍♀️', labelKey: 'profile.avatarPresetTrailRunnerWoman' },
+  { id: 'mountain', emoji: '🏔️', labelKey: 'profile.avatarPresetMountain' },
+  { id: 'climber', emoji: '🧗‍♀️', labelKey: 'profile.avatarPresetClimber' },
   { id: 'hiker', emoji: '🥾', labelKey: 'profile.avatarPresetHiker' },
   { id: 'biker', emoji: '🚴', labelKey: 'profile.avatarPresetBiker' },
 ];
