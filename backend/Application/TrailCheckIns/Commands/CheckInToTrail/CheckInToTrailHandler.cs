@@ -2,6 +2,7 @@ namespace Utanvega.Backend.Application.TrailCheckIns.Commands.CheckInToTrail;
 
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Infrastructure.Persistence;
 
@@ -57,7 +58,37 @@ public class CheckInToTrailHandler : IRequestHandler<CheckInToTrailCommand, Trai
             checkIn = existing;
         }
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException pg && pg.SqlState == "23505")
+        {
+            // Concurrent check-in race: another request inserted the row first.
+            if (existing is null)
+            {
+                if (_dbContext.Entry(checkIn).State == EntityState.Added)
+                {
+                    _dbContext.Entry(checkIn).State = EntityState.Detached;
+                }
+
+                var concurrent = await _dbContext.TrailCheckIns
+                    .FirstOrDefaultAsync(c => c.TrailId == trail.Id && c.UserId == request.UserId, cancellationToken);
+                if (concurrent is null)
+                {
+                    throw;
+                }
+
+                concurrent.UpdatedAt = now;
+                concurrent.ExpiresAt = expiresAt;
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                checkIn = concurrent;
+            }
+            else
+            {
+                throw;
+            }
+        }
 
         var profile = await _dbContext.Profiles
             .AsNoTracking()
