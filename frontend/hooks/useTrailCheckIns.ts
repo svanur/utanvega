@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from './supabase';
 import { useAuth } from './useAuth';
@@ -41,7 +41,7 @@ async function buildError(response: Response, fallback: string): Promise<Error> 
 export function useTrailCheckIns(trailSlug?: string, enabled = true) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const queryKey = ['trail-checkins', trailSlug];
+  const queryKey = useMemo(() => ['trail-checkins', trailSlug] as const, [trailSlug]);
 
   const query = useQuery<TrailCheckInsResponse>({
     queryKey,
@@ -60,17 +60,18 @@ export function useTrailCheckIns(trailSlug?: string, enabled = true) {
     enabled: !!trailSlug && enabled,
     staleTime: 30_000,
   });
+  const trailId = query.data?.trailId;
 
   useEffect(() => {
-    if (!trailSlug || !enabled) return;
+    if (!trailSlug || !enabled || !trailId) return;
 
     const channel = supabase
-      .channel(`trail-checkins-${trailSlug}`)
+      .channel(`trail-checkins-${trailSlug}-${trailId}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'TrailCheckIns' },
+        { event: '*', schema: 'public', table: 'TrailCheckIns', filter: `TrailId=eq.${trailId}` },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['trail-checkins', trailSlug] });
+          queryClient.invalidateQueries({ queryKey });
         }
       )
       .subscribe();
@@ -78,7 +79,7 @@ export function useTrailCheckIns(trailSlug?: string, enabled = true) {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [trailSlug, enabled, queryClient]);
+  }, [trailSlug, enabled, trailId, queryClient, queryKey]);
 
   const getAuthToken = async () => {
     const { data: { session }, error } = await supabase.auth.getSession();
