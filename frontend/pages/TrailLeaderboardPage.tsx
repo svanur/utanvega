@@ -99,7 +99,7 @@ export default function TrailLeaderboardPage({ mode, onToggleMode }: Props) {
             return;
         }
         setSortBy(key);
-        setSortDirection(key === 'runner' ? 'asc' : 'desc');
+        setSortDirection(key === 'behind' || key === 'date' ? 'desc' : 'asc');
     };
 
     if (!slug) {
