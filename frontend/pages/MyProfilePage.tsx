@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Link as RouterLink, Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Box,
@@ -88,8 +88,9 @@ export default function MyProfilePage({ mode, onToggleMode }: Props) {
               </Typography>
               <Button
                 variant="contained"
+                component={RouterLink}
+                to="/my/profile/settings"
                 startIcon={<SettingsIcon />}
-                href="/my/profile/settings"
               >
                 {t('profile.openPublicProfileSettings')}
               </Button>

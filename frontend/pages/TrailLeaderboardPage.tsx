@@ -27,6 +27,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import Layout from '../components/Layout';
 import { useTrailBySlug, useTrailLeaderboard } from '../hooks/useTrails';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
+import { useAuth } from '../hooks/useAuth';
 import { formatSeconds } from '../utils/timeFormat';
 import { getAvatarFallbackText, getAvatarImageSrc } from '../utils/avatarPresets';
 
@@ -37,6 +38,7 @@ export default function TrailLeaderboardPage({ mode, onToggleMode }: Props) {
     const { slug } = useParams<{ slug: string }>();
     const { t, i18n } = useTranslation();
     const { isEnabled } = useFeatureFlags();
+    const { user } = useAuth();
     const locale = i18n.language === 'is' ? 'is-IS' : 'en-GB';
     const { trail, loading: trailLoading } = useTrailBySlug(slug);
     const { leaderboard, loading: leaderboardLoading, error } = useTrailLeaderboard(slug, 1000, true);
@@ -213,8 +215,16 @@ export default function TrailLeaderboardPage({ mode, onToggleMode }: Props) {
                                 <TableBody>
                                     {visibleEntries.map(entry => {
                                         const behind = entry.rank === 1 ? '-' : `+${formatSeconds(Math.max(0, entry.timeInSeconds - topTime))}`;
+                                        const isCurrentUser = user?.id === entry.userId;
                                         return (
-                                            <TableRow key={entry.userId}>
+                                            <TableRow key={entry.userId} sx={{
+                                                ...(isCurrentUser && {
+                                                    bgcolor: 'action.selected',
+                                                    '&:hover': {
+                                                        bgcolor: 'action.hover',
+                                                    }
+                                                })
+                                            }}>
                                                 <TableCell>#{entry.rank}</TableCell>
                                                 <TableCell>
                                                     <Stack direction="row" spacing={1} alignItems="center">

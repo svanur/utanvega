@@ -8,6 +8,7 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import type { TrailLeaderboardEntry } from '../hooks/useTrails';
 import { formatSeconds } from '../utils/timeFormat';
 import { getAvatarFallbackText, getAvatarImageSrc } from '../utils/avatarPresets';
+import { useAuth } from '../hooks/useAuth';
 
 type TrailLeaderboardCardProps = {
     leaderboard: TrailLeaderboardEntry[];
@@ -19,6 +20,7 @@ type TrailLeaderboardCardProps = {
 
 export default function TrailLeaderboardCard({ leaderboard, totalEntries, loading, error, trailSlug }: TrailLeaderboardCardProps) {
     const { t, i18n } = useTranslation();
+    const { user } = useAuth();
     const [expanded, setExpanded] = React.useState(false);
     const topEntry = leaderboard[0];
     const locale = i18n.language === 'is' ? 'is-IS' : 'en-GB';
@@ -90,6 +92,7 @@ export default function TrailLeaderboardCard({ leaderboard, totalEntries, loadin
                         <Stack spacing={1}>
                             {leaderboard.map(entry => {
                                 const behindTime = getBehindTime(entry);
+                                const isCurrentUser = user?.id === entry.userId;
                                 return (
                                     <Paper
                                         key={entry.userId}
@@ -97,14 +100,19 @@ export default function TrailLeaderboardCard({ leaderboard, totalEntries, loadin
                                         sx={{
                                             px: 1.5,
                                             py: 1,
-                                            ...(entry.rank === 1 && {
+                                            ...(isCurrentUser && {
+                                                bgcolor: 'action.selected',
+                                                borderColor: 'primary.main',
+                                                borderWidth: 2,
+                                            }),
+                                            ...(entry.rank === 1 && !isCurrentUser && {
                                                 bgcolor: 'rgba(255, 193, 7, 0.18)',
                                                 borderColor: 'warning.main',
                                             }),
-                                            ...(entry.rank === 2 && {
+                                            ...(entry.rank === 2 && !isCurrentUser && {
                                                 bgcolor: 'rgba(192, 192, 192, 0.22)',
                                             }),
-                                            ...(entry.rank === 3 && {
+                                            ...(entry.rank === 3 && !isCurrentUser && {
                                                 bgcolor: 'rgba(205, 127, 50, 0.18)',
                                             }),
                                         }}
