@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
-import { Navigate, useParams } from 'react-router-dom';
+import { Link as RouterLink, Navigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Alert, Box, Button, CircularProgress, Container, Paper, Stack, Typography, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Grid,
+  TableHead, TableRow, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Grid, Link as MuiLink,
   TextField, PaletteMode, TableSortLabel, Checkbox, FormControlLabel, Tooltip as MuiTooltip,
 } from '@mui/material';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -282,9 +282,20 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
           <Typography variant="h5" fontWeight="bold" sx={{ mb: 1 }}>
             {trail.name}
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            {t('myTrails.loggedCount', { count: trailActivities.length })}
-          </Typography>
+          <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 3 }}>
+            <Typography variant="body2" color="text.secondary">
+              {t('myTrails.loggedCount', { count: trailActivities.length })}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">•</Typography>
+            <MuiLink
+              component={RouterLink}
+              to={`/trails/${trail.slug}`}
+              underline="hover"
+              variant="body2"
+            >
+              {t('myTrails.viewTrail')}
+            </MuiLink>
+          </Stack>
 
           {/* KPI Statistics */}
           {chartData.length > 1 && (

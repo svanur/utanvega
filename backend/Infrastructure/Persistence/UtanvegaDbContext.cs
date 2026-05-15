@@ -21,6 +21,7 @@ public class UtanvegaDbContext : DbContext
     public DbSet<Competition> Competitions => Set<Competition>();
     public DbSet<Race> Races => Set<Race>();
     public DbSet<UserTrailActivity> UserTrailActivities => Set<UserTrailActivity>();
+    public DbSet<Profile> Profiles => Set<Profile>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -215,6 +216,18 @@ public class UtanvegaDbContext : DbContext
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => e.LogDate);
             entity.HasIndex(e => e.CreatedAt);
+        });
+
+        modelBuilder.Entity<Profile>(entity =>
+        {
+            entity.HasKey(e => e.UserId);
+            entity.ToTable("Profiles");
+
+            entity.Property(e => e.UserId).HasColumnName("UserId");
+            entity.Property(e => e.DisplayName).IsRequired().HasColumnName("DisplayName");
+            entity.Property(e => e.AvatarUrl).HasColumnName("AvatarUrl");
+            entity.Property(e => e.CreatedAt).HasColumnName("CreatedAt");
+            entity.Property(e => e.UpdatedAt).HasColumnName("UpdatedAt");
         });
     }
 }

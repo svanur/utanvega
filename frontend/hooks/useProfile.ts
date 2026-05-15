@@ -74,7 +74,7 @@ export function useProfile() {
   }, [fetchOrCreate]);
 
   const updateProfile = useCallback(
-    async (updates: Partial<Pick<UserProfile, 'displayName' | 'avatarUrl'>>) => {
+    async (updates: { displayName?: string; avatarUrl?: string | null }) => {
       if (!user) throw new Error('Not authenticated');
 
       const { data, error: updateError } = await supabase

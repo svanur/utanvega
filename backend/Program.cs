@@ -48,6 +48,7 @@ using Utanvega.Backend.Application.Activities.Commands.CreateUserTrailActivity;
 using Utanvega.Backend.Application.Activities.Commands.UpdateUserTrailActivity;
 using Utanvega.Backend.Application.Activities.Commands.DeleteUserTrailActivity;
 using Utanvega.Backend.Application.Activities.Queries.GetUserTrailActivities;
+using Utanvega.Backend.Application.Activities.Queries.GetTrailLeaderboard;
 using MediatR;
 using FluentValidation;
 using Microsoft.Extensions.Caching.Memory;
@@ -467,6 +468,14 @@ app.MapGet("/api/v1/trails/{slug}/weather", async (string slug, IMediator mediat
     return Results.Ok(weather);
 })
 .WithName("GetTrailWeather");
+
+app.MapGet("/api/v1/trails/{slug}/leaderboard", async (string slug, int? limit, IMediator mediator) =>
+{
+    var query = new GetTrailLeaderboardQuery(slug, limit ?? 10);
+    var leaderboard = await mediator.Send(query);
+    return Results.Ok(leaderboard);
+})
+.WithName("GetTrailLeaderboard");
 
 app.MapGet("/api/v1/locations", async (IMediator mediator) =>
 {

@@ -459,6 +459,46 @@ export interface TrailWeather {
     condition: 'Good' | 'Fair' | 'Poor';
 }
 
+export interface TrailLeaderboardEntry {
+    rank: number;
+    userId: string;
+    displayName: string;
+    avatarUrl?: string;
+    timeInSeconds: number;
+    logDate?: string;
+}
+
+interface TrailLeaderboardResponse {
+    entries: TrailLeaderboardEntry[];
+    totalEntries: number;
+}
+
+export function useTrailLeaderboard(slug?: string, limit = 10, enabled = true) {
+    const { data, isPending, error: queryError } = useQuery<TrailLeaderboardResponse>({
+        queryKey: ['trail-leaderboard', slug, limit],
+        queryFn: () => fetch(`${API_URL}/api/v1/trails/${slug}/leaderboard?limit=${limit}`)
+            .then(async res => {
+                if (!res.ok) {
+                    throw new Error('Leaderboard unavailable');
+                }
+                const response = await res.json() as TrailLeaderboardResponse;
+                return {
+                    entries: response.entries.map(entry => ({
+                        ...entry,
+                        avatarUrl: entry.avatarUrl ?? undefined,
+                        logDate: entry.logDate ?? undefined,
+                    })),
+                    totalEntries: response.totalEntries ?? 0,
+                };
+            }),
+        enabled: !!slug && enabled,
+        staleTime: 5 * 60 * 1000,
+    });
+    const loading = isPending && !!slug && enabled;
+    const error = queryError instanceof Error ? queryError.message : queryError ? String(queryError) : null;
+    return { leaderboard: data?.entries ?? [], totalEntries: data?.totalEntries ?? 0, loading, error };
+}
+
 export function useTrailWeather(slug?: string) {
     const { data: weather = null, isPending, error: queryError } = useQuery<TrailWeather | null>({
         queryKey: ['weather', slug],

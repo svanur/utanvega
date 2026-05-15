@@ -28,6 +28,7 @@ const RaceCalendarPage = lazy(() => import('./pages/RaceCalendarPage'));
 const CompetitionDetailPage = lazy(() => import('./pages/CompetitionDetailPage'));
 const WelcomePage = lazy(() => import('./pages/WelcomePage'));
 const TrailComparePage = lazy(() => import('./pages/TrailComparePage'));
+const TrailLeaderboardPage = lazy(() => import('./pages/TrailLeaderboardPage'));
 const MyProfilePage = lazy(() => import('./pages/MyProfilePage'));
 const MyTrailsPage = lazy(() => import('./pages/MyTrailsPage'));
 const MyTrailDetailsPage = lazy(() => import('./pages/MyTrailDetailsPage'));
@@ -86,6 +87,10 @@ export default function App() {
                         path="/trails/:slug" 
                         element={<TrailDetailsPage mode={mode} onToggleMode={handleToggleMode} />} 
                     />
+                    {isEnabled('trail_leaderboard', false) && <Route
+                        path="/trails/:slug/leaderboard"
+                        element={<TrailLeaderboardPage mode={mode} onToggleMode={handleToggleMode} />}
+                    />}
                     {isEnabled('locations_page') && <Route 
                         path="/locations" 
                         element={<LocationsPage mode={mode} onToggleMode={handleToggleMode} />} 

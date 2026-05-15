@@ -46,7 +46,7 @@ import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import Layout from '../components/Layout';
-import { useTrailBySlug, useTrails, useTrailSuggestions, useTrailWeather, recordTrailView, API_URL } from '../hooks/useTrails';
+import { useTrailBySlug, useTrails, useTrailSuggestions, useTrailWeather, useTrailLeaderboard, recordTrailView, API_URL } from '../hooks/useTrails';
 import { estimateDuration } from '../utils/estimateDuration';
 import PaceInfo from '../components/PaceInfo';
 import LostRunner from '../components/LostRunner';
@@ -66,6 +66,7 @@ import { TrailCard } from '../components/TrailCard';
 import { useAuth } from '../hooks/useAuth';
 import { useTickedTrails } from '../hooks/useTickedTrails';
 import LoginModal from '../components/LoginModal';
+import TrailLeaderboardCard from '../components/TrailLeaderboardCard';
 
 const getActivityIcon = (type: string) => {
     switch (type.toLowerCase()) {
@@ -109,6 +110,8 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     const { isEnabled } = useFeatureFlags();
     const locationsPageEnabled = isEnabled('locations_page');
     const tagsEnabled = isEnabled('tags_page');
+    const leaderboardEnabled = isEnabled('trail_leaderboard', false);
+    const { leaderboard, totalEntries, loading: leaderboardLoading, error: leaderboardError } = useTrailLeaderboard(slug, 3, leaderboardEnabled);
     const { trails: allTrails } = useTrails();
     const { isFavorite, toggleFavorite } = useFavorites();
     const { addRecent } = useRecentlyViewed();
@@ -531,6 +534,16 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
             {/* Weather forecast */}
             {isEnabled('weather_forecast') && (
             <WeatherCard weather={weather} loading={weatherLoading} error={weatherError} />
+            )}
+
+            {leaderboardEnabled && (
+                <TrailLeaderboardCard
+                    leaderboard={leaderboard}
+                    totalEntries={totalEntries}
+                    loading={leaderboardLoading}
+                    error={leaderboardError}
+                    trailSlug={trail.slug}
+                />
             )}
 
             {isEnabled('related_trails') && relatedTrails.length > 0 && (
