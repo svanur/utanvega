@@ -12,7 +12,7 @@ const DEFAULT_ALLOWED_AVATAR_HOSTS = [
   'i.imgur.com',
 ];
 const ALLOWED_AVATAR_HOSTS = new Set(
-  (import.meta.env.VITE_ALLOWED_AVATAR_HOSTS ?? DEFAULT_ALLOWED_AVATAR_HOSTS.join(','))
+  (import.meta.env.VITE_ALLOWED_AVATAR_HOSTS?.trim() || DEFAULT_ALLOWED_AVATAR_HOSTS.join(','))
     .split(',')
     .map((host: string) => host.trim().toLowerCase())
     .filter(Boolean)
