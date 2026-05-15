@@ -18,20 +18,37 @@ public class GetTrailLeaderboardHandler : IRequestHandler<GetTrailLeaderboardQue
         var normalizedSlug = request.TrailSlug.Trim().ToLowerInvariant();
         var limit = Math.Clamp(request.Limit, 1, 1000);
 
-        // Use window function to efficiently get per-user best time without loading all activities
-        var bestByUserAll = await _dbContext.UserTrailActivities
+        var totalEntries = await _dbContext.UserTrailActivities
+            .AsNoTracking()
+            .Where(a => a.TrailSlug == normalizedSlug && a.IsPublic)
+            .Select(a => a.UserId)
+            .Distinct()
+            .CountAsync(cancellationToken);
+
+        // Select only the top `limit` best-per-user rows at DB level.
+        var bestByUser = await _dbContext.UserTrailActivities
             .FromSqlInterpolated($@"
-                SELECT DISTINCT ON (""UserId"")
-                    ""UserId"",
-                    ""TimeInSeconds"",
-                    ""LogDate"",
-                    ""CreatedAt""
-                FROM ""UserTrailActivities""
-                WHERE ""TrailSlug"" = {normalizedSlug} AND ""IsPublic"" = true
-                ORDER BY ""UserId"",
-                    ""TimeInSeconds"" ASC,
-                    ""LogDate"" DESC NULLS LAST,
-                    ""CreatedAt"" DESC")
+                SELECT ranked.""UserId"",
+                       ranked.""TimeInSeconds"",
+                       ranked.""LogDate"",
+                       ranked.""CreatedAt""
+                FROM (
+                    SELECT DISTINCT ON (""UserId"")
+                        ""UserId"",
+                        ""TimeInSeconds"",
+                        ""LogDate"",
+                        ""CreatedAt""
+                    FROM ""UserTrailActivities""
+                    WHERE ""TrailSlug"" = {normalizedSlug} AND ""IsPublic"" = true
+                    ORDER BY ""UserId"",
+                        ""TimeInSeconds"" ASC,
+                        ""LogDate"" DESC NULLS LAST,
+                        ""CreatedAt"" DESC
+                ) AS ranked
+                ORDER BY ranked.""TimeInSeconds"" ASC,
+                         ranked.""LogDate"" DESC NULLS LAST,
+                         ranked.""CreatedAt"" DESC
+                LIMIT {limit}")
             .AsNoTracking()
             .Select(a => new
             {
@@ -40,13 +57,7 @@ public class GetTrailLeaderboardHandler : IRequestHandler<GetTrailLeaderboardQue
                 a.LogDate,
                 a.CreatedAt
             })
-            .OrderBy(a => a.TimeInSeconds)
-            .ThenByDescending(a => a.LogDate ?? DateOnly.MinValue)
-            .ThenByDescending(a => a.CreatedAt)
             .ToListAsync(cancellationToken);
-
-        var totalEntries = bestByUserAll.Count;
-        var bestByUser = bestByUserAll.Take(limit).ToList();
 
         var userIds = bestByUser.Select(a => a.UserId).ToList();
         var profiles = await _dbContext.Profiles
