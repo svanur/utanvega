@@ -28,7 +28,9 @@ const RaceCalendarPage = lazy(() => import('./pages/RaceCalendarPage'));
 const CompetitionDetailPage = lazy(() => import('./pages/CompetitionDetailPage'));
 const WelcomePage = lazy(() => import('./pages/WelcomePage'));
 const TrailComparePage = lazy(() => import('./pages/TrailComparePage'));
+const TrailLeaderboardPage = lazy(() => import('./pages/TrailLeaderboardPage'));
 const MyProfilePage = lazy(() => import('./pages/MyProfilePage'));
+const MyProfileSettingsPage = lazy(() => import('./pages/MyProfileSettingsPage'));
 const MyTrailsPage = lazy(() => import('./pages/MyTrailsPage'));
 const MyTrailDetailsPage = lazy(() => import('./pages/MyTrailDetailsPage'));
 
@@ -63,7 +65,7 @@ export default function App() {
     };
 
     const { activeEgg, clearEgg } = useEasterEggs();
-    const { isEnabled } = useFeatureFlags();
+    const { isEnabled, loaded } = useFeatureFlags();
     const { isAdmin, gandalfQuote, dismissGandalf } = useAdminMode();
 
     return (
@@ -73,6 +75,9 @@ export default function App() {
                 <AuthProvider>
                     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                         <Suspense fallback={<PageLoader />}>
+                {!loaded ? (
+                    <PageLoader />
+                ) : (
                 <Routes>
                     <Route 
                         path="/" 
@@ -86,6 +91,10 @@ export default function App() {
                         path="/trails/:slug" 
                         element={<TrailDetailsPage mode={mode} onToggleMode={handleToggleMode} />} 
                     />
+                    {isEnabled('trail_leaderboard', false) && <Route
+                        path="/trails/:slug/leaderboard"
+                        element={<TrailLeaderboardPage mode={mode} onToggleMode={handleToggleMode} />}
+                    />}
                     {isEnabled('locations_page') && <Route 
                         path="/locations" 
                         element={<LocationsPage mode={mode} onToggleMode={handleToggleMode} />} 
@@ -152,6 +161,10 @@ export default function App() {
                         path="/my/profile"
                         element={<MyProfilePage mode={mode} onToggleMode={handleToggleMode} />}
                     />}
+                    {isEnabled('user_login', false) && <Route
+                        path="/my/profile/settings"
+                        element={<MyProfileSettingsPage mode={mode} onToggleMode={handleToggleMode} />}
+                    />}
                     {isEnabled('trail_activities', false) && <Route
                         path="/my/trails"
                         element={<MyTrailsPage mode={mode} onToggleMode={handleToggleMode} />}
@@ -162,6 +175,7 @@ export default function App() {
                     />}
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
+                )}
                 </Suspense>
                 {isEnabled('spotlight_search') && <SpotlightSearch />}
                 <InstallBanner />

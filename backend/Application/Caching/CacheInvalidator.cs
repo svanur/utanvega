@@ -65,4 +65,20 @@ public class CacheInvalidator : ICacheInvalidator
         if (slug is not null)
             _cache.Remove(CacheKeys.Competition(slug));
     }
+
+    public void InvalidateLeaderboard(string slug)
+    {
+        var normalizedSlug = slug.Trim().ToLowerInvariant();
+        var versionKey = CacheKeys.LeaderboardVersion(normalizedSlug);
+        var current = _cache.GetOrCreate(versionKey, e =>
+        {
+            e.Priority = Microsoft.Extensions.Caching.Memory.CacheItemPriority.NeverRemove;
+            return 0;
+        });
+        _cache.Set(versionKey, current + 1,
+            new Microsoft.Extensions.Caching.Memory.MemoryCacheEntryOptions
+            {
+                Priority = Microsoft.Extensions.Caching.Memory.CacheItemPriority.NeverRemove
+            });
+    }
 }

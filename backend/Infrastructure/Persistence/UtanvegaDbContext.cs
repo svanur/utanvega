@@ -21,6 +21,8 @@ public class UtanvegaDbContext : DbContext
     public DbSet<Competition> Competitions => Set<Competition>();
     public DbSet<Race> Races => Set<Race>();
     public DbSet<UserTrailActivity> UserTrailActivities => Set<UserTrailActivity>();
+    public DbSet<Profile> Profiles => Set<Profile>();
+    public DbSet<TrailCheckIn> TrailCheckIns => Set<TrailCheckIn>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -215,6 +217,39 @@ public class UtanvegaDbContext : DbContext
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => e.LogDate);
             entity.HasIndex(e => e.CreatedAt);
+        });
+
+        modelBuilder.Entity<Profile>(entity =>
+        {
+            entity.HasKey(e => e.UserId);
+            entity.ToTable("Profiles");
+
+            entity.Property(e => e.UserId).HasColumnName("UserId");
+            entity.Property(e => e.DisplayName).IsRequired().HasColumnName("DisplayName");
+            entity.Property(e => e.AvatarUrl).HasColumnName("AvatarUrl");
+            entity.Property(e => e.CreatedAt).HasColumnName("CreatedAt");
+            entity.Property(e => e.UpdatedAt).HasColumnName("UpdatedAt");
+        });
+
+        modelBuilder.Entity<TrailCheckIn>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.ToTable("TrailCheckIns");
+
+            entity.Property(e => e.TrailId).HasColumnName("TrailId");
+            entity.Property(e => e.UserId).HasColumnName("UserId");
+            entity.Property(e => e.CreatedAt).HasColumnName("CreatedAt");
+            entity.Property(e => e.UpdatedAt).HasColumnName("UpdatedAt");
+            entity.Property(e => e.ExpiresAt).HasColumnName("ExpiresAt");
+
+            entity.HasOne(e => e.Trail)
+                  .WithMany()
+                  .HasForeignKey(e => e.TrailId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => new { e.TrailId, e.UserId }).IsUnique();
+            entity.HasIndex(e => new { e.TrailId, e.ExpiresAt });
+            entity.HasIndex(e => new { e.UserId, e.ExpiresAt });
         });
     }
 }
