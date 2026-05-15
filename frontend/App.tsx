@@ -65,7 +65,7 @@ export default function App() {
     };
 
     const { activeEgg, clearEgg } = useEasterEggs();
-    const { isEnabled } = useFeatureFlags();
+    const { isEnabled, loaded } = useFeatureFlags();
     const { isAdmin, gandalfQuote, dismissGandalf } = useAdminMode();
 
     return (
@@ -75,6 +75,9 @@ export default function App() {
                 <AuthProvider>
                     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                         <Suspense fallback={<PageLoader />}>
+                {!loaded ? (
+                    <PageLoader />
+                ) : (
                 <Routes>
                     <Route 
                         path="/" 
@@ -172,6 +175,7 @@ export default function App() {
                     />}
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
+                )}
                 </Suspense>
                 {isEnabled('spotlight_search') && <SpotlightSearch />}
                 <InstallBanner />
