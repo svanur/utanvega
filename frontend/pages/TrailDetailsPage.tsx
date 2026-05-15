@@ -115,6 +115,7 @@ const CHECK_IN_SEARCH_THRESHOLD = 10;
 const CHECK_IN_NEARBY_RADIUS_KM = 0.8;
 const CHECK_IN_JUST_ARRIVED_MINUTES = 10;
 const CHECK_IN_LEAVING_SOON_MINUTES = 30;
+const CHECK_IN_NEARBY_GEO_CACHE_MS = 15 * 60 * 1000;
 
 export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPageProps) {
     const { slug } = useParams<{ slug: string }>();
@@ -151,6 +152,12 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     const [nearbyPromptVisible, setNearbyPromptVisible] = useState(false);
     const previousCheckInCountRef = useRef<number | null>(null);
     const suppressRealtimeToastUntilRef = useRef<number>(0);
+    const nearbyPromptGeoCacheRef = useRef<{
+        userId: string;
+        trailSlug: string;
+        timestamp: number;
+        isNearby: boolean;
+    } | null>(null);
     const { suggestions, loading: suggestionsLoading } = useTrailSuggestions(slug, !!error || (!loading && !trail));
     const [geometry, setGeometry] = useState<GeoJsonGeometry | null>(null);
     const [hoverPoint, setHoverPoint] = useState<{ lat: number; lng: number } | null>(null);
@@ -304,12 +311,24 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     }, [totalCheckIns, checkInEnabled, t]);
 
     useEffect(() => {
-        if (!checkInEnabled || !trail || !user || isCheckedIn) {
+        if (!checkInEnabled || !checkInExpanded || !trail || !user || isCheckedIn) {
             setNearbyPromptVisible(false);
             return;
         }
         if (trail.startLatitude === null || trail.startLongitude === null || !navigator.geolocation) {
             setNearbyPromptVisible(false);
+            return;
+        }
+
+        const now = Date.now();
+        const cached = nearbyPromptGeoCacheRef.current;
+        if (
+            cached &&
+            cached.userId === user.id &&
+            cached.trailSlug === trail.slug &&
+            now - cached.timestamp < CHECK_IN_NEARBY_GEO_CACHE_MS
+        ) {
+            setNearbyPromptVisible(cached.isNearby);
             return;
         }
 
@@ -324,6 +343,8 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
             return 2 * R * Math.asin(Math.sqrt(a));
         };
 
+        let cancelled = false;
+
         navigator.geolocation.getCurrentPosition(
             (position) => {
                 const distanceKm = haversineKm(
@@ -332,12 +353,34 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                     trail.startLatitude!,
                     trail.startLongitude!
                 );
-                setNearbyPromptVisible(distanceKm <= CHECK_IN_NEARBY_RADIUS_KM);
+                const isNearby = distanceKm <= CHECK_IN_NEARBY_RADIUS_KM;
+                nearbyPromptGeoCacheRef.current = {
+                    userId: user.id,
+                    trailSlug: trail.slug,
+                    timestamp: Date.now(),
+                    isNearby,
+                };
+                if (!cancelled) {
+                    setNearbyPromptVisible(isNearby);
+                }
             },
-            () => setNearbyPromptVisible(false),
+            () => {
+                nearbyPromptGeoCacheRef.current = {
+                    userId: user.id,
+                    trailSlug: trail.slug,
+                    timestamp: Date.now(),
+                    isNearby: false,
+                };
+                if (!cancelled) {
+                    setNearbyPromptVisible(false);
+                }
+            },
             { enableHighAccuracy: false, timeout: 5000, maximumAge: 300000 }
         );
-    }, [checkInEnabled, trail, user, isCheckedIn]);
+        return () => {
+            cancelled = true;
+        };
+    }, [checkInEnabled, checkInExpanded, trail, user, isCheckedIn]);
 
     const scroll = (direction: 'left' | 'right') => {
         if (scrollRef.current) {
