@@ -23,6 +23,9 @@
     },
     "profile": {
         "title": "Profile",
+        "publicProfileSettings": "Public profile settings",
+        "publicProfileSettingsDescription": "Manage the name and avatar shown on public leaderboards.",
+        "openPublicProfileSettings": "Edit public profile",
         "displayNameTitle": "Public runner name",
         "displayNameDescription": "This name is shown on public leaderboards.",
         "displayNameLabel": "Display name",

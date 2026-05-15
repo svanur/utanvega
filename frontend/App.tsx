@@ -30,6 +30,7 @@ const WelcomePage = lazy(() => import('./pages/WelcomePage'));
 const TrailComparePage = lazy(() => import('./pages/TrailComparePage'));
 const TrailLeaderboardPage = lazy(() => import('./pages/TrailLeaderboardPage'));
 const MyProfilePage = lazy(() => import('./pages/MyProfilePage'));
+const MyProfileSettingsPage = lazy(() => import('./pages/MyProfileSettingsPage'));
 const MyTrailsPage = lazy(() => import('./pages/MyTrailsPage'));
 const MyTrailDetailsPage = lazy(() => import('./pages/MyTrailDetailsPage'));
 
@@ -156,6 +157,10 @@ export default function App() {
                     {isEnabled('user_login', false) && <Route
                         path="/my/profile"
                         element={<MyProfilePage mode={mode} onToggleMode={handleToggleMode} />}
+                    />}
+                    {isEnabled('user_login', false) && <Route
+                        path="/my/profile/settings"
+                        element={<MyProfileSettingsPage mode={mode} onToggleMode={handleToggleMode} />}
                     />}
                     {isEnabled('trail_activities', false) && <Route
                         path="/my/trails"

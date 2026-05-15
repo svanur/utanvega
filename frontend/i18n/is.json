@@ -23,6 +23,9 @@
     },
     "profile": {
         "title": "Prófíll",
+        "publicProfileSettings": "Stillingar opinbers prófíls",
+        "publicProfileSettingsDescription": "Stjórna nafni og mynd sem birtast á opinberum afrekaskrám.",
+        "openPublicProfileSettings": "Breyta opinberum prófíl",
         "displayNameTitle": "Opinbert hlaupanafn",
         "displayNameDescription": "Þetta nafn birtist á opinberum afrekaskrám.",
         "displayNameLabel": "Birtingarnafn",
@@ -137,7 +140,7 @@
         "personalBest": "PB",
         "leaderboardTitle": "Afrekaskrá leiðar",
         "leaderboardForTrail": "Afrekaskrá fyrir {{trailName}}",
-        "leaderboardDescription": "Bestu opinberu tímarnir á þessari leið. Aðeins æfingar sem eru deildar sem opinberar birtast.",
+        "leaderboardDescription": "Bestu tímarnir á þessari leið. Hér birtast aðeins æfingar sem eru merktar sem 'opinberar'.",
         "viewFullLeaderboard": "Sjá alla afrekaskrá",
         "leaderboardSearchPlaceholder": "Leita að nafni hlaupara...",
         "leaderboardRank": "Sæti",
