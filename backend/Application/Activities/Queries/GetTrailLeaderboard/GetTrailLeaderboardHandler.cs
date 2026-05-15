@@ -2,21 +2,34 @@ namespace Utanvega.Backend.Application.Activities.Queries.GetTrailLeaderboard;
 
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
+using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Infrastructure.Persistence;
 
 public class GetTrailLeaderboardHandler : IRequestHandler<GetTrailLeaderboardQuery, GetTrailLeaderboardResponse>
 {
     private readonly UtanvegaDbContext _dbContext;
+    private readonly IMemoryCache _cache;
 
-    public GetTrailLeaderboardHandler(UtanvegaDbContext dbContext)
+    public GetTrailLeaderboardHandler(UtanvegaDbContext dbContext, IMemoryCache cache)
     {
         _dbContext = dbContext;
+        _cache = cache;
     }
 
     public async Task<GetTrailLeaderboardResponse> Handle(GetTrailLeaderboardQuery request, CancellationToken cancellationToken)
     {
         var normalizedSlug = request.TrailSlug.Trim().ToLowerInvariant();
         var limit = Math.Clamp(request.Limit, 1, 1000);
+        var version = _cache.GetOrCreate(CacheKeys.LeaderboardVersion(normalizedSlug), e =>
+        {
+            e.Priority = CacheItemPriority.NeverRemove;
+            return 0;
+        });
+        var cacheKey = CacheKeys.Leaderboard(normalizedSlug, version, limit);
+
+        if (_cache.TryGetValue(cacheKey, out GetTrailLeaderboardResponse? cached) && cached is not null)
+            return cached;
 
         var totalEntries = await _dbContext.UserTrailActivities
             .AsNoTracking()
@@ -93,6 +106,8 @@ public class GetTrailLeaderboardHandler : IRequestHandler<GetTrailLeaderboardQue
             ));
         }
 
-        return new GetTrailLeaderboardResponse(entries, totalEntries);
+        var response = new GetTrailLeaderboardResponse(entries, totalEntries);
+        _cache.Set(cacheKey, response, TimeSpan.FromHours(1));
+        return response;
     }
 }

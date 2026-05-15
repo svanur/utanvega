@@ -16,7 +16,8 @@ public static class CacheKeys
     public static string Trending(int count, int days) => $"trending:{count}:{days}";
 
     // Activities
-    public static string Leaderboard(string trailSlug, int limit) => $"leaderboard:{trailSlug}:{limit}";
+    public static string LeaderboardVersion(string trailSlug) => $"leaderboard:{trailSlug}:version";
+    public static string Leaderboard(string trailSlug, int version, int limit) => $"leaderboard:{trailSlug}:{version}:{limit}";
 
     // Locations
     public static string LocationsAll => "locations:all";
