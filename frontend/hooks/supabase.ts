@@ -1,14 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
 
-function requireEnv(name: 'VITE_SUPABASE_URL' | 'VITE_SUPABASE_ANON_KEY'): string {
-  const value = import.meta.env[name]?.trim();
-  if (!value) {
-    throw new Error(`Missing required environment variable: ${name}`);
-  }
-  return value;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim();
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
+
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+
+if (!isSupabaseConfigured) {
+  console.warn(
+    '[Auth] Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY. Login features are disabled until these are configured.'
+  );
 }
 
-const supabaseUrl = requireEnv('VITE_SUPABASE_URL');
-const supabaseAnonKey = requireEnv('VITE_SUPABASE_ANON_KEY');
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(
+  supabaseUrl || 'https://invalid.supabase.local',
+  supabaseAnonKey || 'missing-anon-key'
+);

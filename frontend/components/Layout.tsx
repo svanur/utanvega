@@ -19,6 +19,7 @@ import { useHeaderWeather } from '../hooks/useHeaderWeather';
 import { useInstallPrompt } from '../hooks/useInstallPrompt';
 import { useAdminMode } from '../hooks/useAdminMode';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
+import { isSupabaseConfigured } from '../hooks/supabase';
 
 type LayoutProps = PropsWithChildren<{
     mode: PaletteMode;
@@ -142,7 +143,7 @@ export default function Layout({ children, mode, onToggleMode }: LayoutProps) {
                         </IconButton>
                     </Tooltip>
 
-                    {isEnabled('user_login', false) && <UserAvatar />}
+                    {isEnabled('user_login', false) && isSupabaseConfigured && <UserAvatar />}
                 </Toolbar>
             </DynamicHeader>
 

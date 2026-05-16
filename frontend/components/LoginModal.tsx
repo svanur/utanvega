@@ -7,7 +7,6 @@ import {
   Button,
   TextField,
   Alert,
-  Box,
   CircularProgress,
   Stack,
   Divider,
@@ -22,8 +21,11 @@ interface LoginModalProps {
   onClose: () => void;
 }
 
+const AUTH_PENDING_KEY = 'utanvega-auth-pending';
+
 export default function LoginModal({ open, onClose }: LoginModalProps) {
   const { t } = useTranslation();
+  const authRedirectTo = import.meta.env.VITE_AUTH_REDIRECT_URL?.trim() || window.location.origin;
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingGoogle, setLoadingGoogle] = useState(false);
@@ -34,16 +36,19 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
     try {
       setLoadingGoogle(true);
       setError(null);
+      window.sessionStorage.setItem(AUTH_PENDING_KEY, '1');
       const { error: err } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: authRedirectTo,
         },
       });
       if (err) {
+        window.sessionStorage.removeItem(AUTH_PENDING_KEY);
         setError(err.message || 'Failed to sign in with Google');
       }
     } catch (err) {
+      window.sessionStorage.removeItem(AUTH_PENDING_KEY);
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoadingGoogle(false);
@@ -61,7 +66,7 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
       const { error: err } = await supabase.auth.signInWithOtp({
         email: email.trim(),
         options: {
-          emailRedirectTo: window.location.origin,
+          emailRedirectTo: authRedirectTo,
         },
       });
       if (err) {
