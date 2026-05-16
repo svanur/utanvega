@@ -14,7 +14,7 @@ import {
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import GoogleIcon from '@mui/icons-material/Google';
-import { supabase } from '../hooks/supabase';
+import { supabase, isSupabaseConfigured } from '../hooks/supabase';
 import { AUTH_PENDING_KEY } from '../hooks/authConstants';
 
 interface LoginModalProps {
@@ -88,6 +88,24 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
       onClose();
     }
   };
+
+  if (!isSupabaseConfigured) {
+    return (
+      <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+        <DialogTitle>{t('auth.signIn')}</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ pt: 2 }}>
+            <Alert severity="warning">
+              Authentication is currently unavailable. Please contact support or try again later.
+            </Alert>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose}>{t('common.close')}</Button>
+        </DialogActions>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>

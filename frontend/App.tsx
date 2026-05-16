@@ -9,6 +9,7 @@ import { useEasterEggs } from './hooks/useEasterEggs';
 import { EasterEggs } from './components/EasterEggs';
 import SpotlightSearch from './components/SpotlightSearch';
 import { useFeatureFlags } from './hooks/useFeatureFlags';
+import { useLoginEnabled } from './hooks/useLoginEnabled';
 import InstallBanner from './components/InstallBanner';
 import { useAdminMode } from './hooks/useAdminMode';
 import GandalfEntrance from './components/GandalfEntrance';
@@ -67,6 +68,7 @@ export default function App() {
     const { activeEgg, clearEgg } = useEasterEggs();
     const { isEnabled, loaded } = useFeatureFlags();
     const { isAdmin, gandalfQuote, dismissGandalf } = useAdminMode();
+    const loginEnabled = useLoginEnabled();
 
     return (
         <ThemeProvider theme={theme}>
@@ -157,11 +159,11 @@ export default function App() {
                         path="/velkomin" 
                         element={<WelcomePage mode={mode} onToggleMode={handleToggleMode} forceLang="is" />} 
                     />
-                    {isEnabled('user_login', false) && <Route
+                    {loginEnabled && <Route
                         path="/my/profile"
                         element={<MyProfilePage mode={mode} onToggleMode={handleToggleMode} />}
                     />}
-                    {isEnabled('user_login', false) && <Route
+                    {loginEnabled && <Route
                         path="/my/profile/settings"
                         element={<MyProfileSettingsPage mode={mode} onToggleMode={handleToggleMode} />}
                     />}

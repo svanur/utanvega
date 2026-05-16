@@ -19,7 +19,7 @@ import { useHeaderWeather } from '../hooks/useHeaderWeather';
 import { useInstallPrompt } from '../hooks/useInstallPrompt';
 import { useAdminMode } from '../hooks/useAdminMode';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
-import { isSupabaseConfigured } from '../hooks/supabase';
+import { useLoginEnabled } from '../hooks/useLoginEnabled';
 
 type LayoutProps = PropsWithChildren<{
     mode: PaletteMode;
@@ -44,6 +44,8 @@ export default function Layout({ children, mode, onToggleMode }: LayoutProps) {
         ...(isAdmin && isEnabled('game_fun_page') ? [{ label: '🧙‍♂️ Fun', path: '/fun', adminOnly: true }] : []),
         { label: t('nav.about'), path: '/about', adminOnly: false },
     ];
+
+    const loginEnabled = useLoginEnabled();
 
     return (
         <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
@@ -143,7 +145,7 @@ export default function Layout({ children, mode, onToggleMode }: LayoutProps) {
                         </IconButton>
                     </Tooltip>
 
-                    {isEnabled('user_login', false) && isSupabaseConfigured && <UserAvatar />}
+                    {loginEnabled && <UserAvatar />}
                 </Toolbar>
             </DynamicHeader>
 
