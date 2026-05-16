@@ -43,6 +43,8 @@ export default function UserAvatar() {
           disabled={loading}
           color="inherit"
           title={t('auth.signIn')}
+          aria-label={t('auth.signIn')}
+          aria-busy={loading}
         >
           {loading ? <CircularProgress size={18} color="inherit" /> : <LoginIcon />}
         </IconButton>
@@ -68,6 +70,7 @@ export default function UserAvatar() {
         size="small"
         onClick={handleOpenMenu}
         sx={{ p: 0 }}
+        aria-label={t('profile.title')}
       >
         <Avatar
           sx={{
