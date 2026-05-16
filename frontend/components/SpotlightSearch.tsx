@@ -13,12 +13,15 @@ import {
     CircularProgress,
     useTheme,
     useMediaQuery,
+    IconButton,
+    InputAdornment,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import HikingIcon from '@mui/icons-material/Hiking';
 import PlaceIcon from '@mui/icons-material/Place';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import KeyboardReturnIcon from '@mui/icons-material/KeyboardReturn';
+import CloseIcon from '@mui/icons-material/Close';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { API_URL, Trail } from '../hooks/useTrails';
@@ -244,6 +247,20 @@ export default function SpotlightSearch() {
                     onChange={e => setQuery(e.target.value)}
                     onKeyDown={handleKeyDown}
                     sx={{ fontSize: '1.1rem' }}
+                    endAdornment={
+                        query.trim() ? (
+                            <InputAdornment position="end">
+                                <IconButton
+                                    size="small"
+                                    onClick={() => setQuery('')}
+                                    edge="end"
+                                    sx={{ mr: -1 }}
+                                >
+                                    <CloseIcon fontSize="small" />
+                                </IconButton>
+                            </InputAdornment>
+                        ) : undefined
+                    }
                 />
                 <Chip
                     label="ESC"

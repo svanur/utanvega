@@ -69,6 +69,7 @@ import EmptyFilterState from './EmptyFilterState';
 import SmartPresets from './SmartPresets';
 import { getActivePresets } from '../utils/filterPresets';
 import TrailSlotMachine from './TrailSlotMachine';
+import { toUserFriendlyFetchError } from '../utils/apiErrors';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import ListSubheader from '@mui/material/ListSubheader';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
@@ -445,7 +446,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
     if (error) {
         return (
             <Container sx={{ mt: 2 }}>
-                <Alert severity="error">{error}</Alert>
+                <Alert severity="error">{toUserFriendlyFetchError(error, t('common.dataLoadUnavailable'))}</Alert>
             </Container>
         );
     }

@@ -9,7 +9,8 @@
         "view": "View",
         "save": "Save",
         "clear": "Clear",
-        "tip": "Tip"
+        "tip": "Tip",
+        "dataLoadUnavailable": "We couldn't load data right now. Check your internet connection and try again."
     },
     "auth": {
         "signIn": "Sign In",
@@ -319,8 +320,12 @@
     },
     "share": {
         "share": "Share",
+        "shareOptions": "Share options",
+        "facebook": "Facebook",
+        "messenger": "Messenger",
         "copyLink": "Copy Link",
-        "linkCopied": "Link copied to clipboard!"
+        "linkCopied": "Link copied to clipboard!",
+        "messengerNotConfigured": "Messenger share needs app configuration here. Link copied instead."
     },
     "footer": {
         "checkingApi": "Checking API…",
@@ -808,6 +813,7 @@
         "noDate": "Date TBD",
         "nextRace": "Next race:",
         "today": "🔥 Today!",
+        "raceDayBadge": "🏁 It's race day!",
         "tomorrow": "Tomorrow!",
         "passed": "Past event",
         "daysUntil": "In {{count}} days",
@@ -865,6 +871,18 @@
         "statusUpcoming": "Coming soon",
         "raceDayWeather": "Trail Weather – Race Forecast",
         "raceDayWeatherDesc": "Current conditions and 7-day forecast at the race route. Race day is highlighted.",
+        "checklistTitle": "Race day checklist",
+        "checklistWeatherReady": "Current snapshot: {{temperature}}°C and {{wind}} m/s wind.",
+        "checklistWeatherFallback": "Quick prep before heading out:",
+        "checklistBib": "Bib pinned and ready",
+        "checklistShoes": "Shoes and socks set",
+        "checklistFuel": "Fuel/hydration packed",
+        "checklistGoodMoodReady": "Good mood ready 😄",
+        "raceDayShareCta": "I'm racing today 💥",
+        "raceDayShareText": "I'm racing {{raceName}} today 💥",
+        "raceDayShareRaceCta": "I am competing 💥",
+        "raceDayShareRaceText": "Today I am racing {{competitionName}} - {{raceName}} 💥",
+        "checklistSavedLocally": "Saved on this device only.",
         "predict": "Predict",
         "noUpcoming": "No upcoming races"
     },

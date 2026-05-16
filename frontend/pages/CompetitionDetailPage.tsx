@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Container,
@@ -17,6 +17,9 @@ import {
     ListItem,
     ListItemIcon,
     ListItemText,
+    Checkbox,
+    FormControlLabel,
+    FormGroup,
     useTheme,
     alpha,
 } from '@mui/material';
@@ -30,6 +33,7 @@ import TimerIcon from '@mui/icons-material/Timer';
 import StraightenIcon from '@mui/icons-material/Straighten';
 import TerrainIcon from '@mui/icons-material/Terrain';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
+import confetti from 'canvas-confetti';
 import ShareButtons from '../components/ShareButtons';
 import Layout from '../components/Layout';
 import RunningLoader from '../components/RunningLoader';
@@ -51,6 +55,15 @@ const ACTIVITY_ICONS: Record<string, string> = {
     Hiking: '🥾',
     Cycling: '🚴',
 };
+
+type RaceDayChecklistKey = 'bib' | 'shoes' | 'gels' | 'goodMood';
+
+function toAnchorSlug(value: string): string {
+    return value
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+}
 
 function formatNextDate(dateStr: string, t: (key: string, opts?: Record<string, unknown>) => string): string {
     const date = new Date(dateStr + 'T00:00:00');
@@ -139,6 +152,33 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     const theme = useTheme();
     const { isEnabled } = useFeatureFlags();
     const locationsEnabled = isEnabled('locations_page');
+    const confettiFiredForCompetition = useRef<string | null>(null);
+
+    const isRaceDay = competition?.status !== 'Cancelled' && competition?.daysUntil === 0;
+
+    useEffect(() => {
+        if (!competition || !isRaceDay) return;
+        if (confettiFiredForCompetition.current === competition.id) return;
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+        confettiFiredForCompetition.current = competition.id;
+        const colors = ['#1976d2', '#ff9800', '#66bb6a'];
+
+        confetti({
+            particleCount: 16,
+            spread: 50,
+            startVelocity: 28,
+            origin: { x: 0.15, y: 0.35 },
+            colors,
+        });
+        confetti({
+            particleCount: 16,
+            spread: 50,
+            startVelocity: 28,
+            origin: { x: 0.85, y: 0.35 },
+            colors,
+        });
+    }, [competition, isRaceDay]);
 
     const visibleRaces = useMemo(() => {
         if (!competition) return [];
@@ -152,6 +192,19 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                 return a.sortOrder - b.sortOrder;
             });
     }, [competition]);
+    const racesWithAnchors = useMemo(() => {
+        const seen = new Map<string, number>();
+        return visibleRaces.map((race) => {
+            const baseRaw = race.distanceLabel?.trim() || race.name || 'race';
+            const baseSlug = toAnchorSlug(baseRaw) || 'race';
+            const count = (seen.get(baseSlug) ?? 0) + 1;
+            seen.set(baseSlug, count);
+            return {
+                race,
+                anchor: count === 1 ? `race-${baseSlug}` : `race-${baseSlug}-${count}`,
+            };
+        });
+    }, [visibleRaces]);
 
     // Show weather when race is within 7 days and a trail is linked
     const weatherTrailSlug = useMemo(() => {
@@ -161,6 +214,43 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     }, [competition, visibleRaces]);
 
     const { weather, loading: weatherLoading, error: weatherError } = useTrailWeather(weatherTrailSlug);
+    const [raceDayChecklist, setRaceDayChecklist] = useState<Record<RaceDayChecklistKey, boolean>>({
+        bib: false,
+        shoes: false,
+        gels: false,
+        goodMood: false,
+    });
+    const checklistStorageKey = useMemo(
+        () => competition ? `utanvega-race-day-checklist-${competition.id}-${competition.nextDate ?? 'none'}` : null,
+        [competition],
+    );
+    const checklistItems = useMemo(() => ([
+        { key: 'bib', label: t('races.checklistBib') },
+        { key: 'shoes', label: t('races.checklistShoes') },
+        { key: 'gels', label: t('races.checklistFuel') },
+        { key: 'goodMood', label: t('races.checklistGoodMoodReady') },
+    ] as const), [t]);
+
+    useEffect(() => {
+        if (!isRaceDay || !checklistStorageKey) return;
+        try {
+            const raw = localStorage.getItem(checklistStorageKey);
+            if (!raw) return;
+            const parsed = JSON.parse(raw) as Partial<Record<RaceDayChecklistKey, boolean>>;
+            setRaceDayChecklist(prev => ({ ...prev, ...parsed }));
+        } catch {
+            // Ignore invalid local data
+        }
+    }, [isRaceDay, checklistStorageKey]);
+
+    useEffect(() => {
+        if (!isRaceDay || !checklistStorageKey) return;
+        try {
+            localStorage.setItem(checklistStorageKey, JSON.stringify(raceDayChecklist));
+        } catch {
+            // Ignore storage failures
+        }
+    }, [isRaceDay, checklistStorageKey, raceDayChecklist]);
 
     if (loading) {
         return (
@@ -257,32 +347,54 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             <EmojiEventsIcon sx={{ color: theme.palette.warning.main, flexShrink: 0 }} />
                             {competition.name}
                         </Typography>
-                        {competition.status === 'Cancelled' ? (
-                            <Chip label={t('races.statusCancelled')} color="error" sx={{ fontWeight: 700, fontSize: '1rem', px: 1.5, py: 0.5, height: 'auto', flexShrink: 0 }} />
-                        ) : competition.status === 'Upcoming' ? (
-                            <Chip label={t('races.statusUpcoming')} color="info" sx={{ fontWeight: 700, fontSize: '1rem', px: 1.5, py: 0.5, height: 'auto', flexShrink: 0 }} />
-                        ) : (
-                            <Chip
-                                label={getCountdownLabel(competition.daysUntil, t)}
-                                color={getCountdownColor(competition.daysUntil)}
-                                variant="filled"
-                                sx={{
-                                    fontWeight: 700,
-                                    fontSize: '1rem',
-                                    px: 1.5,
-                                    py: 0.5,
-                                    height: 'auto',
-                                    flexShrink: 0,
-                                    ...(competition.daysUntil === 0 && {
+                        <Stack direction="row" spacing={1} alignItems="center">
+                            {isRaceDay ? (
+                                <Chip
+                                    label={t('races.raceDayBadge')}
+                                    color="error"
+                                    variant="filled"
+                                    sx={{
+                                        fontWeight: 800,
+                                        fontSize: '1rem',
+                                        px: 1.5,
+                                        py: 0.5,
+                                        height: 'auto',
+                                        flexShrink: 0,
                                         animation: 'pulse 1.5s ease-in-out infinite',
                                         '@keyframes pulse': {
                                             '0%, 100%': { transform: 'scale(1)', boxShadow: 'none' },
                                             '50%': { transform: 'scale(1.06)', boxShadow: `0 0 8px ${alpha(theme.palette.error.main, 0.6)}` },
                                         },
-                                    }),
-                                }}
-                            />
-                        )}
+                                    }}
+                                />
+                            ) : competition.status === 'Cancelled' ? (
+                                <Chip label={t('races.statusCancelled')} color="error" sx={{ fontWeight: 700, fontSize: '1rem', px: 1.5, py: 0.5, height: 'auto', flexShrink: 0 }} />
+                            ) : competition.status === 'Upcoming' ? (
+                                <Chip label={t('races.statusUpcoming')} color="info" sx={{ fontWeight: 700, fontSize: '1rem', px: 1.5, py: 0.5, height: 'auto', flexShrink: 0 }} />
+                            ) : (
+                                <Chip
+                                    label={getCountdownLabel(competition.daysUntil, t)}
+                                    color={getCountdownColor(competition.daysUntil)}
+                                    variant="filled"
+                                    sx={{
+                                        fontWeight: 700,
+                                        fontSize: '1rem',
+                                        px: 1.5,
+                                        py: 0.5,
+                                        height: 'auto',
+                                        flexShrink: 0,
+                                        ...(competition.daysUntil === 0 && {
+                                            animation: 'pulse 1.5s ease-in-out infinite',
+                                            '@keyframes pulse': {
+                                                '0%, 100%': { transform: 'scale(1)', boxShadow: 'none' },
+                                                '50%': { transform: 'scale(1.06)', boxShadow: `0 0 8px ${alpha(theme.palette.error.main, 0.6)}` },
+                                            },
+                                        }),
+                                    }}
+                                />
+                            )}
+                            {isEnabled('share_trail') && <ShareButtons title={competition.name} />}
+                        </Stack>
                     </Box>
 
                     {/* Row 2: Chips */}
@@ -368,9 +480,57 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 {t('races.organizerSite')}
                             </Button>
                         )}
-                        {isEnabled('share_trail') && <ShareButtons title={competition.name} />}
                     </Stack>
                 </Paper>
+
+                {isRaceDay && (
+                    <Card
+                        variant="outlined"
+                        sx={{
+                            mb: 3,
+                            borderRadius: 3,
+                            borderColor: alpha(theme.palette.error.main, 0.3),
+                            background: `linear-gradient(135deg, ${alpha(theme.palette.error.main, 0.06)} 0%, ${alpha(theme.palette.warning.main, 0.05)} 100%)`,
+                        }}
+                    >
+                        <CardContent>
+                            <Typography variant="h6" fontWeight={800}>
+                                {t('races.checklistTitle')}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 1.5 }}>
+                                {weather && !weatherLoading
+                                    ? t('races.checklistWeatherReady', {
+                                        temperature: Math.round(weather.current.temperature),
+                                        wind: Math.round(weather.current.windSpeed),
+                                    })
+                                    : t('races.checklistWeatherFallback')}
+                            </Typography>
+
+                            <FormGroup>
+                                {checklistItems.map(item => (
+                                    <FormControlLabel
+                                        key={item.key}
+                                        control={(
+                                            <Checkbox
+                                                checked={raceDayChecklist[item.key]}
+                                                onChange={(event) => {
+                                                    setRaceDayChecklist(prev => ({
+                                                        ...prev,
+                                                        [item.key]: event.target.checked,
+                                                    }));
+                                                }}
+                                            />
+                                        )}
+                                        label={item.label}
+                                    />
+                                ))}
+                            </FormGroup>
+                            <Typography variant="caption" color="text.secondary">
+                                {t('races.checklistSavedLocally')}
+                            </Typography>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* Races section */}
                 <Typography variant="h5" fontWeight={700} sx={{ mb: 2 }}>
@@ -381,8 +541,16 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                     <Alert severity="info">{t('races.noRaces')}</Alert>
                 ) : (
                     <Stack spacing={2}>
-                        {visibleRaces.map((race: RaceDto) => (
-                            <RaceCard key={race.id} race={race} t={t} showPredict={isEnabled('tool_trail_predictor')} />
+                        {racesWithAnchors.map(({ race, anchor }) => (
+                            <RaceCard
+                                key={race.id}
+                                race={race}
+                                anchor={anchor}
+                                competitionName={competition.name}
+                                t={t}
+                                showPredict={isEnabled('tool_trail_predictor')}
+                                showRaceDayShare={isRaceDay && isEnabled('share_trail')}
+                            />
                         ))}
                     </Stack>
                 )}
@@ -462,10 +630,29 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     );
 }
 
-function RaceCard({ race, t, showPredict }: { race: RaceDto; t: (key: string, opts?: Record<string, unknown>) => string; showPredict?: boolean }) {
+function RaceCard({
+    race,
+    anchor,
+    competitionName,
+    t,
+    showPredict,
+    showRaceDayShare,
+}: {
+    race: RaceDto;
+    anchor: string;
+    competitionName: string;
+    t: (key: string, opts?: Record<string, unknown>) => string;
+    showPredict?: boolean;
+    showRaceDayShare?: boolean;
+}) {
     const theme = useTheme();
+    const raceShareUrl = useMemo(() => {
+        const currentUrl = new URL(window.location.href);
+        currentUrl.hash = anchor;
+        return currentUrl.toString();
+    }, [anchor]);
     return (
-        <Card variant="outlined" sx={{
+        <Card id={anchor} variant="outlined" sx={{
             borderRadius: 2,
             ...(race.status === 'Cancelled' && { opacity: 0.6 }),
             ...(race.status === 'Upcoming' && { borderStyle: 'dashed', borderColor: theme.palette.info.main }),
@@ -486,9 +673,9 @@ function RaceCard({ race, t, showPredict }: { race: RaceDto; t: (key: string, op
                             <Chip label={t('races.statusUpcoming')} size="small" color="info" sx={{ ml: 0.5, fontWeight: 600 }} />
                         )}
                     </Typography>
-                    {race.trailSlug && (
+                    {(race.trailSlug || showRaceDayShare) && (
                         <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0 }}>
-                            {showPredict && (
+                            {showPredict && race.trailSlug && (
                                 <Button
                                     component={RouterLink}
                                     to={`/tools/trail-predictor?trail=${encodeURIComponent(race.trailSlug)}`}
@@ -499,15 +686,28 @@ function RaceCard({ race, t, showPredict }: { race: RaceDto; t: (key: string, op
                                     🔮 {t('races.predict')}
                                 </Button>
                             )}
-                            <Button
-                                component={RouterLink}
-                                to={`/trails/${race.trailSlug}`}
-                                size="small"
-                                variant="outlined"
-                                sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}
-                            >
-                                {ACTIVITY_ICONS[race.trailSlug ? 'TrailRunning' : ''] ?? '🗺️'} {t('races.viewTrail')}
-                            </Button>
+                            {race.trailSlug && (
+                                <Button
+                                    component={RouterLink}
+                                    to={`/trails/${race.trailSlug}`}
+                                    size="small"
+                                    variant="outlined"
+                                    sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}
+                                >
+                                    {ACTIVITY_ICONS[race.trailSlug ? 'TrailRunning' : ''] ?? '🗺️'} {t('races.viewTrail')}
+                                </Button>
+                            )}
+                            {showRaceDayShare && (
+                                <ShareButtons
+                                    title={race.name}
+                                    url={raceShareUrl}
+                                    shareText={t('races.raceDayShareRaceText', {
+                                        competitionName,
+                                        raceName: race.name,
+                                    })}
+                                    buttonLabel={t('races.raceDayShareRaceCta')}
+                                />
+                            )}
                         </Stack>
                     )}
                 </Box>

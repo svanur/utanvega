@@ -9,7 +9,8 @@
         "view": "Skoða",
         "save": "Vista",
         "clear": "Hreinsa",
-        "tip": "Ábending"
+        "tip": "Ábending",
+        "dataLoadUnavailable": "Ekki tókst að sækja gögn núna. Athugaðu nettenginguna og reyndu aftur."
     },
     "auth": {
         "signIn": "Skrá inn",
@@ -106,7 +107,7 @@
         "mapView": "Kortayfirlit"
     },
     "trail": {
-        "backToTrails": "Til baka",
+        "backToTrails": "Til baka í leiðir",
         "notFound": "Leið fannst ekki",
         "tick": "Merkja sem markverða",
         "ticked": "Markverð",
@@ -233,7 +234,7 @@
         "hard": "Krefjandi",
         "expert": "Erfitt",
         "extreme": "Mjög erfitt",
-        "dialogTitle": "Skilyrði erfiðleikamats",
+        "dialogTitle": "Erfiðleikamat",
         "explanation": "Erfiðleiki er reiknaður út frá **álagsvegalengd**: vegalengd leiðarinnar að viðbættri hækkun deilt með 100. Fyrir hlaupaleiðir á vegi er eingöngu vegalengd notuð. Viðmið eru mismunandi eftir tegund.",
         "level": "Stig",
         "trailRunning": "Utanvegahlaup",
@@ -319,8 +320,12 @@
     },
     "share": {
         "share": "Deila",
+        "shareOptions": "Deilingarmöguleikar",
+        "facebook": "Facebook",
+        "messenger": "Messenger",
         "copyLink": "Afrita hlekk",
-        "linkCopied": "Hlekkur afritaður!"
+        "linkCopied": "Hlekkur afritaður!",
+        "messengerNotConfigured": "Messenger-deiling þarf app-stillingu hér. Hlekkur var afritaður í staðinn."
     },
     "footer": {
         "checkingApi": "Athuga API…",
@@ -808,6 +813,7 @@
         "noDate": "Dagsetning óákveðin",
         "nextRace": "Næsta keppni:",
         "today": "🔥 Í dag!",
+        "raceDayBadge": "🏁 Það er keppnisdagur!",
         "tomorrow": "Á morgun!",
         "passed": "Liðið",
         "daysUntil": "Eftir {{count}} daga",
@@ -865,6 +871,18 @@
         "statusUpcoming": "Væntanlegt",
         "raceDayWeather": "Veður á keppnisleiðinni",
         "raceDayWeatherDesc": "Núverandi veður og 7 daga spá. Keppnisdagurinn er auðkenndur.",
+        "checklistTitle": "Tékklisti fyrir keppnisdag",
+        "checklistWeatherReady": "Núna: {{temperature}}°C og {{wind}} m/s vindur.",
+        "checklistWeatherFallback": "Stutt yfirferð áður en lagt er af stað:",
+        "checklistBib": "Keppnishúmer tilbúið",
+        "checklistShoes": "Skór og sokkar og keppnisfötin klár",
+        "checklistFuel": "Næring & drykkir tilbúnir",
+        "checklistGoodMoodReady": "Góða skapið klárt 😄",
+        "raceDayShareCta": "Ég er að keppa í dag 💥",
+        "raceDayShareText": "{{raceName}} er í dag og ég er að keppa 💥",
+        "raceDayShareRaceCta": "Ég er að keppa 💥",
+        "raceDayShareRaceText": "Í dag er ég að keppa í {{competitionName}} - {{raceName}} 💥",
+        "checklistSavedLocally": "Vistað aðeins í þessu tæki.",
         "predict": "Spá",
         "noUpcoming": "Engin keppni framundan"
     },
