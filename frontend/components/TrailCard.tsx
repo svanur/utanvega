@@ -28,6 +28,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Trail } from '../hooks/useTrails';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
+import { useLoginEnabled } from '../hooks/useLoginEnabled';
 import { estimateDuration } from '../utils/estimateDuration';
 import { useFavorites } from '../hooks/useFavorites';
 import { useHiddenTrails } from '../hooks/useHiddenTrails';
@@ -78,9 +79,9 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
     const navigate = useNavigate();
     const { t } = useTranslation();
     const { isEnabled } = useFeatureFlags();
+    const loginEnabled = useLoginEnabled();
     const locationsPageEnabled = isEnabled('locations_page');
     const tagsEnabled = isEnabled('tags_page');
-    const tickEnabled = isEnabled('user_login', false);
     const { isFavorite, toggleFavorite } = useFavorites();
     const { hideTrail } = useHiddenTrails();
     const { tickedSlugs } = useTickedTrails();
@@ -274,7 +275,7 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                                 {trail.name}
                             </Typography>
                             <Box display="flex" alignItems="center" gap={0.25}>
-                                {tickEnabled && tickedSlugs.has(trail.slug) && (
+                                {loginEnabled && tickedSlugs.has(trail.slug) && (
                                     <CheckCircleIcon color="success" sx={{ fontSize: compact ? 14 : 20 }} />
                                 )}
                                 {isFavorited && <StarIcon color="warning" sx={{ fontSize: compact ? 14 : 20 }} />}

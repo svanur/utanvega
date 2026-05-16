@@ -74,6 +74,7 @@ import { TrailCard } from '../components/TrailCard';
 import { useAuth } from '../hooks/useAuth';
 import { useTickedTrails } from '../hooks/useTickedTrails';
 import LoginModal from '../components/LoginModal';
+import { useLoginEnabled } from '../hooks/useLoginEnabled';
 import TrailLeaderboardCard from '../components/TrailLeaderboardCard';
 import { useTrailCheckIns } from '../hooks/useTrailCheckIns';
 import { getAvatarFallbackText, getAvatarImageSrc } from '../utils/avatarPresets';
@@ -124,6 +125,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     const { trail, loading, error } = useTrailBySlug(slug);
     const { weather, loading: weatherLoading, error: weatherError } = useTrailWeather(slug);
     const { isEnabled } = useFeatureFlags();
+    const loginEnabled = useLoginEnabled();
     const locationsPageEnabled = isEnabled('locations_page');
     const tagsEnabled = isEnabled('tags_page');
     const leaderboardEnabled = isEnabled('trail_leaderboard', false);
@@ -479,7 +481,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                         >
                             {isFavorite(trail.slug) ? <StarIcon /> : <StarBorderIcon />}
                         </IconButton>
-                        {isEnabled('user_login', false) && (
+                        {loginEnabled && (
                         <Tooltip title={tickedSlugs.has(trail.slug) ? t('trail.untick') : t('trail.tick')}>
                             <IconButton
                                 onClick={() => user ? toggleTick(trail.slug) : setLoginModalOpen(true)}
@@ -991,7 +993,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                     )}
                 </DialogContent>
             </Dialog>
-            {isEnabled('user_login', false) && (
+            {loginEnabled && (
             <LoginModal open={loginModalOpen} onClose={() => setLoginModalOpen(false)} />
             )}
         </Layout>

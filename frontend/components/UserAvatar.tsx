@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Avatar, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Divider } from '@mui/material';
+import { Avatar, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Divider, CircularProgress } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import LogoutIcon from '@mui/icons-material/Logout';
@@ -11,7 +11,7 @@ import LoginModal from './LoginModal';
 export default function UserAvatar() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { user, signOut } = useAuth();
+  const { user, signOut, loading } = useAuth();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
 
@@ -40,10 +40,13 @@ export default function UserAvatar() {
         <IconButton
           size="small"
           onClick={() => setLoginModalOpen(true)}
+          disabled={loading}
           color="inherit"
           title={t('auth.signIn')}
+          aria-label={t('auth.signIn')}
+          aria-busy={loading}
         >
-          <LoginIcon />
+          {loading ? <CircularProgress size={18} color="inherit" /> : <LoginIcon />}
         </IconButton>
         <LoginModal
           open={loginModalOpen}
@@ -67,6 +70,7 @@ export default function UserAvatar() {
         size="small"
         onClick={handleOpenMenu}
         sx={{ p: 0 }}
+        aria-label={t('profile.title')}
       >
         <Avatar
           sx={{

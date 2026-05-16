@@ -7,7 +7,6 @@ import {
   Button,
   TextField,
   Alert,
-  Box,
   CircularProgress,
   Stack,
   Divider,
@@ -15,7 +14,8 @@ import {
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import GoogleIcon from '@mui/icons-material/Google';
-import { supabase } from '../hooks/supabase';
+import { supabase, isSupabaseConfigured } from '../hooks/supabase';
+import { AUTH_PENDING_KEY } from '../hooks/authConstants';
 
 interface LoginModalProps {
   open: boolean;
@@ -24,6 +24,7 @@ interface LoginModalProps {
 
 export default function LoginModal({ open, onClose }: LoginModalProps) {
   const { t } = useTranslation();
+  const authRedirectTo = import.meta.env.VITE_AUTH_REDIRECT_URL?.trim() || window.location.origin;
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingGoogle, setLoadingGoogle] = useState(false);
@@ -34,16 +35,19 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
     try {
       setLoadingGoogle(true);
       setError(null);
+      window.sessionStorage.setItem(AUTH_PENDING_KEY, '1');
       const { error: err } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: authRedirectTo,
         },
       });
       if (err) {
+        window.sessionStorage.removeItem(AUTH_PENDING_KEY);
         setError(err.message || 'Failed to sign in with Google');
       }
     } catch (err) {
+      window.sessionStorage.removeItem(AUTH_PENDING_KEY);
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoadingGoogle(false);
@@ -61,7 +65,7 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
       const { error: err } = await supabase.auth.signInWithOtp({
         email: email.trim(),
         options: {
-          emailRedirectTo: window.location.origin,
+          emailRedirectTo: authRedirectTo,
         },
       });
       if (err) {
@@ -84,6 +88,24 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
       onClose();
     }
   };
+
+  if (!isSupabaseConfigured) {
+    return (
+      <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+        <DialogTitle>{t('auth.signIn')}</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ pt: 2 }}>
+            <Alert severity="warning">
+              Authentication is currently unavailable. Please contact support or try again later.
+            </Alert>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose}>{t('common.close')}</Button>
+        </DialogActions>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>

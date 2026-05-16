@@ -1,14 +1,36 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-function requireEnv(name: 'VITE_SUPABASE_URL' | 'VITE_SUPABASE_ANON_KEY'): string {
-  const value = import.meta.env[name]?.trim();
-  if (!value) {
-    throw new Error(`Missing required environment variable: ${name}`);
-  }
-  return value;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim();
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
+
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+
+if (!isSupabaseConfigured) {
+  console.warn(
+    '[Auth] Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY. Login features are disabled until these are configured.'
+  );
 }
 
-const supabaseUrl = requireEnv('VITE_SUPABASE_URL');
-const supabaseAnonKey = requireEnv('VITE_SUPABASE_ANON_KEY');
+let _supabaseClient: SupabaseClient | null = null;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export function getSupabase(): SupabaseClient {
+  if (!isSupabaseConfigured) {
+    throw new Error(
+      'Supabase is not configured. Ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set. ' +
+      'Check isSupabaseConfigured before calling this function.'
+    );
+  }
+
+  if (!_supabaseClient) {
+    _supabaseClient = createClient(supabaseUrl!, supabaseAnonKey!);
+  }
+
+  return _supabaseClient;
+}
+
+// For convenience, also export as a lazy-evaluated getter property
+export const supabase = new Proxy({} as SupabaseClient, {
+  get(target, prop) {
+    return getSupabase()[prop as keyof SupabaseClient];
+  },
+});
