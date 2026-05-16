@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Container,
@@ -17,6 +17,9 @@ import {
     ListItem,
     ListItemIcon,
     ListItemText,
+    Checkbox,
+    FormControlLabel,
+    FormGroup,
     useTheme,
     alpha,
 } from '@mui/material';
@@ -52,6 +55,8 @@ const ACTIVITY_ICONS: Record<string, string> = {
     Hiking: '🥾',
     Cycling: '🚴',
 };
+
+type RaceDayChecklistKey = 'bib' | 'shoes' | 'gels' | 'goodMood';
 
 function formatNextDate(dateStr: string, t: (key: string, opts?: Record<string, unknown>) => string): string {
     const date = new Date(dateStr + 'T00:00:00');
@@ -189,6 +194,43 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     }, [competition, visibleRaces]);
 
     const { weather, loading: weatherLoading, error: weatherError } = useTrailWeather(weatherTrailSlug);
+    const [raceDayChecklist, setRaceDayChecklist] = useState<Record<RaceDayChecklistKey, boolean>>({
+        bib: false,
+        shoes: false,
+        gels: false,
+        goodMood: false,
+    });
+    const checklistStorageKey = useMemo(
+        () => competition ? `utanvega-race-day-checklist-${competition.id}-${competition.nextDate ?? 'none'}` : null,
+        [competition],
+    );
+    const checklistItems = useMemo(() => ([
+        { key: 'bib', label: t('races.checklistBib') },
+        { key: 'shoes', label: t('races.checklistShoes') },
+        { key: 'gels', label: t('races.checklistFuel') },
+        { key: 'goodMood', label: t('races.checklistGoodMoodReady') },
+    ] as const), [t]);
+
+    useEffect(() => {
+        if (!isRaceDay || !checklistStorageKey) return;
+        try {
+            const raw = localStorage.getItem(checklistStorageKey);
+            if (!raw) return;
+            const parsed = JSON.parse(raw) as Partial<Record<RaceDayChecklistKey, boolean>>;
+            setRaceDayChecklist(prev => ({ ...prev, ...parsed }));
+        } catch {
+            // Ignore invalid local data
+        }
+    }, [isRaceDay, checklistStorageKey]);
+
+    useEffect(() => {
+        if (!isRaceDay || !checklistStorageKey) return;
+        try {
+            localStorage.setItem(checklistStorageKey, JSON.stringify(raceDayChecklist));
+        } catch {
+            // Ignore storage failures
+        }
+    }, [isRaceDay, checklistStorageKey, raceDayChecklist]);
 
     if (loading) {
         return (
@@ -420,6 +462,55 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                         )}
                     </Stack>
                 </Paper>
+
+                {isRaceDay && (
+                    <Card
+                        variant="outlined"
+                        sx={{
+                            mb: 3,
+                            borderRadius: 3,
+                            borderColor: alpha(theme.palette.error.main, 0.3),
+                            background: `linear-gradient(135deg, ${alpha(theme.palette.error.main, 0.06)} 0%, ${alpha(theme.palette.warning.main, 0.05)} 100%)`,
+                        }}
+                    >
+                        <CardContent>
+                            <Typography variant="h6" fontWeight={800}>
+                                {t('races.checklistTitle')}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 1.5 }}>
+                                {weather && !weatherLoading
+                                    ? t('races.checklistWeatherReady', {
+                                        temperature: Math.round(weather.current.temperature),
+                                        wind: Math.round(weather.current.windSpeed),
+                                    })
+                                    : t('races.checklistWeatherFallback')}
+                            </Typography>
+
+                            <FormGroup>
+                                {checklistItems.map(item => (
+                                    <FormControlLabel
+                                        key={item.key}
+                                        control={(
+                                            <Checkbox
+                                                checked={raceDayChecklist[item.key]}
+                                                onChange={(event) => {
+                                                    setRaceDayChecklist(prev => ({
+                                                        ...prev,
+                                                        [item.key]: event.target.checked,
+                                                    }));
+                                                }}
+                                            />
+                                        )}
+                                        label={item.label}
+                                    />
+                                ))}
+                            </FormGroup>
+                            <Typography variant="caption" color="text.secondary">
+                                {t('races.checklistSavedLocally')}
+                            </Typography>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* Races section */}
                 <Typography variant="h5" fontWeight={700} sx={{ mb: 2 }}>
