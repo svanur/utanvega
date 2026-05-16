@@ -809,6 +809,7 @@
         "noDate": "Dagsetning óákveðin",
         "nextRace": "Næsta keppni:",
         "today": "🔥 Í dag!",
+        "raceDayBadge": "🏁 Það er keppnisdagur!",
         "tomorrow": "Á morgun!",
         "passed": "Liðið",
         "daysUntil": "Eftir {{count}} daga",

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Container,
@@ -30,6 +30,7 @@ import TimerIcon from '@mui/icons-material/Timer';
 import StraightenIcon from '@mui/icons-material/Straighten';
 import TerrainIcon from '@mui/icons-material/Terrain';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
+import confetti from 'canvas-confetti';
 import ShareButtons from '../components/ShareButtons';
 import Layout from '../components/Layout';
 import RunningLoader from '../components/RunningLoader';
@@ -139,6 +140,33 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     const theme = useTheme();
     const { isEnabled } = useFeatureFlags();
     const locationsEnabled = isEnabled('locations_page');
+    const confettiFiredForCompetition = useRef<string | null>(null);
+
+    const isRaceDay = competition?.status !== 'Cancelled' && competition?.daysUntil === 0;
+
+    useEffect(() => {
+        if (!competition || !isRaceDay) return;
+        if (confettiFiredForCompetition.current === competition.id) return;
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+        confettiFiredForCompetition.current = competition.id;
+        const colors = ['#1976d2', '#ff9800', '#66bb6a'];
+
+        confetti({
+            particleCount: 16,
+            spread: 50,
+            startVelocity: 28,
+            origin: { x: 0.15, y: 0.35 },
+            colors,
+        });
+        confetti({
+            particleCount: 16,
+            spread: 50,
+            startVelocity: 28,
+            origin: { x: 0.85, y: 0.35 },
+            colors,
+        });
+    }, [competition, isRaceDay]);
 
     const visibleRaces = useMemo(() => {
         if (!competition) return [];
@@ -258,7 +286,26 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             {competition.name}
                         </Typography>
                         <Stack direction="row" spacing={1} alignItems="center">
-                            {competition.status === 'Cancelled' ? (
+                            {isRaceDay ? (
+                                <Chip
+                                    label={t('races.raceDayBadge')}
+                                    color="error"
+                                    variant="filled"
+                                    sx={{
+                                        fontWeight: 800,
+                                        fontSize: '1rem',
+                                        px: 1.5,
+                                        py: 0.5,
+                                        height: 'auto',
+                                        flexShrink: 0,
+                                        animation: 'pulse 1.5s ease-in-out infinite',
+                                        '@keyframes pulse': {
+                                            '0%, 100%': { transform: 'scale(1)', boxShadow: 'none' },
+                                            '50%': { transform: 'scale(1.06)', boxShadow: `0 0 8px ${alpha(theme.palette.error.main, 0.6)}` },
+                                        },
+                                    }}
+                                />
+                            ) : competition.status === 'Cancelled' ? (
                                 <Chip label={t('races.statusCancelled')} color="error" sx={{ fontWeight: 700, fontSize: '1rem', px: 1.5, py: 0.5, height: 'auto', flexShrink: 0 }} />
                             ) : competition.status === 'Upcoming' ? (
                                 <Chip label={t('races.statusUpcoming')} color="info" sx={{ fontWeight: 700, fontSize: '1rem', px: 1.5, py: 0.5, height: 'auto', flexShrink: 0 }} />

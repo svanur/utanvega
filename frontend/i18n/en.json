@@ -809,6 +809,7 @@
         "noDate": "Date TBD",
         "nextRace": "Next race:",
         "today": "🔥 Today!",
+        "raceDayBadge": "🏁 It's race day!",
         "tomorrow": "Tomorrow!",
         "passed": "Past event",
         "daysUntil": "In {{count}} days",
