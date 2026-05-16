@@ -9,7 +9,8 @@
         "view": "Skoða",
         "save": "Vista",
         "clear": "Hreinsa",
-        "tip": "Ábending"
+        "tip": "Ábending",
+        "dataLoadUnavailable": "Ekki tókst að sækja gögn núna. Athugaðu nettenginguna og reyndu aftur."
     },
     "auth": {
         "signIn": "Skrá inn",

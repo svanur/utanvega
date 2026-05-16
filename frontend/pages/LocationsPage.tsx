@@ -38,6 +38,7 @@ import Layout from '../components/Layout';
 import { useLocations, Location } from '../hooks/useLocations';
 import { useTrails, Trail } from '../hooks/useTrails';
 import RunningLoader from '../components/RunningLoader';
+import { toUserFriendlyFetchError } from '../utils/apiErrors';
 
 const activityEmoji: Record<string, string> = {
     hiking: '🥾',
@@ -199,7 +200,7 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
         return (
             <Layout mode={mode} onToggleMode={onToggleMode}>
                 <Container sx={{ mt: 4 }}>
-                    <Alert severity="error">{error}</Alert>
+                    <Alert severity="error">{toUserFriendlyFetchError(error, t('common.dataLoadUnavailable'))}</Alert>
                 </Container>
             </Layout>
         );

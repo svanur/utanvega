@@ -9,7 +9,8 @@
         "view": "View",
         "save": "Save",
         "clear": "Clear",
-        "tip": "Tip"
+        "tip": "Tip",
+        "dataLoadUnavailable": "We couldn't load data right now. Check your internet connection and try again."
     },
     "auth": {
         "signIn": "Sign In",

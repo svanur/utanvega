@@ -27,6 +27,7 @@ import Layout from '../components/Layout';
 import RunningLoader from '../components/RunningLoader';
 import { useCompetitions } from '../hooks/useCompetitions';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
+import { toUserFriendlyFetchError } from '../utils/apiErrors';
 
 type RacesPageProps = {
     mode: PaletteMode;
@@ -111,7 +112,7 @@ export default function RacesPage({ mode, onToggleMode }: RacesPageProps) {
         return (
             <Layout mode={mode} onToggleMode={onToggleMode}>
                 <Container maxWidth="md" sx={{ py: 4 }}>
-                    <Alert severity="error">{error}</Alert>
+                    <Alert severity="error">{toUserFriendlyFetchError(error, t('common.dataLoadUnavailable'))}</Alert>
                 </Container>
             </Layout>
         );
