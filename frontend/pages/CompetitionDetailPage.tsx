@@ -257,32 +257,35 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             <EmojiEventsIcon sx={{ color: theme.palette.warning.main, flexShrink: 0 }} />
                             {competition.name}
                         </Typography>
-                        {competition.status === 'Cancelled' ? (
-                            <Chip label={t('races.statusCancelled')} color="error" sx={{ fontWeight: 700, fontSize: '1rem', px: 1.5, py: 0.5, height: 'auto', flexShrink: 0 }} />
-                        ) : competition.status === 'Upcoming' ? (
-                            <Chip label={t('races.statusUpcoming')} color="info" sx={{ fontWeight: 700, fontSize: '1rem', px: 1.5, py: 0.5, height: 'auto', flexShrink: 0 }} />
-                        ) : (
-                            <Chip
-                                label={getCountdownLabel(competition.daysUntil, t)}
-                                color={getCountdownColor(competition.daysUntil)}
-                                variant="filled"
-                                sx={{
-                                    fontWeight: 700,
-                                    fontSize: '1rem',
-                                    px: 1.5,
-                                    py: 0.5,
-                                    height: 'auto',
-                                    flexShrink: 0,
-                                    ...(competition.daysUntil === 0 && {
-                                        animation: 'pulse 1.5s ease-in-out infinite',
-                                        '@keyframes pulse': {
-                                            '0%, 100%': { transform: 'scale(1)', boxShadow: 'none' },
-                                            '50%': { transform: 'scale(1.06)', boxShadow: `0 0 8px ${alpha(theme.palette.error.main, 0.6)}` },
-                                        },
-                                    }),
-                                }}
-                            />
-                        )}
+                        <Stack direction="row" spacing={1} alignItems="center">
+                            {competition.status === 'Cancelled' ? (
+                                <Chip label={t('races.statusCancelled')} color="error" sx={{ fontWeight: 700, fontSize: '1rem', px: 1.5, py: 0.5, height: 'auto', flexShrink: 0 }} />
+                            ) : competition.status === 'Upcoming' ? (
+                                <Chip label={t('races.statusUpcoming')} color="info" sx={{ fontWeight: 700, fontSize: '1rem', px: 1.5, py: 0.5, height: 'auto', flexShrink: 0 }} />
+                            ) : (
+                                <Chip
+                                    label={getCountdownLabel(competition.daysUntil, t)}
+                                    color={getCountdownColor(competition.daysUntil)}
+                                    variant="filled"
+                                    sx={{
+                                        fontWeight: 700,
+                                        fontSize: '1rem',
+                                        px: 1.5,
+                                        py: 0.5,
+                                        height: 'auto',
+                                        flexShrink: 0,
+                                        ...(competition.daysUntil === 0 && {
+                                            animation: 'pulse 1.5s ease-in-out infinite',
+                                            '@keyframes pulse': {
+                                                '0%, 100%': { transform: 'scale(1)', boxShadow: 'none' },
+                                                '50%': { transform: 'scale(1.06)', boxShadow: `0 0 8px ${alpha(theme.palette.error.main, 0.6)}` },
+                                            },
+                                        }),
+                                    }}
+                                />
+                            )}
+                            {isEnabled('share_trail') && <ShareButtons title={competition.name} />}
+                        </Stack>
                     </Box>
 
                     {/* Row 2: Chips */}
@@ -368,7 +371,6 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 {t('races.organizerSite')}
                             </Button>
                         )}
-                        {isEnabled('share_trail') && <ShareButtons title={competition.name} />}
                     </Stack>
                 </Paper>
 
