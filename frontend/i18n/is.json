@@ -107,7 +107,7 @@
         "mapView": "Kortayfirlit"
     },
     "trail": {
-        "backToTrails": "Til baka",
+        "backToTrails": "Til baka í leiðir",
         "notFound": "Leið fannst ekki",
         "tick": "Merkja sem markverða",
         "ticked": "Markverð",
@@ -234,7 +234,7 @@
         "hard": "Krefjandi",
         "expert": "Erfitt",
         "extreme": "Mjög erfitt",
-        "dialogTitle": "Skilyrði erfiðleikamats",
+        "dialogTitle": "Erfiðleikamat",
         "explanation": "Erfiðleiki er reiknaður út frá **álagsvegalengd**: vegalengd leiðarinnar að viðbættri hækkun deilt með 100. Fyrir hlaupaleiðir á vegi er eingöngu vegalengd notuð. Viðmið eru mismunandi eftir tegund.",
         "level": "Stig",
         "trailRunning": "Utanvegahlaup",
