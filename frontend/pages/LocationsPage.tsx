@@ -14,6 +14,7 @@ import {
     Stack,
     TextField,
     InputAdornment,
+    IconButton,
     ToggleButtonGroup,
     ToggleButton,
     Tooltip,
@@ -22,6 +23,7 @@ import {
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import SearchIcon from '@mui/icons-material/Search';
+import CloseIcon from '@mui/icons-material/Close';
 import SortIcon from '@mui/icons-material/Sort';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import MapIcon from '@mui/icons-material/Map';
@@ -206,7 +208,8 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
     return (
         <Layout mode={mode} onToggleMode={onToggleMode}>
             <Container maxWidth="md" sx={{ py: 3 }}>
-                <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom>
+                <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <LocationOnIcon sx={{ fontSize: 32, color: theme.palette.primary.main }} />
                     {t('locations.title')}
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
@@ -311,6 +314,17 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                                     <SearchIcon fontSize="small" />
                                 </InputAdornment>
                             ),
+                            endAdornment: search ? (
+                                <InputAdornment position="end">
+                                    <IconButton
+                                        size="small"
+                                        onClick={() => setSearch('')}
+                                        aria-label={t('common.clear', 'Clear search')}
+                                    >
+                                        <CloseIcon fontSize="small" />
+                                    </IconButton>
+                                </InputAdornment>
+                            ) : undefined,
                         }}
                     />
                     <ToggleButtonGroup
@@ -469,8 +483,9 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                 </Grid>
 
                 {filtered.length === 0 && (
-                    <Box textAlign="center" py={8}>
-                        <Typography color="text.secondary">
+                    <Box sx={{ textAlign: 'center', py: 8 }}>
+                        <LocationOnIcon sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
+                        <Typography variant="h6" color="text.secondary">
                             {search ? t('locations.noMatch') : t('locations.noLocations')}
                         </Typography>
                     </Box>

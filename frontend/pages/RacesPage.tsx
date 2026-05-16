@@ -13,11 +13,13 @@ import {
     Stack,
     TextField,
     InputAdornment,
+    IconButton,
     alpha,
     useTheme,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import SearchIcon from '@mui/icons-material/Search';
+import CloseIcon from '@mui/icons-material/Close';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
@@ -152,6 +154,17 @@ export default function RacesPage({ mode, onToggleMode }: RacesPageProps) {
                                 <SearchIcon fontSize="small" />
                             </InputAdornment>
                         ),
+                        endAdornment: search ? (
+                            <InputAdornment position="end">
+                                <IconButton
+                                    size="small"
+                                    onClick={() => setSearch('')}
+                                    aria-label={t('common.clear', 'Clear search')}
+                                >
+                                    <CloseIcon fontSize="small" />
+                                </IconButton>
+                            </InputAdornment>
+                        ) : undefined,
                     }}
                 />
 
