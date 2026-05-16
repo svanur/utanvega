@@ -15,13 +15,12 @@ import {
 import { useTranslation } from 'react-i18next';
 import GoogleIcon from '@mui/icons-material/Google';
 import { supabase } from '../hooks/supabase';
+import { AUTH_PENDING_KEY } from '../hooks/authConstants';
 
 interface LoginModalProps {
   open: boolean;
   onClose: () => void;
 }
-
-const AUTH_PENDING_KEY = 'utanvega-auth-pending';
 
 export default function LoginModal({ open, onClose }: LoginModalProps) {
   const { t } = useTranslation();

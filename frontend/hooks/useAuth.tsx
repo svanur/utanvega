@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
 import { isSupabaseConfigured, supabase } from './supabase';
+import { AUTH_PENDING_KEY, AUTH_PENDING_TIMEOUT_MS } from './authConstants';
 
 interface AuthContextType {
   user: User | null;
@@ -9,8 +10,6 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-const AUTH_PENDING_KEY = 'utanvega-auth-pending';
-const AUTH_PENDING_TIMEOUT_MS = 10000;
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
