@@ -320,8 +320,12 @@
     },
     "share": {
         "share": "Share",
+        "shareOptions": "Share options",
+        "facebook": "Facebook",
+        "messenger": "Messenger",
         "copyLink": "Copy Link",
-        "linkCopied": "Link copied to clipboard!"
+        "linkCopied": "Link copied to clipboard!",
+        "messengerNotConfigured": "Messenger share needs app configuration here. Link copied instead."
     },
     "footer": {
         "checkingApi": "Checking API…",
@@ -874,6 +878,10 @@
         "checklistShoes": "Shoes and socks set",
         "checklistFuel": "Fuel/hydration packed",
         "checklistGoodMoodReady": "Good mood ready 😄",
+        "raceDayShareCta": "I'm racing today 💥",
+        "raceDayShareText": "I'm racing {{raceName}} today 💥",
+        "raceDayShareRaceCta": "I am competing 💥",
+        "raceDayShareRaceText": "Today I am racing {{competitionName}} - {{raceName}} 💥",
         "checklistSavedLocally": "Saved on this device only.",
         "predict": "Predict",
         "noUpcoming": "No upcoming races"

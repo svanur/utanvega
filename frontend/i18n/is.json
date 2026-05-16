@@ -320,8 +320,12 @@
     },
     "share": {
         "share": "Deila",
+        "shareOptions": "Deilingarmöguleikar",
+        "facebook": "Facebook",
+        "messenger": "Messenger",
         "copyLink": "Afrita hlekk",
-        "linkCopied": "Hlekkur afritaður!"
+        "linkCopied": "Hlekkur afritaður!",
+        "messengerNotConfigured": "Messenger-deiling þarf app-stillingu hér. Hlekkur var afritaður í staðinn."
     },
     "footer": {
         "checkingApi": "Athuga API…",
@@ -874,6 +878,10 @@
         "checklistShoes": "Skór og sokkar og keppnisfötin klár",
         "checklistFuel": "Næring & drykkir tilbúnir",
         "checklistGoodMoodReady": "Góða skapið klárt 😄",
+        "raceDayShareCta": "Ég er að keppa í dag 💥",
+        "raceDayShareText": "{{raceName}} er í dag og ég er að keppa 💥",
+        "raceDayShareRaceCta": "Ég er að keppa 💥",
+        "raceDayShareRaceText": "Í dag er ég að keppa í {{competitionName}} - {{raceName}} 💥",
         "checklistSavedLocally": "Vistað aðeins í þessu tæki.",
         "predict": "Spá",
         "noUpcoming": "Engin keppni framundan"

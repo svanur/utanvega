@@ -58,6 +58,13 @@ const ACTIVITY_ICONS: Record<string, string> = {
 
 type RaceDayChecklistKey = 'bib' | 'shoes' | 'gels' | 'goodMood';
 
+function toAnchorSlug(value: string): string {
+    return value
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+}
+
 function formatNextDate(dateStr: string, t: (key: string, opts?: Record<string, unknown>) => string): string {
     const date = new Date(dateStr + 'T00:00:00');
     const weekdays = t('races.weekdays', { returnObjects: true }) as unknown as string[];
@@ -185,6 +192,19 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                 return a.sortOrder - b.sortOrder;
             });
     }, [competition]);
+    const racesWithAnchors = useMemo(() => {
+        const seen = new Map<string, number>();
+        return visibleRaces.map((race) => {
+            const baseRaw = race.distanceLabel?.trim() || race.name || 'race';
+            const baseSlug = toAnchorSlug(baseRaw) || 'race';
+            const count = (seen.get(baseSlug) ?? 0) + 1;
+            seen.set(baseSlug, count);
+            return {
+                race,
+                anchor: count === 1 ? `race-${baseSlug}` : `race-${baseSlug}-${count}`,
+            };
+        });
+    }, [visibleRaces]);
 
     // Show weather when race is within 7 days and a trail is linked
     const weatherTrailSlug = useMemo(() => {
@@ -521,8 +541,16 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                     <Alert severity="info">{t('races.noRaces')}</Alert>
                 ) : (
                     <Stack spacing={2}>
-                        {visibleRaces.map((race: RaceDto) => (
-                            <RaceCard key={race.id} race={race} t={t} showPredict={isEnabled('tool_trail_predictor')} />
+                        {racesWithAnchors.map(({ race, anchor }) => (
+                            <RaceCard
+                                key={race.id}
+                                race={race}
+                                anchor={anchor}
+                                competitionName={competition.name}
+                                t={t}
+                                showPredict={isEnabled('tool_trail_predictor')}
+                                showRaceDayShare={isRaceDay && isEnabled('share_trail')}
+                            />
                         ))}
                     </Stack>
                 )}
@@ -602,10 +630,29 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     );
 }
 
-function RaceCard({ race, t, showPredict }: { race: RaceDto; t: (key: string, opts?: Record<string, unknown>) => string; showPredict?: boolean }) {
+function RaceCard({
+    race,
+    anchor,
+    competitionName,
+    t,
+    showPredict,
+    showRaceDayShare,
+}: {
+    race: RaceDto;
+    anchor: string;
+    competitionName: string;
+    t: (key: string, opts?: Record<string, unknown>) => string;
+    showPredict?: boolean;
+    showRaceDayShare?: boolean;
+}) {
     const theme = useTheme();
+    const raceShareUrl = useMemo(() => {
+        const currentUrl = new URL(window.location.href);
+        currentUrl.hash = anchor;
+        return currentUrl.toString();
+    }, [anchor]);
     return (
-        <Card variant="outlined" sx={{
+        <Card id={anchor} variant="outlined" sx={{
             borderRadius: 2,
             ...(race.status === 'Cancelled' && { opacity: 0.6 }),
             ...(race.status === 'Upcoming' && { borderStyle: 'dashed', borderColor: theme.palette.info.main }),
@@ -626,9 +673,9 @@ function RaceCard({ race, t, showPredict }: { race: RaceDto; t: (key: string, op
                             <Chip label={t('races.statusUpcoming')} size="small" color="info" sx={{ ml: 0.5, fontWeight: 600 }} />
                         )}
                     </Typography>
-                    {race.trailSlug && (
+                    {(race.trailSlug || showRaceDayShare) && (
                         <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0 }}>
-                            {showPredict && (
+                            {showPredict && race.trailSlug && (
                                 <Button
                                     component={RouterLink}
                                     to={`/tools/trail-predictor?trail=${encodeURIComponent(race.trailSlug)}`}
@@ -639,15 +686,28 @@ function RaceCard({ race, t, showPredict }: { race: RaceDto; t: (key: string, op
                                     🔮 {t('races.predict')}
                                 </Button>
                             )}
-                            <Button
-                                component={RouterLink}
-                                to={`/trails/${race.trailSlug}`}
-                                size="small"
-                                variant="outlined"
-                                sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}
-                            >
-                                {ACTIVITY_ICONS[race.trailSlug ? 'TrailRunning' : ''] ?? '🗺️'} {t('races.viewTrail')}
-                            </Button>
+                            {race.trailSlug && (
+                                <Button
+                                    component={RouterLink}
+                                    to={`/trails/${race.trailSlug}`}
+                                    size="small"
+                                    variant="outlined"
+                                    sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}
+                                >
+                                    {ACTIVITY_ICONS[race.trailSlug ? 'TrailRunning' : ''] ?? '🗺️'} {t('races.viewTrail')}
+                                </Button>
+                            )}
+                            {showRaceDayShare && (
+                                <ShareButtons
+                                    title={race.name}
+                                    url={raceShareUrl}
+                                    shareText={t('races.raceDayShareRaceText', {
+                                        competitionName,
+                                        raceName: race.name,
+                                    })}
+                                    buttonLabel={t('races.raceDayShareRaceCta')}
+                                />
+                            )}
                         </Stack>
                     )}
                 </Box>
