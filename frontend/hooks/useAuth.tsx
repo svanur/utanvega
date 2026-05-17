@@ -30,6 +30,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     const checkAuth = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const authCode = params.get('code');
+      if (authCode) {
+        const { error } = await supabase.auth.exchangeCodeForSession(authCode);
+        if (!active) return;
+        if (!error) {
+          params.delete('code');
+          params.delete('state');
+          params.delete('error');
+          params.delete('error_code');
+          params.delete('error_description');
+          const newSearch = params.toString();
+          const cleanUrl = `${window.location.pathname}${newSearch ? `?${newSearch}` : ''}${window.location.hash}`;
+          window.history.replaceState({}, '', cleanUrl);
+        } else {
+          console.warn('OAuth callback exchange failed:', error.message);
+        }
+      }
+
       const { data } = await supabase.auth.getSession();
       if (!active) return;
       setUser(data.session?.user ?? null);
