@@ -23,7 +23,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     let active = true;
-    const authPending = window.sessionStorage.getItem(AUTH_PENDING_KEY) === '1';
+    const isAuthPending = () => window.sessionStorage.getItem(AUTH_PENDING_KEY) === '1';
 
     const clearAuthPending = () => {
       window.sessionStorage.removeItem(AUTH_PENDING_KEY);
@@ -32,21 +32,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const checkAuth = async () => {
       const params = new URLSearchParams(window.location.search);
       const authCode = params.get('code');
+      const hasOAuthError =
+        params.has('error') ||
+        params.has('error_code') ||
+        params.has('error_description');
+      const hasOAuthParams =
+        params.has('code') ||
+        params.has('state') ||
+        hasOAuthError;
+
+      if (hasOAuthError) {
+        clearAuthPending();
+      }
+
       if (authCode) {
         const { error } = await supabase.auth.exchangeCodeForSession(authCode);
         if (!active) return;
-        if (!error) {
-          params.delete('code');
-          params.delete('state');
-          params.delete('error');
-          params.delete('error_code');
-          params.delete('error_description');
-          const newSearch = params.toString();
-          const cleanUrl = `${window.location.pathname}${newSearch ? `?${newSearch}` : ''}${window.location.hash}`;
-          window.history.replaceState({}, '', cleanUrl);
-        } else {
+        if (error) {
           console.warn('OAuth callback exchange failed:', error.message);
+          clearAuthPending();
         }
+      }
+
+      if (hasOAuthParams) {
+        params.delete('code');
+        params.delete('state');
+        params.delete('error');
+        params.delete('error_code');
+        params.delete('error_description');
+        const newSearch = params.toString();
+        const cleanUrl = `${window.location.pathname}${newSearch ? `?${newSearch}` : ''}${window.location.hash}`;
+        window.history.replaceState({}, '', cleanUrl);
       }
 
       const { data } = await supabase.auth.getSession();
@@ -59,7 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      if (!authPending) {
+      if (!isAuthPending()) {
         setLoading(false);
       }
     };
@@ -70,7 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!active) return;
       setUser(session?.user ?? null);
 
-      if (authPending && event === 'INITIAL_SESSION' && !session) {
+      if (isAuthPending() && event === 'INITIAL_SESSION' && !session) {
         return;
       }
 
