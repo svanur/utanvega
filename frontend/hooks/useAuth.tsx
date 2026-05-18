@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { User, AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { isSupabaseConfigured, supabase } from './supabase';
 import { AUTH_PENDING_KEY, AUTH_PENDING_TIMEOUT_MS } from './authConstants';
@@ -107,8 +107,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     if (!isSupabaseConfigured) return;
-    await supabase.auth.signOut();
-    setUser(null);
+    await supabase.auth.signOut().catch(() => {});
+    setUser(null); // always clear local session regardless of network errors
   };
 
   return (
