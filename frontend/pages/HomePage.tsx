@@ -8,13 +8,14 @@ type HomePageProps = {
     mode: PaletteMode;
     onToggleMode: () => void;
     tagSlug?: string;
+    showQuote?: boolean;
 };
 
-export default function HomePage({ mode, onToggleMode, tagSlug }: HomePageProps) {
+export default function HomePage({ mode, onToggleMode, tagSlug, showQuote = true }: HomePageProps) {
     const { isEnabled } = useFeatureFlags();
     return (
         <Layout mode={mode} onToggleMode={onToggleMode}>
-            {isEnabled('random_quote') && <RandomQuote />}
+            {showQuote && isEnabled('random_quote') && <RandomQuote />}
             <TrailList tagSlug={tagSlug} />
         </Layout>
     );

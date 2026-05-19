@@ -14,6 +14,8 @@ import type { TagDto } from '../hooks/useTags';
 import { InlineEditText, InlineEditSelect } from './InlineEditCell';
 import { useState } from 'react';
 
+const SITE_URL = import.meta.env.VITE_SITE_URL?.trim() || 'https://utanvega.vercel.app';
+
 interface TrailTableProps {
   trails: Trail[];
   selectedIds: string[];
@@ -382,7 +384,7 @@ function TrailRow({ trail, selected, onSelect, onViewMap, onEdit, onDelete, onRe
       </TableCell>
       <TableCell align="center">
         <Tooltip title="View trail on website">
-          <IconButton size="small" component="a" href={`https://utanvega.vercel.app/trails/${trail.slug}`} target="_blank">
+          <IconButton size="small" component="a" href={`${SITE_URL}/trails/${trail.slug}`} target="_blank">
             <OpenInNewIcon fontSize="small" />
           </IconButton>
         </Tooltip>

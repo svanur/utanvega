@@ -86,13 +86,13 @@ export default async function handler(request: Request) {
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>${title} – Utanvega</title>
+  <title>${title} – Hlaupadagskra.is</title>
   <meta name="description" content="${description}" />
 
   <meta property="og:title" content="${ogTitle}" />
   <meta property="og:description" content="${description}" />
   <meta property="og:url" content="${canonicalUrl}" />
-  <meta property="og:site_name" content="Utanvega" />
+  <meta property="og:site_name" content="Hlaupadagskra.is" />
   <meta property="og:type" content="website" />
   <meta property="og:image" content="${ogImageUrl}" />
   <meta property="og:image:width" content="1200" />
@@ -108,7 +108,7 @@ export default async function handler(request: Request) {
   <meta http-equiv="refresh" content="0;url=${canonicalUrl}" />
 </head>
 <body>
-  <p>Redirecting to <a href="${canonicalUrl}">${title} on Utanvega</a>…</p>
+  <p>Redirecting to <a href="${canonicalUrl}">${title} on Hlaupadagskra.is</a>…</p>
 </body>
 </html>`;
 
@@ -130,27 +130,27 @@ function defaultPage(path: string = '') {
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Utanvega – Hlaupaleiðir á Íslandi</title>
+  <title>Hlaupadagskra.is – Öll hlaup á einum stað</title>
   <meta name="description" content="Vefur til að finna og deila skemmtilegum leiðum, hvort sem þær eru utanvega eða innanbæjar." />
 
-  <meta property="og:title" content="Utanvega – Hlaupaleiðir á Íslandi" />
+  <meta property="og:title" content="Hlaupadagskra.is – Öll hlaup á einum stað" />
   <meta property="og:description" content="Vefur til að finna og deila skemmtilegum leiðum, hvort sem þær eru utanvega eða innanbæjar." />
   <meta property="og:url" content="${canonicalUrl}" />
-  <meta property="og:site_name" content="Utanvega" />
+  <meta property="og:site_name" content="Hlaupadagskra.is" />
   <meta property="og:type" content="website" />
   <meta property="og:image" content="${SITE_URL}/api/og-image" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
 
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Utanvega – Hlaupaleiðir á Íslandi" />
+  <meta name="twitter:title" content="Hlaupadagskra.is – Öll hlaup á einum stað" />
   <meta name="twitter:description" content="Vefur til að finna og deila skemmtilegum leiðum, hvort sem þær eru utanvega eða innanbæjar." />
   <meta name="twitter:image" content="${SITE_URL}/api/og-image" />
 
   <meta http-equiv="refresh" content="0;url=${canonicalUrl}" />
 </head>
 <body>
-  <p>Redirecting to <a href="${canonicalUrl}">Utanvega</a>…</p>
+  <p>Redirecting to <a href="${canonicalUrl}">Hlaupadagskra.is</a>…</p>
 </body>
 </html>`;
 

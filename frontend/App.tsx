@@ -81,10 +81,18 @@ export default function App() {
                     <PageLoader />
                 ) : (
                 <Routes>
-                    <Route 
-                        path="/" 
-                        element={<HomePage mode={mode} onToggleMode={handleToggleMode} />} 
+                    <Route
+                        path="/"
+                        element={
+                            isEnabled('races_page')
+                                ? <RacesPage mode={mode} onToggleMode={handleToggleMode} showQuote />
+                                : <HomePage mode={mode} onToggleMode={handleToggleMode} />
+                        }
                     />
+                    {isEnabled('trails_page') && <Route
+                        path="/trails"
+                        element={<HomePage mode={mode} onToggleMode={handleToggleMode} showQuote={false} />}
+                    />}
     {isEnabled('tags_page') && <Route 
                         path="/tags/:slug" 
                         element={<TagPage mode={mode} onToggleMode={handleToggleMode} />} 

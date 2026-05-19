@@ -1,6 +1,6 @@
-# 🏔️ Utanvega — Trail Discovery for Iceland
+# 🏔️ Hlaupadagskra.is — Trail Discovery for Iceland
 
-A web application for finding and sharing trails in Iceland. Browse trails on a map, filter by activity type, difficulty, location, and tags — or explore elevation profiles with interactive charts and route playback.
+A web application for finding races and trails and sharing trails in Iceland. Browse trails on a map, filter by activity type, difficulty, location, and tags — or explore elevation profiles with interactive charts, route playback, and more ...much more.
 
 ## Solution Structure
 
@@ -15,14 +15,14 @@ utanvega/
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| **Frontend** | React 18, TypeScript, Vite 7, MUI 5, Leaflet, Recharts 3 |
-| **Admin** | React 18, TypeScript, Vite 7, MUI 5, Leaflet, Supabase Auth |
-| **Backend** | .NET 9, MediatR (CQRS), EF Core, PostGIS, JWT Auth |
-| **Database** | PostgreSQL + PostGIS (via Supabase) |
-| **Tests** | xUnit, Moq, SQLite in-memory |
-| **Hosting** | Fly.io (backend), Vercel (frontend) |
+| Layer        | Technology                                                  |
+|--------------|-------------------------------------------------------------|
+| **Frontend** | React 18, TypeScript, Vite 7, MUI 5, Leaflet, Recharts 3    |
+| **Admin**    | React 18, TypeScript, Vite 7, MUI 5, Leaflet, Supabase Auth |
+| **Backend**  | .NET 9, MediatR (CQRS), EF Core, PostGIS, JWT Auth          |
+| **Database** | PostgreSQL + PostGIS (via Supabase)                         |
+| **Tests**    | xUnit, Moq, SQLite in-memory                                |
+| **Hosting**  | Fly.io (backend), Vercel (frontend)                         |
 
 ## Prerequisites
 
@@ -121,19 +121,19 @@ dotnet test
 
 ## API Endpoints (Summary)
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/v1/trails` | List all published trails |
-| `GET` | `/api/v1/trails/{slug}` | Get trail by slug |
-| `GET` | `/api/v1/trails/{slug}/geometry` | Get trail GeoJSON geometry |
-| `GET` | `/api/v1/trails/{slug}/gpx` | Download trail GPX file |
-| `GET` | `/api/v1/locations` | List all locations |
-| `GET` | `/api/v1/locations/{slug}` | Get location with trails |
-| `POST` | `/api/v1/admin/trails/upload-gpx` | Upload single GPX |
-| `POST` | `/api/v1/admin/trails/bulk-upload-gpx` | Bulk upload GPX files |
-| `PUT` | `/api/v1/admin/trails/{id}` | Update trail |
-| `DELETE` | `/api/v1/admin/trails/{id}` | Delete trail (soft) |
-| `GET/POST/PUT/DELETE` | `/api/v1/admin/tags/*` | Tag CRUD |
+| Method                | Path                                   | Description                |
+|-----------------------|----------------------------------------|----------------------------|
+| `GET`                 | `/api/v1/trails`                       | List all published trails  |
+| `GET`                 | `/api/v1/trails/{slug}`                | Get trail by slug          |
+| `GET`                 | `/api/v1/trails/{slug}/geometry`       | Get trail GeoJSON geometry |
+| `GET`                 | `/api/v1/trails/{slug}/gpx`            | Download trail GPX file    |
+| `GET`                 | `/api/v1/locations`                    | List all locations         |
+| `GET`                 | `/api/v1/locations/{slug}`             | Get location with trails   |
+| `POST`                | `/api/v1/admin/trails/upload-gpx`      | Upload single GPX          |
+| `POST`                | `/api/v1/admin/trails/bulk-upload-gpx` | Bulk upload GPX files      |
+| `PUT`                 | `/api/v1/admin/trails/{id}`            | Update trail               |
+| `DELETE`              | `/api/v1/admin/trails/{id}`            | Delete trail (soft)        |
+| `GET/POST/PUT/DELETE` | `/api/v1/admin/tags/*`                 | Tag CRUD                   |
 
 ## License
 
