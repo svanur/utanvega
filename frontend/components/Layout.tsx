@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, Container, IconButton, Toolbar, Tooltip, Typography, Button, Menu, MenuItem, useMediaQuery, useTheme, ListItemIcon, ListItemText } from '@mui/material';
+import { Box, ButtonBase, Container, IconButton, Toolbar, Tooltip, Typography, Button, Menu, MenuItem, useMediaQuery, useTheme, ListItemIcon, ListItemText } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { PropsWithChildren } from 'react';
@@ -51,19 +51,20 @@ export default function Layout({ children, mode, onToggleMode }: LayoutProps) {
         <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
             <DynamicHeader weather={weather} isDark={mode === 'dark'}>
                 <Toolbar sx={{ gap: 1 }}>
-                    <Box
-                        sx={{ flexGrow: 1, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 1 }}
+                    <ButtonBase
                         onClick={() => navigate('/')}
+                        sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'flex-start', borderRadius: 1 }}
+                        aria-label="Go to home page"
                     >
                         <img
                             src="/images/hlaupaleidir.avif"
-                            alt="Hlaupadagskrá"
+                            alt=""
                             style={{ height: 32, width: 'auto' }}
                         />
                         <Typography variant="h6" component="div">
                             Hlaupadagskrá.is
                         </Typography>
-                    </Box>
+                    </ButtonBase>
 
                     {isMobile ? (
                         <>
