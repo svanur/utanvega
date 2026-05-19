@@ -449,7 +449,7 @@
         "lastUpdated": "Last updated: {{date}}"
     },
     "about": {
-        "title": "About Utanvega",
+        "title": "About Hlaupadagskra.is",
         "description": "Utanvega is a trail discovery platform built for runners, hikers, and cyclists exploring Iceland's wild landscapes. Find trails near you, check elevation profiles, and share your favorites with friends.",
         "authorTitle": "About me",
         "authorDescription": "Trail runner and developer based in Iceland, building tools to help people discover and enjoy the outdoors.",
@@ -546,7 +546,7 @@
         "nearby": "Nearby"
     },
     "install": {
-        "title": "Install Utanvega",
+        "title": "Install Hlaupadagskra.is",
         "description": "Add to your home screen for quick access and offline use.",
         "button": "Install",
         "iosHint": "Tap Share, then \"Add to Home Screen\"",

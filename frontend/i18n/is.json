@@ -449,8 +449,8 @@
         "lastUpdated": "Síðast uppfært: {{date}}"
     },
     "about": {
-        "title": "Um Utanvega",
-        "description": "Utanvega er vefur til að finna skemmtilegar leiðir fyrir hlaupara, göngufólk og hjólreiðamenn á Íslandi. Finndu leiðir nálægt þér, skoðaðu kort og hæðarsnið og deildu eftirlætisleiðum með vinum.",
+        "title": "Um Hlaupadagskra.is",
+        "description": "Hlaupadagskra.is er vefur til að finna skemmtilegar leiðir fyrir hlaupara, göngufólk og hjólreiðamenn á Íslandi. Finndu leiðir nálægt þér, skoðaðu kort og hæðarsnið og deildu eftirlætisleiðum með vinum.",
         "authorTitle": "Um mig",
         "authorDescription": "Utanvega er gæluverkefni sem byrjaði með excel skjali þar sem ég skráði niður áhugaverðar utanvegaleiðir. Auk þess að vera utanvegahlaupari/þjálfari, þá er hugbúnaðargerð 'hin vinnan' mín. Á utanvega mætast því vinnan og áhugamálið. Vonandi njótið þið vel og lengi.",
         "authorSignature": "Svanur Karlsson",
@@ -546,7 +546,7 @@
         "nearby": "Nálægt mér"
     },
     "install": {
-        "title": "Settu upp Utanvega",
+        "title": "Settu upp Hlaupadagskrá",
         "description": "Bættu við á heimaskjáinn fyrir skjótan aðgang.",
         "button": "Setja upp",
         "iosHint": "Ýttu á Deila, svo „Setja á heimaskjá“",

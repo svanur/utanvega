@@ -51,14 +51,19 @@ export default function Layout({ children, mode, onToggleMode }: LayoutProps) {
         <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
             <DynamicHeader weather={weather} isDark={mode === 'dark'}>
                 <Toolbar sx={{ gap: 1 }}>
-                    <Typography 
-                        variant="h6" 
-                        component="div" 
-                        sx={{ flexGrow: 1, cursor: 'pointer' }} 
+                    <Box
+                        sx={{ flexGrow: 1, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 1 }}
                         onClick={() => navigate('/races')}
                     >
-                        🌄Utanvega🏃‍♂️🏃‍♀️🚴‍
-                    </Typography>
+                        <img
+                            src="/images/hlaupaleidir.avif"
+                            alt="Hlaupadagskrá"
+                            style={{ height: 32, width: 'auto' }}
+                        />
+                        <Typography variant="h6" component="div">
+                            Hlaupadagskrá.is
+                        </Typography>
+                    </Box>
 
                     {isMobile ? (
                         <>
