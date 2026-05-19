@@ -48,7 +48,7 @@ export default defineConfig({
         ],
       },
       manifest: {
-        name: 'Hlaupadagskrá.is',
+        name: 'Hlaupadagskra.is',
         short_name: 'Hlaupadagskrá',
         description: 'Öll hlaup á einum stað',
         theme_color: '#1976d2',

@@ -378,7 +378,7 @@ export default function WelcomePage({ mode, onToggleMode, forceLang }: Props) {
                 />
                 <Fade in timeout={1000}>
                     <Typography
-                        variant="h1"
+                        component="span"
                         sx={{
                             fontSize: { xs: '3rem', sm: '4.5rem', md: '6rem' },
                             mb: 1,
@@ -403,7 +403,7 @@ export default function WelcomePage({ mode, onToggleMode, forceLang }: Props) {
                             WebkitTextFillColor: 'transparent',
                         }}
                     >
-                        Hlaupadagskrá.is
+                        Hlaupadagskra.is
                     </Typography>
                 </Fade>
 

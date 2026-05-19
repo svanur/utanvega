@@ -1,4 +1,4 @@
-# 🏔️ Hlaupadagskrá.is — Trail Discovery for Iceland
+# 🏔️ Hlaupadagskra.is — Trail Discovery for Iceland
 
 A web application for finding races and trails and sharing trails in Iceland. Browse trails on a map, filter by activity type, difficulty, location, and tags — or explore elevation profiles with interactive charts, route playback, and more ...much more.
 

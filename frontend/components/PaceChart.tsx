@@ -137,14 +137,14 @@ export default function PaceChart() {
         if (!tableRef.current) return;
         const win = window.open('', '_blank');
         if (!win) return;
-        win.document.write(`<!DOCTYPE html><html><head><title>Pace Chart — Hlaupadagskrá.is</title>
+        win.document.write(`<!DOCTYPE html><html><head><title>Pace Chart — Hlaupadagskra.is</title>
 <style>body{font-family:system-ui,sans-serif;margin:20px}
 table{border-collapse:collapse;width:100%;font-size:11px}
 th,td{padding:4px 6px;border:1px solid #ccc;text-align:right;font-family:monospace}
 th{background:#f0f0f0;font-weight:700}
 td:first-child,th:first-child{text-align:left;font-weight:600}
 h2{margin:0 0 12px;font-size:16px}</style></head><body>
-<h2>🏃 Pace Chart — Hlaupadagskrá.is</h2>${tableRef.current.outerHTML}</body></html>`);
+<h2>🏃 Pace Chart — Hlaupadagskra.is</h2>${tableRef.current.outerHTML}</body></html>`);
         win.document.close();
         win.print();
     };

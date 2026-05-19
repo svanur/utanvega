@@ -43,7 +43,7 @@ public class GetTrailGpxQueryHandler : IRequestHandler<GetTrailGpxQuery, GpxResp
                 new XElement(ns + "metadata",
                     new XElement(ns + "name", trail.Name),
                     new XElement(ns + "link", new XAttribute("href", $"{_siteUrl}/trails/{trail.Slug}"),
-                        new XElement(ns + "text", "Hlaupadagskrá.is"))
+                        new XElement(ns + "text", "Hlaupadagskra.is"))
                 ),
                 new XElement(ns + "trk",
                     new XElement(ns + "name", trail.Name),

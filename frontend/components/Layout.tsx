@@ -62,7 +62,7 @@ export default function Layout({ children, mode, onToggleMode }: LayoutProps) {
                             style={{ height: 32, width: 'auto' }}
                         />
                         <Typography variant="h6" component="div">
-                            Hlaupadagskrá.is
+                            Hlaupadagskra.is
                         </Typography>
                     </ButtonBase>
 

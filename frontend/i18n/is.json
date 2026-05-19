@@ -342,7 +342,7 @@
         "popular": "Vinsælast"
     },
     "header": {
-        "tagline": "Hlaupadagskrá.is - Vefur til að finna keppnishlaup, skemmtilegar leiðir og deila með vinum.",
+        "tagline": "Hlaupadagskra.is - Vefur til að finna keppnishlaup, skemmtilegar leiðir og deila með vinum.",
         "close": "Loka",
         "dontShowAgain": "Ekki sýna aftur"
     },
@@ -407,10 +407,10 @@
     },
     "privacy": {
         "title": "Persónuverndarstefna",
-        "intro": "Hlaupadagskrá.is leggur áherslu á að virða friðhelgi einkalífs þíns. Þessi stefna útskýrir hvaða gögn við söfnum, hvernig við notum þau og réttindi þín. Í stuttu máli: við söfnum mjög litlu og deilum engu.",
+        "intro": "Hlaupadagskra.is leggur áherslu á að virða friðhelgi einkalífs þíns. Þessi stefna útskýrir hvaða gögn við söfnum, hvernig við notum þau og réttindi þín. Í stuttu máli: við söfnum mjög litlu og deilum engu.",
         "noAccounts": {
             "title": "Enginn notendaaðgangur krafist",
-            "body": "Hlaupadagskrá.is vefsíðan krefst þess ekki að þú stofnir aðgang eða skráir þig inn. Við söfnum ekki nöfnum, netföngum eða neinum persónulegum upplýsingum til að nota á vefnum."
+            "body": "Hlaupadagskra.is vefsíðan krefst þess ekki að þú stofnir aðgang eða skráir þig inn. Við söfnum ekki nöfnum, netföngum eða neinum persónulegum upplýsingum til að nota á vefnum."
         },
         "viewTracking": {
             "title": "Mæling á leiðaskoðunum",
@@ -431,7 +431,7 @@
         "title": "Fyrirvari",
         "useAtOwnRisk": {
             "title": "Á eigin ábyrgð",
-            "body": "Allar upplýsingar á Hlaupadagskrá.is eru eingöngu til upplýsinga. Þú berð sjálf/ur ábyrgð á eigin öryggi á öllum leiðum. Alltaf skaltu meta aðstæður, líkamlegt ástand og búnað áður en þú leggur af stað. Hlaupadagskrá.is ber enga ábyrgð á meiðslum, slysum, skemmdum eða tjóni sem kann að hljótast af notkun upplýsinga á þessari síðu."
+            "body": "Allar upplýsingar á Hlaupadagskra.is eru eingöngu til upplýsinga. Þú berð sjálf/ur ábyrgð á eigin öryggi á öllum leiðum. Alltaf skaltu meta aðstæður, líkamlegt ástand og búnað áður en þú leggur af stað. Hlaupadagskra.is ber enga ábyrgð á meiðslum, slysum, skemmdum eða tjóni sem kann að hljótast af notkun upplýsinga á þessari síðu."
         },
         "weather": {
             "title": "Veður og aðstæður",
@@ -452,10 +452,10 @@
         "title": "Um Hlaupadagskra.is",
         "description": "Hlaupadagskra.is er vefur til að finna skemmtilegar leiðir fyrir hlaupara, göngufólk og hjólreiðamenn á Íslandi. Finndu leiðir nálægt þér, skoðaðu kort og hæðarsnið og deildu eftirlætisleiðum með vinum.",
         "authorTitle": "Um mig",
-        "authorDescription": "Hlaupadagskrá.is er gæluverkefni sem byrjaði með excel skjali þar sem ég skráði niður áhugaverðar utanvegaleiðir. Auk þess að vera utanvegahlaupari/þjálfari, þá er hugbúnaðargerð 'hin vinnan' mín. Á utanvega mætast því vinnan og áhugamálið. Vonandi njótið þið vel og lengi.",
+        "authorDescription": "Hlaupadagskra.is er gæluverkefni sem byrjaði með excel skjali þar sem ég skráði niður áhugaverðar utanvegaleiðir. Auk þess að vera utanvegahlaupari/þjálfari, þá er hugbúnaðargerð 'hin vinnan' mín. Á utanvega mætast því vinnan og áhugamálið. Vonandi njótið þið vel og lengi.",
         "authorSignature": "Svanur Karlsson",
         "techTitle": "Tæknilausnir",
-        "techDescription": "Hlaupadagskrá.is er byggt á React viðmóti, .NET 9 bakenda með PostGIS fyrir staðsetningarleit og PostgreSQL gagnagrunni. Kortin eru búin til með Leaflet og OpenStreetMap.",
+        "techDescription": "Hlaupadagskra.is er byggt á React viðmóti, .NET 9 bakenda með PostGIS fyrir staðsetningarleit og PostgreSQL gagnagrunni. Kortin eru búin til með Leaflet og OpenStreetMap.",
         "aiDescription": "Vefurinn er þróaður með aðstoð Claude, gervigreindar- og kóðunarfulltrúa frá Anthropic. Claude hjálpar til við kóðun, prófanir, endurbætur og gæðaeftirlit.",
         "changelogTitle": "Breytingasaga",
         "changelog": {
@@ -810,7 +810,7 @@
         "subtitle": "Allar upplýsingar eru birtar með fyrirvara um villur og breytingar. Leitið alltaf eftir nýjustu upplýsingum hjá hlaupahaldara.",
         "searchPlaceholder": "Leita að viðburði...",
         "noResults": "Enginn viðburður fannst",
-        "empty": "Engin viðburður enn",
+        "empty": "Enginn viðburður enn",
         "noDate": "Dagsetning óákveðin",
         "nextRace": "Næsta keppni:",
         "today": "🔥 Í dag!",
@@ -919,7 +919,7 @@
         },
         "tools": {
             "title": "🛠️ Tól hlauparans",
-            "desc": "Hraðareiknir, æfingahraði (VDOT), keppnisspá og fleira. Allt sem þú þarft til að skipuleggja næstu ævingar eða ævintýri.",
+            "desc": "Hraðareiknir, æfingahraði (VDOT), keppnisspá og fleira. Allt sem þú þarft til að skipuleggja næstu æfingar eða ævintýri.",
             "cta": "Opna hlaupatólin"
         },
         "share": {
