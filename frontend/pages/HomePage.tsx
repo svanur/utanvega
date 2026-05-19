@@ -11,7 +11,7 @@ type HomePageProps = {
     showQuote?: boolean;
 };
 
-export default function HomePage({ mode, onToggleMode, tagSlug, showQuote = true }: HomePageProps) {
+export default function HomePage({ mode, onToggleMode, tagSlug, showQuote = false }: HomePageProps) {
     const { isEnabled } = useFeatureFlags();
     return (
         <Layout mode={mode} onToggleMode={onToggleMode}>
