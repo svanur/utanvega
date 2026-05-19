@@ -83,7 +83,11 @@ export default function App() {
                 <Routes>
                     <Route
                         path="/"
-                        element={<RacesPage mode={mode} onToggleMode={handleToggleMode} showQuote />}
+                        element={
+                            isEnabled('races_page')
+                                ? <RacesPage mode={mode} onToggleMode={handleToggleMode} showQuote />
+                                : <HomePage mode={mode} onToggleMode={handleToggleMode} />
+                        }
                     />
                     {isEnabled('trails_page') && <Route
                         path="/trails"
