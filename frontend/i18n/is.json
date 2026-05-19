@@ -66,11 +66,11 @@
     "nav": {
         "locations": "Staðsetningar",
         "about": "Um",
-        "races": "Keppni",
+        "races": "Viðburðir",
         "activities": "Athöfn",
         "disclaimer": "Fyrirvari",
         "privacy": "Persónuvernd",
-        "darkMode": "Skipta yfir í dimmt þema",
+        "darkMode": "Skipta yfir í dökkt þema",
         "lightMode": "Skipta yfir í ljóst þema",
         "switchToEnglish": "Switch to English",
         "switchToIcelandic": "Skipta yfir á íslensku"
@@ -79,7 +79,7 @@
         "placeholder": "Leita að leiðum, stöðum og keppnum...",
         "trailsSection": "Leiðir",
         "locationsSection": "Staðir",
-        "racesSection": "Keppni",
+        "racesSection": "Viðburðir",
         "trails": "leiðir",
         "noResults": "Ekkert fannst",
         "hint": "Byrjaðu að skrifa til að að fá leitarniðurstöður…",
@@ -459,8 +459,8 @@
         "changelogTitle": "Breytingasaga",
         "changelog": {
             "v2_5": {
-                "title": "Keppni og mót",
-                "description": "Keppni og mót með dagsetningakerfi, keppnisdagatal, tengingar milli leiða og keppna, tímaspá af keppnissíðum, veður á keppnisdegi, rennistikur í verkfærum o deilanleg slóð á hraðatöflu."
+                "title": "Viðburðir",
+                "description": "Viðburðir, keppnisdagatal, tengingar milli leiða og keppna, tímaspá af keppnissíðum, veður á keppnisdegi, rennistikur í verkfærum o deilanleg slóð á hraðatöflu."
             },
             "v2_4": {
                 "title": "Snjallar forstillingar og deiling",
@@ -805,11 +805,11 @@
         }
     },
     "races": {
-        "title": "Keppni og mót",
-        "subtitle": "Komandi fjallahlaup og keppni á Íslandi. Athugið að staðfesta endanlegar dagsetningar á vefsíðu hlaupahaldara.",
-        "searchPlaceholder": "Leita að keppni...",
-        "noResults": "Engin keppni fannst",
-        "empty": "Engin keppni enn",
+        "title": "Viðburðir - Öll hlaup á einum stað",
+        "subtitle": "Allar upplýsingar eru birtar með fyrirvara um villur og breytingar. Leitið alltaf eftir nýjustu upplýsingum hjá hlaupahaldara.",
+        "searchPlaceholder": "Leita að viðburði...",
+        "noResults": "Engin viðburður fannst",
+        "empty": "Engin viðburður enn",
         "noDate": "Dagsetning óákveðin",
         "nextRace": "Næsta keppni:",
         "today": "🔥 Í dag!",
@@ -931,7 +931,7 @@
             "km": "Samtals km",
             "elevation": "Hæðaraukning (m)",
             "locations": "Staðsetningar",
-            "races": "Komandi keppni"
+            "races": "Komandi viðburðir"
         }
     },
     "activity": {
