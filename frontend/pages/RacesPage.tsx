@@ -24,6 +24,7 @@ import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import Layout from '../components/Layout';
+import RandomQuote from '../components/RandomQuote';
 import RunningLoader from '../components/RunningLoader';
 import { useCompetitions } from '../hooks/useCompetitions';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
@@ -32,6 +33,7 @@ import { toUserFriendlyFetchError } from '../utils/apiErrors';
 type RacesPageProps = {
     mode: PaletteMode;
     onToggleMode: () => void;
+    showQuote?: boolean;
 };
 
 function formatNextDate(dateStr: string, t: (key: string, opts?: Record<string, unknown>) => string): string {
@@ -59,7 +61,7 @@ function getCountdownLabel(daysUntil: number | null, t: (key: string, opts?: Rec
     return t('races.daysUntil', { count: daysUntil });
 }
 
-export default function RacesPage({ mode, onToggleMode }: RacesPageProps) {
+export default function RacesPage({ mode, onToggleMode, showQuote = false }: RacesPageProps) {
     const { t } = useTranslation();
     const { competitions, loading, error } = useCompetitions();
     const { isEnabled } = useFeatureFlags();
@@ -120,6 +122,7 @@ export default function RacesPage({ mode, onToggleMode }: RacesPageProps) {
 
     return (
         <Layout mode={mode} onToggleMode={onToggleMode}>
+            {showQuote && isEnabled('random_quote') && <RandomQuote />}
             <Container maxWidth="md" sx={{ py: 3 }}>
                 {/* Header */}
                 <Box sx={{ mb: 3 }}>

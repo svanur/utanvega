@@ -64,6 +64,7 @@
     },
     "loading": "Hleð leiðum...",
     "nav": {
+        "trails": "Leiðir",
         "locations": "Staðsetningar",
         "about": "Um",
         "races": "Viðburðir",

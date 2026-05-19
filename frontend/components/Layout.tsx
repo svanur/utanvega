@@ -38,8 +38,8 @@ export default function Layout({ children, mode, onToggleMode }: LayoutProps) {
     const { isEnabled } = useFeatureFlags();
 
     const navItems = [
+        ...(isEnabled('trails_page') ? [{ label: `🥾 ${t('nav.trails')}`, path: '/trails', adminOnly: false }] : []),
         ...(isEnabled('locations_page') ? [{ label: `📍 ${t('nav.locations')}`, path: '/locations', adminOnly: false }] : []),
-        ...(isEnabled('races_page') ? [{ label: `🏆 ${t('nav.races')}`, path: '/races', adminOnly: false }] : []),
         ...(isEnabled('tools_page') ? [{ label: `🛠️ ${t('tools.title')}`, path: '/tools', adminOnly: false }] : []),
         ...(isAdmin && isEnabled('game_fun_page') ? [{ label: '🧙‍♂️ Fun', path: '/fun', adminOnly: true }] : []),
         { label: t('nav.about'), path: '/about', adminOnly: false },
@@ -55,7 +55,7 @@ export default function Layout({ children, mode, onToggleMode }: LayoutProps) {
                         variant="h6" 
                         component="div" 
                         sx={{ flexGrow: 1, cursor: 'pointer' }} 
-                        onClick={() => navigate('/')}
+                        onClick={() => navigate('/races')}
                     >
                         🌄Utanvega🏃‍♂️🏃‍♀️🚴‍
                     </Typography>
