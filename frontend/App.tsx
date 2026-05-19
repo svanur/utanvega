@@ -86,7 +86,7 @@ export default function App() {
                         element={
                             isEnabled('races_page')
                                 ? <RacesPage mode={mode} onToggleMode={handleToggleMode} showQuote />
-                                : <HomePage mode={mode} onToggleMode={handleToggleMode} />
+                                : <HomePage mode={mode} onToggleMode={handleToggleMode} showQuote />
                         }
                     />
                     {isEnabled('trails_page') && <Route
