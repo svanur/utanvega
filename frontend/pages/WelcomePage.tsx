@@ -310,9 +310,9 @@ export default function WelcomePage({ mode, onToggleMode, forceLang }: Props) {
     }, []);
 
     const allFeatures = [
-        { icon: <DirectionsRunIcon />, titleKey: 'welcome.trails.title', descKey: 'welcome.trails.desc', cta: 'welcome.trails.cta', ctaPath: '/', tParams: { count: stats.trailCount || '...' }, flag: null },
-        { icon: <PlaceIcon />, titleKey: 'welcome.locations.title', descKey: 'welcome.locations.desc', cta: 'welcome.locations.cta', ctaPath: '/locations', flag: 'locations_page' },
         { icon: <EmojiEventsIcon />, titleKey: 'welcome.races.title', descKey: 'welcome.races.desc', cta: 'welcome.races.cta', ctaPath: '/races', flag: 'races_page' },
+        { icon: <DirectionsRunIcon />, titleKey: 'welcome.trails.title', descKey: 'welcome.trails.desc', cta: 'welcome.trails.cta', ctaPath: '/trails', tParams: { count: stats.trailCount || '...' }, flag: null },
+        { icon: <PlaceIcon />, titleKey: 'welcome.locations.title', descKey: 'welcome.locations.desc', cta: 'welcome.locations.cta', ctaPath: '/locations', flag: 'locations_page' },
         { icon: <BuildIcon />, titleKey: 'welcome.tools.title', descKey: 'welcome.tools.desc', cta: 'welcome.tools.cta', ctaPath: '/tools', flag: 'tools_page' },
         { icon: <ShareIcon />, titleKey: 'welcome.share.title', descKey: 'welcome.share.desc', cta: 'welcome.share.cta', ctaPath: '/', flag: 'share_trail' },
     ];
@@ -388,7 +388,22 @@ export default function WelcomePage({ mode, onToggleMode, forceLang }: Props) {
                             WebkitTextFillColor: 'transparent',
                         }}
                     >
-                        🌄 Utanvega
+                        🏃
+                    </Typography>
+                </Fade>
+                <Fade in timeout={1000}>
+                    <Typography
+                        variant="h1"
+                        sx={{
+                            fontSize: { xs: '3rem', sm: '4.5rem', md: '6rem' },
+                            mb: 1,
+                            background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                            backgroundClip: 'text',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                        }}
+                    >
+                        Hlaupadagskrá.is
                     </Typography>
                 </Fade>
 

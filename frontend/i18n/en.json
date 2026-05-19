@@ -342,7 +342,7 @@
         "popular": "Most popular"
     },
     "header": {
-        "tagline": "Utanvega - A site to find fun trails and share with friends.",
+        "tagline": "Hlaupadagskrá.is - A site to find races, fun trails and share with friends.",
         "close": "Close",
         "dontShowAgain": "Don't show again"
     },
@@ -407,10 +407,10 @@
     },
     "privacy": {
         "title": "Privacy Policy",
-        "intro": "Utanvega is committed to respecting your privacy. This policy explains what data we collect, how we use it, and your rights. The short version: we collect very little and share nothing.",
+        "intro": "Hlaupadagskra.is is committed to respecting your privacy. This policy explains what data we collect, how we use it, and your rights. The short version: we collect very little and share nothing.",
         "noAccounts": {
             "title": "No User Accounts Required",
-            "body": "The public Utanvega website does not require you to create an account or log in. We do not collect your name, email address, or any personal information to use the site."
+            "body": "The public Hlaupadagskra.is website does not require you to create an account or log in. We do not collect your name, email address, or any personal information to use the site."
         },
         "viewTracking": {
             "title": "Trail View Tracking",
@@ -431,7 +431,7 @@
         "title": "Disclaimer",
         "useAtOwnRisk": {
             "title": "Use at Your Own Risk",
-            "body": "All trail information on Utanvega is provided for informational purposes only. You are solely responsible for your own safety when using any trail. Always assess conditions, your fitness level, and equipment before heading out. Utanvega is not liable for any injuries, accidents, damages, or losses arising from the use of the information on this site."
+            "body": "All trail information on Hlaupadagskra.is is provided for informational purposes only. You are solely responsible for your own safety when using any trail. Always assess conditions, your fitness level, and equipment before heading out. Hlaupadagskra.is is not liable for any injuries, accidents, damages, or losses arising from the use of the information on this site."
         },
         "weather": {
             "title": "Weather & Conditions",
@@ -450,12 +450,12 @@
     },
     "about": {
         "title": "About Hlaupadagskra.is",
-        "description": "Utanvega is a trail discovery platform built for runners, hikers, and cyclists exploring Iceland's wild landscapes. Find trails near you, check elevation profiles, and share your favorites with friends.",
+        "description": "Hlaupadagskra.is is a trail discovery platform built for runners, hikers, and cyclists exploring Iceland's wild landscapes. Find trails near you, check elevation profiles, and share your favorites with friends.",
         "authorTitle": "About me",
         "authorDescription": "Trail runner and developer based in Iceland, building tools to help people discover and enjoy the outdoors.",
         "authorSignature": "Svanur Karlsson",
         "techTitle": "Technical Stack",
-        "techDescription": "Utanvega is built with a React frontend, a .NET 9 backend with PostGIS for spatial queries, and PostgreSQL for data storage. Maps are powered by Leaflet with OpenStreetMap tiles.",
+        "techDescription": "Hlaupadagskra.is is built with a React frontend, a .NET 9 backend with PostGIS for spatial queries, and PostgreSQL for data storage. Maps are powered by Leaflet with OpenStreetMap tiles.",
         "aiDescription": "Development assisted by Claude, an AI coding agent by Anthropic, used for code generation, refactoring, and quality improvements.",
         "changelogTitle": "Changelog",
         "changelog": {
@@ -888,7 +888,7 @@
         "noUpcoming": "No upcoming races"
     },
     "calendar": {
-        "title": "Race Calendar",
+        "title": "Event Calendar",
         "today": "Today",
         "noEvents": "No events this month",
         "eventCount_one": "{{count}} event this month",
@@ -902,6 +902,11 @@
         "whatCanYouDo": "What can you do here?",
         "readyToRun": "Ready to hit the trails?",
         "readyToRunDesc": "Join the Icelandic trail community and find your next adventure.",
+        "races": {
+            "title": "🏆 Races & Competitions",
+            "desc": "Stay on top of upcoming races with countdowns, calendar views and race-day weather. Predict your finish time before you toe the line.",
+            "cta": "See Races"
+        },
         "trails": {
             "title": "🏔️ Discover Trails",
             "desc": "Browse {{count}} curated trails across Iceland. Filter by distance, elevation, activity type — and find your next favorite route.",
@@ -911,11 +916,6 @@
             "title": "📍 Explore Locations",
             "desc": "See trails grouped by region. From Reykjavík city runs to remote highland crossings — explore Iceland on the map.",
             "cta": "View Locations"
-        },
-        "races": {
-            "title": "🏆 Races & Competitions",
-            "desc": "Stay on top of upcoming races with countdowns, calendar views and race-day weather. Predict your finish time before you toe the line.",
-            "cta": "See Races"
         },
         "tools": {
             "title": "🛠️ Runner Tools",

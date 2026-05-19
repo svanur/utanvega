@@ -12,7 +12,7 @@ const SITE_URL =
   process.env.SITE_URL ||
   (process.env.VERCEL_PROJECT_PRODUCTION_URL
     ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-    : 'https://utanvega.vercel.app');
+    : 'https://hlaupadagskra.is');
 
 function esc(str: string): string {
   return str
@@ -86,7 +86,7 @@ export default async function handler(request: Request) {
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>${title} – Utanvega</title>
+  <title>${title} – Hlaupadagskra.is</title>
   <meta name="description" content="${description}" />
 
   <meta property="og:title" content="${ogTitle}" />
@@ -108,7 +108,7 @@ export default async function handler(request: Request) {
   <meta http-equiv="refresh" content="0;url=${canonicalUrl}" />
 </head>
 <body>
-  <p>Redirecting to <a href="${canonicalUrl}">${title} on Utanvega</a>…</p>
+  <p>Redirecting to <a href="${canonicalUrl}">${title} on Hlaupadagskra.is</a>…</p>
 </body>
 </html>`;
 
@@ -150,7 +150,7 @@ function defaultPage(path: string = '') {
   <meta http-equiv="refresh" content="0;url=${canonicalUrl}" />
 </head>
 <body>
-  <p>Redirecting to <a href="${canonicalUrl}">Utanvega</a>…</p>
+  <p>Redirecting to <a href="${canonicalUrl}">Hlaupadagskra.is</a>…</p>
 </body>
 </html>`;
 
