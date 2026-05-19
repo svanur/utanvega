@@ -12,7 +12,7 @@ const SITE_URL =
   process.env.SITE_URL ||
   (process.env.VERCEL_PROJECT_PRODUCTION_URL
     ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-    : 'https://hlaupadagskra.is');
+    : 'https://utanvega.vercel.app');
 
 function esc(str: string): string {
   return str

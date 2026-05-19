@@ -18,10 +18,12 @@ public record GpxResponse(string FileName, string Content);
 public class GetTrailGpxQueryHandler : IRequestHandler<GetTrailGpxQuery, GpxResponse?>
 {
     private readonly UtanvegaDbContext _context;
+    private readonly string _siteUrl;
 
-    public GetTrailGpxQueryHandler(UtanvegaDbContext context)
+    public GetTrailGpxQueryHandler(UtanvegaDbContext context, IConfiguration configuration)
     {
         _context = context;
+        _siteUrl = configuration["SiteUrl"] ?? "https://utanvega.vercel.app";
     }
 
     public async Task<GpxResponse?> Handle(GetTrailGpxQuery request, CancellationToken cancellationToken)
@@ -40,7 +42,7 @@ public class GetTrailGpxQueryHandler : IRequestHandler<GetTrailGpxQuery, GpxResp
                 new XAttribute("creator", "Hlaupadagskra.is"),
                 new XElement(ns + "metadata",
                     new XElement(ns + "name", trail.Name),
-                    new XElement(ns + "link", new XAttribute("href", $"https://utanvega.vercel.app/trails/{trail.Slug}"),
+                    new XElement(ns + "link", new XAttribute("href", $"{_siteUrl}/trails/{trail.Slug}"),
                         new XElement(ns + "text", "Hlaupadagskrá.is"))
                 ),
                 new XElement(ns + "trk",
