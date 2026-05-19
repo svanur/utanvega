@@ -450,10 +450,10 @@
     },
     "about": {
         "title": "Um Hlaupadagskra.is",
-        "description": "Hlaupadagskra.is er vefur til að finna skemmtilegar leiðir fyrir hlaupara, göngufólk og hjólreiðamenn á Íslandi. Finndu leiðir nálægt þér, skoðaðu kort og hæðarsnið og deildu eftirlætisleiðum með vinum.",
-        "authorTitle": "Um mig",
-        "authorDescription": "Hlaupadagskra.is er gæluverkefni sem byrjaði með excel skjali þar sem ég skráði niður áhugaverðar utanvegaleiðir. Auk þess að vera utanvegahlaupari/þjálfari, þá er hugbúnaðargerð 'hin vinnan' mín. Á utanvega mætast því vinnan og áhugamálið. Vonandi njótið þið vel og lengi.",
-        "authorSignature": "Svanur Karlsson",
+        "description": "Á hlaupadagskra.is er nú að finna heildarlista allra staðfestra og óstaðfestra hlaupa á Íslandi. Grunn hugmyndin er að taka saman í einföldum lista allar lykilupplýsingar úr öllum viðburðum sem kalla má hlaupaviðburði hvort sem þeir eru löggild keppnishlaup á götu, ITRA utanvegahlaup eða bara skipulögð styrtarhlaup fyrir góðan málstað.\n\nHlaupin eru flokkuð niður, vísað er á frekari upplýsingasíður, skráningarsíður og samfélagsmiðla eftir því sem  við á. Þessi fyrsta útgáfa síðunnar er ekki frábær en þó að minnsta kosti með tæmandi með upplýsingar um alla hlaupatengda viðburði árið sem eru ógnar margir.\n\nMarkmiðið okkar með hlaupadagskra.is er uppfylla ósk hlaupara að sjá öll hlaup yfir árið á einum stað og getað leitað og filterað á aðgengilegan máta. Hlaup eru merkt “staðfest, skráning hafin” og slíkt ef viðburðarhaldarar hafa tilkynnt slíkt en “Óstaðfest” eða “ þangað til það liggur fyrir rétt tímasetning eða hlaup verður ekki haldið.",
+        "authorTitle": "Um okkur",
+        "authorDescription": "Vefnum er haldið uppi af þremur hlaupurum af hlaupaástríðu án beinnar tengingar við tiltekin fyrirtæki eða viðburði og því er stuðningur hlaupasamfélagsins mikilvægur.",
+        "authorSignature": "Óskar Þór, Svanur Þór og Tómas G.",
         "techTitle": "Tæknilausnir",
         "techDescription": "Hlaupadagskra.is er byggt á React viðmóti, .NET 9 bakenda með PostGIS fyrir staðsetningarleit og PostgreSQL gagnagrunni. Kortin eru búin til með Leaflet og OpenStreetMap.",
         "aiDescription": "Vefurinn er þróaður með aðstoð Claude, gervigreindar- og kóðunarfulltrúa frá Anthropic. Claude hjálpar til við kóðun, prófanir, endurbætur og gæðaeftirlit.",
@@ -520,8 +520,8 @@
                 "description": "Staðsetningarsíður, röðun eftir fjarlægð, eftirlæti og faldar leiðir, og stuðningur við dimmt þema."
             },
             "v1_0": {
-                "title": "Fyrsta útgáfa",
-                "description": "Leiðalisti með leit, upplýsingasíður með GPX gögnum, tvítyngt viðmót (íslenska/enska) og snjalltækjafyrst hönnun."
+                "title": "Febrúar, 2025",
+                "description": "Hlaupadagskra.is fer í loftið með lista yfir öll hlaup á Íslandi."
             }
         }
     },
