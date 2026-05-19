@@ -53,7 +53,7 @@ export default function Layout({ children, mode, onToggleMode }: LayoutProps) {
                 <Toolbar sx={{ gap: 1 }}>
                     <Box
                         sx={{ flexGrow: 1, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 1 }}
-                        onClick={() => navigate('/races')}
+                        onClick={() => navigate('/')}
                     >
                         <img
                             src="/images/hlaupaleidir.avif"
