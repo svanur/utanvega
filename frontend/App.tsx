@@ -5,7 +5,6 @@ import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-
 import { createAppTheme } from './theme';
 import ErrorBoundary from './components/ErrorBoundary';
 import HomePage from './pages/HomePage';
-import RacesPage from './pages/RacesPage';
 import { useEasterEggs } from './hooks/useEasterEggs';
 import { EasterEggs } from './components/EasterEggs';
 import SpotlightSearch from './components/SpotlightSearch';
@@ -25,6 +24,7 @@ const DisclaimerPage = lazy(() => import('./pages/DisclaimerPage'));
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
 const FunPage = lazy(() => import('./pages/FunPage'));
 const ToolsPage = lazy(() => import('./pages/ToolsPage'));
+const RacesPage = lazy(() => import('./pages/RacesPage'));
 const RaceCalendarPage = lazy(() => import('./pages/RaceCalendarPage'));
 const CompetitionDetailPage = lazy(() => import('./pages/CompetitionDetailPage'));
 const WelcomePage = lazy(() => import('./pages/WelcomePage'));
