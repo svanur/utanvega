@@ -165,6 +165,11 @@ function AdminContent() {
               <KeyboardIcon />
             </IconButton>
           </Tooltip>
+          {user?.email && (
+            <Typography variant="body2" sx={{ mr: 2, opacity: 0.85 }}>
+              {user.email.split('@')[0]}
+            </Typography>
+          )}
           <Button color="inherit" onClick={signOut} startIcon={<LogoutIcon />}>
             Logout
           </Button>
