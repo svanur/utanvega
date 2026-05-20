@@ -132,9 +132,16 @@ function AdminContent() {
           <IconButton color="inherit" edge="start" onClick={() => setDrawerOpen(!drawerOpen)} sx={{ mr: 1 }}>
             {drawerOpen ? <ChevronLeftIcon /> : <MenuIcon />}
           </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            🌄 Utanvega Admin
-          </Typography>
+          <Box
+            component="button"
+            onClick={() => setCurrentPage('trails')}
+            sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1, background: 'none', border: 'none', cursor: 'pointer', p: 0, color: 'inherit' }}
+          >
+            <img src="/images/hlaupaleidir.avif" alt="Hlaupadagskra logo" style={{ height: 32 }} />
+            <Typography variant="h6" noWrap>
+              Hlaupadagskra.is
+            </Typography>
+          </Box>
           <Tooltip title="Search (Ctrl+K)">
             <IconButton
               color="inherit"
@@ -158,6 +165,11 @@ function AdminContent() {
               <KeyboardIcon />
             </IconButton>
           </Tooltip>
+          {user?.email && (
+            <Typography variant="body2" sx={{ mr: 2, opacity: 0.85 }}>
+              {user.email.split('@')[0]}
+            </Typography>
+          )}
           <Button color="inherit" onClick={signOut} startIcon={<LogoutIcon />}>
             Logout
           </Button>

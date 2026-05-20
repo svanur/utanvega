@@ -52,9 +52,9 @@ export default function Layout({ children, mode, onToggleMode }: LayoutProps) {
             <DynamicHeader weather={weather} isDark={mode === 'dark'}>
                 <Toolbar sx={{ gap: 1 }}>
                     <ButtonBase
-                        onClick={() => navigate('/')}
+                        onClick={() => navigate('/races')}
                         sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'flex-start', borderRadius: 1 }}
-                        aria-label="Go to home page"
+                        aria-label="Go to Races"
                     >
                         <img
                             src="/images/hlaupaleidir.avif"
