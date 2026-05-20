@@ -12,7 +12,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import SearchIcon from '@mui/icons-material/Search';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import TrailList from './pages/TrailList';
 import { LocationList } from './pages/LocationList';
 import TrailHealth from './pages/TrailHealth';
@@ -46,8 +46,27 @@ const DRAWER_WIDTH = 220;
 const DRAWER_COLLAPSED = 56;
 
 function AdminContent() {
+  type Page = 'trails' | 'locations' | 'health' | 'map' | 'tags' | 'analytics' | 'features' | 'competitions';
+  const VALID_PAGES: Page[] = ['trails', 'locations', 'health', 'map', 'tags', 'analytics', 'features', 'competitions'];
+
+  const pageFromPath = (): Page => {
+    const segment = window.location.pathname.replace(/^\//, '') as Page;
+    return VALID_PAGES.includes(segment) ? segment : 'trails';
+  };
+
   const { user, loading: authLoading, signOut } = useAuth();
-  const [currentPage, setCurrentPage] = useState<'trails' | 'locations' | 'health' | 'map' | 'tags' | 'analytics' | 'features' | 'competitions'>('trails');
+  const [currentPage, setCurrentPageState] = useState<Page>(pageFromPath);
+
+  const setCurrentPage = useCallback((page: Page) => {
+    setCurrentPageState(page);
+    window.history.pushState(null, '', `/${page === 'trails' ? '' : page}`);
+  }, []);
+
+  useEffect(() => {
+    const onPopState = () => setCurrentPageState(pageFromPath());
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
   const [drawerOpen, setDrawerOpen] = useState(true);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
