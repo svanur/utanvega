@@ -17,6 +17,15 @@ namespace Utanvega.Backend.Migrations
                 nullable: true,
                 oldClrType: typeof(int),
                 oldType: "integer");
+
+            // Legacy rows used 0 to mean "not ITRA certified". Convert to NULL where
+            // CertifiedBy is empty (truly not affiliated) so 0 means "certified, 0 pts".
+            migrationBuilder.Sql("""
+                UPDATE "Races"
+                SET "ItraPoints" = NULL
+                WHERE "ItraPoints" = 0
+                  AND ("CertifiedBy" IS NULL OR "CertifiedBy" = '')
+                """);
         }
 
         /// <inheritdoc />
