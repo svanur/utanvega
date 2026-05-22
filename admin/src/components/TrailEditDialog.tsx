@@ -37,7 +37,7 @@ type TrailDetail = {
     length: number;
     elevationGain: number;
     elevationLoss: number;
-    youtubeUrl: string;
+    youtubeUrl?: string | null;
     locations: TrailLocationInfo[];
     tags: TrailTagInfo[];
 };
