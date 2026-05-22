@@ -334,7 +334,7 @@ app.UseSerilogRequestLogging(opts =>
 });
 
 // Security headers
-app.Use(async (context, next) =>
+app.Use(async (HttpContext context, Func<Task> next) =>
 {
     context.Response.Headers["X-Content-Type-Options"] = "nosniff";
     context.Response.Headers["X-Frame-Options"] = "DENY";
@@ -349,7 +349,7 @@ if (!app.Environment.IsDevelopment())
 }
 
 // Return validation errors as structured 400 responses; sanitize unhandled exceptions
-app.Use(async (context, next) =>
+app.Use(async (HttpContext context, RequestDelegate next) =>
 {
     try
     {
@@ -1244,6 +1244,10 @@ app.MapGet("/api/v1/events", async (IMediator mediator, bool includeHidden = fal
     return Results.Ok(events);
 })
 .WithName("GetPublicEvents");
+
+// Legacy stubs — keep deployed frontend/admin from crashing until redeployed
+app.MapGet("/api/v1/competitions", () => Results.Ok(Array.Empty<object>())).WithName("LegacyCompetitions");
+app.MapGet("/api/v1/competitions/{slug}", (string slug) => Results.NotFound()).WithName("LegacyCompetitionBySlug");
 
 app.MapGet("/api/v1/events/calendar", async (IMediator mediator, DateOnly? from, DateOnly? to) =>
 {

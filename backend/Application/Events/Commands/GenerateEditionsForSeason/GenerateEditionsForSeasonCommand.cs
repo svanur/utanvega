@@ -41,21 +41,25 @@ public class GenerateEditionsForSeasonCommandHandler : IRequestHandler<GenerateE
 
         var dates = _scheduleEngine.GetOccurrencesInRange(ev.ScheduleRule, request.From, request.To);
 
-        // Skip dates that already have an edition
-        var existingDates = await _context.EventEditions
+        // Load existing editions in the date range
+        var existingEditions = await _context.EventEditions
             .Where(ed => ed.EventId == request.EventId && ed.Date != null)
-            .Select(ed => ed.Date!.Value)
             .ToListAsync(cancellationToken);
 
-        var existingDateSet = existingDates.ToHashSet();
+        var existingDateSet = existingEditions
+            .Where(ed => ed.Date.HasValue)
+            .Select(ed => ed.Date!.Value)
+            .ToHashSet();
+
         var newDates = dates.Where(d => !existingDateSet.Contains(d)).ToList();
 
+        // Create new editions for dates that don't exist yet
         var editions = newDates.Select((date, index) => new EventEdition
         {
             EventId = request.EventId,
             Date = date,
             Year = date.Year,
-            Title = $"Round {index + 1}",
+            Title = $"Hlaup {index + 1}",
             TrailId = request.TrailId,
             RegistrationUrl = request.RegistrationUrl,
             RegistrationStatus = RegistrationStatus.NotStarted,
@@ -63,6 +67,22 @@ public class GenerateEditionsForSeasonCommandHandler : IRequestHandler<GenerateE
         }).ToList();
 
         _context.EventEditions.AddRange(editions);
+
+        // Apply defaults to existing editions that are missing them
+        if (request.TrailId.HasValue || !string.IsNullOrWhiteSpace(request.RegistrationUrl))
+        {
+            var editionsInRange = existingEditions
+                .Where(ed => ed.Date.HasValue && ed.Date.Value >= request.From && ed.Date.Value <= request.To);
+
+            foreach (var ed in editionsInRange)
+            {
+                if (request.TrailId.HasValue && ed.TrailId == null)
+                    ed.TrailId = request.TrailId;
+                if (!string.IsNullOrWhiteSpace(request.RegistrationUrl) && string.IsNullOrWhiteSpace(ed.RegistrationUrl))
+                    ed.RegistrationUrl = request.RegistrationUrl;
+            }
+        }
+
         await _context.SaveChangesAsync(cancellationToken);
         _cacheInvalidator.InvalidateEvent(ev.Slug);
 

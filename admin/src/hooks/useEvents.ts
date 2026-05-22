@@ -195,6 +195,8 @@ export interface GenerateEditionsForSeasonInput {
     eventId: string;
     from: string;
     to: string;
+    trailId?: string | null;
+    registrationUrl?: string | null;
 }
 
 export interface GenerateEditionsForSeasonResult {
