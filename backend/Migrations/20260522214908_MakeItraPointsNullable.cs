@@ -22,6 +22,8 @@ namespace Utanvega.Backend.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.Sql("""UPDATE "Races" SET "ItraPoints" = 0 WHERE "ItraPoints" IS NULL""");
+
             migrationBuilder.AlterColumn<int>(
                 name: "ItraPoints",
                 table: "Races",
