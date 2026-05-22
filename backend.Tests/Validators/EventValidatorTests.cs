@@ -341,6 +341,14 @@ public class EventValidatorTests
     }
 
     [Fact]
+    public void CreateRace_NullItraPoints_Passes()
+    {
+        var cmd = ValidRaceCommand with { ItraPoints = null };
+        var result = _raceValidator.TestValidate(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.ItraPoints);
+    }
+
+    [Fact]
     public void CreateRace_NegativePrizeMoney_Fails()
     {
         var cmd = ValidRaceCommand with { PrizeMoney = -500m };
@@ -392,6 +400,14 @@ public class EventValidatorTests
         var cmd = ValidUpdateRaceCommand with { Id = Guid.Empty };
         var result = _updateRaceValidator.TestValidate(cmd);
         result.ShouldHaveValidationErrorFor(x => x.Id);
+    }
+
+    [Fact]
+    public void UpdateRace_NullItraPoints_Passes()
+    {
+        var cmd = ValidUpdateRaceCommand with { ItraPoints = null };
+        var result = _updateRaceValidator.TestValidate(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.ItraPoints);
     }
 
     // ─── GenerateEditionsForSeasonCommandValidator ───

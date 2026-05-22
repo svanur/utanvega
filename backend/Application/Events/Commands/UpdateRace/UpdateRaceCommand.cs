@@ -17,7 +17,7 @@ public record UpdateRaceCommand(
     int SortOrder,
     string TicketStatus,
     int? MaxParticipants,
-    int ItraPoints,
+    int? ItraPoints,
     string? CertifiedBy,
     decimal PrizeMoney,
     string? ChampionshipCategory,

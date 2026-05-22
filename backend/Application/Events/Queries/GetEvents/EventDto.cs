@@ -39,7 +39,7 @@ public record RaceDto(
     int SortOrder,
     string TicketStatus,
     int? MaxParticipants,
-    int ItraPoints,
+    int? ItraPoints,
     string? CertifiedBy,
     decimal PrizeMoney,
     string? ChampionshipCategory,
