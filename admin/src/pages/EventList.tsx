@@ -154,6 +154,16 @@ const EVENT_TYPE_COLORS: Record<EventType, 'primary' | 'secondary' | 'warning' |
   Festival: 'info',
   Other: 'default',
 };
+const ACTIVITY_TYPE_COLORS: Record<ActivityType, 'primary' | 'secondary' | 'warning' | 'success' | 'default' | 'info' | 'error'> = {
+  TrailRunning: 'success',
+  Running: 'primary',
+  Cycling: 'info',
+  Hiking: 'warning',
+  FunRun: 'secondary',
+  ObstacleCourse: 'error',
+  Social: 'default',
+  Other: 'default',
+};
 const ACTIVITY_TYPES: ActivityType[] = ['TrailRunning', 'Running', 'Cycling', 'Hiking', 'FunRun', 'ObstacleCourse', 'Social', 'Other'];
 const EVENT_STATUSES: EventStatus[] = ['Unconfirmed', 'Confirmed', 'Cancelled', 'Hidden', 'Unlisted'];
 const REGISTRATION_STATUSES: RegistrationStatus[] = ['NotStarted', 'Open', 'Closed'];
@@ -930,6 +940,7 @@ export default function EventList({ onNotify }: EventListProps) {
             <TableRow>
               <TableCell width={40} />
               <TableCell>Name</TableCell>
+              <TableCell>Activity</TableCell>
               <TableCell>Type</TableCell>
               <TableCell>Schedule</TableCell>
               <TableCell>Next Edition</TableCell>
@@ -951,6 +962,9 @@ export default function EventList({ onNotify }: EventListProps) {
                   <TableCell>
                     <Typography variant="body2" fontWeight={700}>{event.name}</Typography>
                     <Typography variant="caption" color="text.secondary" fontFamily="monospace">{event.slug}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Chip label={`${ACTIVITY_ICONS[event.activityType] ?? '🏅'} ${event.activityType}`} size="small" color={ACTIVITY_TYPE_COLORS[event.activityType as ActivityType] ?? 'default'} variant="outlined" />
                   </TableCell>
                   <TableCell>
                     <Chip label={event.type} size="small" color={EVENT_TYPE_COLORS[event.type as EventType] ?? 'default'} />
