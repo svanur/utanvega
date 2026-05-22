@@ -553,8 +553,8 @@ export default function EventList({ onNotify }: EventListProps) {
 
         if (sortBy === 'nextEditionDate') {
           if (!a.nextEditionDate && !b.nextEditionDate) cmp = 0;
-          else if (!a.nextEditionDate) return 1;
-          else if (!b.nextEditionDate) return -1;
+          else if (!a.nextEditionDate) cmp = 1;
+          else if (!b.nextEditionDate) cmp = -1;
           else cmp = a.nextEditionDate.localeCompare(b.nextEditionDate);
         } else if (sortBy === 'editionCount') {
           cmp = (a.editionCount ?? 0) - (b.editionCount ?? 0);
