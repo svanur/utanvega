@@ -1102,7 +1102,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                                         )}
                                         {comp.editionCount > 0 && (
                                             <Chip
-                                                label={t('races.raceCount', { count: comp.editionCount })}
+                                                label={t('races.editionCount', { count: comp.editionCount })}
                                                 size="small"
                                                 variant="outlined"
                                                 sx={{ fontSize: '0.65rem', height: 20 }}

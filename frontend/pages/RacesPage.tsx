@@ -226,7 +226,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                         />
                                                     )}
                                                     <Chip
-                                                        label={t('races.raceCount', { count: comp.editionCount })}
+                                                        label={t('races.editionCount', { count: comp.editionCount })}
                                                         size="small"
                                                         variant="outlined"
                                                         color="primary"
