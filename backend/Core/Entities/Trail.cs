@@ -10,6 +10,7 @@ public enum ActivityType
     Hiking,
     FunRun,
     ObstacleCourse,
+    CrossCountryRun,
     Social,
     Other,
 }

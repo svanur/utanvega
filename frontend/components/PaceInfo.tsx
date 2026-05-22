@@ -32,8 +32,9 @@ const rows: PaceRow[] = [
     { activity: 'running',        i18nKey: 'difficulty.running',        speed: '11 km/h', climbPenalty: '1.5 min / 100m' },
     { activity: 'hiking',         i18nKey: 'difficulty.hiking',         speed: '4 km/h',  climbPenalty: '10 min / 100m' },
     { activity: 'cycling',        i18nKey: 'difficulty.cycling',        speed: '20 km/h', climbPenalty: '3 min / 100m' },
-    { activity: 'funrun',         i18nKey: 'difficulty.funRun',         speed: '9 km/h',  climbPenalty: '1.5 min / 100m' },
-    { activity: 'obstaclecourse', i18nKey: 'difficulty.obstacleCourse', speed: '5 km/h',  climbPenalty: '4 min / 100m' },
+    { activity: 'funrun',           i18nKey: 'difficulty.funRun',           speed: '9 km/h',   climbPenalty: '1.5 min / 100m' },
+    { activity: 'obstaclecourse',   i18nKey: 'difficulty.obstacleCourse',   speed: '5 km/h',   climbPenalty: '4 min / 100m' },
+    { activity: 'crosscountryrun',  i18nKey: 'difficulty.crossCountryRun',  speed: '9.5 km/h', climbPenalty: '2 min / 100m' },
 ];
 
 interface PaceInfoProps {
