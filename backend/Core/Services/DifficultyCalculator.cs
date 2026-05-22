@@ -23,8 +23,8 @@ public static class DifficultyCalculator
             ActivityType.Running         => FromDistance(distanceKm, RoadRunningThresholds),
             ActivityType.Hiking          => FromEffort(effortKm, HikingThresholds),
             ActivityType.Cycling         => FromEffort(effortKm, CyclingThresholds),
-            ActivityType.FunRun          => FromDistance(distanceKm, funRunThresholds),
-            ActivityType.ObstacleCourse  => FromDistance(distanceKm, obstacleCourseThresholds),
+            ActivityType.FunRun          => FromDistance(distanceKm, FunRunThresholds),
+            ActivityType.ObstacleCourse  => FromDistance(distanceKm, ObstacleCourseThresholds),
             _                            => FromEffort(effortKm, TrailRunningThresholds),
         };
     }
@@ -51,18 +51,20 @@ public static class DifficultyCalculator
     private static readonly double[] CyclingThresholds = [30, 70, 140, 250];
 
     // Fun Run — casual events, lower distance thresholds than road running
-    private static readonly double[] funRunThresholds = [5, 10, 15, 30];
+    private static readonly double[] FunRunThresholds = [5, 10, 15, 30];
 
     // Obstacle Course — obstacles multiply difficulty, short distances are already hard
-    private static readonly double[] obstacleCourseThresholds = [5, 10, 18, 30];
+    private static readonly double[] ObstacleCourseThresholds = [5, 10, 18, 30];
 
     private static Difficulty FromEffort(double effortKm, double[] thresholds)
     {
         if (effortKm < thresholds[0]) return Difficulty.Easy;
         if (effortKm < thresholds[1]) return Difficulty.Moderate;
         if (effortKm < thresholds[2]) return Difficulty.Hard;
-        if (effortKm < thresholds[3]) return Difficulty.Expert;
-        return Difficulty.Extreme;
+
+        return effortKm < thresholds[3] 
+            ? Difficulty.Expert
+            : Difficulty.Extreme;
     }
 
     private static Difficulty FromDistance(double distanceKm, double[] thresholds)
