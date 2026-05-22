@@ -549,25 +549,22 @@ export default function EventList({ onNotify }: EventListProps) {
       })
       .sort((a, b) => {
         const dir = sortDir === 'asc' ? 1 : -1;
+        let cmp = 0;
 
         if (sortBy === 'nextEditionDate') {
-          if (!a.nextEditionDate && !b.nextEditionDate) return 0;
-          if (!a.nextEditionDate) return 1;
-          if (!b.nextEditionDate) return -1;
-          return dir * a.nextEditionDate.localeCompare(b.nextEditionDate);
+          if (!a.nextEditionDate && !b.nextEditionDate) cmp = 0;
+          else if (!a.nextEditionDate) return 1;
+          else if (!b.nextEditionDate) return -1;
+          else cmp = a.nextEditionDate.localeCompare(b.nextEditionDate);
+        } else if (sortBy === 'editionCount') {
+          cmp = (a.editionCount ?? 0) - (b.editionCount ?? 0);
+        } else if (sortBy === 'activityType' || sortBy === 'type' || sortBy === 'status' || sortBy === 'locationName') {
+          cmp = (a[sortBy] ?? '').toLowerCase().localeCompare((b[sortBy] ?? '').toLowerCase());
+        } else {
+          cmp = a.name.localeCompare(b.name);
         }
 
-        if (sortBy === 'editionCount') {
-          return dir * ((a.editionCount ?? 0) - (b.editionCount ?? 0));
-        }
-
-        if (sortBy === 'activityType' || sortBy === 'type' || sortBy === 'status' || sortBy === 'locationName') {
-          const aVal = (a[sortBy] ?? '').toLowerCase();
-          const bVal = (b[sortBy] ?? '').toLowerCase();
-          return dir * aVal.localeCompare(bVal);
-        }
-
-        return dir * a.name.localeCompare(b.name);
+        return cmp !== 0 ? dir * cmp : a.name.localeCompare(b.name);
       });
   }, [events, searchQuery, sortBy, sortDir, activityFilter, typeFilter, statusFilter, locationFilter]);
 
