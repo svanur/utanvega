@@ -1112,7 +1112,7 @@ export default function EventList({ onNotify }: EventListProps) {
                   </TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell colSpan={9} sx={{ py: 0, borderBottom: expandedEventId === event.id ? undefined : 'none' }}>
+                  <TableCell colSpan={10} sx={{ py: 0, borderBottom: expandedEventId === event.id ? undefined : 'none' }}>
                     <Collapse in={expandedEventId === event.id} timeout="auto" unmountOnExit>
                       <Box sx={{ px: 2, py: 2, bgcolor: 'action.hover' }}>
                         {loadingDetail ? (
@@ -1355,7 +1355,7 @@ export default function EventList({ onNotify }: EventListProps) {
 
             {filteredEvents.length === 0 && (
               <TableRow>
-                <TableCell colSpan={9} align="center">
+                <TableCell colSpan={10} align="center">
                   <Typography color="text.secondary" sx={{ py: 4 }}>
                     {searchQuery.trim() ? `No events match "${searchQuery}"` : 'No events yet. Click "New Event" to get started.'}
                   </Typography>
