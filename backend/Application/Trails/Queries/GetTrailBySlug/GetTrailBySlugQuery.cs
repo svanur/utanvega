@@ -34,28 +34,36 @@ public class GetTrailBySlugQueryHandler : IRequestHandler<GetTrailBySlugQuery, T
             .Include(t => t.TrailTags)
                 .ThenInclude(tt => tt.Tag)
             .AsNoTracking()
-            .FirstOrDefaultAsync(t => t.Slug == request.Slug && (t.Status == TrailStatus.Published || t.Status == TrailStatus.RaceOnly), cancellationToken);
+            .FirstOrDefaultAsync(t => t.Slug == request.Slug && (t.Status == TrailStatus.Published || t.Status == TrailStatus.EventOnly), cancellationToken);
 
         if (trail == null)
             return null;
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var linkedRaces = await _context.Races
-            .Include(r => r.Competition)
+            .Include(r => r.EventEdition)
+                .ThenInclude(ed => ed.Event)
             .AsNoTracking()
-            .Where(r => r.TrailId == trail.Id && r.Status == RaceStatus.Active && r.Competition.Status == CompetitionStatus.Active)
-            .Select(r => new { r.Name, r.DistanceLabel, r.Competition })
+            .Where(r => r.TrailId == trail.Id
+                && r.Status == RaceStatus.Active
+                && r.EventEdition.Event.Status == EventStatus.Confirmed)
             .ToListAsync(cancellationToken);
 
         var linkedRaceDtos = linkedRaces
             .Select(r =>
             {
-                var daysUntil = r.Competition.ScheduleRule != null
-                    ? (_scheduleEngine.GetNextOccurrence(r.Competition.ScheduleRule, today) is { } next
-                        ? next.DayNumber - today.DayNumber
-                        : (int?)null)
-                    : null;
-                return new LinkedRaceDto(r.Competition.Name, r.Competition.Slug, r.Name, r.DistanceLabel, daysUntil);
+                int? daysUntil = null;
+                if (r.EventEdition.Date.HasValue && r.EventEdition.Date.Value >= today)
+                    daysUntil = r.EventEdition.Date.Value.DayNumber - today.DayNumber;
+                else if (r.EventEdition.Event.ScheduleRule != null)
+                    daysUntil = _scheduleEngine.GetDaysUntilNext(r.EventEdition.Event.ScheduleRule);
+
+                return new LinkedRaceDto(
+                    r.EventEdition.Event.Name,
+                    r.EventEdition.Event.Slug,
+                    r.Name,
+                    r.DistanceLabel,
+                    daysUntil);
             })
             .ToList();
 

@@ -66,11 +66,15 @@ namespace Utanvega.Backend.Migrations
                     b.ToTable("ChangeLogs");
                 });
 
-            modelBuilder.Entity("Utanvega.Backend.Core.Entities.Competition", b =>
+            modelBuilder.Entity("Utanvega.Backend.Core.Entities.Event", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<string>("ActivityType")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<string>("AlertMessage")
                         .HasColumnType("text");
@@ -103,10 +107,6 @@ namespace Utanvega.Backend.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
-                    b.Property<string>("RegistrationUrl")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
                     b.Property<string>("ScheduleRule")
                         .HasColumnType("jsonb");
 
@@ -115,7 +115,14 @@ namespace Utanvega.Backend.Migrations
                         .HasMaxLength(250)
                         .HasColumnType("character varying(250)");
 
+                    b.Property<string>("SocialLinks")
+                        .HasColumnType("jsonb");
+
                     b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Type")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -132,7 +139,61 @@ namespace Utanvega.Backend.Migrations
                     b.HasIndex("Slug")
                         .IsUnique();
 
-                    b.ToTable("Competitions");
+                    b.ToTable("Events");
+                });
+
+            modelBuilder.Entity("Utanvega.Backend.Core.Entities.EventEdition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly?>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text");
+
+                    b.Property<string>("RegistrationStatus")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("RegistrationUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ResultsUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid?>("TrailId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("Year")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Date");
+
+                    b.HasIndex("EventId");
+
+                    b.HasIndex("TrailId");
+
+                    b.ToTable("EventEditions");
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.FeatureFlag", b =>
@@ -253,11 +314,19 @@ namespace Utanvega.Backend.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("CompetitionId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("CertifiedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ChampionshipCategory")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<int?>("CutoffMinutes")
                         .HasColumnType("integer");
+
+                    b.Property<DateOnly?>("DateOfRace")
+                        .HasColumnType("date");
 
                     b.Property<string>("Description")
                         .HasColumnType("text");
@@ -266,15 +335,35 @@ namespace Utanvega.Backend.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<Guid>("EventEditionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ItraPoints")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("MaxParticipants")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<decimal>("PrizeMoney")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
                     b.Property<int>("SortOrder")
                         .HasColumnType("integer");
 
+                    b.Property<TimeOnly?>("StartTime")
+                        .HasColumnType("time without time zone");
+
                     b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TicketStatus")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -283,7 +372,7 @@ namespace Utanvega.Backend.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CompetitionId");
+                    b.HasIndex("EventEditionId");
 
                     b.HasIndex("TrailId");
 
@@ -576,7 +665,7 @@ namespace Utanvega.Backend.Migrations
                     b.ToTable("UserTrailActivities", (string)null);
                 });
 
-            modelBuilder.Entity("Utanvega.Backend.Core.Entities.Competition", b =>
+            modelBuilder.Entity("Utanvega.Backend.Core.Entities.Event", b =>
                 {
                     b.HasOne("Utanvega.Backend.Core.Entities.Location", "Location")
                         .WithMany()
@@ -584,6 +673,24 @@ namespace Utanvega.Backend.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Location");
+                });
+
+            modelBuilder.Entity("Utanvega.Backend.Core.Entities.EventEdition", b =>
+                {
+                    b.HasOne("Utanvega.Backend.Core.Entities.Event", "Event")
+                        .WithMany("Editions")
+                        .HasForeignKey("EventId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Utanvega.Backend.Core.Entities.Trail", "Trail")
+                        .WithMany()
+                        .HasForeignKey("TrailId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Event");
+
+                    b.Navigation("Trail");
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.Location", b =>
@@ -598,9 +705,9 @@ namespace Utanvega.Backend.Migrations
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.Race", b =>
                 {
-                    b.HasOne("Utanvega.Backend.Core.Entities.Competition", "Competition")
+                    b.HasOne("Utanvega.Backend.Core.Entities.EventEdition", "EventEdition")
                         .WithMany("Races")
-                        .HasForeignKey("CompetitionId")
+                        .HasForeignKey("EventEditionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -609,7 +716,7 @@ namespace Utanvega.Backend.Migrations
                         .HasForeignKey("TrailId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.Navigation("Competition");
+                    b.Navigation("EventEdition");
 
                     b.Navigation("Trail");
                 });
@@ -674,7 +781,12 @@ namespace Utanvega.Backend.Migrations
                     b.Navigation("Trail");
                 });
 
-            modelBuilder.Entity("Utanvega.Backend.Core.Entities.Competition", b =>
+            modelBuilder.Entity("Utanvega.Backend.Core.Entities.Event", b =>
+                {
+                    b.Navigation("Editions");
+                });
+
+            modelBuilder.Entity("Utanvega.Backend.Core.Entities.EventEdition", b =>
                 {
                     b.Navigation("Races");
                 });

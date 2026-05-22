@@ -197,7 +197,7 @@ const statusOptions = [
   { value: 'Published', label: 'Published' },
   { value: 'Flagged', label: 'Flagged' },
   { value: 'Archived', label: 'Archived' },
-  { value: 'RaceOnly', label: 'Race Only' },
+  { value: 'EventOnly', label: 'Event Only' },
 ];
 
 const difficultyOptions = [
@@ -374,8 +374,8 @@ function TrailRow({ trail, selected, onSelect, onViewMap, onEdit, onDelete, onRe
             onSave={(v) => onPatchTrail(trail.id, 'status', v)}
             renderDisplay={(v) => (
               <Chip
-                label={v === 'RaceOnly' ? 'Race Only' : v}
-                color={v === 'Published' ? 'success' : v === 'Flagged' ? 'warning' : v === 'RaceOnly' ? 'info' : 'default'}
+                label={v === 'EventOnly' ? 'Event Only' : v}
+                color={v === 'Published' ? 'success' : v === 'Flagged' ? 'warning' : v === 'EventOnly' ? 'info' : 'default'}
                 size="small"
               />
             )}

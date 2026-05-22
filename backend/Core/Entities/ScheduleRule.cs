@@ -3,7 +3,7 @@ namespace Utanvega.Backend.Core.Entities;
 using System.Text.Json.Serialization;
 
 /// <summary>
-/// Recurring schedule pattern stored as JSON on Competition.
+/// Recurring schedule pattern stored as JSON on Event.
 /// Supports yearly events ("2nd Saturday of July"), seasonal series
 /// ("every Thursday Oct–Mar"), and fixed one-off dates.
 /// </summary>

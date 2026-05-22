@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Box, Typography, Alert, CircularProgress, MenuItem, Paper, Chip, Tabs, Tab, Autocomplete, Checkbox } from '@mui/material';
 import { Add as AddIcon, History as HistoryIcon, Map as MapIcon, LocalOffer as TagIcon, CheckBoxOutlineBlank, CheckBox as CheckBoxIcon, UploadFile as UploadFileIcon, EmojiEvents as RaceIcon } from '@mui/icons-material';
 import { MapContainer, TileLayer, Polyline, CircleMarker, useMap } from 'react-leaflet';
@@ -7,7 +7,7 @@ import 'leaflet/dist/leaflet.css';
 import { apiFetch } from '../hooks/api';
 import { useLocations } from '../hooks/useLocations';
 import { useTags } from '../hooks/useTags';
-import type { RaceAdminDto, CompetitionDto } from '../hooks/useCompetitions';
+import type { EventDetailDto, EventEditionDto, EventSummaryDto, RaceDto } from '../hooks/useEvents';
 import ChangeLogList from './ChangeLogList';
 import { generateSlug } from '../utils/slugify';
 
@@ -41,7 +41,30 @@ type TrailDetail = {
     tags: TrailTagInfo[];
 };
 
+type LinkableEdition = {
+    id: string;
+    eventId: string;
+    eventName: string;
+    label: string;
+    date: string | null;
+};
+
+type LinkedTrailRace = RaceDto & {
+    eventId: string;
+    eventName: string;
+    eventSlug: string;
+    editionId: string;
+    editionLabel: string;
+};
+
 const roles = ['Start', 'End', 'BelongsTo', 'PassingThrough'];
+
+function buildEditionLabel(edition: Pick<EventEditionDto, 'title' | 'year' | 'date'>): string {
+    if (edition.title?.trim()) return edition.title;
+    if (edition.date) return edition.date;
+    if (edition.year != null) return `Edition ${edition.year}`;
+    return 'Untitled edition';
+}
 
 const activityTypes = [
     { value: 'TrailRunning', label: 'Trail Running' },
@@ -56,7 +79,7 @@ const trailStatuses = [
     { value: 'Flagged', label: 'Flagged' },
     { value: 'Archived', label: 'Archived' },
     { value: 'Deleted', label: 'Deleted' },
-    { value: 'RaceOnly', label: 'Race Only' },
+    { value: 'EventOnly', label: 'Event Only' },
 ];
 
 const difficulties = [
@@ -90,10 +113,12 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
     const [newLocId, setNewLocId] = useState('');
     const [newLocRole, setNewLocRole] = useState<'Start' | 'End' | 'BelongsTo' | 'PassingThrough'>('BelongsTo');
     const [activeTab, setActiveTab] = useState(0);
-    const [allRaces, setAllRaces] = useState<RaceAdminDto[]>([]);
+    const [allRaces, setAllRaces] = useState<LinkedTrailRace[]>([]);
     const [racesLoading, setRacesLoading] = useState(false);
-    const [allCompetitions, setAllCompetitions] = useState<CompetitionDto[]>([]);
-    const [selectedCompToLink, setSelectedCompToLink] = useState<CompetitionDto | null>(null);
+    const [allEvents, setAllEvents] = useState<EventSummaryDto[]>([]);
+    const [allEditions, setAllEditions] = useState<LinkableEdition[]>([]);
+    const [selectedEventToLink, setSelectedEventToLink] = useState<EventSummaryDto | null>(null);
+    const [selectedEditionToLink, setSelectedEditionToLink] = useState<LinkableEdition | null>(null);
 
     useEffect(() => {
         if (open && trailId) {
@@ -101,14 +126,38 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
                 try {
                     setLoading(true);
                     setRacesLoading(true);
-                    const [data, races, competitions] = await Promise.all([
+                    setError(null);
+
+                    const [data, events] = await Promise.all([
                         apiFetch<TrailDetail>(`/api/v1/admin/trails/${trailId}`),
-                        apiFetch<RaceAdminDto[]>('/api/v1/admin/races'),
-                        apiFetch<CompetitionDto[]>('/api/v1/admin/competitions'),
+                        apiFetch<EventSummaryDto[]>('/api/v1/admin/events'),
                     ]);
+
+                    const eventDetails = (await Promise.all(events.map(async (event) => {
+                        try {
+                            return await apiFetch<EventDetailDto>(`/api/v1/events/${event.slug}`);
+                        } catch {
+                            return null;
+                        }
+                    }))).filter((event): event is EventDetailDto => event !== null);
+
                     setTrail(data);
-                    setAllRaces(races);
-                    setAllCompetitions(competitions);
+                    setAllEvents(events);
+                    setAllEditions(eventDetails.flatMap(detail => detail.editions.map(edition => ({
+                        id: edition.id,
+                        eventId: detail.id,
+                        eventName: detail.name,
+                        label: buildEditionLabel(edition),
+                        date: edition.date,
+                    }))));
+                    setAllRaces(eventDetails.flatMap(detail => detail.editions.flatMap(edition => edition.races.map(race => ({
+                        ...race,
+                        eventId: detail.id,
+                        eventName: detail.name,
+                        eventSlug: detail.slug,
+                        editionId: edition.id,
+                        editionLabel: buildEditionLabel(edition),
+                    })))));
                 } catch (_err) {
                     setError('Failed to load trail details.');
                 } finally {
@@ -180,43 +229,78 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
         setTrail({ ...trail, locations: updatedLocations });
     };
 
-    const handleLinkCompetition = async () => {
-        if (!trail || !selectedCompToLink) return;
+    const handleLinkEventRace = async () => {
+        if (!trail || !selectedEventToLink || !selectedEditionToLink) return;
+
+        if (allRaces.some(r => r.editionId === selectedEditionToLink.id && r.trailId === trail.id)) {
+            setError('This trail is already linked to the selected edition.');
+            return;
+        }
+
         try {
-            const distanceKm = Math.round(trail.length / 1000);
-            const raceName = `${selectedCompToLink.name} - ${distanceKm}km`;
-            const existingSortOrder = allRaces.filter(r => r.competitionId === selectedCompToLink.id).length + 1;
-            const result = await apiFetch<{ id: string }>(`/api/v1/admin/competitions/${selectedCompToLink.id}/races`, {
+            const distanceKm = (trail.length / 1000).toFixed(1);
+            const raceName = `${selectedEventToLink.name} ${distanceKm} km`;
+            const existingSortOrder = allRaces.filter(r => r.editionId === selectedEditionToLink.id).length;
+            const result = await apiFetch<{ id: string }>(`/api/v1/admin/editions/${selectedEditionToLink.id}/races`, {
                 method: 'POST',
                 body: JSON.stringify({
-                    competitionId: selectedCompToLink.id,
+                    eventEditionId: selectedEditionToLink.id,
                     trailId: trail.id,
                     name: raceName,
+                    distanceLabel: `${distanceKm} km`,
+                    cutoffMinutes: null,
+                    description: undefined,
                     status: 'Active',
                     sortOrder: existingSortOrder,
+                    ticketStatus: 'Available',
+                    maxParticipants: null,
+                    itraPoints: 0,
+                    certifiedBy: undefined,
+                    prizeMoney: 0,
+                    championshipCategory: undefined,
+                    dateOfRace: selectedEditionToLink.date,
+                    startTime: null,
                 }),
             });
-            const newRace: RaceAdminDto = {
+
+            const newRace: LinkedTrailRace = {
                 id: result.id,
-                name: raceName,
+                eventEditionId: selectedEditionToLink.id,
                 trailId: trail.id,
-                competitionId: selectedCompToLink.id,
-                competitionName: selectedCompToLink.name,
-                competitionSlug: selectedCompToLink.slug,
-                distanceLabel: null,
+                trailName: trail.name,
+                trailSlug: trail.slug,
+                name: raceName,
+                distanceLabel: `${distanceKm} km`,
                 cutoffMinutes: null,
                 description: null,
                 status: 'Active',
                 sortOrder: existingSortOrder,
+                ticketStatus: 'Available',
+                maxParticipants: null,
+                itraPoints: 0,
+                certifiedBy: null,
+                prizeMoney: 0,
+                championshipCategory: null,
+                dateOfRace: selectedEditionToLink.date,
+                startTime: null,
+                trailDistanceMeters: trail.length,
+                trailElevationGain: trail.elevationGain,
+                eventId: selectedEventToLink.id,
+                eventName: selectedEventToLink.name,
+                eventSlug: selectedEventToLink.slug,
+                editionId: selectedEditionToLink.id,
+                editionLabel: selectedEditionToLink.label,
             };
+
             setAllRaces(prev => [...prev, newRace]);
-            setSelectedCompToLink(null);
-        } catch (_err) {
-            setError('Failed to link competition.');
+            setSelectedEventToLink(null);
+            setSelectedEditionToLink(null);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to link event race.');
         }
     };
 
-    const handleUnlinkRace = async (race: RaceAdminDto) => {
+    const handleUnlinkRace = async (race: LinkedTrailRace) => {
         try {
             await apiFetch(`/api/v1/admin/races/${race.id}`, { method: 'DELETE' });
             setAllRaces(prev => prev.filter(r => r.id !== race.id));
@@ -380,7 +464,7 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
 
                             <Typography variant="subtitle1" sx={{ mt: 2 }}>
                                 <RaceIcon sx={{ fontSize: 18, mr: 0.5, verticalAlign: 'text-bottom' }} />
-                                Add trail to competition
+                                Add trail to event race
                             </Typography>
                             <Paper variant="outlined" sx={{ p: 2 }}>
                                 {racesLoading ? <CircularProgress size={20} /> : (
@@ -389,32 +473,44 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
                                             {allRaces.filter(r => r.trailId === trail.id).map(race => (
                                                 <Chip
                                                     key={race.id}
-                                                    label={`${race.competitionName} — ${race.name}${race.distanceLabel ? ` (${race.distanceLabel})` : ''}`}
+                                                    label={`${race.eventName} / ${race.editionLabel} — ${race.name}${race.distanceLabel ? ` (${race.distanceLabel})` : ''}`}
                                                     onDelete={() => handleUnlinkRace(race)}
                                                     color="secondary"
                                                     variant="outlined"
                                                 />
                                             ))}
                                             {allRaces.filter(r => r.trailId === trail.id).length === 0 && (
-                                                <Typography variant="body2" color="text.secondary">No races linked.</Typography>
+                                                <Typography variant="body2" color="text.secondary">No event races linked.</Typography>
                                             )}
                                         </Box>
-                                        <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+                                        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 2, alignItems: 'flex-start' }}>
                                             <Autocomplete
                                                 size="small"
-                                                sx={{ flexGrow: 1 }}
-                                                options={allCompetitions}
+                                                options={allEvents}
                                                 getOptionLabel={(opt) => opt.name}
-                                                value={selectedCompToLink}
-                                                onChange={(_e, val) => setSelectedCompToLink(val)}
-                                                renderInput={(params) => <TextField {...params} label="Link Competition" placeholder="Search competitions..." />}
+                                                value={selectedEventToLink}
+                                                onChange={(_e, val) => {
+                                                    setSelectedEventToLink(val);
+                                                    setSelectedEditionToLink(null);
+                                                }}
+                                                renderInput={(params) => <TextField {...params} label="Event" placeholder="Search events..." />}
                                                 isOptionEqualToValue={(opt, val) => opt.id === val.id}
+                                            />
+                                            <Autocomplete
+                                                size="small"
+                                                options={allEditions.filter(edition => edition.eventId === selectedEventToLink?.id)}
+                                                getOptionLabel={(opt) => `${opt.label}${opt.date ? ` (${opt.date})` : ''}`}
+                                                value={selectedEditionToLink}
+                                                onChange={(_e, val) => setSelectedEditionToLink(val)}
+                                                renderInput={(params) => <TextField {...params} label="Edition" placeholder="Choose edition..." />}
+                                                isOptionEqualToValue={(opt, val) => opt.id === val.id}
+                                                disabled={!selectedEventToLink}
                                             />
                                             <Button
                                                 variant="outlined"
                                                 startIcon={<AddIcon />}
-                                                onClick={handleLinkCompetition}
-                                                disabled={!selectedCompToLink}
+                                                onClick={handleLinkEventRace}
+                                                disabled={!selectedEditionToLink}
                                                 sx={{ mt: 0.5 }}
                                             >
                                                 Link
@@ -461,7 +557,7 @@ function TrailMapTab({ trailId, onGpxReplaced }: { trailId: string | null; onGpx
     const [uploadResult, setUploadResult] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const fetchGeometry = async () => {
+    const fetchGeometry = useCallback(async () => {
         if (!trailId) return;
         try {
             setLoading(true);
@@ -474,9 +570,9 @@ function TrailMapTab({ trailId, onGpxReplaced }: { trailId: string | null; onGpx
         } finally {
             setLoading(false);
         }
-    };
+    }, [trailId]);
 
-    useEffect(() => { fetchGeometry(); }, [trailId]);
+    useEffect(() => { void fetchGeometry(); }, [fetchGeometry]);
 
     const handleGpxReplace = async (file: File) => {
         if (!trailId) return;
