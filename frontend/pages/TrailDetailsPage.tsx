@@ -5,6 +5,7 @@ import {
     Box, 
     Typography, 
     Button, 
+    ButtonBase,
     Paper, 
     Grid, 
     Chip,
@@ -767,12 +768,11 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
             {/* YouTube 360° video */}
             {trail.youtubeUrl && toYoutubeEmbedUrl(trail.youtubeUrl) && (
                 <Paper elevation={1} sx={{ p: { xs: 2, sm: 3 }, mb: 3, borderRadius: 2 }}>
-                    <Stack
-                        direction="row"
-                        alignItems="center"
-                        justifyContent="space-between"
+                    <ButtonBase
                         onClick={() => setVideoExpanded(prev => !prev)}
-                        sx={{ cursor: 'pointer', userSelect: 'none' }}
+                        aria-expanded={videoExpanded}
+                        aria-label={t('trail.video360')}
+                        sx={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center', textAlign: 'left', borderRadius: 1 }}
                     >
                         <Stack direction="row" alignItems="center" spacing={1}>
                             <VideocamIcon color="primary" />
@@ -780,10 +780,10 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                 {t('trail.video360')}
                             </Typography>
                         </Stack>
-                        <IconButton size="small">
+                        <IconButton size="small" tabIndex={-1} aria-hidden="true">
                             {videoExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                         </IconButton>
-                    </Stack>
+                    </ButtonBase>
                     <Collapse in={videoExpanded} unmountOnExit>
                         <Box sx={{ position: 'relative', width: '100%', paddingBottom: '56.25%', height: 0, borderRadius: 1, overflow: 'hidden', mt: 2 }}>
                             <iframe
