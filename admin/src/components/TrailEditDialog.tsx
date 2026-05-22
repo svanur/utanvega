@@ -128,21 +128,34 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
                     setRacesLoading(true);
                     setError(null);
 
-                    const [data, events] = await Promise.all([
+                    const [data, eventDetails] = await Promise.all([
                         apiFetch<TrailDetail>(`/api/v1/admin/trails/${trailId}`),
-                        apiFetch<EventSummaryDto[]>('/api/v1/admin/events'),
+                        apiFetch<EventDetailDto[]>('/api/v1/admin/events/details'),
                     ]);
 
-                    const eventDetails = (await Promise.all(events.map(async (event) => {
-                        try {
-                            return await apiFetch<EventDetailDto>(`/api/v1/events/${event.slug}`);
-                        } catch {
-                            return null;
-                        }
-                    }))).filter((event): event is EventDetailDto => event !== null);
-
                     setTrail(data);
-                    setAllEvents(events);
+                    setAllEvents(eventDetails.map(d => ({
+                        id: d.id,
+                        name: d.name,
+                        slug: d.slug,
+                        description: d.description,
+                        type: d.type,
+                        activityType: d.activityType,
+                        status: d.status,
+                        organizerName: d.organizerName,
+                        organizerWebsite: d.organizerWebsite,
+                        alertMessage: d.alertMessage,
+                        alertSeverity: d.alertSeverity,
+                        locationId: d.locationId,
+                        locationName: d.locationName,
+                        scheduleRule: d.scheduleRule,
+                        socialLinks: d.socialLinks,
+                        nextEditionDate: d.nextEditionDate,
+                        daysUntil: d.daysUntil,
+                        editionCount: d.editions.length,
+                        createdAt: d.createdAt,
+                        updatedAt: d.updatedAt,
+                    } as EventSummaryDto)));
                     setAllEditions(eventDetails.flatMap(detail => detail.editions.map(edition => ({
                         id: edition.id,
                         eventId: detail.id,

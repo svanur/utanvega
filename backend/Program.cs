@@ -38,6 +38,7 @@ using Utanvega.Backend.Core.Services;
 using Utanvega.Backend.Application.Events.Queries.GetEvents;
 using Utanvega.Backend.Application.Events.Queries.GetEvent;
 using Utanvega.Backend.Application.Events.Queries.GetEventCalendar;
+using Utanvega.Backend.Application.Events.Queries.GetAllEventDetails;
 using Utanvega.Backend.Application.Events.Commands.CreateEvent;
 using Utanvega.Backend.Application.Events.Commands.UpdateEvent;
 using Utanvega.Backend.Application.Events.Commands.DeleteEvent;
@@ -1274,6 +1275,14 @@ app.MapGet("/api/v1/admin/events", [Authorize] async (IMediator mediator) =>
     return Results.Ok(events);
 })
 .WithName("GetAdminEvents")
+.RequireAuthorization();
+
+app.MapGet("/api/v1/admin/events/details", [Authorize] async (IMediator mediator) =>
+{
+    var events = await mediator.Send(new GetAllEventDetailsQuery());
+    return Results.Ok(events);
+})
+.WithName("GetAdminEventDetails")
 .RequireAuthorization();
 
 app.MapPost("/api/v1/admin/events", [Authorize] async (CreateEventCommand command, IMediator mediator) =>
