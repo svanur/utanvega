@@ -34,7 +34,8 @@ public class CreateRaceCommandValidator : AbstractValidator<CreateRaceCommand>
         RuleFor(x => x.SortOrder).GreaterThanOrEqualTo(0);
 
         RuleFor(x => x.ItraPoints)
-            .InclusiveBetween(0, 6);
+            .InclusiveBetween(0, 6)
+            .When(x => x.ItraPoints.HasValue);
 
         RuleFor(x => x.PrizeMoney)
             .GreaterThanOrEqualTo(0);

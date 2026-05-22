@@ -41,7 +41,7 @@ export interface RaceDto {
     sortOrder: number;
     ticketStatus: TicketStatus;
     maxParticipants: number | null;
-    itraPoints: number;
+    itraPoints: number | null;
     certifiedBy: string | null;
     prizeMoney: number;
     championshipCategory: string | null;
@@ -164,7 +164,7 @@ export interface CreateRaceInput {
     sortOrder: number;
     ticketStatus: TicketStatus;
     maxParticipants?: number | null;
-    itraPoints: number;
+    itraPoints?: number | null;
     certifiedBy?: string;
     prizeMoney: number;
     championshipCategory?: string;
@@ -183,7 +183,7 @@ export interface UpdateRaceInput {
     sortOrder: number;
     ticketStatus: TicketStatus;
     maxParticipants?: number | null;
-    itraPoints: number;
+    itraPoints?: number | null;
     certifiedBy?: string;
     prizeMoney: number;
     championshipCategory?: string;

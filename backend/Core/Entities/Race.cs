@@ -34,7 +34,7 @@ public class Race
     public TicketStatus TicketStatus { get; set; } = TicketStatus.Available;
     public int? MaxParticipants { get; set; }
 
-    public int ItraPoints { get; set; } = 0;
+    public int? ItraPoints { get; set; }
     public string? CertifiedBy { get; set; }
     public decimal PrizeMoney { get; set; } = 0;
     public string? ChampionshipCategory { get; set; }

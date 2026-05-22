@@ -341,7 +341,7 @@ function createEmptyRaceForm(eventEditionId = '', sortOrder = 0): RaceFormState 
     sortOrder: String(sortOrder),
     ticketStatus: 'Available',
     maxParticipants: '',
-    itraPoints: '0',
+    itraPoints: '',
     certifiedBy: '',
     prizeMoney: '0',
     championshipCategory: '',
@@ -422,7 +422,7 @@ function buildRaceForm(race: RaceDto): RaceFormState {
     sortOrder: race.sortOrder.toString(),
     ticketStatus: race.ticketStatus,
     maxParticipants: race.maxParticipants?.toString() ?? '',
-    itraPoints: race.itraPoints.toString(),
+    itraPoints: race.itraPoints?.toString() ?? '',
     certifiedBy: race.certifiedBy ?? '',
     prizeMoney: race.prizeMoney.toString(),
     championshipCategory: race.championshipCategory ?? '',
@@ -817,7 +817,7 @@ export default function EventList({ onNotify }: EventListProps) {
             status: 'Active',
             sortOrder: 0,
             ticketStatus: 'Available',
-            itraPoints: 0,
+            itraPoints: null,
             prizeMoney: 0,
           });
           onNotify(`Edition "${editionLabel}" created with default race`);
@@ -889,7 +889,7 @@ export default function EventList({ onNotify }: EventListProps) {
                 status: 'Active',
                 sortOrder: 0,
                 ticketStatus: 'Available',
-                itraPoints: 0,
+                itraPoints: null,
                 prizeMoney: 0,
               }),
             ));
@@ -935,7 +935,7 @@ export default function EventList({ onNotify }: EventListProps) {
         sortOrder: raceForm.sortOrder.trim() ? Number(raceForm.sortOrder) : 0,
         ticketStatus: raceForm.ticketStatus,
         maxParticipants: raceForm.maxParticipants.trim() ? Number(raceForm.maxParticipants) : null,
-        itraPoints: raceForm.itraPoints.trim() ? Number(raceForm.itraPoints) : 0,
+        itraPoints: raceForm.itraPoints.trim() !== '' ? Number(raceForm.itraPoints) : null,
         certifiedBy: trimToUndefined(raceForm.certifiedBy),
         prizeMoney: raceForm.prizeMoney.trim() ? Number(raceForm.prizeMoney) : 0,
         championshipCategory: trimToUndefined(raceForm.championshipCategory),
@@ -1473,8 +1473,11 @@ export default function EventList({ onNotify }: EventListProps) {
                                                         {race.maxParticipants != null && (
                                                           <Typography variant="caption" color="text.secondary">Max {race.maxParticipants} participants</Typography>
                                                         )}
-                                                        {race.itraPoints > 0 && (
-                                                          <Typography variant="caption" color="text.secondary">{race.itraPoints} ITRA pts</Typography>
+                                                        {race.itraPoints != null && (
+                                                          <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                                                            <img src={`/images/itra-${race.itraPoints}.png`} alt={`ITRA ${race.itraPoints}`} style={{ height: 20 }} />
+                                                            <Typography variant="caption" color="text.secondary">{race.itraPoints} ITRA pts</Typography>
+                                                          </Box>
                                                         )}
                                                         {race.certifiedBy && (
                                                           <Typography variant="caption" color="text.secondary">Certified by {race.certifiedBy}</Typography>
@@ -1943,6 +1946,9 @@ export default function EventList({ onNotify }: EventListProps) {
                 type="number"
                 value={raceForm.itraPoints}
                 onChange={(event) => setRaceField('itraPoints', event.target.value)}
+                inputProps={{ min: 0, max: 6 }}
+                placeholder="Empty = not ITRA"
+                helperText="0-6 if ITRA certified, empty if not"
               />
               <TextField
                 label="Prize Money"
