@@ -19,11 +19,13 @@ public static class DifficultyCalculator
 
         return activityType switch
         {
-            ActivityType.TrailRunning => FromEffort(effortKm, trailRunningThresholds),
-            ActivityType.Running      => FromDistance(distanceKm, roadRunningThresholds),
-            ActivityType.Hiking       => FromEffort(effortKm, hikingThresholds),
-            ActivityType.Cycling      => FromEffort(effortKm, cyclingThresholds),
-            _                         => FromEffort(effortKm, trailRunningThresholds),
+            ActivityType.TrailRunning    => FromEffort(effortKm, TrailRunningThresholds),
+            ActivityType.Running         => FromDistance(distanceKm, RoadRunningThresholds),
+            ActivityType.Hiking          => FromEffort(effortKm, HikingThresholds),
+            ActivityType.Cycling         => FromEffort(effortKm, CyclingThresholds),
+            ActivityType.FunRun          => FromDistance(distanceKm, FunRunThresholds),
+            ActivityType.ObstacleCourse  => FromDistance(distanceKm, ObstacleCourseThresholds),
+            _                            => FromEffort(effortKm, TrailRunningThresholds),
         };
     }
 
@@ -37,24 +39,32 @@ public static class DifficultyCalculator
     // Anything above Expert ceiling = Extreme
 
     // Trail Running — elevation matters a lot, ultra distances for Expert/Extreme
-    private static readonly double[] trailRunningThresholds = [12, 25, 50, 90];
+    private static readonly double[] TrailRunningThresholds = [12, 25, 50, 90];
 
     // Road Running — primarily distance-based (half, full, ultra, 100k+)
-    private static readonly double[] roadRunningThresholds = [10, 21, 42, 100];
+    private static readonly double[] RoadRunningThresholds = [10, 21, 42, 100];
 
     // Hiking — slower pace, effort thresholds are lower
-    private static readonly double[] hikingThresholds = [8, 16, 30, 55];
+    private static readonly double[] HikingThresholds = [8, 16, 30, 55];
 
     // Cycling — much longer distances are normal, elevation still contributes
-    private static readonly double[] cyclingThresholds = [30, 70, 140, 250];
+    private static readonly double[] CyclingThresholds = [30, 70, 140, 250];
+
+    // Fun Run — casual events, lower distance thresholds than road running
+    private static readonly double[] FunRunThresholds = [5, 10, 15, 30];
+
+    // Obstacle Course — obstacles multiply difficulty, short distances are already hard
+    private static readonly double[] ObstacleCourseThresholds = [5, 10, 18, 30];
 
     private static Difficulty FromEffort(double effortKm, double[] thresholds)
     {
         if (effortKm < thresholds[0]) return Difficulty.Easy;
         if (effortKm < thresholds[1]) return Difficulty.Moderate;
         if (effortKm < thresholds[2]) return Difficulty.Hard;
-        if (effortKm < thresholds[3]) return Difficulty.Expert;
-        return Difficulty.Extreme;
+
+        return effortKm < thresholds[3] 
+            ? Difficulty.Expert
+            : Difficulty.Extreme;
     }
 
     private static Difficulty FromDistance(double distanceKm, double[] thresholds)

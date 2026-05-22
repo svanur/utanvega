@@ -8,6 +8,8 @@ public enum ActivityType
     Running,
     Cycling,
     Hiking,
+    FunRun,
+    ObstacleCourse,
     Social,
     Other,
 }

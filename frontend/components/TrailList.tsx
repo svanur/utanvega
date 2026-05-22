@@ -46,6 +46,8 @@ import {
     DirectionsRun as DirectionsRunIcon,
     Hiking as HikingIcon,
     DirectionsBike as DirectionsBikeIcon,
+    Celebration as CelebrationIcon,
+    FitnessCenter as FitnessCenterIcon,
     ChevronLeft as ChevronLeftIcon,
     ChevronRight as ChevronRightIcon,
     Casino as CasinoIcon,
@@ -582,6 +584,8 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                         Running: <DirectionsRunIcon fontSize="small" />,
                         Hiking: <HikingIcon fontSize="small" />,
                         Cycling: <DirectionsBikeIcon fontSize="small" />,
+                        FunRun: <CelebrationIcon fontSize="small" />,
+                        ObstacleCourse: <FitnessCenterIcon fontSize="small" />,
                     }[type];
                     const label = t(`difficulty.${type.charAt(0).toLowerCase() + type.slice(1)}`);
                     return (

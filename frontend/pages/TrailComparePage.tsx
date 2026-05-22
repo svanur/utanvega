@@ -1094,9 +1094,9 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
                                     <StatRow
                                         label={t('compare.estTime')}
                                         icon={<TimerIcon />}
-                                        valA={trailA ? <Typography variant="body2">{estimateDuration(trailA.length, trailA.elevationGain, trailA.activityType)}</Typography> : null}
+                                        valA={trailA ? <Typography variant="body2">{estimateDuration(trailA.length, trailA.elevationGain, trailA.activityType) ?? '—'}</Typography> : null}
                                         diff={<Typography variant="body2" color="text.disabled">—</Typography>}
-                                        valB={trailB ? <Typography variant="body2">{estimateDuration(trailB.length, trailB.elevationGain, trailB.activityType)}</Typography> : null}
+                                        valB={trailB ? <Typography variant="body2">{estimateDuration(trailB.length, trailB.elevationGain, trailB.activityType) ?? '—'}</Typography> : null}
                                         loading={bothLoading}
                                     />
                                     <StatRow

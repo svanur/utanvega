@@ -67,7 +67,7 @@ export interface FilterState {
     sortBy: SortOption;
 }
 
-export const ALL_ACTIVITY_TYPES = ['TrailRunning', 'Running', 'Hiking', 'Cycling'];
+export const ALL_ACTIVITY_TYPES = ['TrailRunning', 'Running', 'Hiking', 'Cycling', 'FunRun', 'ObstacleCourse'];
 
 export const DEFAULT_FILTERS: FilterState = {
     minLength: 0,
@@ -227,8 +227,10 @@ export function useTrails(disableGeolocation = false) {
             // Estimated Duration
             if (filters.minDuration > 0 || filters.maxDuration < 480) {
                 const durationMin = estimateDurationMinutes(trail.length, trail.elevationGain, trail.activityType);
-                if (durationMin < filters.minDuration) return false;
-                if (filters.maxDuration < 480 && durationMin > filters.maxDuration) return false;
+                if (durationMin !== null) {
+                    if (durationMin < filters.minDuration) return false;
+                    if (filters.maxDuration < 480 && durationMin > filters.maxDuration) return false;
+                }
             }
 
             // Trail Type
