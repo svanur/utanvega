@@ -857,15 +857,17 @@ export default function EventList({ onNotify }: EventListProps) {
 
     setSaving(true);
     try {
+      const isRaceOrSeries = generateForm.eventType === 'Race' || generateForm.eventType === 'Series';
+
       const result = await generateEditionsForSeason({
         eventId: generateForm.eventId,
         from,
         to,
-        trailId: generateForm.trailId || null,
+        // For Race/Series events, trail belongs on the Race, not the Edition
+        trailId: isRaceOrSeries ? null : (generateForm.trailId || null),
         registrationUrl: generateForm.registrationUrl.trim() || null,
       });
       const hasDefaults = generateForm.trailId || generateForm.registrationUrl.trim();
-      const isRaceOrSeries = generateForm.eventType === 'Race' || generateForm.eventType === 'Series';
 
       // Auto-create default races for editions without races (Race/Series events only)
       let racesCreated = 0;
