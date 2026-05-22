@@ -80,16 +80,26 @@ import TrailLeaderboardCard from '../components/TrailLeaderboardCard';
 import { useTrailCheckIns } from '../hooks/useTrailCheckIns';
 import { getAvatarFallbackText, getAvatarImageSrc } from '../utils/avatarPresets';
 
-function toYoutubeEmbedUrl(url: string): string {
+const ALLOWED_YT_HOSTS = ['www.youtube.com', 'youtube.com', 'youtu.be', 'www.youtube-nocookie.com'];
+
+function toYoutubeEmbedUrl(url: string): string | null {
     try {
         const parsed = new URL(url);
+        if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return null;
+        if (!ALLOWED_YT_HOSTS.includes(parsed.hostname)) return null;
+
         if (parsed.hostname === 'youtu.be') {
-            return `https://www.youtube.com/embed${parsed.pathname}`;
+            const id = parsed.pathname.slice(1);
+            return id ? `https://www.youtube.com/embed/${id}` : null;
+        }
+        if (parsed.pathname.startsWith('/embed/')) {
+            return `https://www.youtube.com${parsed.pathname}`;
         }
         const videoId = parsed.searchParams.get('v');
-        if (videoId) return `https://www.youtube.com/embed/${videoId}`;
-    } catch { /* fallback */ }
-    return url;
+        return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
+    } catch {
+        return null;
+    }
 }
 
 const getActivityIcon = (type: string) => {
@@ -755,7 +765,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
             </Paper>
 
             {/* YouTube 360° video */}
-            {trail.youtubeUrl && (
+            {trail.youtubeUrl && toYoutubeEmbedUrl(trail.youtubeUrl) && (
                 <Paper elevation={1} sx={{ p: { xs: 2, sm: 3 }, mb: 3, borderRadius: 2 }}>
                     <Stack
                         direction="row"
@@ -778,7 +788,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                         <Box sx={{ position: 'relative', width: '100%', paddingBottom: '56.25%', height: 0, borderRadius: 1, overflow: 'hidden', mt: 2 }}>
                             <iframe
                                 style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
-                                src={toYoutubeEmbedUrl(trail.youtubeUrl)}
+                                src={toYoutubeEmbedUrl(trail.youtubeUrl)!}
                                 title={t('trail.video360')}
                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope"
                                 allowFullScreen
