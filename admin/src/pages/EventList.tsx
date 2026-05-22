@@ -998,7 +998,7 @@ export default function EventList({ onNotify }: EventListProps) {
         </FormControl>
         {hasActiveFilters && (
           <Tooltip title="Clear all filters">
-            <IconButton size="small" onClick={resetFilters}>
+            <IconButton size="small" aria-label="Clear all filters" onClick={resetFilters}>
               <ClearIcon fontSize="small" />
             </IconButton>
           </Tooltip>
