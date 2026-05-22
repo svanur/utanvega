@@ -29,7 +29,7 @@ import { useTranslation } from 'react-i18next';
 import { Trail } from '../hooks/useTrails';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { useLoginEnabled } from '../hooks/useLoginEnabled';
-import { estimateDuration, supportsTimeEstimate } from '../utils/estimateDuration';
+import { estimateDuration } from '../utils/estimateDuration';
 import { useFavorites } from '../hooks/useFavorites';
 import { useHiddenTrails } from '../hooks/useHiddenTrails';
 import { useTickedTrails } from '../hooks/useTickedTrails';
@@ -93,7 +93,7 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
     const isFavorited = isFavoritedProp ?? isFavorite(trail.slug);
 
     const distanceKm = (trail.length / 1000).toFixed(1);
-    const estTime = supportsTimeEstimate(trail.activityType) ? estimateDuration(trail.length, trail.elevationGain, trail.activityType) : null;
+    const estTime = estimateDuration(trail.length, trail.elevationGain, trail.activityType);
     const userDist = trail.distanceToUser !== undefined && trail.distanceToUser !== Infinity
         ? `${trail.distanceToUser.toFixed(1)} ${t('trailCard.kmAway')}`
         : null;

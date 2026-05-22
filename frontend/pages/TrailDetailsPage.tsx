@@ -55,7 +55,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import Layout from '../components/Layout';
 import { useTrailBySlug, useTrails, useTrailSuggestions, useTrailWeather, useTrailLeaderboard, recordTrailView, API_URL } from '../hooks/useTrails';
-import { estimateDuration, supportsTimeEstimate } from '../utils/estimateDuration';
+import { estimateDuration } from '../utils/estimateDuration';
 import PaceInfo from '../components/PaceInfo';
 import LostRunner from '../components/LostRunner';
 import { useFavorites } from '../hooks/useFavorites';
@@ -456,7 +456,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     }
 
     const distanceKm = (trail.length / 1000).toFixed(2);
-    const estTime = supportsTimeEstimate(trail.activityType) ? estimateDuration(trail.length, trail.elevationGain, trail.activityType) : null;
+    const estTime = estimateDuration(trail.length, trail.elevationGain, trail.activityType);
 
     return (
         <Layout mode={mode} onToggleMode={onToggleMode}>

@@ -227,6 +227,7 @@ export function useTrails(disableGeolocation = false) {
             // Estimated Duration
             if (filters.minDuration > 0 || filters.maxDuration < 480) {
                 const durationMin = estimateDurationMinutes(trail.length, trail.elevationGain, trail.activityType);
+                if (durationMin === null) return true; // No estimate — don't exclude
                 if (durationMin < filters.minDuration) return false;
                 if (filters.maxDuration < 480 && durationMin > filters.maxDuration) return false;
             }

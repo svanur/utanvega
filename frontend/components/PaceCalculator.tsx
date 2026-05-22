@@ -207,12 +207,14 @@ export default function PaceCalculator() {
 
         // Estimate time from distance + elevation + activity type
         const estMinutes = estimateDurationMinutes(trail.distance * 1000, trail.elevationGain, trail.activityType);
-        const estTime = formatTime(estMinutes);
-        setTimeStr(estTime);
+        if (estMinutes !== null) {
+            const estTime = formatTime(estMinutes);
+            setTimeStr(estTime);
 
-        // Compute pace from distance + estimated time
-        const estPace = estMinutes / d;
-        setPaceStr(formatPace(estPace));
+            // Compute pace from distance + estimated time
+            const estPace = estMinutes / d;
+            setPaceStr(formatPace(estPace));
+        }
     };
 
     const stepPace = (direction: 1 | -1) => {

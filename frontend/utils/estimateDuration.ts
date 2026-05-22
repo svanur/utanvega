@@ -26,7 +26,8 @@ export function supportsTimeEstimate(activityType: string): boolean {
     return !NO_ESTIMATE_TYPES.has(activityType.toLowerCase());
 }
 
-export function estimateDurationMinutes(lengthMeters: number, elevationGainMeters: number, activityType: string): number {
+export function estimateDurationMinutes(lengthMeters: number, elevationGainMeters: number, activityType: string): number | null {
+    if (!supportsTimeEstimate(activityType)) return null;
     const km = lengthMeters / 1000;
     const { baseSpeedKmh, climbPenaltyMinPer100m } = PACE_MAP[activityType.toLowerCase()] ?? DEFAULT_PACE;
     return Math.round((km / baseSpeedKmh) * 60 + (elevationGainMeters / 100) * climbPenaltyMinPer100m);
@@ -39,6 +40,7 @@ export function formatDuration(totalMinutes: number): string {
     return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
 }
 
-export function estimateDuration(lengthMeters: number, elevationGainMeters: number, activityType: string): string {
-    return formatDuration(estimateDurationMinutes(lengthMeters, elevationGainMeters, activityType));
+export function estimateDuration(lengthMeters: number, elevationGainMeters: number, activityType: string): string | null {
+    const minutes = estimateDurationMinutes(lengthMeters, elevationGainMeters, activityType);
+    return minutes !== null ? formatDuration(minutes) : null;
 }

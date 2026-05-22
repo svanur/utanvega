@@ -151,7 +151,7 @@ const EVENT_TYPE_COLORS: Record<EventType, 'primary' | 'secondary' | 'warning' |
   Race: 'primary',
   Series: 'secondary',
   Advertisement: 'warning',
-  Festival: 'success',
+  Festival: 'info',
   Other: 'default',
 };
 const ACTIVITY_TYPES: ActivityType[] = ['TrailRunning', 'Running', 'Cycling', 'Hiking', 'FunRun', 'ObstacleCourse', 'Social', 'Other'];

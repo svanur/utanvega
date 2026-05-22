@@ -23,7 +23,7 @@ import LandscapeIcon from '@mui/icons-material/Landscape';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Trail, API_URL } from '../hooks/useTrails';
-import { estimateDuration, supportsTimeEstimate } from '../utils/estimateDuration';
+import { estimateDuration } from '../utils/estimateDuration';
 import DifficultyInfo from './DifficultyInfo';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 
@@ -147,7 +147,7 @@ export const TrailQuickView: React.FC<TrailQuickViewProps> = ({ trail, open, onC
     if (!trail) return null;
 
     const distanceKm = (trail.length / 1000).toFixed(1);
-    const estTime = supportsTimeEstimate(trail.activityType) ? estimateDuration(trail.length, trail.elevationGain, trail.activityType) : null;
+    const estTime = estimateDuration(trail.length, trail.elevationGain, trail.activityType);
     const summary = generateSummary(trail, t, i18n.language);
 
     return (
