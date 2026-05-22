@@ -29,7 +29,7 @@ import { useTranslation } from 'react-i18next';
 import { Trail } from '../hooks/useTrails';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { useLoginEnabled } from '../hooks/useLoginEnabled';
-import { estimateDuration } from '../utils/estimateDuration';
+import { estimateDuration, supportsTimeEstimate } from '../utils/estimateDuration';
 import { useFavorites } from '../hooks/useFavorites';
 import { useHiddenTrails } from '../hooks/useHiddenTrails';
 import { useTickedTrails } from '../hooks/useTickedTrails';
@@ -93,7 +93,7 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
     const isFavorited = isFavoritedProp ?? isFavorite(trail.slug);
 
     const distanceKm = (trail.length / 1000).toFixed(1);
-    const estTime = estimateDuration(trail.length, trail.elevationGain, trail.activityType);
+    const estTime = supportsTimeEstimate(trail.activityType) ? estimateDuration(trail.length, trail.elevationGain, trail.activityType) : null;
     const userDist = trail.distanceToUser !== undefined && trail.distanceToUser !== Infinity
         ? `${trail.distanceToUser.toFixed(1)} ${t('trailCard.kmAway')}`
         : null;
@@ -400,10 +400,12 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                             <TrendingDownIcon sx={{ mr: compact ? 0 : 0.5, fontSize: compact ? 14 : 18, color: 'error.main' }} />
                             <Typography variant="body2" fontSize={compact ? '0.75rem' : undefined}>-{Math.round(trail.elevationLoss)}</Typography>
                         </Box>
+                        {estTime && (
                         <Box display="flex" alignItems="center">
                             <AccessTimeIcon sx={{ mr: compact ? 0 : 0.5, fontSize: compact ? 14 : 18 }} />
                             <Typography variant="body2" fontSize={compact ? '0.75rem' : undefined}>~{estTime}</Typography>
                         </Box>
+                        )}
                         {userDist && !compact && (
                             <Box display="flex" alignItems="center">
                                 <LocationOnIcon sx={{ mr: 0.5, fontSize: 18, color: 'primary.main' }} />

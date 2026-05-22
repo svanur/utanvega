@@ -55,7 +55,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import Layout from '../components/Layout';
 import { useTrailBySlug, useTrails, useTrailSuggestions, useTrailWeather, useTrailLeaderboard, recordTrailView, API_URL } from '../hooks/useTrails';
-import { estimateDuration } from '../utils/estimateDuration';
+import { estimateDuration, supportsTimeEstimate } from '../utils/estimateDuration';
 import PaceInfo from '../components/PaceInfo';
 import LostRunner from '../components/LostRunner';
 import { useFavorites } from '../hooks/useFavorites';
@@ -456,7 +456,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     }
 
     const distanceKm = (trail.length / 1000).toFixed(2);
-    const estTime = estimateDuration(trail.length, trail.elevationGain, trail.activityType);
+    const estTime = supportsTimeEstimate(trail.activityType) ? estimateDuration(trail.length, trail.elevationGain, trail.activityType) : null;
 
     return (
         <Layout mode={mode} onToggleMode={onToggleMode}>
@@ -696,7 +696,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                             </Stack>
                         </Grid>
                         <Grid item xs={6} sm>
-                            {isEnabled('pace_info') && <PaceInfo activityType={trail.activityType} formattedDuration={estTime} />}
+                            {isEnabled('pace_info') && estTime && <PaceInfo activityType={trail.activityType} formattedDuration={estTime} />}
                         </Grid>
                     </Grid>
                 </Box>

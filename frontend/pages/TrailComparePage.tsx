@@ -57,7 +57,7 @@ import Layout from '../components/Layout';
 import ShareButtons from '../components/ShareButtons';
 import { useTrailBySlug, Trail, API_URL } from '../hooks/useTrails';
 import { useTrailGeometry } from '../hooks/useTrailGeometries';
-import { estimateDuration } from '../utils/estimateDuration';
+import { estimateDuration, supportsTimeEstimate } from '../utils/estimateDuration';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1094,9 +1094,9 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
                                     <StatRow
                                         label={t('compare.estTime')}
                                         icon={<TimerIcon />}
-                                        valA={trailA ? <Typography variant="body2">{estimateDuration(trailA.length, trailA.elevationGain, trailA.activityType)}</Typography> : null}
+                                        valA={trailA && supportsTimeEstimate(trailA.activityType) ? <Typography variant="body2">{estimateDuration(trailA.length, trailA.elevationGain, trailA.activityType)}</Typography> : null}
                                         diff={<Typography variant="body2" color="text.disabled">—</Typography>}
-                                        valB={trailB ? <Typography variant="body2">{estimateDuration(trailB.length, trailB.elevationGain, trailB.activityType)}</Typography> : null}
+                                        valB={trailB && supportsTimeEstimate(trailB.activityType) ? <Typography variant="body2">{estimateDuration(trailB.length, trailB.elevationGain, trailB.activityType)}</Typography> : null}
                                         loading={bothLoading}
                                     />
                                     <StatRow

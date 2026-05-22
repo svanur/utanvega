@@ -23,7 +23,7 @@ import LandscapeIcon from '@mui/icons-material/Landscape';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Trail, API_URL } from '../hooks/useTrails';
-import { estimateDuration } from '../utils/estimateDuration';
+import { estimateDuration, supportsTimeEstimate } from '../utils/estimateDuration';
 import DifficultyInfo from './DifficultyInfo';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 
@@ -147,7 +147,7 @@ export const TrailQuickView: React.FC<TrailQuickViewProps> = ({ trail, open, onC
     if (!trail) return null;
 
     const distanceKm = (trail.length / 1000).toFixed(1);
-    const estTime = estimateDuration(trail.length, trail.elevationGain, trail.activityType);
+    const estTime = supportsTimeEstimate(trail.activityType) ? estimateDuration(trail.length, trail.elevationGain, trail.activityType) : null;
     const summary = generateSummary(trail, t, i18n.language);
 
     return (
@@ -225,6 +225,7 @@ export const TrailQuickView: React.FC<TrailQuickViewProps> = ({ trail, open, onC
                         </Box>
                         <Typography variant="caption" color="text.secondary">{t('quickView.loss')}</Typography>
                     </Box>
+                    {estTime && (
                     <Box sx={{ textAlign: 'center' }}>
                         <Box display="flex" alignItems="center" justifyContent="center" gap={0.5}>
                             <AccessTimeIcon sx={{ fontSize: 16 }} color="primary" />
@@ -232,6 +233,7 @@ export const TrailQuickView: React.FC<TrailQuickViewProps> = ({ trail, open, onC
                         </Box>
                         <Typography variant="caption" color="text.secondary">{t('quickView.estTime')}</Typography>
                     </Box>
+                    )}
                 </Box>
 
                 {/* Chips */}
