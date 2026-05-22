@@ -154,7 +154,7 @@ const EVENT_TYPE_COLORS: Record<EventType, 'primary' | 'secondary' | 'warning' |
   Festival: 'success',
   Other: 'default',
 };
-const ACTIVITY_TYPES: ActivityType[] = ['TrailRunning', 'Running', 'Cycling', 'Hiking', 'Social', 'Other'];
+const ACTIVITY_TYPES: ActivityType[] = ['TrailRunning', 'Running', 'Cycling', 'Hiking', 'FunRun', 'ObstacleCourse', 'Social', 'Other'];
 const EVENT_STATUSES: EventStatus[] = ['Unconfirmed', 'Confirmed', 'Cancelled', 'Hidden', 'Unlisted'];
 const REGISTRATION_STATUSES: RegistrationStatus[] = ['NotStarted', 'Open', 'Closed'];
 const RACE_STATUSES: RaceStatus[] = ['Active', 'Cancelled', 'Hidden'];
@@ -166,6 +166,8 @@ const ACTIVITY_ICONS: Record<string, string> = {
   Running: '🏃',
   Hiking: '🥾',
   Cycling: '🚴',
+  FunRun: '🎊',
+  ObstacleCourse: '🧗',
   Social: '🎉',
   Other: '🏅',
 };

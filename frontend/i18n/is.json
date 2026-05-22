@@ -242,6 +242,8 @@
         "running": "Hlaup",
         "hiking": "Ganga",
         "cycling": "Hjólreiðar",
+        "funRun": "Skemmtiskokk",
+        "obstacleCourse": "Hindrunarhlaup",
         "formula": "**Álagsvegalengd** = vegalengd (km) + hækkun (m) ÷ 100. Til dæmis, 15 km leið með 800 m hækkun = 23 km álag."
     },
     "paceModel": {
