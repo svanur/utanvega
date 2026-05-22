@@ -7,7 +7,7 @@ export type EventType = 'Race' | 'Series' | 'Advertisement' | 'Festival' | 'Othe
 export type ActivityType = 'TrailRunning' | 'Running' | 'Cycling' | 'Hiking' | 'Social' | 'Other';
 export type EventStatus = 'Unconfirmed' | 'Confirmed' | 'Cancelled' | 'Hidden' | 'Unlisted';
 export type RegistrationStatus = 'NotStarted' | 'Open' | 'Closed';
-export type RaceStatus = 'Active' | 'Cancelled' | 'Upcoming' | 'Hidden';
+export type RaceStatus = 'Active' | 'Cancelled' | 'Hidden';
 export type TicketStatus = 'Available' | 'SoldOut';
 export type AlertSeverity = 'info' | 'success' | 'warning' | 'error';
 
