@@ -75,10 +75,10 @@ function useWelcomeStats() {
             fetch(`${API_URL}/api/v1/trails`, { signal: ac.signal }).then(r => r.ok ? r.json() : []),
             fetch(`${API_URL}/api/v1/locations`, { signal: ac.signal }).then(r => r.ok ? r.json() : []),
             fetch(`${API_URL}/api/v1/events`, { signal: ac.signal }).then(r => r.ok ? r.json() : []),
-        ]).then(([trails, locations, competitions]) => {
+        ]).then(([trails, locations, events]) => {
             const totalKm = (trails as { length: number }[]).reduce((sum, t) => sum + (t.length || 0), 0) / 1000;
             const totalElev = (trails as { elevationGain: number }[]).reduce((sum, t) => sum + (t.elevationGain || 0), 0);
-            const upcoming = (competitions as { nextEditionDate: string | null }[]).filter(c => c.nextEditionDate).length;
+            const upcoming = (events as { nextEditionDate: string | null }[]).filter(e => e.nextEditionDate).length;
             setStats({
                 trailCount: trails.length,
                 totalKm: Math.round(totalKm),
