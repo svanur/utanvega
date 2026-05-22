@@ -41,9 +41,9 @@ public class GenerateEditionsForSeasonCommandHandler : IRequestHandler<GenerateE
 
         var dates = _scheduleEngine.GetOccurrencesInRange(ev.ScheduleRule, request.From, request.To);
 
-        // Load existing editions in the date range
+        // Load existing editions within the requested date range for deduplication
         var existingEditions = await _context.EventEditions
-            .Where(ed => ed.EventId == request.EventId && ed.Date != null)
+            .Where(ed => ed.EventId == request.EventId && ed.Date >= request.From && ed.Date <= request.To)
             .ToListAsync(cancellationToken);
 
         var existingDateSet = existingEditions
@@ -71,10 +71,7 @@ public class GenerateEditionsForSeasonCommandHandler : IRequestHandler<GenerateE
         // Apply defaults to existing editions that are missing them
         if (request.TrailId.HasValue || !string.IsNullOrWhiteSpace(request.RegistrationUrl))
         {
-            var editionsInRange = existingEditions
-                .Where(ed => ed.Date.HasValue && ed.Date.Value >= request.From && ed.Date.Value <= request.To);
-
-            foreach (var ed in editionsInRange)
+            foreach (var ed in existingEditions)
             {
                 if (request.TrailId.HasValue && ed.TrailId == null)
                     ed.TrailId = request.TrailId;
