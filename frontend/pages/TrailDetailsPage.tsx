@@ -784,7 +784,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                             {videoExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                         </IconButton>
                     </Stack>
-                    <Collapse in={videoExpanded}>
+                    <Collapse in={videoExpanded} unmountOnExit>
                         <Box sx={{ position: 'relative', width: '100%', paddingBottom: '56.25%', height: 0, borderRadius: 1, overflow: 'hidden', mt: 2 }}>
                             <iframe
                                 style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
@@ -792,6 +792,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                 title={t('trail.video360')}
                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope"
                                 allowFullScreen
+                                loading="lazy"
                             />
                         </Box>
                     </Collapse>
