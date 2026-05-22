@@ -17,6 +17,7 @@ export type Trail = {
     startLongitude?: number | null;
     locations: { id: string, name: string, slug: string, role: string }[];
     tags?: { name: string, slug: string, color: string | null }[];
+    youtubeUrl?: string | null;
 };
 
 export function useTrails(includeDeleted: boolean = false) {

@@ -133,6 +133,7 @@
         "wereYouLookingFor": "Varstu kannski að leita að einni af þessum?",
         "partOfRace": "Hluti af keppni: {{competition}}",
         "partOfRaceDistances": "Hluti af keppni: {{competition}} ({{count}} vegalengdir)",
+        "video360": "360° Myndband",
         "role": {
             "Start": "Upphaf",
             "End": "Endir",

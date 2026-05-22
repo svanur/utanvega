@@ -42,7 +42,8 @@ public record TrailDto(
     List<LocationInfoDto> Locations,
     List<TagInfoDto> Tags,
     int ViewCount = 0,
-    List<LinkedRaceDto>? LinkedRaces = null
+    List<LinkedRaceDto>? LinkedRaces = null,
+    string? YoutubeUrl = null
 );
 
 public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailDto>>
@@ -102,7 +103,8 @@ public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailD
             t.TrailTags
                 .Select(tt => new TagInfoDto(tt.Tag.Name, tt.Tag.Slug, tt.Tag.Color))
                 .ToList(),
-            viewCounts.GetValueOrDefault(t.Id, 0)
+            viewCounts.GetValueOrDefault(t.Id, 0),
+            YoutubeUrl: t.YoutubeUrl
         )).ToList();
 
         return result;

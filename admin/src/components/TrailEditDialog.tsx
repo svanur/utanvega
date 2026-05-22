@@ -37,6 +37,7 @@ type TrailDetail = {
     length: number;
     elevationGain: number;
     elevationLoss: number;
+    youtubeUrl?: string | null;
     locations: TrailLocationInfo[];
     tags: TrailTagInfo[];
 };
@@ -199,6 +200,7 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
                     type: trail.type,
                     difficulty: trail.difficulty,
                     visibility: trail.visibility,
+                    youtubeUrl: trail.youtubeUrl || null,
                     updatedBy: 'admin', // Simple for now
                     locations: trail.locations.map(l => ({
                         locationId: l.locationId,
@@ -351,6 +353,15 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
                             <TextField label="Name" fullWidth value={trail.name} onChange={(e) => handleChange('name', e.target.value)} />
                             <TextField label="Slug" fullWidth value={trail.slug} onChange={(e) => handleChange('slug', e.target.value)} />
                             <TextField label="Description" multiline rows={4} fullWidth value={trail.description || ''} onChange={(e) => handleChange('description', e.target.value)} />
+                            <TextField
+                                label="YouTube URL"
+                                fullWidth
+                                type="url"
+                                placeholder="https://www.youtube.com/watch?v=..."
+                                value={trail.youtubeUrl || ''}
+                                onChange={(e) => handleChange('youtubeUrl', e.target.value)}
+                                helperText="360° trail video from youtube.com/@360RunsIceland"
+                            />
                             
                             <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
                                 <TextField select label="Activity" value={trail.activityType} onChange={(e) => handleChange('activityType', e.target.value)}>

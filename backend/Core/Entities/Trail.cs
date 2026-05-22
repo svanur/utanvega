@@ -69,6 +69,8 @@ public class Trail
     // NetTopologySuite for PostGIS
     public Geometry? GpxData { get; set; }
     
+    public string? YoutubeUrl { get; set; }
+    
     public string? CreatedBy { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public string? UpdatedBy { get; set; }
