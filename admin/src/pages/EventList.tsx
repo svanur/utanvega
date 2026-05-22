@@ -41,6 +41,7 @@ import {
   Add as AddIcon,
   AutoAwesome as GenerateIcon,
   Clear as ClearIcon,
+  ContentCopy as CopyIcon,
   Delete as DeleteIcon,
   Edit as EditIcon,
   ExpandLess as ExpandLessIcon,
@@ -102,6 +103,8 @@ interface EventFormState {
 
 interface EditionFormState {
   eventId: string;
+  eventType: EventType;
+  eventName: string;
   year: string;
   date: string;
   title: string;
@@ -134,6 +137,7 @@ interface RaceFormState {
 interface GenerateFormState {
   eventId: string;
   eventName: string;
+  eventType: EventType;
   fromMonth: number;
   fromYear: number;
   toMonth: number;
@@ -309,9 +313,11 @@ function createEmptyEventForm(): EventFormState {
   };
 }
 
-function createEmptyEditionForm(eventId = ''): EditionFormState {
+function createEmptyEditionForm(eventId = '', eventType: EventType = 'Race', eventName = ''): EditionFormState {
   return {
     eventId,
+    eventType,
+    eventName,
     year: new Date().getFullYear().toString(),
     date: '',
     title: '',
@@ -349,6 +355,7 @@ function createGenerateForm(event: EventSummaryDto): GenerateFormState {
   return {
     eventId: event.id,
     eventName: event.name,
+    eventType: event.type,
     fromMonth: 1,
     fromYear: currentYear,
     toMonth: 12,
@@ -387,9 +394,11 @@ function buildEventForm(event: EventSummaryDto): EventFormState {
   };
 }
 
-function buildEditionForm(edition: EventEditionDto): EditionFormState {
+function buildEditionForm(edition: EventEditionDto, eventType: EventType = 'Race', eventName = ''): EditionFormState {
   return {
     eventId: edition.eventId,
+    eventType,
+    eventName,
     year: edition.year?.toString() ?? '',
     date: edition.date ?? '',
     title: edition.title ?? '',
@@ -504,7 +513,8 @@ export default function EventList({ onNotify }: EventListProps) {
   const [eventForm, setEventForm] = useState<EventFormState>(createEmptyEventForm());
   const [editionForm, setEditionForm] = useState<EditionFormState>(createEmptyEditionForm());
   const [raceForm, setRaceForm] = useState<RaceFormState>(createEmptyRaceForm());
-  const [generateForm, setGenerateForm] = useState<GenerateFormState>({ eventId: '', eventName: '', fromMonth: 1, fromYear: new Date().getFullYear(), toMonth: 12, toYear: new Date().getFullYear(), trailId: '', registrationUrl: '' });
+  const [applyToAllEditions, setApplyToAllEditions] = useState(false);
+  const [generateForm, setGenerateForm] = useState<GenerateFormState>({ eventId: '', eventName: '', eventType: 'Race', fromMonth: 1, fromYear: new Date().getFullYear(), toMonth: 12, toYear: new Date().getFullYear(), trailId: '', registrationUrl: '' });
 
   const sortedLocations = useMemo(
     () => [...locations].sort((a, b) => a.name.localeCompare(b.name)),
@@ -662,15 +672,15 @@ export default function EventList({ onNotify }: EventListProps) {
     setShowEventDialog(true);
   };
 
-  const openCreateEdition = (eventId: string) => {
+  const openCreateEdition = (event: EventSummaryDto) => {
     setEditEditionId(null);
-    setEditionForm(createEmptyEditionForm(eventId));
+    setEditionForm(createEmptyEditionForm(event.id, event.type, event.name));
     setShowEditionDialog(true);
   };
 
   const openEditEdition = (edition: EventEditionDto) => {
     setEditEditionId(edition.id);
-    setEditionForm(buildEditionForm(edition));
+    setEditionForm(buildEditionForm(edition, expandedDetail?.type ?? 'Race', expandedDetail?.name ?? ''));
     setShowEditionDialog(true);
   };
 
@@ -767,6 +777,8 @@ export default function EventList({ onNotify }: EventListProps) {
   const handleSaveEdition = async () => {
     if (!editionForm.eventId) return;
 
+    const isRaceOrSeries = editionForm.eventType === 'Race' || editionForm.eventType === 'Series';
+
     setSaving(true);
     try {
       const input = {
@@ -778,7 +790,7 @@ export default function EventList({ onNotify }: EventListProps) {
         resultsUrl: trimToUndefined(editionForm.resultsUrl),
         notes: trimToUndefined(editionForm.notes),
         registrationStatus: editionForm.registrationStatus,
-        trailId: editionForm.trailId || null,
+        trailId: isRaceOrSeries ? null : (editionForm.trailId || null),
       };
       const editionLabel = trimToUndefined(editionForm.title) || editionForm.date || editionForm.year || 'Untitled edition';
 
@@ -795,8 +807,23 @@ export default function EventList({ onNotify }: EventListProps) {
         });
         onNotify(`Edition "${editionLabel}" updated`);
       } else {
-        await createEdition(input);
-        onNotify(`Edition "${editionLabel}" created`);
+        const newEditionId = await createEdition(input);
+
+        if (isRaceOrSeries) {
+          await createRace({
+            eventEditionId: newEditionId,
+            trailId: null,
+            name: editionForm.eventName || 'Race',
+            status: 'Active',
+            sortOrder: 0,
+            ticketStatus: 'Available',
+            itraPoints: 0,
+            prizeMoney: 0,
+          });
+          onNotify(`Edition "${editionLabel}" created with default race`);
+        } else {
+          onNotify(`Edition "${editionLabel}" created`);
+        }
       }
 
       setShowEditionDialog(false);
@@ -838,11 +865,47 @@ export default function EventList({ onNotify }: EventListProps) {
         registrationUrl: generateForm.registrationUrl.trim() || null,
       });
       const hasDefaults = generateForm.trailId || generateForm.registrationUrl.trim();
-      onNotify(result.count > 0
-        ? `Generated ${result.count} edition${result.count === 1 ? '' : 's'} for "${generateForm.eventName}"`
-        : hasDefaults
-          ? `Defaults applied to existing editions for "${generateForm.eventName}"`
-          : `No new editions to generate — all dates already exist.`, result.count > 0 || hasDefaults ? 'success' : 'error');
+      const isRaceOrSeries = generateForm.eventType === 'Race' || generateForm.eventType === 'Series';
+
+      // Auto-create default races for editions without races (Race/Series events only)
+      let racesCreated = 0;
+      if (isRaceOrSeries) {
+        const raceTrailId = generateForm.trailId || null;
+        const raceName = generateForm.eventName || 'Race';
+
+        // Fetch fresh event detail to find ALL editions without races
+        const eventSlug = expandedDetail?.slug ?? events.find(e => e.id === generateForm.eventId)?.slug;
+        if (eventSlug) {
+          const freshDetail = await getEvent(eventSlug);
+          const editionsWithoutRaces = freshDetail.editions.filter(ed => ed.races.length === 0);
+          if (editionsWithoutRaces.length > 0) {
+            await Promise.all(editionsWithoutRaces.map(ed =>
+              createRace({
+                eventEditionId: ed.id,
+                trailId: raceTrailId,
+                name: raceName,
+                status: 'Active',
+                sortOrder: 0,
+                ticketStatus: 'Available',
+                itraPoints: 0,
+                prizeMoney: 0,
+              }),
+            ));
+            racesCreated = editionsWithoutRaces.length;
+          }
+        }
+      }
+
+      const parts: string[] = [];
+      if (result.count > 0) parts.push(`Generated ${result.count} edition${result.count === 1 ? '' : 's'}`);
+      if (racesCreated > 0) parts.push(`created ${racesCreated} default race${racesCreated === 1 ? '' : 's'}`);
+      if (parts.length === 0 && hasDefaults) parts.push('Defaults applied to existing editions');
+      if (parts.length === 0) parts.push('No new editions to generate — all dates already exist.');
+
+      onNotify(
+        `${parts.join(' and ')} for "${generateForm.eventName}"`,
+        result.count > 0 || hasDefaults || racesCreated > 0 ? 'success' : 'error',
+      );
       setShowGenerateDialog(false);
       if (expandedEventId === generateForm.eventId) {
         await refreshExpandedEvent();
@@ -897,12 +960,44 @@ export default function EventList({ onNotify }: EventListProps) {
           startTime: input.startTime,
         });
         onNotify(`Race "${raceForm.name.trim()}" updated`);
+
+        // Apply to matching races in other editions
+        if (applyToAllEditions && expandedDetail) {
+          const otherRaces = expandedDetail.editions
+            .filter(ed => ed.id !== raceForm.eventEditionId)
+            .flatMap(ed => ed.races)
+            .filter(r => r.id !== editRaceId && r.sortOrder === input.sortOrder);
+
+          if (otherRaces.length > 0) {
+            await Promise.all(otherRaces.map(r =>
+              updateRace(r.id, {
+                trailId: input.trailId,
+                name: input.name,
+                distanceLabel: input.distanceLabel,
+                cutoffMinutes: input.cutoffMinutes,
+                description: input.description,
+                status: input.status,
+                sortOrder: input.sortOrder,
+                ticketStatus: input.ticketStatus,
+                maxParticipants: input.maxParticipants,
+                itraPoints: input.itraPoints,
+                certifiedBy: input.certifiedBy,
+                prizeMoney: input.prizeMoney,
+                championshipCategory: input.championshipCategory,
+                dateOfRace: null,
+                startTime: input.startTime,
+              }),
+            ));
+            onNotify(`Also updated ${otherRaces.length} matching race${otherRaces.length === 1 ? '' : 's'} in other editions`);
+          }
+        }
       } else {
         await createRace(input);
         onNotify(`Race "${raceForm.name.trim()}" created`);
       }
 
       setShowRaceDialog(false);
+      setApplyToAllEditions(false);
       await refreshExpandedEvent();
     } catch (err) {
       onNotify(err instanceof Error ? err.message : 'Failed to save race', 'error');
@@ -920,6 +1015,54 @@ export default function EventList({ onNotify }: EventListProps) {
       await refreshExpandedEvent();
     } catch (err) {
       onNotify(err instanceof Error ? err.message : 'Failed to delete race', 'error');
+    }
+  };
+
+  const handleCopyRacesFromPrevious = async (edition: EventEditionDto) => {
+    if (!expandedDetail) return;
+
+    // Find the closest earlier edition with races, falling back to any other with races
+    const otherEditions = expandedDetail.editions.filter(ed => ed.id !== edition.id && ed.races.length > 0);
+    if (otherEditions.length === 0) return;
+
+    const earlierEditions = otherEditions
+      .filter(ed => (ed.date ?? '') < (edition.date ?? '') || (!ed.date && !edition.date))
+      .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''));
+
+    const sourceEdition = earlierEditions[0] ?? otherEditions[0];
+
+    const raceCount = sourceEdition.races.length;
+    const label = buildEditionLabel(sourceEdition);
+    if (!window.confirm(`Copy ${raceCount} race${raceCount === 1 ? '' : 's'} from "${label}" into this edition?`)) return;
+
+    setSaving(true);
+    try {
+      await Promise.all(sourceEdition.races.map(race =>
+        createRace({
+          eventEditionId: edition.id,
+          trailId: race.trailId ?? null,
+          name: race.name,
+          distanceLabel: race.distanceLabel ?? undefined,
+          cutoffMinutes: race.cutoffMinutes ?? null,
+          description: race.description ?? undefined,
+          status: 'Active',
+          sortOrder: race.sortOrder,
+          ticketStatus: 'Available',
+          maxParticipants: race.maxParticipants ?? null,
+          itraPoints: race.itraPoints,
+          certifiedBy: race.certifiedBy ?? undefined,
+          prizeMoney: race.prizeMoney,
+          championshipCategory: race.championshipCategory ?? undefined,
+          dateOfRace: null,
+          startTime: race.startTime ?? null,
+        }),
+      ));
+      onNotify(`Copied ${raceCount} race${raceCount === 1 ? '' : 's'} from "${label}"`);
+      await refreshExpandedEvent();
+    } catch (err) {
+      onNotify(err instanceof Error ? err.message : 'Failed to copy races', 'error');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -1147,7 +1290,7 @@ export default function EventList({ onNotify }: EventListProps) {
                                     Generate Editions
                                   </Button>
                                 )}
-                                <Button size="small" variant="contained" startIcon={<AddIcon />} onClick={() => openCreateEdition(event.id)}>
+                                <Button size="small" variant="contained" startIcon={<AddIcon />} onClick={() => openCreateEdition(event)}>
                                   Add Edition
                                 </Button>
                               </Stack>
@@ -1255,9 +1398,16 @@ export default function EventList({ onNotify }: EventListProps) {
                                           <Typography variant="subtitle2" color="text.secondary">
                                             Races ({edition.races.length})
                                           </Typography>
-                                          <Button size="small" startIcon={<AddIcon />} onClick={() => openCreateRace(edition)}>
-                                            Add Race
-                                          </Button>
+                                          <Stack direction="row" spacing={1}>
+                                            {expandedDetail && expandedDetail.editions.some(ed => ed.id !== edition.id && ed.races.length > 0) && (
+                                              <Button size="small" startIcon={<CopyIcon />} onClick={() => handleCopyRacesFromPrevious(edition)} disabled={saving}>
+                                                Copy race
+                                              </Button>
+                                            )}
+                                            <Button size="small" startIcon={<AddIcon />} onClick={() => openCreateRace(edition)}>
+                                              Add Race
+                                            </Button>
+                                          </Stack>
                                         </Box>
 
                                         {edition.races.length === 0 ? (
@@ -1678,14 +1828,16 @@ export default function EventList({ onNotify }: EventListProps) {
                 {REGISTRATION_STATUSES.map(status => <MenuItem key={status} value={status}>{status}</MenuItem>)}
               </Select>
             </FormControl>
-            <Autocomplete
-              options={sortedTrails}
-              value={sortedTrails.find(trail => trail.id === editionForm.trailId) ?? null}
-              onChange={(_, value) => setEditionField('trailId', value?.id ?? '')}
-              getOptionLabel={(trail) => `${trail.name} (${(trail.length / 1000).toFixed(1)} km)`}
-              isOptionEqualToValue={(option, value) => option.id === value.id}
-              renderInput={(params) => <TextField {...params} label="Linked Trail" />}
-            />
+            {editionForm.eventType !== 'Race' && editionForm.eventType !== 'Series' && (
+              <Autocomplete
+                options={sortedTrails}
+                value={sortedTrails.find(trail => trail.id === editionForm.trailId) ?? null}
+                onChange={(_, value) => setEditionField('trailId', value?.id ?? '')}
+                getOptionLabel={(trail) => `${trail.name} (${(trail.length / 1000).toFixed(1)} km)`}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+                renderInput={(params) => <TextField {...params} label="Linked Trail" />}
+              />
+            )}
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
               <TextField
                 label="Registration URL"
@@ -1827,11 +1979,19 @@ export default function EventList({ onNotify }: EventListProps) {
             />
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowRaceDialog(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleSaveRace} disabled={!raceForm.name.trim() || saving}>
-            {saving ? <CircularProgress size={20} /> : editRaceId ? 'Update Race' : 'Create Race'}
-          </Button>
+        <DialogActions sx={{ justifyContent: 'space-between', px: 3 }}>
+          {editRaceId && expandedDetail && expandedDetail.editions.length > 1 ? (
+            <FormControlLabel
+              control={<Switch checked={applyToAllEditions} onChange={(_, checked) => setApplyToAllEditions(checked)} size="small" />}
+              label={<Typography variant="body2">Apply to other editions</Typography>}
+            />
+          ) : <Box />}
+          <Box>
+            <Button onClick={() => { setShowRaceDialog(false); setApplyToAllEditions(false); }}>Cancel</Button>
+            <Button variant="contained" onClick={handleSaveRace} disabled={!raceForm.name.trim() || saving}>
+              {saving ? <CircularProgress size={20} /> : editRaceId ? 'Update Race' : 'Create Race'}
+            </Button>
+          </Box>
         </DialogActions>
       </Dialog>
 

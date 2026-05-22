@@ -274,7 +274,7 @@ public class EventValidatorTests
 
     private readonly CreateRaceCommandValidator _raceValidator = new();
 
-    private CreateRaceCommand ValidRaceCommand => new(
+    private static CreateRaceCommand ValidRaceCommand => new(
         EventEditionId: Guid.NewGuid(),
         TrailId: null,
         Name: "55K Ultra",
