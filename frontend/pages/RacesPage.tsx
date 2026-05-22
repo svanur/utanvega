@@ -274,8 +274,8 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                 )}
                                             </Box>
 
-                                            {/* Countdown chip — hide for Cancelled/Upcoming (they have status chips in the title) */}
-                                            {comp.status !== 'Cancelled' && comp.status !== 'Upcoming' && comp.status !== 'Unconfirmed' && (
+                                            {/* Countdown chip — hide when a status chip is shown in the title */}
+                                            {comp.status !== 'Cancelled' && comp.status !== 'Unconfirmed' && (
                                                 <Chip
                                                     label={getCountdownLabel(comp.daysUntil, t)}
                                                     color={getCountdownColor(comp.daysUntil)}
