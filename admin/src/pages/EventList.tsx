@@ -32,6 +32,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TableSortLabel,
   TextField,
   Tooltip,
   Typography,
@@ -46,9 +47,7 @@ import {
   ExpandMore as ExpandMoreIcon,
   EmojiEvents as TrophyIcon,
   Link as LinkIcon,
-  Schedule as ScheduleIcon,
   Search as SearchIcon,
-  SortByAlpha as SortByAlphaIcon,
 } from '@mui/icons-material';
 import {
   useEvents,
@@ -152,6 +151,16 @@ const EVENT_TYPE_COLORS: Record<EventType, 'primary' | 'secondary' | 'warning' |
   Series: 'secondary',
   Advertisement: 'warning',
   Festival: 'info',
+  Other: 'default',
+};
+const ACTIVITY_TYPE_COLORS: Record<ActivityType, 'primary' | 'secondary' | 'warning' | 'success' | 'default' | 'info' | 'error'> = {
+  TrailRunning: 'success',
+  Running: 'primary',
+  Cycling: 'info',
+  Hiking: 'warning',
+  FunRun: 'secondary',
+  ObstacleCourse: 'error',
+  Social: 'default',
   Other: 'default',
 };
 const ACTIVITY_TYPES: ActivityType[] = ['TrailRunning', 'Running', 'Cycling', 'Hiking', 'FunRun', 'ObstacleCourse', 'Social', 'Other'];
@@ -483,8 +492,13 @@ export default function EventList({ onNotify }: EventListProps) {
   const [expandedEditionIds, setExpandedEditionIds] = useState<string[]>([]);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [sortBy, setSortBy] = useState<'name' | 'nextEditionDate'>('name');
+  const [sortBy, setSortBy] = useState<'name' | 'activityType' | 'type' | 'nextEditionDate' | 'status' | 'editionCount' | 'locationName'>('name');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [searchQuery, setSearchQuery] = useState('');
+  const [activityFilter, setActivityFilter] = useState<string>('all');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [locationFilter, setLocationFilter] = useState<string>('all');
   const [eventForm, setEventForm] = useState<EventFormState>(createEmptyEventForm());
   const [editionForm, setEditionForm] = useState<EditionFormState>(createEmptyEditionForm());
   const [raceForm, setRaceForm] = useState<RaceFormState>(createEmptyRaceForm());
@@ -499,13 +513,20 @@ export default function EventList({ onNotify }: EventListProps) {
     [trails],
   );
 
+  const eventLocationOptions = useMemo(
+    () => [...new Set(events.map(e => e.locationName).filter(Boolean) as string[])].sort(),
+    [events],
+  );
+
+  const hasActiveFilters = activityFilter !== 'all' || typeFilter !== 'all' || statusFilter !== 'all' || locationFilter !== 'all';
+  const resetFilters = () => { setActivityFilter('all'); setTypeFilter('all'); setStatusFilter('all'); setLocationFilter('all'); };
+
   const filteredEvents = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
 
     return [...events]
       .filter(event => {
-        if (!normalizedQuery) return true;
-        return [
+        if (normalizedQuery && ![
           event.name,
           event.slug,
           event.description ?? '',
@@ -513,19 +534,48 @@ export default function EventList({ onNotify }: EventListProps) {
           event.organizerName ?? '',
           event.type,
           event.status,
-        ].some(value => value.toLowerCase().includes(normalizedQuery));
-      })
-      .sort((a, b) => {
-        if (sortBy === 'nextEditionDate') {
-          if (!a.nextEditionDate && !b.nextEditionDate) return a.name.localeCompare(b.name);
-          if (!a.nextEditionDate) return 1;
-          if (!b.nextEditionDate) return -1;
-          return a.nextEditionDate.localeCompare(b.nextEditionDate);
+          event.activityType,
+        ].some(value => value.toLowerCase().includes(normalizedQuery))) return false;
+
+        if (activityFilter !== 'all' && event.activityType !== activityFilter) return false;
+        if (typeFilter !== 'all' && event.type !== typeFilter) return false;
+        if (statusFilter !== 'all' && event.status !== statusFilter) return false;
+        if (locationFilter !== 'all') {
+          if (locationFilter === 'none' && event.locationName) return false;
+          if (locationFilter !== 'none' && event.locationName !== locationFilter) return false;
         }
 
-        return a.name.localeCompare(b.name);
+        return true;
+      })
+      .sort((a, b) => {
+        const dir = sortDir === 'asc' ? 1 : -1;
+        let cmp = 0;
+
+        if (sortBy === 'nextEditionDate') {
+          if (!a.nextEditionDate && !b.nextEditionDate) cmp = 0;
+          else if (!a.nextEditionDate) cmp = 1;
+          else if (!b.nextEditionDate) cmp = -1;
+          else cmp = a.nextEditionDate.localeCompare(b.nextEditionDate);
+        } else if (sortBy === 'editionCount') {
+          cmp = (a.editionCount ?? 0) - (b.editionCount ?? 0);
+        } else if (sortBy === 'activityType' || sortBy === 'type' || sortBy === 'status' || sortBy === 'locationName') {
+          cmp = (a[sortBy] ?? '').toLowerCase().localeCompare((b[sortBy] ?? '').toLowerCase());
+        } else {
+          cmp = a.name.localeCompare(b.name);
+        }
+
+        return cmp !== 0 ? dir * cmp : a.name.localeCompare(b.name);
       });
-  }, [events, searchQuery, sortBy]);
+  }, [events, searchQuery, sortBy, sortDir, activityFilter, typeFilter, statusFilter, locationFilter]);
+
+  const handleRequestSort = (field: typeof sortBy) => {
+    if (sortBy === field) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(field);
+      setSortDir('asc');
+    }
+  };
 
   const setEventField = <K extends keyof EventFormState>(field: K, value: EventFormState[K]) => {
     setEventForm(prev => ({ ...prev, [field]: value }));
@@ -890,52 +940,112 @@ export default function EventList({ onNotify }: EventListProps) {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
           <TrophyIcon color="primary" />
           <Typography variant="h5">Events</Typography>
-          <Chip label={searchQuery.trim() ? `${filteredEvents.length} / ${events.length}` : events.length} size="small" color="primary" />
-          <Tooltip title={sortBy === 'name' ? 'Sort by next edition date' : 'Sort by name'}>
-            <IconButton size="small" onClick={() => setSortBy(current => current === 'name' ? 'nextEditionDate' : 'name')}>
-              {sortBy === 'name' ? <SortByAlphaIcon fontSize="small" /> : <ScheduleIcon fontSize="small" />}
-            </IconButton>
-          </Tooltip>
+          <Chip label={searchQuery.trim() || hasActiveFilters ? `${filteredEvents.length} / ${events.length}` : events.length} size="small" color="primary" />
         </Box>
-
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-          <TextField
-            size="small"
-            placeholder="Search events…"
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            sx={{ width: 260 }}
-            InputProps={{
-              startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment>,
-              endAdornment: searchQuery ? (
-                <InputAdornment position="end">
-                  <IconButton size="small" aria-label="Clear search" onClick={() => setSearchQuery('')}>
-                    <ClearIcon fontSize="small" />
-                  </IconButton>
-                </InputAdornment>
-              ) : undefined,
-            }}
-          />
-          <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateEvent}>
-            New Event
-          </Button>
-        </Box>
+        <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateEvent}>
+          New Event
+        </Button>
       </Box>
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
+      <Paper sx={{ mb: 3, p: 2, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+        <TextField
+          size="small"
+          placeholder="Search events…"
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+          sx={{ minWidth: 200, flexGrow: 1, maxWidth: 300 }}
+          InputProps={{
+            startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment>,
+            endAdornment: searchQuery ? (
+              <InputAdornment position="end">
+                <IconButton size="small" aria-label="Clear search" onClick={() => setSearchQuery('')}>
+                  <ClearIcon fontSize="small" />
+                </IconButton>
+              </InputAdornment>
+            ) : undefined,
+          }}
+        />
+        <FormControl size="small" sx={{ minWidth: 140 }}>
+          <InputLabel>Activity</InputLabel>
+          <Select value={activityFilter} label="Activity" onChange={e => setActivityFilter(e.target.value)}>
+            <MenuItem value="all">All</MenuItem>
+            {ACTIVITY_TYPES.map(at => <MenuItem key={at} value={at}>{ACTIVITY_ICONS[at] ?? '🏅'} {at}</MenuItem>)}
+          </Select>
+        </FormControl>
+        <FormControl size="small" sx={{ minWidth: 120 }}>
+          <InputLabel>Type</InputLabel>
+          <Select value={typeFilter} label="Type" onChange={e => setTypeFilter(e.target.value)}>
+            <MenuItem value="all">All</MenuItem>
+            {EVENT_TYPES.map(t => <MenuItem key={t} value={t}>{t}</MenuItem>)}
+          </Select>
+        </FormControl>
+        <FormControl size="small" sx={{ minWidth: 120 }}>
+          <InputLabel>Status</InputLabel>
+          <Select value={statusFilter} label="Status" onChange={e => setStatusFilter(e.target.value)}>
+            <MenuItem value="all">All</MenuItem>
+            {EVENT_STATUSES.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+          </Select>
+        </FormControl>
+        <FormControl size="small" sx={{ minWidth: 140 }}>
+          <InputLabel>Location</InputLabel>
+          <Select value={locationFilter} label="Location" onChange={e => setLocationFilter(e.target.value)}>
+            <MenuItem value="all">All</MenuItem>
+            <MenuItem value="none"><em>No location</em></MenuItem>
+            {eventLocationOptions.map(loc => <MenuItem key={loc} value={loc}>{loc}</MenuItem>)}
+          </Select>
+        </FormControl>
+        {hasActiveFilters && (
+          <Tooltip title="Clear all filters">
+            <IconButton size="small" aria-label="Clear all filters" onClick={resetFilters}>
+              <ClearIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
+      </Paper>
 
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
               <TableCell width={40} />
-              <TableCell>Name</TableCell>
-              <TableCell>Type</TableCell>
+              <TableCell sortDirection={sortBy === 'name' ? sortDir : false}>
+                <TableSortLabel active={sortBy === 'name'} direction={sortBy === 'name' ? sortDir : 'asc'} onClick={() => handleRequestSort('name')}>
+                  Name
+                </TableSortLabel>
+              </TableCell>
+              <TableCell sortDirection={sortBy === 'activityType' ? sortDir : false}>
+                <TableSortLabel active={sortBy === 'activityType'} direction={sortBy === 'activityType' ? sortDir : 'asc'} onClick={() => handleRequestSort('activityType')}>
+                  Activity
+                </TableSortLabel>
+              </TableCell>
+              <TableCell sortDirection={sortBy === 'type' ? sortDir : false}>
+                <TableSortLabel active={sortBy === 'type'} direction={sortBy === 'type' ? sortDir : 'asc'} onClick={() => handleRequestSort('type')}>
+                  Type
+                </TableSortLabel>
+              </TableCell>
               <TableCell>Schedule</TableCell>
-              <TableCell>Next Edition</TableCell>
-              <TableCell align="center">Status</TableCell>
-              <TableCell align="center">Editions</TableCell>
-              <TableCell>Location</TableCell>
+              <TableCell sortDirection={sortBy === 'nextEditionDate' ? sortDir : false}>
+                <TableSortLabel active={sortBy === 'nextEditionDate'} direction={sortBy === 'nextEditionDate' ? sortDir : 'asc'} onClick={() => handleRequestSort('nextEditionDate')}>
+                  Next Edition
+                </TableSortLabel>
+              </TableCell>
+              <TableCell align="center" sortDirection={sortBy === 'status' ? sortDir : false}>
+                <TableSortLabel active={sortBy === 'status'} direction={sortBy === 'status' ? sortDir : 'asc'} onClick={() => handleRequestSort('status')}>
+                  Status
+                </TableSortLabel>
+              </TableCell>
+              <TableCell align="center" sortDirection={sortBy === 'editionCount' ? sortDir : false}>
+                <TableSortLabel active={sortBy === 'editionCount'} direction={sortBy === 'editionCount' ? sortDir : 'asc'} onClick={() => handleRequestSort('editionCount')}>
+                  Editions
+                </TableSortLabel>
+              </TableCell>
+              <TableCell sortDirection={sortBy === 'locationName' ? sortDir : false}>
+                <TableSortLabel active={sortBy === 'locationName'} direction={sortBy === 'locationName' ? sortDir : 'asc'} onClick={() => handleRequestSort('locationName')}>
+                  Location
+                </TableSortLabel>
+              </TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -951,6 +1061,9 @@ export default function EventList({ onNotify }: EventListProps) {
                   <TableCell>
                     <Typography variant="body2" fontWeight={700}>{event.name}</Typography>
                     <Typography variant="caption" color="text.secondary" fontFamily="monospace">{event.slug}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Chip label={`${ACTIVITY_ICONS[event.activityType] ?? '🏅'} ${event.activityType}`} size="small" color={ACTIVITY_TYPE_COLORS[event.activityType as ActivityType] ?? 'default'} variant="outlined" />
                   </TableCell>
                   <TableCell>
                     <Chip label={event.type} size="small" color={EVENT_TYPE_COLORS[event.type as EventType] ?? 'default'} />
@@ -999,7 +1112,7 @@ export default function EventList({ onNotify }: EventListProps) {
                   </TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell colSpan={9} sx={{ py: 0, borderBottom: expandedEventId === event.id ? undefined : 'none' }}>
+                  <TableCell colSpan={10} sx={{ py: 0, borderBottom: expandedEventId === event.id ? undefined : 'none' }}>
                     <Collapse in={expandedEventId === event.id} timeout="auto" unmountOnExit>
                       <Box sx={{ px: 2, py: 2, bgcolor: 'action.hover' }}>
                         {loadingDetail ? (
@@ -1242,7 +1355,7 @@ export default function EventList({ onNotify }: EventListProps) {
 
             {filteredEvents.length === 0 && (
               <TableRow>
-                <TableCell colSpan={9} align="center">
+                <TableCell colSpan={10} align="center">
                   <Typography color="text.secondary" sx={{ py: 4 }}>
                     {searchQuery.trim() ? `No events match "${searchQuery}"` : 'No events yet. Click "New Event" to get started.'}
                   </Typography>
