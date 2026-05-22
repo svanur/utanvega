@@ -634,6 +634,7 @@ app.MapGet("/api/v1/admin/trails/{idOrSlug}", [Authorize] async (string idOrSlug
         trail.Length,
         trail.ElevationGain,
         trail.ElevationLoss,
+        trail.YoutubeUrl,
         Locations = trail.TrailLocations
             .OrderBy(tl => tl.Order)
             .Select(tl => new { tl.LocationId, Role = tl.Role.ToString(), tl.Order })
