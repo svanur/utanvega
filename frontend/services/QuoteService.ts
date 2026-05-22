@@ -90,6 +90,8 @@ export class QuoteService {
         { text: "Ég hleyp og hleyp og hleyp og hleyp og hleyp. Ég er alinn upp á malbiki.", author: "Emmsjé Gauti" },
         { text: "Þetta reddast :)", author: "Allir Íslendingar, (nánast) alltaf..." },
         { text: "Gerum bara eitthvað gott og gerum það saman, mér er alveg sama hvað, bara ef það er gaman", author: "Friðrik Dór, Dönsum eins og hálfvitar" },
+        { text: "Get stuff done and things will improve slowly", author: "Jon Albon" },
+        { text: "This is ten percent luck. Twenty percent skill. Fifteen percent concentrated power of will. Five percent pleasure. Fifty percent pain. And a hundred percent reason to remember the name", author: "Fort Minor, Remember the name" },
     ];
 
     static getRandomQuote(): Quote {

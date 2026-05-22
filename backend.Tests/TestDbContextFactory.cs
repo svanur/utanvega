@@ -140,7 +140,7 @@ internal class TestDbContext : UtanvegaDbContext
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<Core.Entities.Competition>(entity =>
+        modelBuilder.Entity<Core.Entities.Event>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
@@ -148,15 +148,39 @@ internal class TestDbContext : UtanvegaDbContext
             entity.HasIndex(e => e.Slug).IsUnique();
             entity.Property(e => e.OrganizerName).HasMaxLength(200);
             entity.Property(e => e.OrganizerWebsite).HasMaxLength(500);
-            entity.Property(e => e.RegistrationUrl).HasMaxLength(500);
+            entity.Property(e => e.Type).HasConversion<string>();
             entity.Property(e => e.Status).HasConversion<string>();
             entity.Property(e => e.ScheduleRule).HasConversion(
                 v => v == null ? null : JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
                 v => v == null ? null : JsonSerializer.Deserialize<Core.Entities.ScheduleRule>(v, (JsonSerializerOptions?)null)
             );
+            entity.Property(e => e.SocialLinks).HasConversion(
+                v => v == null ? null : JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                v => v == null ? null : JsonSerializer.Deserialize<System.Collections.Generic.List<Core.Entities.SocialLink>>(v, (JsonSerializerOptions?)null)
+            );
             entity.HasOne(e => e.Location)
                   .WithMany()
                   .HasForeignKey(e => e.LocationId)
+                  .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<Core.Entities.EventEdition>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Title).HasMaxLength(200);
+            entity.Property(e => e.RegistrationUrl).HasMaxLength(500);
+            entity.Property(e => e.ResultsUrl).HasMaxLength(500);
+            entity.Property(e => e.RegistrationStatus).HasConversion<string>();
+            entity.Property(e => e.Date).HasConversion(
+                v => v.HasValue ? (int?)v.Value.DayNumber : null,
+                v => v.HasValue ? (DateOnly?)DateOnly.FromDayNumber(v.Value) : null);
+            entity.HasOne(e => e.Event)
+                  .WithMany(ev => ev.Editions)
+                  .HasForeignKey(e => e.EventId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Trail)
+                  .WithMany()
+                  .HasForeignKey(e => e.TrailId)
                   .OnDelete(DeleteBehavior.SetNull);
         });
 
@@ -165,9 +189,22 @@ internal class TestDbContext : UtanvegaDbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
             entity.Property(e => e.DistanceLabel).HasMaxLength(50);
-            entity.HasOne(e => e.Competition)
-                  .WithMany(c => c.Races)
-                  .HasForeignKey(e => e.CompetitionId)
+            entity.Property(e => e.CertifiedBy).HasMaxLength(100);
+            entity.Property(e => e.ChampionshipCategory).HasMaxLength(200);
+            entity.Property(e => e.PrizeMoney).HasConversion(
+                v => (double)v,
+                v => (decimal)v);
+            entity.Property(e => e.Status).HasConversion<string>();
+            entity.Property(e => e.TicketStatus).HasConversion<string>();
+            entity.Property(e => e.DateOfRace).HasConversion(
+                v => v.HasValue ? (int?)v.Value.DayNumber : null,
+                v => v.HasValue ? (DateOnly?)DateOnly.FromDayNumber(v.Value) : null);
+            entity.Property(e => e.StartTime).HasConversion(
+                v => v.HasValue ? (long?)v.Value.Ticks : null,
+                v => v.HasValue ? (TimeOnly?)new TimeOnly(v.Value) : null);
+            entity.HasOne(e => e.EventEdition)
+                  .WithMany(ed => ed.Races)
+                  .HasForeignKey(e => e.EventEditionId)
                   .OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.Trail)
                   .WithMany()

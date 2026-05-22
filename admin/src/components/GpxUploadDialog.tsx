@@ -26,6 +26,9 @@ const ACTIVITY_TYPES = [
   { value: 'Running', label: 'Running' },
   { value: 'Cycling', label: 'Cycling' },
   { value: 'Hiking', label: 'Hiking' },
+  { value: 'FunRun', label: 'Fun Run' },
+  { value: 'ObstacleCourse', label: 'Obstacle Course' },
+  { value: 'CrossCountryRun', label: 'Cross Country Run' },
 ] as const;
 
 export default function GpxUploadDialog({ open, onClose, onUploadSuccess }: { open: boolean, onClose: () => void, onUploadSuccess: (trail?: { id: string, slug: string, name: string }, detectedLocations?: DetectedLocation[]) => void }) {

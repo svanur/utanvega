@@ -242,6 +242,9 @@
         "running": "Running",
         "hiking": "Hiking",
         "cycling": "Cycling",
+        "funRun": "Fun Run",
+        "obstacleCourse": "Obstacle Course",
+        "crossCountryRun": "Cross Country Run",
         "formula": "**Effort distance** = distance (km) + elevation gain (m) ÷ 100. For example, a 15 km trail with 800 m gain = 23 km effort."
     },
     "paceModel": {
@@ -821,6 +824,9 @@
         "raceCount_one": "{{count}} course",
         "raceCount_other": "{{count}} courses",
         "raceCount": "{{count}} courses",
+        "editionCount_one": "{{count}} edition",
+        "editionCount_other": "{{count}} editions",
+        "editionCount": "{{count}} editions",
         "register": "Register",
         "organizerSite": "Organizer website",
         "racesHeading": "Races",

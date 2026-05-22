@@ -8,6 +8,11 @@ public enum ActivityType
     Running,
     Cycling,
     Hiking,
+    FunRun,
+    ObstacleCourse,
+    CrossCountryRun,
+    Social,
+    Other,
 }
 
 public enum TrailStatus
@@ -17,7 +22,7 @@ public enum TrailStatus
     Flagged,
     Archived,
     Deleted,
-    RaceOnly,
+    EventOnly,
 }
 
 public enum Difficulty

@@ -696,7 +696,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                             </Stack>
                         </Grid>
                         <Grid item xs={6} sm>
-                            {isEnabled('pace_info') && <PaceInfo activityType={trail.activityType} formattedDuration={estTime} />}
+                            {isEnabled('pace_info') && estTime && <PaceInfo activityType={trail.activityType} formattedDuration={estTime} />}
                         </Grid>
                     </Grid>
                 </Box>

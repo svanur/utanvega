@@ -24,7 +24,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import Layout from '../components/Layout';
 import RunningLoader from '../components/RunningLoader';
-import { useCompetitionCalendar, CalendarDay } from '../hooks/useCompetitions';
+import { useEventCalendar, CalendarDay } from '../hooks/useEvents';
 import { useNavigate } from 'react-router-dom';
 
 type RaceCalendarPageProps = {
@@ -49,7 +49,7 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
     const [month, setMonth] = useState(today.getMonth());
 
     const { from, to } = useMemo(() => getMonthRange(year, month), [year, month]);
-    const { days, loading } = useCompetitionCalendar(from, to);
+    const { days, loading } = useEventCalendar(from, to);
 
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
     const [selectedDay, setSelectedDay] = useState<CalendarDay | null>(null);
@@ -306,10 +306,19 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
                                                 </Stack>
                                             }
                                             secondary={
-                                                ev.locationName && (
-                                                    <Stack direction="row" alignItems="center" spacing={0.3} sx={{ mt: 0.3 }}>
-                                                        <LocationOnIcon sx={{ fontSize: 12 }} />
-                                                        <Typography variant="caption">{ev.locationName}</Typography>
+                                                (ev.editionTitle || ev.locationName) && (
+                                                    <Stack spacing={0.3} sx={{ mt: 0.3 }}>
+                                                        {ev.editionTitle && (
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                {ev.editionTitle}
+                                                            </Typography>
+                                                        )}
+                                                        {ev.locationName && (
+                                                            <Stack direction="row" alignItems="center" spacing={0.3}>
+                                                                <LocationOnIcon sx={{ fontSize: 12 }} />
+                                                                <Typography variant="caption">{ev.locationName}</Typography>
+                                                            </Stack>
+                                                        )}
                                                     </Stack>
                                                 )
                                             }

@@ -46,6 +46,9 @@ import {
     DirectionsRun as DirectionsRunIcon,
     Hiking as HikingIcon,
     DirectionsBike as DirectionsBikeIcon,
+    Celebration as CelebrationIcon,
+    FitnessCenter as FitnessCenterIcon,
+    Grass as GrassIcon,
     ChevronLeft as ChevronLeftIcon,
     ChevronRight as ChevronRightIcon,
     Casino as CasinoIcon,
@@ -73,7 +76,7 @@ import { toUserFriendlyFetchError } from '../utils/apiErrors';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import ListSubheader from '@mui/material/ListSubheader';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
-import { useCompetitions } from '../hooks/useCompetitions';
+import { useEvents } from '../hooks/useEvents';
 import { useOfflineTrails } from '../hooks/useOfflineTrails';
 import OfflinePinIcon from '@mui/icons-material/OfflinePin';
 
@@ -110,7 +113,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
     const { isEnabled } = useFeatureFlags();
     const locationsPageEnabled = isEnabled('locations_page');
     const tagsEnabled = isEnabled('tags_page');
-    const { competitions: allCompetitions, loading: competitionsLoading } = useCompetitions();
+    const { events: allCompetitions, loading: competitionsLoading } = useEvents();
     const { offlineSlugs, isOffline } = useOfflineTrails();
 
     // Extract preset ID from navigation state (e.g. navigating from tag page with preset)
@@ -168,8 +171,8 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
 
     const upcomingCompetitions = React.useMemo(() =>
         allCompetitions
-            .filter(c => c.status === 'Active' && c.nextDate != null && (c.daysUntil ?? 999) >= 0)
-            .sort((a, b) => (a.nextDate ?? '').localeCompare(b.nextDate ?? ''))
+            .filter(c => !['Cancelled', 'Hidden', 'Unlisted'].includes(c.status) && c.nextEditionDate != null && (c.daysUntil ?? 999) >= 0)
+            .sort((a, b) => (a.nextEditionDate ?? '').localeCompare(b.nextEditionDate ?? ''))
             .slice(0, 10),
         [allCompetitions]
     );
@@ -582,6 +585,9 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                         Running: <DirectionsRunIcon fontSize="small" />,
                         Hiking: <HikingIcon fontSize="small" />,
                         Cycling: <DirectionsBikeIcon fontSize="small" />,
+                        FunRun: <CelebrationIcon fontSize="small" />,
+                        ObstacleCourse: <FitnessCenterIcon fontSize="small" />,
+                        CrossCountryRun: <GrassIcon fontSize="small" />,
                     }[type];
                     const label = t(`difficulty.${type.charAt(0).toLowerCase() + type.slice(1)}`);
                     return (
@@ -1100,9 +1106,9 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                                                 sx={{ fontSize: '0.65rem', height: 20 }}
                                             />
                                         )}
-                                        {comp.raceCount > 0 && (
+                                        {comp.editionCount > 0 && (
                                             <Chip
-                                                label={t('races.raceCount', { count: comp.raceCount })}
+                                                label={t('races.editionCount', { count: comp.editionCount })}
                                                 size="small"
                                                 variant="outlined"
                                                 sx={{ fontSize: '0.65rem', height: 20 }}

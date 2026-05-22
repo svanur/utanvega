@@ -12,7 +12,8 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import SearchIcon from '@mui/icons-material/Search';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
+import { BrowserRouter, useNavigate, useLocation } from 'react-router-dom';
 import TrailList from './pages/TrailList';
 import { LocationList } from './pages/LocationList';
 import TrailHealth from './pages/TrailHealth';
@@ -20,7 +21,7 @@ import TrailMapView from './pages/TrailMapView';
 import TagManagement from './pages/TagManagement';
 import AnalyticsPage from './pages/AnalyticsPage';
 import FeatureFlagsPage from './pages/FeatureFlagsPage';
-import CompetitionList from './pages/CompetitionList';
+import EventList from './pages/EventList';
 import GpxUploadDialog from './components/GpxUploadDialog';
 import LoginPage from './pages/LoginPage';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -45,28 +46,30 @@ const theme = createTheme({
 const DRAWER_WIDTH = 220;
 const DRAWER_COLLAPSED = 56;
 
+type PageKey = 'trails' | 'locations' | 'health' | 'map' | 'tags' | 'analytics' | 'features' | 'events';
+
+const PAGE_PATHS: Record<PageKey, string> = {
+  trails: '/',
+  locations: '/locations',
+  health: '/health',
+  map: '/map',
+  tags: '/tags',
+  analytics: '/analytics',
+  events: '/events',
+  features: '/features',
+};
+
+function pathToPage(pathname: string): PageKey {
+  const entry = Object.entries(PAGE_PATHS).find(([, path]) => path === pathname);
+  return (entry?.[0] as PageKey) ?? 'trails';
+}
+
 function AdminContent() {
-  type Page = 'trails' | 'locations' | 'health' | 'map' | 'tags' | 'analytics' | 'features' | 'competitions';
-  const VALID_PAGES: Page[] = ['trails', 'locations', 'health', 'map', 'tags', 'analytics', 'features', 'competitions'];
-
-  const pageFromPath = (): Page => {
-    const segment = window.location.pathname.replace(/^\//, '') as Page;
-    return VALID_PAGES.includes(segment) ? segment : 'trails';
-  };
-
   const { user, loading: authLoading, signOut } = useAuth();
-  const [currentPage, setCurrentPageState] = useState<Page>(pageFromPath);
-
-  const setCurrentPage = useCallback((page: Page) => {
-    setCurrentPageState(page);
-    window.history.pushState(null, '', `/${page === 'trails' ? '' : page}`);
-  }, []);
-
-  useEffect(() => {
-    const onPopState = () => setCurrentPageState(pageFromPath());
-    window.addEventListener('popstate', onPopState);
-    return () => window.removeEventListener('popstate', onPopState);
-  }, []);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const currentPage = pathToPage(location.pathname);
+  const setCurrentPage = useCallback((page: PageKey) => navigate(PAGE_PATHS[page]), [navigate]);
   const [drawerOpen, setDrawerOpen] = useState(true);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -218,7 +221,7 @@ function AdminContent() {
               { key: 'map' as const, icon: <MapIcon />, label: 'Trail Map' },
               { key: 'tags' as const, icon: <LocalOfferIcon />, label: 'Tags' },
               { key: 'analytics' as const, icon: <BarChartIcon />, label: 'Analytics' },
-              { key: 'competitions' as const, icon: <EmojiEventsIcon />, label: 'Competitions' },
+              { key: 'events' as const, icon: <EmojiEventsIcon />, label: 'Events' },
               { key: 'features' as const, icon: <ToggleOnIcon />, label: 'Features' },
             ].map(item => (
               <ListItem key={item.key} disablePadding>
@@ -254,8 +257,8 @@ function AdminContent() {
             <AnalyticsPage />
           ) : currentPage === 'features' ? (
             <FeatureFlagsPage onNotify={notify} />
-          ) : currentPage === 'competitions' ? (
-            <CompetitionList onNotify={notify} />
+          ) : currentPage === 'events' ? (
+            <EventList onNotify={notify} />
           ) : (
             <LocationList onNotify={notify} />
           )}
@@ -291,7 +294,7 @@ function AdminContent() {
       </Box>
       <AdminSpotlightSearch
         onEditTrail={(id) => { setSelectedTrailId(id); setSearchTerm(null); setCurrentPage('trails'); }}
-        onNavigate={(page) => setCurrentPage(page as typeof currentPage)}
+        onNavigate={(page) => setCurrentPage(page as PageKey)}
         onFilterTrails={(term) => { setSearchTerm(term); setSelectedTrailId(null); setCurrentPage('trails'); }}
       />
       <KeyboardShortcutsDialog open={showShortcuts} onClose={() => setShowShortcuts(false)} />
@@ -304,9 +307,11 @@ export default function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <ErrorBoundary>
-        <AuthProvider>
-          <AdminContent />
-        </AuthProvider>
+        <BrowserRouter>
+          <AuthProvider>
+            <AdminContent />
+          </AuthProvider>
+        </BrowserRouter>
       </ErrorBoundary>
     </ThemeProvider>
   );

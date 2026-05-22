@@ -198,6 +198,9 @@ export default function PaceCalculator() {
             TrailRunning: 'trail',
             Hiking: 'trail',
             Cycling: 'road',
+            FunRun: 'road',
+            ObstacleCourse: 'trail',
+            CrossCountryRun: 'gravel',
         };
         setTerrain(terrainMap[trail.activityType] ?? 'trail');
 
@@ -205,12 +208,17 @@ export default function PaceCalculator() {
 
         // Estimate time from distance + elevation + activity type
         const estMinutes = estimateDurationMinutes(trail.distance * 1000, trail.elevationGain, trail.activityType);
-        const estTime = formatTime(estMinutes);
-        setTimeStr(estTime);
+        if (estMinutes !== null) {
+            const estTime = formatTime(estMinutes);
+            setTimeStr(estTime);
 
-        // Compute pace from distance + estimated time
-        const estPace = estMinutes / d;
-        setPaceStr(formatPace(estPace));
+            // Compute pace from distance + estimated time
+            const estPace = estMinutes / d;
+            setPaceStr(formatPace(estPace));
+        } else {
+            setTimeStr('');
+            setPaceStr('');
+        }
     };
 
     const stepPace = (direction: 1 | -1) => {

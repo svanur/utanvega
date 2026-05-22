@@ -18,8 +18,8 @@ public record LocationInfoDto(Guid Id, string Name, string Slug, int Order, stri
 public record TagInfoDto(string Name, string Slug, string? Color);
 
 public record LinkedRaceDto(
-    string CompetitionName,
-    string CompetitionSlug,
+    string EventName,
+    string EventSlug,
     string RaceName,
     string? DistanceLabel,
     int? DaysUntil

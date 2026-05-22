@@ -400,10 +400,12 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                             <TrendingDownIcon sx={{ mr: compact ? 0 : 0.5, fontSize: compact ? 14 : 18, color: 'error.main' }} />
                             <Typography variant="body2" fontSize={compact ? '0.75rem' : undefined}>-{Math.round(trail.elevationLoss)}</Typography>
                         </Box>
+                        {estTime && (
                         <Box display="flex" alignItems="center">
                             <AccessTimeIcon sx={{ mr: compact ? 0 : 0.5, fontSize: compact ? 14 : 18 }} />
                             <Typography variant="body2" fontSize={compact ? '0.75rem' : undefined}>~{estTime}</Typography>
                         </Box>
+                        )}
                         {userDist && !compact && (
                             <Box display="flex" alignItems="center">
                                 <LocationOnIcon sx={{ mr: 0.5, fontSize: 18, color: 'primary.main' }} />

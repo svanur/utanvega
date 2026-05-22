@@ -242,6 +242,9 @@
         "running": "Hlaup",
         "hiking": "Ganga",
         "cycling": "Hjólreiðar",
+        "funRun": "Skemmtiskokk",
+        "obstacleCourse": "Hindrunarhlaup",
+        "crossCountryRun": "Víðavangshlaup",
         "formula": "**Álagsvegalengd** = vegalengd (km) + hækkun (m) ÷ 100. Til dæmis, 15 km leið með 800 m hækkun = 23 km álag."
     },
     "paceModel": {
@@ -821,6 +824,9 @@
         "raceCount_one": "{{count}} hlaupaleið",
         "raceCount_other": "{{count}} hlaupaleiðir",
         "raceCount": "{{count}} hlaupaleiðir",
+        "editionCount_one": "{{count}} útgáfa",
+        "editionCount_other": "{{count}} útgáfur",
+        "editionCount": "{{count}} útgáfur",
         "register": "Skráning",
         "organizerSite": "Vefur skipuleggjanda",
         "racesHeading": "Keppnishlaup",
