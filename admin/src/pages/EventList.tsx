@@ -978,7 +978,7 @@ export default function EventList({ onNotify }: EventListProps) {
           <InputLabel>Type</InputLabel>
           <Select value={typeFilter} label="Type" onChange={e => setTypeFilter(e.target.value)}>
             <MenuItem value="all">All</MenuItem>
-            {(['Race', 'Series', 'Advertisement', 'Festival', 'Other'] as EventType[]).map(t => <MenuItem key={t} value={t}>{t}</MenuItem>)}
+            {EVENT_TYPES.map(t => <MenuItem key={t} value={t}>{t}</MenuItem>)}
           </Select>
         </FormControl>
         <FormControl size="small" sx={{ minWidth: 120 }}>
