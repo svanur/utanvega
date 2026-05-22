@@ -986,7 +986,7 @@ export default function EventList({ onNotify }: EventListProps) {
                 certifiedBy: input.certifiedBy,
                 prizeMoney: input.prizeMoney,
                 championshipCategory: input.championshipCategory,
-                dateOfRace: null,
+                dateOfRace: r.dateOfRace ?? null,
                 startTime: input.startTime,
               }),
             ));
@@ -1023,15 +1023,23 @@ export default function EventList({ onNotify }: EventListProps) {
   const handleCopyRacesFromPrevious = async (edition: EventEditionDto) => {
     if (!expandedDetail) return;
 
-    // Find the closest earlier edition with races, falling back to any other with races
-    const otherEditions = expandedDetail.editions.filter(ed => ed.id !== edition.id && ed.races.length > 0);
-    if (otherEditions.length === 0) return;
+    // Sort all editions chronologically and find the target's position
+    const allSorted = [...expandedDetail.editions].sort(sortEditions);
+    const targetIndex = allSorted.findIndex(ed => ed.id === edition.id);
 
-    const earlierEditions = otherEditions
-      .filter(ed => (ed.date ?? '') < (edition.date ?? '') || (!ed.date && !edition.date))
-      .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''));
-
-    const sourceEdition = earlierEditions[0] ?? otherEditions[0];
+    // Look backwards for the closest earlier edition with races
+    let sourceEdition: EventEditionDto | undefined;
+    for (let i = targetIndex - 1; i >= 0; i--) {
+      if (allSorted[i].races.length > 0) {
+        sourceEdition = allSorted[i];
+        break;
+      }
+    }
+    // Fallback: use the most recent edition with races (any position)
+    if (!sourceEdition) {
+      sourceEdition = [...allSorted].reverse().find(ed => ed.id !== edition.id && ed.races.length > 0);
+    }
+    if (!sourceEdition) return;
 
     const raceCount = sourceEdition.races.length;
     const label = buildEditionLabel(sourceEdition);
