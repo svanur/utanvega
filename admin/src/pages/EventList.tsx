@@ -495,6 +495,10 @@ export default function EventList({ onNotify }: EventListProps) {
   const [sortBy, setSortBy] = useState<'name' | 'activityType' | 'type' | 'nextEditionDate' | 'status' | 'editionCount' | 'locationName'>('name');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [searchQuery, setSearchQuery] = useState('');
+  const [activityFilter, setActivityFilter] = useState<string>('all');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [locationFilter, setLocationFilter] = useState<string>('all');
   const [eventForm, setEventForm] = useState<EventFormState>(createEmptyEventForm());
   const [editionForm, setEditionForm] = useState<EditionFormState>(createEmptyEditionForm());
   const [raceForm, setRaceForm] = useState<RaceFormState>(createEmptyRaceForm());
@@ -509,13 +513,20 @@ export default function EventList({ onNotify }: EventListProps) {
     [trails],
   );
 
+  const eventLocationOptions = useMemo(
+    () => [...new Set(events.map(e => e.locationName).filter(Boolean) as string[])].sort(),
+    [events],
+  );
+
+  const hasActiveFilters = activityFilter !== 'all' || typeFilter !== 'all' || statusFilter !== 'all' || locationFilter !== 'all';
+  const resetFilters = () => { setActivityFilter('all'); setTypeFilter('all'); setStatusFilter('all'); setLocationFilter('all'); };
+
   const filteredEvents = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
 
     return [...events]
       .filter(event => {
-        if (!normalizedQuery) return true;
-        return [
+        if (normalizedQuery && ![
           event.name,
           event.slug,
           event.description ?? '',
@@ -523,7 +534,18 @@ export default function EventList({ onNotify }: EventListProps) {
           event.organizerName ?? '',
           event.type,
           event.status,
-        ].some(value => value.toLowerCase().includes(normalizedQuery));
+          event.activityType,
+        ].some(value => value.toLowerCase().includes(normalizedQuery))) return false;
+
+        if (activityFilter !== 'all' && event.activityType !== activityFilter) return false;
+        if (typeFilter !== 'all' && event.type !== typeFilter) return false;
+        if (statusFilter !== 'all' && event.status !== statusFilter) return false;
+        if (locationFilter !== 'all') {
+          if (locationFilter === 'none' && event.locationName) return false;
+          if (locationFilter !== 'none' && event.locationName !== locationFilter) return false;
+        }
+
+        return true;
       })
       .sort((a, b) => {
         const dir = sortDir === 'asc' ? 1 : -1;
@@ -547,7 +569,7 @@ export default function EventList({ onNotify }: EventListProps) {
 
         return dir * a.name.localeCompare(b.name);
       });
-  }, [events, searchQuery, sortBy, sortDir]);
+  }, [events, searchQuery, sortBy, sortDir, activityFilter, typeFilter, statusFilter, locationFilter]);
 
   const handleRequestSort = (field: typeof sortBy) => {
     if (sortBy === field) {
@@ -921,34 +943,70 @@ export default function EventList({ onNotify }: EventListProps) {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
           <TrophyIcon color="primary" />
           <Typography variant="h5">Events</Typography>
-          <Chip label={searchQuery.trim() ? `${filteredEvents.length} / ${events.length}` : events.length} size="small" color="primary" />
+          <Chip label={searchQuery.trim() || hasActiveFilters ? `${filteredEvents.length} / ${events.length}` : events.length} size="small" color="primary" />
         </Box>
-
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-          <TextField
-            size="small"
-            placeholder="Search events…"
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            sx={{ width: 260 }}
-            InputProps={{
-              startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment>,
-              endAdornment: searchQuery ? (
-                <InputAdornment position="end">
-                  <IconButton size="small" aria-label="Clear search" onClick={() => setSearchQuery('')}>
-                    <ClearIcon fontSize="small" />
-                  </IconButton>
-                </InputAdornment>
-              ) : undefined,
-            }}
-          />
-          <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateEvent}>
-            New Event
-          </Button>
-        </Box>
+        <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateEvent}>
+          New Event
+        </Button>
       </Box>
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
+      <Paper sx={{ mb: 3, p: 2, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+        <TextField
+          size="small"
+          placeholder="Search events…"
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+          sx={{ minWidth: 200, flexGrow: 1, maxWidth: 300 }}
+          InputProps={{
+            startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment>,
+            endAdornment: searchQuery ? (
+              <InputAdornment position="end">
+                <IconButton size="small" aria-label="Clear search" onClick={() => setSearchQuery('')}>
+                  <ClearIcon fontSize="small" />
+                </IconButton>
+              </InputAdornment>
+            ) : undefined,
+          }}
+        />
+        <FormControl size="small" sx={{ minWidth: 140 }}>
+          <InputLabel>Activity</InputLabel>
+          <Select value={activityFilter} label="Activity" onChange={e => setActivityFilter(e.target.value)}>
+            <MenuItem value="all">All</MenuItem>
+            {ACTIVITY_TYPES.map(at => <MenuItem key={at} value={at}>{ACTIVITY_ICONS[at] ?? '🏅'} {at}</MenuItem>)}
+          </Select>
+        </FormControl>
+        <FormControl size="small" sx={{ minWidth: 120 }}>
+          <InputLabel>Type</InputLabel>
+          <Select value={typeFilter} label="Type" onChange={e => setTypeFilter(e.target.value)}>
+            <MenuItem value="all">All</MenuItem>
+            {(['Race', 'Series', 'Advertisement', 'Festival', 'Other'] as EventType[]).map(t => <MenuItem key={t} value={t}>{t}</MenuItem>)}
+          </Select>
+        </FormControl>
+        <FormControl size="small" sx={{ minWidth: 120 }}>
+          <InputLabel>Status</InputLabel>
+          <Select value={statusFilter} label="Status" onChange={e => setStatusFilter(e.target.value)}>
+            <MenuItem value="all">All</MenuItem>
+            {EVENT_STATUSES.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+          </Select>
+        </FormControl>
+        <FormControl size="small" sx={{ minWidth: 140 }}>
+          <InputLabel>Location</InputLabel>
+          <Select value={locationFilter} label="Location" onChange={e => setLocationFilter(e.target.value)}>
+            <MenuItem value="all">All</MenuItem>
+            <MenuItem value="none"><em>No location</em></MenuItem>
+            {eventLocationOptions.map(loc => <MenuItem key={loc} value={loc}>{loc}</MenuItem>)}
+          </Select>
+        </FormControl>
+        {hasActiveFilters && (
+          <Tooltip title="Clear all filters">
+            <IconButton size="small" onClick={resetFilters}>
+              <ClearIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
+      </Paper>
 
       <TableContainer component={Paper}>
         <Table>
