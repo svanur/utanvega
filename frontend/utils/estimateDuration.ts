@@ -13,8 +13,9 @@ const PACE_MAP: Record<string, PaceParams> = {
     trailrunning:   { baseSpeedKmh: 10, climbPenaltyMinPer100m: 2.5 },
     hiking:         { baseSpeedKmh: 4,  climbPenaltyMinPer100m: 10 },
     cycling:        { baseSpeedKmh: 20, climbPenaltyMinPer100m: 3 },
-    funrun:         { baseSpeedKmh: 9,  climbPenaltyMinPer100m: 1.5 },
-    obstaclecourse: { baseSpeedKmh: 5,  climbPenaltyMinPer100m: 4 },
+    funrun:           { baseSpeedKmh: 9,  climbPenaltyMinPer100m: 1.5 },
+    obstaclecourse:   { baseSpeedKmh: 5,  climbPenaltyMinPer100m: 4 },
+    crosscountryrun:  { baseSpeedKmh: 9.5, climbPenaltyMinPer100m: 2 },
 };
 
 const DEFAULT_PACE: PaceParams = { baseSpeedKmh: 5, climbPenaltyMinPer100m: 5 };

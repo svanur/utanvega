@@ -200,6 +200,7 @@ export default function PaceCalculator() {
             Cycling: 'road',
             FunRun: 'road',
             ObstacleCourse: 'trail',
+            CrossCountryRun: 'gravel',
         };
         setTerrain(terrainMap[trail.activityType] ?? 'trail');
 

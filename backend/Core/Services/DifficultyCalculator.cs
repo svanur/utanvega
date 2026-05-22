@@ -25,6 +25,7 @@ public static class DifficultyCalculator
             ActivityType.Cycling         => FromEffort(effortKm, CyclingThresholds),
             ActivityType.FunRun          => FromDistance(distanceKm, FunRunThresholds),
             ActivityType.ObstacleCourse  => FromDistance(distanceKm, ObstacleCourseThresholds),
+            ActivityType.CrossCountryRun => FromDistance(distanceKm, crossCountryRunThresholds),
             _                            => FromEffort(effortKm, TrailRunningThresholds),
         };
     }
@@ -55,6 +56,9 @@ public static class DifficultyCalculator
 
     // Obstacle Course — obstacles multiply difficulty, short distances are already hard
     private static readonly double[] ObstacleCourseThresholds = [5, 10, 18, 30];
+
+    // Cross Country Run — softer ground than road, slightly harder per km
+    private static readonly double[] crossCountryRunThresholds = [8, 18, 35, 80];
 
     private static Difficulty FromEffort(double effortKm, double[] thresholds)
     {

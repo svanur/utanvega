@@ -67,7 +67,7 @@ export interface FilterState {
     sortBy: SortOption;
 }
 
-export const ALL_ACTIVITY_TYPES = ['TrailRunning', 'Running', 'Hiking', 'Cycling', 'FunRun', 'ObstacleCourse'];
+export const ALL_ACTIVITY_TYPES = ['TrailRunning', 'Running', 'Hiking', 'Cycling', 'FunRun', 'ObstacleCourse', 'CrossCountryRun'];
 
 export const DEFAULT_FILTERS: FilterState = {
     minLength: 0,

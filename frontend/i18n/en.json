@@ -244,6 +244,7 @@
         "cycling": "Cycling",
         "funRun": "Fun Run",
         "obstacleCourse": "Obstacle Course",
+        "crossCountryRun": "Cross Country Run",
         "formula": "**Effort distance** = distance (km) + elevation gain (m) ÷ 100. For example, a 15 km trail with 800 m gain = 23 km effort."
     },
     "paceModel": {
