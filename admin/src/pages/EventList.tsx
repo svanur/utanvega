@@ -1409,9 +1409,9 @@ export default function EventList({ onNotify }: EventListProps) {
                                             Races ({edition.races.length})
                                           </Typography>
                                           <Stack direction="row" spacing={1}>
-                                            {expandedDetail && expandedDetail.editions.some(ed => ed.id !== edition.id && ed.races.length > 0) && (
+                                            {expandedDetail && edition.races.length === 0 && expandedDetail.editions.some(ed => ed.id !== edition.id && ed.races.length > 0) && (
                                               <Button size="small" startIcon={<CopyIcon />} onClick={() => handleCopyRacesFromPrevious(edition)} disabled={saving}>
-                                                Copy race
+                                                Copy races
                                               </Button>
                                             )}
                                             <Button size="small" startIcon={<AddIcon />} onClick={() => openCreateRace(edition)}>
