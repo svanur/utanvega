@@ -135,8 +135,12 @@ interface RaceFormState {
 interface GenerateFormState {
   eventId: string;
   eventName: string;
-  from: string;
-  to: string;
+  fromMonth: number;
+  fromYear: number;
+  toMonth: number;
+  toYear: number;
+  trailId: string;
+  registrationUrl: string;
 }
 
 const DAYS: DayOfWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -326,8 +330,10 @@ function createGenerateForm(event: EventSummaryDto): GenerateFormState {
   return {
     eventId: event.id,
     eventName: event.name,
-    from: `${currentYear}-01-01`,
-    to: `${currentYear + 1}-12-31`,
+    fromMonth: 1,
+    fromYear: currentYear,
+    toMonth: 12,
+    toYear: currentYear,
   };
 }
 
@@ -472,7 +478,7 @@ export default function EventList({ onNotify }: EventListProps) {
   const [eventForm, setEventForm] = useState<EventFormState>(createEmptyEventForm());
   const [editionForm, setEditionForm] = useState<EditionFormState>(createEmptyEditionForm());
   const [raceForm, setRaceForm] = useState<RaceFormState>(createEmptyRaceForm());
-  const [generateForm, setGenerateForm] = useState<GenerateFormState>({ eventId: '', eventName: '', from: '', to: '' });
+  const [generateForm, setGenerateForm] = useState<GenerateFormState>({ eventId: '', eventName: '', fromMonth: 1, fromYear: new Date().getFullYear(), toMonth: 12, toYear: new Date().getFullYear() });
 
   const sortedLocations = useMemo(
     () => [...locations].sort((a, b) => a.name.localeCompare(b.name)),
@@ -754,14 +760,18 @@ export default function EventList({ onNotify }: EventListProps) {
   };
 
   const handleGenerateEditions = async () => {
-    if (!generateForm.eventId || !generateForm.from || !generateForm.to) return;
+    if (!generateForm.eventId) return;
+
+    const from = `${generateForm.fromYear}-${String(generateForm.fromMonth).padStart(2, '0')}-01`;
+    const lastDay = new Date(generateForm.toYear, generateForm.toMonth, 0).getDate();
+    const to = `${generateForm.toYear}-${String(generateForm.toMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
     setSaving(true);
     try {
       const result = await generateEditionsForSeason({
         eventId: generateForm.eventId,
-        from: generateForm.from,
-        to: generateForm.to,
+        from,
+        to,
       });
       onNotify(result.count > 0
         ? `Generated ${result.count} edition${result.count === 1 ? '' : 's'} for "${generateForm.eventName}"`
@@ -1696,30 +1706,44 @@ export default function EventList({ onNotify }: EventListProps) {
         <DialogTitle>Generate Editions</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" sx={{ pt: 1, mb: 2 }}>
-            Generate editions for {generateForm.eventName} between the selected dates using the event schedule rule.
+            Generate editions for {generateForm.eventName} using its schedule rule. Existing dates are skipped.
           </Typography>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <TextField
-              label="From"
-              type="date"
-              value={generateForm.from}
-              onChange={(event) => setGenerateForm(prev => ({ ...prev, from: event.target.value }))}
-              InputLabelProps={{ shrink: true }}
-              inputProps={{ lang: 'is' }}
-            />
-            <TextField
-              label="To"
-              type="date"
-              value={generateForm.to}
-              onChange={(event) => setGenerateForm(prev => ({ ...prev, to: event.target.value }))}
-              InputLabelProps={{ shrink: true }}
-              inputProps={{ lang: 'is' }}
-            />
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+              <FormControl size="small">
+                <InputLabel>From month</InputLabel>
+                <Select value={generateForm.fromMonth} label="From month" onChange={(event) => setGenerateForm(prev => ({ ...prev, fromMonth: Number(event.target.value) }))}>
+                  {MONTHS_SHORT.slice(1).map((m, i) => <MenuItem key={m} value={i + 1}>{m}</MenuItem>)}
+                </Select>
+              </FormControl>
+              <TextField
+                label="Year"
+                type="number"
+                size="small"
+                value={generateForm.fromYear}
+                onChange={(event) => setGenerateForm(prev => ({ ...prev, fromYear: Number(event.target.value) }))}
+              />
+            </Box>
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+              <FormControl size="small">
+                <InputLabel>To month</InputLabel>
+                <Select value={generateForm.toMonth} label="To month" onChange={(event) => setGenerateForm(prev => ({ ...prev, toMonth: Number(event.target.value) }))}>
+                  {MONTHS_SHORT.slice(1).map((m, i) => <MenuItem key={m} value={i + 1}>{m}</MenuItem>)}
+                </Select>
+              </FormControl>
+              <TextField
+                label="Year"
+                type="number"
+                size="small"
+                value={generateForm.toYear}
+                onChange={(event) => setGenerateForm(prev => ({ ...prev, toYear: Number(event.target.value) }))}
+              />
+            </Box>
           </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowGenerateDialog(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleGenerateEditions} disabled={!generateForm.from || !generateForm.to || saving}>
+          <Button variant="contained" onClick={handleGenerateEditions} disabled={saving}>
             {saving ? <CircularProgress size={20} /> : 'Generate'}
           </Button>
         </DialogActions>

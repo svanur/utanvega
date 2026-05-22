@@ -10,7 +10,9 @@ namespace Utanvega.Backend.Application.Events.Commands.GenerateEditionsForSeason
 public record GenerateEditionsForSeasonCommand(
     Guid EventId,
     DateOnly From,
-    DateOnly To
+    DateOnly To,
+    Guid? TrailId = null,
+    string? RegistrationUrl = null
 ) : IRequest<List<Guid>>;
 
 public class GenerateEditionsForSeasonCommandHandler : IRequestHandler<GenerateEditionsForSeasonCommand, List<Guid>>
@@ -39,12 +41,23 @@ public class GenerateEditionsForSeasonCommandHandler : IRequestHandler<GenerateE
 
         var dates = _scheduleEngine.GetOccurrencesInRange(ev.ScheduleRule, request.From, request.To);
 
-        var editions = dates.Select((date, index) => new EventEdition
+        // Skip dates that already have an edition
+        var existingDates = await _context.EventEditions
+            .Where(ed => ed.EventId == request.EventId && ed.Date != null)
+            .Select(ed => ed.Date!.Value)
+            .ToListAsync(cancellationToken);
+
+        var existingDateSet = existingDates.ToHashSet();
+        var newDates = dates.Where(d => !existingDateSet.Contains(d)).ToList();
+
+        var editions = newDates.Select((date, index) => new EventEdition
         {
             EventId = request.EventId,
             Date = date,
             Year = date.Year,
             Title = $"Round {index + 1}",
+            TrailId = request.TrailId,
+            RegistrationUrl = request.RegistrationUrl,
             RegistrationStatus = RegistrationStatus.NotStarted,
             CreatedAt = DateTime.UtcNow,
         }).ToList();
