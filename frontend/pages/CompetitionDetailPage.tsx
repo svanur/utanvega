@@ -286,7 +286,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                 const dateA = a.date ?? '';
                 const dateB = b.date ?? '';
                 if (dateA && dateB && dateA !== dateB) return dateB.localeCompare(dateA);
-                return b.year - a.year;
+                return (b.year ?? 0) - (a.year ?? 0);
             })
             .map(edition => ({
                 ...edition,

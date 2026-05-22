@@ -1247,6 +1247,7 @@ app.MapGet("/api/v1/events", async (IMediator mediator, bool includeHidden = fal
 
 // Legacy stubs — keep deployed frontend/admin from crashing until redeployed
 app.MapGet("/api/v1/competitions", () => Results.Ok(Array.Empty<object>())).WithName("LegacyCompetitions");
+app.MapGet("/api/v1/competitions/calendar", () => Results.Ok(Array.Empty<object>())).WithName("LegacyCompetitionsCalendar");
 app.MapGet("/api/v1/competitions/{slug}", (string slug) => Results.NotFound()).WithName("LegacyCompetitionBySlug");
 
 app.MapGet("/api/v1/events/calendar", async (IMediator mediator, DateOnly? from, DateOnly? to) =>

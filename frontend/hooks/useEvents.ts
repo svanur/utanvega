@@ -67,7 +67,7 @@ export interface RaceDto {
 export interface EventEditionDto {
     id: string;
     eventId: string;
-    year: number;
+    year: number | null;
     date: string | null;
     title: string | null;
     registrationUrl: string | null;
