@@ -214,6 +214,9 @@ export default function PaceCalculator() {
             // Compute pace from distance + estimated time
             const estPace = estMinutes / d;
             setPaceStr(formatPace(estPace));
+        } else {
+            setTimeStr('');
+            setPaceStr('');
         }
     };
 
