@@ -204,7 +204,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                 {comp.status === 'Cancelled' && (
                                                     <Chip label={t('races.statusCancelled')} size="small" color="error" sx={{ ml: 1, fontWeight: 600 }} />
                                                 )}
-                                                {(comp.status === 'Upcoming' || comp.status === 'Unconfirmed') && (
+                                                {comp.status === 'Unconfirmed' && (
                                                     <Chip label={t('races.statusUpcoming')} size="small" color="info" sx={{ ml: 1, fontWeight: 600 }} />
                                                 )}
 
