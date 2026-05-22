@@ -32,6 +32,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TableSortLabel,
   TextField,
   Tooltip,
   Typography,
@@ -46,9 +47,7 @@ import {
   ExpandMore as ExpandMoreIcon,
   EmojiEvents as TrophyIcon,
   Link as LinkIcon,
-  Schedule as ScheduleIcon,
   Search as SearchIcon,
-  SortByAlpha as SortByAlphaIcon,
 } from '@mui/icons-material';
 import {
   useEvents,
@@ -493,7 +492,8 @@ export default function EventList({ onNotify }: EventListProps) {
   const [expandedEditionIds, setExpandedEditionIds] = useState<string[]>([]);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [sortBy, setSortBy] = useState<'name' | 'nextEditionDate'>('name');
+  const [sortBy, setSortBy] = useState<'name' | 'activityType' | 'type' | 'nextEditionDate' | 'status' | 'editionCount' | 'locationName'>('name');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [searchQuery, setSearchQuery] = useState('');
   const [eventForm, setEventForm] = useState<EventFormState>(createEmptyEventForm());
   const [editionForm, setEditionForm] = useState<EditionFormState>(createEmptyEditionForm());
@@ -526,16 +526,37 @@ export default function EventList({ onNotify }: EventListProps) {
         ].some(value => value.toLowerCase().includes(normalizedQuery));
       })
       .sort((a, b) => {
+        const dir = sortDir === 'asc' ? 1 : -1;
+
         if (sortBy === 'nextEditionDate') {
-          if (!a.nextEditionDate && !b.nextEditionDate) return a.name.localeCompare(b.name);
+          if (!a.nextEditionDate && !b.nextEditionDate) return 0;
           if (!a.nextEditionDate) return 1;
           if (!b.nextEditionDate) return -1;
-          return a.nextEditionDate.localeCompare(b.nextEditionDate);
+          return dir * a.nextEditionDate.localeCompare(b.nextEditionDate);
         }
 
-        return a.name.localeCompare(b.name);
+        if (sortBy === 'editionCount') {
+          return dir * ((a.editionCount ?? 0) - (b.editionCount ?? 0));
+        }
+
+        if (sortBy === 'activityType' || sortBy === 'type' || sortBy === 'status' || sortBy === 'locationName') {
+          const aVal = (a[sortBy] ?? '').toLowerCase();
+          const bVal = (b[sortBy] ?? '').toLowerCase();
+          return dir * aVal.localeCompare(bVal);
+        }
+
+        return dir * a.name.localeCompare(b.name);
       });
-  }, [events, searchQuery, sortBy]);
+  }, [events, searchQuery, sortBy, sortDir]);
+
+  const handleRequestSort = (field: typeof sortBy) => {
+    if (sortBy === field) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(field);
+      setSortDir('asc');
+    }
+  };
 
   const setEventField = <K extends keyof EventFormState>(field: K, value: EventFormState[K]) => {
     setEventForm(prev => ({ ...prev, [field]: value }));
@@ -901,11 +922,6 @@ export default function EventList({ onNotify }: EventListProps) {
           <TrophyIcon color="primary" />
           <Typography variant="h5">Events</Typography>
           <Chip label={searchQuery.trim() ? `${filteredEvents.length} / ${events.length}` : events.length} size="small" color="primary" />
-          <Tooltip title={sortBy === 'name' ? 'Sort by next edition date' : 'Sort by name'}>
-            <IconButton size="small" onClick={() => setSortBy(current => current === 'name' ? 'nextEditionDate' : 'name')}>
-              {sortBy === 'name' ? <SortByAlphaIcon fontSize="small" /> : <ScheduleIcon fontSize="small" />}
-            </IconButton>
-          </Tooltip>
         </Box>
 
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -939,14 +955,42 @@ export default function EventList({ onNotify }: EventListProps) {
           <TableHead>
             <TableRow>
               <TableCell width={40} />
-              <TableCell>Name</TableCell>
-              <TableCell>Activity</TableCell>
-              <TableCell>Type</TableCell>
+              <TableCell sortDirection={sortBy === 'name' ? sortDir : false}>
+                <TableSortLabel active={sortBy === 'name'} direction={sortBy === 'name' ? sortDir : 'asc'} onClick={() => handleRequestSort('name')}>
+                  Name
+                </TableSortLabel>
+              </TableCell>
+              <TableCell sortDirection={sortBy === 'activityType' ? sortDir : false}>
+                <TableSortLabel active={sortBy === 'activityType'} direction={sortBy === 'activityType' ? sortDir : 'asc'} onClick={() => handleRequestSort('activityType')}>
+                  Activity
+                </TableSortLabel>
+              </TableCell>
+              <TableCell sortDirection={sortBy === 'type' ? sortDir : false}>
+                <TableSortLabel active={sortBy === 'type'} direction={sortBy === 'type' ? sortDir : 'asc'} onClick={() => handleRequestSort('type')}>
+                  Type
+                </TableSortLabel>
+              </TableCell>
               <TableCell>Schedule</TableCell>
-              <TableCell>Next Edition</TableCell>
-              <TableCell align="center">Status</TableCell>
-              <TableCell align="center">Editions</TableCell>
-              <TableCell>Location</TableCell>
+              <TableCell sortDirection={sortBy === 'nextEditionDate' ? sortDir : false}>
+                <TableSortLabel active={sortBy === 'nextEditionDate'} direction={sortBy === 'nextEditionDate' ? sortDir : 'asc'} onClick={() => handleRequestSort('nextEditionDate')}>
+                  Next Edition
+                </TableSortLabel>
+              </TableCell>
+              <TableCell align="center" sortDirection={sortBy === 'status' ? sortDir : false}>
+                <TableSortLabel active={sortBy === 'status'} direction={sortBy === 'status' ? sortDir : 'asc'} onClick={() => handleRequestSort('status')}>
+                  Status
+                </TableSortLabel>
+              </TableCell>
+              <TableCell align="center" sortDirection={sortBy === 'editionCount' ? sortDir : false}>
+                <TableSortLabel active={sortBy === 'editionCount'} direction={sortBy === 'editionCount' ? sortDir : 'asc'} onClick={() => handleRequestSort('editionCount')}>
+                  Editions
+                </TableSortLabel>
+              </TableCell>
+              <TableCell sortDirection={sortBy === 'locationName' ? sortDir : false}>
+                <TableSortLabel active={sortBy === 'locationName'} direction={sortBy === 'locationName' ? sortDir : 'asc'} onClick={() => handleRequestSort('locationName')}>
+                  Location
+                </TableSortLabel>
+              </TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
