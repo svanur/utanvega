@@ -1,0 +1,153 @@
+using MediatR;
+using Microsoft.EntityFrameworkCore;
+using Utanvega.Backend.Application.Caching;
+using Utanvega.Backend.Application.Events.Queries.GetEvents;
+using Utanvega.Backend.Core.Entities;
+using Utanvega.Backend.Core.Services;
+using Utanvega.Backend.Infrastructure.Persistence;
+
+namespace Utanvega.Backend.Application.Events.Queries.GetEvent;
+
+public record EventDetailDto(
+    Guid Id,
+    string Name,
+    string Slug,
+    string? Description,
+    string Type,
+    string ActivityType,
+    string Status,
+    string? OrganizerName,
+    string? OrganizerWebsite,
+    string? AlertMessage,
+    string? AlertSeverity,
+    Guid? LocationId,
+    string? LocationName,
+    ScheduleRule? ScheduleRule,
+    List<SocialLink>? SocialLinks,
+    DateOnly? NextEditionDate,
+    int? DaysUntil,
+    List<DateOnly> UpcomingDates,
+    List<EventEditionDto> Editions,
+    DateTime CreatedAt,
+    DateTime? UpdatedAt
+);
+
+public record GetEventQuery(string Slug) : IRequest<EventDetailDto?>, ICacheable
+{
+    public string CacheKey => CacheKeys.Event(Slug);
+    public TimeSpan CacheDuration => TimeSpan.FromHours(1);
+}
+
+public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDto?>
+{
+    private readonly UtanvegaDbContext _context;
+    private readonly IScheduleRuleEngine _scheduleEngine;
+
+    public GetEventQueryHandler(UtanvegaDbContext context, IScheduleRuleEngine scheduleEngine)
+    {
+        _context = context;
+        _scheduleEngine = scheduleEngine;
+    }
+
+    public async Task<EventDetailDto?> Handle(GetEventQuery request, CancellationToken cancellationToken)
+    {
+        var ev = await _context.Events
+            .AsNoTracking()
+            .Include(e => e.Location)
+            .Include(e => e.Editions)
+                .ThenInclude(ed => ed.Trail)
+            .Include(e => e.Editions)
+                .ThenInclude(ed => ed.Races)
+                    .ThenInclude(r => r.Trail)
+            .FirstOrDefaultAsync(e => e.Slug == request.Slug, cancellationToken);
+
+        if (ev == null) return null;
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        var nextEditionDate = ev.Editions
+            .Where(ed => ed.Date.HasValue && ed.Date.Value >= today)
+            .OrderBy(ed => ed.Date)
+            .Select(ed => ed.Date)
+            .FirstOrDefault();
+
+        var nextDate = nextEditionDate
+            ?? (ev.ScheduleRule != null ? _scheduleEngine.GetNextOccurrence(ev.ScheduleRule, today) : null);
+
+        var daysUntil = nextDate.HasValue ? nextDate.Value.DayNumber - today.DayNumber : (int?)null;
+
+        var upcomingDates = ev.ScheduleRule != null
+            ? _scheduleEngine.GetOccurrencesInRange(ev.ScheduleRule, today, today.AddMonths(12))
+            : new List<DateOnly>();
+
+        var editions = ev.Editions
+            .OrderByDescending(ed => ed.Date ?? DateOnly.MinValue)
+            .Select(ed => new EventEditionDto(
+                ed.Id,
+                ed.EventId,
+                ed.Year,
+                ed.Date,
+                ed.Title,
+                ed.RegistrationUrl,
+                ed.ResultsUrl,
+                ed.Notes,
+                ed.RegistrationStatus.ToString(),
+                ed.TrailId,
+                ed.Trail?.Name,
+                ed.Trail?.Slug,
+                ed.Races
+                    .OrderBy(r => r.SortOrder)
+                    .Select(r => new RaceDto(
+                        r.Id,
+                        r.EventEditionId,
+                        r.TrailId,
+                        r.Trail?.Name,
+                        r.Trail?.Slug,
+                        r.Name,
+                        r.DistanceLabel,
+                        r.CutoffMinutes,
+                        r.Description,
+                        r.Status.ToString(),
+                        r.SortOrder,
+                        r.TicketStatus.ToString(),
+                        r.MaxParticipants,
+                        r.ItraPoints,
+                        r.CertifiedBy,
+                        r.PrizeMoney,
+                        r.ChampionshipCategory,
+                        r.DateOfRace,
+                        r.StartTime,
+                        r.Trail?.Length,
+                        r.Trail?.ElevationGain
+                    ))
+                    .ToList(),
+                ed.CreatedAt,
+                ed.UpdatedAt
+            ))
+            .ToList();
+
+        return new EventDetailDto(
+            ev.Id,
+            ev.Name,
+            ev.Slug,
+            ev.Description,
+            ev.Type.ToString(),
+            ev.ActivityType.ToString(),
+            ev.Status.ToString(),
+            ev.OrganizerName,
+            ev.OrganizerWebsite,
+            ev.AlertMessage,
+            ev.AlertSeverity,
+            ev.LocationId,
+            ev.Location?.Name,
+            ev.ScheduleRule,
+            ev.SocialLinks,
+            nextDate,
+            daysUntil,
+            upcomingDates,
+            editions,
+            ev.CreatedAt,
+            ev.UpdatedAt
+        );
+    }
+}

@@ -24,17 +24,17 @@ public static class CacheKeys
     public static string LocationTree => "locations:tree";
     public static string Location(string slug) => $"location:{slug}";
 
-    // Competitions
-    public static string Competitions(bool includeHidden) => $"competitions:{includeHidden}";
-    public static string Competition(string slug) => $"competition:{slug}";
+    // Events
+    public static string Events(bool includeHidden) => $"events:{includeHidden}";
+    public static string Event(string slug) => $"event:{slug}";
 
     /// <summary>
-    /// Calendar entries include the competition version so bumping the version
+    /// Calendar entries include the event version so bumping the version
     /// effectively orphans all cached calendar responses without needing key enumeration.
     /// </summary>
     public static string Calendar(int version, DateOnly from, DateOnly to) =>
         $"calendar:{version}:{from:yyyy-MM-dd}:{to:yyyy-MM-dd}";
 
-    /// <summary>Version token that is incremented on every competition/race write.</summary>
-    public static string CompetitionVersion => "competition:version";
+    /// <summary>Version token incremented on every event/edition/race write.</summary>
+    public static string EventVersion => "event:version";
 }

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-type PageKey = 'trails' | 'locations' | 'health' | 'map' | 'tags' | 'analytics' | 'features' | 'competitions';
+type PageKey = 'trails' | 'locations' | 'health' | 'map' | 'tags' | 'analytics' | 'features' | 'events';
 
 interface UseAdminShortcutsOptions {
     onNavigate: (page: PageKey) => void;
@@ -51,7 +51,7 @@ export function useAdminShortcuts({
                     '4': 'map',
                     '5': 'tags',
                     '6': 'analytics',
-                    '7': 'competitions',
+                    '7': 'events',
                     '8': 'features',
                 };
                 if (pages[e.key]) {

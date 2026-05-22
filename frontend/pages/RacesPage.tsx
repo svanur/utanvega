@@ -26,7 +26,7 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 import Layout from '../components/Layout';
 import RandomQuote from '../components/RandomQuote';
 import RunningLoader from '../components/RunningLoader';
-import { useCompetitions } from '../hooks/useCompetitions';
+import { useEvents } from '../hooks/useEvents';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
 
@@ -63,7 +63,7 @@ function getCountdownLabel(daysUntil: number | null, t: (key: string, opts?: Rec
 
 export default function RacesPage({ mode, onToggleMode, showQuote = false }: RacesPageProps) {
     const { t } = useTranslation();
-    const { competitions, loading, error } = useCompetitions();
+    const { events, loading, error } = useEvents();
     const { isEnabled } = useFeatureFlags();
     const locationsEnabled = isEnabled('locations_page');
     const navigate = useNavigate();
@@ -72,7 +72,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
 
     const filtered = useMemo(() => {
         const q = search.toLowerCase().trim();
-        let result = competitions.filter(c => c.status !== 'Hidden');
+        let result = events.filter(c => c.status !== 'Hidden' && c.status !== 'Unlisted');
 
         if (q) {
             result = result.filter(c =>
@@ -100,7 +100,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         });
 
         return result;
-    }, [competitions, search]);
+    }, [events, search]);
 
     if (loading) {
         return (
@@ -204,7 +204,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                 {comp.status === 'Cancelled' && (
                                                     <Chip label={t('races.statusCancelled')} size="small" color="error" sx={{ ml: 1, fontWeight: 600 }} />
                                                 )}
-                                                {comp.status === 'Upcoming' && (
+                                                {comp.status === 'Unconfirmed' && (
                                                     <Chip label={t('races.statusUpcoming')} size="small" color="info" sx={{ ml: 1, fontWeight: 600 }} />
                                                 )}
 
@@ -226,7 +226,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                         />
                                                     )}
                                                     <Chip
-                                                        label={t('races.raceCount', { count: comp.raceCount })}
+                                                        label={t('races.editionCount', { count: comp.editionCount })}
                                                         size="small"
                                                         variant="outlined"
                                                         color="primary"
@@ -244,14 +244,14 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                 )}
 
                                                 {/* Next date */}
-                                                {comp.nextDate && comp.status !== 'Cancelled' && (
+                                                {comp.nextEditionDate && comp.status !== 'Cancelled' && (
                                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1.5 }}>
                                                         <CalendarTodayIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
                                                         <Typography variant="body2" color="text.secondary" sx={{ mr: 0.5 }}>
                                                             {t('races.nextRace')}
                                                         </Typography>
                                                         <Typography variant="body2" fontWeight={600}>
-                                                            {formatNextDate(comp.nextDate, t)}
+                                                            {formatNextDate(comp.nextEditionDate, t)}
                                                         </Typography>
                                                     </Box>
                                                 )}
@@ -274,8 +274,8 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                 )}
                                             </Box>
 
-                                            {/* Countdown chip — hide for Cancelled/Upcoming (they have status chips in the title) */}
-                                            {comp.status !== 'Cancelled' && comp.status !== 'Upcoming' && (
+                                            {/* Countdown chip — hide when a status chip is shown in the title */}
+                                            {comp.status !== 'Cancelled' && comp.status !== 'Unconfirmed' && (
                                                 <Chip
                                                     label={getCountdownLabel(comp.daysUntil, t)}
                                                     color={getCountdownColor(comp.daysUntil)}

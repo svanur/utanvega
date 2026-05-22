@@ -3,6 +3,7 @@ namespace Utanvega.Backend.Infrastructure.Persistence;
 using System.Text.Json;
 using Utanvega.Backend.Core.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 public class UtanvegaDbContext : DbContext
 {
@@ -18,7 +19,8 @@ public class UtanvegaDbContext : DbContext
     public DbSet<ChangeLog> ChangeLogs => Set<ChangeLog>();
     public DbSet<TrailView> TrailViews => Set<TrailView>();
     public DbSet<FeatureFlag> FeatureFlags => Set<FeatureFlag>();
-    public DbSet<Competition> Competitions => Set<Competition>();
+    public DbSet<Event> Events => Set<Event>();
+    public DbSet<EventEdition> EventEditions => Set<EventEdition>();
     public DbSet<Race> Races => Set<Race>();
     public DbSet<UserTrailActivity> UserTrailActivities => Set<UserTrailActivity>();
     public DbSet<Profile> Profiles => Set<Profile>();
@@ -147,7 +149,7 @@ public class UtanvegaDbContext : DbContext
             entity.Property(e => e.Description).HasMaxLength(500);
         });
 
-        modelBuilder.Entity<Competition>(entity =>
+        modelBuilder.Entity<Event>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
@@ -155,8 +157,9 @@ public class UtanvegaDbContext : DbContext
             entity.HasIndex(e => e.Slug).IsUnique();
             entity.Property(e => e.OrganizerName).HasMaxLength(200);
             entity.Property(e => e.OrganizerWebsite).HasMaxLength(500);
-            entity.Property(e => e.RegistrationUrl).HasMaxLength(500);
 
+            entity.Property(e => e.Type).HasConversion<string>();
+            entity.Property(e => e.ActivityType).HasConversion<string>();
             entity.Property(e => e.Status).HasConversion<string>();
 
             entity.Property(e => e.ScheduleRule)
@@ -166,22 +169,35 @@ public class UtanvegaDbContext : DbContext
                       v => v == null ? null : JsonSerializer.Deserialize<ScheduleRule>(v, (JsonSerializerOptions?)null)
                   );
 
+            entity.Property(e => e.SocialLinks)
+                  .HasColumnType("jsonb")
+                  .HasConversion(
+                      v => v == null ? null : JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                      v => v == null ? null : JsonSerializer.Deserialize<List<SocialLink>>(v, (JsonSerializerOptions?)null)
+                  )
+                  .Metadata.SetValueComparer(new ValueComparer<List<SocialLink>?>(
+                      (a, b) => JsonSerializer.Serialize(a, (JsonSerializerOptions?)null) == JsonSerializer.Serialize(b, (JsonSerializerOptions?)null),
+                      v => v == null ? 0 : JsonSerializer.Serialize(v, (JsonSerializerOptions?)null).GetHashCode(),
+                      v => v == null ? null : JsonSerializer.Deserialize<List<SocialLink>>(JsonSerializer.Serialize(v, (JsonSerializerOptions?)null), (JsonSerializerOptions?)null)
+                  ));
+
             entity.HasOne(e => e.Location)
                   .WithMany()
                   .HasForeignKey(e => e.LocationId)
                   .OnDelete(DeleteBehavior.SetNull);
         });
 
-        modelBuilder.Entity<Race>(entity =>
+        modelBuilder.Entity<EventEdition>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
-            entity.Property(e => e.DistanceLabel).HasMaxLength(50);
-            entity.Property(e => e.Status).HasConversion<string>();
+            entity.Property(e => e.Title).HasMaxLength(200);
+            entity.Property(e => e.RegistrationUrl).HasMaxLength(500);
+            entity.Property(e => e.ResultsUrl).HasMaxLength(500);
+            entity.Property(e => e.RegistrationStatus).HasConversion<string>();
 
-            entity.HasOne(e => e.Competition)
-                  .WithMany(c => c.Races)
-                  .HasForeignKey(e => e.CompetitionId)
+            entity.HasOne(e => e.Event)
+                  .WithMany(ev => ev.Editions)
+                  .HasForeignKey(e => e.EventId)
                   .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasOne(e => e.Trail)
@@ -189,7 +205,32 @@ public class UtanvegaDbContext : DbContext
                   .HasForeignKey(e => e.TrailId)
                   .OnDelete(DeleteBehavior.SetNull);
 
-            entity.HasIndex(e => e.CompetitionId);
+            entity.HasIndex(e => e.EventId);
+            entity.HasIndex(e => e.Date);
+        });
+
+        modelBuilder.Entity<Race>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.DistanceLabel).HasMaxLength(50);
+            entity.Property(e => e.CertifiedBy).HasMaxLength(100);
+            entity.Property(e => e.ChampionshipCategory).HasMaxLength(200);
+            entity.Property(e => e.PrizeMoney).HasPrecision(10, 2);
+            entity.Property(e => e.Status).HasConversion<string>();
+            entity.Property(e => e.TicketStatus).HasConversion<string>();
+
+            entity.HasOne(e => e.EventEdition)
+                  .WithMany(ed => ed.Races)
+                  .HasForeignKey(e => e.EventEditionId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Trail)
+                  .WithMany()
+                  .HasForeignKey(e => e.TrailId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(e => e.EventEditionId);
         });
 
         modelBuilder.Entity<UserTrailActivity>(entity =>
