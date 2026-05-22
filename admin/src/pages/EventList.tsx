@@ -147,6 +147,13 @@ const DAYS: DayOfWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday
 const MONTHS = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const MONTHS_SHORT = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const EVENT_TYPES: EventType[] = ['Race', 'Series', 'Advertisement', 'Festival', 'Other'];
+const EVENT_TYPE_COLORS: Record<EventType, 'primary' | 'secondary' | 'warning' | 'success' | 'default' | 'info' | 'error'> = {
+  Race: 'primary',
+  Series: 'secondary',
+  Advertisement: 'warning',
+  Festival: 'success',
+  Other: 'default',
+};
 const ACTIVITY_TYPES: ActivityType[] = ['TrailRunning', 'Running', 'Cycling', 'Hiking', 'Social', 'Other'];
 const EVENT_STATUSES: EventStatus[] = ['Unconfirmed', 'Confirmed', 'Cancelled', 'Hidden', 'Unlisted'];
 const REGISTRATION_STATUSES: RegistrationStatus[] = ['NotStarted', 'Open', 'Closed'];
@@ -334,6 +341,8 @@ function createGenerateForm(event: EventSummaryDto): GenerateFormState {
     fromYear: currentYear,
     toMonth: 12,
     toYear: currentYear,
+    trailId: '',
+    registrationUrl: '',
   };
 }
 
@@ -478,7 +487,7 @@ export default function EventList({ onNotify }: EventListProps) {
   const [eventForm, setEventForm] = useState<EventFormState>(createEmptyEventForm());
   const [editionForm, setEditionForm] = useState<EditionFormState>(createEmptyEditionForm());
   const [raceForm, setRaceForm] = useState<RaceFormState>(createEmptyRaceForm());
-  const [generateForm, setGenerateForm] = useState<GenerateFormState>({ eventId: '', eventName: '', fromMonth: 1, fromYear: new Date().getFullYear(), toMonth: 12, toYear: new Date().getFullYear() });
+  const [generateForm, setGenerateForm] = useState<GenerateFormState>({ eventId: '', eventName: '', fromMonth: 1, fromYear: new Date().getFullYear(), toMonth: 12, toYear: new Date().getFullYear(), trailId: '', registrationUrl: '' });
 
   const sortedLocations = useMemo(
     () => [...locations].sort((a, b) => a.name.localeCompare(b.name)),
@@ -772,10 +781,15 @@ export default function EventList({ onNotify }: EventListProps) {
         eventId: generateForm.eventId,
         from,
         to,
+        trailId: generateForm.trailId || null,
+        registrationUrl: generateForm.registrationUrl.trim() || null,
       });
+      const hasDefaults = generateForm.trailId || generateForm.registrationUrl.trim();
       onNotify(result.count > 0
         ? `Generated ${result.count} edition${result.count === 1 ? '' : 's'} for "${generateForm.eventName}"`
-        : `No editions generated — make sure the event has a schedule rule set.`, result.count > 0 ? 'success' : 'error');
+        : hasDefaults
+          ? `Defaults applied to existing editions for "${generateForm.eventName}"`
+          : `No new editions to generate — all dates already exist.`, result.count > 0 || hasDefaults ? 'success' : 'error');
       setShowGenerateDialog(false);
       if (expandedEventId === generateForm.eventId) {
         await refreshExpandedEvent();
@@ -938,7 +952,7 @@ export default function EventList({ onNotify }: EventListProps) {
                     <Typography variant="caption" color="text.secondary" fontFamily="monospace">{event.slug}</Typography>
                   </TableCell>
                   <TableCell>
-                    <Chip label={event.type} size="small" variant="outlined" />
+                    <Chip label={event.type} size="small" color={EVENT_TYPE_COLORS[event.type as EventType] ?? 'default'} />
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" color="text.secondary">{formatSchedule(event.scheduleRule)}</Typography>
@@ -997,7 +1011,7 @@ export default function EventList({ onNotify }: EventListProps) {
                                   <Typography variant="body2">{expandedDetail.description}</Typography>
                                 )}
                                 <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-                                  <Chip label={expandedDetail.type} size="small" variant="outlined" />
+                                  <Chip label={expandedDetail.type} size="small" color={EVENT_TYPE_COLORS[expandedDetail.type as EventType] ?? 'default'} />
                                   <Chip label={`${expandedDetail.editions.length} edition${expandedDetail.editions.length === 1 ? '' : 's'}`} size="small" />
                                   {expandedDetail.organizerName && <Chip label={`Organizer: ${expandedDetail.organizerName}`} size="small" variant="outlined" />}
                                   {expandedDetail.locationName && <Chip label={expandedDetail.locationName} size="small" variant="outlined" />}
@@ -1384,14 +1398,17 @@ export default function EventList({ onNotify }: EventListProps) {
 
               {eventForm.hasSchedule && (
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1 }}>
-                  <FormControl fullWidth>
-                    <InputLabel>Schedule Type</InputLabel>
-                    <Select value={eventForm.scheduleType} label="Schedule Type" onChange={(event) => setEventField('scheduleType', event.target.value as ScheduleType)}>
-                      <MenuItem value="Yearly">Yearly (e.g. 2nd Saturday in July)</MenuItem>
-                      <MenuItem value="Seasonal">Seasonal series (e.g. Every Thu, Oct–Mar)</MenuItem>
-                      <MenuItem value="Fixed">Fixed date</MenuItem>
-                    </Select>
-                  </FormControl>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    <Button size="small" variant={eventForm.scheduleType === 'Yearly' ? 'contained' : 'outlined'} onClick={() => setEventField('scheduleType', 'Yearly' as ScheduleType)}>
+                      Yearly
+                    </Button>
+                    <Button size="small" variant={eventForm.scheduleType === 'Seasonal' ? 'contained' : 'outlined'} onClick={() => setEventField('scheduleType', 'Seasonal' as ScheduleType)}>
+                      Seasonal
+                    </Button>
+                    <Button size="small" variant={eventForm.scheduleType === 'Fixed' ? 'contained' : 'outlined'} onClick={() => setEventField('scheduleType', 'Fixed' as ScheduleType)}>
+                      Fixed date
+                    </Button>
+                  </Box>
 
                   {eventForm.scheduleType === 'Yearly' && (
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
@@ -1739,6 +1756,23 @@ export default function EventList({ onNotify }: EventListProps) {
                 onChange={(event) => setGenerateForm(prev => ({ ...prev, toYear: Number(event.target.value) }))}
               />
             </Box>
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>Defaults (optional)</Typography>
+            <Autocomplete
+              size="small"
+              options={sortedTrails}
+              value={sortedTrails.find(trail => trail.id === generateForm.trailId) ?? null}
+              onChange={(_, value) => setGenerateForm(prev => ({ ...prev, trailId: value?.id ?? '' }))}
+              getOptionLabel={(trail) => `${trail.name} (${(trail.length / 1000).toFixed(1)} km)`}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+              renderInput={(params) => <TextField {...params} label="Linked Trail" />}
+            />
+            <TextField
+              label="Registration URL"
+              size="small"
+              value={generateForm.registrationUrl}
+              onChange={(event) => setGenerateForm(prev => ({ ...prev, registrationUrl: event.target.value }))}
+              placeholder="https://..."
+            />
           </Box>
         </DialogContent>
         <DialogActions>
