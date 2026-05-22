@@ -176,7 +176,9 @@ namespace Utanvega.Backend.Migrations
                 column: "Slug",
                 unique: true);
 
-            // Clean up orphaned Race rows whose old CompetitionId won't exist in EventEditions
+            // Data-destructive: deletes all existing Race rows. The old Competitions model is being
+            // replaced entirely — EventEditions is empty at this point, so all Races with the renamed
+            // CompetitionId → EventEditionId column will be removed before the FK constraint is added.
             migrationBuilder.Sql("DELETE FROM \"Races\" WHERE \"EventEditionId\" NOT IN (SELECT \"Id\" FROM \"EventEditions\")");
 
             migrationBuilder.AddForeignKey(
