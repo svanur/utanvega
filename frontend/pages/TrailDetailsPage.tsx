@@ -53,6 +53,7 @@ import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import GroupsIcon from '@mui/icons-material/Groups';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import VideocamIcon from '@mui/icons-material/Videocam';
 import Layout from '../components/Layout';
 import { useTrailBySlug, useTrails, useTrailSuggestions, useTrailWeather, useTrailLeaderboard, recordTrailView, API_URL } from '../hooks/useTrails';
 import { estimateDuration } from '../utils/estimateDuration';
@@ -78,6 +79,18 @@ import { useLoginEnabled } from '../hooks/useLoginEnabled';
 import TrailLeaderboardCard from '../components/TrailLeaderboardCard';
 import { useTrailCheckIns } from '../hooks/useTrailCheckIns';
 import { getAvatarFallbackText, getAvatarImageSrc } from '../utils/avatarPresets';
+
+function toYoutubeEmbedUrl(url: string): string {
+    try {
+        const parsed = new URL(url);
+        if (parsed.hostname === 'youtu.be') {
+            return `https://www.youtube.com/embed${parsed.pathname}`;
+        }
+        const videoId = parsed.searchParams.get('v');
+        if (videoId) return `https://www.youtube.com/embed/${videoId}`;
+    } catch { /* fallback */ }
+    return url;
+}
 
 const getActivityIcon = (type: string) => {
     switch (type.toLowerCase()) {
@@ -149,6 +162,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     const [loginModalOpen, setLoginModalOpen] = useState(false);
     const [checkInError, setCheckInError] = useState<string | null>(null);
     const [checkInExpanded, setCheckInExpanded] = useState(false);
+    const [videoExpanded, setVideoExpanded] = useState(true);
     const [checkInSearch, setCheckInSearch] = useState('');
     const [toastMessage, setToastMessage] = useState<string | null>(null);
     const [nearbyPromptVisible, setNearbyPromptVisible] = useState(false);
@@ -739,6 +753,40 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                     </>
                 )}
             </Paper>
+
+            {/* YouTube 360° video */}
+            {trail.youtubeUrl && (
+                <Paper elevation={1} sx={{ p: { xs: 2, sm: 3 }, mb: 3, borderRadius: 2 }}>
+                    <Stack
+                        direction="row"
+                        alignItems="center"
+                        justifyContent="space-between"
+                        onClick={() => setVideoExpanded(prev => !prev)}
+                        sx={{ cursor: 'pointer', userSelect: 'none' }}
+                    >
+                        <Stack direction="row" alignItems="center" spacing={1}>
+                            <VideocamIcon color="primary" />
+                            <Typography variant="h6" fontWeight="bold">
+                                {t('trail.video360')}
+                            </Typography>
+                        </Stack>
+                        <IconButton size="small">
+                            {videoExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                        </IconButton>
+                    </Stack>
+                    <Collapse in={videoExpanded}>
+                        <Box sx={{ position: 'relative', width: '100%', paddingBottom: '56.25%', height: 0, borderRadius: 1, overflow: 'hidden', mt: 2 }}>
+                            <iframe
+                                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
+                                src={toYoutubeEmbedUrl(trail.youtubeUrl)}
+                                title={t('trail.video360')}
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope"
+                                allowFullScreen
+                            />
+                        </Box>
+                    </Collapse>
+                </Paper>
+            )}
 
             {/* Weather forecast */}
             {isEnabled('weather_forecast') && (

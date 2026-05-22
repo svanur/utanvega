@@ -41,6 +41,7 @@ export interface Trail {
     tags?: TagInfo[];
     viewCount?: number;
     linkedRaces?: LinkedRace[];
+    youtubeUrl?: string | null;
     distanceToUser?: number; // in kilometers
 }
 
