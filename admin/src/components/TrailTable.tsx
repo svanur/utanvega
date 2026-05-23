@@ -385,13 +385,13 @@ function TrailRow({ trail, selected, onSelect, onViewMap, onEdit, onDelete, onRe
       <TableCell align="center">
         <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }}>
           <Tooltip title="View trail on website">
-            <IconButton size="small" component="a" href={`${SITE_URL}/trails/${trail.slug}`} target="_blank">
+            <IconButton size="small" component="a" href={`${SITE_URL}/trails/${trail.slug}`} target="_blank" rel="noopener noreferrer">
               <OpenInNewIcon fontSize="small" />
             </IconButton>
           </Tooltip>
-          {trail.youtubeUrl && (
+          {trail.youtubeUrl && /^https?:\/\//i.test(trail.youtubeUrl) && (
             <Tooltip title="360° video">
-              <IconButton size="small" component="a" href={trail.youtubeUrl} target="_blank">
+              <IconButton size="small" component="a" href={trail.youtubeUrl} target="_blank" rel="noopener noreferrer">
                 <img src="/images/360-play.avif" alt="360°" style={{ width: 20, height: 20 }} />
               </IconButton>
             </Tooltip>
