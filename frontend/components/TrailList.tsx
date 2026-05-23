@@ -82,9 +82,11 @@ import { useEvents } from '../hooks/useEvents';
 import { useOfflineTrails } from '../hooks/useOfflineTrails';
 import OfflinePinIcon from '@mui/icons-material/OfflinePin';
 
+type ViewMode = 'list' | 'map' | 'table';
+
 interface TrailListProps {
     tagSlug?: string;
-    onViewModeChange?: (mode: string) => void;
+    onViewModeChange?: (mode: ViewMode) => void;
 }
 
 export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange }) => {
@@ -127,7 +129,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
     }, []);
 
     const [showAdvanced, setShowAdvanced] = React.useState(false);
-    const [viewMode, setViewMode] = React.useState<'list' | 'map' | 'table'>(() => {
+    const [viewMode, setViewMode] = React.useState<ViewMode>(() => {
         try {
             const saved = localStorage.getItem('utanvega-view-mode');
             if (saved === 'list' || saved === 'map' || saved === 'table') return saved;
@@ -1184,7 +1186,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                     <ToggleButtonGroup
                         value={viewMode}
                         exclusive
-                        onChange={(_, value) => { if (value) { setViewMode(value); localStorage.setItem('utanvega-view-mode', value); onViewModeChange?.(value); } }}
+                        onChange={(_, value) => { if (value) { const v = value as ViewMode; setViewMode(v); try { localStorage.setItem('utanvega-view-mode', v); } catch {/* */} onViewModeChange?.(v); } }}
                         size="small"
                         aria-label={t('home.viewMode')}
                     >
