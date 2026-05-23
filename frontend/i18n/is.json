@@ -105,9 +105,11 @@
         "locationDenied": "Staðsetning lokuð — leyfa í stillingum vafrans",
         "viewMode": "Birting",
         "listView": "Listayfirlit",
-        "mapView": "Kortayfirlit"
+        "mapView": "Kortayfirlit",
+        "tableView": "Töfluyfirlit"
     },
     "trail": {
+        "name": "Heiti",
         "backToTrails": "Til baka í leiðir",
         "notFound": "Leið fannst ekki",
         "tick": "Merkja sem markverða",
@@ -118,6 +120,10 @@
         "loss": "Lækkun",
         "type": "Tegund",
         "estTime": "Áætlaður tími",
+        "difficulty": "Erfiðleiki",
+        "activity": "Tegund æfingar",
+        "location": "Staðsetning",
+        "kmAway": "km í burtu",
         "routeMap": "Leiðarkort",
         "fullscreenMap": "Heilskjár kort",
         "closeFullscreen": "Loka heilskjá",

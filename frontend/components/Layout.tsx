@@ -24,9 +24,10 @@ import { useLoginEnabled } from '../hooks/useLoginEnabled';
 type LayoutProps = PropsWithChildren<{
     mode: PaletteMode;
     onToggleMode: () => void;
+    maxWidth?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | false;
 }>;
 
-export default function Layout({ children, mode, onToggleMode }: LayoutProps) {
+export default function Layout({ children, mode, onToggleMode, maxWidth = 'md' }: LayoutProps) {
     const navigate = useNavigate();
     const { t } = useTranslation();
     const theme = useTheme();
@@ -155,7 +156,7 @@ export default function Layout({ children, mode, onToggleMode }: LayoutProps) {
                 </Toolbar>
             </DynamicHeader>
 
-            <Container maxWidth="md" sx={{ py: 4, flex: 1 }}>
+            <Container maxWidth={maxWidth} sx={{ py: 4, flex: 1 }}>
                 {children}
             </Container>
 
