@@ -144,6 +144,9 @@ const TrailTableView: React.FC<TrailTableViewProps> = ({ trails, favorites, onTo
                                     '&:last-child td': { border: 0 },
                                     bgcolor: idx % 2 === 1 ? 'action.hover' : 'transparent',
                                 }}
+                                tabIndex={0}
+                                role="link"
+                                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/trails/${trail.slug}`); } }}
                                 onClick={() => navigate(`/trails/${trail.slug}`)}
                             >
                                 <TableCell padding="checkbox" onClick={e => e.stopPropagation()}>
