@@ -288,7 +288,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
         if (filters.difficulty !== 'All') params.set('difficulty', filters.difficulty);
         if (filters.trailType !== 'All') params.set('trailType', filters.trailType);
         if (filters.sortBy !== 'distance') params.set('sort', filters.sortBy);
-        if (viewMode === 'map') params.set('view', 'map');
+        if (viewMode !== 'list') params.set('view', viewMode);
 
         setSearchParams(params, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
