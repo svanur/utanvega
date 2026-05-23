@@ -186,7 +186,7 @@ const TrailTableView: React.FC<TrailTableViewProps> = ({ trails, favorites, onTo
                                 </TableCell>
                                 <TableCell align="center" onClick={e => e.stopPropagation()}>
                                     {trail.youtubeUrl ? (
-                                        <Tooltip title={t('video360', '360° Video')}>
+                                        <Tooltip title={t('trail.video360', '360° Video')}>
                                             <IconButton
                                                 size="small"
                                                 component="a"
