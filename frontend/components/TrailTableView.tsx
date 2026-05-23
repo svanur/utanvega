@@ -147,7 +147,7 @@ const TrailTableView: React.FC<TrailTableViewProps> = ({ trails, favorites, onTo
                                 onClick={() => navigate(`/trails/${trail.slug}`)}
                             >
                                 <TableCell padding="checkbox" onClick={e => e.stopPropagation()}>
-                                    <IconButton size="small" onClick={() => onToggleFavorite(trail.slug)} aria-label={isFav ? 'Unfavorite' : 'Favorite'}>
+                                    <IconButton size="small" onClick={() => onToggleFavorite(trail.slug)} aria-label={isFav ? t('trailCard.removeFavorite') : t('trailCard.addFavorite')}>
                                         {isFav ? <StarIcon fontSize="small" color="warning" /> : <StarBorderIcon fontSize="small" />}
                                     </IconButton>
                                 </TableCell>
