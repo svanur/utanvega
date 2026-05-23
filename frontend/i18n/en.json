@@ -105,9 +105,11 @@
         "locationDenied": "Location blocked — allow in browser settings",
         "viewMode": "View mode",
         "listView": "List view",
-        "mapView": "Map view"
+        "mapView": "Map view",
+        "tableView": "Table view"
     },
     "trail": {
+        "name": "Name",
         "backToTrails": "Back to Trails",
         "notFound": "Trail not found",
         "tick": "Mark as ticked",
@@ -118,6 +120,10 @@
         "loss": "Loss",
         "type": "Type",
         "estTime": "Est. time",
+        "difficulty": "Difficulty",
+        "activity": "Activity",
+        "location": "Location",
+        "kmAway": "km away",
         "routeMap": "Route Map",
         "fullscreenMap": "Fullscreen map",
         "closeFullscreen": "Close fullscreen",
