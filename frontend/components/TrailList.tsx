@@ -251,8 +251,11 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
         const randomShortcut = searchParams.get('random');
 
         if (q) setSearchQuery(q);
-        if (view === 'map') setViewMode('map');
-        else if (view === 'table') setViewMode('table');
+        if (view === 'map' || view === 'table') {
+            setViewMode(view);
+            try { localStorage.setItem('utanvega-view-mode', view); } catch {/* */}
+            onViewModeChange?.(view);
+        }
 
         const updates: Partial<FilterState> = {};
         if (activity) updates.selectedActivityTypes = activity.split(',');
