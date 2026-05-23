@@ -10,6 +10,7 @@
         "save": "Save",
         "clear": "Clear",
         "tip": "Tip",
+        "viewDetails": "View Details",
         "dataLoadUnavailable": "We couldn't load data right now. Check your internet connection and try again."
     },
     "auth": {
@@ -898,7 +899,13 @@
         "raceDayShareRaceText": "Today I am racing {{competitionName}} - {{raceName}} 💥",
         "checklistSavedLocally": "Saved on this device only.",
         "predict": "Predict",
-        "noUpcoming": "No upcoming races"
+        "noUpcoming": "No upcoming races",
+        "table": {
+            "name": "Name",
+            "nextRace": "Next Race",
+            "organizer": "Organizer",
+            "editions": "Editions"
+        }
     },
     "calendar": {
         "title": "Event Calendar",
