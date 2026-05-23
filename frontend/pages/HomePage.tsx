@@ -14,7 +14,9 @@ type HomePageProps = {
 
 export default function HomePage({ mode, onToggleMode, tagSlug, showQuote = false }: HomePageProps) {
     const { isEnabled } = useFeatureFlags();
-    const [viewMode, setViewMode] = useState(() => localStorage.getItem('utanvega-view-mode') || 'list');
+    const [viewMode, setViewMode] = useState(() => {
+        try { return localStorage.getItem('utanvega-view-mode') || 'list'; } catch { return 'list'; }
+    });
     const maxWidth = viewMode === 'table' ? false as const : 'md' as const;
     return (
         <Layout mode={mode} onToggleMode={onToggleMode} maxWidth={maxWidth}>

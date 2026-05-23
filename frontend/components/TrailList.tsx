@@ -128,8 +128,10 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
 
     const [showAdvanced, setShowAdvanced] = React.useState(false);
     const [viewMode, setViewMode] = React.useState<'list' | 'map' | 'table'>(() => {
-        const saved = localStorage.getItem('utanvega-view-mode');
-        if (saved === 'list' || saved === 'map' || saved === 'table') return saved;
+        try {
+            const saved = localStorage.getItem('utanvega-view-mode');
+            if (saved === 'list' || saved === 'map' || saved === 'table') return saved;
+        } catch { /* storage unavailable */ }
         return 'list';
     });
     const [showHidden, setShowHidden] = React.useState(false);
