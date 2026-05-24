@@ -7,15 +7,18 @@ import { Link as RouterLink } from 'react-router-dom';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import type { EventSummary } from '../hooks/useEvents';
 import { useLocations } from '../hooks/useLocations';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerIconRetina from 'leaflet/dist/images/marker-icon-2x.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 import 'leaflet/dist/leaflet.css';
 
 // Fix Leaflet marker icons
 // @ts-expect-error - Leaflet internal _getIconUrl not in type definitions
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+    iconRetinaUrl: markerIconRetina,
+    iconUrl: markerIcon,
+    shadowUrl: markerShadow,
 });
 
 interface EventMapViewProps {
