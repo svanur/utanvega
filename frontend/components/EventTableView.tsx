@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -82,8 +82,9 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events }) => {
     const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
     const [detailCache, setDetailCache] = useState<Record<string, EventDetail>>({});
     const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
+    const fetchedOrInFlightRef = useRef<Set<string>>(new Set());
 
-    const toggleExpand = useCallback(async (event: EventSummary) => {
+    const toggleExpand = useCallback((event: EventSummary) => {
         const id = event.id;
         setExpandedIds(prev => {
             const next = new Set(prev);
@@ -91,19 +92,16 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events }) => {
             return next;
         });
 
-        if (!detailCache[id] && !loadingIds.has(id)) {
-            setLoadingIds(prev => new Set(prev).add(id));
-            try {
-                const res = await fetch(`${API_URL}/api/v1/events/${encodeURIComponent(event.slug)}`);
-                if (res.ok) {
-                    const detail = await res.json() as EventDetail;
-                    setDetailCache(prev => ({ ...prev, [id]: detail }));
-                }
-            } finally {
+        if (fetchedOrInFlightRef.current.has(id)) return;
+        fetchedOrInFlightRef.current.add(id);
+        setLoadingIds(prev => new Set(prev).add(id));
+        fetch(`${API_URL}/api/v1/events/${encodeURIComponent(event.slug)}`)
+            .then(res => res.ok ? res.json() as Promise<EventDetail> : null)
+            .then(detail => { if (detail) setDetailCache(prev => ({ ...prev, [id]: detail })); })
+            .finally(() => {
                 setLoadingIds(prev => { const next = new Set(prev); next.delete(id); return next; });
-            }
-        }
-    }, [detailCache, loadingIds]);
+            });
+    }, []);
 
     const handleSort = (field: SortField) => {
         if (sortField === field) {
