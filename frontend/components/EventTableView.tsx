@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     TableSortLabel, Paper, Typography, Chip, IconButton, Tooltip, Stack,
-    Collapse, Box, CircularProgress, Skeleton,
+    Collapse, Box, Skeleton,
 } from '@mui/material';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
