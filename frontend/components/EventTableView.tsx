@@ -303,7 +303,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events }) => {
                                                         </Typography>
                                                         <Stack direction="row" flexWrap="wrap" gap={1}>
                                                             {races.map(race => (
-                                                                <RaceChipCard key={race.id} race={race} />
+                                                                <RaceChipCard key={race.id} race={race} editionDate={nextEdition?.date ?? null} />
                                                             ))}
                                                         </Stack>
                                                     </Stack>
@@ -333,20 +333,37 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events }) => {
 };
 
 // Compact race card shown inside the expanded row
-function RaceChipCard({ race }: { race: RaceDto }) {
-    const { t } = useTranslation();
+function RaceChipCard({ race, editionDate }: { race: RaceDto; editionDate?: string | null }) {
+    const { t, i18n } = useTranslation();
+    const navigate = useNavigate();
     const cutoffHours = race.cutoffMinutes ? Math.floor(race.cutoffMinutes / 60) : null;
     const cutoffMins = race.cutoffMinutes ? race.cutoffMinutes % 60 : null;
+    const hasTrail = !!race.trailSlug;
+
+    const dateStr = race.dateOfRace ?? editionDate ?? null;
+    const formattedDate = dateStr
+        ? new Date(dateStr + 'T00:00:00').toLocaleDateString(i18n.language === 'is' ? 'is-IS' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+        : null;
 
     return (
         <Paper
             variant="outlined"
-            sx={{ px: 1.5, py: 1, borderRadius: 1.5, minWidth: 140, maxWidth: 260 }}
+            onClick={hasTrail ? () => navigate(`/trails/${race.trailSlug}`) : undefined}
+            sx={{
+                px: 1.5, py: 1, borderRadius: 1.5, minWidth: 140, maxWidth: 260,
+                cursor: hasTrail ? 'pointer' : 'default',
+                '&:hover': hasTrail ? { borderColor: 'primary.main', bgcolor: 'action.hover' } : {},
+            }}
         >
             <Stack spacing={0.5}>
                 <Typography variant="body2" fontWeight={600} noWrap>
                     {race.name}
                 </Typography>
+                {formattedDate && (
+                    <Typography variant="caption" color="text.secondary">
+                        {formattedDate}
+                    </Typography>
+                )}
                 <Stack direction="row" flexWrap="wrap" gap={0.5} alignItems="center">
                     {race.distanceLabel && (
                         <Chip

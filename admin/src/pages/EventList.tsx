@@ -530,7 +530,7 @@ export default function EventList({ onNotify }: EventListProps) {
     [locations],
   );
   const sortedTrails = useMemo(
-    () => [...trails].sort((a, b) => a.name.localeCompare(b.name)),
+    () => [...trails].filter(t => t.status === 'Published' || t.status === 'EventOnly').sort((a, b) => a.name.localeCompare(b.name)),
     [trails],
   );
 
