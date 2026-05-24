@@ -867,14 +867,13 @@ export default function EventList({ onNotify }: EventListProps) {
     setSaving(true);
     try {
       const isSeries = generateForm.eventType === 'Series';
-      const isRaceOrSeries = generateForm.eventType === 'Race' || isSeries;
 
       const result = await generateEditionsForSeason({
         eventId: generateForm.eventId,
         from,
         to,
-        // For Race/Series events, trail belongs on the Race, not the Edition
-        trailId: isRaceOrSeries ? (generateForm.trailId || null) : (generateForm.trailId || null),
+        // For Race/Series events, trail is set on the Race (backend handles it); for others, on the Edition
+        trailId: generateForm.trailId || null,
         registrationUrl: generateForm.registrationUrl.trim() || null,
         // Series: pass season start month so backend groups dates into seasons
         seasonStartMonth: isSeries ? generateForm.seasonStartMonth : null,
