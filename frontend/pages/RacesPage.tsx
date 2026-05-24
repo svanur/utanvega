@@ -34,7 +34,6 @@ import Layout from '../components/Layout';
 import RandomQuote from '../components/RandomQuote';
 import RunningLoader from '../components/RunningLoader';
 import { useEvents } from '../hooks/useEvents';
-import { useLocations } from '../hooks/useLocations';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
 
@@ -78,7 +77,6 @@ function getCountdownLabel(daysUntil: number | null, t: (key: string, opts?: Rec
 export default function RacesPage({ mode, onToggleMode, showQuote = false }: RacesPageProps) {
     const { t } = useTranslation();
     const { events, loading, error } = useEvents();
-    const { locations } = useLocations();
     const { isEnabled } = useFeatureFlags();
     const locationsEnabled = isEnabled('locations_page');
     const navigate = useNavigate();
@@ -358,7 +356,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                     </Suspense>
                 ) : (
                     <Suspense fallback={<Box display="flex" justifyContent="center" py={4}><CircularProgress /></Box>}>
-                        <EventMapView events={filtered} locations={locations} />
+                        <EventMapView events={filtered} />
                     </Suspense>
                 )}
             </Container>

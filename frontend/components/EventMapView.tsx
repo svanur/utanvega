@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { Link as RouterLink } from 'react-router-dom';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import type { EventSummary } from '../hooks/useEvents';
-import type { Location } from '../hooks/useLocations';
+import { useLocations } from '../hooks/useLocations';
 import 'leaflet/dist/leaflet.css';
 
 // Fix Leaflet marker icons
@@ -20,7 +20,6 @@ L.Icon.Default.mergeOptions({
 
 interface EventMapViewProps {
     events: EventSummary[];
-    locations: Location[];
 }
 
 function getCountdownColor(daysUntil: number | null): 'success' | 'warning' | 'error' | 'default' {
@@ -34,8 +33,9 @@ function getCountdownColor(daysUntil: number | null): 'success' | 'warning' | 'e
 const ICELAND_CENTER: [number, number] = [64.96, -18.5];
 const ICELAND_ZOOM = 6;
 
-const EventMapView: React.FC<EventMapViewProps> = ({ events, locations }) => {
+const EventMapView: React.FC<EventMapViewProps> = ({ events }) => {
     const { t } = useTranslation();
+    const { locations } = useLocations();
 
     const eventsWithCoords = useMemo(() => {
         const locationMap = new Map(locations.map(l => [l.id, l]));
