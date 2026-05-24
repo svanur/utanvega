@@ -14,6 +14,7 @@ import DirectionsBikeIcon from '@mui/icons-material/DirectionsBike';
 import CelebrationIcon from '@mui/icons-material/Celebration';
 import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
 import GrassIcon from '@mui/icons-material/Grass';
+import CampaignIcon from '@mui/icons-material/Campaign';
 import type { Trail } from '../hooks/useTrails';
 
 interface TrailTableViewProps {
@@ -48,6 +49,7 @@ function getActivityIcon(type: string) {
         case 'FunRun': return <CelebrationIcon fontSize="small" />;
         case 'ObstacleCourse': return <FitnessCenterIcon fontSize="small" />;
         case 'CrossCountryRun': return <GrassIcon fontSize="small" />;
+        case 'Advertisement': return <CampaignIcon fontSize="small" />;
         default: return <DirectionsRunIcon fontSize="small" />;
     }
 }

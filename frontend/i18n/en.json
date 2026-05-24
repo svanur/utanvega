@@ -11,6 +11,8 @@
         "clear": "Clear",
         "tip": "Tip",
         "viewDetails": "View Details",
+        "expand": "Expand",
+        "collapse": "Collapse",
         "dataLoadUnavailable": "We couldn't load data right now. Check your internet connection and try again."
     },
     "auth": {
@@ -903,8 +905,15 @@
         "table": {
             "name": "Name",
             "nextRace": "Next Race",
+            "date": "Date",
+            "type": "Type",
             "organizer": "Organizer",
-            "editions": "Editions"
+            "editions": "Editions",
+            "races": "Races",
+            "noRaces": "No races for this edition",
+            "soldOut": "Sold Out",
+            "almostSoldOut": "Almost Full",
+            "cutoff": "Cutoff time"
         }
     },
     "calendar": {
