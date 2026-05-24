@@ -46,7 +46,7 @@ const EventMapView: React.FC<EventMapViewProps> = ({ events }) => {
             .filter(e => e.locationId)
             .map(e => {
                 const loc = locationMap.get(e.locationId!);
-                if (!loc?.latitude || !loc?.longitude) return null;
+                if (loc?.latitude == null || loc?.longitude == null) return null;
                 return { ...e, lat: loc.latitude, lng: loc.longitude };
             })
             .filter((e): e is NonNullable<typeof e> => e !== null);
