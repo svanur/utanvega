@@ -976,23 +976,35 @@ export default function EventList({ onNotify }: EventListProps) {
         });
         onNotify(`Race "${raceForm.name.trim()}" updated`);
 
-        // Apply to matching races in other editions
+        // Apply to other races
         if (applyToAllEditions && expandedDetail) {
-          const otherRaces = expandedDetail.editions
-            .filter(ed => ed.id !== raceForm.eventEditionId)
-            .flatMap(ed => ed.races)
-            .filter(r => r.id !== editRaceId && r.sortOrder === input.sortOrder);
+          const isSeries = expandedDetail.type === 'Series';
+          let otherRaces: typeof expandedDetail.editions[0]['races'];
+
+          if (isSeries) {
+            // Series: apply to other races within the same edition
+            otherRaces = expandedDetail.editions
+              .filter(ed => ed.id === raceForm.eventEditionId)
+              .flatMap(ed => ed.races)
+              .filter(r => r.id !== editRaceId);
+          } else {
+            // Non-Series: apply to matching races (by sortOrder) in other editions
+            otherRaces = expandedDetail.editions
+              .filter(ed => ed.id !== raceForm.eventEditionId)
+              .flatMap(ed => ed.races)
+              .filter(r => r.id !== editRaceId && r.sortOrder === input.sortOrder);
+          }
 
           if (otherRaces.length > 0) {
             await Promise.all(otherRaces.map(r =>
               updateRace(r.id, {
                 trailId: input.trailId,
-                name: input.name,
+                name: isSeries ? r.name : input.name,
                 distanceLabel: input.distanceLabel,
                 cutoffMinutes: input.cutoffMinutes,
                 description: input.description,
                 status: input.status,
-                sortOrder: input.sortOrder,
+                sortOrder: isSeries ? r.sortOrder : input.sortOrder,
                 ticketStatus: input.ticketStatus,
                 maxParticipants: input.maxParticipants,
                 itraPoints: input.itraPoints,
@@ -1003,7 +1015,7 @@ export default function EventList({ onNotify }: EventListProps) {
                 startTime: input.startTime,
               }),
             ));
-            onNotify(`Also updated ${otherRaces.length} matching race${otherRaces.length === 1 ? '' : 's'} in other editions`);
+            onNotify(`Also updated ${otherRaces.length} other race${otherRaces.length === 1 ? '' : 's'} in ${isSeries ? 'this edition' : 'other editions'}`);
           }
         }
       } else {
@@ -2009,10 +2021,14 @@ export default function EventList({ onNotify }: EventListProps) {
           </Box>
         </DialogContent>
         <DialogActions sx={{ justifyContent: 'space-between', px: 3 }}>
-          {editRaceId && expandedDetail && expandedDetail.editions.length > 1 ? (
+          {editRaceId && expandedDetail && (
+            expandedDetail.type === 'Series'
+              ? expandedDetail.editions.find(ed => ed.id === raceForm.eventEditionId)?.races && expandedDetail.editions.find(ed => ed.id === raceForm.eventEditionId)!.races.length > 1
+              : expandedDetail.editions.length > 1
+          ) ? (
             <FormControlLabel
               control={<Switch checked={applyToAllEditions} onChange={(_, checked) => setApplyToAllEditions(checked)} size="small" />}
-              label={<Typography variant="body2">Apply to other editions</Typography>}
+              label={<Typography variant="body2">{expandedDetail.type === 'Series' ? 'Apply to other races in edition' : 'Apply to other editions'}</Typography>}
             />
           ) : <Box />}
           <Box>
