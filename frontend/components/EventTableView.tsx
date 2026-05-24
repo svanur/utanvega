@@ -289,7 +289,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events }) => {
                                     <TableCell colSpan={totalColumns} sx={{ py: 0, px: 0, borderBottom: isExpanded ? undefined : 0 }}>
                                         <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                                             <Box sx={{ px: 3, py: 1.5 }}>
-                                                {isLoading ? (
+                                                {isLoading || (!detail && isExpanded) ? (
                                                     <Stack spacing={1}>
                                                         <Skeleton variant="rectangular" width="60%" height={32} />
                                                         <Skeleton variant="rectangular" width="40%" height={32} />
