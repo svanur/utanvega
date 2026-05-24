@@ -69,6 +69,7 @@ function getTicketStatusColor(status: string | null): 'success' | 'error' | 'war
         case 'SoldOut': return 'error';
         case 'AlmostSoldOut': return 'warning';
         case 'WaitingList': return 'warning';
+        case 'Closed': return 'default';
         default: return 'default';
     }
 }

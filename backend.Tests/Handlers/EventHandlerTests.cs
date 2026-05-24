@@ -586,17 +586,17 @@ public class EventHandlerTests : IDisposable
 
         using var genCtx = _factory.CreateContext();
         var handler = new GenerateEditionsForSeasonCommandHandler(genCtx, _scheduleEngine, _cacheInvalidator);
-        var ids = await handler.Handle(new GenerateEditionsForSeasonCommand(
+        var result = await handler.Handle(new GenerateEditionsForSeasonCommand(
             EventId: ev.Id,
             From: new DateOnly(2025, 10, 1),
             To: new DateOnly(2025, 12, 31)
         ), CancellationToken.None);
 
-        Assert.NotEmpty(ids);
+        Assert.NotEmpty(result.EditionIds);
 
         using var verifyCtx = _factory.CreateContext();
         var editions = verifyCtx.EventEditions.Where(e => e.EventId == ev.Id).ToList();
-        Assert.Equal(ids.Count, editions.Count);
+        Assert.Equal(result.EditionIds.Count, editions.Count);
         Assert.All(editions, e => Assert.NotNull(e.Date));
     }
 
@@ -614,13 +614,116 @@ public class EventHandlerTests : IDisposable
 
         using var genCtx = _factory.CreateContext();
         var handler = new GenerateEditionsForSeasonCommandHandler(genCtx, _scheduleEngine, _cacheInvalidator);
-        var ids = await handler.Handle(new GenerateEditionsForSeasonCommand(
+        var result = await handler.Handle(new GenerateEditionsForSeasonCommand(
             EventId: ev.Id,
             From: new DateOnly(2025, 1, 1),
             To: new DateOnly(2025, 12, 31)
         ), CancellationToken.None);
 
-        Assert.Empty(ids);
+        Assert.Empty(result.EditionIds);
+        Assert.Equal(0, result.RacesCreated);
+    }
+
+    [Fact]
+    public async Task GenerateEditions_Series_GroupsBySeasonAndCreatesRaces()
+    {
+        var ev = CreateTestEvent("Powerade vetrarhlaup");
+        ev.Type = EventType.Series;
+        ev.ScheduleRule = new ScheduleRule
+        {
+            Type = ScheduleType.Seasonal,
+            DayOfWeek = DayOfWeek.Thursday,
+            WeekOfMonth = 2,
+            MonthStart = 10,
+            MonthEnd = 3,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var genCtx = _factory.CreateContext();
+        var handler = new GenerateEditionsForSeasonCommandHandler(genCtx, _scheduleEngine, _cacheInvalidator);
+        var result = await handler.Handle(new GenerateEditionsForSeasonCommand(
+            EventId: ev.Id,
+            From: new DateOnly(2025, 10, 1),
+            To: new DateOnly(2026, 3, 31),
+            SeasonStartMonth: 10
+        ), CancellationToken.None);
+
+        // Should create 1 edition (season 2025–2026) with 6 races (Oct–Mar)
+        Assert.Single(result.EditionIds);
+        Assert.Equal(6, result.RacesCreated);
+
+        using var verifyCtx = _factory.CreateContext();
+        var edition = verifyCtx.EventEditions
+            .Where(e => e.EventId == ev.Id)
+            .Single();
+        Assert.Equal(2025, edition.Year);
+        Assert.Contains("2025", edition.Title!);
+
+        var races = verifyCtx.Races.Where(r => r.EventEditionId == edition.Id).OrderBy(r => r.SortOrder).ToList();
+        Assert.Equal(6, races.Count);
+        Assert.All(races, r => Assert.NotNull(r.DateOfRace));
+        // First race should be in October, last in March
+        Assert.Equal(10, races[0].DateOfRace!.Value.Month);
+        Assert.Equal(3, races[^1].DateOfRace!.Value.Month);
+    }
+
+    [Fact]
+    public async Task GenerateEditions_Series_IsIdempotent()
+    {
+        var ev = CreateTestEvent("Winter Series");
+        ev.Type = EventType.Series;
+        ev.ScheduleRule = new ScheduleRule
+        {
+            Type = ScheduleType.Seasonal,
+            DayOfWeek = DayOfWeek.Thursday,
+            WeekOfMonth = 2,
+            MonthStart = 10,
+            MonthEnd = 12,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            await ctx.SaveChangesAsync();
+        }
+
+        // First run
+        using (var genCtx = _factory.CreateContext())
+        {
+            var handler = new GenerateEditionsForSeasonCommandHandler(genCtx, _scheduleEngine, _cacheInvalidator);
+            var result = await handler.Handle(new GenerateEditionsForSeasonCommand(
+                EventId: ev.Id,
+                From: new DateOnly(2025, 10, 1),
+                To: new DateOnly(2025, 12, 31),
+                SeasonStartMonth: 10
+            ), CancellationToken.None);
+            Assert.Single(result.EditionIds);
+            Assert.True(result.RacesCreated > 0);
+        }
+
+        // Second run — should create nothing
+        using (var genCtx = _factory.CreateContext())
+        {
+            var handler = new GenerateEditionsForSeasonCommandHandler(genCtx, _scheduleEngine, _cacheInvalidator);
+            var result = await handler.Handle(new GenerateEditionsForSeasonCommand(
+                EventId: ev.Id,
+                From: new DateOnly(2025, 10, 1),
+                To: new DateOnly(2025, 12, 31),
+                SeasonStartMonth: 10
+            ), CancellationToken.None);
+            Assert.Empty(result.EditionIds);
+            Assert.Equal(0, result.RacesCreated);
+        }
+
+        // Verify still only 1 edition
+        using var verifyCtx = _factory.CreateContext();
+        var editions = verifyCtx.EventEditions.Where(e => e.EventId == ev.Id).ToList();
+        Assert.Single(editions);
     }
 
     // ─── GetEventsQuery ───

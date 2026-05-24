@@ -1341,8 +1341,8 @@ app.MapDelete("/api/v1/admin/editions/{id:guid}", [Authorize] async (Guid id, IM
 app.MapPost("/api/v1/admin/events/{eventId:guid}/editions/generate", [Authorize] async (Guid eventId, GenerateEditionsForSeasonCommand command, IMediator mediator) =>
 {
     if (eventId != command.EventId) return Results.BadRequest("EventId mismatch");
-    var ids = await mediator.Send(command);
-    return Results.Ok(new { editionIds = ids, count = ids.Count });
+    var result = await mediator.Send(command);
+    return Results.Ok(new { editionIds = result.EditionIds, count = result.EditionIds.Count, racesCreated = result.RacesCreated });
 })
 .WithName("GenerateEditionsForSeason")
 .RequireAuthorization();

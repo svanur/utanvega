@@ -7,8 +7,8 @@ export type EventType = 'Race' | 'Series' | 'Advertisement' | 'Festival' | 'Othe
 export type ActivityType = 'TrailRunning' | 'Running' | 'Cycling' | 'Hiking' | 'FunRun' | 'ObstacleCourse' | 'CrossCountryRun' | 'Social' | 'Other';
 export type EventStatus = 'Unconfirmed' | 'Confirmed' | 'Cancelled' | 'Hidden' | 'Unlisted';
 export type RegistrationStatus = 'NotStarted' | 'Open' | 'Closed';
-export type RaceStatus = 'Active' | 'Cancelled' | 'Hidden';
-export type TicketStatus = 'Available' | 'SoldOut';
+export type RaceStatus = 'Active' | 'Upcoming' | 'Completed' | 'Cancelled' | 'Hidden';
+export type TicketStatus = 'Available' | 'SoldOut' | 'Closed';
 export type AlertSeverity = 'info' | 'success' | 'warning' | 'error';
 
 export interface SocialLink {
@@ -197,11 +197,14 @@ export interface GenerateEditionsForSeasonInput {
     to: string;
     trailId?: string | null;
     registrationUrl?: string | null;
+    seasonStartMonth?: number | null;
+    editionName?: string | null;
 }
 
 export interface GenerateEditionsForSeasonResult {
     editionIds: string[];
     count: number;
+    racesCreated: number;
 }
 
 export function useEvents() {
