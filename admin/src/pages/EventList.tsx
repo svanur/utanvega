@@ -144,6 +144,8 @@ interface GenerateFormState {
   toYear: number;
   trailId: string;
   registrationUrl: string;
+  seasonStartMonth: number | null;
+  editionName: string;
 }
 
 const DAYS: DayOfWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -171,8 +173,8 @@ const ACTIVITY_TYPE_COLORS: Record<ActivityType, 'primary' | 'secondary' | 'warn
 const ACTIVITY_TYPES: ActivityType[] = ['TrailRunning', 'Running', 'Cycling', 'Hiking', 'FunRun', 'ObstacleCourse', 'CrossCountryRun', 'Social', 'Other'];
 const EVENT_STATUSES: EventStatus[] = ['Unconfirmed', 'Confirmed', 'Cancelled', 'Hidden', 'Unlisted'];
 const REGISTRATION_STATUSES: RegistrationStatus[] = ['NotStarted', 'Open', 'Closed'];
-const RACE_STATUSES: RaceStatus[] = ['Active', 'Cancelled', 'Hidden'];
-const TICKET_STATUSES: TicketStatus[] = ['Available', 'SoldOut'];
+const RACE_STATUSES: RaceStatus[] = ['Active', 'Upcoming', 'Completed', 'Cancelled', 'Hidden'];
+const TICKET_STATUSES: TicketStatus[] = ['Available', 'SoldOut', 'Closed'];
 const ALERT_SEVERITIES: AlertSeverity[] = ['info', 'success', 'warning', 'error'];
 
 const ACTIVITY_ICONS: Record<string, string> = {
@@ -250,12 +252,15 @@ function getRegistrationStatusColor(status: RegistrationStatus): 'default' | 'su
 
 function getRaceStatusColor(status: RaceStatus): 'default' | 'success' | 'info' | 'error' {
   if (status === 'Active') return 'success';
+  if (status === 'Completed') return 'info';
   if (status === 'Cancelled') return 'error';
   return 'default';
 }
 
-function getTicketStatusColor(status: TicketStatus): 'success' | 'error' {
-  return status === 'Available' ? 'success' : 'error';
+function getTicketStatusColor(status: TicketStatus): 'success' | 'error' | 'default' {
+  if (status === 'Available') return 'success';
+  if (status === 'SoldOut') return 'error';
+  return 'default';
 }
 
 function trimToUndefined(value: string): string | undefined {
@@ -271,13 +276,14 @@ function buildEditionLabel(edition: Pick<EventEditionDto, 'title' | 'year' | 'da
 }
 
 function sortEditions(a: EventEditionDto, b: EventEditionDto): number {
-  if (a.date && b.date) return a.date.localeCompare(b.date);
+  // Newest first
+  if (a.date && b.date) return b.date.localeCompare(a.date);
   if (a.date) return -1;
   if (b.date) return 1;
-  if (a.year != null && b.year != null) return a.year - b.year;
+  if (a.year != null && b.year != null) return b.year - a.year;
   if (a.year != null) return -1;
   if (b.year != null) return 1;
-  return buildEditionLabel(a).localeCompare(buildEditionLabel(b));
+  return buildEditionLabel(b).localeCompare(buildEditionLabel(a));
 }
 
 function sortRaces(a: RaceDto, b: RaceDto): number {
@@ -352,16 +358,19 @@ function createEmptyRaceForm(eventEditionId = '', sortOrder = 0): RaceFormState 
 
 function createGenerateForm(event: EventSummaryDto): GenerateFormState {
   const currentYear = new Date().getFullYear();
+  const seasonStart = event.type === 'Series' ? (event.scheduleRule?.monthStart ?? null) : null;
   return {
     eventId: event.id,
     eventName: event.name,
     eventType: event.type,
-    fromMonth: 1,
+    fromMonth: seasonStart ?? 1,
     fromYear: currentYear,
-    toMonth: 12,
-    toYear: currentYear,
+    toMonth: event.scheduleRule?.monthEnd ?? 12,
+    toYear: currentYear + (seasonStart && event.scheduleRule?.monthEnd && event.scheduleRule.monthEnd < seasonStart ? 1 : 0),
     trailId: '',
     registrationUrl: '',
+    seasonStartMonth: seasonStart,
+    editionName: '',
   };
 }
 
@@ -514,14 +523,14 @@ export default function EventList({ onNotify }: EventListProps) {
   const [editionForm, setEditionForm] = useState<EditionFormState>(createEmptyEditionForm());
   const [raceForm, setRaceForm] = useState<RaceFormState>(createEmptyRaceForm());
   const [applyToAllEditions, setApplyToAllEditions] = useState(false);
-  const [generateForm, setGenerateForm] = useState<GenerateFormState>({ eventId: '', eventName: '', eventType: 'Race', fromMonth: 1, fromYear: new Date().getFullYear(), toMonth: 12, toYear: new Date().getFullYear(), trailId: '', registrationUrl: '' });
+  const [generateForm, setGenerateForm] = useState<GenerateFormState>({ eventId: '', eventName: '', eventType: 'Race', fromMonth: 1, fromYear: new Date().getFullYear(), toMonth: 12, toYear: new Date().getFullYear(), trailId: '', registrationUrl: '', seasonStartMonth: null, editionName: '' });
 
   const sortedLocations = useMemo(
     () => [...locations].sort((a, b) => a.name.localeCompare(b.name)),
     [locations],
   );
   const sortedTrails = useMemo(
-    () => [...trails].sort((a, b) => a.name.localeCompare(b.name)),
+    () => [...trails].filter(t => t.status === 'Published' || t.status === 'EventOnly').sort((a, b) => a.name.localeCompare(b.name)),
     [trails],
   );
 
@@ -857,21 +866,24 @@ export default function EventList({ onNotify }: EventListProps) {
 
     setSaving(true);
     try {
-      const isRaceOrSeries = generateForm.eventType === 'Race' || generateForm.eventType === 'Series';
+      const isSeries = generateForm.eventType === 'Series';
 
       const result = await generateEditionsForSeason({
         eventId: generateForm.eventId,
         from,
         to,
-        // For Race/Series events, trail belongs on the Race, not the Edition
-        trailId: isRaceOrSeries ? null : (generateForm.trailId || null),
+        // For Race/Series events, trail is set on the Race (backend handles it); for others, on the Edition
+        trailId: generateForm.trailId || null,
         registrationUrl: generateForm.registrationUrl.trim() || null,
+        // Series: pass season start month so backend groups dates into seasons
+        seasonStartMonth: isSeries ? generateForm.seasonStartMonth : null,
+        editionName: isSeries && generateForm.editionName.trim() ? generateForm.editionName.trim() : null,
       });
       const hasDefaults = generateForm.trailId || generateForm.registrationUrl.trim();
 
-      // Auto-create default races for editions without races (Race/Series events only)
-      let racesCreated = 0;
-      if (isRaceOrSeries) {
+      // Auto-create default races for editions without races (Race events only — Series handled by backend)
+      let racesCreated = result.racesCreated;
+      if (generateForm.eventType === 'Race') {
         const raceTrailId = generateForm.trailId || null;
         const raceName = generateForm.eventName || 'Race';
 
@@ -893,14 +905,14 @@ export default function EventList({ onNotify }: EventListProps) {
                 prizeMoney: 0,
               }),
             ));
-            racesCreated = editionsWithoutRaces.length;
+            racesCreated += editionsWithoutRaces.length;
           }
         }
       }
 
       const parts: string[] = [];
-      if (result.count > 0) parts.push(`Generated ${result.count} edition${result.count === 1 ? '' : 's'}`);
-      if (racesCreated > 0) parts.push(`created ${racesCreated} default race${racesCreated === 1 ? '' : 's'}`);
+      if (result.count > 0) parts.push(`Generated ${result.count} ${isSeries ? 'season' : 'edition'}${result.count === 1 ? '' : 's'}`);
+      if (racesCreated > 0) parts.push(`created ${racesCreated} race${racesCreated === 1 ? '' : 's'}`);
       if (parts.length === 0 && hasDefaults) parts.push('Defaults applied to existing editions');
       if (parts.length === 0) parts.push('No new editions to generate — all dates already exist.');
 
@@ -963,23 +975,35 @@ export default function EventList({ onNotify }: EventListProps) {
         });
         onNotify(`Race "${raceForm.name.trim()}" updated`);
 
-        // Apply to matching races in other editions
+        // Apply to other races
         if (applyToAllEditions && expandedDetail) {
-          const otherRaces = expandedDetail.editions
-            .filter(ed => ed.id !== raceForm.eventEditionId)
-            .flatMap(ed => ed.races)
-            .filter(r => r.id !== editRaceId && r.sortOrder === input.sortOrder);
+          const isSeries = expandedDetail.type === 'Series';
+          let otherRaces: typeof expandedDetail.editions[0]['races'];
+
+          if (isSeries) {
+            // Series: apply to other races within the same edition
+            otherRaces = expandedDetail.editions
+              .filter(ed => ed.id === raceForm.eventEditionId)
+              .flatMap(ed => ed.races)
+              .filter(r => r.id !== editRaceId);
+          } else {
+            // Non-Series: apply to matching races (by sortOrder) in other editions
+            otherRaces = expandedDetail.editions
+              .filter(ed => ed.id !== raceForm.eventEditionId)
+              .flatMap(ed => ed.races)
+              .filter(r => r.id !== editRaceId && r.sortOrder === input.sortOrder);
+          }
 
           if (otherRaces.length > 0) {
             await Promise.all(otherRaces.map(r =>
               updateRace(r.id, {
                 trailId: input.trailId,
-                name: input.name,
+                name: isSeries ? r.name : input.name,
                 distanceLabel: input.distanceLabel,
                 cutoffMinutes: input.cutoffMinutes,
                 description: input.description,
                 status: input.status,
-                sortOrder: input.sortOrder,
+                sortOrder: isSeries ? r.sortOrder : input.sortOrder,
                 ticketStatus: input.ticketStatus,
                 maxParticipants: input.maxParticipants,
                 itraPoints: input.itraPoints,
@@ -990,7 +1014,7 @@ export default function EventList({ onNotify }: EventListProps) {
                 startTime: input.startTime,
               }),
             ));
-            onNotify(`Also updated ${otherRaces.length} matching race${otherRaces.length === 1 ? '' : 's'} in other editions`);
+            onNotify(`Also updated ${otherRaces.length} other race${otherRaces.length === 1 ? '' : 's'} in ${isSeries ? 'this edition' : 'other editions'}`);
           }
         }
       } else {
@@ -1996,10 +2020,14 @@ export default function EventList({ onNotify }: EventListProps) {
           </Box>
         </DialogContent>
         <DialogActions sx={{ justifyContent: 'space-between', px: 3 }}>
-          {editRaceId && expandedDetail && expandedDetail.editions.length > 1 ? (
+          {editRaceId && expandedDetail && (
+            expandedDetail.type === 'Series'
+              ? expandedDetail.editions.find(ed => ed.id === raceForm.eventEditionId)?.races && expandedDetail.editions.find(ed => ed.id === raceForm.eventEditionId)!.races.length > 1
+              : expandedDetail.editions.length > 1
+          ) ? (
             <FormControlLabel
               control={<Switch checked={applyToAllEditions} onChange={(_, checked) => setApplyToAllEditions(checked)} size="small" />}
-              label={<Typography variant="body2">Apply to other editions</Typography>}
+              label={<Typography variant="body2">{expandedDetail.type === 'Series' ? 'Apply to other races in edition' : 'Apply to other editions'}</Typography>}
             />
           ) : <Box />}
           <Box>
@@ -2012,12 +2040,36 @@ export default function EventList({ onNotify }: EventListProps) {
       </Dialog>
 
       <Dialog open={showGenerateDialog} onClose={() => setShowGenerateDialog(false)} maxWidth="xs" fullWidth>
-        <DialogTitle>Generate Editions</DialogTitle>
+        <DialogTitle>Generate {generateForm.eventType === 'Series' ? 'Season' : 'Editions'}</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" sx={{ pt: 1, mb: 2 }}>
-            Generate editions for {generateForm.eventName} using its schedule rule. Existing dates are skipped.
+            {generateForm.eventType === 'Series'
+              ? `Generate seasons for ${generateForm.eventName}. Each season becomes one edition with individual races. Existing race dates are skipped.`
+              : `Generate editions for ${generateForm.eventName} using its schedule rule. Existing dates are skipped.`}
           </Typography>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {generateForm.eventType === 'Series' && (
+              <FormControl size="small">
+                <InputLabel>Season starts in</InputLabel>
+                <Select
+                  value={generateForm.seasonStartMonth ?? ''}
+                  label="Season starts in"
+                  onChange={(event) => setGenerateForm(prev => ({ ...prev, seasonStartMonth: event.target.value ? Number(event.target.value) : null }))}
+                >
+                  {MONTHS_SHORT.slice(1).map((m, i) => <MenuItem key={m} value={i + 1}>{m}</MenuItem>)}
+                </Select>
+              </FormControl>
+            )}
+            {generateForm.eventType === 'Series' && (
+              <TextField
+                label="Season name (optional)"
+                size="small"
+                placeholder="e.g. Powerade vetrarhlaup"
+                value={generateForm.editionName}
+                onChange={(event) => setGenerateForm(prev => ({ ...prev, editionName: event.target.value }))}
+                helperText="If set, editions are named 'Season name 2025–2026'"
+              />
+            )}
             <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
               <FormControl size="small">
                 <InputLabel>From month</InputLabel>

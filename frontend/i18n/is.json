@@ -10,6 +10,9 @@
         "save": "Vista",
         "clear": "Hreinsa",
         "tip": "Ábending",
+        "viewDetails": "Skoða nánar",
+        "expand": "Opna",
+        "collapse": "Loka",
         "dataLoadUnavailable": "Ekki tókst að sækja gögn núna. Athugaðu nettenginguna og reyndu aftur."
     },
     "auth": {
@@ -898,7 +901,20 @@
         "raceDayShareRaceText": "Í dag er ég að keppa í {{competitionName}} - {{raceName}} 💥",
         "checklistSavedLocally": "Vistað aðeins í þessu tæki.",
         "predict": "Spá",
-        "noUpcoming": "Engin keppni framundan"
+        "noUpcoming": "Engin keppni framundan",
+        "table": {
+            "name": "Heiti",
+            "nextRace": "Næsta keppni",
+            "date": "Dagsetning",
+            "type": "Tegund",
+            "organizer": "Skipuleggjandi",
+            "editions": "Útgáfur",
+            "races": "Hlaupagreinar",
+            "noRaces": "Engar greinar skráðar",
+            "soldOut": "Uppselt",
+            "almostSoldOut": "Næstum fullt",
+            "cutoff": "Tímamörk"
+        }
     },
     "calendar": {
         "title": "Viðburðadagatal",

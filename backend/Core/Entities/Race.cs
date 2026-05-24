@@ -6,12 +6,14 @@ public enum RaceStatus
     Cancelled,
     Upcoming,
     Hidden,
+    Completed,
 }
 
 public enum TicketStatus
 {
     Available,
     SoldOut,
+    Closed,
 }
 
 public class Race
