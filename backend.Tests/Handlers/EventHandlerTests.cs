@@ -915,4 +915,170 @@ public class EventHandlerTests : IDisposable
 
         Assert.Empty(result);
     }
+
+    // ─── Recently Completed (DaysUntil negative) ───
+
+    [Fact]
+    public async Task GetEvents_RecentlyCompleted_ReturnsNegativeDaysUntil()
+    {
+        var ev = CreateTestEvent("Yesterday Race");
+        ev.Slug = "yesterday-race";
+        ev.ScheduleRule = null;
+        var pastDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1));
+        var edition = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Year = pastDate.Year,
+            Date = pastDate,
+            RegistrationStatus = RegistrationStatus.Closed,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.Equal(-1, dto.DaysUntil);
+        Assert.Equal(pastDate, dto.DisplayDate);
+    }
+
+    [Fact]
+    public async Task GetEvents_RecentlyCompleted_3DayBoundary()
+    {
+        var ev = CreateTestEvent("Three Days Ago");
+        ev.Slug = "three-days-ago";
+        ev.ScheduleRule = null;
+        var pastDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-3));
+        var edition = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Year = pastDate.Year,
+            Date = pastDate,
+            RegistrationStatus = RegistrationStatus.Closed,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.Equal(-3, dto.DaysUntil);
+        Assert.Equal(pastDate, dto.DisplayDate);
+    }
+
+    [Fact]
+    public async Task GetEvents_RecentlyCompleted_BeyondBoundary_ReturnsNull()
+    {
+        var ev = CreateTestEvent("Four Days Ago");
+        ev.Slug = "four-days-ago";
+        ev.ScheduleRule = null;
+        var pastDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-4));
+        var edition = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Year = pastDate.Year,
+            Date = pastDate,
+            RegistrationStatus = RegistrationStatus.Closed,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.Null(dto.DaysUntil);
+        Assert.Null(dto.DisplayDate);
+    }
+
+    [Fact]
+    public async Task GetEvents_RecentlyCompleted_CancelledEvent_NotMarkedAsCompleted()
+    {
+        var ev = CreateTestEvent("Cancelled Yesterday");
+        ev.Slug = "cancelled-yesterday";
+        ev.Status = EventStatus.Cancelled;
+        ev.ScheduleRule = null;
+        var pastDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1));
+        var edition = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Year = pastDate.Year,
+            Date = pastDate,
+            RegistrationStatus = RegistrationStatus.Closed,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(IncludeHidden: true), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.Null(dto.DaysUntil);
+        Assert.Null(dto.DisplayDate);
+    }
+
+    [Fact]
+    public async Task GetEvents_RecentlyCompleted_WithScheduleRule_StillShowsNegative()
+    {
+        var ev = CreateTestEvent("Annual Race");
+        ev.Slug = "annual-race";
+        // Has a schedule rule that would generate future dates
+        var pastDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1));
+        var edition = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Year = pastDate.Year,
+            Date = pastDate,
+            RegistrationStatus = RegistrationStatus.Closed,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.Equal(-1, dto.DaysUntil);
+        Assert.Equal(pastDate, dto.DisplayDate);
+        // NextEditionDate should still be a future date (from schedule rule)
+        Assert.NotNull(dto.NextEditionDate);
+        Assert.True(dto.NextEditionDate > pastDate);
+    }
 }
