@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+    Box,
     Button,
     Dialog,
     DialogContent,
@@ -7,9 +8,6 @@ import {
     DialogTitle,
     Snackbar,
     Alert,
-    TextField,
-    Stack,
-    Typography,
     useTheme,
 } from '@mui/material';
 import ShareIcon from '@mui/icons-material/Share';
@@ -19,6 +17,7 @@ import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import IconButton from '@mui/material/IconButton';
 import { useTranslation } from 'react-i18next';
 import { ACTIVITY_EMOJI } from '../constants/activityEmoji';
+import TimePickerInput from './TimePickerInput';
 
 interface RaceFinishCardProps {
     eventName: string;
@@ -304,19 +303,14 @@ export default function RaceFinishCard(props: RaceFinishCardProps) {
                     {t('races.finishCard.title', { defaultValue: 'Share your result!' })}
                 </DialogTitle>
                 <DialogContent sx={{ p: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                    <Stack direction="row" spacing={1} alignItems="center" sx={{ width: '100%', maxWidth: 300, mt: 1 }}>
-                        <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>
-                            ⏱️ {t('races.finishCard.timeLabel', { defaultValue: 'Finish time:' })}
-                        </Typography>
-                        <TextField
-                            size="small"
-                            placeholder="HH:MM:SS"
-                            value={finishTime}
-                            onChange={(e) => setFinishTime(e.target.value)}
-                            sx={{ flex: 1 }}
-                            inputProps={{ style: { textAlign: 'center', fontWeight: 700 } }}
+                    <Box sx={{ width: '100%', maxWidth: 260, mt: 1 }}>
+                        <TimePickerInput
+                            value={finishTime || '00:00:00'}
+                            onChange={setFinishTime}
+                            label={t('races.finishCard.timeLabel', { defaultValue: 'Finish time' })}
+                            helperText=""
                         />
-                    </Stack>
+                    </Box>
                     <canvas
                         ref={canvasRef}
                         style={{
