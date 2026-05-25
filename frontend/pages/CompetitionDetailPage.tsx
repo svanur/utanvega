@@ -176,12 +176,12 @@ function EditionMeta({
     edition,
     t,
     showHeader,
-    hideButtons,
+    hideMeta,
 }: {
     edition: EventEditionDto;
     t: (key: string, opts?: Record<string, unknown>) => string;
     showHeader?: boolean;
-    hideButtons?: boolean;
+    hideMeta?: boolean;
 }) {
     const heading = edition.title?.trim() || String(edition.year);
 
@@ -196,10 +196,10 @@ function EditionMeta({
                 {!showHeader && edition.title && (
                     <Chip label={edition.title} size="small" variant="outlined" />
                 )}
-                {!hideButtons && (
+                {!hideMeta && (
                     <Chip label={String(edition.year)} size="small" variant="outlined" color="primary" />
                 )}
-                {!hideButtons && edition.date && (
+                {!hideMeta && edition.date && (
                     <Chip
                         icon={<CalendarTodayIcon />}
                         label={formatNextDate(edition.date, t)}
@@ -220,7 +220,7 @@ function EditionMeta({
                     {edition.notes}
                 </Typography>
             )}
-            {!hideButtons && (
+            {!hideMeta && (
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mt: 1.5 }} alignItems={{ sm: 'center' }}>
                     {edition.registrationUrl && (
                         <Button
@@ -646,7 +646,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
 
                     {!showEditionSections && primaryEdition && (
                         <Box sx={{ mt: 2.5 }}>
-                            <EditionMeta edition={primaryEdition} t={t} hideButtons />
+                            <EditionMeta edition={primaryEdition} t={t} hideMeta />
                         </Box>
                     )}
                 </Paper>
