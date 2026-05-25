@@ -678,16 +678,19 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                         )}
                         {event.socialLinks && event.socialLinks.length > 0 && (
                             <Stack direction="row" spacing={0.5}>
-                                {event.socialLinks.map((link, idx) => {
+                                {event.socialLinks
+                                    .filter((link) => /^https?:\/\//i.test(link.url))
+                                    .map((link) => {
                                     const type = link.type.toLowerCase();
                                     let icon = <LanguageIcon />;
                                     if (type === 'facebook') icon = <FacebookIcon />;
                                     else if (type === 'instagram') icon = <InstagramIcon />;
                                     else if (type === 'x' || type === 'twitter') icon = <XIcon />;
                                     return (
-                                        <Tooltip key={idx} title={link.type}>
+                                        <Tooltip key={`${type}-${link.url}`} title={link.type}>
                                             <IconButton
                                                 size="small"
+                                                aria-label={link.type}
                                                 onClick={() => window.open(link.url, '_blank', 'noopener')}
                                                 sx={{ color: 'text.secondary' }}
                                             >
