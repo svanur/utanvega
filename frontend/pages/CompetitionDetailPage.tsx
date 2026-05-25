@@ -20,6 +20,7 @@ import {
     Checkbox,
     FormControlLabel,
     FormGroup,
+    Tooltip,
     useTheme,
     alpha,
 } from '@mui/material';
@@ -987,7 +988,13 @@ function RaceCard({
                         <Chip label={`👥 ${race.maxParticipants}`} size="small" variant="outlined" />
                     )}
                     {race.itraPoints != null && (
-                        <Chip label={`ITRA ${race.itraPoints}`} size="small" variant="outlined" />
+                        <Tooltip title={`ITRA ${race.itraPoints}`}>
+                            <img
+                                src={`/images/itra-${race.itraPoints}.png`}
+                                alt={`ITRA ${race.itraPoints}`}
+                                style={{ height: 20, verticalAlign: 'middle' }}
+                            />
+                        </Tooltip>
                     )}
                 </Stack>
 
