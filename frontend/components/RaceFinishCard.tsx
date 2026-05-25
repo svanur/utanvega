@@ -144,7 +144,8 @@ function renderFinishCard(
     }
 
     // Finish time (the star of the show)
-    if (finishTime) {
+    const hasTime = finishTime && finishTime !== '00:00:00';
+    if (hasTime) {
         y += 90;
         // Gold badge background
         const timeWidth = 500;
@@ -252,8 +253,8 @@ export default function RaceFinishCard(props: RaceFinishCardProps) {
                     title: props.raceName,
                     text: t('races.finishCard.shareText', {
                         raceName: props.raceName,
-                        time: finishTime,
-                        defaultValue: `I finished ${props.raceName}${finishTime ? ` in ${finishTime}` : ''}! 🏁`,
+                        time: finishTime && finishTime !== '00:00:00' ? finishTime : '',
+                        defaultValue: `I finished ${props.raceName}${finishTime && finishTime !== '00:00:00' ? ` in ${finishTime}` : ''}! 🏁`,
                     }),
                     files: [file],
                 });
