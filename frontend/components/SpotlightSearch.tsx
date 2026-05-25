@@ -157,8 +157,8 @@ export default function SpotlightSearch() {
                     type: 'competition' as const,
                     name: comp.name,
                     slug: comp.slug,
-                    subtitle: comp.nextEditionDate
-                        ? new Date(comp.nextEditionDate + 'T00:00:00').toLocaleDateString(i18n.language === 'is' ? 'is-IS' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })
+                    subtitle: (comp.displayDate ?? comp.nextEditionDate)
+                        ? new Date((comp.displayDate ?? comp.nextEditionDate)! + 'T00:00:00').toLocaleDateString(i18n.language === 'is' ? 'is-IS' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })
                         : (comp.organizerName ?? comp.locationName ?? undefined),
                     score: scoreMatch(q, comp.name),
                 }))

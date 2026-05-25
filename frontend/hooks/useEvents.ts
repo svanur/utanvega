@@ -35,6 +35,7 @@ export interface EventSummary {
     socialLinks: SocialLink[] | null;
     nextEditionDate: string | null;
     daysUntil: number | null;
+    displayDate: string | null;
     editionCount: number;
     createdAt: string;
     updatedAt: string | null;

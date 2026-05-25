@@ -29,7 +29,8 @@ public record EventDetailDto(
     List<DateOnly> UpcomingDates,
     List<EventEditionDto> Editions,
     DateTime CreatedAt,
-    DateTime? UpdatedAt
+    DateTime? UpdatedAt,
+    DateOnly? DisplayDate = null
 );
 
 public record GetEventQuery(string Slug) : IRequest<EventDetailDto?>, ICacheable
@@ -87,18 +88,21 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
             && (today.DayNumber - mostRecentPast.Value.DayNumber) <= 3;
 
         int? daysUntil;
+        DateOnly? displayDate;
         if (recentlyCompleted)
         {
             daysUntil = mostRecentPast!.Value.DayNumber - today.DayNumber;
-            nextDate = mostRecentPast.Value;
+            displayDate = mostRecentPast.Value;
         }
         else if (nextDate.HasValue)
         {
             daysUntil = nextDate.Value.DayNumber - today.DayNumber;
+            displayDate = nextDate.Value;
         }
         else
         {
             daysUntil = null;
+            displayDate = null;
         }
 
         var upcomingDates = ev.ScheduleRule != null
@@ -172,7 +176,8 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
             upcomingDates,
             editions,
             ev.CreatedAt,
-            ev.UpdatedAt
+            ev.UpdatedAt,
+            displayDate
         );
     }
 }

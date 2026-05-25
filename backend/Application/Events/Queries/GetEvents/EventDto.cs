@@ -22,7 +22,8 @@ public record EventSummaryDto(
     int? DaysUntil,
     int EditionCount,
     DateTime CreatedAt,
-    DateTime? UpdatedAt
+    DateTime? UpdatedAt,
+    DateOnly? DisplayDate = null
 );
 
 public record RaceDto(

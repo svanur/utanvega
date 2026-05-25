@@ -58,18 +58,21 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 && (today.DayNumber - mostRecentPast.Value.DayNumber) <= 3;
 
             int? daysUntil;
+            DateOnly? displayDate;
             if (recentlyCompleted)
             {
                 daysUntil = mostRecentPast!.Value.DayNumber - today.DayNumber;
-                nextDate = mostRecentPast.Value;
+                displayDate = mostRecentPast.Value;
             }
             else if (nextDate.HasValue)
             {
                 daysUntil = nextDate.Value.DayNumber - today.DayNumber;
+                displayDate = nextDate.Value;
             }
             else
             {
                 daysUntil = null;
+                displayDate = null;
             }
 
             return new EventSummaryDto(
@@ -92,7 +95,8 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 daysUntil,
                 e.Editions.Count,
                 e.CreatedAt,
-                e.UpdatedAt
+                e.UpdatedAt,
+                displayDate
             );
         }).ToList();
     }

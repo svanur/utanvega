@@ -617,14 +617,14 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                         ) : null;
                     })()}
 
-                    {event.nextEditionDate && event.status !== 'Cancelled' && (
+                    {(event.displayDate ?? event.nextEditionDate) && event.status !== 'Cancelled' && (
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 2 }}>
                             <CalendarTodayIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
                             <Typography variant="body2" color="text.secondary" sx={{ mr: 0.5 }}>
                                 {t('races.nextRace')}
                             </Typography>
                             <Typography variant="body1" fontWeight={600}>
-                                {formatNextDate(event.nextEditionDate, t)}
+                                {formatNextDate((event.displayDate ?? event.nextEditionDate)!, t)}
                             </Typography>
                         </Box>
                     )}

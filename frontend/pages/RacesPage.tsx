@@ -262,9 +262,9 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                 <Typography variant="subtitle1" fontWeight={700}>
                                                                     {comp.name}
                                                                 </Typography>
-                                                                {comp.nextEditionDate && (
+                                                                {(comp.displayDate ?? comp.nextEditionDate) && (
                                                                     <Typography variant="body2" color="text.secondary">
-                                                                        {formatNextDate(comp.nextEditionDate, t)}
+                                                                        {formatNextDate((comp.displayDate ?? comp.nextEditionDate)!, t)}
                                                                     </Typography>
                                                                 )}
                                                             </Box>
@@ -345,14 +345,14 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                     )}
 
                                                     {/* Next date */}
-                                                    {comp.nextEditionDate && comp.status !== 'Cancelled' && (
+                                                    {(comp.displayDate ?? comp.nextEditionDate) && comp.status !== 'Cancelled' && (
                                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1.5 }}>
                                                             <CalendarTodayIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
                                                             <Typography variant="body2" color="text.secondary" sx={{ mr: 0.5 }}>
                                                                 {t('races.nextRace')}
                                                             </Typography>
                                                             <Typography variant="body2" fontWeight={600}>
-                                                                {formatNextDate(comp.nextEditionDate, t)}
+                                                                {formatNextDate((comp.displayDate ?? comp.nextEditionDate)!, t)}
                                                             </Typography>
                                                         </Box>
                                                     )}
