@@ -399,7 +399,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                 <LostRunner
                     message={t('races.notFound')}
                     buttonLabel={t('races.backToRaces')}
-                    onBack={() => navigate('/races')}
+                    onBack={() => navigate('/events')}
                 />
                 {suggestions.length > 0 && (
                     <Container maxWidth="md" sx={{ mt: 2, mb: 4 }}>
@@ -417,7 +417,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                         '&:hover': { bgcolor: 'action.hover' },
                                         borderRadius: 2,
                                     }}
-                                    onClick={() => navigate(`/races/${candidate.slug}`)}
+                                    onClick={() => navigate(`/events/${candidate.slug}`)}
                                 >
                                     <Stack direction="row" alignItems="center" justifyContent="space-between">
                                         <Box>

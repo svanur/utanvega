@@ -96,7 +96,7 @@ const EventMapView: React.FC<EventMapViewProps> = ({ events }) => {
                                 )}
                                 <Button
                                     component={RouterLink}
-                                    to={`/races/${event.slug}`}
+                                    to={`/events/${event.slug}`}
                                     size="small"
                                     sx={{ mt: 1, display: 'block' }}
                                 >

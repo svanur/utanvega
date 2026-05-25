@@ -120,7 +120,7 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
             <Container maxWidth="sm" sx={{ py: 3 }}>
                 {/* Header */}
                 <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-                    <IconButton onClick={() => navigate('/races')} sx={{ minWidth: 44, minHeight: 44 }}>
+                    <IconButton onClick={() => navigate('/events')} sx={{ minWidth: 44, minHeight: 44 }}>
                         <ArrowBackIcon />
                     </IconButton>
                     <EmojiEventsIcon sx={{ color: theme.palette.warning.main }} />
@@ -295,7 +295,7 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
                                 {selectedDay.events.map((ev, i) => (
                                     <ListItemButton
                                         key={i}
-                                        onClick={() => navigate(`/races/${ev.slug}`)}
+                                        onClick={() => navigate(`/events/${ev.slug}`)}
                                         sx={{ borderRadius: 1 }}
                                     >
                                         <ListItemText

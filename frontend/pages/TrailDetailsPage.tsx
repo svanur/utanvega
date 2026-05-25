@@ -646,7 +646,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                         <Paper
                                             key={rep.competitionSlug}
                                             component={RouterLink}
-                                            to={`/races/${rep.competitionSlug}`}
+                                            to={`/events/${rep.competitionSlug}`}
                                             elevation={0}
                                             sx={{
                                                 display: 'flex',

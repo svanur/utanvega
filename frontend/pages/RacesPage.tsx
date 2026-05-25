@@ -156,7 +156,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                             label={t('calendar.title')}
                             variant="outlined"
                             size="small"
-                            onClick={() => navigate('/races/calendar')}
+                            onClick={() => navigate('/events/calendar')}
                         />
                     </Stack>
                     <Typography variant="body2" color="text.secondary">
@@ -242,7 +242,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                         ...(comp.status === 'Cancelled' && { opacity: 0.65 }),
                                     }}
                                 >
-                                    <CardActionArea onClick={() => navigate(`/races/${comp.slug}`)}>
+                                    <CardActionArea onClick={() => navigate(`/events/${comp.slug}`)}>
                                         <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
                                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1, flexWrap: 'wrap' }}>
                                                 <Box sx={{ flex: 1, minWidth: 200 }}>
