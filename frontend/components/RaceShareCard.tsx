@@ -214,6 +214,18 @@ export default function RaceShareCard(props: RaceShareCardProps) {
         });
     }, []);
 
+    const handleDownload = useCallback(async () => {
+        const blob = await getBlob();
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${props.eventName.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-race-card.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+        setSnackbar(t('races.shareCard.downloaded', { defaultValue: 'Image saved!' }));
+    }, [getBlob, props.eventName, t]);
+
     const handleShare = useCallback(async () => {
         const blob = await getBlob();
         if (!blob) return;
@@ -232,12 +244,10 @@ export default function RaceShareCard(props: RaceShareCardProps) {
                 });
             } catch (err) {
                 if (err instanceof Error && err.name !== 'AbortError') {
-                    // Fallback to download
                     handleDownload();
                 }
             }
         } else {
-            // Fallback: copy image to clipboard if supported, otherwise download
             try {
                 await navigator.clipboard.write([
                     new ClipboardItem({ 'image/png': blob }),
@@ -247,19 +257,7 @@ export default function RaceShareCard(props: RaceShareCardProps) {
                 handleDownload();
             }
         }
-    }, [getBlob, props.eventName, t]);
-
-    const handleDownload = useCallback(async () => {
-        const blob = await getBlob();
-        if (!blob) return;
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${props.eventName.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-race-card.png`;
-        a.click();
-        URL.revokeObjectURL(url);
-        setSnackbar(t('races.shareCard.downloaded', { defaultValue: 'Image saved!' }));
-    }, [getBlob, props.eventName, t]);
+    }, [getBlob, handleDownload, props.eventName, t]);
 
     return (
         <>
