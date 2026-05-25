@@ -354,7 +354,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
             return now >= start;
         });
     }, [isRaceDay, visibleRaces, now]);
-    const showChecklist = isRaceWeek && !firstRaceStarted && !isPostRace;
+    const showChecklist = isRaceWeek && !firstRaceStarted;
 
     const showEditionSections = currentEditions.length > 1;
     const primaryEdition = useMemo(
