@@ -21,9 +21,14 @@ import {
     FormControlLabel,
     FormGroup,
     Tooltip,
+    IconButton,
     useTheme,
     alpha,
 } from '@mui/material';
+import FacebookIcon from '@mui/icons-material/Facebook';
+import InstagramIcon from '@mui/icons-material/Instagram';
+import LanguageIcon from '@mui/icons-material/Language';
+import XIcon from '@mui/icons-material/X';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
@@ -670,6 +675,28 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             >
                                 {t('races.organizerSite')}
                             </Button>
+                        )}
+                        {event.socialLinks && event.socialLinks.length > 0 && (
+                            <Stack direction="row" spacing={0.5}>
+                                {event.socialLinks.map((link, idx) => {
+                                    const type = link.type.toLowerCase();
+                                    let icon = <LanguageIcon />;
+                                    if (type === 'facebook') icon = <FacebookIcon />;
+                                    else if (type === 'instagram') icon = <InstagramIcon />;
+                                    else if (type === 'x' || type === 'twitter') icon = <XIcon />;
+                                    return (
+                                        <Tooltip key={idx} title={link.type}>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => window.open(link.url, '_blank', 'noopener')}
+                                                sx={{ color: 'text.secondary' }}
+                                            >
+                                                {icon}
+                                            </IconButton>
+                                        </Tooltip>
+                                    );
+                                })}
+                            </Stack>
                         )}
                     </Stack>
 
