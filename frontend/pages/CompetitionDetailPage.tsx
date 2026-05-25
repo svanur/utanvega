@@ -304,7 +304,8 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
 
     const { currentEditions, pastEditions } = useMemo(() => {
         if (!event) return { currentEditions: [] as PreparedEdition[], pastEditions: [] as PreparedEdition[] };
-        const today = new Date().toISOString().slice(0, 10);
+        const now = new Date();
+        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         const nextDate = event.nextEditionDate;
         const current: PreparedEdition[] = [];
         const past: PreparedEdition[] = [];
