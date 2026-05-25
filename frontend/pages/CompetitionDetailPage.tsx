@@ -137,7 +137,6 @@ function getCountdownLabel(daysUntil: number | null, t: (key: string, opts?: Rec
     if (daysUntil === 1) return t('races.tomorrow');
     if (daysUntil === -1) return t('races.yesterday');
     if (daysUntil < -1) return t('races.daysAgo', { count: Math.abs(daysUntil) });
-    if (daysUntil < 0) return t('races.passed');
     return t('races.daysUntil', { count: daysUntil });
 }
 

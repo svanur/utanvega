@@ -931,7 +931,7 @@
         "raceFinished": "🏁 Lokið",
         "progressBar": {
             "waiting": "Bíður eftir byrjun...",
-            "cutoffReached": "Tímamörkum náð",
+            "cutoffReached": "Tímatakmörk liðin",
             "remaining": "{{time}} eftir"
         },
         "checklistSavedLocally": "Vistað aðeins í þessu tæki.",
