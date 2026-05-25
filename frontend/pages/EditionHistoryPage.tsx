@@ -76,16 +76,20 @@ function getRegistrationStatusColor(status: string | null | undefined): 'success
 }
 
 export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistoryPageProps) {
-    const { slug, editionId } = useParams<{ slug: string; editionId: string }>();
+    const { slug, editionKey } = useParams<{ slug: string; editionKey: string }>();
     const { t } = useTranslation();
     const { event, loading, error } = useEventBySlug(slug);
     const navigate = useNavigate();
     const theme = useTheme();
 
     const edition: EventEditionDto | null = useMemo(() => {
-        if (!event || !editionId) return null;
-        return event.editions.find(ed => ed.id === editionId) ?? null;
-    }, [event, editionId]);
+        if (!event || !editionKey) return null;
+        // Match by date (yyyy-mm-dd), year, or fall back to id
+        return event.editions.find(ed => ed.date === editionKey)
+            ?? event.editions.find(ed => String(ed.year) === editionKey)
+            ?? event.editions.find(ed => ed.id === editionKey)
+            ?? null;
+    }, [event, editionKey]);
 
     const visibleRaces = useMemo(() => {
         if (!edition) return [];

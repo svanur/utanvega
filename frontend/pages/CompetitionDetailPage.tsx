@@ -739,74 +739,6 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                     </Stack>
                 )}
 
-                {pastEditions.length > 0 && (
-                    <Box sx={{ mt: 4 }}>
-                        <Typography variant="h5" fontWeight={700} sx={{ mb: 2 }}>
-                            {t('races.history.title', { defaultValue: 'Event History' })}
-                        </Typography>
-                        <Stack spacing={1.5}>
-                            {pastEditions.map(edition => {
-                                const heading = edition.title?.trim() || String(edition.year);
-                                const raceCount = edition.visibleRaces.length;
-                                return (
-                                    <Paper
-                                        key={edition.id}
-                                        variant="outlined"
-                                        sx={{
-                                            p: { xs: 1.5, sm: 2 },
-                                            borderRadius: 2,
-                                            cursor: 'pointer',
-                                            transition: 'background-color 0.15s',
-                                            '&:hover': { bgcolor: 'action.hover' },
-                                        }}
-                                        onClick={() => navigate(`/events/${slug}/history/${edition.id}`)}
-                                    >
-                                        <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
-                                            <Box sx={{ minWidth: 0 }}>
-                                                <Typography variant="subtitle1" fontWeight={600} noWrap>
-                                                    {heading}
-                                                </Typography>
-                                                <Stack direction="row" spacing={0.5} sx={{ mt: 0.5, flexWrap: 'wrap', gap: 0.5 }}>
-                                                    {edition.date && (
-                                                        <Chip
-                                                            icon={<CalendarTodayIcon />}
-                                                            label={formatNextDate(edition.date, t)}
-                                                            size="small"
-                                                            variant="outlined"
-                                                        />
-                                                    )}
-                                                    {raceCount > 0 && (
-                                                        <Chip
-                                                            icon={<DirectionsRunIcon />}
-                                                            label={t('races.raceCount', { count: raceCount })}
-                                                            size="small"
-                                                            variant="outlined"
-                                                        />
-                                                    )}
-                                                    {edition.resultsUrl && (
-                                                        <Chip
-                                                            label={t('races.results', { defaultValue: 'Results' })}
-                                                            size="small"
-                                                            color="primary"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                window.open(edition.resultsUrl!, '_blank', 'noopener');
-                                                            }}
-                                                        />
-                                                    )}
-                                                </Stack>
-                                            </Box>
-                                            <Typography variant="body2" color="primary" sx={{ flexShrink: 0 }}>
-                                                →
-                                            </Typography>
-                                        </Stack>
-                                    </Paper>
-                                );
-                            })}
-                        </Stack>
-                    </Box>
-                )}
-
                 {event.status !== 'Cancelled' && event.upcomingDates && event.upcomingDates.length > 1 && (
                     <Box sx={{ mt: 3 }}>
                         <Typography variant="h5" fontWeight={700} sx={{ mb: 1 }}>
@@ -873,6 +805,75 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             {t('races.raceDayWeatherDesc')}
                         </Typography>
                         <WeatherCard weather={weather} loading={weatherLoading} error={weatherError} raceDate={nextRaceDate} />
+                    </Box>
+                )}
+
+                {pastEditions.length > 0 && (
+                    <Box sx={{ mt: 4 }}>
+                        <Typography variant="h5" fontWeight={700} sx={{ mb: 2 }}>
+                            {t('races.history.title', { defaultValue: 'Event History' })}
+                        </Typography>
+                        <Stack spacing={1.5}>
+                            {pastEditions.map(edition => {
+                                const heading = edition.title?.trim() || String(edition.year);
+                                const raceCount = edition.visibleRaces.length;
+                                const editionKey = edition.date ?? String(edition.year ?? edition.id);
+                                return (
+                                    <Paper
+                                        key={edition.id}
+                                        variant="outlined"
+                                        sx={{
+                                            p: { xs: 1.5, sm: 2 },
+                                            borderRadius: 2,
+                                            cursor: 'pointer',
+                                            transition: 'background-color 0.15s',
+                                            '&:hover': { bgcolor: 'action.hover' },
+                                        }}
+                                        onClick={() => navigate(`/events/${slug}/history/${editionKey}`)}
+                                    >
+                                        <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+                                            <Box sx={{ minWidth: 0 }}>
+                                                <Typography variant="subtitle1" fontWeight={600} noWrap>
+                                                    {heading}
+                                                </Typography>
+                                                <Stack direction="row" spacing={0.5} sx={{ mt: 0.5, flexWrap: 'wrap', gap: 0.5 }}>
+                                                    {edition.date && (
+                                                        <Chip
+                                                            icon={<CalendarTodayIcon />}
+                                                            label={formatNextDate(edition.date, t)}
+                                                            size="small"
+                                                            variant="outlined"
+                                                        />
+                                                    )}
+                                                    {raceCount > 0 && (
+                                                        <Chip
+                                                            icon={<DirectionsRunIcon />}
+                                                            label={t('races.raceCount', { count: raceCount })}
+                                                            size="small"
+                                                            variant="outlined"
+                                                        />
+                                                    )}
+                                                    {edition.resultsUrl && (
+                                                        <Chip
+                                                            label={t('races.results', { defaultValue: 'Results' })}
+                                                            size="small"
+                                                            color="primary"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                window.open(edition.resultsUrl!, '_blank', 'noopener');
+                                                            }}
+                                                        />
+                                                    )}
+                                                </Stack>
+                                            </Box>
+                                            <Typography variant="body2" color="primary" sx={{ flexShrink: 0 }}>
+                                                →
+                                            </Typography>
+                                        </Stack>
+                                    </Paper>
+                                );
+                            })}
+                        </Stack>
                     </Box>
                 )}
             </Container>

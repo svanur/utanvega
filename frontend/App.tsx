@@ -158,7 +158,7 @@ export default function App() {
                         element={<CompetitionDetailPage mode={mode} onToggleMode={handleToggleMode} />} 
                     />
                     <Route 
-                        path="/events/:slug/history/:editionId" 
+                        path="/events/:slug/history/:editionKey" 
                         element={<EditionHistoryPage mode={mode} onToggleMode={handleToggleMode} />} 
                     />
                     {/* Legacy redirects */}
