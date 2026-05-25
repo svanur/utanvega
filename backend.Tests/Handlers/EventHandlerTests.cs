@@ -924,7 +924,8 @@ public class EventHandlerTests : IDisposable
         var ev = CreateTestEvent("Yesterday Race");
         ev.Slug = "yesterday-race";
         ev.ScheduleRule = null;
-        var pastDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1));
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var pastDate = today.AddDays(-1);
         var edition = new EventEdition
         {
             Id = Guid.NewGuid(),
@@ -956,7 +957,8 @@ public class EventHandlerTests : IDisposable
         var ev = CreateTestEvent("Three Days Ago");
         ev.Slug = "three-days-ago";
         ev.ScheduleRule = null;
-        var pastDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-3));
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var pastDate = today.AddDays(-3);
         var edition = new EventEdition
         {
             Id = Guid.NewGuid(),
@@ -988,7 +990,8 @@ public class EventHandlerTests : IDisposable
         var ev = CreateTestEvent("Four Days Ago");
         ev.Slug = "four-days-ago";
         ev.ScheduleRule = null;
-        var pastDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-4));
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var pastDate = today.AddDays(-4);
         var edition = new EventEdition
         {
             Id = Guid.NewGuid(),
@@ -1021,7 +1024,8 @@ public class EventHandlerTests : IDisposable
         ev.Slug = "cancelled-yesterday";
         ev.Status = EventStatus.Cancelled;
         ev.ScheduleRule = null;
-        var pastDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1));
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var pastDate = today.AddDays(-1);
         var edition = new EventEdition
         {
             Id = Guid.NewGuid(),
@@ -1053,7 +1057,8 @@ public class EventHandlerTests : IDisposable
         var ev = CreateTestEvent("Annual Race");
         ev.Slug = "annual-race";
         // Has a schedule rule that would generate future dates
-        var pastDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1));
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var pastDate = today.AddDays(-1);
         var edition = new EventEdition
         {
             Id = Guid.NewGuid(),
