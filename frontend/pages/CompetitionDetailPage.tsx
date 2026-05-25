@@ -996,7 +996,8 @@ function RaceCard({
         const start = new Date(race.dateOfRace + 'T00:00:00');
         start.setHours(h, m, s, 0);
         if (now < start) return 'pre';
-        const cutoffMs = (race.cutoffMinutes ?? 720) * 60 * 1000;
+        if (race.cutoffMinutes == null) return 'in-progress';
+        const cutoffMs = race.cutoffMinutes * 60 * 1000;
         if (now.getTime() - start.getTime() < cutoffMs) return 'in-progress';
         return 'finished';
     }, [daysUntil, race.dateOfRace, race.startTime, race.cutoffMinutes, now]);
