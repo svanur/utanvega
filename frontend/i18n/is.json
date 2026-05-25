@@ -905,7 +905,7 @@
         "shareCard": {
             "button": "Ég er að keppa! 💥",
             "racingToday": "Í dag er keppnisdagur!",
-            "racingSoon": "Ég er að keppa!",
+            "racingSoon": "Keppni í gangi!",
             "countdown_one": "{{count}} dagur eftir!",
             "countdown_other": "{{count}} dagar eftir!",
             "shareText": "Ég er að keppa í {{eventName}}! 💥",

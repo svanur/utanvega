@@ -202,6 +202,7 @@ function renderFinishCard(
 }
 
 export default function RaceFinishCard(props: RaceFinishCardProps) {
+    const { eventName, raceName, distanceLabel, date, activityType } = props;
     const { t } = useTranslation();
     const theme = useTheme();
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -220,7 +221,7 @@ export default function RaceFinishCard(props: RaceFinishCardProps) {
             }
         });
         return () => cancelAnimationFrame(frame);
-    }, [open, props, finishTime, t, isDark]);
+    }, [open, eventName, raceName, distanceLabel, date, activityType, finishTime, t, isDark]);
 
     const getBlob = useCallback((): Promise<Blob | null> => {
         return new Promise((resolve) => {

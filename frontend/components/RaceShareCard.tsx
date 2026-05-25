@@ -185,6 +185,7 @@ function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number)
 }
 
 export default function RaceShareCard(props: RaceShareCardProps) {
+    const { eventName, raceName, distanceLabel, date, daysUntil, activityType } = props;
     const { t } = useTranslation();
     const theme = useTheme();
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -202,7 +203,7 @@ export default function RaceShareCard(props: RaceShareCardProps) {
             }
         });
         return () => cancelAnimationFrame(frame);
-    }, [open, props, t, isDark]);
+    }, [open, eventName, raceName, distanceLabel, date, daysUntil, activityType, t, isDark]);
 
     const getBlob = useCallback((): Promise<Blob | null> => {
         return new Promise((resolve) => {
