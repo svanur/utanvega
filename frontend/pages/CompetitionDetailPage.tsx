@@ -55,12 +55,7 @@ type PreparedEdition = EventEditionDto & {
     visibleRaces: RaceDto[];
 };
 
-const ACTIVITY_ICONS: Record<string, string> = {
-    TrailRunning: '🏃‍♂️',
-    Running: '🏃',
-    Hiking: '🥾',
-    Cycling: '🚴',
-};
+import { ACTIVITY_EMOJI } from '../constants/activityEmoji';
 
 type RaceDayChecklistKey = 'bib' | 'shoes' | 'gels' | 'goodMood';
 
@@ -966,7 +961,7 @@ function RaceCard({
                                     variant="outlined"
                                     sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}
                                 >
-                                    {ACTIVITY_ICONS[race.trailSlug ? 'TrailRunning' : ''] ?? '🗺️'} {t('races.viewTrail')}
+                                    {ACTIVITY_EMOJI[race.trailSlug ? 'TrailRunning' : ''] ?? '🗺️'} {t('races.viewTrail')}
                                 </Button>
                             )}
                             {showShareCard && (

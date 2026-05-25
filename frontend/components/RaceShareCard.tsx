@@ -26,12 +26,7 @@ interface RaceShareCardProps {
 const CARD_WIDTH = 1080;
 const CARD_HEIGHT = 1080;
 
-const ACTIVITY_EMOJI: Record<string, string> = {
-    TrailRunning: '🏃‍♂️',
-    Running: '🏃',
-    Hiking: '🥾',
-    Cycling: '🚴',
-};
+import { ACTIVITY_EMOJI } from '../constants/activityEmoji';
 
 function drawRoundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
     ctx.beginPath();
