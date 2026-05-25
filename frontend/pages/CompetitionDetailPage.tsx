@@ -36,6 +36,7 @@ import TerrainIcon from '@mui/icons-material/Terrain';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
 import confetti from 'canvas-confetti';
 import ShareButtons from '../components/ShareButtons';
+import RaceShareCard from '../components/RaceShareCard';
 import Layout from '../components/Layout';
 import RunningLoader from '../components/RunningLoader';
 import LostRunner from '../components/LostRunner';
@@ -723,6 +724,9 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                                 t={t}
                                                 showPredict={isEnabled('tool_trail_predictor')}
                                                 showRaceDayShare={isRaceWeek && isEnabled('share_trail')}
+                                                daysUntil={event.daysUntil}
+                                                activityType={event.activityType}
+                                                editionDate={edition.date}
                                             />
                                         ))}
                                     </Stack>
@@ -743,8 +747,11 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 t={t}
                                 showPredict={isEnabled('tool_trail_predictor')}
                                 showRaceDayShare={isRaceWeek && isEnabled('share_trail')}
-                            />
-                        ))}
+                                    daysUntil={event.daysUntil}
+                                    activityType={event.activityType}
+                                    editionDate={event.nextEditionDate}
+                                />
+                            ))}
                     </Stack>
                 )}
 
@@ -900,6 +907,9 @@ function RaceCard({
     t,
     showPredict,
     showRaceDayShare,
+    daysUntil,
+    activityType,
+    editionDate,
 }: {
     race: RaceDto;
     anchor: string;
@@ -907,13 +917,11 @@ function RaceCard({
     t: (key: string, opts?: Record<string, unknown>) => string;
     showPredict?: boolean;
     showRaceDayShare?: boolean;
+    daysUntil?: number | null;
+    activityType?: string;
+    editionDate?: string | null;
 }) {
     const theme = useTheme();
-    const raceShareUrl = useMemo(() => {
-        const currentUrl = new URL(window.location.href);
-        currentUrl.hash = anchor;
-        return currentUrl.toString();
-    }, [anchor]);
     const raceDateTime = formatRaceDateTime(race.dateOfRace, race.startTime, t);
 
     return (
@@ -962,14 +970,13 @@ function RaceCard({
                                 </Button>
                             )}
                             {showRaceDayShare && (
-                                <ShareButtons
-                                    title={race.name}
-                                    url={raceShareUrl}
-                                    shareText={t('races.raceDayShareRaceText', {
-                                        competitionName,
-                                        raceName: race.name,
-                                    })}
-                                    buttonLabel={t('races.raceDayShareRaceCta')}
+                                <RaceShareCard
+                                    eventName={competitionName}
+                                    raceName={race.name}
+                                    distanceLabel={race.distanceLabel}
+                                    date={race.dateOfRace ?? editionDate ?? null}
+                                    daysUntil={daysUntil ?? null}
+                                    activityType={activityType}
                                 />
                             )}
                         </Stack>
