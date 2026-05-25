@@ -333,6 +333,20 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     }, [event, preparedEditions]);
 
     const visibleRaces = useMemo(() => currentEditions.flatMap(edition => edition.visibleRaces), [currentEditions]);
+
+    const firstRaceStarted = useMemo(() => {
+        if (!isRaceDay || !visibleRaces.length) return false;
+        const now = new Date();
+        return visibleRaces.some(r => {
+            if (!r.dateOfRace || !r.startTime) return false;
+            const [h, m] = r.startTime.split(':').map(Number);
+            const start = new Date(r.dateOfRace + 'T00:00:00');
+            start.setHours(h, m, 0, 0);
+            return now >= start;
+        });
+    }, [isRaceDay, visibleRaces]);
+    const showChecklist = isRaceWeek && !firstRaceStarted && !isPostRace;
+
     const showEditionSections = currentEditions.length > 1;
     const primaryEdition = useMemo(
         () => currentEditions.find(edition => edition.date === event?.nextEditionDate)
@@ -656,8 +670,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                     )}
                 </Paper>
 
-                {isRaceWeek && (
-                    <Card
+                {showChecklist && (                    <Card
                         variant="outlined"
                         sx={{
                             mb: 3,
