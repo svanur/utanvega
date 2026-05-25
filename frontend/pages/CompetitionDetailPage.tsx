@@ -723,7 +723,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                                 competitionName={event.name}
                                                 t={t}
                                                 showPredict={isEnabled('tool_trail_predictor')}
-                                                showRaceDayShare={isRaceWeek && isEnabled('share_trail')}
+                                                showShareCard={isRaceWeek && isEnabled('share_trail')}
                                                 daysUntil={event.daysUntil}
                                                 activityType={event.activityType}
                                                 editionDate={edition.date}
@@ -746,7 +746,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 competitionName={event.name}
                                 t={t}
                                 showPredict={isEnabled('tool_trail_predictor')}
-                                showRaceDayShare={isRaceWeek && isEnabled('share_trail')}
+                                showShareCard={isRaceWeek && isEnabled('share_trail')}
                                     daysUntil={event.daysUntil}
                                     activityType={event.activityType}
                                     editionDate={event.nextEditionDate}
@@ -906,7 +906,7 @@ function RaceCard({
     competitionName,
     t,
     showPredict,
-    showRaceDayShare,
+    showShareCard,
     daysUntil,
     activityType,
     editionDate,
@@ -916,7 +916,7 @@ function RaceCard({
     competitionName: string;
     t: (key: string, opts?: Record<string, unknown>) => string;
     showPredict?: boolean;
-    showRaceDayShare?: boolean;
+    showShareCard?: boolean;
     daysUntil?: number | null;
     activityType?: string;
     editionDate?: string | null;
@@ -945,7 +945,7 @@ function RaceCard({
                             <Chip label={t('races.statusUpcoming')} size="small" color="info" sx={{ ml: 0.5, fontWeight: 600 }} />
                         )}
                     </Typography>
-                    {(race.trailSlug || showRaceDayShare) && (
+                    {(race.trailSlug || showShareCard) && (
                         <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0 }}>
                             {showPredict && race.trailSlug && (
                                 <Button
@@ -969,7 +969,7 @@ function RaceCard({
                                     {ACTIVITY_ICONS[race.trailSlug ? 'TrailRunning' : ''] ?? '🗺️'} {t('races.viewTrail')}
                                 </Button>
                             )}
-                            {showRaceDayShare && (
+                            {showShareCard && (
                                 <RaceShareCard
                                     eventName={competitionName}
                                     raceName={race.name}
