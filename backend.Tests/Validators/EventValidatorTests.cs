@@ -125,6 +125,17 @@ public class EventValidatorTests
         result.ShouldNotHaveAnyValidationErrors();
     }
 
+    [Fact]
+    public void CreateEvent_NonHttpSocialLink_Fails()
+    {
+        var cmd = ValidCreateEventCommand with
+        {
+            SocialLinks = [new SocialLink { Type = "Suspicious", Url = "ftp://example.com/file" }]
+        };
+        var result = _createEventValidator.TestValidate(cmd);
+        result.ShouldHaveAnyValidationError();
+    }
+
     // ─── UpdateEventCommandValidator ───
 
     private readonly UpdateEventCommandValidator _updateEventValidator = new();

@@ -49,8 +49,9 @@ public class UpdateEventCommandValidator : AbstractValidator<UpdateEventCommand>
                 link.RuleFor(l => l.Url)
                     .NotEmpty()
                     .MaximumLength(500)
-                    .Must(url => Uri.TryCreate(url, UriKind.Absolute, out _))
-                    .WithMessage("SocialLink URL must be a valid URL.");
+                    .Must(url => Uri.TryCreate(url, UriKind.Absolute, out var uri)
+                        && (uri.Scheme == "http" || uri.Scheme == "https"))
+                    .WithMessage("SocialLink URL must be a valid HTTP or HTTPS URL.");
             })
             .When(x => x.SocialLinks is not null);
     }
