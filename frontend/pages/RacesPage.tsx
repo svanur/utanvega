@@ -267,8 +267,8 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                     </Typography>
                                                                 )}
                                                             </Box>
-                                                            <Chip
-                                                                label={t('races.justRaced', { defaultValue: '🏁 Just raced!' })}
+                                                                <Chip
+                                                                label={getCountdownLabel(comp.daysUntil, t)}
                                                                 color="success"
                                                                 size="small"
                                                                 sx={{ fontWeight: 700 }}
