@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Container,
@@ -11,6 +11,7 @@ import {
     Chip,
     Stack,
     Button,
+    IconButton,
     Paper,
     Tooltip,
     useTheme,
@@ -20,6 +21,8 @@ import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
+import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import TimerIcon from '@mui/icons-material/Timer';
 import StraightenIcon from '@mui/icons-material/Straighten';
 import TerrainIcon from '@mui/icons-material/Terrain';
@@ -99,6 +102,46 @@ export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistor
             .sort((a, b) => a.sortOrder - b.sortOrder);
     }, [edition]);
 
+    // Sorted editions (newest first) for prev/next navigation
+    const sortedEditions = useMemo(() => {
+        if (!event) return [];
+        return [...event.editions].sort((a, b) => {
+            const dateA = a.date ?? '';
+            const dateB = b.date ?? '';
+            if (dateA && dateB && dateA !== dateB) return dateB.localeCompare(dateA);
+            return (b.year ?? 0) - (a.year ?? 0);
+        });
+    }, [event]);
+
+    const currentIndex = useMemo(
+        () => edition ? sortedEditions.findIndex(ed => ed.id === edition.id) : -1,
+        [edition, sortedEditions],
+    );
+
+    const editionKeyFor = (ed: EventEditionDto) => ed.date ?? String(ed.year ?? ed.id);
+    const prevEdition = currentIndex > 0 ? sortedEditions[currentIndex - 1] : null;
+    const nextEdition = currentIndex >= 0 && currentIndex < sortedEditions.length - 1
+        ? sortedEditions[currentIndex + 1] : null;
+
+    const goToEdition = useCallback((ed: EventEditionDto) => {
+        navigate(`/events/${slug}/history/${editionKeyFor(ed)}`, { replace: true });
+    }, [navigate, slug]);
+
+    // Swipe left/right to navigate editions
+    const touchStartX = useRef<number | null>(null);
+    const handleTouchStart = useCallback((e: React.TouchEvent) => {
+        touchStartX.current = e.touches[0].clientX;
+    }, []);
+    const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+        if (touchStartX.current === null) return;
+        const diff = e.changedTouches[0].clientX - touchStartX.current;
+        touchStartX.current = null;
+        if (Math.abs(diff) < 60) return;
+        // Swipe right → newer (prev), swipe left → older (next)
+        if (diff > 0 && prevEdition) goToEdition(prevEdition);
+        else if (diff < 0 && nextEdition) goToEdition(nextEdition);
+    }, [prevEdition, nextEdition, goToEdition]);
+
     if (loading) {
         return (
             <Layout mode={mode} onToggleMode={onToggleMode}>
@@ -143,15 +186,39 @@ export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistor
 
     return (
         <Layout mode={mode} onToggleMode={onToggleMode}>
-            <Container maxWidth="md" sx={{ py: 3 }}>
-                <Button
-                    startIcon={<ArrowBackIcon />}
-                    onClick={() => navigate(`/events/${slug}`)}
-                    size="small"
-                    sx={{ mb: 2 }}
-                >
-                    {t('races.history.backToEvent', { defaultValue: 'Back to event' })}
-                </Button>
+            <Container
+                maxWidth="md"
+                sx={{ py: 3 }}
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+            >
+                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+                    <Button
+                        startIcon={<ArrowBackIcon />}
+                        onClick={() => navigate(`/events/${slug}`)}
+                        size="small"
+                    >
+                        {t('races.history.backToEvent', { defaultValue: 'Back to event' })}
+                    </Button>
+                    <Stack direction="row" spacing={0.5}>
+                        <IconButton
+                            size="small"
+                            disabled={!prevEdition}
+                            onClick={() => prevEdition && goToEdition(prevEdition)}
+                            aria-label={t('races.history.newer', { defaultValue: 'Newer' })}
+                        >
+                            <NavigateBeforeIcon />
+                        </IconButton>
+                        <IconButton
+                            size="small"
+                            disabled={!nextEdition}
+                            onClick={() => nextEdition && goToEdition(nextEdition)}
+                            aria-label={t('races.history.older', { defaultValue: 'Older' })}
+                        >
+                            <NavigateNextIcon />
+                        </IconButton>
+                    </Stack>
+                </Stack>
 
                 <Paper
                     elevation={0}
