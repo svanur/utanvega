@@ -672,7 +672,8 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                     )}
                 </Paper>
 
-                {showChecklist && (                    <Card
+                {showChecklist && (
+                    <Card
                         variant="outlined"
                         sx={{
                             mb: 3,
