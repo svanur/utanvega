@@ -261,6 +261,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     const confettiFiredForEvent = useRef<string | null>(null);
 
     const isRaceDay = event?.status !== 'Cancelled' && event?.daysUntil === 0;
+    const isRaceWeek = event?.status !== 'Cancelled' && event?.daysUntil != null && event.daysUntil >= 0 && event.daysUntil <= 7;
 
     useEffect(() => {
         if (!event || !isRaceDay) return;
@@ -390,7 +391,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     ] as const), [t]);
 
     useEffect(() => {
-        if (!isRaceDay || !checklistStorageKey) return;
+        if (!isRaceWeek || !checklistStorageKey) return;
         try {
             const raw = localStorage.getItem(checklistStorageKey);
             if (!raw) return;
@@ -399,16 +400,16 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
         } catch {
             // Ignore invalid local data
         }
-    }, [isRaceDay, checklistStorageKey]);
+    }, [isRaceWeek, checklistStorageKey]);
 
     useEffect(() => {
-        if (!isRaceDay || !checklistStorageKey) return;
+        if (!isRaceWeek || !checklistStorageKey) return;
         try {
             localStorage.setItem(checklistStorageKey, JSON.stringify(raceDayChecklist));
         } catch {
             // Ignore storage failures
         }
-    }, [isRaceDay, checklistStorageKey, raceDayChecklist]);
+    }, [isRaceWeek, checklistStorageKey, raceDayChecklist]);
 
     if (loading) {
         return (
@@ -649,7 +650,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                     )}
                 </Paper>
 
-                {isRaceDay && (
+                {isRaceWeek && (
                     <Card
                         variant="outlined"
                         sx={{
@@ -721,7 +722,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                                 competitionName={event.name}
                                                 t={t}
                                                 showPredict={isEnabled('tool_trail_predictor')}
-                                                showRaceDayShare={isRaceDay && isEnabled('share_trail')}
+                                                showRaceDayShare={isRaceWeek && isEnabled('share_trail')}
                                             />
                                         ))}
                                     </Stack>
@@ -741,7 +742,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 competitionName={event.name}
                                 t={t}
                                 showPredict={isEnabled('tool_trail_predictor')}
-                                showRaceDayShare={isRaceDay && isEnabled('share_trail')}
+                                showRaceDayShare={isRaceWeek && isEnabled('share_trail')}
                             />
                         ))}
                     </Stack>
