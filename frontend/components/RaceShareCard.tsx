@@ -158,7 +158,7 @@ function renderCard(
     ctx.font = '32px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
     ctx.fillStyle = isDark ? '#607d8b' : '#90a4ae';
     ctx.textAlign = 'center';
-    ctx.fillText('utanvega.is', CARD_WIDTH / 2, CARD_HEIGHT - 60);
+    ctx.fillText('hlaupadagskra.is', CARD_WIDTH / 2, CARD_HEIGHT - 60);
 
     // Bottom accent line
     ctx.fillStyle = accentColor;
