@@ -1011,7 +1011,7 @@ function RaceCard({
                                     {ACTIVITY_EMOJI[race.trailSlug ? 'TrailRunning' : ''] ?? '🗺️'} {t('races.viewTrail')}
                                 </Button>
                             )}
-                            {showShareCard && (
+                            {showShareCard && racePhase !== 'finished' && (
                                 <RaceShareCard
                                     eventName={competitionName}
                                     raceName={race.name}
@@ -1021,7 +1021,7 @@ function RaceCard({
                                     activityType={activityType}
                                 />
                             )}
-                            {showFinishCard && (
+                            {(showFinishCard || (showShareCard && racePhase === 'finished')) && (
                                 <RaceFinishCard
                                     eventName={competitionName}
                                     raceName={race.name}
