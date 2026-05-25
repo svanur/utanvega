@@ -263,6 +263,14 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     const isRaceWeek = event?.status !== 'Cancelled' && event?.daysUntil != null && event.daysUntil >= 0 && event.daysUntil <= 7;
     const isPostRace = event?.status !== 'Cancelled' && event?.daysUntil != null && event.daysUntil < 0 && event.daysUntil >= -3;
 
+    // Ticking clock for race-day phase transitions (updates every 60s)
+    const [now, setNow] = useState(() => new Date());
+    useEffect(() => {
+        if (!isRaceDay) return;
+        const interval = setInterval(() => setNow(new Date()), 60_000);
+        return () => clearInterval(interval);
+    }, [isRaceDay]);
+
     useEffect(() => {
         if (!event || !isRaceDay) return;
         if (confettiFiredForEvent.current === event.id) return;
@@ -338,7 +346,6 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
 
     const firstRaceStarted = useMemo(() => {
         if (!isRaceDay || !visibleRaces.length) return false;
-        const now = new Date();
         return visibleRaces.some(r => {
             if (!r.dateOfRace || !r.startTime) return false;
             const [h, m] = r.startTime.split(':').map(Number);
@@ -346,7 +353,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
             start.setHours(h, m, 0, 0);
             return now >= start;
         });
-    }, [isRaceDay, visibleRaces]);
+    }, [isRaceDay, visibleRaces, now]);
     const showChecklist = isRaceWeek && !firstRaceStarted && !isPostRace;
 
     const showEditionSections = currentEditions.length > 1;
@@ -749,6 +756,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                                 daysUntil={event.daysUntil}
                                                 activityType={event.activityType}
                                                 editionDate={edition.date}
+                                                now={now}
                                             />
                                         ))}
                                     </Stack>
@@ -773,6 +781,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 daysUntil={event.daysUntil}
                                 activityType={event.activityType}
                                 editionDate={event.nextEditionDate}
+                                now={now}
                             />
                             ))}
                     </Stack>
@@ -934,6 +943,7 @@ function RaceCard({
     daysUntil,
     activityType,
     editionDate,
+    now,
 }: {
     race: RaceDto;
     anchor: string;
@@ -945,6 +955,7 @@ function RaceCard({
     daysUntil?: number | null;
     activityType?: string;
     editionDate?: string | null;
+    now: Date;
 }) {
     const theme = useTheme();
     const raceDateTime = formatRaceDateTime(race.dateOfRace, race.startTime, t);
@@ -952,7 +963,6 @@ function RaceCard({
     // Race phase: determine if race is in progress (started but not finished)
     const racePhase = useMemo(() => {
         if (daysUntil !== 0 || !race.dateOfRace || !race.startTime) return 'pre';
-        const now = new Date();
         const [h, m] = race.startTime.split(':').map(Number);
         const start = new Date(race.dateOfRace + 'T00:00:00');
         start.setHours(h, m, 0, 0);
@@ -960,7 +970,7 @@ function RaceCard({
         const cutoffMs = (race.cutoffMinutes ?? 720) * 60 * 1000;
         if (now.getTime() - start.getTime() < cutoffMs) return 'in-progress';
         return 'finished';
-    }, [daysUntil, race.dateOfRace, race.startTime, race.cutoffMinutes]);
+    }, [daysUntil, race.dateOfRace, race.startTime, race.cutoffMinutes, now]);
 
     return (
         <Card id={anchor} variant="outlined" sx={{
