@@ -348,9 +348,10 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
         if (!isRaceDay || !visibleRaces.length) return false;
         return visibleRaces.some(r => {
             if (!r.dateOfRace || !r.startTime) return false;
-            const [h, m] = r.startTime.split(':').map(Number);
+            const parts = r.startTime.split(':').map(Number);
+            const [h, m, s = 0] = parts;
             const start = new Date(r.dateOfRace + 'T00:00:00');
-            start.setHours(h, m, 0, 0);
+            start.setHours(h, m, s, 0);
             return now >= start;
         });
     }, [isRaceDay, visibleRaces, now]);
@@ -963,9 +964,10 @@ function RaceCard({
     // Race phase: determine if race is in progress (started but not finished)
     const racePhase = useMemo(() => {
         if (daysUntil !== 0 || !race.dateOfRace || !race.startTime) return 'pre';
-        const [h, m] = race.startTime.split(':').map(Number);
+        const parts = race.startTime.split(':').map(Number);
+        const [h, m, s = 0] = parts;
         const start = new Date(race.dateOfRace + 'T00:00:00');
-        start.setHours(h, m, 0, 0);
+        start.setHours(h, m, s, 0);
         if (now < start) return 'pre';
         const cutoffMs = (race.cutoffMinutes ?? 720) * 60 * 1000;
         if (now.getTime() - start.getTime() < cutoffMs) return 'in-progress';

@@ -26,9 +26,10 @@ export default function RaceProgressBar({ startTime, dateOfRace, cutoffMinutes, 
     const theme = useTheme();
 
     const { startDate, endDate, elapsed, total, progress, phase } = useMemo(() => {
-        const [h, m] = startTime.split(':').map(Number);
+        const parts = startTime.split(':').map(Number);
+        const [h, m, s = 0] = parts;
         const start = new Date(dateOfRace + 'T00:00:00');
-        start.setHours(h, m, 0, 0);
+        start.setHours(h, m, s, 0);
         const end = new Date(start.getTime() + cutoffMinutes * 60 * 1000);
         const totalMs = cutoffMinutes * 60 * 1000;
         const elapsedMs = Math.max(0, now.getTime() - start.getTime());
