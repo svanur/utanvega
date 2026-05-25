@@ -10,6 +10,8 @@ import {
 } from '@mui/material';
 import ShareIcon from '@mui/icons-material/Share';
 import DownloadIcon from '@mui/icons-material/Download';
+import CloseIcon from '@mui/icons-material/Close';
+import IconButton from '@mui/material/IconButton';
 import { useTranslation } from 'react-i18next';
 
 interface RaceShareCardProps {
@@ -89,6 +91,17 @@ function renderCard(
     ctx.fillText(emoji, CARD_WIDTH / 2, y);
     y += 100;
 
+    // Race name at the top
+    ctx.font = 'bold 64px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillStyle = textColor;
+    ctx.textAlign = 'center';
+    const nameLines = wrapText(ctx, props.raceName, CARD_WIDTH - pad * 2);
+    for (const line of nameLines) {
+        y += 80;
+        ctx.fillText(line, CARD_WIDTH / 2, y);
+    }
+    y += 40;
+
     // "I'm racing!" badge
     const badgeText = props.daysUntil === 0
         ? t('races.shareCard.racingToday', { defaultValue: "It's race day!" })
@@ -99,32 +112,23 @@ function renderCard(
     ctx.fillText(badgeText, CARD_WIDTH / 2, y + 60);
     y += 120;
 
-    // Event name
-    ctx.font = 'bold 64px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-    ctx.fillStyle = textColor;
-    ctx.textAlign = 'center';
-    // Word wrap event name
-    const eventLines = wrapText(ctx, props.eventName, CARD_WIDTH - pad * 2);
-    for (const line of eventLines) {
-        y += 80;
-        ctx.fillText(line, CARD_WIDTH / 2, y);
+    // Distance with "km" suffix
+    if (props.distanceLabel) {
+        y += 60;
+        ctx.font = 'bold 80px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        ctx.fillStyle = textColor;
+        const distText = /\d/.test(props.distanceLabel) && !/km/i.test(props.distanceLabel)
+            ? `${props.distanceLabel} km`
+            : props.distanceLabel;
+        ctx.fillText(distText, CARD_WIDTH / 2, y);
     }
-    y += 40;
 
-    // Race name (if different from event)
-    if (props.raceName && props.raceName !== props.eventName) {
+    // Event name (if different from race name)
+    if (props.eventName && props.eventName !== props.raceName) {
         ctx.font = '44px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
         ctx.fillStyle = subtextColor;
-        y += 55;
-        ctx.fillText(props.raceName, CARD_WIDTH / 2, y);
-    }
-
-    // Distance label (prominent)
-    if (props.distanceLabel) {
-        y += 80;
-        ctx.font = 'bold 72px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-        ctx.fillStyle = textColor;
-        ctx.fillText(props.distanceLabel, CARD_WIDTH / 2, y);
+        y += 70;
+        ctx.fillText(props.eventName, CARD_WIDTH / 2, y);
     }
 
     // Date
@@ -275,7 +279,14 @@ export default function RaceShareCard(props: RaceShareCardProps) {
                 maxWidth="sm"
                 fullWidth
             >
-                <DialogContent sx={{ p: 2, display: 'flex', justifyContent: 'center' }}>
+                <IconButton
+                    aria-label="close"
+                    onClick={() => setOpen(false)}
+                    sx={{ position: 'absolute', right: 8, top: 8, zIndex: 1 }}
+                >
+                    <CloseIcon />
+                </IconButton>
+                <DialogContent sx={{ p: 2, pt: 5, display: 'flex', justifyContent: 'center' }}>
                     <canvas
                         ref={canvasRef}
                         style={{
