@@ -929,6 +929,11 @@
         "justRacedSection": "Nýlega lokið",
         "inProgress": "🏃 Í gangi",
         "raceFinished": "🏁 Lokið",
+        "progressBar": {
+            "waiting": "Bíður eftir byrjun...",
+            "cutoffReached": "Tímamörkum náð",
+            "remaining": "{{time}} eftir"
+        },
         "checklistSavedLocally": "Vistað aðeins í þessu tæki.",
         "predict": "Spá",
         "noUpcoming": "Engin keppni framundan",

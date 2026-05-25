@@ -929,6 +929,11 @@
         "justRacedSection": "Recently completed",
         "inProgress": "🏃 In progress",
         "raceFinished": "🏁 Finished",
+        "progressBar": {
+            "waiting": "Waiting for start...",
+            "cutoffReached": "Cutoff time reached",
+            "remaining": "{{time}} remaining"
+        },
         "checklistSavedLocally": "Saved on this device only.",
         "predict": "Predict",
         "noUpcoming": "No upcoming races",

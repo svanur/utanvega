@@ -38,6 +38,7 @@ import confetti from 'canvas-confetti';
 import ShareButtons from '../components/ShareButtons';
 import RaceShareCard from '../components/RaceShareCard';
 import RaceFinishCard from '../components/RaceFinishCard';
+import RaceProgressBar from '../components/RaceProgressBar';
 import Layout from '../components/Layout';
 import RunningLoader from '../components/RunningLoader';
 import LostRunner from '../components/LostRunner';
@@ -263,11 +264,11 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     const isRaceWeek = event?.status !== 'Cancelled' && event?.daysUntil != null && event.daysUntil >= 0 && event.daysUntil <= 7;
     const isPostRace = event?.status !== 'Cancelled' && event?.daysUntil != null && event.daysUntil < 0 && event.daysUntil >= -3;
 
-    // Ticking clock for race-day phase transitions (updates every 60s)
+    // Ticking clock for race-day phase transitions and progress bar
     const [now, setNow] = useState(() => new Date());
     useEffect(() => {
         if (!isRaceDay) return;
-        const interval = setInterval(() => setNow(new Date()), 60_000);
+        const interval = setInterval(() => setNow(new Date()), 10_000);
         return () => clearInterval(interval);
     }, [isRaceDay]);
 
@@ -1079,6 +1080,16 @@ function RaceCard({
                         </Tooltip>
                     )}
                 </Stack>
+
+                {/* Race progress bar on race day */}
+                {daysUntil === 0 && race.dateOfRace && race.startTime && race.cutoffMinutes != null && (
+                    <RaceProgressBar
+                        startTime={race.startTime}
+                        dateOfRace={race.dateOfRace}
+                        cutoffMinutes={race.cutoffMinutes}
+                        now={now}
+                    />
+                )}
 
                 {race.description && (
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1, whiteSpace: 'pre-line' }}>
