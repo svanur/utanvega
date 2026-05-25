@@ -175,10 +175,12 @@ function EditionMeta({
     edition,
     t,
     showHeader,
+    hideButtons,
 }: {
     edition: EventEditionDto;
     t: (key: string, opts?: Record<string, unknown>) => string;
     showHeader?: boolean;
+    hideButtons?: boolean;
 }) {
     const heading = edition.title?.trim() || String(edition.year);
 
@@ -193,8 +195,10 @@ function EditionMeta({
                 {!showHeader && edition.title && (
                     <Chip label={edition.title} size="small" variant="outlined" />
                 )}
-                <Chip label={String(edition.year)} size="small" variant="outlined" color="primary" />
-                {edition.date && (
+                {!hideButtons && (
+                    <Chip label={String(edition.year)} size="small" variant="outlined" color="primary" />
+                )}
+                {!hideButtons && edition.date && (
                     <Chip
                         icon={<CalendarTodayIcon />}
                         label={formatNextDate(edition.date, t)}
@@ -215,30 +219,32 @@ function EditionMeta({
                     {edition.notes}
                 </Typography>
             )}
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mt: 1.5 }} alignItems={{ sm: 'center' }}>
-                {edition.registrationUrl && (
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        endIcon={<OpenInNewIcon />}
-                        onClick={() => window.open(edition.registrationUrl!, '_blank', 'noopener')}
-                        sx={{ textTransform: 'none' }}
-                    >
-                        {t('races.register')}
-                    </Button>
-                )}
-                {edition.resultsUrl && (
-                    <Button
-                        variant="outlined"
-                        size="small"
-                        endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
-                        onClick={() => window.open(edition.resultsUrl!, '_blank', 'noopener')}
-                        sx={{ textTransform: 'none' }}
-                    >
-                        {t('races.results', { defaultValue: 'Results' })}
-                    </Button>
-                )}
-            </Stack>
+            {!hideButtons && (
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mt: 1.5 }} alignItems={{ sm: 'center' }}>
+                    {edition.registrationUrl && (
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            endIcon={<OpenInNewIcon />}
+                            onClick={() => window.open(edition.registrationUrl!, '_blank', 'noopener')}
+                            sx={{ textTransform: 'none' }}
+                        >
+                            {t('races.register')}
+                        </Button>
+                    )}
+                    {edition.resultsUrl && (
+                        <Button
+                            variant="outlined"
+                            size="small"
+                            endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
+                            onClick={() => window.open(edition.resultsUrl!, '_blank', 'noopener')}
+                            sx={{ textTransform: 'none' }}
+                        >
+                            {t('races.results', { defaultValue: 'Results' })}
+                        </Button>
+                    )}
+                </Stack>
+            )}
         </Box>
     );
 }
@@ -638,7 +644,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
 
                     {!showEditionSections && primaryEdition && (
                         <Box sx={{ mt: 2.5 }}>
-                            <EditionMeta edition={primaryEdition} t={t} />
+                            <EditionMeta edition={primaryEdition} t={t} hideButtons />
                         </Box>
                     )}
                 </Paper>
