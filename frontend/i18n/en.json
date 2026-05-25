@@ -920,6 +920,7 @@
             "finished": "I finished!",
             "timeLabel": "Finish time:",
             "shareText": "I finished {{raceName}} in {{time}}! 🏁",
+            "shareTextNoTime": "I finished {{raceName}}! 🏁",
             "share": "Share",
             "download": "Save Image",
             "copiedToClipboard": "Image copied to clipboard!",

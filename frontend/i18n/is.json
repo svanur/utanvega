@@ -920,6 +920,7 @@
             "finished": "Ég kláraði!",
             "timeLabel": "Lokatími:",
             "shareText": "Ég kláraði {{raceName}} á {{time}}! 🏁",
+            "shareTextNoTime": "Ég kláraði {{raceName}}! 🏁",
             "share": "Deila",
             "download": "Vista mynd",
             "copiedToClipboard": "Mynd afrituð!",

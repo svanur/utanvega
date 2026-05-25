@@ -250,13 +250,13 @@ export default function RaceFinishCard(props: RaceFinishCardProps) {
 
         if (typeof navigator.share !== 'undefined' && navigator.canShare?.({ files: [file] })) {
             try {
+                const hasTime = finishTime && finishTime !== '00:00:00';
+                const shareText = hasTime
+                    ? t('races.finishCard.shareText', { raceName: props.raceName, time: finishTime })
+                    : t('races.finishCard.shareTextNoTime', { raceName: props.raceName });
                 await navigator.share({
                     title: props.raceName,
-                    text: t('races.finishCard.shareText', {
-                        raceName: props.raceName,
-                        time: finishTime && finishTime !== '00:00:00' ? finishTime : '',
-                        defaultValue: `I finished ${props.raceName}${finishTime && finishTime !== '00:00:00' ? ` in ${finishTime}` : ''}! 🏁`,
-                    }),
+                    text: shareText,
                     files: [file],
                 });
             } catch (err) {
