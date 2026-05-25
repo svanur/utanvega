@@ -911,6 +911,21 @@
             "copiedToClipboard": "Image copied to clipboard!",
             "downloaded": "Image saved!"
         },
+        "finishCard": {
+            "button": "I finished! 🏁",
+            "title": "Share your result!",
+            "finished": "I finished!",
+            "timeLabel": "Finish time:",
+            "shareText": "I finished {{raceName}} in {{time}}! 🏁",
+            "share": "Share",
+            "download": "Save Image",
+            "copiedToClipboard": "Image copied to clipboard!",
+            "downloaded": "Image saved!"
+        },
+        "justRaced": "🏁 Just raced!",
+        "justRacedSection": "Recently completed",
+        "inProgress": "🏃 In progress",
+        "raceFinished": "🏁 Finished",
         "checklistSavedLocally": "Saved on this device only.",
         "predict": "Predict",
         "noUpcoming": "No upcoming races",

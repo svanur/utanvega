@@ -911,6 +911,21 @@
             "copiedToClipboard": "Mynd afrituð!",
             "downloaded": "Mynd vistuð!"
         },
+        "finishCard": {
+            "button": "Ég kláraði! 🏁",
+            "title": "Deildu niðurstöðunni!",
+            "finished": "Ég kláraði!",
+            "timeLabel": "Lokatími:",
+            "shareText": "Ég kláraði {{raceName}} á {{time}}! 🏁",
+            "share": "Deila",
+            "download": "Vista mynd",
+            "copiedToClipboard": "Mynd afrituð!",
+            "downloaded": "Mynd vistuð!"
+        },
+        "justRaced": "🏁 Nýlokið!",
+        "justRacedSection": "Nýlega lokið",
+        "inProgress": "🏃 Í gangi",
+        "raceFinished": "🏁 Lokið",
         "checklistSavedLocally": "Vistað aðeins í þessu tæki.",
         "predict": "Spá",
         "noUpcoming": "Engin keppni framundan",

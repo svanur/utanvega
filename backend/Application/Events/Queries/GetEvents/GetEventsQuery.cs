@@ -44,7 +44,23 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
         return events.Select(e =>
         {
             var nextDate = ResolveNextDate(e, today);
-            var daysUntil = nextDate.HasValue ? nextDate.Value.DayNumber - today.DayNumber : (int?)null;
+            int? daysUntil;
+            if (nextDate.HasValue)
+            {
+                daysUntil = nextDate.Value.DayNumber - today.DayNumber;
+            }
+            else
+            {
+                var mostRecentPast = e.Editions
+                    .Where(ed => ed.Date.HasValue && ed.Date.Value < today)
+                    .OrderByDescending(ed => ed.Date)
+                    .Select(ed => ed.Date)
+                    .FirstOrDefault();
+
+                daysUntil = mostRecentPast.HasValue && (today.DayNumber - mostRecentPast.Value.DayNumber) <= 3
+                    ? mostRecentPast.Value.DayNumber - today.DayNumber
+                    : null;
+            }
 
             return new EventSummaryDto(
                 e.Id,

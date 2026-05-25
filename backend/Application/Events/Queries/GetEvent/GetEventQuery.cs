@@ -74,7 +74,24 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
         var nextDate = nextEditionDate
             ?? (ev.ScheduleRule != null ? _scheduleEngine.GetNextOccurrence(ev.ScheduleRule, today) : null);
 
-        var daysUntil = nextDate.HasValue ? nextDate.Value.DayNumber - today.DayNumber : (int?)null;
+        int? daysUntil;
+        if (nextDate.HasValue)
+        {
+            daysUntil = nextDate.Value.DayNumber - today.DayNumber;
+        }
+        else
+        {
+            // Check for recently-past editions (up to 3 days ago) for post-race features
+            var mostRecentPast = ev.Editions
+                .Where(ed => ed.Date.HasValue && ed.Date.Value < today)
+                .OrderByDescending(ed => ed.Date)
+                .Select(ed => ed.Date)
+                .FirstOrDefault();
+
+            daysUntil = mostRecentPast.HasValue && (today.DayNumber - mostRecentPast.Value.DayNumber) <= 3
+                ? mostRecentPast.Value.DayNumber - today.DayNumber
+                : null;
+        }
 
         var upcomingDates = ev.ScheduleRule != null
             ? _scheduleEngine.GetOccurrencesInRange(ev.ScheduleRule, today, today.AddMonths(12))

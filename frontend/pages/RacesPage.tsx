@@ -61,6 +61,7 @@ function formatNextDate(dateStr: string, t: (key: string, opts?: Record<string, 
 
 function getCountdownColor(daysUntil: number | null): 'success' | 'warning' | 'error' | 'default' {
     if (daysUntil === null) return 'default';
+    if (daysUntil < 0) return 'success';
     if (daysUntil <= 7) return 'error';
     if (daysUntil <= 30) return 'warning';
     return 'success';
@@ -121,6 +122,12 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
 
         return result;
     }, [events, search]);
+
+    const { justRaced, upcoming } = useMemo(() => {
+        const jr = filtered.filter(c => c.daysUntil != null && c.daysUntil < 0 && c.daysUntil >= -3);
+        const up = filtered.filter(c => !(c.daysUntil != null && c.daysUntil < 0 && c.daysUntil >= -3));
+        return { justRaced: jr, upcoming: up };
+    }, [filtered]);
 
     if (loading) {
         return (
@@ -229,8 +236,51 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                             </Typography>
                         </Box>
                     ) : (
+                        <>
+                            {justRaced.length > 0 && (
+                                <Box sx={{ mb: 3 }}>
+                                    <Typography variant="h6" fontWeight={700} sx={{ mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        🏁 {t('races.justRacedSection', { defaultValue: 'Recently completed' })}
+                                    </Typography>
+                                    <Stack spacing={1.5}>
+                                        {justRaced.map(comp => (
+                                            <Card
+                                                key={comp.id}
+                                                sx={{
+                                                    transition: 'transform 0.15s, box-shadow 0.15s',
+                                                    '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] },
+                                                    borderLeft: `4px solid ${theme.palette.success.main}`,
+                                                }}
+                                            >
+                                                <CardActionArea onClick={() => navigate(`/events/${comp.slug}`)}>
+                                                    <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1 }}>
+                                                            <Box>
+                                                                <Typography variant="subtitle1" fontWeight={700}>
+                                                                    {comp.name}
+                                                                </Typography>
+                                                                {comp.nextEditionDate && (
+                                                                    <Typography variant="body2" color="text.secondary">
+                                                                        {formatNextDate(comp.nextEditionDate, t)}
+                                                                    </Typography>
+                                                                )}
+                                                            </Box>
+                                                            <Chip
+                                                                label={t('races.justRaced', { defaultValue: '🏁 Just raced!' })}
+                                                                color="success"
+                                                                size="small"
+                                                                sx={{ fontWeight: 700 }}
+                                                            />
+                                                        </Box>
+                                                    </CardContent>
+                                                </CardActionArea>
+                                            </Card>
+                                        ))}
+                                    </Stack>
+                                </Box>
+                            )}
                         <Stack spacing={2}>
-                            {filtered.map(comp => (
+                            {upcoming.map(comp => (
                                 <Card
                                     key={comp.id}
                                     sx={{
@@ -349,6 +399,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                 </Card>
                             ))}
                         </Stack>
+                        </>
                     )
                 ) : viewMode === 'table' ? (
                     <Suspense fallback={<Box display="flex" justifyContent="center" py={4}><CircularProgress /></Box>}>
