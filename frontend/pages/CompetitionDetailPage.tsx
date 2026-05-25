@@ -828,17 +828,20 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                     <Paper
                                         key={edition.id}
                                         variant="outlined"
+                                        tabIndex={0}
+                                        role="link"
                                         sx={{
                                             p: { xs: 1.5, sm: 2 },
                                             borderRadius: 2,
                                             cursor: 'pointer',
                                             transition: 'background-color 0.15s',
-                                            '&:hover': { bgcolor: 'action.hover' },
+                                            '&:hover, &:focus-visible': { bgcolor: 'action.hover', outline: 'none' },
                                             display: 'flex',
                                             flexDirection: 'column',
                                             justifyContent: 'space-between',
                                         }}
                                         onClick={() => navigate(`/events/${slug}/history/${editionKey}`)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/events/${slug}/history/${editionKey}`); } }}
                                     >
                                         <Typography variant="subtitle1" fontWeight={600} noWrap>
                                             {heading}
