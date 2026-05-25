@@ -36,6 +36,7 @@ import TerrainIcon from '@mui/icons-material/Terrain';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
 import confetti from 'canvas-confetti';
 import ShareButtons from '../components/ShareButtons';
+import RaceShareCard from '../components/RaceShareCard';
 import Layout from '../components/Layout';
 import RunningLoader from '../components/RunningLoader';
 import LostRunner from '../components/LostRunner';
@@ -54,12 +55,7 @@ type PreparedEdition = EventEditionDto & {
     visibleRaces: RaceDto[];
 };
 
-const ACTIVITY_ICONS: Record<string, string> = {
-    TrailRunning: '🏃‍♂️',
-    Running: '🏃',
-    Hiking: '🥾',
-    Cycling: '🚴',
-};
+import { ACTIVITY_EMOJI } from '../constants/activityEmoji';
 
 type RaceDayChecklistKey = 'bib' | 'shoes' | 'gels' | 'goodMood';
 
@@ -175,10 +171,12 @@ function EditionMeta({
     edition,
     t,
     showHeader,
+    hideMeta,
 }: {
     edition: EventEditionDto;
     t: (key: string, opts?: Record<string, unknown>) => string;
     showHeader?: boolean;
+    hideMeta?: boolean;
 }) {
     const heading = edition.title?.trim() || String(edition.year);
 
@@ -193,8 +191,10 @@ function EditionMeta({
                 {!showHeader && edition.title && (
                     <Chip label={edition.title} size="small" variant="outlined" />
                 )}
-                <Chip label={String(edition.year)} size="small" variant="outlined" color="primary" />
-                {edition.date && (
+                {!hideMeta && (
+                    <Chip label={String(edition.year)} size="small" variant="outlined" color="primary" />
+                )}
+                {!hideMeta && edition.date && (
                     <Chip
                         icon={<CalendarTodayIcon />}
                         label={formatNextDate(edition.date, t)}
@@ -215,30 +215,32 @@ function EditionMeta({
                     {edition.notes}
                 </Typography>
             )}
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mt: 1.5 }} alignItems={{ sm: 'center' }}>
-                {edition.registrationUrl && (
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        endIcon={<OpenInNewIcon />}
-                        onClick={() => window.open(edition.registrationUrl!, '_blank', 'noopener')}
-                        sx={{ textTransform: 'none' }}
-                    >
-                        {t('races.register')}
-                    </Button>
-                )}
-                {edition.resultsUrl && (
-                    <Button
-                        variant="outlined"
-                        size="small"
-                        endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
-                        onClick={() => window.open(edition.resultsUrl!, '_blank', 'noopener')}
-                        sx={{ textTransform: 'none' }}
-                    >
-                        {t('races.results', { defaultValue: 'Results' })}
-                    </Button>
-                )}
-            </Stack>
+            {!hideMeta && (
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mt: 1.5 }} alignItems={{ sm: 'center' }}>
+                    {edition.registrationUrl && (
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            endIcon={<OpenInNewIcon />}
+                            onClick={() => window.open(edition.registrationUrl!, '_blank', 'noopener')}
+                            sx={{ textTransform: 'none' }}
+                        >
+                            {t('races.register')}
+                        </Button>
+                    )}
+                    {edition.resultsUrl && (
+                        <Button
+                            variant="outlined"
+                            size="small"
+                            endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
+                            onClick={() => window.open(edition.resultsUrl!, '_blank', 'noopener')}
+                            sx={{ textTransform: 'none' }}
+                        >
+                            {t('races.results', { defaultValue: 'Results' })}
+                        </Button>
+                    )}
+                </Stack>
+            )}
         </Box>
     );
 }
@@ -255,6 +257,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     const confettiFiredForEvent = useRef<string | null>(null);
 
     const isRaceDay = event?.status !== 'Cancelled' && event?.daysUntil === 0;
+    const isRaceWeek = event?.status !== 'Cancelled' && event?.daysUntil != null && event.daysUntil >= 0 && event.daysUntil <= 7;
 
     useEffect(() => {
         if (!event || !isRaceDay) return;
@@ -384,7 +387,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     ] as const), [t]);
 
     useEffect(() => {
-        if (!isRaceDay || !checklistStorageKey) return;
+        if (!isRaceWeek || !checklistStorageKey) return;
         try {
             const raw = localStorage.getItem(checklistStorageKey);
             if (!raw) return;
@@ -393,16 +396,16 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
         } catch {
             // Ignore invalid local data
         }
-    }, [isRaceDay, checklistStorageKey]);
+    }, [isRaceWeek, checklistStorageKey]);
 
     useEffect(() => {
-        if (!isRaceDay || !checklistStorageKey) return;
+        if (!isRaceWeek || !checklistStorageKey) return;
         try {
             localStorage.setItem(checklistStorageKey, JSON.stringify(raceDayChecklist));
         } catch {
             // Ignore storage failures
         }
-    }, [isRaceDay, checklistStorageKey, raceDayChecklist]);
+    }, [isRaceWeek, checklistStorageKey, raceDayChecklist]);
 
     if (loading) {
         return (
@@ -638,12 +641,12 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
 
                     {!showEditionSections && primaryEdition && (
                         <Box sx={{ mt: 2.5 }}>
-                            <EditionMeta edition={primaryEdition} t={t} />
+                            <EditionMeta edition={primaryEdition} t={t} hideMeta />
                         </Box>
                     )}
                 </Paper>
 
-                {isRaceDay && (
+                {isRaceWeek && (
                     <Card
                         variant="outlined"
                         sx={{
@@ -715,7 +718,10 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                                 competitionName={event.name}
                                                 t={t}
                                                 showPredict={isEnabled('tool_trail_predictor')}
-                                                showRaceDayShare={isRaceDay && isEnabled('share_trail')}
+                                                showShareCard={isRaceWeek && isEnabled('share_trail')}
+                                                daysUntil={event.daysUntil}
+                                                activityType={event.activityType}
+                                                editionDate={edition.date}
                                             />
                                         ))}
                                     </Stack>
@@ -735,9 +741,12 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 competitionName={event.name}
                                 t={t}
                                 showPredict={isEnabled('tool_trail_predictor')}
-                                showRaceDayShare={isRaceDay && isEnabled('share_trail')}
-                            />
-                        ))}
+                                showShareCard={isRaceWeek && isEnabled('share_trail')}
+                                    daysUntil={event.daysUntil}
+                                    activityType={event.activityType}
+                                    editionDate={event.nextEditionDate}
+                                />
+                            ))}
                     </Stack>
                 )}
 
@@ -892,21 +901,22 @@ function RaceCard({
     competitionName,
     t,
     showPredict,
-    showRaceDayShare,
+    showShareCard,
+    daysUntil,
+    activityType,
+    editionDate,
 }: {
     race: RaceDto;
     anchor: string;
     competitionName: string;
     t: (key: string, opts?: Record<string, unknown>) => string;
     showPredict?: boolean;
-    showRaceDayShare?: boolean;
+    showShareCard?: boolean;
+    daysUntil?: number | null;
+    activityType?: string;
+    editionDate?: string | null;
 }) {
     const theme = useTheme();
-    const raceShareUrl = useMemo(() => {
-        const currentUrl = new URL(window.location.href);
-        currentUrl.hash = anchor;
-        return currentUrl.toString();
-    }, [anchor]);
     const raceDateTime = formatRaceDateTime(race.dateOfRace, race.startTime, t);
 
     return (
@@ -930,7 +940,7 @@ function RaceCard({
                             <Chip label={t('races.statusUpcoming')} size="small" color="info" sx={{ ml: 0.5, fontWeight: 600 }} />
                         )}
                     </Typography>
-                    {(race.trailSlug || showRaceDayShare) && (
+                    {(race.trailSlug || showShareCard) && (
                         <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0 }}>
                             {showPredict && race.trailSlug && (
                                 <Button
@@ -951,18 +961,17 @@ function RaceCard({
                                     variant="outlined"
                                     sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}
                                 >
-                                    {ACTIVITY_ICONS[race.trailSlug ? 'TrailRunning' : ''] ?? '🗺️'} {t('races.viewTrail')}
+                                    {ACTIVITY_EMOJI[race.trailSlug ? 'TrailRunning' : ''] ?? '🗺️'} {t('races.viewTrail')}
                                 </Button>
                             )}
-                            {showRaceDayShare && (
-                                <ShareButtons
-                                    title={race.name}
-                                    url={raceShareUrl}
-                                    shareText={t('races.raceDayShareRaceText', {
-                                        competitionName,
-                                        raceName: race.name,
-                                    })}
-                                    buttonLabel={t('races.raceDayShareRaceCta')}
+                            {showShareCard && (
+                                <RaceShareCard
+                                    eventName={competitionName}
+                                    raceName={race.name}
+                                    distanceLabel={race.distanceLabel}
+                                    date={race.dateOfRace ?? editionDate ?? null}
+                                    daysUntil={daysUntil ?? null}
+                                    activityType={activityType}
                                 />
                             )}
                         </Stack>

@@ -27,8 +27,8 @@ function h(
 }
 
 const ACTIVITY_EMOJI: Record<string, string> = {
-  TrailRunning: '🏃',
-  Running: '🏃‍♂️',
+  TrailRunning: '🏃‍♂️',
+  Running: '🏃',
   Hiking: '🥾',
   Cycling: '🚴',
 };

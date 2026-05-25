@@ -899,6 +899,18 @@
         "raceDayShareText": "I'm racing {{raceName}} today 💥",
         "raceDayShareRaceCta": "I am competing 💥",
         "raceDayShareRaceText": "Today I am racing {{competitionName}} - {{raceName}} 💥",
+        "shareCard": {
+            "button": "I'm racing! 💥",
+            "racingToday": "It's race day!",
+            "racingSoon": "I'm racing!",
+            "countdown_one": "{{count}} day to go!",
+            "countdown_other": "{{count}} days to go!",
+            "shareText": "I'm racing {{eventName}}! 💥",
+            "share": "Share",
+            "download": "Save Image",
+            "copiedToClipboard": "Image copied to clipboard!",
+            "downloaded": "Image saved!"
+        },
         "checklistSavedLocally": "Saved on this device only.",
         "predict": "Predict",
         "noUpcoming": "No upcoming races",
