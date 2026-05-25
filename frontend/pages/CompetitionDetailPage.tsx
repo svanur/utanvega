@@ -301,14 +301,38 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
             }));
     }, [event]);
 
-    const visibleRaces = useMemo(() => preparedEditions.flatMap(edition => edition.visibleRaces), [preparedEditions]);
-    const showEditionSections = preparedEditions.length > 1;
+    const { currentEditions, pastEditions } = useMemo(() => {
+        if (!event) return { currentEditions: [] as PreparedEdition[], pastEditions: [] as PreparedEdition[] };
+        const today = new Date().toISOString().slice(0, 10);
+        const nextDate = event.nextEditionDate;
+        const current: PreparedEdition[] = [];
+        const past: PreparedEdition[] = [];
+        for (const edition of preparedEditions) {
+            const edDate = edition.date;
+            const isNextEdition = nextDate && edDate === nextDate;
+            const isFuture = edDate && edDate >= today;
+            const hasNoDate = !edDate;
+            if (isNextEdition || isFuture || hasNoDate) {
+                current.push(edition);
+            } else {
+                past.push(edition);
+            }
+        }
+        // If no current editions found, promote the first (most recent) one
+        if (current.length === 0 && past.length > 0) {
+            current.push(past.shift()!);
+        }
+        return { currentEditions: current, pastEditions: past };
+    }, [event, preparedEditions]);
+
+    const visibleRaces = useMemo(() => currentEditions.flatMap(edition => edition.visibleRaces), [currentEditions]);
+    const showEditionSections = currentEditions.length > 1;
     const primaryEdition = useMemo(
-        () => preparedEditions.find(edition => edition.date === event?.nextEditionDate)
-            ?? preparedEditions.find(edition => edition.visibleRaces.length > 0)
-            ?? preparedEditions[0]
+        () => currentEditions.find(edition => edition.date === event?.nextEditionDate)
+            ?? currentEditions.find(edition => edition.visibleRaces.length > 0)
+            ?? currentEditions[0]
             ?? null,
-        [preparedEditions, event?.nextEditionDate],
+        [currentEditions, event?.nextEditionDate],
     );
 
     const racesWithAnchors = useMemo(() => {
@@ -670,11 +694,11 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                     {t('races.racesHeading')}
                 </Typography>
 
-                {preparedEditions.length === 0 ? (
+                {currentEditions.length === 0 && pastEditions.length === 0 ? (
                     <Alert severity="info">{t('races.noRaces')}</Alert>
                 ) : showEditionSections ? (
                     <Stack spacing={3}>
-                        {preparedEditions.map(edition => (
+                        {currentEditions.map(edition => (
                             <Paper key={edition.id} variant="outlined" sx={{ p: { xs: 2, sm: 2.5 }, borderRadius: 2.5 }}>
                                 <EditionMeta edition={edition} t={t} showHeader />
                                 {edition.visibleRaces.length === 0 ? (
@@ -697,7 +721,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             </Paper>
                         ))}
                     </Stack>
-                ) : visibleRaces.length === 0 ? (
+                ) : visibleRaces.length === 0 && currentEditions.length === 0 ? (
                     <Alert severity="info">{t('races.noRaces')}</Alert>
                 ) : (
                     <Stack spacing={2}>
@@ -713,6 +737,74 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             />
                         ))}
                     </Stack>
+                )}
+
+                {pastEditions.length > 0 && (
+                    <Box sx={{ mt: 4 }}>
+                        <Typography variant="h5" fontWeight={700} sx={{ mb: 2 }}>
+                            {t('races.history.title', { defaultValue: 'Event History' })}
+                        </Typography>
+                        <Stack spacing={1.5}>
+                            {pastEditions.map(edition => {
+                                const heading = edition.title?.trim() || String(edition.year);
+                                const raceCount = edition.visibleRaces.length;
+                                return (
+                                    <Paper
+                                        key={edition.id}
+                                        variant="outlined"
+                                        sx={{
+                                            p: { xs: 1.5, sm: 2 },
+                                            borderRadius: 2,
+                                            cursor: 'pointer',
+                                            transition: 'background-color 0.15s',
+                                            '&:hover': { bgcolor: 'action.hover' },
+                                        }}
+                                        onClick={() => navigate(`/events/${slug}/history/${edition.id}`)}
+                                    >
+                                        <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+                                            <Box sx={{ minWidth: 0 }}>
+                                                <Typography variant="subtitle1" fontWeight={600} noWrap>
+                                                    {heading}
+                                                </Typography>
+                                                <Stack direction="row" spacing={0.5} sx={{ mt: 0.5, flexWrap: 'wrap', gap: 0.5 }}>
+                                                    {edition.date && (
+                                                        <Chip
+                                                            icon={<CalendarTodayIcon />}
+                                                            label={formatNextDate(edition.date, t)}
+                                                            size="small"
+                                                            variant="outlined"
+                                                        />
+                                                    )}
+                                                    {raceCount > 0 && (
+                                                        <Chip
+                                                            icon={<DirectionsRunIcon />}
+                                                            label={t('races.raceCount', { count: raceCount })}
+                                                            size="small"
+                                                            variant="outlined"
+                                                        />
+                                                    )}
+                                                    {edition.resultsUrl && (
+                                                        <Chip
+                                                            label={t('races.results', { defaultValue: 'Results' })}
+                                                            size="small"
+                                                            color="primary"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                window.open(edition.resultsUrl!, '_blank', 'noopener');
+                                                            }}
+                                                        />
+                                                    )}
+                                                </Stack>
+                                            </Box>
+                                            <Typography variant="body2" color="primary" sx={{ flexShrink: 0 }}>
+                                                →
+                                            </Typography>
+                                        </Stack>
+                                    </Paper>
+                                );
+                            })}
+                        </Stack>
+                    </Box>
                 )}
 
                 {event.status !== 'Cancelled' && event.upcomingDates && event.upcomingDates.length > 1 && (
