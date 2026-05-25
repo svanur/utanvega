@@ -87,7 +87,6 @@ const EventMapView: React.FC<EventMapViewProps> = ({ events }) => {
                                             : event.daysUntil === 1 ? t('races.tomorrow')
                                             : event.daysUntil === -1 ? t('races.yesterday')
                                             : event.daysUntil < -1 ? t('races.daysAgo', { count: Math.abs(event.daysUntil) })
-                                            : event.daysUntil < 0 ? t('races.passed')
                                             : t('races.daysUntil', { count: event.daysUntil })
                                         }
                                         size="small"
