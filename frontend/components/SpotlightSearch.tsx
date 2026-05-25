@@ -181,7 +181,7 @@ export default function SpotlightSearch() {
         } else if (result.type === 'location') {
             navigate(`/locations/${result.slug}`);
         } else {
-            navigate(`/races/${result.slug}`);
+            navigate(`/events/${result.slug}`);
         }
     }, [navigate]);
 

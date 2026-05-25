@@ -197,8 +197,8 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events }) => {
                                         bgcolor: idx % 2 === 1 ? 'action.hover' : 'transparent',
                                         ...(event.status === 'Cancelled' && { opacity: 0.6 }),
                                     }}
-                                    onClick={() => navigate(`/races/${event.slug}`)}
-                                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/races/${event.slug}`); } }}
+                                    onClick={() => navigate(`/events/${event.slug}`)}
+                                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/events/${event.slug}`); } }}
                                 >
                                     <TableCell sx={{ p: 0.5 }}>
                                         <IconButton

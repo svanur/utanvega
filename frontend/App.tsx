@@ -48,6 +48,11 @@ function TagPage({ mode, onToggleMode }: { mode: PaletteMode; onToggleMode: () =
     return <HomePage mode={mode} onToggleMode={onToggleMode} tagSlug={slug} />;
 }
 
+function RacesSlugRedirect() {
+    const { slug } = useParams<{ slug: string }>();
+    return <Navigate to={`/events/${slug}`} replace />;
+}
+
 export default function App() {
     const [mode, setMode] = useState<PaletteMode>(() => {
         const saved = localStorage.getItem('theme-mode');
@@ -140,17 +145,21 @@ export default function App() {
                     {isEnabled('races_page') && (
                     <>
                     <Route 
-                        path="/races" 
+                        path="/events" 
                         element={<RacesPage mode={mode} onToggleMode={handleToggleMode} />} 
                     />
                     <Route 
-                        path="/races/calendar" 
+                        path="/events/calendar" 
                         element={<RaceCalendarPage mode={mode} onToggleMode={handleToggleMode} />} 
                     />
                     <Route 
-                        path="/races/:slug" 
+                        path="/events/:slug" 
                         element={<CompetitionDetailPage mode={mode} onToggleMode={handleToggleMode} />} 
                     />
+                    {/* Legacy redirects */}
+                    <Route path="/races" element={<Navigate to="/events" replace />} />
+                    <Route path="/races/calendar" element={<Navigate to="/events/calendar" replace />} />
+                    <Route path="/races/:slug" element={<RacesSlugRedirect />} />
                     </>
                     )}
                     <Route 

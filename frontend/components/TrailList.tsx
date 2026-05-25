@@ -1093,7 +1093,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                         {discoveryTab === 'races' && !competitionsLoading && upcomingCompetitions.map(comp => (
                             <Card
                                 key={comp.id}
-                                onClick={() => navigate(`/races/${comp.slug}`)}
+                                onClick={() => navigate(`/events/${comp.slug}`)}
                                 sx={{
                                     minWidth: 200,
                                     maxWidth: 260,
