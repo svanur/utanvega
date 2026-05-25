@@ -12,6 +12,7 @@ import {
     Stack,
     Button,
     Paper,
+    Tooltip,
     useTheme,
     alpha,
 } from '@mui/material';
@@ -95,12 +96,7 @@ export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistor
         if (!edition) return [];
         return [...edition.races]
             .filter(race => race.status !== 'Hidden')
-            .sort((a, b) => {
-                const cancelledA = a.status === 'Cancelled' ? 1 : 0;
-                const cancelledB = b.status === 'Cancelled' ? 1 : 0;
-                if (cancelledA !== cancelledB) return cancelledA - cancelledB;
-                return a.sortOrder - b.sortOrder;
-            });
+            .sort((a, b) => a.sortOrder - b.sortOrder);
     }, [edition]);
 
     if (loading) {
@@ -324,7 +320,13 @@ function HistoryRaceCard({
                         <Chip label={`👥 ${race.maxParticipants}`} size="small" variant="outlined" />
                     )}
                     {race.itraPoints != null && (
-                        <Chip label={`ITRA ${race.itraPoints}`} size="small" variant="outlined" />
+                        <Tooltip title={`ITRA ${race.itraPoints}`}>
+                            <img
+                                src={`/images/itra-${race.itraPoints}.png`}
+                                alt={`ITRA ${race.itraPoints}`}
+                                style={{ height: 20, verticalAlign: 'middle' }}
+                            />
+                        </Tooltip>
                     )}
                 </Stack>
 
