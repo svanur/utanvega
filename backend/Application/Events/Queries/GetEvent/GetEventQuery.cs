@@ -89,6 +89,7 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
         if (recentlyCompleted)
         {
             daysUntil = mostRecentPast!.Value.DayNumber - today.DayNumber;
+            nextDate = mostRecentPast.Value;
         }
         else if (nextDate.HasValue)
         {
