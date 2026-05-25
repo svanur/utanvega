@@ -382,7 +382,7 @@ function RaceChipCard({ race, editionDate }: { race: RaceDto; editionDate?: stri
                             sx={{ height: 22, fontSize: '0.7rem' }}
                         />
                     )}
-                    {race.itraPoints != null && race.itraPoints > 0 && (
+                    {race.itraPoints != null && (
                         <Tooltip title={`ITRA ${race.itraPoints}`}>
                             <img
                                 src={`/images/itra-${race.itraPoints}.png`}

@@ -902,6 +902,13 @@
         "checklistSavedLocally": "Saved on this device only.",
         "predict": "Predict",
         "noUpcoming": "No upcoming races",
+        "history": {
+            "title": "Event History",
+            "backToEvent": "Back to event",
+            "editionNotFound": "Edition not found",
+            "pastEdition": "Past edition",
+            "completed": "Completed"
+        },
         "table": {
             "name": "Name",
             "nextRace": "Next Race",

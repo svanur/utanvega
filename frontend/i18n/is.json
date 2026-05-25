@@ -902,6 +902,13 @@
         "checklistSavedLocally": "Vistað aðeins í þessu tæki.",
         "predict": "Spá",
         "noUpcoming": "Engin keppni framundan",
+        "history": {
+            "title": "Saga viðburðar",
+            "backToEvent": "Til baka",
+            "editionNotFound": "Útgáfa fannst ekki",
+            "pastEdition": "Liðin útgáfa",
+            "completed": "Lokið"
+        },
         "table": {
             "name": "Heiti",
             "nextRace": "Næsta keppni",

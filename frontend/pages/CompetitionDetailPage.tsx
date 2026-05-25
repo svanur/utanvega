@@ -20,6 +20,7 @@ import {
     Checkbox,
     FormControlLabel,
     FormGroup,
+    Tooltip,
     useTheme,
     alpha,
 } from '@mui/material';
@@ -301,14 +302,39 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
             }));
     }, [event]);
 
-    const visibleRaces = useMemo(() => preparedEditions.flatMap(edition => edition.visibleRaces), [preparedEditions]);
-    const showEditionSections = preparedEditions.length > 1;
+    const { currentEditions, pastEditions } = useMemo(() => {
+        if (!event) return { currentEditions: [] as PreparedEdition[], pastEditions: [] as PreparedEdition[] };
+        const now = new Date();
+        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const nextDate = event.nextEditionDate;
+        const current: PreparedEdition[] = [];
+        const past: PreparedEdition[] = [];
+        for (const edition of preparedEditions) {
+            const edDate = edition.date;
+            const isNextEdition = nextDate && edDate === nextDate;
+            const isFuture = edDate && edDate >= today;
+            const hasNoDate = !edDate;
+            if (isNextEdition || isFuture || hasNoDate) {
+                current.push(edition);
+            } else {
+                past.push(edition);
+            }
+        }
+        // If no current editions found, promote the first (most recent) one
+        if (current.length === 0 && past.length > 0) {
+            current.push(past.shift()!);
+        }
+        return { currentEditions: current, pastEditions: past };
+    }, [event, preparedEditions]);
+
+    const visibleRaces = useMemo(() => currentEditions.flatMap(edition => edition.visibleRaces), [currentEditions]);
+    const showEditionSections = currentEditions.length > 1;
     const primaryEdition = useMemo(
-        () => preparedEditions.find(edition => edition.date === event?.nextEditionDate)
-            ?? preparedEditions.find(edition => edition.visibleRaces.length > 0)
-            ?? preparedEditions[0]
+        () => currentEditions.find(edition => edition.date === event?.nextEditionDate)
+            ?? currentEditions.find(edition => edition.visibleRaces.length > 0)
+            ?? currentEditions[0]
             ?? null,
-        [preparedEditions, event?.nextEditionDate],
+        [currentEditions, event?.nextEditionDate],
     );
 
     const racesWithAnchors = useMemo(() => {
@@ -670,11 +696,11 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                     {t('races.racesHeading')}
                 </Typography>
 
-                {preparedEditions.length === 0 ? (
+                {currentEditions.length === 0 && pastEditions.length === 0 ? (
                     <Alert severity="info">{t('races.noRaces')}</Alert>
                 ) : showEditionSections ? (
                     <Stack spacing={3}>
-                        {preparedEditions.map(edition => (
+                        {currentEditions.map(edition => (
                             <Paper key={edition.id} variant="outlined" sx={{ p: { xs: 2, sm: 2.5 }, borderRadius: 2.5 }}>
                                 <EditionMeta edition={edition} t={t} showHeader />
                                 {edition.visibleRaces.length === 0 ? (
@@ -697,7 +723,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             </Paper>
                         ))}
                     </Stack>
-                ) : visibleRaces.length === 0 ? (
+                ) : visibleRaces.length === 0 && currentEditions.length === 0 ? (
                     <Alert severity="info">{t('races.noRaces')}</Alert>
                 ) : (
                     <Stack spacing={2}>
@@ -781,6 +807,78 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             {t('races.raceDayWeatherDesc')}
                         </Typography>
                         <WeatherCard weather={weather} loading={weatherLoading} error={weatherError} raceDate={nextRaceDate} />
+                    </Box>
+                )}
+
+                {pastEditions.length > 0 && (
+                    <Box sx={{ mt: 4 }}>
+                        <Typography variant="h5" fontWeight={700} sx={{ mb: 2 }}>
+                            {t('races.history.title', { defaultValue: 'Event History' })}
+                        </Typography>
+                        <Box sx={{
+                            display: 'grid',
+                            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' },
+                            gap: 1.5,
+                        }}>
+                            {pastEditions.map(edition => {
+                                const heading = edition.title?.trim() || String(edition.year);
+                                const raceCount = edition.visibleRaces.length;
+                                const editionKey = edition.date ?? String(edition.year ?? edition.id);
+                                return (
+                                    <Paper
+                                        key={edition.id}
+                                        variant="outlined"
+                                        tabIndex={0}
+                                        role="link"
+                                        sx={{
+                                            p: { xs: 1.5, sm: 2 },
+                                            borderRadius: 2,
+                                            cursor: 'pointer',
+                                            transition: 'background-color 0.15s',
+                                            '&:hover, &:focus-visible': { bgcolor: 'action.hover', outline: 'none' },
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            justifyContent: 'space-between',
+                                        }}
+                                        onClick={() => navigate(`/events/${slug}/history/${editionKey}`)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/events/${slug}/history/${editionKey}`); } }}
+                                    >
+                                        <Typography variant="subtitle1" fontWeight={600} noWrap>
+                                            {heading}
+                                        </Typography>
+                                        <Stack direction="row" spacing={0.5} sx={{ mt: 0.5, flexWrap: 'wrap', gap: 0.5 }}>
+                                            {edition.date && (
+                                                <Chip
+                                                    icon={<CalendarTodayIcon />}
+                                                    label={formatNextDate(edition.date, t)}
+                                                    size="small"
+                                                    variant="outlined"
+                                                />
+                                            )}
+                                            {raceCount > 0 && (
+                                                <Chip
+                                                    icon={<DirectionsRunIcon />}
+                                                    label={t('races.raceCount', { count: raceCount })}
+                                                    size="small"
+                                                    variant="outlined"
+                                                />
+                                            )}
+                                            {edition.resultsUrl && (
+                                                <Chip
+                                                    label={t('races.results', { defaultValue: 'Results' })}
+                                                    size="small"
+                                                    color="primary"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        window.open(edition.resultsUrl!, '_blank', 'noopener');
+                                                    }}
+                                                />
+                                            )}
+                                        </Stack>
+                                    </Paper>
+                                );
+                            })}
+                        </Box>
                     </Box>
                 )}
             </Container>
@@ -894,7 +992,13 @@ function RaceCard({
                         <Chip label={`👥 ${race.maxParticipants}`} size="small" variant="outlined" />
                     )}
                     {race.itraPoints != null && (
-                        <Chip label={`ITRA ${race.itraPoints}`} size="small" variant="outlined" />
+                        <Tooltip title={`ITRA ${race.itraPoints}`}>
+                            <img
+                                src={`/images/itra-${race.itraPoints}.png`}
+                                alt={`ITRA ${race.itraPoints}`}
+                                style={{ height: 20, verticalAlign: 'middle' }}
+                            />
+                        </Tooltip>
                     )}
                 </Stack>
 
