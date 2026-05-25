@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
     Button,
     Dialog,
@@ -194,18 +194,20 @@ export default function RaceShareCard(props: RaceShareCardProps) {
     const theme = useTheme();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [open, setOpen] = useState(false);
+    const [rendered, setRendered] = useState(false);
     const [snackbar, setSnackbar] = useState('');
     const isDark = theme.palette.mode === 'dark';
 
-    const generateCard = useCallback(() => {
-        setOpen(true);
-        // Render after dialog opens so canvas is in DOM
-        setTimeout(() => {
+    useEffect(() => {
+        if (!open) { setRendered(false); return; }
+        const frame = requestAnimationFrame(() => {
             if (canvasRef.current) {
                 renderCard(canvasRef.current, props, t, isDark);
+                setRendered(true);
             }
-        }, 50);
-    }, [props, t, isDark]);
+        });
+        return () => cancelAnimationFrame(frame);
+    }, [open, props, t, isDark]);
 
     const getBlob = useCallback((): Promise<Blob | null> => {
         return new Promise((resolve) => {
@@ -265,7 +267,7 @@ export default function RaceShareCard(props: RaceShareCardProps) {
                 variant="contained"
                 color="secondary"
                 startIcon={<ShareIcon />}
-                onClick={generateCard}
+                onClick={() => setOpen(true)}
                 sx={{ textTransform: 'none' }}
             >
                 {t('races.shareCard.button', { defaultValue: "I'm racing! 💥" })}
@@ -302,6 +304,7 @@ export default function RaceShareCard(props: RaceShareCardProps) {
                         variant="contained"
                         startIcon={<ShareIcon />}
                         onClick={handleShare}
+                        disabled={!rendered}
                         sx={{ textTransform: 'none' }}
                     >
                         {t('races.shareCard.share', { defaultValue: 'Share' })}
@@ -310,6 +313,7 @@ export default function RaceShareCard(props: RaceShareCardProps) {
                         variant="outlined"
                         startIcon={<DownloadIcon />}
                         onClick={handleDownload}
+                        disabled={!rendered}
                         sx={{ textTransform: 'none' }}
                     >
                         {t('races.shareCard.download', { defaultValue: 'Save Image' })}
