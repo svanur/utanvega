@@ -125,8 +125,10 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
     }, [events, search]);
 
     const { justRaced, upcoming } = useMemo(() => {
-        const jr = filtered.filter(c => c.daysUntil != null && c.daysUntil < 0 && c.daysUntil >= -3);
-        const up = filtered.filter(c => !(c.daysUntil != null && c.daysUntil < 0 && c.daysUntil >= -3));
+        const isRecentlyCompleted = (c: typeof filtered[0]) =>
+            c.daysUntil != null && c.daysUntil < 0 && c.daysUntil >= -3 && c.status !== 'Cancelled';
+        const jr = filtered.filter(isRecentlyCompleted);
+        const up = filtered.filter(c => !isRecentlyCompleted(c));
         return { justRaced: jr, upcoming: up };
     }, [filtered]);
 
