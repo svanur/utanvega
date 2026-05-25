@@ -82,7 +82,8 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
             .Select(ed => ed.Date)
             .FirstOrDefault();
 
-        var recentlyCompleted = mostRecentPast.HasValue
+        var recentlyCompleted = ev.Status != EventStatus.Cancelled
+            && mostRecentPast.HasValue
             && (today.DayNumber - mostRecentPast.Value.DayNumber) <= 3;
 
         int? daysUntil;
