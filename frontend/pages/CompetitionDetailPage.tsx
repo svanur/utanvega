@@ -147,6 +147,7 @@ function getCountdownLabel(daysUntil: number | null, t: (key: string, opts?: Rec
 
 function getCountdownColor(daysUntil: number | null): 'success' | 'warning' | 'error' | 'default' {
     if (daysUntil === null) return 'default';
+    if (daysUntil < 0) return 'success';
     if (daysUntil <= 7) return 'error';
     if (daysUntil <= 30) return 'warning';
     return 'success';
