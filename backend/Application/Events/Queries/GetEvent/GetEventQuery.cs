@@ -29,7 +29,8 @@ public record EventDetailDto(
     List<DateOnly> UpcomingDates,
     List<EventEditionDto> Editions,
     DateTime CreatedAt,
-    DateTime? UpdatedAt
+    DateTime? UpdatedAt,
+    DateOnly? DisplayDate = null
 );
 
 public record GetEventQuery(string Slug) : IRequest<EventDetailDto?>, ICacheable
@@ -74,7 +75,35 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
         var nextDate = nextEditionDate
             ?? (ev.ScheduleRule != null ? _scheduleEngine.GetNextOccurrence(ev.ScheduleRule, today) : null);
 
-        var daysUntil = nextDate.HasValue ? nextDate.Value.DayNumber - today.DayNumber : (int?)null;
+        // Check for recently-past editions (up to 3 days ago)
+        // so events with schedule rules still show as "recently completed"
+        var mostRecentPast = ev.Editions
+            .Where(ed => ed.Date.HasValue && ed.Date.Value < today)
+            .OrderByDescending(ed => ed.Date)
+            .Select(ed => ed.Date)
+            .FirstOrDefault();
+
+        var recentlyCompleted = ev.Status != EventStatus.Cancelled
+            && mostRecentPast.HasValue
+            && (today.DayNumber - mostRecentPast.Value.DayNumber) <= 3;
+
+        int? daysUntil;
+        DateOnly? displayDate;
+        if (recentlyCompleted)
+        {
+            daysUntil = mostRecentPast!.Value.DayNumber - today.DayNumber;
+            displayDate = mostRecentPast.Value;
+        }
+        else if (nextDate.HasValue)
+        {
+            daysUntil = nextDate.Value.DayNumber - today.DayNumber;
+            displayDate = nextDate.Value;
+        }
+        else
+        {
+            daysUntil = null;
+            displayDate = null;
+        }
 
         var upcomingDates = ev.ScheduleRule != null
             ? _scheduleEngine.GetOccurrencesInRange(ev.ScheduleRule, today, today.AddMonths(12))
@@ -147,7 +176,8 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
             upcomingDates,
             editions,
             ev.CreatedAt,
-            ev.UpdatedAt
+            ev.UpdatedAt,
+            displayDate
         );
     }
 }

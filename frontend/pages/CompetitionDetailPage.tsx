@@ -21,9 +21,14 @@ import {
     FormControlLabel,
     FormGroup,
     Tooltip,
+    IconButton,
     useTheme,
     alpha,
 } from '@mui/material';
+import FacebookIcon from '@mui/icons-material/Facebook';
+import InstagramIcon from '@mui/icons-material/Instagram';
+import LanguageIcon from '@mui/icons-material/Language';
+import XIcon from '@mui/icons-material/X';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
@@ -37,6 +42,8 @@ import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
 import confetti from 'canvas-confetti';
 import ShareButtons from '../components/ShareButtons';
 import RaceShareCard from '../components/RaceShareCard';
+import RaceFinishCard from '../components/RaceFinishCard';
+import RaceProgressBar from '../components/RaceProgressBar';
 import Layout from '../components/Layout';
 import RunningLoader from '../components/RunningLoader';
 import LostRunner from '../components/LostRunner';
@@ -133,12 +140,14 @@ function getCountdownLabel(daysUntil: number | null, t: (key: string, opts?: Rec
     if (daysUntil === null) return t('races.noDate');
     if (daysUntil === 0) return t('races.today');
     if (daysUntil === 1) return t('races.tomorrow');
-    if (daysUntil < 0) return t('races.passed');
+    if (daysUntil === -1) return t('races.yesterday');
+    if (daysUntil < -1) return t('races.daysAgo', { count: Math.abs(daysUntil) });
     return t('races.daysUntil', { count: daysUntil });
 }
 
 function getCountdownColor(daysUntil: number | null): 'success' | 'warning' | 'error' | 'default' {
     if (daysUntil === null) return 'default';
+    if (daysUntil < 0) return 'success';
     if (daysUntil <= 7) return 'error';
     if (daysUntil <= 30) return 'warning';
     return 'success';
@@ -258,6 +267,15 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
 
     const isRaceDay = event?.status !== 'Cancelled' && event?.daysUntil === 0;
     const isRaceWeek = event?.status !== 'Cancelled' && event?.daysUntil != null && event.daysUntil >= 0 && event.daysUntil <= 7;
+    const isPostRace = event?.status !== 'Cancelled' && event?.daysUntil != null && event.daysUntil < 0 && event.daysUntil >= -3;
+
+    // Ticking clock for race-day phase transitions and progress bar
+    const [currentTime, setCurrentTime] = useState(() => new Date());
+    useEffect(() => {
+        if (!isRaceDay) return;
+        const interval = setInterval(() => setCurrentTime(new Date()), 10_000);
+        return () => clearInterval(interval);
+    }, [isRaceDay]);
 
     useEffect(() => {
         if (!event || !isRaceDay) return;
@@ -310,6 +328,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
         const now = new Date();
         const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         const nextDate = event.nextEditionDate;
+        const displayDate = event.displayDate;
         const current: PreparedEdition[] = [];
         const past: PreparedEdition[] = [];
         for (const edition of preparedEditions) {
@@ -317,7 +336,8 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
             const isNextEdition = nextDate && edDate === nextDate;
             const isFuture = edDate && edDate >= today;
             const hasNoDate = !edDate;
-            if (isNextEdition || isFuture || hasNoDate) {
+            const isDisplayDate = isPostRace && displayDate && edDate === displayDate;
+            if (isNextEdition || isFuture || hasNoDate || isDisplayDate) {
                 current.push(edition);
             } else {
                 past.push(edition);
@@ -328,16 +348,34 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
             current.push(past.shift()!);
         }
         return { currentEditions: current, pastEditions: past };
-    }, [event, preparedEditions]);
+    }, [event, preparedEditions, isPostRace]);
 
     const visibleRaces = useMemo(() => currentEditions.flatMap(edition => edition.visibleRaces), [currentEditions]);
+
+    const firstRaceStarted = useMemo(() => {
+        if (!isRaceDay || !visibleRaces.length) return false;
+        return visibleRaces.some(r => {
+            if (r.status === 'Cancelled') return false;
+            if (!r.dateOfRace || !r.startTime) return false;
+            const parts = r.startTime.split(':').map(Number);
+            const [h, m, s = 0] = parts;
+            const start = new Date(r.dateOfRace + 'T00:00:00');
+            start.setHours(h, m, s, 0);
+            return currentTime >= start;
+        });
+    }, [isRaceDay, visibleRaces, currentTime]);
+    const showChecklist = isRaceWeek && !firstRaceStarted;
+
     const showEditionSections = currentEditions.length > 1;
     const primaryEdition = useMemo(
-        () => currentEditions.find(edition => edition.date === event?.nextEditionDate)
+        () => (isPostRace && event?.displayDate
+                ? currentEditions.find(edition => edition.date === event.displayDate)
+                : undefined)
+            ?? currentEditions.find(edition => edition.date === event?.nextEditionDate)
             ?? currentEditions.find(edition => edition.visibleRaces.length > 0)
             ?? currentEditions[0]
             ?? null,
-        [currentEditions, event?.nextEditionDate],
+        [currentEditions, event?.nextEditionDate, event?.displayDate, isPostRace],
     );
 
     const racesWithAnchors = useMemo(() => {
@@ -500,7 +538,14 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             {event.name}
                         </Typography>
                         <Stack direction="row" spacing={1} alignItems="center">
-                            {isRaceDay ? (
+                            {isPostRace ? (
+                                <Chip
+                                    label={t('races.justRaced', { defaultValue: '🏁 Just raced!' })}
+                                    color="success"
+                                    variant="filled"
+                                    sx={{ fontWeight: 700, fontSize: '1rem', px: 1.5, py: 0.5, height: 'auto', flexShrink: 0 }}
+                                />
+                            ) : isRaceDay ? (
                                 <Chip
                                     label={t('races.raceDayBadge')}
                                     color="error"
@@ -585,14 +630,14 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                         ) : null;
                     })()}
 
-                    {event.nextEditionDate && event.status !== 'Cancelled' && (
+                    {(event.displayDate ?? event.nextEditionDate) && event.status !== 'Cancelled' && (
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 2 }}>
                             <CalendarTodayIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
                             <Typography variant="body2" color="text.secondary" sx={{ mr: 0.5 }}>
-                                {t('races.nextRace')}
+                                {t(event.daysUntil != null && event.daysUntil < 0 ? 'races.lastRace' : 'races.nextRace')}
                             </Typography>
                             <Typography variant="body1" fontWeight={600}>
-                                {formatNextDate(event.nextEditionDate, t)}
+                                {formatNextDate((event.displayDate ?? event.nextEditionDate)!, t)}
                             </Typography>
                         </Box>
                     )}
@@ -617,13 +662,14 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                         )}
                         {!showEditionSections && primaryEdition?.resultsUrl && (
                             <Button
-                                variant="outlined"
-                                size="small"
+                                variant={isPostRace ? 'contained' : 'outlined'}
+                                color={isPostRace ? 'success' : 'primary'}
+                                size={isPostRace ? 'medium' : 'small'}
                                 endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
                                 onClick={() => window.open(primaryEdition.resultsUrl!, '_blank', 'noopener')}
-                                sx={{ textTransform: 'none' }}
+                                sx={{ textTransform: 'none', ...(isPostRace && { fontWeight: 700 }) }}
                             >
-                                {t('races.results', { defaultValue: 'Results' })}
+                                {isPostRace ? `🏁 ${t('races.results', { defaultValue: 'Results' })}` : t('races.results', { defaultValue: 'Results' })}
                             </Button>
                         )}
                         {event.organizerWebsite && (
@@ -637,6 +683,31 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 {t('races.organizerSite')}
                             </Button>
                         )}
+                        {event.socialLinks && event.socialLinks.length > 0 && (
+                            <Stack direction="row" spacing={0.5}>
+                                {event.socialLinks
+                                    .filter((link) => /^https?:\/\//i.test(link.url))
+                                    .map((link) => {
+                                    const type = link.type.toLowerCase();
+                                    let icon = <LanguageIcon />;
+                                    if (type === 'facebook') icon = <FacebookIcon />;
+                                    else if (type === 'instagram') icon = <InstagramIcon />;
+                                    else if (type === 'x' || type === 'twitter') icon = <XIcon />;
+                                    return (
+                                        <Tooltip key={`${type}-${link.url}`} title={link.type}>
+                                            <IconButton
+                                                size="small"
+                                                aria-label={link.type}
+                                                onClick={() => window.open(link.url, '_blank', 'noopener')}
+                                                sx={{ color: 'text.secondary' }}
+                                            >
+                                                {icon}
+                                            </IconButton>
+                                        </Tooltip>
+                                    );
+                                })}
+                            </Stack>
+                        )}
                     </Stack>
 
                     {!showEditionSections && primaryEdition && (
@@ -646,7 +717,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                     )}
                 </Paper>
 
-                {isRaceWeek && (
+                {showChecklist && (
                     <Card
                         variant="outlined"
                         sx={{
@@ -719,9 +790,11 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                                 t={t}
                                                 showPredict={isEnabled('tool_trail_predictor')}
                                                 showShareCard={isRaceWeek && isEnabled('share_trail')}
+                                                showFinishCard={isPostRace && isEnabled('share_trail') && edition.date === event.displayDate}
                                                 daysUntil={event.daysUntil}
                                                 activityType={event.activityType}
                                                 editionDate={edition.date}
+                                                now={currentTime}
                                             />
                                         ))}
                                     </Stack>
@@ -742,10 +815,12 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 t={t}
                                 showPredict={isEnabled('tool_trail_predictor')}
                                 showShareCard={isRaceWeek && isEnabled('share_trail')}
-                                    daysUntil={event.daysUntil}
-                                    activityType={event.activityType}
-                                    editionDate={event.nextEditionDate}
-                                />
+                                showFinishCard={isPostRace && isEnabled('share_trail') && currentEditions[0]?.date === event.displayDate}
+                                daysUntil={event.daysUntil}
+                                activityType={event.activityType}
+                                editionDate={event.displayDate ?? event.nextEditionDate}
+                                now={currentTime}
+                            />
                             ))}
                     </Stack>
                 )}
@@ -902,9 +977,11 @@ function RaceCard({
     t,
     showPredict,
     showShareCard,
+    showFinishCard,
     daysUntil,
     activityType,
     editionDate,
+    now,
 }: {
     race: RaceDto;
     anchor: string;
@@ -912,18 +989,36 @@ function RaceCard({
     t: (key: string, opts?: Record<string, unknown>) => string;
     showPredict?: boolean;
     showShareCard?: boolean;
+    showFinishCard?: boolean;
     daysUntil?: number | null;
     activityType?: string;
     editionDate?: string | null;
+    now: Date;
 }) {
     const theme = useTheme();
     const raceDateTime = formatRaceDateTime(race.dateOfRace, race.startTime, t);
+
+    // Race phase: determine if race is in progress (started but not finished)
+    const racePhase = useMemo(() => {
+        if (race.status === 'Cancelled') return 'pre';
+        if (daysUntil !== 0 || !race.dateOfRace || !race.startTime) return 'pre';
+        const parts = race.startTime.split(':').map(Number);
+        const [h, m, s = 0] = parts;
+        const start = new Date(race.dateOfRace + 'T00:00:00');
+        start.setHours(h, m, s, 0);
+        if (now < start) return 'pre';
+        if (race.cutoffMinutes == null) return 'in-progress';
+        const cutoffMs = race.cutoffMinutes * 60 * 1000;
+        if (now.getTime() - start.getTime() < cutoffMs) return 'in-progress';
+        return 'finished';
+    }, [daysUntil, race.status, race.dateOfRace, race.startTime, race.cutoffMinutes, now]);
 
     return (
         <Card id={anchor} variant="outlined" sx={{
             borderRadius: 2,
             ...(race.status === 'Cancelled' && { opacity: 0.6 }),
             ...(race.status === 'Upcoming' && { borderStyle: 'dashed', borderColor: theme.palette.info.main }),
+            ...(racePhase === 'in-progress' && { borderColor: theme.palette.success.main, borderWidth: 2 }),
         }}>
             <CardContent sx={{ p: { xs: 2, sm: 2.5 }, '&:last-child': { pb: { xs: 2, sm: 2.5 } } }}>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: { xs: 0.5, sm: 1 }, justifyContent: 'space-between' }}>
@@ -939,9 +1034,15 @@ function RaceCard({
                         {race.status === 'Upcoming' && (
                             <Chip label={t('races.statusUpcoming')} size="small" color="info" sx={{ ml: 0.5, fontWeight: 600 }} />
                         )}
+                        {racePhase === 'in-progress' && (
+                            <Chip label={t('races.inProgress', { defaultValue: '🏃 In progress' })} size="small" color="success" sx={{ ml: 0.5, fontWeight: 600 }} />
+                        )}
+                        {racePhase === 'finished' && daysUntil === 0 && (
+                            <Chip label={t('races.raceFinished', { defaultValue: '🏁 Finished' })} size="small" color="default" sx={{ ml: 0.5, fontWeight: 600 }} />
+                        )}
                     </Typography>
-                    {(race.trailSlug || showShareCard) && (
-                        <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0 }}>
+                    {(race.trailSlug || showShareCard || showFinishCard) && (
+                        <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0, flexWrap: 'wrap' }}>
                             {showPredict && race.trailSlug && (
                                 <Button
                                     component={RouterLink}
@@ -964,13 +1065,22 @@ function RaceCard({
                                     {ACTIVITY_EMOJI[race.trailSlug ? 'TrailRunning' : ''] ?? '🗺️'} {t('races.viewTrail')}
                                 </Button>
                             )}
-                            {showShareCard && (
+                            {showShareCard && racePhase !== 'finished' && race.status !== 'Cancelled' && (
                                 <RaceShareCard
                                     eventName={competitionName}
                                     raceName={race.name}
                                     distanceLabel={race.distanceLabel}
                                     date={race.dateOfRace ?? editionDate ?? null}
                                     daysUntil={daysUntil ?? null}
+                                    activityType={activityType}
+                                />
+                            )}
+                            {(showFinishCard || (showShareCard && racePhase === 'finished')) && race.status !== 'Cancelled' && (
+                                <RaceFinishCard
+                                    eventName={competitionName}
+                                    raceName={race.name}
+                                    distanceLabel={race.distanceLabel}
+                                    date={race.dateOfRace ?? editionDate ?? null}
                                     activityType={activityType}
                                 />
                             )}
@@ -1010,6 +1120,16 @@ function RaceCard({
                         </Tooltip>
                     )}
                 </Stack>
+
+                {/* Race progress bar on race day */}
+                {daysUntil === 0 && race.status !== 'Cancelled' && race.dateOfRace && race.startTime && race.cutoffMinutes != null && (
+                    <RaceProgressBar
+                        startTime={race.startTime}
+                        dateOfRace={race.dateOfRace}
+                        cutoffMinutes={race.cutoffMinutes}
+                        now={now}
+                    />
+                )}
 
                 {race.description && (
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1, whiteSpace: 'pre-line' }}>

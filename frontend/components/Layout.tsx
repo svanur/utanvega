@@ -58,7 +58,7 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md' }
                         aria-label="Go to Races"
                     >
                         <img
-                            src="/images/hlaupaleidir.avif"
+                            src="/images/hlaupadagskra.avif"
                             alt=""
                             style={{ height: 32, width: 'auto' }}
                         />

@@ -34,7 +34,7 @@ export default function LoginPage() {
         }}>
             <Paper elevation={3} sx={{ p: 4, width: '100%', maxWidth: 400 }}>
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3 }}>
-                    <img src="/images/hlaupaleidir.avif" alt="Hlaupadagskra logo" style={{ height: 64, marginBottom: 12 }} />
+                    <img src="/images/hlaupadagskra.avif" alt="Hlaupadagskra logo" style={{ height: 64, marginBottom: 12 }} />
                     <Typography variant="h5" align="center">
                         Hlaupadagskra.is
                     </Typography>

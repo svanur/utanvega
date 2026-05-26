@@ -125,6 +125,17 @@ public class EventValidatorTests
         result.ShouldNotHaveAnyValidationErrors();
     }
 
+    [Fact]
+    public void CreateEvent_NonHttpSocialLink_Fails()
+    {
+        var cmd = ValidCreateEventCommand with
+        {
+            SocialLinks = [new SocialLink { Type = "Suspicious", Url = "ftp://example.com/file" }]
+        };
+        var result = _createEventValidator.TestValidate(cmd);
+        result.ShouldHaveAnyValidationError();
+    }
+
     // ─── UpdateEventCommandValidator ───
 
     private readonly UpdateEventCommandValidator _updateEventValidator = new();
@@ -174,6 +185,17 @@ public class EventValidatorTests
         var cmd = ValidUpdateEventCommand with { Status = "Bogus" };
         var result = _updateEventValidator.TestValidate(cmd);
         result.ShouldHaveValidationErrorFor(x => x.Status);
+    }
+
+    [Fact]
+    public void UpdateEvent_NonHttpSocialLink_Fails()
+    {
+        var cmd = ValidUpdateEventCommand with
+        {
+            SocialLinks = [new SocialLink { Type = "Suspicious", Url = "ftp://example.com/file" }]
+        };
+        var result = _updateEventValidator.TestValidate(cmd);
+        result.ShouldHaveAnyValidationError();
     }
 
     // ─── CreateEditionCommandValidator ───

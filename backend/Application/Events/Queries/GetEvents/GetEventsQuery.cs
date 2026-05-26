@@ -44,7 +44,36 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
         return events.Select(e =>
         {
             var nextDate = ResolveNextDate(e, today);
-            var daysUntil = nextDate.HasValue ? nextDate.Value.DayNumber - today.DayNumber : (int?)null;
+
+            // Check for recently-past editions (up to 3 days ago)
+            // so events with schedule rules still show as "recently completed"
+            var mostRecentPast = e.Editions
+                .Where(ed => ed.Date.HasValue && ed.Date.Value < today)
+                .OrderByDescending(ed => ed.Date)
+                .Select(ed => ed.Date)
+                .FirstOrDefault();
+
+            var recentlyCompleted = e.Status != EventStatus.Cancelled
+                && mostRecentPast.HasValue
+                && (today.DayNumber - mostRecentPast.Value.DayNumber) <= 3;
+
+            int? daysUntil;
+            DateOnly? displayDate;
+            if (recentlyCompleted)
+            {
+                daysUntil = mostRecentPast!.Value.DayNumber - today.DayNumber;
+                displayDate = mostRecentPast.Value;
+            }
+            else if (nextDate.HasValue)
+            {
+                daysUntil = nextDate.Value.DayNumber - today.DayNumber;
+                displayDate = nextDate.Value;
+            }
+            else
+            {
+                daysUntil = null;
+                displayDate = null;
+            }
 
             return new EventSummaryDto(
                 e.Id,
@@ -66,7 +95,8 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 daysUntil,
                 e.Editions.Count,
                 e.CreatedAt,
-                e.UpdatedAt
+                e.UpdatedAt,
+                displayDate
             );
         }).ToList();
     }

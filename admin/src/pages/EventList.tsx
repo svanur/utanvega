@@ -1654,43 +1654,6 @@ export default function EventList({ onNotify }: EventListProps) {
             </Box>
 
             <Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1, gap: 1, flexWrap: 'wrap' }}>
-                <Typography variant="subtitle2">Social Links</Typography>
-                <Button size="small" startIcon={<AddIcon />} onClick={handleAddSocialLink}>
-                  Add Social Link
-                </Button>
-              </Box>
-              {eventForm.socialLinks.length === 0 ? (
-                <Typography variant="body2" color="text.secondary">
-                  No social links configured.
-                </Typography>
-              ) : (
-                <Stack spacing={1.5}>
-                  {eventForm.socialLinks.map((link, index) => (
-                    <Box key={`social-${index}`} sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 2fr auto' }, gap: 1, alignItems: 'center' }}>
-                      <TextField
-                        label="Type"
-                        value={link.type}
-                        onChange={(event) => handleSocialLinkChange(index, 'type', event.target.value)}
-                        placeholder="Instagram"
-                      />
-                      <TextField
-                        label="URL"
-                        value={link.url}
-                        onChange={(event) => handleSocialLinkChange(index, 'url', event.target.value)}
-                        placeholder="https://..."
-                        fullWidth
-                      />
-                      <IconButton color="error" onClick={() => handleRemoveSocialLink(index)}>
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Box>
-                  ))}
-                </Stack>
-              )}
-            </Box>
-
-            <Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
                 <Typography variant="subtitle2">Schedule Rule</Typography>
                 <FormControlLabel
@@ -1817,6 +1780,43 @@ export default function EventList({ onNotify }: EventListProps) {
                     />
                   )}
                 </Box>
+              )}
+            </Box>
+
+            <Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1, gap: 1, flexWrap: 'wrap' }}>
+                <Typography variant="subtitle2">Social Links</Typography>
+                <Button size="small" startIcon={<AddIcon />} onClick={handleAddSocialLink}>
+                  Add Social Link
+                </Button>
+              </Box>
+              {eventForm.socialLinks.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">
+                  No social links configured.
+                </Typography>
+              ) : (
+                <Stack spacing={1.5}>
+                  {eventForm.socialLinks.map((link, index) => (
+                    <Box key={`social-${index}`} sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 2fr auto' }, gap: 1, alignItems: 'center' }}>
+                      <TextField
+                        label="Type"
+                        value={link.type}
+                        onChange={(event) => handleSocialLinkChange(index, 'type', event.target.value)}
+                        placeholder="Instagram"
+                      />
+                      <TextField
+                        label="URL"
+                        value={link.url}
+                        onChange={(event) => handleSocialLinkChange(index, 'url', event.target.value)}
+                        placeholder="https://..."
+                        fullWidth
+                      />
+                      <IconButton color="error" onClick={() => handleRemoveSocialLink(index)}>
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                  ))}
+                </Stack>
               )}
             </Box>
           </Box>

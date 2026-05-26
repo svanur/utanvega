@@ -216,7 +216,8 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events }) => {
                                                 label={
                                                     event.daysUntil === 0 ? t('races.today')
                                                     : event.daysUntil === 1 ? t('races.tomorrow')
-                                                    : event.daysUntil < 0 ? t('races.passed')
+                                                    : event.daysUntil === -1 ? t('races.yesterday')
+                                                    : event.daysUntil < -1 ? t('races.daysAgo', { count: Math.abs(event.daysUntil) })
                                                     : t('races.daysUntil', { count: event.daysUntil })
                                                 }
                                                 size="small"
@@ -228,9 +229,9 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events }) => {
                                         )}
                                     </TableCell>
                                     <TableCell align="center">
-                                        {event.nextEditionDate ? (
+                                        {(event.displayDate ?? event.nextEditionDate) ? (
                                             <Typography variant="body2" color="text.secondary" noWrap>
-                                                {new Date(event.nextEditionDate + 'T00:00:00').toLocaleDateString(
+                                                {new Date((event.displayDate ?? event.nextEditionDate)! + 'T00:00:00').toLocaleDateString(
                                                     i18n.language === 'is' ? 'is-IS' : 'en-US',
                                                     { day: 'numeric', month: 'short', year: 'numeric' }
                                                 )}
