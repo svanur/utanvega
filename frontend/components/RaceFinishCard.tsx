@@ -30,6 +30,25 @@ interface RaceFinishCardProps {
 const CARD_WIDTH = 1080;
 const CARD_HEIGHT = 1080;
 
+// Module-level cached brand image (shared across all instances, loaded once)
+let cachedBrandImage: HTMLImageElement | null = null;
+let brandImageLoading = false;
+const brandImageCallbacks: Array<(img: HTMLImageElement) => void> = [];
+
+function loadBrandImage(onLoad: (img: HTMLImageElement) => void) {
+    if (cachedBrandImage) { onLoad(cachedBrandImage); return; }
+    brandImageCallbacks.push(onLoad);
+    if (brandImageLoading) return;
+    brandImageLoading = true;
+    const img = new Image();
+    img.src = '/images/hlaupadagskra.avif';
+    img.onload = () => {
+        cachedBrandImage = img;
+        for (const cb of brandImageCallbacks) cb(img);
+        brandImageCallbacks.length = 0;
+    };
+}
+
 function drawRoundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
     ctx.beginPath();
     ctx.moveTo(x + r, y);
@@ -221,10 +240,9 @@ export default function RaceFinishCard(props: RaceFinishCardProps) {
     const isDark = theme.palette.mode === 'dark';
 
     useEffect(() => {
-        const img = new Image();
-        img.src = '/images/hlaupadagskra.avif';
-        img.onload = () => { setBrandImage(img); };
-    }, []);
+        if (!open) return;
+        loadBrandImage((img) => setBrandImage(img));
+    }, [open]);
 
     useEffect(() => {
         if (!open) { setRendered(false); return; }
