@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState as useLocalState } from 'react';
 import { Box, TextField } from '@mui/material';
 
 interface TimePickerInputProps {
@@ -11,8 +11,8 @@ interface TimePickerInputProps {
 }
 
 /**
- * Custom time picker with arrow key support for hours, minutes, seconds.
- * Click on a segment (HH, MM, or SS) and use arrow keys to adjust.
+ * Custom time picker with keyboard and arrow key support.
+ * Type digits directly (auto-inserts colons) or use arrow keys on segments.
  * Format: HH:MM:SS
  */
 export default function TimePickerInput({
@@ -24,6 +24,7 @@ export default function TimePickerInput({
   helperText = 'Format: HH:MM:SS',
 }: TimePickerInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [rawInput, setRawInput] = useLocalState<string | null>(null);
 
   // Parse current value into segments
   const parseTime = (timeStr: string) => {
@@ -37,37 +38,55 @@ export default function TimePickerInput({
 
   const { hours, minutes, seconds } = parseTime(value);
 
-  // Format time string
   const formatTime = (h: string, m: string, s: string): string => {
     return `${h.padStart(2, '0')}:${m.padStart(2, '0')}:${s.padStart(2, '0')}`;
   };
 
-  // Validate and constrain numeric values
   const constrainValue = (val: number, max: number): string => {
     const constrained = Math.max(0, Math.min(val, max));
     return String(constrained).padStart(2, '0');
   };
 
-  // Handle arrow key changes
-  const handleKeyDown = (e: React.KeyboardEvent, segment: 'hours' | 'minutes' | 'seconds') => {
+  // Commit raw input as formatted time
+  const commitRawInput = (raw: string) => {
+    const digits = raw.replace(/\D/g, '');
+    if (digits.length === 0) return;
+
+    // Pad digits to 6 (HHMMSS)
+    const padded = digits.padEnd(6, '0').slice(0, 6);
+    const h = constrainValue(parseInt(padded.slice(0, 2), 10), 23);
+    const m = constrainValue(parseInt(padded.slice(2, 4), 10), 59);
+    const s = constrainValue(parseInt(padded.slice(4, 6), 10), 59);
+    onChange(formatTime(h, m, s));
+  };
+
+  // Handle arrow key changes based on cursor position
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (disabled) return;
 
-    const current = segment === 'hours' ? parseInt(hours, 10) : 
-                   segment === 'minutes' ? parseInt(minutes, 10) : 
-                   parseInt(seconds, 10);
-
-    let newValue = current;
-    const max = segment === 'hours' ? 23 : 59;
-
-    if (e.key === 'ArrowUp') {
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
       e.preventDefault();
-      newValue = current === max ? 0 : current + 1;
-    } else if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      newValue = current === 0 ? max : current - 1;
-    }
+      // If in raw input mode, commit first
+      if (rawInput !== null) {
+        commitRawInput(rawInput);
+        setRawInput(null);
+      }
 
-    if (newValue !== current) {
+      const cursorPos = inputRef.current?.selectionStart || 0;
+      let segment: 'hours' | 'minutes' | 'seconds' = 'hours';
+      if (cursorPos <= 2) segment = 'hours';
+      else if (cursorPos <= 5) segment = 'minutes';
+      else segment = 'seconds';
+
+      const current = segment === 'hours' ? parseInt(hours, 10) :
+                     segment === 'minutes' ? parseInt(minutes, 10) :
+                     parseInt(seconds, 10);
+
+      const max = segment === 'hours' ? 23 : 59;
+      const newValue = e.key === 'ArrowUp'
+        ? (current === max ? 0 : current + 1)
+        : (current === 0 ? max : current - 1);
+
       const constrained = constrainValue(newValue, max);
       const newTime = formatTime(
         segment === 'hours' ? constrained : hours,
@@ -75,55 +94,66 @@ export default function TimePickerInput({
         segment === 'seconds' ? constrained : seconds
       );
       onChange(newTime);
-    }
-  };
 
-  // Handle direct text input
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let input = e.target.value;
-
-    // Allow only digits and colons
-    input = input.replace(/[^\d:]/g, '');
-
-    // Auto-format on input
-    const parts = input.split(':').filter(p => p.length > 0);
-    if (parts.length >= 1) {
-      const h = constrainValue(parseInt(parts[0], 10), 23);
-      const m = parts.length >= 2 ? constrainValue(parseInt(parts[1], 10), 59) : '00';
-      const s = parts.length >= 3 ? constrainValue(parseInt(parts[2], 10), 59) : '00';
-      onChange(formatTime(h, m, s));
-    }
-  };
-
-  // Handle keyboard navigation (detect segment by cursor position)
-  const handleTextFieldKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!inputRef.current || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
-
-    const cursorPos = inputRef.current.selectionStart || 0;
-    let segment: 'hours' | 'minutes' | 'seconds' = 'hours';
-
-    if (cursorPos <= 2) segment = 'hours';
-    else if (cursorPos <= 5) segment = 'minutes';
-    else segment = 'seconds';
-
-    // Call handleKeyDown and restore cursor position after state update
-    handleKeyDown(e, segment);
-    
-    // Use setTimeout to restore cursor position after React re-renders
-    setTimeout(() => {
-      if (inputRef.current) {
-        inputRef.current.setSelectionRange(cursorPos, cursorPos);
+      // Restore cursor position after render
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.setSelectionRange(cursorPos, cursorPos);
+        }
+      }, 0);
+    } else if (e.key === 'Enter') {
+      // Commit on Enter
+      if (rawInput !== null) {
+        commitRawInput(rawInput);
+        setRawInput(null);
       }
-    }, 0);
+    }
+  };
+
+  // Handle direct text input — allow typing freely, auto-insert colons
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target.value;
+    const digits = input.replace(/\D/g, '');
+
+    if (digits.length === 0) {
+      setRawInput('');
+      return;
+    }
+
+    // Auto-format with colons as user types digits
+    let formatted = '';
+    for (let i = 0; i < digits.length && i < 6; i++) {
+      if (i === 2 || i === 4) formatted += ':';
+      formatted += digits[i];
+    }
+    setRawInput(formatted);
+
+    // Auto-commit when all 6 digits entered
+    if (digits.length >= 6) {
+      const h = constrainValue(parseInt(digits.slice(0, 2), 10), 23);
+      const m = constrainValue(parseInt(digits.slice(2, 4), 10), 59);
+      const s = constrainValue(parseInt(digits.slice(4, 6), 10), 59);
+      onChange(formatTime(h, m, s));
+      setRawInput(null);
+    }
+  };
+
+  // Commit on blur
+  const handleBlur = () => {
+    if (rawInput !== null) {
+      commitRawInput(rawInput);
+      setRawInput(null);
+    }
   };
 
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
       <TextField
         inputRef={inputRef}
-        value={value}
+        value={rawInput !== null ? rawInput : value}
         onChange={handleChange}
-        onKeyDown={handleTextFieldKeyDown}
+        onKeyDown={handleKeyDown}
+        onBlur={handleBlur}
         label={label}
         placeholder="HH:MM:SS"
         disabled={disabled}
