@@ -76,9 +76,9 @@ export default function TimePickerInput({
       let baseSeconds = seconds;
       if (rawInput !== null) {
         const parts = rawInput.split(':');
-        baseHours = (parts[0] || '').replace(/\D/g, '').padStart(2, '0').slice(0, 2);
-        baseMinutes = (parts[1] || '').replace(/\D/g, '').padStart(2, '0').slice(0, 2);
-        baseSeconds = (parts[2] || '').replace(/\D/g, '').padStart(2, '0').slice(0, 2);
+        baseHours = constrainValue(parseInt((parts[0] || '0').replace(/\D/g, '') || '0', 10), 23);
+        baseMinutes = constrainValue(parseInt((parts[1] || '0').replace(/\D/g, '') || '0', 10), 59);
+        baseSeconds = constrainValue(parseInt((parts[2] || '0').replace(/\D/g, '') || '0', 10), 59);
         setRawInput(null);
       }
 
