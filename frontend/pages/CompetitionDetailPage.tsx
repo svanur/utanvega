@@ -269,10 +269,10 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     const isPostRace = event?.status !== 'Cancelled' && event?.daysUntil != null && event.daysUntil < 0 && event.daysUntil >= -3;
 
     // Ticking clock for race-day phase transitions and progress bar
-    const [now, setNow] = useState(() => new Date());
+    const [currentTime, setCurrentTime] = useState(() => new Date());
     useEffect(() => {
         if (!isRaceDay) return;
-        const interval = setInterval(() => setNow(new Date()), 10_000);
+        const interval = setInterval(() => setCurrentTime(new Date()), 10_000);
         return () => clearInterval(interval);
     }, [isRaceDay]);
 
@@ -357,9 +357,9 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
             const [h, m, s = 0] = parts;
             const start = new Date(r.dateOfRace + 'T00:00:00');
             start.setHours(h, m, s, 0);
-            return now >= start;
+            return currentTime >= start;
         });
-    }, [isRaceDay, visibleRaces, now]);
+    }, [isRaceDay, visibleRaces, currentTime]);
     const showChecklist = isRaceWeek && !firstRaceStarted;
 
     const showEditionSections = currentEditions.length > 1;
@@ -787,7 +787,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                                 daysUntil={event.daysUntil}
                                                 activityType={event.activityType}
                                                 editionDate={edition.date}
-                                                now={now}
+                                                now={currentTime}
                                             />
                                         ))}
                                     </Stack>
@@ -812,7 +812,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 daysUntil={event.daysUntil}
                                 activityType={event.activityType}
                                 editionDate={event.nextEditionDate}
-                                now={now}
+                                now={currentTime}
                             />
                             ))}
                     </Stack>
