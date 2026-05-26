@@ -213,7 +213,7 @@ export default function RaceFinishCard(props: RaceFinishCardProps) {
     const { t } = useTranslation();
     const theme = useTheme();
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const brandImageRef = useRef<HTMLImageElement | null>(null);
+    const [brandImage, setBrandImage] = useState<HTMLImageElement | null>(null);
     const [open, setOpen] = useState(false);
     const [finishTime, setFinishTime] = useState('');
     const [rendered, setRendered] = useState(false);
@@ -223,19 +223,19 @@ export default function RaceFinishCard(props: RaceFinishCardProps) {
     useEffect(() => {
         const img = new Image();
         img.src = '/images/hlaupadagskra.avif';
-        img.onload = () => { brandImageRef.current = img; };
+        img.onload = () => { setBrandImage(img); };
     }, []);
 
     useEffect(() => {
         if (!open) { setRendered(false); return; }
         const frame = requestAnimationFrame(() => {
             if (canvasRef.current) {
-                renderFinishCard(canvasRef.current, { eventName, raceName, distanceLabel, date, activityType }, finishTime, t, isDark, brandImageRef.current);
+                renderFinishCard(canvasRef.current, { eventName, raceName, distanceLabel, date, activityType }, finishTime, t, isDark, brandImage);
                 setRendered(true);
             }
         });
         return () => cancelAnimationFrame(frame);
-    }, [open, eventName, raceName, distanceLabel, date, activityType, finishTime, t, isDark]);
+    }, [open, eventName, raceName, distanceLabel, date, activityType, finishTime, t, isDark, brandImage]);
 
     const getBlob = useCallback((): Promise<Blob | null> => {
         return new Promise((resolve) => {

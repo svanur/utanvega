@@ -196,7 +196,7 @@ export default function RaceShareCard(props: RaceShareCardProps) {
     const { t } = useTranslation();
     const theme = useTheme();
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const brandImageRef = useRef<HTMLImageElement | null>(null);
+    const [brandImage, setBrandImage] = useState<HTMLImageElement | null>(null);
     const [open, setOpen] = useState(false);
     const [rendered, setRendered] = useState(false);
     const [snackbar, setSnackbar] = useState('');
@@ -205,19 +205,19 @@ export default function RaceShareCard(props: RaceShareCardProps) {
     useEffect(() => {
         const img = new Image();
         img.src = '/images/hlaupadagskra.avif';
-        img.onload = () => { brandImageRef.current = img; };
+        img.onload = () => { setBrandImage(img); };
     }, []);
 
     useEffect(() => {
         if (!open) { setRendered(false); return; }
         const frame = requestAnimationFrame(() => {
             if (canvasRef.current) {
-                renderCard(canvasRef.current, { eventName, raceName, distanceLabel, date, daysUntil, activityType }, t, isDark, brandImageRef.current);
+                renderCard(canvasRef.current, { eventName, raceName, distanceLabel, date, daysUntil, activityType }, t, isDark, brandImage);
                 setRendered(true);
             }
         });
         return () => cancelAnimationFrame(frame);
-    }, [open, eventName, raceName, distanceLabel, date, daysUntil, activityType, t, isDark]);
+    }, [open, eventName, raceName, distanceLabel, date, daysUntil, activityType, t, isDark, brandImage]);
 
     const getBlob = useCallback((): Promise<Blob | null> => {
         return new Promise((resolve) => {
