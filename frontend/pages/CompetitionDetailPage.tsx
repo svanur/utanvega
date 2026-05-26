@@ -813,7 +813,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 showFinishCard={isPostRace && isEnabled('share_trail') && currentEditions[0]?.date === event.displayDate}
                                 daysUntil={event.daysUntil}
                                 activityType={event.activityType}
-                                editionDate={event.nextEditionDate}
+                                editionDate={event.displayDate ?? event.nextEditionDate}
                                 now={currentTime}
                             />
                             ))}
