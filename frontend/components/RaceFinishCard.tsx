@@ -120,28 +120,17 @@ function renderFinishCard(
         y += 90;
     }
 
-    // "I finished!" header
+    // "I finished!" label
     const headerText = t('races.finishCard.finished', { defaultValue: 'I finished!' });
-    ctx.font = 'bold 60px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.font = '600 44px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
     ctx.fillStyle = accentColor;
     ctx.textAlign = 'center';
-    ctx.fillText(headerText, CARD_WIDTH / 2, y + 60);
-    y += 130;
-
-    // Race name
-    ctx.font = 'bold 58px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-    ctx.fillStyle = textColor;
-    ctx.textAlign = 'center';
-    const nameLines = wrapText(ctx, props.raceName, CARD_WIDTH - pad * 2);
-    for (const line of nameLines) {
-        y += 72;
-        ctx.fillText(line, CARD_WIDTH / 2, y);
-    }
-    y += 30;
+    ctx.fillText(headerText, CARD_WIDTH / 2, y + 50);
+    y += 90;
 
     // Distance
     if (props.distanceLabel) {
-        y += 55;
+        y += 50;
         ctx.font = '48px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
         ctx.fillStyle = subtextColor;
         const distText = /\d/.test(props.distanceLabel) && !/km/i.test(props.distanceLabel)
@@ -149,6 +138,17 @@ function renderFinishCard(
             : props.distanceLabel;
         ctx.fillText(distText, CARD_WIDTH / 2, y);
     }
+
+    // Race name - big bold hero
+    ctx.font = '900 76px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillStyle = textColor;
+    ctx.textAlign = 'center';
+    const nameLines = wrapText(ctx, props.raceName, CARD_WIDTH - pad * 2);
+    for (const line of nameLines) {
+        y += 90;
+        ctx.fillText(line, CARD_WIDTH / 2, y);
+    }
+    y += 30;
 
     // Finish time (the star of the show)
     const hasTime = finishTime && finishTime !== '00:00:00';
