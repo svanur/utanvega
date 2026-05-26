@@ -120,7 +120,8 @@ export default function TimePickerInput({
     const digits = input.replace(/\D/g, '');
 
     if (digits.length === 0) {
-      setRawInput('');
+      onChange('00:00:00');
+      setRawInput(null);
       return;
     }
 
