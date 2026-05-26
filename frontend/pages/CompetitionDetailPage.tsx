@@ -352,6 +352,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     const firstRaceStarted = useMemo(() => {
         if (!isRaceDay || !visibleRaces.length) return false;
         return visibleRaces.some(r => {
+            if (r.status === 'Cancelled') return false;
             if (!r.dateOfRace || !r.startTime) return false;
             const parts = r.startTime.split(':').map(Number);
             const [h, m, s = 0] = parts;
