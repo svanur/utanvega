@@ -69,9 +69,16 @@ export default function TimePickerInput({
 
     if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
       e.preventDefault();
-      // If in raw input mode, commit first
+
+      // Determine base values — use raw input if active, otherwise current value
+      let baseHours = hours;
+      let baseMinutes = minutes;
+      let baseSeconds = seconds;
       if (rawInput !== null) {
-        commitRawInput(rawInput);
+        const parts = rawInput.split(':');
+        baseHours = (parts[0] || '').replace(/\D/g, '').padStart(2, '0').slice(0, 2);
+        baseMinutes = (parts[1] || '').replace(/\D/g, '').padStart(2, '0').slice(0, 2);
+        baseSeconds = (parts[2] || '').replace(/\D/g, '').padStart(2, '0').slice(0, 2);
         setRawInput(null);
       }
 
@@ -81,9 +88,9 @@ export default function TimePickerInput({
       else if (cursorPos <= 5) segment = 'minutes';
       else segment = 'seconds';
 
-      const current = segment === 'hours' ? parseInt(hours, 10) :
-                     segment === 'minutes' ? parseInt(minutes, 10) :
-                     parseInt(seconds, 10);
+      const current = segment === 'hours' ? parseInt(baseHours, 10) :
+                     segment === 'minutes' ? parseInt(baseMinutes, 10) :
+                     parseInt(baseSeconds, 10);
 
       const max = segment === 'hours' ? 23 : 59;
       const newValue = e.key === 'ArrowUp'
@@ -92,9 +99,9 @@ export default function TimePickerInput({
 
       const constrained = constrainValue(newValue, max);
       const newTime = formatTime(
-        segment === 'hours' ? constrained : hours,
-        segment === 'minutes' ? constrained : minutes,
-        segment === 'seconds' ? constrained : seconds
+        segment === 'hours' ? constrained : baseHours,
+        segment === 'minutes' ? constrained : baseMinutes,
+        segment === 'seconds' ? constrained : baseSeconds
       );
       onChange(newTime);
 
