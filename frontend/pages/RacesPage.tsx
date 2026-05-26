@@ -376,7 +376,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                 </Box>
 
                                                 {/* Countdown chip */}
-                                                {comp.status !== 'Cancelled' && comp.status !== 'Unconfirmed' && (
+                                                {comp.status !== 'Cancelled' && (
                                                     <Chip
                                                         label={getCountdownLabel(comp.daysUntil, t)}
                                                         color={getCountdownColor(comp.daysUntil)}
