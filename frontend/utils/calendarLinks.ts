@@ -10,6 +10,12 @@ export interface CalendarEventInfo {
     url?: string;
 }
 
+const SITE_TAGLINE = 'https://www.hlaupadagskra.is – Öll hlaup á einum stað';
+
+function appendTagline(description?: string): string {
+    return description ? `${description}\n\n${SITE_TAGLINE}` : SITE_TAGLINE;
+}
+
 /**
  * Generate a Google Calendar "Add Event" URL.
  */
@@ -26,7 +32,7 @@ export function googleCalendarUrl(event: CalendarEventInfo): string {
         dates: `${start}/${end}`,
     });
     if (event.location) params.set('location', event.location);
-    if (event.description) params.set('details', event.description);
+    params.set('details', appendTagline(event.description));
 
     return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
@@ -44,7 +50,7 @@ export function outlookCalendarUrl(event: CalendarEventInfo): string {
         allday: 'true',
     });
     if (event.location) params.set('location', event.location);
-    if (event.description) params.set('body', event.description);
+    params.set('body', appendTagline(event.description));
 
     return `https://outlook.live.com/calendar/0/action/compose?${params.toString()}`;
 }
@@ -71,7 +77,7 @@ export function generateIcs(event: CalendarEventInfo): string {
         `SUMMARY:${escapeIcs(event.title)}`,
     ];
     if (event.location) lines.push(`LOCATION:${escapeIcs(event.location)}`);
-    if (event.description) lines.push(`DESCRIPTION:${escapeIcs(event.description)}`);
+    lines.push(`DESCRIPTION:${escapeIcs(appendTagline(event.description))}`);
     if (event.url) lines.push(`URL:${event.url}`);
     lines.push('END:VEVENT', 'END:VCALENDAR');
 

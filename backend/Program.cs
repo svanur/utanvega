@@ -1297,8 +1297,8 @@ app.MapGet("/api/v1/events/calendar.ics", async (IMediator mediator, IConfigurat
                 Url = new Uri($"{siteUrl}/events/{ev.Slug}"),
             };
             vEvent.Description = ev.RaceCount > 0
-                ? $"{ev.RaceCount} race(s). More info: {siteUrl}/events/{ev.Slug}"
-                : $"More info: {siteUrl}/events/{ev.Slug}";
+                ? $"{ev.RaceCount} race(s). More info: {siteUrl}/events/{ev.Slug}\n\nhttps://www.hlaupadagskra.is – Öll hlaup á einum stað"
+                : $"More info: {siteUrl}/events/{ev.Slug}\n\nhttps://www.hlaupadagskra.is – Öll hlaup á einum stað";
             ical.Events.Add(vEvent);
         }
     }
