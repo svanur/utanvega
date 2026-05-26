@@ -216,7 +216,7 @@ export default function RaceFinishCard(props: RaceFinishCardProps) {
         if (!open) { setRendered(false); return; }
         const frame = requestAnimationFrame(() => {
             if (canvasRef.current) {
-                renderFinishCard(canvasRef.current, props, finishTime, t, isDark);
+                renderFinishCard(canvasRef.current, { eventName, raceName, distanceLabel, date, activityType }, finishTime, t, isDark);
                 setRendered(true);
             }
         });

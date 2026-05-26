@@ -198,7 +198,7 @@ export default function RaceShareCard(props: RaceShareCardProps) {
         if (!open) { setRendered(false); return; }
         const frame = requestAnimationFrame(() => {
             if (canvasRef.current) {
-                renderCard(canvasRef.current, props, t, isDark);
+                renderCard(canvasRef.current, { eventName, raceName, distanceLabel, date, daysUntil, activityType }, t, isDark);
                 setRendered(true);
             }
         });
