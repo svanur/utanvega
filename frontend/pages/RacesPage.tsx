@@ -33,7 +33,7 @@ import TableChartIcon from '@mui/icons-material/TableChart';
 import Layout from '../components/Layout';
 import RandomQuote from '../components/RandomQuote';
 import RunningLoader from '../components/RunningLoader';
-import { useEvents } from '../hooks/useEvents';
+import { useEvents, type EventSummary } from '../hooks/useEvents';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
 
@@ -125,7 +125,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
     }, [events, search]);
 
     const { justRaced, upcoming } = useMemo(() => {
-        const isRecentlyCompleted = (c: typeof filtered[0]) =>
+        const isRecentlyCompleted = (c: EventSummary) =>
             c.daysUntil != null && c.daysUntil < 0 && c.daysUntil >= -3 && c.status !== 'Cancelled';
         const jr = filtered.filter(isRecentlyCompleted);
         const up = filtered.filter(c => !isRecentlyCompleted(c));
