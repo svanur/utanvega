@@ -1262,8 +1262,18 @@ app.MapGet("/api/v1/events/calendar", async (IMediator mediator, DateOnly? from,
 })
 .WithName("GetEventCalendar");
 
-app.MapGet("/api/v1/events/calendar.ics", async (IMediator mediator, IConfiguration configuration) =>
+app.MapGet("/api/v1/events/calendar.ics", async (IMediator mediator, IConfiguration configuration, UtanvegaDbContext context, IMemoryCache cache) =>
 {
+    var flags = await cache.GetOrCreateAsync("feature_flags", async entry =>
+    {
+        entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
+        return await context.FeatureFlags
+            .AsNoTracking()
+            .ToDictionaryAsync(f => f.Name, f => f.Enabled);
+    });
+    if (flags == null || !flags.TryGetValue("calendar_integration", out var enabled) || !enabled)
+        return Results.NotFound();
+
     var siteUrl = configuration["SiteUrl"] ?? "https://utanvega.vercel.app";
     var today = DateOnly.FromDateTime(DateTime.UtcNow);
     var rangeFrom = today.AddMonths(-3);

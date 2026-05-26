@@ -686,7 +686,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 {t('races.organizerSite')}
                             </Button>
                         )}
-                        {(event.displayDate ?? event.nextEditionDate) && event.status !== 'Cancelled' && event.daysUntil != null && event.daysUntil >= 0 && (
+                        {isEnabled('calendar_integration', false) && (event.displayDate ?? event.nextEditionDate) && event.status !== 'Cancelled' && event.daysUntil != null && event.daysUntil >= 0 && (
                             <AddToCalendarButton event={event} t={t} />
                         )}
                         {event.socialLinks && event.socialLinks.length > 0 && (

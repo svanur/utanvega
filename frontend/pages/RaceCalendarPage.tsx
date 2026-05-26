@@ -31,6 +31,7 @@ import RunningLoader from '../components/RunningLoader';
 import { useEventCalendar, CalendarDay } from '../hooks/useEvents';
 import { useNavigate } from 'react-router-dom';
 import { API_URL } from '../hooks/useTrails';
+import { useFeatureFlags } from '../hooks/useFeatureFlags';
 
 type RaceCalendarPageProps = {
     mode: PaletteMode;
@@ -48,6 +49,7 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
     const { t } = useTranslation();
     const theme = useTheme();
     const navigate = useNavigate();
+    const { isEnabled } = useFeatureFlags();
     const today = new Date();
 
     const [year, setYear] = useState(today.getFullYear());
@@ -140,6 +142,7 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
                         variant="outlined"
                         onClick={goToToday}
                     />
+                    {isEnabled('calendar_integration', false) && (
                     <Tooltip title={t('calendar.subscribeTooltip', { defaultValue: 'Subscribe to live calendar feed' })}>
                         <Chip
                             icon={<CalendarMonthIcon />}
@@ -156,6 +159,7 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
                             }}
                         />
                     </Tooltip>
+                    )}
                 </Stack>
 
                 {/* Month navigation */}
