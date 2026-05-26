@@ -49,14 +49,17 @@ export default function TimePickerInput({
 
   // Commit raw input as formatted time
   const commitRawInput = (raw: string) => {
-    const digits = raw.replace(/\D/g, '');
-    if (digits.length === 0) return;
+    // Split on colons to respect segment boundaries
+    const parts = raw.split(':');
+    const hStr = (parts[0] || '').replace(/\D/g, '').padStart(2, '0').slice(0, 2);
+    const mStr = (parts[1] || '').replace(/\D/g, '').padStart(2, '0').slice(0, 2);
+    const sStr = (parts[2] || '').replace(/\D/g, '').padStart(2, '0').slice(0, 2);
 
-    // Pad digits to 6 (HHMMSS)
-    const padded = digits.padEnd(6, '0').slice(0, 6);
-    const h = constrainValue(parseInt(padded.slice(0, 2), 10), 23);
-    const m = constrainValue(parseInt(padded.slice(2, 4), 10), 59);
-    const s = constrainValue(parseInt(padded.slice(4, 6), 10), 59);
+    if (hStr === '00' && mStr === '00' && sStr === '00' && raw.replace(/\D/g, '').length === 0) return;
+
+    const h = constrainValue(parseInt(hStr, 10), 23);
+    const m = constrainValue(parseInt(mStr, 10), 59);
+    const s = constrainValue(parseInt(sStr, 10), 59);
     onChange(formatTime(h, m, s));
   };
 
