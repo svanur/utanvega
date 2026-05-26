@@ -47,6 +47,7 @@ function renderCard(
     props: RaceShareCardProps,
     t: (key: string, opts?: Record<string, unknown>) => string,
     isDark: boolean,
+    brandImage: HTMLImageElement | null,
 ) {
     const ctx = canvas.getContext('2d')!;
     canvas.width = CARD_WIDTH;
@@ -79,12 +80,18 @@ function renderCard(
     const pad = 80;
     let y = 160;
 
-    // Activity emoji (large)
-    const emoji = ACTIVITY_EMOJI[props.activityType ?? ''] ?? '🏆';
-    ctx.font = '120px serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(emoji, CARD_WIDTH / 2, y);
-    y += 100;
+    // Brand image or activity emoji (large)
+    if (brandImage) {
+        const imgSize = 160;
+        ctx.drawImage(brandImage, (CARD_WIDTH - imgSize) / 2, y - imgSize + 40, imgSize, imgSize);
+        y += 60;
+    } else {
+        const emoji = ACTIVITY_EMOJI[props.activityType ?? ''] ?? '🏆';
+        ctx.font = '120px serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(emoji, CARD_WIDTH / 2, y);
+        y += 100;
+    }
 
     // Race name at the top
     ctx.font = 'bold 64px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
@@ -189,16 +196,23 @@ export default function RaceShareCard(props: RaceShareCardProps) {
     const { t } = useTranslation();
     const theme = useTheme();
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const brandImageRef = useRef<HTMLImageElement | null>(null);
     const [open, setOpen] = useState(false);
     const [rendered, setRendered] = useState(false);
     const [snackbar, setSnackbar] = useState('');
     const isDark = theme.palette.mode === 'dark';
 
     useEffect(() => {
+        const img = new Image();
+        img.src = '/images/hlaupadagskra.avif';
+        img.onload = () => { brandImageRef.current = img; };
+    }, []);
+
+    useEffect(() => {
         if (!open) { setRendered(false); return; }
         const frame = requestAnimationFrame(() => {
             if (canvasRef.current) {
-                renderCard(canvasRef.current, { eventName, raceName, distanceLabel, date, daysUntil, activityType }, t, isDark);
+                renderCard(canvasRef.current, { eventName, raceName, distanceLabel, date, daysUntil, activityType }, t, isDark, brandImageRef.current);
                 setRendered(true);
             }
         });

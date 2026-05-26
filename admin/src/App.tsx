@@ -159,7 +159,7 @@ function AdminContent() {
             onClick={() => setCurrentPage('trails')}
             sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1, background: 'none', border: 'none', cursor: 'pointer', p: 0, color: 'inherit' }}
           >
-            <img src="/images/hlaupaleidir.avif" alt="Hlaupadagskra logo" style={{ height: 32 }} />
+            <img src="/images/hlaupadagskra.avif" alt="Hlaupadagskra logo" style={{ height: 32 }} />
             <Typography variant="h6" noWrap>
               Hlaupadagskra.is
             </Typography>

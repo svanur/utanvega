@@ -67,6 +67,7 @@ function renderFinishCard(
     finishTime: string,
     t: (key: string, opts?: Record<string, unknown>) => string,
     isDark: boolean,
+    brandImage: HTMLImageElement | null,
 ) {
     const ctx = canvas.getContext('2d')!;
     canvas.width = CARD_WIDTH;
@@ -106,12 +107,18 @@ function renderFinishCard(
     const pad = 80;
     let y = 140;
 
-    // Trophy + activity emoji
-    const emoji = ACTIVITY_EMOJI[props.activityType ?? ''] ?? '🏆';
-    ctx.font = '100px serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(`🏁 ${emoji} 🏁`, CARD_WIDTH / 2, y);
-    y += 90;
+    // Brand image or trophy + activity emoji
+    if (brandImage) {
+        const imgSize = 140;
+        ctx.drawImage(brandImage, (CARD_WIDTH - imgSize) / 2, y - imgSize + 40, imgSize, imgSize);
+        y += 50;
+    } else {
+        const emoji = ACTIVITY_EMOJI[props.activityType ?? ''] ?? '🏆';
+        ctx.font = '100px serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`🏁 ${emoji} 🏁`, CARD_WIDTH / 2, y);
+        y += 90;
+    }
 
     // "I finished!" header
     const headerText = t('races.finishCard.finished', { defaultValue: 'I finished!' });
@@ -206,6 +213,7 @@ export default function RaceFinishCard(props: RaceFinishCardProps) {
     const { t } = useTranslation();
     const theme = useTheme();
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const brandImageRef = useRef<HTMLImageElement | null>(null);
     const [open, setOpen] = useState(false);
     const [finishTime, setFinishTime] = useState('');
     const [rendered, setRendered] = useState(false);
@@ -213,10 +221,16 @@ export default function RaceFinishCard(props: RaceFinishCardProps) {
     const isDark = theme.palette.mode === 'dark';
 
     useEffect(() => {
+        const img = new Image();
+        img.src = '/images/hlaupadagskra.avif';
+        img.onload = () => { brandImageRef.current = img; };
+    }, []);
+
+    useEffect(() => {
         if (!open) { setRendered(false); return; }
         const frame = requestAnimationFrame(() => {
             if (canvasRef.current) {
-                renderFinishCard(canvasRef.current, { eventName, raceName, distanceLabel, date, activityType }, finishTime, t, isDark);
+                renderFinishCard(canvasRef.current, { eventName, raceName, distanceLabel, date, activityType }, finishTime, t, isDark, brandImageRef.current);
                 setRendered(true);
             }
         });
