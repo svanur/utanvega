@@ -24,6 +24,8 @@ import {
     IconButton,
     useTheme,
     alpha,
+    Menu,
+    MenuItem,
 } from '@mui/material';
 import FacebookIcon from '@mui/icons-material/Facebook';
 import InstagramIcon from '@mui/icons-material/Instagram';
@@ -63,6 +65,7 @@ type PreparedEdition = EventEditionDto & {
 };
 
 import { ACTIVITY_EMOJI } from '../constants/activityEmoji';
+import { googleCalendarUrl, outlookCalendarUrl, downloadIcs } from '../utils/calendarLinks';
 
 type RaceDayChecklistKey = 'bib' | 'shoes' | 'gels' | 'goodMood';
 
@@ -683,6 +686,9 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 {t('races.organizerSite')}
                             </Button>
                         )}
+                        {(event.displayDate ?? event.nextEditionDate) && event.status !== 'Cancelled' && event.daysUntil != null && event.daysUntil >= 0 && (
+                            <AddToCalendarButton event={event} t={t} />
+                        )}
                         {event.socialLinks && event.socialLinks.length > 0 && (
                             <Stack direction="row" spacing={0.5}>
                                 {event.socialLinks
@@ -967,6 +973,47 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                 )}
             </Container>
         </Layout>
+    );
+}
+
+function AddToCalendarButton({ event, t }: { event: { name: string; displayDate?: string | null; nextEditionDate?: string | null; locationName?: string | null; slug: string; description?: string | null }; t: (key: string, opts?: Record<string, unknown>) => string }) {
+    const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+    const date = (event.displayDate ?? event.nextEditionDate)!;
+    const calEvent = {
+        title: event.name,
+        date,
+        location: event.locationName ?? undefined,
+        description: event.description ?? undefined,
+        url: `https://hlaupadagskra.is/events/${event.slug}`,
+    };
+
+    return (
+        <>
+           <Button
+               variant="outlined"
+               size="small"
+               startIcon={<CalendarTodayIcon sx={{ fontSize: 14 }} />}
+               onClick={(e) => setAnchorEl(e.currentTarget)}
+               sx={{ textTransform: 'none' }}
+           >
+               {t('races.addToCalendar', { defaultValue: 'Add to Calendar' })}
+           </Button>
+           <Menu
+               anchorEl={anchorEl}
+               open={Boolean(anchorEl)}
+               onClose={() => setAnchorEl(null)}
+           >
+               <MenuItem onClick={() => { window.open(googleCalendarUrl(calEvent), '_blank', 'noopener'); setAnchorEl(null); }}>
+                   Google Calendar
+               </MenuItem>
+               <MenuItem onClick={() => { window.open(outlookCalendarUrl(calEvent), '_blank', 'noopener'); setAnchorEl(null); }}>
+                   Outlook
+               </MenuItem>
+               <MenuItem onClick={() => { downloadIcs(calEvent); setAnchorEl(null); }}>
+                   {t('races.downloadIcs', { defaultValue: 'Download .ics (Apple/Other)' })}
+               </MenuItem>
+           </Menu>
+        </>
     );
 }
 

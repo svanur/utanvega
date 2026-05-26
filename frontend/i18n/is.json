@@ -843,6 +843,8 @@
         "editionCount": "{{count}} útgáfur",
         "register": "Skráning",
         "organizerSite": "Vefur skipuleggjanda",
+        "addToCalendar": "Setja í dagatal",
+        "downloadIcs": "Hlaða niður .ics (Apple/Annað)",
         "racesHeading": "Keppnishlaup",
         "scheduleHeading": "Dagsetningar",
         "noRaces": "Engin hlaup skráð enn fyrir þessa keppni.",
@@ -966,7 +968,10 @@
         "noEvents": "Engir viðburðir í þessum mánuði",
         "eventCount_one": "{{count}} viðburður í þessum mánuði",
         "eventCount_other": "{{count}} viðburðir í þessum mánuði",
-        "eventCount": "{{count}} viðburðir í þessum mánuði"
+        "eventCount": "{{count}} viðburðir í þessum mánuði",
+        "subscribe": "Gerast áskrifandi",
+        "subscribeTooltip": "Gerast áskrifandi að dagatalsfæðu",
+        "subscribeSuccess": "Slóð afrituð! Límdu hana í dagatalið þitt."
     },
     "welcome": {
         "tagline": "Öll hlaup á einum stað",

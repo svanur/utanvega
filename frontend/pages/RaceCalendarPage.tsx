@@ -15,6 +15,9 @@ import {
     List,
     ListItemButton,
     ListItemText,
+    Snackbar,
+    Alert,
+    Tooltip,
 } from '@mui/material';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -22,10 +25,12 @@ import TodayIcon from '@mui/icons-material/Today';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import Layout from '../components/Layout';
 import RunningLoader from '../components/RunningLoader';
 import { useEventCalendar, CalendarDay } from '../hooks/useEvents';
 import { useNavigate } from 'react-router-dom';
+import { API_URL } from '../hooks/useTrails';
 
 type RaceCalendarPageProps = {
     mode: PaletteMode;
@@ -54,6 +59,7 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
     const [selectedDay, setSelectedDay] = useState<CalendarDay | null>(null);
     const [todayFlash, setTodayFlash] = useState(false);
+    const [subscribeSnackbar, setSubscribeSnackbar] = useState('');
     const todayRef = useRef<HTMLDivElement>(null);
     const touchStartX = useRef<number | null>(null);
 
@@ -134,6 +140,22 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
                         variant="outlined"
                         onClick={goToToday}
                     />
+                    <Tooltip title={t('calendar.subscribeTooltip', { defaultValue: 'Subscribe to live calendar feed' })}>
+                        <Chip
+                            icon={<CalendarMonthIcon />}
+                            label={t('calendar.subscribe', { defaultValue: 'Subscribe' })}
+                            size="small"
+                            color="primary"
+                            variant="outlined"
+                            onClick={() => {
+                                const icsUrl = `${API_URL}/api/v1/events/calendar.ics`;
+                                const webcalUrl = icsUrl.replace(/^https?:/, 'webcal:');
+                                navigator.clipboard.writeText(icsUrl)
+                                    .then(() => setSubscribeSnackbar(t('calendar.subscribeSuccess', { defaultValue: 'Calendar URL copied! Paste it in your calendar app.' })))
+                                    .catch(() => { window.open(webcalUrl); });
+                            }}
+                        />
+                    </Tooltip>
                 </Stack>
 
                 {/* Month navigation */}
@@ -329,6 +351,17 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
                         </Box>
                     )}
                 </Popover>
+
+                <Snackbar
+                    open={!!subscribeSnackbar}
+                    autoHideDuration={5000}
+                    onClose={() => setSubscribeSnackbar('')}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                >
+                    <Alert severity="success" onClose={() => setSubscribeSnackbar('')} variant="filled">
+                        {subscribeSnackbar}
+                    </Alert>
+                </Snackbar>
             </Container>
         </Layout>
     );

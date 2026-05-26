@@ -1262,6 +1262,44 @@ app.MapGet("/api/v1/events/calendar", async (IMediator mediator, DateOnly? from,
 })
 .WithName("GetEventCalendar");
 
+app.MapGet("/api/v1/events/calendar.ics", async (IMediator mediator, IConfiguration configuration) =>
+{
+    var siteUrl = configuration["SiteUrl"] ?? "https://utanvega.vercel.app";
+    var today = DateOnly.FromDateTime(DateTime.UtcNow);
+    var rangeFrom = today.AddMonths(-3);
+    var rangeTo = today.AddMonths(12);
+    var days = await mediator.Send(new GetEventCalendarQuery(rangeFrom, rangeTo));
+
+    var ical = new Ical.Net.Calendar();
+    ical.ProductId = "-//Hlaupadagskra.is//Events//IS";
+
+    foreach (var day in days)
+    {
+        foreach (var ev in day.Events)
+        {
+            var vEvent = new Ical.Net.CalendarComponents.CalendarEvent
+            {
+                Uid = $"{ev.Slug}-{day.Date:yyyy-MM-dd}@hlaupadagskra.is",
+                DtStart = new Ical.Net.DataTypes.CalDateTime(day.Date.Year, day.Date.Month, day.Date.Day),
+                IsAllDay = true,
+                Summary = ev.EditionTitle != null ? $"{ev.Name} – {ev.EditionTitle}" : ev.Name,
+                Location = ev.LocationName ?? "",
+                Url = new Uri($"{siteUrl}/events/{ev.Slug}"),
+            };
+            vEvent.Description = ev.RaceCount > 0
+                ? $"{ev.RaceCount} race(s). More info: {siteUrl}/events/{ev.Slug}"
+                : $"More info: {siteUrl}/events/{ev.Slug}";
+            ical.Events.Add(vEvent);
+        }
+    }
+
+    var serializer = new Ical.Net.Serialization.CalendarSerializer();
+    var icsContent = serializer.SerializeToString(ical);
+
+    return Results.Text(icsContent, "text/calendar; charset=utf-8");
+})
+.WithName("GetEventCalendarIcs");
+
 app.MapGet("/api/v1/events/{slug}", async (string slug, IMediator mediator) =>
 {
     var ev = await mediator.Send(new GetEventQuery(slug));
