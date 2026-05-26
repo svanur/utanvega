@@ -629,7 +629,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 2 }}>
                             <CalendarTodayIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
                             <Typography variant="body2" color="text.secondary" sx={{ mr: 0.5 }}>
-                                {t('races.nextRace')}
+                                {t(event.daysUntil != null && event.daysUntil < 0 ? 'races.lastRace' : 'races.nextRace')}
                             </Typography>
                             <Typography variant="body1" fontWeight={600}>
                                 {formatNextDate((event.displayDate ?? event.nextEditionDate)!, t)}

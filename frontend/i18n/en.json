@@ -826,6 +826,7 @@
         "empty": "No competitions yet",
         "noDate": "Date TBD",
         "nextRace": "Next race:",
+        "lastRace": "Last race:",
         "today": "🔥 Today!",
         "raceDayBadge": "🏁 It's race day!",
         "tomorrow": "Tomorrow!",
@@ -905,7 +906,7 @@
         "shareCard": {
             "button": "I'm racing! 💥",
             "racingToday": "It's race day!",
-            "racingSoon": "I'm racing today!",
+            "racingSoon": "I'm participating in this race!",
             "countdown_one": "{{count}} day to go!",
             "countdown_other": "{{count}} days to go!",
             "shareText": "I'm racing {{eventName}}! 💥",
