@@ -328,6 +328,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
         const now = new Date();
         const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         const nextDate = event.nextEditionDate;
+        const displayDate = event.displayDate;
         const current: PreparedEdition[] = [];
         const past: PreparedEdition[] = [];
         for (const edition of preparedEditions) {
@@ -335,7 +336,8 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
             const isNextEdition = nextDate && edDate === nextDate;
             const isFuture = edDate && edDate >= today;
             const hasNoDate = !edDate;
-            if (isNextEdition || isFuture || hasNoDate) {
+            const isDisplayDate = isPostRace && displayDate && edDate === displayDate;
+            if (isNextEdition || isFuture || hasNoDate || isDisplayDate) {
                 current.push(edition);
             } else {
                 past.push(edition);
@@ -346,7 +348,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
             current.push(past.shift()!);
         }
         return { currentEditions: current, pastEditions: past };
-    }, [event, preparedEditions]);
+    }, [event, preparedEditions, isPostRace]);
 
     const visibleRaces = useMemo(() => currentEditions.flatMap(edition => edition.visibleRaces), [currentEditions]);
 
@@ -366,11 +368,14 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
 
     const showEditionSections = currentEditions.length > 1;
     const primaryEdition = useMemo(
-        () => currentEditions.find(edition => edition.date === event?.nextEditionDate)
+        () => (isPostRace && event?.displayDate
+                ? currentEditions.find(edition => edition.date === event.displayDate)
+                : undefined)
+            ?? currentEditions.find(edition => edition.date === event?.nextEditionDate)
             ?? currentEditions.find(edition => edition.visibleRaces.length > 0)
             ?? currentEditions[0]
             ?? null,
-        [currentEditions, event?.nextEditionDate],
+        [currentEditions, event?.nextEditionDate, event?.displayDate, isPostRace],
     );
 
     const racesWithAnchors = useMemo(() => {
