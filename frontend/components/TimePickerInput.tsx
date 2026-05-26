@@ -107,6 +107,10 @@ export default function TimePickerInput({
         commitRawInput(rawInput);
         setRawInput(null);
       }
+    } else if (/^\d$/.test(e.key) && rawInput === null) {
+      // Starting to type digits while showing formatted value — enter raw mode
+      e.preventDefault();
+      setRawInput(e.key);
     }
   };
 
@@ -146,6 +150,13 @@ export default function TimePickerInput({
     }
   };
 
+  // Select all on focus so typing replaces the current value
+  const handleFocus = () => {
+    setTimeout(() => {
+      inputRef.current?.select();
+    }, 0);
+  };
+
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
       <TextField
@@ -154,14 +165,13 @@ export default function TimePickerInput({
         onChange={handleChange}
         onKeyDown={handleKeyDown}
         onBlur={handleBlur}
+        onFocus={handleFocus}
         label={label}
         placeholder="HH:MM:SS"
         disabled={disabled}
         required={required}
         helperText={helperText}
         inputProps={{
-          pattern: '\\d{2}:\\d{2}:\\d{2}',
-          maxLength: 8,
           style: { fontFamily: 'monospace', textAlign: 'center' },
         }}
         fullWidth
