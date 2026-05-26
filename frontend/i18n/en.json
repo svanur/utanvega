@@ -905,7 +905,7 @@
         "shareCard": {
             "button": "I'm racing! 💥",
             "racingToday": "It's race day!",
-            "racingSoon": "Race in progress!",
+            "racingSoon": "I'm racing today!",
             "countdown_one": "{{count}} day to go!",
             "countdown_other": "{{count}} days to go!",
             "shareText": "I'm racing {{eventName}}! 💥",
