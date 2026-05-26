@@ -994,6 +994,7 @@ function RaceCard({
 
     // Race phase: determine if race is in progress (started but not finished)
     const racePhase = useMemo(() => {
+        if (race.status === 'Cancelled') return 'pre';
         if (daysUntil !== 0 || !race.dateOfRace || !race.startTime) return 'pre';
         const parts = race.startTime.split(':').map(Number);
         const [h, m, s = 0] = parts;
@@ -1004,7 +1005,7 @@ function RaceCard({
         const cutoffMs = race.cutoffMinutes * 60 * 1000;
         if (now.getTime() - start.getTime() < cutoffMs) return 'in-progress';
         return 'finished';
-    }, [daysUntil, race.dateOfRace, race.startTime, race.cutoffMinutes, now]);
+    }, [daysUntil, race.status, race.dateOfRace, race.startTime, race.cutoffMinutes, now]);
 
     return (
         <Card id={anchor} variant="outlined" sx={{
