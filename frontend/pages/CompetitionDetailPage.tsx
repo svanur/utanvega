@@ -1116,7 +1116,7 @@ function RaceCard({
                 </Stack>
 
                 {/* Race progress bar on race day */}
-                {daysUntil === 0 && race.dateOfRace && race.startTime && race.cutoffMinutes != null && (
+                {daysUntil === 0 && race.status !== 'Cancelled' && race.dateOfRace && race.startTime && race.cutoffMinutes != null && (
                     <RaceProgressBar
                         startTime={race.startTime}
                         dateOfRace={race.dateOfRace}
