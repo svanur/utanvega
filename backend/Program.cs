@@ -1291,6 +1291,7 @@ app.MapGet("/api/v1/events/calendar.ics", async (IMediator mediator, IConfigurat
             {
                 Uid = $"{ev.Slug}-{day.Date:yyyy-MM-dd}@hlaupadagskra.is",
                 DtStart = new Ical.Net.DataTypes.CalDateTime(day.Date.Year, day.Date.Month, day.Date.Day),
+                DtEnd = new Ical.Net.DataTypes.CalDateTime(day.Date.AddDays(1).Year, day.Date.AddDays(1).Month, day.Date.AddDays(1).Day),
                 IsAllDay = true,
                 Summary = ev.EditionTitle != null ? $"{ev.Name} – {ev.EditionTitle}" : ev.Name,
                 Location = ev.LocationName ?? "",
