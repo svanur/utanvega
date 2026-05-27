@@ -843,6 +843,8 @@
         "editionCount": "{{count}} editions",
         "register": "Register",
         "organizerSite": "Organizer website",
+        "addToCalendar": "Add to Calendar",
+        "downloadIcs": "Download .ics (Apple/Other)",
         "racesHeading": "Races",
         "scheduleHeading": "Upcoming dates",
         "noRaces": "No races listed yet for this competition.",
@@ -966,7 +968,10 @@
         "noEvents": "No events this month",
         "eventCount_one": "{{count}} event this month",
         "eventCount_other": "{{count}} events this month",
-        "eventCount": "{{count}} events this month"
+        "eventCount": "{{count}} events this month",
+        "subscribe": "Subscribe",
+        "subscribeTooltip": "Subscribe to live calendar feed",
+        "subscribeSuccess": "Calendar URL copied! Paste it in your calendar app."
     },
     "welcome": {
         "tagline": "Discover the best trails for running, hiking & cycling in Iceland",

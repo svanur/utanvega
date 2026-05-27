@@ -1262,6 +1262,60 @@ app.MapGet("/api/v1/events/calendar", async (IMediator mediator, DateOnly? from,
 })
 .WithName("GetEventCalendar");
 
+app.MapGet("/api/v1/events/calendar.ics", async (IMediator mediator, IConfiguration configuration, UtanvegaDbContext context, IMemoryCache cache) =>
+{
+    var flags = await cache.GetOrCreateAsync("feature_flags", async entry =>
+    {
+        entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
+        return await context.FeatureFlags
+            .AsNoTracking()
+            .ToDictionaryAsync(f => f.Name, f => f.Enabled);
+    });
+    if (flags == null || !flags.TryGetValue("calendar_integration", out var enabled) || !enabled)
+        return Results.NotFound();
+
+    var icsContent = await cache.GetOrCreateAsync("calendar_ics_content", async entry =>
+    {
+        entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10);
+
+        var siteUrl = configuration["SiteUrl"] ?? "https://utanvega.vercel.app";
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var rangeFrom = today.AddMonths(-3);
+        var rangeTo = today.AddMonths(12);
+        var days = await mediator.Send(new GetEventCalendarQuery(rangeFrom, rangeTo));
+
+        var ical = new Ical.Net.Calendar();
+        ical.ProductId = "-//Hlaupadagskra.is//Events//IS";
+
+        foreach (var day in days)
+        {
+            foreach (var ev in day.Events)
+            {
+                var vEvent = new Ical.Net.CalendarComponents.CalendarEvent
+                {
+                    Uid = $"{ev.Slug}-{day.Date:yyyy-MM-dd}@hlaupadagskra.is",
+                    DtStart = new Ical.Net.DataTypes.CalDateTime(day.Date.Year, day.Date.Month, day.Date.Day),
+                    DtEnd = new Ical.Net.DataTypes.CalDateTime(day.Date.AddDays(1).Year, day.Date.AddDays(1).Month, day.Date.AddDays(1).Day),
+                    IsAllDay = true,
+                    Summary = ev.EditionTitle != null ? $"{ev.Name} – {ev.EditionTitle}" : ev.Name,
+                    Location = ev.LocationName ?? "",
+                    Url = new Uri($"{siteUrl}/events/{ev.Slug}"),
+                };
+                vEvent.Description = ev.RaceCount > 0
+                    ? $"{ev.RaceCount} race(s). More info: {siteUrl}/events/{ev.Slug}\n\nhttps://www.hlaupadagskra.is – Öll hlaup á einum stað"
+                    : $"More info: {siteUrl}/events/{ev.Slug}\n\nhttps://www.hlaupadagskra.is – Öll hlaup á einum stað";
+                ical.Events.Add(vEvent);
+            }
+        }
+
+        var serializer = new Ical.Net.Serialization.CalendarSerializer();
+        return serializer.SerializeToString(ical);
+    });
+
+    return Results.Text(icsContent!, "text/calendar; charset=utf-8");
+})
+.WithName("GetEventCalendarIcs");
+
 app.MapGet("/api/v1/events/{slug}", async (string slug, IMediator mediator) =>
 {
     var ev = await mediator.Send(new GetEventQuery(slug));
