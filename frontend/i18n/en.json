@@ -968,10 +968,6 @@
         "registrationStatus": {
             "Open": "Open",
             "Closed": "Closed",
-            "SoldOut": "Sold Out",
-            "AlmostFull": "Almost Full",
-            "WaitingList": "Waiting List",
-            "OpeningSoon": "Opening Soon",
             "NotStarted": ""
         },
         "ticketStatus": {

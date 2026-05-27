@@ -66,14 +66,10 @@ function getCountdownColor(daysUntil: number | null): 'success' | 'warning' | 'e
 }
 
 
-function getRegistrationStatusColor(status: string): 'success' | 'error' | 'warning' | 'info' | 'default' {
+function getRegistrationStatusColor(status: string): 'success' | 'error' | 'default' {
     switch (status) {
         case 'Open': return 'success';
-        case 'Closed': return 'default';
-        case 'SoldOut': return 'error';
-        case 'AlmostFull': return 'warning';
-        case 'WaitingList': return 'warning';
-        case 'OpeningSoon': return 'info';
+        case 'Closed': return 'error';
         default: return 'default';
     }
 }

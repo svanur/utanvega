@@ -968,10 +968,6 @@
         "registrationStatus": {
             "Open": "Opin",
             "Closed": "Lokuð",
-            "SoldOut": "Uppselt",
-            "AlmostFull": "Næstum fullt",
-            "WaitingList": "Biðlisti",
-            "OpeningSoon": "Opnar bráðum",
             "NotStarted": ""
         },
         "ticketStatus": {
