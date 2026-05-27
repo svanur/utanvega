@@ -153,9 +153,13 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
                             onClick={() => {
                                 const icsUrl = `${API_URL}/api/v1/events/calendar.ics`;
                                 const webcalUrl = icsUrl.replace(/^https?:/, 'webcal:');
+                                if (!navigator.clipboard) {
+                                    window.location.href = webcalUrl;
+                                    return;
+                                }
                                 navigator.clipboard.writeText(icsUrl)
                                     .then(() => setSubscribeSnackbar(t('calendar.subscribeSuccess', { defaultValue: 'Calendar URL copied! Paste it in your calendar app.' })))
-                                    .catch(() => { window.open(webcalUrl); });
+                                    .catch(() => { window.location.href = webcalUrl; });
                             }}
                         />
                     </Tooltip>
