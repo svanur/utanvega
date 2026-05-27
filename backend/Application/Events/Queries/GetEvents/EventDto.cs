@@ -23,7 +23,10 @@ public record EventSummaryDto(
     int EditionCount,
     DateTime CreatedAt,
     DateTime? UpdatedAt,
-    DateOnly? DisplayDate = null
+    DateOnly? DisplayDate = null,
+    List<string>? Distances = null,
+    string? RegistrationUrl = null,
+    string? RegistrationStatus = null
 );
 
 public record RaceDto(

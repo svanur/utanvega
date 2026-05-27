@@ -955,11 +955,22 @@
             "type": "Type",
             "organizer": "Organizer",
             "editions": "Editions",
+            "distances": "Distances",
+            "register": "Register",
             "races": "Races",
             "noRaces": "No races for this edition",
             "soldOut": "Sold Out",
             "almostSoldOut": "Almost Full",
             "cutoff": "Cutoff time"
+        },
+        "registrationStatus": {
+            "Open": "Open",
+            "Closed": "Closed",
+            "SoldOut": "Sold Out",
+            "AlmostFull": "Almost Full",
+            "WaitingList": "Waiting List",
+            "OpeningSoon": "Opening Soon",
+            "NotStarted": ""
         }
     },
     "calendar": {

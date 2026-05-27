@@ -20,6 +20,7 @@ import {
     ToggleButton,
     Tooltip,
     CircularProgress,
+    Button,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import SearchIcon from '@mui/icons-material/Search';
@@ -30,6 +31,7 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 import ListIcon from '@mui/icons-material/List';
 import MapIcon from '@mui/icons-material/Map';
 import TableChartIcon from '@mui/icons-material/TableChart';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import Layout from '../components/Layout';
 import RandomQuote from '../components/RandomQuote';
 import RunningLoader from '../components/RunningLoader';
@@ -267,6 +269,13 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                         {formatNextDate((comp.displayDate ?? comp.nextEditionDate)!, t)}
                                                                     </Typography>
                                                                 )}
+                                                                {comp.distances && comp.distances.length > 0 && (
+                                                                    <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.5 }}>
+                                                                        {comp.distances.map((d, i) => (
+                                                                            <Chip key={i} label={d} size="small" variant="outlined" />
+                                                                        ))}
+                                                                    </Stack>
+                                                                )}
                                                             </Box>
                                                                 <Chip
                                                                 label={getCountdownLabel(comp.daysUntil, t)}
@@ -355,6 +364,38 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                 {formatNextDate((comp.displayDate ?? comp.nextEditionDate)!, t)}
                                                             </Typography>
                                                         </Box>
+                                                    )}
+
+                                                    {/* Distances */}
+                                                    {comp.distances && comp.distances.length > 0 && (
+                                                        <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 1 }}>
+                                                            {comp.distances.map((d, i) => (
+                                                                <Chip
+                                                                    key={i}
+                                                                    label={d}
+                                                                    size="small"
+                                                                    variant="outlined"
+                                                                    clickable
+                                                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/events/${comp.slug}`); }}
+                                                                />
+                                                            ))}
+                                                        </Stack>
+                                                    )}
+
+                                                    {/* Register link */}
+                                                    {comp.registrationUrl && comp.daysUntil != null && comp.daysUntil >= 0 && (
+                                                        <Button
+                                                            size="small"
+                                                            variant="outlined"
+                                                            href={comp.registrationUrl}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            sx={{ mt: 1, textTransform: 'none', fontSize: '0.8rem', alignSelf: 'flex-start' }}
+                                                        >
+                                                            {t('races.register', 'Register')}
+                                                        </Button>
                                                     )}
 
                                                     {comp.description && (

@@ -955,11 +955,22 @@
             "type": "Tegund",
             "organizer": "Skipuleggjandi",
             "editions": "Útgáfur",
+            "distances": "Vegalengdir",
+            "register": "Skráning",
             "races": "Hlaupagreinar",
             "noRaces": "Engar greinar skráðar",
             "soldOut": "Uppselt",
             "almostSoldOut": "Næstum fullt",
             "cutoff": "Tímamörk"
+        },
+        "registrationStatus": {
+            "Open": "Opin",
+            "Closed": "Lokuð",
+            "SoldOut": "Uppselt",
+            "AlmostFull": "Næstum fullt",
+            "WaitingList": "Biðlisti",
+            "OpeningSoon": "Opnar bráðum",
+            "NotStarted": ""
         }
     },
     "calendar": {
