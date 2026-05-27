@@ -16,15 +16,23 @@ function appendTagline(description?: string): string {
     return description ? `${description}\n\n${SITE_TAGLINE}` : SITE_TAGLINE;
 }
 
+/** Compute the next day from a YYYY-MM-DD string using pure UTC math. */
+function nextDayCompact(yyyymmdd: string): string {
+    const [y, m, d] = yyyymmdd.split('-').map(Number);
+    const next = new Date(Date.UTC(y, m - 1, d + 1));
+    const ny = next.getUTCFullYear();
+    const nm = String(next.getUTCMonth() + 1).padStart(2, '0');
+    const nd = String(next.getUTCDate()).padStart(2, '0');
+    return `${ny}${nm}${nd}`;
+}
+
 /**
  * Generate a Google Calendar "Add Event" URL.
  */
 export function googleCalendarUrl(event: CalendarEventInfo): string {
     // Google uses all-day format: YYYYMMDD/YYYYMMDD (end is exclusive)
     const start = event.date.replace(/-/g, '');
-    const endDate = new Date(event.date + 'T00:00:00');
-    endDate.setDate(endDate.getDate() + 1);
-    const end = endDate.toISOString().slice(0, 10).replace(/-/g, '');
+    const end = nextDayCompact(event.date);
 
     const params = new URLSearchParams({
         action: 'TEMPLATE',
@@ -60,9 +68,7 @@ export function outlookCalendarUrl(event: CalendarEventInfo): string {
  */
 export function generateIcs(event: CalendarEventInfo): string {
     const start = event.date.replace(/-/g, '');
-    const endDate = new Date(event.date + 'T00:00:00');
-    endDate.setDate(endDate.getDate() + 1);
-    const end = endDate.toISOString().slice(0, 10).replace(/-/g, '');
+    const end = nextDayCompact(event.date);
 
     const uid = `${event.title.replace(/\s/g, '-').toLowerCase()}-${event.date}@hlaupadagskra.is`;
 
