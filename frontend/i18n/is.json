@@ -973,6 +973,11 @@
             "WaitingList": "Biðlisti",
             "OpeningSoon": "Opnar bráðum",
             "NotStarted": ""
+        },
+        "ticketStatus": {
+            "Available": "Laust",
+            "SoldOut": "Uppselt",
+            "Closed": "Lokað"
         }
     },
     "calendar": {

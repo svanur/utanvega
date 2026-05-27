@@ -31,6 +31,7 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
             .Include(e => e.Location)
             .Include(e => e.Editions)
                 .ThenInclude(ed => ed.Races)
+                    .ThenInclude(r => r.Trail)
             .AsQueryable();
 
         if (!request.IncludeHidden)
@@ -85,9 +86,20 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                     .FirstOrDefault();
 
             var distances = relevantEdition?.Races
-                .Where(r => !string.IsNullOrWhiteSpace(r.DistanceLabel) && r.Status != RaceStatus.Cancelled)
+                .Where(r => r.Status != RaceStatus.Cancelled)
                 .OrderBy(r => r.SortOrder)
-                .Select(r => r.DistanceLabel!)
+                .Select(r => {
+                    var label = !string.IsNullOrWhiteSpace(r.DistanceLabel)
+                        ? r.DistanceLabel
+                        : r.Trail != null && r.Trail.Length > 0
+                            ? $"{r.Trail.Length / 1000.0:0.#} km"
+                            : null;
+                    return label != null
+                        ? new RaceDistanceSummaryDto(label, r.TicketStatus.ToString())
+                        : null;
+                })
+                .Where(d => d != null)
+                .Cast<RaceDistanceSummaryDto>()
                 .ToList();
 
             return new EventSummaryDto(

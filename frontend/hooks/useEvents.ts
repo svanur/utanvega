@@ -37,7 +37,7 @@ export interface EventSummary {
     daysUntil: number | null;
     displayDate: string | null;
     editionCount: number;
-    distances: string[] | null;
+    distances: { label: string; ticketStatus: string | null }[] | null;
     registrationUrl: string | null;
     registrationStatus: string | null;
     resultsUrl: string | null;

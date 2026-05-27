@@ -973,6 +973,11 @@
             "WaitingList": "Waiting List",
             "OpeningSoon": "Opening Soon",
             "NotStarted": ""
+        },
+        "ticketStatus": {
+            "Available": "Available",
+            "SoldOut": "Sold Out",
+            "Closed": "Closed"
         }
     },
     "calendar": {

@@ -297,14 +297,16 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events }) => {
                                         {event.distances && event.distances.length > 0 ? (
                                             <Stack direction="row" flexWrap="wrap" gap={0.5}>
                                                 {event.distances.map((d, i) => (
-                                                    <Chip
-                                                        key={i}
-                                                        label={d}
-                                                        size="small"
-                                                        variant="outlined"
-                                                        clickable
-                                                        onClick={(e) => { e.stopPropagation(); navigate(`/events/${event.slug}`); }}
-                                                    />
+                                                    <Tooltip key={i} title={d.ticketStatus && d.ticketStatus !== 'Available' ? t(`races.ticketStatus.${d.ticketStatus}`, d.ticketStatus) : ''}>
+                                                        <Chip
+                                                            label={d.label}
+                                                            size="small"
+                                                            variant="outlined"
+                                                            clickable
+                                                            color={getTicketStatusColor(d.ticketStatus)}
+                                                            onClick={(e) => { e.stopPropagation(); navigate(`/events/${event.slug}`); }}
+                                                        />
+                                                    </Tooltip>
                                                 ))}
                                             </Stack>
                                         ) : (

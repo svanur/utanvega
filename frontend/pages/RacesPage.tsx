@@ -69,6 +69,14 @@ function getCountdownColor(daysUntil: number | null): 'success' | 'warning' | 'e
     return 'success';
 }
 
+function getDistanceChipColor(ticketStatus: string | null): 'success' | 'error' | 'warning' | 'default' {
+    switch (ticketStatus) {
+        case 'SoldOut': return 'error';
+        case 'Closed': return 'default';
+        default: return 'success';
+    }
+}
+
 function getCountdownLabel(daysUntil: number | null, t: (key: string, opts?: Record<string, unknown>) => string): string {
     if (daysUntil === null) return t('races.noDate');
     if (daysUntil === 0) return t('races.today');
@@ -272,7 +280,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                 {comp.distances && comp.distances.length > 0 && (
                                                                     <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.5 }}>
                                                                         {comp.distances.map((d, i) => (
-                                                                            <Chip key={i} label={d} size="small" variant="outlined" />
+                                                                            <Chip key={i} label={d.label} size="small" variant="outlined" color={getDistanceChipColor(d.ticketStatus)} />
                                                                         ))}
                                                                     </Stack>
                                                                 )}
@@ -385,14 +393,16 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                     {comp.distances && comp.distances.length > 0 && (
                                                         <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 1 }}>
                                                             {comp.distances.map((d, i) => (
-                                                                <Chip
-                                                                    key={i}
-                                                                    label={d}
-                                                                    size="small"
-                                                                    variant="outlined"
-                                                                    clickable
-                                                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/events/${comp.slug}`); }}
-                                                                />
+                                                                <Tooltip key={i} title={d.ticketStatus && d.ticketStatus !== 'Available' ? t(`races.ticketStatus.${d.ticketStatus}`, d.ticketStatus) : ''}>
+                                                                    <Chip
+                                                                        label={d.label}
+                                                                        size="small"
+                                                                        variant="outlined"
+                                                                        clickable
+                                                                        color={getDistanceChipColor(d.ticketStatus)}
+                                                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/events/${comp.slug}`); }}
+                                                                    />
+                                                                </Tooltip>
                                                             ))}
                                                         </Stack>
                                                     )}
