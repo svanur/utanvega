@@ -2,6 +2,11 @@ namespace Utanvega.Backend.Application.Events.Queries.GetEvents;
 
 using Utanvega.Backend.Core.Entities;
 
+public record RaceDistanceSummaryDto(
+    string Label,
+    string? TicketStatus
+);
+
 public record EventSummaryDto(
     Guid Id,
     string Name,
@@ -23,7 +28,11 @@ public record EventSummaryDto(
     int EditionCount,
     DateTime CreatedAt,
     DateTime? UpdatedAt,
-    DateOnly? DisplayDate = null
+    DateOnly? DisplayDate = null,
+    List<RaceDistanceSummaryDto>? Distances = null,
+    string? RegistrationUrl = null,
+    string? RegistrationStatus = null,
+    string? ResultsUrl = null
 );
 
 public record RaceDto(

@@ -30,6 +30,8 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
             .AsNoTracking()
             .Include(e => e.Location)
             .Include(e => e.Editions)
+                .ThenInclude(ed => ed.Races)
+                    .ThenInclude(r => r.Trail)
             .AsQueryable();
 
         if (!request.IncludeHidden)
@@ -75,6 +77,31 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 displayDate = null;
             }
 
+            // Determine the relevant edition for distances/registration
+            var relevantEdition = recentlyCompleted
+                ? e.Editions.FirstOrDefault(ed => ed.Date == mostRecentPast)
+                : e.Editions
+                    .Where(ed => ed.Date.HasValue && ed.Date.Value >= today)
+                    .OrderBy(ed => ed.Date)
+                    .FirstOrDefault();
+
+            var distances = relevantEdition?.Races
+                .Where(r => r.Status != RaceStatus.Cancelled)
+                .OrderBy(r => r.SortOrder)
+                .Select(r => {
+                    var label = !string.IsNullOrWhiteSpace(r.DistanceLabel)
+                        ? r.DistanceLabel
+                        : r.Trail != null && r.Trail.Length > 0
+                            ? $"{r.Trail.Length / 1000.0:0.#} km"
+                            : null;
+                    return label != null
+                        ? new RaceDistanceSummaryDto(label, r.TicketStatus.ToString())
+                        : null;
+                })
+                .Where(d => d != null)
+                .Cast<RaceDistanceSummaryDto>()
+                .ToList();
+
             return new EventSummaryDto(
                 e.Id,
                 e.Name,
@@ -96,7 +123,11 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 e.Editions.Count,
                 e.CreatedAt,
                 e.UpdatedAt,
-                displayDate
+                displayDate,
+                distances?.Count > 0 ? distances : null,
+                relevantEdition?.RegistrationUrl,
+                relevantEdition?.RegistrationStatus.ToString(),
+                relevantEdition?.ResultsUrl
             );
         }).ToList();
     }

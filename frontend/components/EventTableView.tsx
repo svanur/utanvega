@@ -4,8 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     TableSortLabel, Paper, Typography, Chip, IconButton, Tooltip, Stack,
-    Collapse, Box, Skeleton,
+    Collapse, Box, Skeleton, Button,
 } from '@mui/material';
+import { getTicketStatusColor } from '../utils/ticketStatus';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
@@ -20,6 +21,7 @@ import CelebrationIcon from '@mui/icons-material/Celebration';
 import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
 import GrassIcon from '@mui/icons-material/Grass';
 import CampaignIcon from '@mui/icons-material/Campaign';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import type { EventSummary, EventDetail, RaceDto } from '../hooks/useEvents';
 import { API_URL } from '../hooks/useTrails';
 
@@ -52,7 +54,7 @@ interface EventTableViewProps {
     events: EventSummary[];
 }
 
-type SortField = 'name' | 'daysUntil' | 'nextEditionDate' | 'locationName' | 'editionCount' | 'activityType' | 'type';
+type SortField = 'name' | 'daysUntil' | 'nextEditionDate' | 'locationName' | 'activityType' | 'type';
 type SortDir = 'asc' | 'desc';
 
 function getCountdownColor(daysUntil: number | null): 'success' | 'warning' | 'error' | 'default' {
@@ -63,13 +65,11 @@ function getCountdownColor(daysUntil: number | null): 'success' | 'warning' | 'e
     return 'success';
 }
 
-function getTicketStatusColor(status: string | null): 'success' | 'error' | 'warning' | 'default' {
+
+function getRegistrationStatusColor(status: string): 'success' | 'error' | 'default' {
     switch (status) {
-        case 'Available': return 'success';
-        case 'SoldOut': return 'error';
-        case 'AlmostSoldOut': return 'warning';
-        case 'WaitingList': return 'warning';
-        case 'Closed': return 'default';
+        case 'Open': return 'success';
+        case 'Closed': return 'error';
         default: return 'default';
     }
 }
@@ -135,8 +135,6 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events }) => {
                     return dir * a.type.localeCompare(b.type);
                 case 'locationName':
                     return dir * (a.locationName ?? '').localeCompare(b.locationName ?? '', 'is');
-                case 'editionCount':
-                    return dir * (a.editionCount - b.editionCount);
                 case 'activityType':
                     return dir * a.activityType.localeCompare(b.activityType);
                 default:
@@ -152,10 +150,10 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events }) => {
         { field: 'type', label: t('races.table.type', 'Type'), align: 'center' },
         { field: 'locationName', label: t('trail.location', 'Location') },
         { field: 'activityType', label: t('trail.activity', 'Activity'), align: 'center' },
-        { field: 'editionCount', label: t('races.table.editions', 'Editions'), align: 'right' },
     ];
 
-    const totalColumns = columns.length + 1; // +1 for expand column
+    // +1 for expand column, +2 for Distances and Register (non-sortable)
+    const totalColumns = columns.length + 3;
 
     return (
         <TableContainer component={Paper} elevation={1} sx={{ borderRadius: 2, width: '100%', overflowX: 'auto' }}>
@@ -174,6 +172,8 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events }) => {
                                 </TableSortLabel>
                             </TableCell>
                         ))}
+                        <TableCell>{t('races.table.distances', 'Distances')}</TableCell>
+                        <TableCell align="center">{t('races.table.links', 'Links')}</TableCell>
                     </TableRow>
                 </TableHead>
                 <TableBody>
@@ -280,8 +280,66 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events }) => {
                                             </Stack>
                                         </Tooltip>
                                     </TableCell>
-                                    <TableCell align="right">
-                                        <Typography variant="body2">{event.editionCount}</Typography>
+                                    <TableCell>
+                                        {event.distances && event.distances.length > 0 ? (
+                                            <Stack direction="row" flexWrap="wrap" gap={0.5}>
+                                                {event.distances.map((d, i) => (
+                                                    <Tooltip key={i} title={d.ticketStatus && d.ticketStatus !== 'Available' ? t(`races.ticketStatus.${d.ticketStatus}`, d.ticketStatus) : ''}>
+                                                        <Chip
+                                                            label={d.label}
+                                                            size="small"
+                                                            variant="outlined"
+                                                            clickable
+                                                            color={getTicketStatusColor(d.ticketStatus)}
+                                                            onClick={(e) => { e.stopPropagation(); navigate(`/events/${event.slug}`); }}
+                                                        />
+                                                    </Tooltip>
+                                                ))}
+                                            </Stack>
+                                        ) : (
+                                            <Typography variant="body2" color="text.secondary">—</Typography>
+                                        )}
+                                    </TableCell>
+                                    <TableCell align="center">
+                                        {event.registrationUrl && event.daysUntil != null && event.daysUntil >= 0 ? (
+                                            <Stack alignItems="center" spacing={0.5}>
+                                                <Button
+                                                    size="small"
+                                                    variant="outlined"
+                                                    href={event.registrationUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    sx={{ textTransform: 'none', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+                                                >
+                                                    {t('races.register', 'Register')}
+                                                </Button>
+                                                {event.registrationStatus && event.registrationStatus !== 'NotStarted' && (
+                                                    <Chip
+                                                        label={t(`races.registrationStatus.${event.registrationStatus}`, event.registrationStatus)}
+                                                        size="small"
+                                                        color={getRegistrationStatusColor(event.registrationStatus)}
+                                                    />
+                                                )}
+                                            </Stack>
+                                        ) : event.resultsUrl && event.daysUntil != null && event.daysUntil < 0 ? (
+                                            <Button
+                                                size="small"
+                                                variant="outlined"
+                                                color="success"
+                                                href={event.resultsUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
+                                                onClick={(e) => e.stopPropagation()}
+                                                sx={{ textTransform: 'none', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+                                            >
+                                                {t('races.results', 'Results')}
+                                            </Button>
+                                        ) : (
+                                            <Typography variant="body2" color="text.secondary">—</Typography>
+                                        )}
                                     </TableCell>
                                 </TableRow>
 

@@ -20,6 +20,7 @@ import {
     ToggleButton,
     Tooltip,
     CircularProgress,
+    Button,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import SearchIcon from '@mui/icons-material/Search';
@@ -30,12 +31,14 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 import ListIcon from '@mui/icons-material/List';
 import MapIcon from '@mui/icons-material/Map';
 import TableChartIcon from '@mui/icons-material/TableChart';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import Layout from '../components/Layout';
 import RandomQuote from '../components/RandomQuote';
 import RunningLoader from '../components/RunningLoader';
 import { useEvents, type EventSummary } from '../hooks/useEvents';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
+import { getTicketStatusColor } from '../utils/ticketStatus';
 
 const EventTableView = lazy(() => import('../components/EventTableView'));
 const EventMapView = lazy(() => import('../components/EventMapView'));
@@ -267,6 +270,28 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                         {formatNextDate((comp.displayDate ?? comp.nextEditionDate)!, t)}
                                                                     </Typography>
                                                                 )}
+                                                                {comp.distances && comp.distances.length > 0 && (
+                                                                    <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.5 }}>
+                                                                        {comp.distances.map((d, i) => (
+                                                                            <Chip key={i} label={d.label} size="small" variant="outlined" color={getTicketStatusColor(d.ticketStatus)} />
+                                                                        ))}
+                                                                    </Stack>
+                                                                )}
+                                                                {comp.resultsUrl && (
+                                                                    <Button
+                                                                        size="small"
+                                                                        variant="outlined"
+                                                                        color="success"
+                                                                        href={comp.resultsUrl}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
+                                                                        onClick={(e) => e.stopPropagation()}
+                                                                        sx={{ mt: 0.5, textTransform: 'none', fontSize: '0.75rem' }}
+                                                                    >
+                                                                        {t('races.results', 'Results')}
+                                                                    </Button>
+                                                                )}
                                                             </Box>
                                                                 <Chip
                                                                 label={getCountdownLabel(comp.daysUntil, t)}
@@ -355,6 +380,40 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                 {formatNextDate((comp.displayDate ?? comp.nextEditionDate)!, t)}
                                                             </Typography>
                                                         </Box>
+                                                    )}
+
+                                                    {/* Distances */}
+                                                    {comp.distances && comp.distances.length > 0 && (
+                                                        <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 1 }}>
+                                                            {comp.distances.map((d, i) => (
+                                                                <Tooltip key={i} title={d.ticketStatus && d.ticketStatus !== 'Available' ? t(`races.ticketStatus.${d.ticketStatus}`, d.ticketStatus) : ''}>
+                                                                    <Chip
+                                                                        label={d.label}
+                                                                        size="small"
+                                                                        variant="outlined"
+                                                                        clickable
+                                                                        color={getTicketStatusColor(d.ticketStatus)}
+                                                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/events/${comp.slug}`); }}
+                                                                    />
+                                                                </Tooltip>
+                                                            ))}
+                                                        </Stack>
+                                                    )}
+
+                                                    {/* Register link */}
+                                                    {comp.registrationUrl && comp.daysUntil != null && comp.daysUntil >= 0 && (
+                                                        <Button
+                                                            size="small"
+                                                            variant="outlined"
+                                                            href={comp.registrationUrl}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            sx={{ mt: 1, textTransform: 'none', fontSize: '0.8rem', alignSelf: 'flex-start' }}
+                                                        >
+                                                            {t('races.register', 'Register')}
+                                                        </Button>
                                                     )}
 
                                                     {comp.description && (

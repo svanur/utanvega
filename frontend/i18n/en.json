@@ -842,6 +842,7 @@
         "editionCount_other": "{{count}} editions",
         "editionCount": "{{count}} editions",
         "register": "Register",
+        "results": "Results",
         "organizerSite": "Organizer website",
         "addToCalendar": "Add to Calendar",
         "downloadIcs": "Download .ics (Apple/Other)",
@@ -955,11 +956,24 @@
             "type": "Type",
             "organizer": "Organizer",
             "editions": "Editions",
+            "distances": "Distances",
+            "register": "Register",
+            "links": "Links",
             "races": "Races",
             "noRaces": "No races for this edition",
             "soldOut": "Sold Out",
             "almostSoldOut": "Almost Full",
             "cutoff": "Cutoff time"
+        },
+        "registrationStatus": {
+            "Open": "Open",
+            "Closed": "Closed",
+            "NotStarted": ""
+        },
+        "ticketStatus": {
+            "Available": "Available",
+            "SoldOut": "Sold Out",
+            "Closed": "Closed"
         }
     },
     "calendar": {
