@@ -276,6 +276,21 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                         ))}
                                                                     </Stack>
                                                                 )}
+                                                                {comp.resultsUrl && (
+                                                                    <Button
+                                                                        size="small"
+                                                                        variant="outlined"
+                                                                        color="success"
+                                                                        href={comp.resultsUrl}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
+                                                                        onClick={(e) => e.stopPropagation()}
+                                                                        sx={{ mt: 0.5, textTransform: 'none', fontSize: '0.75rem' }}
+                                                                    >
+                                                                        {t('races.results', 'Results')}
+                                                                    </Button>
+                                                                )}
                                                             </Box>
                                                                 <Chip
                                                                 label={getCountdownLabel(comp.daysUntil, t)}

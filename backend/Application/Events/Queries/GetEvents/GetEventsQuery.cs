@@ -114,7 +114,8 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 displayDate,
                 distances?.Count > 0 ? distances : null,
                 relevantEdition?.RegistrationUrl,
-                relevantEdition?.RegistrationStatus.ToString()
+                relevantEdition?.RegistrationStatus.ToString(),
+                relevantEdition?.ResultsUrl
             );
         }).ToList();
     }

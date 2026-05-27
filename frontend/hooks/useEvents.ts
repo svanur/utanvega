@@ -40,6 +40,7 @@ export interface EventSummary {
     distances: string[] | null;
     registrationUrl: string | null;
     registrationStatus: string | null;
+    resultsUrl: string | null;
     createdAt: string;
     updatedAt: string | null;
 }

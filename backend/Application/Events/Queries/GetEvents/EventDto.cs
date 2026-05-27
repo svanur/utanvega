@@ -26,7 +26,8 @@ public record EventSummaryDto(
     DateOnly? DisplayDate = null,
     List<string>? Distances = null,
     string? RegistrationUrl = null,
-    string? RegistrationStatus = null
+    string? RegistrationStatus = null,
+    string? ResultsUrl = null
 );
 
 public record RaceDto(

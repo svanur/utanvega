@@ -186,7 +186,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events }) => {
                             </TableCell>
                         ))}
                         <TableCell>{t('races.table.distances', 'Distances')}</TableCell>
-                        <TableCell align="center">{t('races.table.register', 'Register')}</TableCell>
+                        <TableCell align="center">{t('races.table.links', 'Links')}</TableCell>
                     </TableRow>
                 </TableHead>
                 <TableBody>
@@ -334,6 +334,20 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events }) => {
                                                     />
                                                 )}
                                             </Stack>
+                                        ) : event.resultsUrl && event.daysUntil != null && event.daysUntil < 0 ? (
+                                            <Button
+                                                size="small"
+                                                variant="outlined"
+                                                color="success"
+                                                href={event.resultsUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
+                                                onClick={(e) => e.stopPropagation()}
+                                                sx={{ textTransform: 'none', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+                                            >
+                                                {t('races.results', 'Results')}
+                                            </Button>
                                         ) : (
                                             <Typography variant="body2" color="text.secondary">—</Typography>
                                         )}
