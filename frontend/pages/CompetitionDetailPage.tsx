@@ -984,7 +984,7 @@ function AddToCalendarButton({ event, t }: { event: { name: string; displayDate?
         date,
         location: event.locationName ?? undefined,
         description: event.description ?? undefined,
-        url: `https://hlaupadagskra.is/events/${event.slug}`,
+        url: `${window.location.origin}/events/${event.slug}`,
     };
 
     return (
