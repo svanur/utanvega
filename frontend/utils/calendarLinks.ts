@@ -101,7 +101,7 @@ export function downloadIcs(event: CalendarEventInfo): void {
     a.href = url;
     a.download = `${event.title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.ics`;
     a.click();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function escapeIcs(text: string): string {
