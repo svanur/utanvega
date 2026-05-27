@@ -49,12 +49,14 @@ export function googleCalendarUrl(event: CalendarEventInfo): string {
  * Generate an Outlook.com "Add Event" URL.
  */
 export function outlookCalendarUrl(event: CalendarEventInfo): string {
+    const endCompact = nextDayCompact(event.date);
+    const enddt = `${endCompact.slice(0, 4)}-${endCompact.slice(4, 6)}-${endCompact.slice(6, 8)}`;
     const params = new URLSearchParams({
         path: '/calendar/action/compose',
         rru: 'addevent',
         subject: event.title,
         startdt: event.date,
-        enddt: event.date,
+        enddt,
         allday: 'true',
     });
     if (event.location) params.set('location', event.location);
