@@ -6,6 +6,7 @@ import {
     TableSortLabel, Paper, Typography, Chip, IconButton, Tooltip, Stack,
     Collapse, Box, Skeleton, Button,
 } from '@mui/material';
+import { getTicketStatusColor } from '../utils/ticketStatus';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
@@ -64,16 +65,6 @@ function getCountdownColor(daysUntil: number | null): 'success' | 'warning' | 'e
     return 'success';
 }
 
-function getTicketStatusColor(status: string | null): 'success' | 'error' | 'warning' | 'default' {
-    switch (status) {
-        case 'Available': return 'success';
-        case 'SoldOut': return 'error';
-        case 'AlmostSoldOut': return 'warning';
-        case 'WaitingList': return 'warning';
-        case 'Closed': return 'default';
-        default: return 'default';
-    }
-}
 
 function getRegistrationStatusColor(status: string): 'success' | 'error' | 'warning' | 'info' | 'default' {
     switch (status) {

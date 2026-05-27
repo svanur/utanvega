@@ -38,6 +38,7 @@ import RunningLoader from '../components/RunningLoader';
 import { useEvents, type EventSummary } from '../hooks/useEvents';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
+import { getTicketStatusColor } from '../utils/ticketStatus';
 
 const EventTableView = lazy(() => import('../components/EventTableView'));
 const EventMapView = lazy(() => import('../components/EventMapView'));
@@ -67,14 +68,6 @@ function getCountdownColor(daysUntil: number | null): 'success' | 'warning' | 'e
     if (daysUntil <= 7) return 'error';
     if (daysUntil <= 30) return 'warning';
     return 'success';
-}
-
-function getDistanceChipColor(ticketStatus: string | null): 'success' | 'error' | 'warning' | 'default' {
-    switch (ticketStatus) {
-        case 'SoldOut': return 'error';
-        case 'Closed': return 'default';
-        default: return 'success';
-    }
 }
 
 function getCountdownLabel(daysUntil: number | null, t: (key: string, opts?: Record<string, unknown>) => string): string {
@@ -280,7 +273,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                 {comp.distances && comp.distances.length > 0 && (
                                                                     <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.5 }}>
                                                                         {comp.distances.map((d, i) => (
-                                                                            <Chip key={i} label={d.label} size="small" variant="outlined" color={getDistanceChipColor(d.ticketStatus)} />
+                                                                            <Chip key={i} label={d.label} size="small" variant="outlined" color={getTicketStatusColor(d.ticketStatus)} />
                                                                         ))}
                                                                     </Stack>
                                                                 )}
@@ -399,7 +392,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                         size="small"
                                                                         variant="outlined"
                                                                         clickable
-                                                                        color={getDistanceChipColor(d.ticketStatus)}
+                                                                        color={getTicketStatusColor(d.ticketStatus)}
                                                                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/events/${comp.slug}`); }}
                                                                     />
                                                                 </Tooltip>
