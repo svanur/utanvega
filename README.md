@@ -81,7 +81,7 @@ npm run dev
 This starts all three projects concurrently:
 - **Frontend** → http://localhost:5173
 - **Admin** → http://localhost:5174
-- **Backend** → http://localhost:5062
+- **Backend** → http://localhost:8080
 
 Or run individually:
 
@@ -100,72 +100,129 @@ dotnet test
 
 ## Local Supabase (Docker) How-To
 
-Use this when hosted Supabase is unavailable (for example quota limits).
+Run PostgreSQL + PostGIS + Supabase Auth locally via Docker. This eliminates dependency on the hosted Supabase project for development.
+
+### Prerequisites
+
+- **Docker Desktop** — [Install here](https://www.docker.com/products/docker-desktop/). Must be running before executing any commands below.
+- **Node.js 18+** — For running the setup script.
+- **.NET 9 SDK** — For EF Core migrations.
+
+Verify Docker is running:
+
+```bash
+docker --version
+docker compose version
+```
 
 ### First-time setup
+
+Run from the **repo root** (`utanvega/`):
 
 ```bash
 npm run supabase:setup
 ```
 
-What this does:
-- Generates local env files:
-  - `supabase/.env.local`
-  - `frontend/.env.local`
-  - `admin/.env.local`
-- Starts local Supabase services (Postgres + Auth + Kong)
-- Seeds a local admin user for login
-- Writes backend user-secrets (`ConnectionStrings:DefaultConnection`, `SUPABASE_URL`, `SUPABASE_JWT_SECRET`)
+**What this does (in order):**
+1. Generates secrets (JWT secret, Postgres password, anon/service-role keys)
+2. Writes local env files (git-ignored):
+   - `supabase/.env.local` — Docker Compose secrets
+   - `frontend/.env.local` — Vite env pointing to local Supabase
+   - `admin/.env.local` — Vite env pointing to local Supabase
+3. Starts Docker containers: PostgreSQL+PostGIS, GoTrue (Auth), Kong (API gateway)
+4. Waits for auth service to be healthy
+5. Seeds a local admin user for the admin panel
+6. Writes .NET user-secrets for the backend (`ConnectionStrings:DefaultConnection`, `SUPABASE_URL`, `SUPABASE_JWT_SECRET`)
+
+**Output:** The script prints the local admin email and password in the terminal.
+
+### After first-time setup: run migrations
+
+The database starts empty. Apply EF Core migrations to create the schema:
+
+```bash
+cd backend
+dotnet ef database update
+```
 
 ### Daily workflow
 
-Start local Supabase:
-
 ```bash
+# 1. Start the local database + auth (if not already running)
 npm run supabase:up
+
+# 2. Start the app (frontend + admin + backend)
+npm run dev
 ```
 
-Stop local Supabase:
+To stop Supabase when done:
 
 ```bash
 npm run supabase:down
 ```
 
-Start the app stack:
+### Available commands
 
-```bash
-npm run dev
+| Command | What it does |
+|---------|-------------|
+| `npm run supabase:setup` | Full first-time setup (generates env, starts Docker, seeds admin, writes user-secrets) |
+| `npm run supabase:up` | Start Docker containers only (assumes env files exist) |
+| `npm run supabase:down` | Stop Docker containers (data persists in volume) |
+| `npm run supabase:seed` | Re-seed admin user + re-write user-secrets (containers must be running) |
+
+All commands are run from the **repo root**.
+
+### Local endpoints
+
+| Service | URL | Notes |
+|---------|-----|-------|
+| Supabase API gateway | http://localhost:8000 | Kong routes to auth |
+| Auth health check | http://localhost:8000/auth/v1/health | Should return `{"status":"ok"}` |
+| Auth (direct) | http://localhost:9999 | GoTrue direct access |
+| PostgreSQL | localhost:5432 | User: `postgres`, DB: `postgres` |
+| Backend API | http://localhost:8080 | After running `npm run dev` |
+| Frontend | http://localhost:5173 | After running `npm run dev` |
+| Admin | http://localhost:5174 | After running `npm run dev` |
+
+### Connecting with a database client
+
+Use any PostgreSQL client (pgAdmin, DBeaver, DataGrip, `psql`):
+
+```
+Host: localhost
+Port: 5432
+Database: postgres
+Username: postgres
+Password: (check supabase/.env.local → POSTGRES_PASSWORD)
 ```
 
-### Reseed local auth/admin user
+### Reset everything (nuclear option)
+
+Destroys all local data and recreates from scratch:
 
 ```bash
-npm run supabase:seed
-```
-
-### Useful local endpoints
-
-- Supabase gateway: `http://localhost:8000`
-- Auth health: `http://localhost:8000/auth/v1/health`
-- Auth service (direct): `http://localhost:9999`
-- Postgres: `localhost:5432`
-
-### Local admin login
-
-`npm run supabase:setup` prints the generated local admin credentials in the terminal.
-
-### Reset everything (clean local Supabase state)
-
-```bash
-docker compose --env-file supabase/.env.local -f supabase/docker-compose.local.yml down -v
+npm run supabase:down
+docker volume rm hlaupadagskra-supabase-local_db-data
 npm run supabase:setup
+cd backend && dotnet ef database update
 ```
+
+### Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| `port 5432 already in use` | Stop any local PostgreSQL service, or change the port in `docker-compose.local.yml` |
+| Auth container keeps restarting | Check logs: `docker logs hlaupadagskra-supabase-auth` — usually a role password mismatch. Reset with nuclear option above. |
+| `dotnet ef database update` fails | Ensure containers are running (`npm run supabase:up`) and check connection string in user-secrets |
+| Admin login doesn't work | Run `npm run supabase:seed` to re-create the admin user |
+| Docker not found | Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) and ensure it's running |
 
 ### Notes
 
-- `*.env.local` files are ignored by git.
-- Keep production/staging Supabase envs separate from local values.
-- If auth fails after env changes, run `npm run supabase:down` then `npm run supabase:setup`.
+- All `*.env.local` files are git-ignored — safe to contain secrets.
+- The Docker volume (`db-data`) persists data across `supabase:down` / `supabase:up` cycles.
+- Only `docker volume rm` or the nuclear reset destroys data.
+- Keep production/staging Supabase credentials in separate env files or user-secrets, never in `.env.local`.
 
 ## Features
 
