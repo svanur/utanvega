@@ -8,6 +8,6 @@ public interface ICacheInvalidator
 {
     void InvalidateTrail(string? slug = null);
     void InvalidateLocation(string? slug = null);
-    void InvalidateCompetition(string? slug = null);
+    void InvalidateEvent(string? slug = null);
     void InvalidateLeaderboard(string slug);
 }

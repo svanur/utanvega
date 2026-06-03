@@ -15,6 +15,9 @@ import {
     List,
     ListItemButton,
     ListItemText,
+    Snackbar,
+    Alert,
+    Tooltip,
 } from '@mui/material';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -22,10 +25,13 @@ import TodayIcon from '@mui/icons-material/Today';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import Layout from '../components/Layout';
 import RunningLoader from '../components/RunningLoader';
-import { useCompetitionCalendar, CalendarDay } from '../hooks/useCompetitions';
+import { useEventCalendar, CalendarDay } from '../hooks/useEvents';
 import { useNavigate } from 'react-router-dom';
+import { API_URL } from '../hooks/useTrails';
+import { useFeatureFlags } from '../hooks/useFeatureFlags';
 
 type RaceCalendarPageProps = {
     mode: PaletteMode;
@@ -43,17 +49,19 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
     const { t } = useTranslation();
     const theme = useTheme();
     const navigate = useNavigate();
+    const { isEnabled } = useFeatureFlags();
     const today = new Date();
 
     const [year, setYear] = useState(today.getFullYear());
     const [month, setMonth] = useState(today.getMonth());
 
     const { from, to } = useMemo(() => getMonthRange(year, month), [year, month]);
-    const { days, loading } = useCompetitionCalendar(from, to);
+    const { days, loading } = useEventCalendar(from, to);
 
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
     const [selectedDay, setSelectedDay] = useState<CalendarDay | null>(null);
     const [todayFlash, setTodayFlash] = useState(false);
+    const [subscribeSnackbar, setSubscribeSnackbar] = useState('');
     const todayRef = useRef<HTMLDivElement>(null);
     const touchStartX = useRef<number | null>(null);
 
@@ -120,7 +128,7 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
             <Container maxWidth="sm" sx={{ py: 3 }}>
                 {/* Header */}
                 <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-                    <IconButton onClick={() => navigate('/races')} sx={{ minWidth: 44, minHeight: 44 }}>
+                    <IconButton onClick={() => navigate('/events')} sx={{ minWidth: 44, minHeight: 44 }}>
                         <ArrowBackIcon />
                     </IconButton>
                     <EmojiEventsIcon sx={{ color: theme.palette.warning.main }} />
@@ -134,6 +142,28 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
                         variant="outlined"
                         onClick={goToToday}
                     />
+                    {isEnabled('calendar_integration', false) && (
+                    <Tooltip title={t('calendar.subscribeTooltip', { defaultValue: 'Subscribe to live calendar feed' })}>
+                        <Chip
+                            icon={<CalendarMonthIcon />}
+                            label={t('calendar.subscribe', { defaultValue: 'Subscribe' })}
+                            size="small"
+                            color="primary"
+                            variant="outlined"
+                            onClick={() => {
+                                const icsUrl = `${API_URL}/api/v1/events/calendar.ics`;
+                                const webcalUrl = icsUrl.replace(/^https?:/, 'webcal:');
+                                if (!navigator.clipboard) {
+                                    window.location.href = webcalUrl;
+                                    return;
+                                }
+                                navigator.clipboard.writeText(icsUrl)
+                                    .then(() => setSubscribeSnackbar(t('calendar.subscribeSuccess', { defaultValue: 'Calendar URL copied! Paste it in your calendar app.' })))
+                                    .catch(() => { window.location.href = webcalUrl; });
+                            }}
+                        />
+                    </Tooltip>
+                    )}
                 </Stack>
 
                 {/* Month navigation */}
@@ -295,7 +325,7 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
                                 {selectedDay.events.map((ev, i) => (
                                     <ListItemButton
                                         key={i}
-                                        onClick={() => navigate(`/races/${ev.slug}`)}
+                                        onClick={() => navigate(`/events/${ev.slug}`)}
                                         sx={{ borderRadius: 1 }}
                                     >
                                         <ListItemText
@@ -306,10 +336,19 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
                                                 </Stack>
                                             }
                                             secondary={
-                                                ev.locationName && (
-                                                    <Stack direction="row" alignItems="center" spacing={0.3} sx={{ mt: 0.3 }}>
-                                                        <LocationOnIcon sx={{ fontSize: 12 }} />
-                                                        <Typography variant="caption">{ev.locationName}</Typography>
+                                                (ev.editionTitle || ev.locationName) && (
+                                                    <Stack spacing={0.3} sx={{ mt: 0.3 }}>
+                                                        {ev.editionTitle && (
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                {ev.editionTitle}
+                                                            </Typography>
+                                                        )}
+                                                        {ev.locationName && (
+                                                            <Stack direction="row" alignItems="center" spacing={0.3}>
+                                                                <LocationOnIcon sx={{ fontSize: 12 }} />
+                                                                <Typography variant="caption">{ev.locationName}</Typography>
+                                                            </Stack>
+                                                        )}
                                                     </Stack>
                                                 )
                                             }
@@ -320,6 +359,17 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
                         </Box>
                     )}
                 </Popover>
+
+                <Snackbar
+                    open={!!subscribeSnackbar}
+                    autoHideDuration={5000}
+                    onClose={() => setSubscribeSnackbar('')}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                >
+                    <Alert severity="success" onClose={() => setSubscribeSnackbar('')} variant="filled">
+                        {subscribeSnackbar}
+                    </Alert>
+                </Snackbar>
             </Container>
         </Layout>
     );

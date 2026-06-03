@@ -100,7 +100,8 @@ public class GetLocationBySlugQueryHandler : IRequestHandler<GetLocationBySlugQu
                 .ToList(),
             t.TrailTags
                 .Select(tt => new TagInfoDto(tt.Tag.Name, tt.Tag.Slug, tt.Tag.Color))
-                .ToList()
+                .ToList(),
+            YoutubeUrl: t.YoutubeUrl
         )).ToList();
 
         return new LocationWithTrailsDto(locationDto, childDtos, trailDtos);

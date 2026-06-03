@@ -35,6 +35,7 @@ import {
     FilterList as FilterIcon,
     List as ListIcon,
     Map as MapIcon,
+    TableChart as TableChartIcon,
     Star as StarIcon,
     StarBorder as StarBorderIcon,
     VisibilityOff as VisibilityOffIcon,
@@ -46,6 +47,9 @@ import {
     DirectionsRun as DirectionsRunIcon,
     Hiking as HikingIcon,
     DirectionsBike as DirectionsBikeIcon,
+    Celebration as CelebrationIcon,
+    FitnessCenter as FitnessCenterIcon,
+    Grass as GrassIcon,
     ChevronLeft as ChevronLeftIcon,
     ChevronRight as ChevronRightIcon,
     Casino as CasinoIcon,
@@ -64,6 +68,7 @@ import { useLocationTree } from '../hooks/useLocations';
 import type { LocationTreeNode } from '../hooks/useLocations';
 import { TrailCard } from './TrailCard';
 const TrailMapView = React.lazy(() => import('./TrailMapView').then(m => ({ default: m.TrailMapView })));
+const TrailTableView = React.lazy(() => import('./TrailTableView'));
 import ShareButtons from './ShareButtons';
 import EmptyFilterState from './EmptyFilterState';
 import SmartPresets from './SmartPresets';
@@ -73,15 +78,18 @@ import { toUserFriendlyFetchError } from '../utils/apiErrors';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import ListSubheader from '@mui/material/ListSubheader';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
-import { useCompetitions } from '../hooks/useCompetitions';
+import { useEvents } from '../hooks/useEvents';
 import { useOfflineTrails } from '../hooks/useOfflineTrails';
 import OfflinePinIcon from '@mui/icons-material/OfflinePin';
 
+type ViewMode = 'list' | 'map' | 'table';
+
 interface TrailListProps {
     tagSlug?: string;
+    onViewModeChange?: (mode: ViewMode) => void;
 }
 
-export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
+export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange }) => {
     const { t } = useTranslation();
     const [searchParams, setSearchParams] = useSearchParams();
     const location = useLocation();
@@ -110,7 +118,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
     const { isEnabled } = useFeatureFlags();
     const locationsPageEnabled = isEnabled('locations_page');
     const tagsEnabled = isEnabled('tags_page');
-    const { competitions: allCompetitions, loading: competitionsLoading } = useCompetitions();
+    const { events: allCompetitions, loading: competitionsLoading } = useEvents();
     const { offlineSlugs, isOffline } = useOfflineTrails();
 
     // Extract preset ID from navigation state (e.g. navigating from tag page with preset)
@@ -121,7 +129,13 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
     }, []);
 
     const [showAdvanced, setShowAdvanced] = React.useState(false);
-    const [viewMode, setViewMode] = React.useState<'list' | 'map'>('list');
+    const [viewMode, setViewMode] = React.useState<ViewMode>(() => {
+        try {
+            const saved = localStorage.getItem('utanvega-view-mode');
+            if (saved === 'list' || saved === 'map' || saved === 'table') return saved;
+        } catch { /* storage unavailable */ }
+        return 'list';
+    });
     const [showHidden, setShowHidden] = React.useState(false);
 
     // Easter egg: "hin upprunalegu" in search triggers The Originals
@@ -168,8 +182,8 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
 
     const upcomingCompetitions = React.useMemo(() =>
         allCompetitions
-            .filter(c => c.status === 'Active' && c.nextDate != null && (c.daysUntil ?? 999) >= 0)
-            .sort((a, b) => (a.nextDate ?? '').localeCompare(b.nextDate ?? ''))
+            .filter(c => !['Cancelled', 'Hidden', 'Unlisted'].includes(c.status) && c.nextEditionDate != null && (c.daysUntil ?? 999) >= 0)
+            .sort((a, b) => (a.nextEditionDate ?? '').localeCompare(b.nextEditionDate ?? ''))
             .slice(0, 10),
         [allCompetitions]
     );
@@ -237,7 +251,11 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
         const randomShortcut = searchParams.get('random');
 
         if (q) setSearchQuery(q);
-        if (view === 'map') setViewMode('map');
+        if (view === 'map' || view === 'table') {
+            setViewMode(view);
+            try { localStorage.setItem('utanvega-view-mode', view); } catch {/* */}
+            onViewModeChange?.(view);
+        }
 
         const updates: Partial<FilterState> = {};
         if (activity) updates.selectedActivityTypes = activity.split(',');
@@ -273,7 +291,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
         if (filters.difficulty !== 'All') params.set('difficulty', filters.difficulty);
         if (filters.trailType !== 'All') params.set('trailType', filters.trailType);
         if (filters.sortBy !== 'distance') params.set('sort', filters.sortBy);
-        if (viewMode === 'map') params.set('view', 'map');
+        if (viewMode !== 'list') params.set('view', viewMode);
 
         setSearchParams(params, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -482,7 +500,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
 
     return (
         <Container 
-            maxWidth="md" 
+            maxWidth={viewMode === 'table' ? 'lg' : 'md'} 
             sx={{ 
                 py: 2, 
                 position: 'relative',
@@ -574,14 +592,17 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
 
             {/* Activity Type pills */}
             {isEnabled('activity_pills') && (
-            <Box display="flex" gap={1} mb={2} flexWrap="wrap">
-                {ALL_ACTIVITY_TYPES.map(type => {
+            <Box display="flex" gap={0.5} mb={2} flexWrap="nowrap" overflow="auto">
+                {ALL_ACTIVITY_TYPES.filter(type => trails.some(t => t.activityType === type)).map(type => {
                     const selected = filters.selectedActivityTypes.includes(type);
                     const icon = {
                         TrailRunning: <LandscapeIcon fontSize="small" />,
                         Running: <DirectionsRunIcon fontSize="small" />,
                         Hiking: <HikingIcon fontSize="small" />,
                         Cycling: <DirectionsBikeIcon fontSize="small" />,
+                        FunRun: <CelebrationIcon fontSize="small" />,
+                        ObstacleCourse: <FitnessCenterIcon fontSize="small" />,
+                        CrossCountryRun: <GrassIcon fontSize="small" />,
                     }[type];
                     const label = t(`difficulty.${type.charAt(0).toLowerCase() + type.slice(1)}`);
                     return (
@@ -598,13 +619,16 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                                 }}
                                 color={selected ? 'primary' : 'default'}
                                 variant={selected ? 'filled' : 'outlined'}
+                                size="small"
                                 sx={{ 
                                     fontWeight: selected ? 'bold' : 'normal',
                                     opacity: selected ? 1 : 0.6,
-                                    '& .MuiChip-label': { display: { xs: 'none', sm: 'block' } },
-                                    '& .MuiChip-icon': { mx: { xs: 0, sm: undefined } },
+                                    fontSize: '0.75rem',
+                                    height: 26,
+                                    '& .MuiChip-label': { display: { xs: 'none', sm: 'block' }, px: 0.75 },
+                                    '& .MuiChip-icon': { mx: { xs: 0, sm: undefined }, fontSize: '1rem' },
                                     px: { xs: 0.5, sm: undefined },
-                                    minWidth: { xs: 36, sm: undefined },
+                                    minWidth: { xs: 32, sm: undefined },
                                     justifyContent: 'center',
                                 }}
                             />
@@ -1069,7 +1093,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                         {discoveryTab === 'races' && !competitionsLoading && upcomingCompetitions.map(comp => (
                             <Card
                                 key={comp.id}
-                                onClick={() => navigate(`/races/${comp.slug}`)}
+                                onClick={() => navigate(`/events/${comp.slug}`)}
                                 sx={{
                                     minWidth: 200,
                                     maxWidth: 260,
@@ -1100,9 +1124,9 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                                                 sx={{ fontSize: '0.65rem', height: 20 }}
                                             />
                                         )}
-                                        {comp.raceCount > 0 && (
+                                        {comp.editionCount > 0 && (
                                             <Chip
-                                                label={t('races.raceCount', { count: comp.raceCount })}
+                                                label={t('races.editionCount', { count: comp.editionCount })}
                                                 size="small"
                                                 variant="outlined"
                                                 sx={{ fontSize: '0.65rem', height: 20 }}
@@ -1120,7 +1144,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                 <Typography variant="h5" fontWeight="bold">
                     {filters.selectedTags.length > 0
                         ? t('home.trailsTagged', { tags: filters.selectedTags.map(s => availableTags.find(tg => tg.slug === s)?.name || s).join(', ') })
-                        : viewMode === 'list' ? t('home.allTrails') : t('home.trailMap')
+                        : viewMode === 'map' ? t('home.trailMap') : t('home.allTrails')
                     }
                     <Typography 
                         component="span" 
@@ -1165,16 +1189,25 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                     <ToggleButtonGroup
                         value={viewMode}
                         exclusive
-                        onChange={(_, value) => value && setViewMode(value)}
+                        onChange={(_, value) => { if (value) { const v = value as ViewMode; setViewMode(v); try { localStorage.setItem('utanvega-view-mode', v); } catch {/* */} onViewModeChange?.(v); } }}
                         size="small"
                         aria-label={t('home.viewMode')}
                     >
-                        <ToggleButton value="list" aria-label={t('home.listView')}>
-                            <ListIcon fontSize="small" />
-                        </ToggleButton>
-                        <ToggleButton value="map" aria-label={t('home.mapView')}>
-                            <MapIcon fontSize="small" />
-                        </ToggleButton>
+                        <Tooltip title={t('home.listView')}>
+                            <ToggleButton value="list" aria-label={t('home.listView')}>
+                                <ListIcon fontSize="small" />
+                            </ToggleButton>
+                        </Tooltip>
+                        <Tooltip title={t('home.mapView')}>
+                            <ToggleButton value="map" aria-label={t('home.mapView')}>
+                                <MapIcon fontSize="small" />
+                            </ToggleButton>
+                        </Tooltip>
+                        <Tooltip title={t('home.tableView')}>
+                            <ToggleButton value="table" aria-label={t('home.tableView')}>
+                                <TableChartIcon fontSize="small" />
+                            </ToggleButton>
+                        </Tooltip>
                     </ToggleButtonGroup>
                     {isEnabled('share_trail') && <ShareButtons title={t('home.allTrails')} />}
                     {isEnabled('random_trail') && (
@@ -1218,6 +1251,14 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug }) => {
                         </Collapse>
                     ))
                 )
+            ) : viewMode === 'table' ? (
+                <React.Suspense fallback={
+                    <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+                        <CircularProgress />
+                    </Box>
+                }>
+                    <TrailTableView trails={filteredTrails} favorites={favorites} onToggleFavorite={toggleFavorite} userLocation={userLocation} />
+                </React.Suspense>
             ) : (
                 <React.Suspense fallback={
                     <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">

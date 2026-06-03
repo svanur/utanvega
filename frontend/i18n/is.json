@@ -10,6 +10,9 @@
         "save": "Vista",
         "clear": "Hreinsa",
         "tip": "Ábending",
+        "viewDetails": "Skoða nánar",
+        "expand": "Opna",
+        "collapse": "Loka",
         "dataLoadUnavailable": "Ekki tókst að sækja gögn núna. Athugaðu nettenginguna og reyndu aftur."
     },
     "auth": {
@@ -64,13 +67,14 @@
     },
     "loading": "Hleð leiðum...",
     "nav": {
+        "trails": "Leiðir",
         "locations": "Staðsetningar",
         "about": "Um",
-        "races": "Keppni",
+        "races": "Viðburðir",
         "activities": "Athöfn",
         "disclaimer": "Fyrirvari",
         "privacy": "Persónuvernd",
-        "darkMode": "Skipta yfir í dimmt þema",
+        "darkMode": "Skipta yfir í dökkt þema",
         "lightMode": "Skipta yfir í ljóst þema",
         "switchToEnglish": "Switch to English",
         "switchToIcelandic": "Skipta yfir á íslensku"
@@ -79,7 +83,7 @@
         "placeholder": "Leita að leiðum, stöðum og keppnum...",
         "trailsSection": "Leiðir",
         "locationsSection": "Staðir",
-        "racesSection": "Keppni",
+        "racesSection": "Viðburðir",
         "trails": "leiðir",
         "noResults": "Ekkert fannst",
         "hint": "Byrjaðu að skrifa til að að fá leitarniðurstöður…",
@@ -104,9 +108,11 @@
         "locationDenied": "Staðsetning lokuð — leyfa í stillingum vafrans",
         "viewMode": "Birting",
         "listView": "Listayfirlit",
-        "mapView": "Kortayfirlit"
+        "mapView": "Kortayfirlit",
+        "tableView": "Töfluyfirlit"
     },
     "trail": {
+        "name": "Heiti",
         "backToTrails": "Til baka í leiðir",
         "notFound": "Leið fannst ekki",
         "tick": "Merkja sem markverða",
@@ -117,6 +123,10 @@
         "loss": "Lækkun",
         "type": "Tegund",
         "estTime": "Áætlaður tími",
+        "difficulty": "Erfiðleiki",
+        "activity": "Tegund æfingar",
+        "location": "Staðsetning",
+        "kmAway": "km í burtu",
         "routeMap": "Leiðarkort",
         "fullscreenMap": "Heilskjár kort",
         "closeFullscreen": "Loka heilskjá",
@@ -132,6 +142,7 @@
         "wereYouLookingFor": "Varstu kannski að leita að einni af þessum?",
         "partOfRace": "Hluti af keppni: {{competition}}",
         "partOfRaceDistances": "Hluti af keppni: {{competition}} ({{count}} vegalengdir)",
+        "video360": "360° Myndband",
         "role": {
             "Start": "Upphaf",
             "End": "Endir",
@@ -241,6 +252,9 @@
         "running": "Hlaup",
         "hiking": "Ganga",
         "cycling": "Hjólreiðar",
+        "funRun": "Skemmtiskokk",
+        "obstacleCourse": "Hindrunarhlaup",
+        "crossCountryRun": "Víðavangshlaup",
         "formula": "**Álagsvegalengd** = vegalengd (km) + hækkun (m) ÷ 100. Til dæmis, 15 km leið með 800 m hækkun = 23 km álag."
     },
     "paceModel": {
@@ -341,7 +355,7 @@
         "popular": "Vinsælast"
     },
     "header": {
-        "tagline": "Utanvega - Vefur til að finna skemmtilegar leiðir og deila með vinum.",
+        "tagline": "Hlaupadagskra.is - Vefur til að finna keppnishlaup, skemmtilegar leiðir og deila með vinum.",
         "close": "Loka",
         "dontShowAgain": "Ekki sýna aftur"
     },
@@ -406,14 +420,14 @@
     },
     "privacy": {
         "title": "Persónuverndarstefna",
-        "intro": "Utanvega leggur áherslu á að virða friðhelgi einkalífs þíns. Þessi stefna útskýrir hvaða gögn við söfnum, hvernig við notum þau og réttindi þín. Í stuttu máli: við söfnum mjög litlu og deilum engu.",
+        "intro": "Hlaupadagskra.is leggur áherslu á að virða friðhelgi einkalífs þíns. Þessi stefna útskýrir hvaða gögn við söfnum, hvernig við notum þau og réttindi þín. Í stuttu máli: við söfnum mjög litlu og deilum engu.",
         "noAccounts": {
             "title": "Enginn notendaaðgangur krafist",
-            "body": "Almenna Utanvega vefsíðan krefst þess ekki að þú stofnir aðgang eða skráir þig inn. Við söfnum ekki nafni þínu, netfangi eða neinum persónulegum upplýsingum til að nota síðuna."
+            "body": "Hlaupadagskra.is vefsíðan krefst þess ekki að þú stofnir aðgang eða skráir þig inn. Við söfnum ekki nöfnum, netföngum eða neinum persónulegum upplýsingum til að nota á vefnum."
         },
         "viewTracking": {
             "title": "Mæling á leiðaskoðunum",
-            "body": "Þegar þú skoðar leið skráum við heimsóknina til að sýna vinsælar og vaxandi leiðir. Við vistum einstefnuhátt (hash) af IP-tölu þinni — ekki IP-töluna sjálfa — til að koma í veg fyrir tvítalningu. Ekki er hægt að snúa þessu háttnúmeri aftur til að auðkenna þig. Gögn eru eingöngu notuð til samanlagðrar tölfræði."
+            "body": "Þegar þú skoðar leið skráum við heimsóknina til að sýna vinsælar og vaxandi leiðir. Við vistum **hash** af IP-tölu þinni — ekki IP-töluna sjálfa — til að koma í veg fyrir tvítalningu. Ekki er hægt að snúa þessu númeri aftur til að auðkenna þig. Gögn eru eingöngu notuð til samanlagðrar tölfræði."
         },
         "localStorage": {
             "title": "Gögn vistuð á tækinu þínu",
@@ -430,7 +444,7 @@
         "title": "Fyrirvari",
         "useAtOwnRisk": {
             "title": "Á eigin ábyrgð",
-            "body": "Allar upplýsingar á Utanvega eru eingöngu til upplýsinga. Þú berð sjálf/ur ábyrgð á eigin öryggi á öllum leiðum. Alltaf skaltu meta aðstæður, líkamlegt ástand og búnað áður en þú leggur af stað. Utanvega ber enga ábyrgð á meiðslum, slysum, skemmdum eða tjóni sem kann að hljótast af notkun upplýsinga á þessari síðu."
+            "body": "Allar upplýsingar á Hlaupadagskra.is eru eingöngu til upplýsinga. Þú berð sjálf/ur ábyrgð á eigin öryggi á öllum leiðum. Alltaf skaltu meta aðstæður, líkamlegt ástand og búnað áður en þú leggur af stað. Hlaupadagskra.is ber enga ábyrgð á meiðslum, slysum, skemmdum eða tjóni sem kann að hljótast af notkun upplýsinga á þessari síðu."
         },
         "weather": {
             "title": "Veður og aðstæður",
@@ -448,19 +462,19 @@
         "lastUpdated": "Síðast uppfært: {{date}}"
     },
     "about": {
-        "title": "Um Utanvega",
-        "description": "Utanvega er vefur til að finna skemmtilegar leiðir fyrir hlaupara, göngufólk og hjólreiðamenn á Íslandi. Finndu leiðir nálægt þér, skoðaðu kort og hæðarsnið og deildu eftirlætisleiðum með vinum.",
-        "authorTitle": "Um mig",
-        "authorDescription": "Utanvega er gæluverkefni sem byrjaði með excel skjali þar sem ég skráði niður áhugaverðar utanvegaleiðir. Auk þess að vera utanvegahlaupari/þjálfari, þá er hugbúnaðargerð 'hin vinnan' mín. Á utanvega mætast því vinnan og áhugamálið. Vonandi njótið þið vel og lengi.",
-        "authorSignature": "Svanur Karlsson",
+        "title": "Um Hlaupadagskra.is",
+        "description": "Á hlaupadagskra.is er nú að finna heildarlista allra staðfestra og óstaðfestra hlaupa á Íslandi. Grunn hugmyndin er að taka saman í einföldum lista allar lykilupplýsingar úr öllum viðburðum sem kalla má hlaupaviðburði hvort sem þeir eru löggild keppnishlaup á götu, ITRA utanvegahlaup eða bara skipulögð styrtarhlaup fyrir góðan málstað.\n\nHlaupin eru flokkuð niður, vísað er á frekari upplýsingasíður, skráningarsíður og samfélagsmiðla eftir því sem  við á. Þessi fyrsta útgáfa síðunnar er ekki frábær en þó að minnsta kosti með tæmandi með upplýsingar um alla hlaupatengda viðburði árið sem eru ógnar margir.\n\nMarkmiðið okkar með hlaupadagskra.is er uppfylla ósk hlaupara að sjá öll hlaup yfir árið á einum stað og getað leitað og filterað á aðgengilegan máta. Hlaup eru merkt “staðfest, skráning hafin” og slíkt ef viðburðarhaldarar hafa tilkynnt slíkt en “Óstaðfest” eða “ þangað til það liggur fyrir rétt tímasetning eða hlaup verður ekki haldið.",
+        "authorTitle": "Um okkur",
+        "authorDescription": "Vefnum er haldið uppi af þremur hlaupurum af hlaupaástríðu án beinnar tengingar við tiltekin fyrirtæki eða viðburði og því er stuðningur hlaupasamfélagsins mikilvægur.",
+        "authorSignature": "Óskar Þór, Svanur Þór og Tómas G.",
         "techTitle": "Tæknilausnir",
-        "techDescription": "Utanvega er byggt á React viðmóti, .NET 9 bakenda með PostGIS fyrir staðsetningarleit og PostgreSQL gagnagrunni. Kortin eru búin til með Leaflet og OpenStreetMap.",
+        "techDescription": "Hlaupadagskra.is er byggt á React viðmóti, .NET 9 bakenda með PostGIS fyrir staðsetningarleit og PostgreSQL gagnagrunni. Kortin eru búin til með Leaflet og OpenStreetMap.",
         "aiDescription": "Vefurinn er þróaður með aðstoð Claude, gervigreindar- og kóðunarfulltrúa frá Anthropic. Claude hjálpar til við kóðun, prófanir, endurbætur og gæðaeftirlit.",
         "changelogTitle": "Breytingasaga",
         "changelog": {
             "v2_5": {
-                "title": "Keppni og mót",
-                "description": "Keppni og mót með dagsetningakerfi, keppnisdagatal, tengingar milli leiða og keppna, tímaspá af keppnissíðum, veður á keppnisdegi, rennistikur í verkfærum o deilanleg slóð á hraðatöflu."
+                "title": "Viðburðir",
+                "description": "Viðburðir, dagatal, tengingar milli leiða og keppna, tímaspá af keppnissíðum, veður á keppnisdegi, rennistikur í verkfærum o deilanleg slóð á hraðatöflu."
             },
             "v2_4": {
                 "title": "Snjallar forstillingar og deiling",
@@ -519,8 +533,8 @@
                 "description": "Staðsetningarsíður, röðun eftir fjarlægð, eftirlæti og faldar leiðir, og stuðningur við dimmt þema."
             },
             "v1_0": {
-                "title": "Fyrsta útgáfa",
-                "description": "Leiðalisti með leit, upplýsingasíður með GPX gögnum, tvítyngt viðmót (íslenska/enska) og snjalltækjafyrst hönnun."
+                "title": "Febrúar, 2025",
+                "description": "Hlaupadagskra.is fer í loftið með lista yfir öll hlaup á Íslandi."
             }
         }
     },
@@ -545,7 +559,7 @@
         "nearby": "Nálægt mér"
     },
     "install": {
-        "title": "Settu upp Utanvega",
+        "title": "Settu upp Hlaupadagskra.is",
         "description": "Bættu við á heimaskjáinn fyrir skjótan aðgang.",
         "button": "Setja upp",
         "iosHint": "Ýttu á Deila, svo „Setja á heimaskjá“",
@@ -805,23 +819,33 @@
         }
     },
     "races": {
-        "title": "Keppni og mót",
-        "subtitle": "Komandi fjallahlaup og keppni á Íslandi. Athugið að staðfesta endanlegar dagsetningar á vefsíðu hlaupahaldara.",
-        "searchPlaceholder": "Leita að keppni...",
-        "noResults": "Engin keppni fannst",
-        "empty": "Engin keppni enn",
+        "title": "Viðburðir - Öll hlaup á einum stað",
+        "subtitle": "Allar upplýsingar eru birtar með fyrirvara um villur og breytingar. Leitið alltaf eftir nýjustu upplýsingum hjá hlaupahaldara.",
+        "searchPlaceholder": "Leita að viðburði...",
+        "noResults": "Enginn viðburður fannst",
+        "empty": "Enginn viðburður enn",
         "noDate": "Dagsetning óákveðin",
         "nextRace": "Næsta keppni:",
+        "lastRace": "Síðasta keppni:",
         "today": "🔥 Í dag!",
         "raceDayBadge": "🏁 Það er keppnisdagur!",
         "tomorrow": "Á morgun!",
         "passed": "Liðið",
+        "yesterday": "Í gær",
+        "daysAgo_one": "Fyrir {{count}} degi síðan",
+        "daysAgo_other": "Fyrir {{count}} dögum síðan",
         "daysUntil": "Eftir {{count}} daga",
         "raceCount_one": "{{count}} hlaupaleið",
         "raceCount_other": "{{count}} hlaupaleiðir",
         "raceCount": "{{count}} hlaupaleiðir",
+        "editionCount_one": "{{count}} útgáfa",
+        "editionCount_other": "{{count}} útgáfur",
+        "editionCount": "{{count}} útgáfur",
         "register": "Skráning",
+        "results": "Úrslit",
         "organizerSite": "Vefur skipuleggjanda",
+        "addToCalendar": "Setja í dagatal",
+        "downloadIcs": "Hlaða niður .ics (Apple/Annað)",
         "racesHeading": "Keppnishlaup",
         "scheduleHeading": "Dagsetningar",
         "noRaces": "Engin hlaup skráð enn fyrir þessa keppni.",
@@ -882,25 +906,99 @@
         "raceDayShareText": "{{raceName}} er í dag og ég er að keppa 💥",
         "raceDayShareRaceCta": "Ég er að keppa 💥",
         "raceDayShareRaceText": "Í dag er ég að keppa í {{competitionName}} - {{raceName}} 💥",
+        "shareCard": {
+            "button": "Ég er að keppa! 💥",
+            "racingToday": "Í dag er keppnisdagur!",
+            "racingSoon": "Ég ætla að taka þátt! 💥",
+            "countdown_one": "{{count}} dagur eftir!",
+            "countdown_other": "{{count}} dagar í hlaup!",
+            "shareText": "Ég er að keppa í {{eventName}}! 💥",
+            "share": "Deila",
+            "download": "Vista mynd",
+            "copiedToClipboard": "Mynd afrituð!",
+            "downloaded": "Mynd vistuð!"
+        },
+        "finishCard": {
+            "button": "Ég kláraði! 🏁",
+            "title": "Deildu niðurstöðunni!",
+            "finished": "Ég kláraði!",
+            "timeLabel": "Lokatími:",
+            "shareText": "Ég kláraði {{raceName}} á {{time}}! 🏁",
+            "shareTextNoTime": "Ég kláraði {{raceName}}! 🏁",
+            "share": "Deila",
+            "download": "Vista mynd",
+            "copiedToClipboard": "Mynd afrituð!",
+            "downloaded": "Mynd vistuð!"
+        },
+        "justRaced": "🏁 Nýlokið!",
+        "justRacedSection": "Nýlega lokið",
+        "inProgress": "🏃 Í gangi",
+        "raceFinished": "🏁 Lokið",
+        "progressBar": {
+            "waiting": "Bíður eftir byrjun...",
+            "cutoffReached": "Tímatakmörk liðin",
+            "remaining": "{{time}} eftir"
+        },
         "checklistSavedLocally": "Vistað aðeins í þessu tæki.",
         "predict": "Spá",
-        "noUpcoming": "Engin keppni framundan"
+        "noUpcoming": "Engin keppni framundan",
+        "history": {
+            "title": "Saga viðburðar",
+            "backToEvent": "Til baka",
+            "editionNotFound": "Útgáfa fannst ekki",
+            "pastEdition": "Liðin útgáfa",
+            "completed": "Lokið"
+        },
+        "table": {
+            "name": "Heiti",
+            "nextRace": "Næsta keppni",
+            "date": "Dagsetning",
+            "type": "Tegund",
+            "organizer": "Skipuleggjandi",
+            "editions": "Útgáfur",
+            "distances": "Vegalengdir",
+            "register": "Skráning",
+            "links": "Tenglar",
+            "races": "Hlaupagreinar",
+            "noRaces": "Engar greinar skráðar",
+            "soldOut": "Uppselt",
+            "almostSoldOut": "Næstum fullt",
+            "cutoff": "Tímamörk"
+        },
+        "registrationStatus": {
+            "Open": "Opin",
+            "Closed": "Lokuð",
+            "NotStarted": ""
+        },
+        "ticketStatus": {
+            "Available": "Laust",
+            "SoldOut": "Uppselt",
+            "Closed": "Lokað"
+        }
     },
     "calendar": {
-        "title": "Keppnisdagatal",
+        "title": "Viðburðadagatal",
         "today": "Í dag",
         "noEvents": "Engir viðburðir í þessum mánuði",
         "eventCount_one": "{{count}} viðburður í þessum mánuði",
         "eventCount_other": "{{count}} viðburðir í þessum mánuði",
-        "eventCount": "{{count}} viðburðir í þessum mánuði"
+        "eventCount": "{{count}} viðburðir í þessum mánuði",
+        "subscribe": "Gerast áskrifandi",
+        "subscribeTooltip": "Gerast áskrifandi að dagatalsfæðu",
+        "subscribeSuccess": "Slóð afrituð! Límdu hana í dagatalið þitt."
     },
     "welcome": {
-        "tagline": "Finndu leiðir til að hlaupa, ganga eða hjóla á Íslandi",
+        "tagline": "Öll hlaup á einum stað",
         "discoverMore": "Sjá meira",
         "startExploring": "Já! Kíkjum á þetta",
         "whatCanYouDo": "Hvað er hægt að gera hér?",
         "readyToRun": "Tilbúin(n) að leggja af stað?",
         "readyToRunDesc": "Vertu hluti af íslenska útivistarsamfélaginu og finndu næstu ævintýraleið.",
+        "races": {
+            "title": "🏆 Viðburðir",
+            "desc": "Hér finnur þú alla viðburði ársins, niðurtalningu að 'þínu' hlaupi, viðburðadagatal og veðurspá á keppnisdegi. Spáðu fyrir um tímann þinn, áður en þú tekur þig til.",
+            "cta": "Sjá viðburði"
+        },
         "trails": {
             "title": "🏔️ Uppgötvaðu leiðir",
             "desc": "Skoðaðu {{count}} valdar leiðir víðsvegar um Ísland. Síaðu eftir vegalengd, hæðarbreytingu og tegund — og finndu uppáhalds leiðina þína.",
@@ -911,14 +1009,9 @@
             "desc": "Sjáðu leiðir flokkaðar eftir svæðum. Frá borgarhlaupaleiðum í Reykjavík til afskekktra hálendisleiða — kannaðu Ísland á kortinu.",
             "cta": "Sjá staðsetningar"
         },
-        "races": {
-            "title": "🏆 Keppnishlaup",
-            "desc": "Fylgstu með komandi hlaupum, niðurtalningu, dagatali og veðurspá á keppnisdegi. Spáðu fyrir um tímann þinn, áður en þú tekur þig til.",
-            "cta": "Sjá keppnisleiðir"
-        },
         "tools": {
             "title": "🛠️ Tól hlauparans",
-            "desc": "Hraðareiknir, æfingahraði (VDOT), keppnisspá og fleira. Allt sem þú þarft til að skipuleggja næstu ævintýri.",
+            "desc": "Hraðareiknir, æfingahraði (VDOT), keppnisspá og fleira. Allt sem þú þarft til að skipuleggja næstu æfingar eða ævintýri.",
             "cta": "Opna hlaupatólin"
         },
         "share": {
@@ -931,7 +1024,7 @@
             "km": "Samtals km",
             "elevation": "Hæðaraukning (m)",
             "locations": "Staðsetningar",
-            "races": "Komandi keppni"
+            "races": "Komandi viðburðir"
         }
     },
     "activity": {

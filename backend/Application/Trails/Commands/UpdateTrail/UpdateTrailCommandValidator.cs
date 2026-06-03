@@ -48,6 +48,12 @@ public class UpdateTrailCommandValidator : AbstractValidator<UpdateTrailCommand>
             .MaximumLength(5000)
             .When(x => x.Description is not null);
 
+        RuleFor(x => x.YoutubeUrl)
+            .MaximumLength(500)
+            .Must(BeAValidYoutubeUrl)
+            .WithMessage("YoutubeUrl must be a valid YouTube URL.")
+            .When(x => !string.IsNullOrEmpty(x.YoutubeUrl));
+
         RuleForEach(x => x.Locations)
             .ChildRules(loc =>
             {
@@ -59,5 +65,16 @@ public class UpdateTrailCommandValidator : AbstractValidator<UpdateTrailCommand>
                 loc.RuleFor(l => l.Order).GreaterThanOrEqualTo(0);
             })
             .When(x => x.Locations is not null);
+    }
+
+    private static readonly string[] AllowedYoutubeHosts =
+        ["www.youtube.com", "youtube.com", "youtu.be", "www.youtube-nocookie.com"];
+
+    private static bool BeAValidYoutubeUrl(string? url)
+    {
+        if (string.IsNullOrEmpty(url)) return true;
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return false;
+        if (uri.Scheme != "https" && uri.Scheme != "http") return false;
+        return AllowedYoutubeHosts.Contains(uri.Host, StringComparer.OrdinalIgnoreCase);
     }
 }

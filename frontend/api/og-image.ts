@@ -27,8 +27,8 @@ function h(
 }
 
 const ACTIVITY_EMOJI: Record<string, string> = {
-  TrailRunning: '🏃',
-  Running: '🏃‍♂️',
+  TrailRunning: '🏃‍♂️',
+  Running: '🏃',
   Hiking: '🥾',
   Cycling: '🚴',
 };
@@ -115,7 +115,7 @@ export default async function handler(request: Request) {
             fontWeight: 700,
             color: '#90CAF9',
             letterSpacing: '-0.5px',
-          }, '⛰️ UTANVEGA'),
+          }, '🏃 HLAUPADAGSKRA.IS'),
         ),
         h('div', {
           display: 'flex',
@@ -210,8 +210,8 @@ function defaultImage() {
       fontFamily: 'sans-serif',
       color: 'white',
     },
-    h('div', { display: 'flex', fontSize: '72px', fontWeight: 800, marginBottom: '16px' }, '⛰️ Utanvega'),
-    h('div', { display: 'flex', fontSize: '28px', color: '#94a3b8' }, 'Hlaupaleiðir á Íslandi'),
+    h('div', { display: 'flex', fontSize: '72px', fontWeight: 800, marginBottom: '16px' }, '🏃 Hlaupadagskra.is'),
+    h('div', { display: 'flex', fontSize: '28px', color: '#94a3b8' }, 'Öll hlaup á einum stað'),
   );
 
   return new ImageResponse(image as unknown as React.ReactElement, {

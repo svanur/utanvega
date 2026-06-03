@@ -225,6 +225,7 @@ export const TrailQuickView: React.FC<TrailQuickViewProps> = ({ trail, open, onC
                         </Box>
                         <Typography variant="caption" color="text.secondary">{t('quickView.loss')}</Typography>
                     </Box>
+                    {estTime && (
                     <Box sx={{ textAlign: 'center' }}>
                         <Box display="flex" alignItems="center" justifyContent="center" gap={0.5}>
                             <AccessTimeIcon sx={{ fontSize: 16 }} color="primary" />
@@ -232,6 +233,7 @@ export const TrailQuickView: React.FC<TrailQuickViewProps> = ({ trail, open, onC
                         </Box>
                         <Typography variant="caption" color="text.secondary">{t('quickView.estTime')}</Typography>
                     </Box>
+                    )}
                 </Box>
 
                 {/* Chips */}

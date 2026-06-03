@@ -35,15 +35,20 @@ using Utanvega.Backend.Application.Trails.Queries.GetTrendingTrails;
 using Utanvega.Backend.Application.Trails.Commands.RecordTrailView;
 using Utanvega.Backend.Application.Weather.Queries;
 using Utanvega.Backend.Core.Services;
-using Utanvega.Backend.Application.Competitions.Queries.GetCompetitions;
-using Utanvega.Backend.Application.Competitions.Queries.GetCompetition;
-using Utanvega.Backend.Application.Competitions.Queries.GetCompetitionCalendar;
-using Utanvega.Backend.Application.Competitions.Commands.CreateCompetition;
-using Utanvega.Backend.Application.Competitions.Commands.UpdateCompetition;
-using Utanvega.Backend.Application.Competitions.Commands.DeleteCompetition;
-using Utanvega.Backend.Application.Competitions.Commands.CreateRace;
-using Utanvega.Backend.Application.Competitions.Commands.UpdateRace;
-using Utanvega.Backend.Application.Competitions.Commands.DeleteRace;
+using Utanvega.Backend.Application.Events.Queries.GetEvents;
+using Utanvega.Backend.Application.Events.Queries.GetEvent;
+using Utanvega.Backend.Application.Events.Queries.GetEventCalendar;
+using Utanvega.Backend.Application.Events.Queries.GetAllEventDetails;
+using Utanvega.Backend.Application.Events.Commands.CreateEvent;
+using Utanvega.Backend.Application.Events.Commands.UpdateEvent;
+using Utanvega.Backend.Application.Events.Commands.DeleteEvent;
+using Utanvega.Backend.Application.Events.Commands.CreateEdition;
+using Utanvega.Backend.Application.Events.Commands.UpdateEdition;
+using Utanvega.Backend.Application.Events.Commands.DeleteEdition;
+using Utanvega.Backend.Application.Events.Commands.CreateRace;
+using Utanvega.Backend.Application.Events.Commands.UpdateRace;
+using Utanvega.Backend.Application.Events.Commands.DeleteRace;
+using Utanvega.Backend.Application.Events.Commands.GenerateEditionsForSeason;
 using Utanvega.Backend.Application.Activities.Commands.CreateUserTrailActivity;
 using Utanvega.Backend.Application.Activities.Commands.UpdateUserTrailActivity;
 using Utanvega.Backend.Application.Activities.Commands.DeleteUserTrailActivity;
@@ -330,7 +335,7 @@ app.UseSerilogRequestLogging(opts =>
 });
 
 // Security headers
-app.Use(async (context, next) =>
+app.Use(async (HttpContext context, Func<Task> next) =>
 {
     context.Response.Headers["X-Content-Type-Options"] = "nosniff";
     context.Response.Headers["X-Frame-Options"] = "DENY";
@@ -345,7 +350,7 @@ if (!app.Environment.IsDevelopment())
 }
 
 // Return validation errors as structured 400 responses; sanitize unhandled exceptions
-app.Use(async (context, next) =>
+app.Use(async (HttpContext context, RequestDelegate next) =>
 {
     try
     {
@@ -629,6 +634,7 @@ app.MapGet("/api/v1/admin/trails/{idOrSlug}", [Authorize] async (string idOrSlug
         trail.Length,
         trail.ElevationGain,
         trail.ElevationLoss,
+        trail.YoutubeUrl,
         Locations = trail.TrailLocations
             .OrderBy(tl => tl.Order)
             .Select(tl => new { tl.LocationId, Role = tl.Role.ToString(), tl.Order })
@@ -1231,70 +1237,179 @@ app.MapDelete("/api/v1/admin/features/{id:guid}", [Authorize] async (Guid id, Ut
 })
 .WithName("DeleteFeatureFlag");
 
-// ============ Competition Endpoints ============
+// ============ Event Endpoints ============
 
-app.MapGet("/api/v1/competitions", async (IMediator mediator, bool includeHidden = false) =>
+// Public
+app.MapGet("/api/v1/events", async (IMediator mediator, bool includeHidden = false) =>
 {
-    var competitions = await mediator.Send(new GetCompetitionsQuery(includeHidden));
-    return Results.Ok(competitions);
+    var events = await mediator.Send(new GetEventsQuery(includeHidden));
+    return Results.Ok(events);
 })
-.WithName("GetPublicCompetitions");
+.WithName("GetPublicEvents");
 
-app.MapGet("/api/v1/competitions/calendar", async (IMediator mediator, DateOnly? from, DateOnly? to) =>
+// Legacy stubs — keep deployed frontend/admin from crashing until redeployed
+app.MapGet("/api/v1/competitions", () => Results.Ok(Array.Empty<object>())).WithName("LegacyCompetitions");
+app.MapGet("/api/v1/competitions/calendar", () => Results.Ok(Array.Empty<object>())).WithName("LegacyCompetitionsCalendar");
+app.MapGet("/api/v1/competitions/{slug}", (string slug) => Results.NotFound()).WithName("LegacyCompetitionBySlug");
+
+app.MapGet("/api/v1/events/calendar", async (IMediator mediator, DateOnly? from, DateOnly? to) =>
 {
     var today = DateOnly.FromDateTime(DateTime.UtcNow);
     var rangeFrom = from ?? new DateOnly(today.Year, today.Month, 1);
     var rangeTo = to ?? rangeFrom.AddMonths(1).AddDays(-1);
-    var calendar = await mediator.Send(new GetCompetitionCalendarQuery(rangeFrom, rangeTo));
+    var calendar = await mediator.Send(new GetEventCalendarQuery(rangeFrom, rangeTo));
     return Results.Ok(calendar);
 })
-.WithName("GetCompetitionCalendar");
+.WithName("GetEventCalendar");
 
-app.MapGet("/api/v1/competitions/{slug}", async (string slug, IMediator mediator) =>
+app.MapGet("/api/v1/events/calendar.ics", async (IMediator mediator, IConfiguration configuration, UtanvegaDbContext context, IMemoryCache cache) =>
 {
-    var competition = await mediator.Send(new GetCompetitionQuery(slug));
-    return competition != null ? Results.Ok(competition) : Results.NotFound();
-})
-.WithName("GetCompetitionBySlug");
+    var flags = await cache.GetOrCreateAsync("feature_flags", async entry =>
+    {
+        entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
+        return await context.FeatureFlags
+            .AsNoTracking()
+            .ToDictionaryAsync(f => f.Name, f => f.Enabled);
+    });
+    if (flags == null || !flags.TryGetValue("calendar_integration", out var enabled) || !enabled)
+        return Results.NotFound();
 
-// Admin Competition CRUD
-app.MapGet("/api/v1/admin/competitions", [Authorize] async (IMediator mediator) =>
+    var icsContent = await cache.GetOrCreateAsync("calendar_ics_content", async entry =>
+    {
+        entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10);
+
+        var siteUrl = configuration["SiteUrl"] ?? "https://utanvega.vercel.app";
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var rangeFrom = today.AddMonths(-3);
+        var rangeTo = today.AddMonths(12);
+        var days = await mediator.Send(new GetEventCalendarQuery(rangeFrom, rangeTo));
+
+        var ical = new Ical.Net.Calendar();
+        ical.ProductId = "-//Hlaupadagskra.is//Events//IS";
+
+        foreach (var day in days)
+        {
+            foreach (var ev in day.Events)
+            {
+                var vEvent = new Ical.Net.CalendarComponents.CalendarEvent
+                {
+                    Uid = $"{ev.Slug}-{day.Date:yyyy-MM-dd}@hlaupadagskra.is",
+                    DtStart = new Ical.Net.DataTypes.CalDateTime(day.Date.Year, day.Date.Month, day.Date.Day),
+                    DtEnd = new Ical.Net.DataTypes.CalDateTime(day.Date.AddDays(1).Year, day.Date.AddDays(1).Month, day.Date.AddDays(1).Day),
+                    IsAllDay = true,
+                    Summary = ev.EditionTitle != null ? $"{ev.Name} – {ev.EditionTitle}" : ev.Name,
+                    Location = ev.LocationName ?? "",
+                    Url = new Uri($"{siteUrl}/events/{ev.Slug}"),
+                };
+                vEvent.Description = ev.RaceCount > 0
+                    ? $"{ev.RaceCount} race(s). More info: {siteUrl}/events/{ev.Slug}\n\nhttps://www.hlaupadagskra.is – Öll hlaup á einum stað"
+                    : $"More info: {siteUrl}/events/{ev.Slug}\n\nhttps://www.hlaupadagskra.is – Öll hlaup á einum stað";
+                ical.Events.Add(vEvent);
+            }
+        }
+
+        var serializer = new Ical.Net.Serialization.CalendarSerializer();
+        return serializer.SerializeToString(ical);
+    });
+
+    return Results.Text(icsContent!, "text/calendar; charset=utf-8");
+})
+.WithName("GetEventCalendarIcs");
+
+app.MapGet("/api/v1/events/{slug}", async (string slug, IMediator mediator) =>
 {
-    var competitions = await mediator.Send(new GetCompetitionsQuery(IncludeHidden: true));
-    return Results.Ok(competitions);
+    var ev = await mediator.Send(new GetEventQuery(slug));
+    return ev != null ? Results.Ok(ev) : Results.NotFound();
 })
-.WithName("GetAdminCompetitions");
+.WithName("GetEventBySlug");
 
-app.MapPost("/api/v1/admin/competitions", [Authorize] async (CreateCompetitionCommand command, IMediator mediator) =>
+// Admin Event CRUD
+app.MapGet("/api/v1/admin/events", [Authorize] async (IMediator mediator) =>
+{
+    var events = await mediator.Send(new GetEventsQuery(IncludeHidden: true));
+    return Results.Ok(events);
+})
+.WithName("GetAdminEvents")
+.RequireAuthorization();
+
+app.MapGet("/api/v1/admin/events/details", [Authorize] async (IMediator mediator) =>
+{
+    var events = await mediator.Send(new GetAllEventDetailsQuery());
+    return Results.Ok(events);
+})
+.WithName("GetAdminEventDetails")
+.RequireAuthorization();
+
+app.MapPost("/api/v1/admin/events", [Authorize] async (CreateEventCommand command, IMediator mediator) =>
 {
     var id = await mediator.Send(command);
-    return Results.Created($"/api/v1/competitions/{id}", new { id });
+    return Results.Created($"/api/v1/events/{id}", new { id });
 })
-.WithName("CreateCompetition");
+.WithName("CreateEvent")
+.RequireAuthorization();
 
-app.MapPut("/api/v1/admin/competitions/{id:guid}", [Authorize] async (Guid id, UpdateCompetitionCommand command, IMediator mediator) =>
+app.MapPut("/api/v1/admin/events/{id:guid}", [Authorize] async (Guid id, UpdateEventCommand command, IMediator mediator) =>
 {
     if (id != command.Id) return Results.BadRequest("ID mismatch");
     var success = await mediator.Send(command);
     return success ? Results.NoContent() : Results.NotFound();
 })
-.WithName("UpdateCompetition");
+.WithName("UpdateEvent")
+.RequireAuthorization();
 
-app.MapDelete("/api/v1/admin/competitions/{id:guid}", [Authorize] async (Guid id, IMediator mediator) =>
+app.MapDelete("/api/v1/admin/events/{id:guid}", [Authorize] async (Guid id, IMediator mediator) =>
 {
-    var success = await mediator.Send(new DeleteCompetitionCommand(id));
+    var success = await mediator.Send(new DeleteEventCommand(id));
     return success ? Results.NoContent() : Results.NotFound();
 })
-.WithName("DeleteCompetition");
+.WithName("DeleteEvent")
+.RequireAuthorization();
+
+// Admin Edition CRUD
+app.MapPost("/api/v1/admin/events/{eventId:guid}/editions", [Authorize] async (Guid eventId, CreateEditionCommand command, IMediator mediator) =>
+{
+    if (eventId != command.EventId) return Results.BadRequest("EventId mismatch");
+    var id = await mediator.Send(command);
+    return Results.Created($"/api/v1/admin/events/{eventId}/editions/{id}", new { id });
+})
+.WithName("CreateEdition")
+.RequireAuthorization();
+
+app.MapPut("/api/v1/admin/editions/{id:guid}", [Authorize] async (Guid id, UpdateEditionCommand command, IMediator mediator) =>
+{
+    if (id != command.Id) return Results.BadRequest("ID mismatch");
+    var success = await mediator.Send(command);
+    return success ? Results.NoContent() : Results.NotFound();
+})
+.WithName("UpdateEdition")
+.RequireAuthorization();
+
+app.MapDelete("/api/v1/admin/editions/{id:guid}", [Authorize] async (Guid id, IMediator mediator) =>
+{
+    var success = await mediator.Send(new DeleteEditionCommand(id));
+    return success ? Results.NoContent() : Results.NotFound();
+})
+.WithName("DeleteEdition")
+.RequireAuthorization();
+
+app.MapPost("/api/v1/admin/events/{eventId:guid}/editions/generate", [Authorize] async (Guid eventId, GenerateEditionsForSeasonCommand command, IMediator mediator) =>
+{
+    if (eventId != command.EventId) return Results.BadRequest("EventId mismatch");
+    var result = await mediator.Send(command);
+    return Results.Ok(new { editionIds = result.EditionIds, count = result.EditionIds.Count, racesCreated = result.RacesCreated });
+})
+.WithName("GenerateEditionsForSeason")
+.RequireAuthorization();
 
 // Admin Race CRUD
-app.MapPost("/api/v1/admin/competitions/{competitionId}/races", [Authorize] async (Guid competitionId, CreateRaceCommand command, IMediator mediator) =>
+app.MapPost("/api/v1/admin/editions/{editionId:guid}/races", [Authorize] async (Guid editionId, CreateRaceCommand command, IMediator mediator) =>
 {
-    if (competitionId != command.CompetitionId) return Results.BadRequest("CompetitionId mismatch");
+    if (editionId != command.EventEditionId) return Results.BadRequest("EventEditionId mismatch");
     var id = await mediator.Send(command);
-    return Results.Created($"/api/v1/admin/competitions/{competitionId}/races/{id}", new { id });
+    return Results.Created($"/api/v1/admin/editions/{editionId}/races/{id}", new { id });
 })
-.WithName("CreateRace");
+.WithName("CreateRace")
+.RequireAuthorization();
 
 app.MapPut("/api/v1/admin/races/{id:guid}", [Authorize] async (Guid id, UpdateRaceCommand command, IMediator mediator) =>
 {
@@ -1302,41 +1417,16 @@ app.MapPut("/api/v1/admin/races/{id:guid}", [Authorize] async (Guid id, UpdateRa
     var success = await mediator.Send(command);
     return success ? Results.NoContent() : Results.NotFound();
 })
-.WithName("UpdateRace");
+.WithName("UpdateRace")
+.RequireAuthorization();
 
 app.MapDelete("/api/v1/admin/races/{id:guid}", [Authorize] async (Guid id, IMediator mediator) =>
 {
     var success = await mediator.Send(new DeleteRaceCommand(id));
     return success ? Results.NoContent() : Results.NotFound();
 })
-.WithName("DeleteRace");
-
-app.MapGet("/api/v1/admin/races", [Authorize] async (UtanvegaDbContext context) =>
-{
-    var races = await context.Races
-        .Include(r => r.Competition)
-        .AsNoTracking()
-        .OrderBy(r => r.Competition.Name)
-        .ThenBy(r => r.SortOrder)
-        .Select(r => new
-        {
-            r.Id,
-            r.Name,
-            r.TrailId,
-            r.CompetitionId,
-            CompetitionName = r.Competition.Name,
-            CompetitionSlug = r.Competition.Slug,
-            r.DistanceLabel,
-            r.CutoffMinutes,
-            r.Description,
-            Status = r.Status.ToString(),
-            r.SortOrder,
-        })
-        .ToListAsync();
-
-    return Results.Ok(races);
-})
-.WithName("GetAllAdminRaces");
+.WithName("DeleteRace")
+.RequireAuthorization();
 
 // User Trail Activities Endpoints
 app.MapPost("/api/v1/user/activities", [Authorize] async (IMediator mediator, HttpContext context, CreateUserTrailActivityDto dto) =>

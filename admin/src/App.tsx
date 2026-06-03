@@ -13,6 +13,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import SearchIcon from '@mui/icons-material/Search';
 import { useState, useCallback } from 'react';
+import { BrowserRouter, useNavigate, useLocation } from 'react-router-dom';
 import TrailList from './pages/TrailList';
 import { LocationList } from './pages/LocationList';
 import TrailHealth from './pages/TrailHealth';
@@ -20,7 +21,7 @@ import TrailMapView from './pages/TrailMapView';
 import TagManagement from './pages/TagManagement';
 import AnalyticsPage from './pages/AnalyticsPage';
 import FeatureFlagsPage from './pages/FeatureFlagsPage';
-import CompetitionList from './pages/CompetitionList';
+import EventList from './pages/EventList';
 import GpxUploadDialog from './components/GpxUploadDialog';
 import LoginPage from './pages/LoginPage';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -45,9 +46,30 @@ const theme = createTheme({
 const DRAWER_WIDTH = 220;
 const DRAWER_COLLAPSED = 56;
 
+type PageKey = 'trails' | 'locations' | 'health' | 'map' | 'tags' | 'analytics' | 'features' | 'events';
+
+const PAGE_PATHS: Record<PageKey, string> = {
+  trails: '/',
+  locations: '/locations',
+  health: '/health',
+  map: '/map',
+  tags: '/tags',
+  analytics: '/analytics',
+  events: '/events',
+  features: '/features',
+};
+
+function pathToPage(pathname: string): PageKey {
+  const entry = Object.entries(PAGE_PATHS).find(([, path]) => path === pathname);
+  return (entry?.[0] as PageKey) ?? 'trails';
+}
+
 function AdminContent() {
   const { user, loading: authLoading, signOut } = useAuth();
-  const [currentPage, setCurrentPage] = useState<'trails' | 'locations' | 'health' | 'map' | 'tags' | 'analytics' | 'features' | 'competitions'>('trails');
+  const navigate = useNavigate();
+  const location = useLocation();
+  const currentPage = pathToPage(location.pathname);
+  const setCurrentPage = useCallback((page: PageKey) => navigate(PAGE_PATHS[page]), [navigate]);
   const [drawerOpen, setDrawerOpen] = useState(true);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -132,9 +154,16 @@ function AdminContent() {
           <IconButton color="inherit" edge="start" onClick={() => setDrawerOpen(!drawerOpen)} sx={{ mr: 1 }}>
             {drawerOpen ? <ChevronLeftIcon /> : <MenuIcon />}
           </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            🌄 Utanvega Admin
-          </Typography>
+          <Box
+            component="button"
+            onClick={() => setCurrentPage('trails')}
+            sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1, background: 'none', border: 'none', cursor: 'pointer', p: 0, color: 'inherit' }}
+          >
+            <img src="/images/hlaupadagskra.avif" alt="Hlaupadagskra logo" style={{ height: 32 }} />
+            <Typography variant="h6" noWrap>
+              Hlaupadagskra.is
+            </Typography>
+          </Box>
           <Tooltip title="Search (Ctrl+K)">
             <IconButton
               color="inherit"
@@ -158,6 +187,11 @@ function AdminContent() {
               <KeyboardIcon />
             </IconButton>
           </Tooltip>
+          {user?.email && (
+            <Typography variant="body2" sx={{ mr: 2, opacity: 0.85 }}>
+              {user.email.split('@')[0]}
+            </Typography>
+          )}
           <Button color="inherit" onClick={signOut} startIcon={<LogoutIcon />}>
             Logout
           </Button>
@@ -187,7 +221,7 @@ function AdminContent() {
               { key: 'map' as const, icon: <MapIcon />, label: 'Trail Map' },
               { key: 'tags' as const, icon: <LocalOfferIcon />, label: 'Tags' },
               { key: 'analytics' as const, icon: <BarChartIcon />, label: 'Analytics' },
-              { key: 'competitions' as const, icon: <EmojiEventsIcon />, label: 'Competitions' },
+              { key: 'events' as const, icon: <EmojiEventsIcon />, label: 'Events' },
               { key: 'features' as const, icon: <ToggleOnIcon />, label: 'Features' },
             ].map(item => (
               <ListItem key={item.key} disablePadding>
@@ -223,8 +257,8 @@ function AdminContent() {
             <AnalyticsPage />
           ) : currentPage === 'features' ? (
             <FeatureFlagsPage onNotify={notify} />
-          ) : currentPage === 'competitions' ? (
-            <CompetitionList onNotify={notify} />
+          ) : currentPage === 'events' ? (
+            <EventList onNotify={notify} />
           ) : (
             <LocationList onNotify={notify} />
           )}
@@ -260,7 +294,7 @@ function AdminContent() {
       </Box>
       <AdminSpotlightSearch
         onEditTrail={(id) => { setSelectedTrailId(id); setSearchTerm(null); setCurrentPage('trails'); }}
-        onNavigate={(page) => setCurrentPage(page as typeof currentPage)}
+        onNavigate={(page) => setCurrentPage(page as PageKey)}
         onFilterTrails={(term) => { setSearchTerm(term); setSelectedTrailId(null); setCurrentPage('trails'); }}
       />
       <KeyboardShortcutsDialog open={showShortcuts} onClose={() => setShowShortcuts(false)} />
@@ -273,9 +307,11 @@ export default function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <ErrorBoundary>
-        <AuthProvider>
-          <AdminContent />
-        </AuthProvider>
+        <BrowserRouter>
+          <AuthProvider>
+            <AdminContent />
+          </AuthProvider>
+        </BrowserRouter>
       </ErrorBoundary>
     </ThemeProvider>
   );

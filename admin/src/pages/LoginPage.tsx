@@ -33,9 +33,12 @@ export default function LoginPage() {
             bgcolor: 'background.default'
         }}>
             <Paper elevation={3} sx={{ p: 4, width: '100%', maxWidth: 400 }}>
-                <Typography variant="h5" gutterBottom align="center" sx={{ mb: 3 }}>
-                    🌄 Utanvega Admin Login
-                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3 }}>
+                    <img src="/images/hlaupadagskra.avif" alt="Hlaupadagskra logo" style={{ height: 64, marginBottom: 12 }} />
+                    <Typography variant="h5" align="center">
+                        Hlaupadagskra.is
+                    </Typography>
+                </Box>
                 
                 <form onSubmit={handleLogin}>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>

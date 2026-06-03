@@ -74,11 +74,11 @@ function useWelcomeStats() {
         Promise.all([
             fetch(`${API_URL}/api/v1/trails`, { signal: ac.signal }).then(r => r.ok ? r.json() : []),
             fetch(`${API_URL}/api/v1/locations`, { signal: ac.signal }).then(r => r.ok ? r.json() : []),
-            fetch(`${API_URL}/api/v1/competitions`, { signal: ac.signal }).then(r => r.ok ? r.json() : []),
-        ]).then(([trails, locations, competitions]) => {
+            fetch(`${API_URL}/api/v1/events`, { signal: ac.signal }).then(r => r.ok ? r.json() : []),
+        ]).then(([trails, locations, events]) => {
             const totalKm = (trails as { length: number }[]).reduce((sum, t) => sum + (t.length || 0), 0) / 1000;
             const totalElev = (trails as { elevationGain: number }[]).reduce((sum, t) => sum + (t.elevationGain || 0), 0);
-            const upcoming = (competitions as { nextDate: string | null }[]).filter(c => c.nextDate).length;
+            const upcoming = (events as { nextEditionDate: string | null }[]).filter(e => e.nextEditionDate).length;
             setStats({
                 trailCount: trails.length,
                 totalKm: Math.round(totalKm),
@@ -310,9 +310,9 @@ export default function WelcomePage({ mode, onToggleMode, forceLang }: Props) {
     }, []);
 
     const allFeatures = [
-        { icon: <DirectionsRunIcon />, titleKey: 'welcome.trails.title', descKey: 'welcome.trails.desc', cta: 'welcome.trails.cta', ctaPath: '/', tParams: { count: stats.trailCount || '...' }, flag: null },
+        { icon: <EmojiEventsIcon />, titleKey: 'welcome.races.title', descKey: 'welcome.races.desc', cta: 'welcome.races.cta', ctaPath: '/events', flag: 'races_page' },
+        { icon: <DirectionsRunIcon />, titleKey: 'welcome.trails.title', descKey: 'welcome.trails.desc', cta: 'welcome.trails.cta', ctaPath: '/trails', tParams: { count: stats.trailCount || '...' }, flag: 'trails_page' },
         { icon: <PlaceIcon />, titleKey: 'welcome.locations.title', descKey: 'welcome.locations.desc', cta: 'welcome.locations.cta', ctaPath: '/locations', flag: 'locations_page' },
-        { icon: <EmojiEventsIcon />, titleKey: 'welcome.races.title', descKey: 'welcome.races.desc', cta: 'welcome.races.cta', ctaPath: '/races', flag: 'races_page' },
         { icon: <BuildIcon />, titleKey: 'welcome.tools.title', descKey: 'welcome.tools.desc', cta: 'welcome.tools.cta', ctaPath: '/tools', flag: 'tools_page' },
         { icon: <ShareIcon />, titleKey: 'welcome.share.title', descKey: 'welcome.share.desc', cta: 'welcome.share.cta', ctaPath: '/', flag: 'share_trail' },
     ];
@@ -378,6 +378,21 @@ export default function WelcomePage({ mode, onToggleMode, forceLang }: Props) {
                 />
                 <Fade in timeout={1000}>
                     <Typography
+                        component="span"
+                        sx={{
+                            fontSize: { xs: '3rem', sm: '4.5rem', md: '6rem' },
+                            mb: 1,
+                            background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                            backgroundClip: 'text',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                        }}
+                    >
+                        🏃
+                    </Typography>
+                </Fade>
+                <Fade in timeout={1000}>
+                    <Typography
                         variant="h1"
                         sx={{
                             fontSize: { xs: '3rem', sm: '4.5rem', md: '6rem' },
@@ -388,7 +403,7 @@ export default function WelcomePage({ mode, onToggleMode, forceLang }: Props) {
                             WebkitTextFillColor: 'transparent',
                         }}
                     >
-                        🌄 Utanvega
+                        Hlaupadagskra.is
                     </Typography>
                 </Fade>
 

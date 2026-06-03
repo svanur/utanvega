@@ -72,7 +72,7 @@ export default function TrailFilterBar({
           <MenuItem value="Draft">Draft</MenuItem>
           <MenuItem value="Published">Published</MenuItem>
           <MenuItem value="Archived">Archived</MenuItem>
-          <MenuItem value="RaceOnly">Race Only</MenuItem>
+          <MenuItem value="EventOnly">Event Only</MenuItem>
           {includeDeleted && <MenuItem value="Deleted">Deleted</MenuItem>}
         </Select>
       </FormControl>

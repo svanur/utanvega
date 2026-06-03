@@ -10,6 +10,9 @@
         "save": "Save",
         "clear": "Clear",
         "tip": "Tip",
+        "viewDetails": "View Details",
+        "expand": "Expand",
+        "collapse": "Collapse",
         "dataLoadUnavailable": "We couldn't load data right now. Check your internet connection and try again."
     },
     "auth": {
@@ -64,6 +67,7 @@
     },
     "loading": "Loading trails...",
     "nav": {
+        "trails": "Trails",
         "locations": "Locations",
         "about": "About",
         "races": "Races",
@@ -104,9 +108,11 @@
         "locationDenied": "Location blocked — allow in browser settings",
         "viewMode": "View mode",
         "listView": "List view",
-        "mapView": "Map view"
+        "mapView": "Map view",
+        "tableView": "Table view"
     },
     "trail": {
+        "name": "Name",
         "backToTrails": "Back to Trails",
         "notFound": "Trail not found",
         "tick": "Mark as ticked",
@@ -117,6 +123,10 @@
         "loss": "Loss",
         "type": "Type",
         "estTime": "Est. time",
+        "difficulty": "Difficulty",
+        "activity": "Activity",
+        "location": "Location",
+        "kmAway": "km away",
         "routeMap": "Route Map",
         "fullscreenMap": "Fullscreen map",
         "closeFullscreen": "Close fullscreen",
@@ -132,6 +142,7 @@
         "wereYouLookingFor": "Were you looking for one of these?",
         "partOfRace": "Part of {{competition}}",
         "partOfRaceDistances": "Part of {{competition}} ({{count}} distances)",
+        "video360": "360° Video",
         "role": {
             "Start": "Start",
             "End": "Finish",
@@ -241,6 +252,9 @@
         "running": "Running",
         "hiking": "Hiking",
         "cycling": "Cycling",
+        "funRun": "Fun Run",
+        "obstacleCourse": "Obstacle Course",
+        "crossCountryRun": "Cross Country Run",
         "formula": "**Effort distance** = distance (km) + elevation gain (m) ÷ 100. For example, a 15 km trail with 800 m gain = 23 km effort."
     },
     "paceModel": {
@@ -341,7 +355,7 @@
         "popular": "Most popular"
     },
     "header": {
-        "tagline": "Utanvega - A site to find fun trails and share with friends.",
+        "tagline": "Hlaupadagskra.is - A site to find races, fun trails and share with friends.",
         "close": "Close",
         "dontShowAgain": "Don't show again"
     },
@@ -406,10 +420,10 @@
     },
     "privacy": {
         "title": "Privacy Policy",
-        "intro": "Utanvega is committed to respecting your privacy. This policy explains what data we collect, how we use it, and your rights. The short version: we collect very little and share nothing.",
+        "intro": "Hlaupadagskra.is is committed to respecting your privacy. This policy explains what data we collect, how we use it, and your rights. The short version: we collect very little and share nothing.",
         "noAccounts": {
             "title": "No User Accounts Required",
-            "body": "The public Utanvega website does not require you to create an account or log in. We do not collect your name, email address, or any personal information to use the site."
+            "body": "The public Hlaupadagskra.is website does not require you to create an account or log in. We do not collect your name, email address, or any personal information to use the site."
         },
         "viewTracking": {
             "title": "Trail View Tracking",
@@ -430,7 +444,7 @@
         "title": "Disclaimer",
         "useAtOwnRisk": {
             "title": "Use at Your Own Risk",
-            "body": "All trail information on Utanvega is provided for informational purposes only. You are solely responsible for your own safety when using any trail. Always assess conditions, your fitness level, and equipment before heading out. Utanvega is not liable for any injuries, accidents, damages, or losses arising from the use of the information on this site."
+            "body": "All trail information on Hlaupadagskra.is is provided for informational purposes only. You are solely responsible for your own safety when using any trail. Always assess conditions, your fitness level, and equipment before heading out. Hlaupadagskra.is is not liable for any injuries, accidents, damages, or losses arising from the use of the information on this site."
         },
         "weather": {
             "title": "Weather & Conditions",
@@ -448,13 +462,13 @@
         "lastUpdated": "Last updated: {{date}}"
     },
     "about": {
-        "title": "About Utanvega",
-        "description": "Utanvega is a trail discovery platform built for runners, hikers, and cyclists exploring Iceland's wild landscapes. Find trails near you, check elevation profiles, and share your favorites with friends.",
+        "title": "About Hlaupadagskra.is",
+        "description": "Hlaupadagskra.is is a trail discovery platform built for runners, hikers, and cyclists exploring Iceland's wild landscapes. Find trails near you, check elevation profiles, and share your favorites with friends.",
         "authorTitle": "About me",
         "authorDescription": "Trail runner and developer based in Iceland, building tools to help people discover and enjoy the outdoors.",
         "authorSignature": "Svanur Karlsson",
         "techTitle": "Technical Stack",
-        "techDescription": "Utanvega is built with a React frontend, a .NET 9 backend with PostGIS for spatial queries, and PostgreSQL for data storage. Maps are powered by Leaflet with OpenStreetMap tiles.",
+        "techDescription": "Hlaupadagskra.is is built with a React frontend, a .NET 9 backend with PostGIS for spatial queries, and PostgreSQL for data storage. Maps are powered by Leaflet with OpenStreetMap tiles.",
         "aiDescription": "Development assisted by Claude, an AI coding agent by Anthropic, used for code generation, refactoring, and quality improvements.",
         "changelogTitle": "Changelog",
         "changelog": {
@@ -545,7 +559,7 @@
         "nearby": "Nearby"
     },
     "install": {
-        "title": "Install Utanvega",
+        "title": "Install Hlaupadagskra.is",
         "description": "Add to your home screen for quick access and offline use.",
         "button": "Install",
         "iosHint": "Tap Share, then \"Add to Home Screen\"",
@@ -805,23 +819,33 @@
         }
     },
     "races": {
-        "title": "Races & Competitions",
-        "subtitle": "Upcoming trail races and competitions in Iceland. Be sure to confirm final dates on the race organizer's website.",
+        "title": "Events - All Races in one place",
+        "subtitle": "Upcoming competitions and races in Iceland. Be sure to confirm final dates on the race organizer's website.",
         "searchPlaceholder": "Search competitions...",
         "noResults": "No competitions match your search",
         "empty": "No competitions yet",
         "noDate": "Date TBD",
         "nextRace": "Next race:",
+        "lastRace": "Last race:",
         "today": "🔥 Today!",
         "raceDayBadge": "🏁 It's race day!",
         "tomorrow": "Tomorrow!",
         "passed": "Past event",
+        "yesterday": "Yesterday",
+        "daysAgo_one": "{{count}} day ago",
+        "daysAgo_other": "{{count}} days ago",
         "daysUntil": "In {{count}} days",
         "raceCount_one": "{{count}} course",
         "raceCount_other": "{{count}} courses",
         "raceCount": "{{count}} courses",
+        "editionCount_one": "{{count}} edition",
+        "editionCount_other": "{{count}} editions",
+        "editionCount": "{{count}} editions",
         "register": "Register",
+        "results": "Results",
         "organizerSite": "Organizer website",
+        "addToCalendar": "Add to Calendar",
+        "downloadIcs": "Download .ics (Apple/Other)",
         "racesHeading": "Races",
         "scheduleHeading": "Upcoming dates",
         "noRaces": "No races listed yet for this competition.",
@@ -882,17 +906,86 @@
         "raceDayShareText": "I'm racing {{raceName}} today 💥",
         "raceDayShareRaceCta": "I am competing 💥",
         "raceDayShareRaceText": "Today I am racing {{competitionName}} - {{raceName}} 💥",
+        "shareCard": {
+            "button": "I'm racing! 💥",
+            "racingToday": "It's race day!",
+            "racingSoon": "I'm participating in this race!",
+            "countdown_one": "{{count}} day to go!",
+            "countdown_other": "{{count}} days to go!",
+            "shareText": "I'm racing {{eventName}}! 💥",
+            "share": "Share",
+            "download": "Save Image",
+            "copiedToClipboard": "Image copied to clipboard!",
+            "downloaded": "Image saved!"
+        },
+        "finishCard": {
+            "button": "I finished! 🏁",
+            "title": "Share your result!",
+            "finished": "I finished!",
+            "timeLabel": "Finish time:",
+            "shareText": "I finished {{raceName}} in {{time}}! 🏁",
+            "shareTextNoTime": "I finished {{raceName}}! 🏁",
+            "share": "Share",
+            "download": "Save Image",
+            "copiedToClipboard": "Image copied to clipboard!",
+            "downloaded": "Image saved!"
+        },
+        "justRaced": "🏁 Just raced!",
+        "justRacedSection": "Recently completed",
+        "inProgress": "🏃 In progress",
+        "raceFinished": "🏁 Finished",
+        "progressBar": {
+            "waiting": "Waiting for start...",
+            "cutoffReached": "Cutoff time reached",
+            "remaining": "{{time}} remaining"
+        },
         "checklistSavedLocally": "Saved on this device only.",
         "predict": "Predict",
-        "noUpcoming": "No upcoming races"
+        "noUpcoming": "No upcoming races",
+        "history": {
+            "title": "Event History",
+            "backToEvent": "Back to event",
+            "editionNotFound": "Edition not found",
+            "pastEdition": "Past edition",
+            "completed": "Completed"
+        },
+        "table": {
+            "name": "Name",
+            "nextRace": "Next Race",
+            "date": "Date",
+            "type": "Type",
+            "organizer": "Organizer",
+            "editions": "Editions",
+            "distances": "Distances",
+            "register": "Register",
+            "links": "Links",
+            "races": "Races",
+            "noRaces": "No races for this edition",
+            "soldOut": "Sold Out",
+            "almostSoldOut": "Almost Full",
+            "cutoff": "Cutoff time"
+        },
+        "registrationStatus": {
+            "Open": "Open",
+            "Closed": "Closed",
+            "NotStarted": ""
+        },
+        "ticketStatus": {
+            "Available": "Available",
+            "SoldOut": "Sold Out",
+            "Closed": "Closed"
+        }
     },
     "calendar": {
-        "title": "Race Calendar",
+        "title": "Event Calendar",
         "today": "Today",
         "noEvents": "No events this month",
         "eventCount_one": "{{count}} event this month",
         "eventCount_other": "{{count}} events this month",
-        "eventCount": "{{count}} events this month"
+        "eventCount": "{{count}} events this month",
+        "subscribe": "Subscribe",
+        "subscribeTooltip": "Subscribe to live calendar feed",
+        "subscribeSuccess": "Calendar URL copied! Paste it in your calendar app."
     },
     "welcome": {
         "tagline": "Discover the best trails for running, hiking & cycling in Iceland",
@@ -901,6 +994,11 @@
         "whatCanYouDo": "What can you do here?",
         "readyToRun": "Ready to hit the trails?",
         "readyToRunDesc": "Join the Icelandic trail community and find your next adventure.",
+        "races": {
+            "title": "🏆 Races & Competitions",
+            "desc": "Stay on top of upcoming races with countdowns, calendar views and race-day weather. Predict your finish time before you toe the line.",
+            "cta": "See Races"
+        },
         "trails": {
             "title": "🏔️ Discover Trails",
             "desc": "Browse {{count}} curated trails across Iceland. Filter by distance, elevation, activity type — and find your next favorite route.",
@@ -910,11 +1008,6 @@
             "title": "📍 Explore Locations",
             "desc": "See trails grouped by region. From Reykjavík city runs to remote highland crossings — explore Iceland on the map.",
             "cta": "View Locations"
-        },
-        "races": {
-            "title": "🏆 Races & Competitions",
-            "desc": "Stay on top of upcoming races with countdowns, calendar views and race-day weather. Predict your finish time before you toe the line.",
-            "cta": "See Races"
         },
         "tools": {
             "title": "🛠️ Runner Tools",

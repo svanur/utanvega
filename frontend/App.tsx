@@ -27,6 +27,7 @@ const ToolsPage = lazy(() => import('./pages/ToolsPage'));
 const RacesPage = lazy(() => import('./pages/RacesPage'));
 const RaceCalendarPage = lazy(() => import('./pages/RaceCalendarPage'));
 const CompetitionDetailPage = lazy(() => import('./pages/CompetitionDetailPage'));
+const EditionHistoryPage = lazy(() => import('./pages/EditionHistoryPage'));
 const WelcomePage = lazy(() => import('./pages/WelcomePage'));
 const TrailComparePage = lazy(() => import('./pages/TrailComparePage'));
 const TrailLeaderboardPage = lazy(() => import('./pages/TrailLeaderboardPage'));
@@ -46,6 +47,11 @@ function PageLoader() {
 function TagPage({ mode, onToggleMode }: { mode: PaletteMode; onToggleMode: () => void }) {
     const { slug } = useParams<{ slug: string }>();
     return <HomePage mode={mode} onToggleMode={onToggleMode} tagSlug={slug} />;
+}
+
+function RacesSlugRedirect() {
+    const { slug } = useParams<{ slug: string }>();
+    return <Navigate to={`/events/${slug}`} replace />;
 }
 
 export default function App() {
@@ -81,10 +87,18 @@ export default function App() {
                     <PageLoader />
                 ) : (
                 <Routes>
-                    <Route 
-                        path="/" 
-                        element={<HomePage mode={mode} onToggleMode={handleToggleMode} />} 
+                    <Route
+                        path="/"
+                        element={
+                            isEnabled('races_page')
+                                ? <RacesPage mode={mode} onToggleMode={handleToggleMode} showQuote />
+                                : <HomePage mode={mode} onToggleMode={handleToggleMode} showQuote />
+                        }
                     />
+                    {isEnabled('trails_page') && <Route
+                        path="/trails"
+                        element={<HomePage mode={mode} onToggleMode={handleToggleMode} showQuote={false} />}
+                    />}
     {isEnabled('tags_page') && <Route 
                         path="/tags/:slug" 
                         element={<TagPage mode={mode} onToggleMode={handleToggleMode} />} 
@@ -132,17 +146,25 @@ export default function App() {
                     {isEnabled('races_page') && (
                     <>
                     <Route 
-                        path="/races" 
+                        path="/events" 
                         element={<RacesPage mode={mode} onToggleMode={handleToggleMode} />} 
                     />
                     <Route 
-                        path="/races/calendar" 
+                        path="/events/calendar" 
                         element={<RaceCalendarPage mode={mode} onToggleMode={handleToggleMode} />} 
                     />
                     <Route 
-                        path="/races/:slug" 
+                        path="/events/:slug" 
                         element={<CompetitionDetailPage mode={mode} onToggleMode={handleToggleMode} />} 
                     />
+                    <Route 
+                        path="/events/:slug/history/:editionKey" 
+                        element={<EditionHistoryPage mode={mode} onToggleMode={handleToggleMode} />} 
+                    />
+                    {/* Legacy redirects */}
+                    <Route path="/races" element={<Navigate to="/events" replace />} />
+                    <Route path="/races/calendar" element={<Navigate to="/events/calendar" replace />} />
+                    <Route path="/races/:slug" element={<RacesSlugRedirect />} />
                     </>
                     )}
                     <Route 

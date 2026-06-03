@@ -48,9 +48,9 @@ export default defineConfig({
         ],
       },
       manifest: {
-        name: 'Utanvega',
-        short_name: 'Utanvega',
-        description: 'Explore and discover trails in Iceland',
+        name: 'Hlaupadagskra.is',
+        short_name: 'Hlaupadagskrá',
+        description: 'Öll hlaup á einum stað',
         theme_color: '#1976d2',
         background_color: '#f6f8fb',
         display: 'standalone',

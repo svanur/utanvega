@@ -14,6 +14,8 @@ import type { TagDto } from '../hooks/useTags';
 import { InlineEditText, InlineEditSelect } from './InlineEditCell';
 import { useState } from 'react';
 
+const SITE_URL = import.meta.env.VITE_SITE_URL?.trim() || 'https://utanvega.vercel.app';
+
 interface TrailTableProps {
   trails: Trail[];
   selectedIds: string[];
@@ -96,7 +98,7 @@ export default function TrailTable({
                 Status
               </TableSortLabel>
             </TableCell>
-            <TableCell align="center">Web</TableCell>
+            <TableCell align="center">Links</TableCell>
             <TableCell align="right">Actions</TableCell>
           </TableRow>
         </TableHead>
@@ -195,7 +197,7 @@ const statusOptions = [
   { value: 'Published', label: 'Published' },
   { value: 'Flagged', label: 'Flagged' },
   { value: 'Archived', label: 'Archived' },
-  { value: 'RaceOnly', label: 'Race Only' },
+  { value: 'EventOnly', label: 'Event Only' },
 ];
 
 const difficultyOptions = [
@@ -372,8 +374,8 @@ function TrailRow({ trail, selected, onSelect, onViewMap, onEdit, onDelete, onRe
             onSave={(v) => onPatchTrail(trail.id, 'status', v)}
             renderDisplay={(v) => (
               <Chip
-                label={v === 'RaceOnly' ? 'Race Only' : v}
-                color={v === 'Published' ? 'success' : v === 'Flagged' ? 'warning' : v === 'RaceOnly' ? 'info' : 'default'}
+                label={v === 'EventOnly' ? 'Event Only' : v}
+                color={v === 'Published' ? 'success' : v === 'Flagged' ? 'warning' : v === 'EventOnly' ? 'info' : 'default'}
                 size="small"
               />
             )}
@@ -381,11 +383,20 @@ function TrailRow({ trail, selected, onSelect, onViewMap, onEdit, onDelete, onRe
         )}
       </TableCell>
       <TableCell align="center">
-        <Tooltip title="View trail on website">
-          <IconButton size="small" component="a" href={`https://utanvega.vercel.app/trails/${trail.slug}`} target="_blank">
-            <OpenInNewIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
+        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }}>
+          <Tooltip title="View trail on website">
+            <IconButton size="small" component="a" href={`${SITE_URL}/trails/${trail.slug}`} target="_blank" rel="noopener noreferrer" aria-label={`View ${trail.name} on website`}>
+              <OpenInNewIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          {trail.youtubeUrl && /^https?:\/\//i.test(trail.youtubeUrl) && (
+            <Tooltip title="360° video">
+              <IconButton size="small" component="a" href={trail.youtubeUrl} target="_blank" rel="noopener noreferrer" aria-label={`360° video for ${trail.name}`}>
+                <img src="/images/360-play.avif" alt="360°" style={{ width: 20, height: 20 }} />
+              </IconButton>
+            </Tooltip>
+          )}
+        </Box>
       </TableCell>
       <TableCell align="right">
         <Button size="small" startIcon={<MapIcon />} onClick={onViewMap}>Map</Button>

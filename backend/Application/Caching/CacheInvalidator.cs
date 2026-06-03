@@ -13,13 +13,11 @@ public class CacheInvalidator : ICacheInvalidator
 
     public void InvalidateTrail(string? slug = null)
     {
-        // Clear all trail list variants
         _cache.Remove(CacheKeys.Trails(false, true));
         _cache.Remove(CacheKeys.Trails(false, false));
         _cache.Remove(CacheKeys.Trails(true, false));
         _cache.Remove(CacheKeys.Trails(true, true));
         _cache.Remove(CacheKeys.GeometriesAll);
-        // Trail count changes affect location tree
         _cache.Remove(CacheKeys.LocationTree);
 
         if (slug is not null)
@@ -34,7 +32,6 @@ public class CacheInvalidator : ICacheInvalidator
     {
         _cache.Remove(CacheKeys.LocationsAll);
         _cache.Remove(CacheKeys.LocationTree);
-        // Location changes can affect trail DTOs (location info on trails)
         _cache.Remove(CacheKeys.Trails(false, true));
         _cache.Remove(CacheKeys.Trails(false, false));
         _cache.Remove(CacheKeys.Trails(true, false));
@@ -44,26 +41,22 @@ public class CacheInvalidator : ICacheInvalidator
             _cache.Remove(CacheKeys.Location(slug));
     }
 
-    public void InvalidateCompetition(string? slug = null)
+    public void InvalidateEvent(string? slug = null)
     {
-        _cache.Remove(CacheKeys.Competitions(false));
-        _cache.Remove(CacheKeys.Competitions(true));
+        _cache.Remove(CacheKeys.Events(false));
+        _cache.Remove(CacheKeys.Events(true));
 
         // Bump the version token so all cached calendar entries are effectively invalidated.
-        // Calendar keys include the version, so old entries become orphaned and expire via TTL.
-        var current = _cache.GetOrCreate(CacheKeys.CompetitionVersion, e =>
+        var current = _cache.GetOrCreate(CacheKeys.EventVersion, e =>
         {
-            e.Priority = Microsoft.Extensions.Caching.Memory.CacheItemPriority.NeverRemove;
+            e.Priority = CacheItemPriority.NeverRemove;
             return 0;
         });
-        _cache.Set(CacheKeys.CompetitionVersion, current + 1,
-            new Microsoft.Extensions.Caching.Memory.MemoryCacheEntryOptions
-            {
-                Priority = Microsoft.Extensions.Caching.Memory.CacheItemPriority.NeverRemove
-            });
+        _cache.Set(CacheKeys.EventVersion, current + 1,
+            new MemoryCacheEntryOptions { Priority = CacheItemPriority.NeverRemove });
 
         if (slug is not null)
-            _cache.Remove(CacheKeys.Competition(slug));
+            _cache.Remove(CacheKeys.Event(slug));
     }
 
     public void InvalidateLeaderboard(string slug)
@@ -72,13 +65,10 @@ public class CacheInvalidator : ICacheInvalidator
         var versionKey = CacheKeys.LeaderboardVersion(normalizedSlug);
         var current = _cache.GetOrCreate(versionKey, e =>
         {
-            e.Priority = Microsoft.Extensions.Caching.Memory.CacheItemPriority.NeverRemove;
+            e.Priority = CacheItemPriority.NeverRemove;
             return 0;
         });
         _cache.Set(versionKey, current + 1,
-            new Microsoft.Extensions.Caching.Memory.MemoryCacheEntryOptions
-            {
-                Priority = Microsoft.Extensions.Caching.Memory.CacheItemPriority.NeverRemove
-            });
+            new MemoryCacheEntryOptions { Priority = CacheItemPriority.NeverRemove });
     }
 }

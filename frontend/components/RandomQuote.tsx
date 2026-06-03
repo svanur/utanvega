@@ -31,7 +31,7 @@ export default function RandomQuote() {
                     </IconButton>
                     <Box>
                         <Typography variant="overline" color="primary">
-                            🌄Utanvega🏃‍♂️🏃‍♀️🚴‍
+                            🏃 Hlaupadagskra.is
                         </Typography>
                         <Typography variant="h4" component="h1" gutterBottom>
                             {quote.text}

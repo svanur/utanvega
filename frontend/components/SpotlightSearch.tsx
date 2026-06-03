@@ -26,7 +26,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { API_URL, Trail } from '../hooks/useTrails';
 import { Location } from '../hooks/useLocations';
-import { CompetitionSummary } from '../hooks/useCompetitions';
+import { EventSummary } from '../hooks/useEvents';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 
 interface SearchResult {
@@ -76,7 +76,7 @@ export default function SpotlightSearch() {
     const [activeIndex, setActiveIndex] = useState(0);
     const [trails, setTrails] = useState<Trail[]>([]);
     const [locations, setLocations] = useState<Location[]>([]);
-    const [competitions, setCompetitions] = useState<CompetitionSummary[]>([]);
+    const [competitions, setCompetitions] = useState<EventSummary[]>([]);
     const [loaded, setLoaded] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
     const listRef = useRef<HTMLUListElement>(null);
@@ -113,12 +113,12 @@ export default function SpotlightSearch() {
             fetches.push(fetch(`${API_URL}/api/v1/locations`).then(r => r.json()));
         }
         if (racesEnabled) {
-            fetches.push(fetch(`${API_URL}/api/v1/competitions`).then(r => r.json()));
+            fetches.push(fetch(`${API_URL}/api/v1/events`).then(r => r.json()));
         }
         Promise.all(fetches).then(([trailData, locationData, competitionData]) => {
             setTrails(trailData as Trail[]);
             if (locationsEnabled && locationData) setLocations(locationData as Location[]);
-            if (racesEnabled && competitionData) setCompetitions(competitionData as CompetitionSummary[]);
+            if (racesEnabled && competitionData) setCompetitions((competitionData as EventSummary[]).filter(comp => comp.status !== 'Hidden' && comp.status !== 'Unlisted'));
             setLoaded(true);
         }).catch(() => {
             setLoaded(true);
@@ -157,8 +157,8 @@ export default function SpotlightSearch() {
                     type: 'competition' as const,
                     name: comp.name,
                     slug: comp.slug,
-                    subtitle: comp.nextDate
-                        ? new Date(comp.nextDate + 'T00:00:00').toLocaleDateString(i18n.language === 'is' ? 'is-IS' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })
+                    subtitle: (comp.displayDate ?? comp.nextEditionDate)
+                        ? new Date((comp.displayDate ?? comp.nextEditionDate)! + 'T00:00:00').toLocaleDateString(i18n.language === 'is' ? 'is-IS' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })
                         : (comp.organizerName ?? comp.locationName ?? undefined),
                     score: scoreMatch(q, comp.name),
                 }))
@@ -181,7 +181,7 @@ export default function SpotlightSearch() {
         } else if (result.type === 'location') {
             navigate(`/locations/${result.slug}`);
         } else {
-            navigate(`/races/${result.slug}`);
+            navigate(`/events/${result.slug}`);
         }
     }, [navigate]);
 

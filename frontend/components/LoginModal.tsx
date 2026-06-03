@@ -10,12 +10,13 @@ import {
   CircularProgress,
   Stack,
   Divider,
-  Typography,
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import GoogleIcon from '@mui/icons-material/Google';
 import { supabase, isSupabaseConfigured } from '../hooks/supabase';
 import { AUTH_PENDING_KEY } from '../hooks/authConstants';
+
+const authRedirectTo = (import.meta.env.VITE_AUTH_REDIRECT_URL?.trim() || window.location.origin) as string;
 
 interface LoginModalProps {
   open: boolean;
@@ -24,7 +25,6 @@ interface LoginModalProps {
 
 export default function LoginModal({ open, onClose }: LoginModalProps) {
   const { t } = useTranslation();
-  const authRedirectTo = import.meta.env.VITE_AUTH_REDIRECT_URL?.trim() || window.location.origin;
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingGoogle, setLoadingGoogle] = useState(false);
@@ -138,17 +138,13 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleMagicLink()}
                 disabled={loading}
                 size="small"
               />
             </>
           )}
 
-          {magicLinkSent && (
-            <Typography variant="body2" color="text.secondary" align="center">
-              {t('auth.magicLinkSent')}
-            </Typography>
-          )}
         </Stack>
       </DialogContent>
       <DialogActions>

@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User } from '@supabase/supabase-js';
+import { createContext, useContext, useState, useEffect } from 'react';
+import { User, AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { isSupabaseConfigured, supabase } from './supabase';
 import { AUTH_PENDING_KEY, AUTH_PENDING_TIMEOUT_MS } from './authConstants';
 
@@ -31,7 +31,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const checkAuth = async () => {
       const params = new URLSearchParams(window.location.search);
-      const authCode = params.get('code');
       const hasOAuthError =
         params.has('error') ||
         params.has('error_code') ||
@@ -45,14 +44,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         clearAuthPending();
       }
 
-      if (authCode) {
-        const { error } = await supabase.auth.exchangeCodeForSession(authCode);
-        if (!active) return;
-        if (error) {
-          console.warn('OAuth callback exchange failed:', error.message);
-          clearAuthPending();
-        }
-      }
+      // Do NOT manually call exchangeCodeForSession here.
+      // The Supabase client is configured with detectSessionInUrl: true + flowType: 'pkce',
+      // which automatically exchanges both PKCE codes (?code=) and magic link tokens (?token_hash=).
+      // Calling exchangeCodeForSession manually would be a double-exchange (codes are single-use)
+      // and creates a race condition with the auto-exchange.
 
       if (hasOAuthParams) {
         params.delete('code');
@@ -82,7 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     checkAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
       if (!active) return;
       setUser(session?.user ?? null);
 
@@ -111,8 +107,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     if (!isSupabaseConfigured) return;
-    await supabase.auth.signOut();
-    setUser(null);
+    await supabase.auth.signOut().catch(() => {});
+    setUser(null); // always clear local session regardless of network errors
   };
 
   return (

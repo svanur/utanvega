@@ -23,6 +23,7 @@ public record UpdateTrailCommand(
     string Difficulty,
     string Visibility,
     string? UpdatedBy,
+    string? YoutubeUrl = null,
     List<TrailLocationUpdateDto>? Locations = null,
     List<Guid>? TagIds = null
 ) : IRequest<bool>;
@@ -60,6 +61,7 @@ public class UpdateTrailCommandHandler : IRequestHandler<UpdateTrailCommand, boo
         trail.Slug = request.Slug;
         
         trail.Description = request.Description;
+        trail.YoutubeUrl = request.YoutubeUrl;
         
         if (Enum.TryParse<ActivityType>(request.ActivityType, true, out var activityType))
         {

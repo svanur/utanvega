@@ -5,6 +5,7 @@ import {
     Box, 
     Typography, 
     Button, 
+    ButtonBase,
     Paper, 
     Grid, 
     Chip,
@@ -53,6 +54,7 @@ import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import GroupsIcon from '@mui/icons-material/Groups';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import VideocamIcon from '@mui/icons-material/Videocam';
 import Layout from '../components/Layout';
 import { useTrailBySlug, useTrails, useTrailSuggestions, useTrailWeather, useTrailLeaderboard, recordTrailView, API_URL } from '../hooks/useTrails';
 import { estimateDuration } from '../utils/estimateDuration';
@@ -78,6 +80,28 @@ import { useLoginEnabled } from '../hooks/useLoginEnabled';
 import TrailLeaderboardCard from '../components/TrailLeaderboardCard';
 import { useTrailCheckIns } from '../hooks/useTrailCheckIns';
 import { getAvatarFallbackText, getAvatarImageSrc } from '../utils/avatarPresets';
+
+const ALLOWED_YT_HOSTS = ['www.youtube.com', 'youtube.com', 'youtu.be', 'www.youtube-nocookie.com'];
+
+function toYoutubeEmbedUrl(url: string): string | null {
+    try {
+        const parsed = new URL(url);
+        if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return null;
+        if (!ALLOWED_YT_HOSTS.includes(parsed.hostname)) return null;
+
+        if (parsed.hostname === 'youtu.be') {
+            const id = parsed.pathname.slice(1);
+            return id ? `https://www.youtube.com/embed/${id}` : null;
+        }
+        if (parsed.pathname.startsWith('/embed/')) {
+            return `https://www.youtube.com${parsed.pathname}`;
+        }
+        const videoId = parsed.searchParams.get('v');
+        return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
+    } catch {
+        return null;
+    }
+}
 
 const getActivityIcon = (type: string) => {
     switch (type.toLowerCase()) {
@@ -149,6 +173,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     const [loginModalOpen, setLoginModalOpen] = useState(false);
     const [checkInError, setCheckInError] = useState<string | null>(null);
     const [checkInExpanded, setCheckInExpanded] = useState(false);
+    const [videoExpanded, setVideoExpanded] = useState(true);
     const [checkInSearch, setCheckInSearch] = useState('');
     const [toastMessage, setToastMessage] = useState<string | null>(null);
     const [nearbyPromptVisible, setNearbyPromptVisible] = useState(false);
@@ -621,7 +646,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                         <Paper
                                             key={rep.competitionSlug}
                                             component={RouterLink}
-                                            to={`/races/${rep.competitionSlug}`}
+                                            to={`/events/${rep.competitionSlug}`}
                                             elevation={0}
                                             sx={{
                                                 display: 'flex',
@@ -696,7 +721,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                             </Stack>
                         </Grid>
                         <Grid item xs={6} sm>
-                            {isEnabled('pace_info') && <PaceInfo activityType={trail.activityType} formattedDuration={estTime} />}
+                            {isEnabled('pace_info') && estTime && <PaceInfo activityType={trail.activityType} formattedDuration={estTime} />}
                         </Grid>
                     </Grid>
                 </Box>
@@ -739,6 +764,40 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                     </>
                 )}
             </Paper>
+
+            {/* YouTube 360° video */}
+            {trail.youtubeUrl && toYoutubeEmbedUrl(trail.youtubeUrl) && (
+                <Paper elevation={1} sx={{ p: { xs: 2, sm: 3 }, mb: 3, borderRadius: 2 }}>
+                    <ButtonBase
+                        onClick={() => setVideoExpanded(prev => !prev)}
+                        aria-expanded={videoExpanded}
+                        aria-label={t('trail.video360')}
+                        sx={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center', textAlign: 'left', borderRadius: 1 }}
+                    >
+                        <Stack direction="row" alignItems="center" spacing={1}>
+                            <VideocamIcon color="primary" />
+                            <Typography variant="h6" fontWeight="bold">
+                                {t('trail.video360')}
+                            </Typography>
+                        </Stack>
+                        <IconButton size="small" tabIndex={-1} aria-hidden="true">
+                            {videoExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                        </IconButton>
+                    </ButtonBase>
+                    <Collapse in={videoExpanded} unmountOnExit>
+                        <Box sx={{ position: 'relative', width: '100%', paddingBottom: '56.25%', height: 0, borderRadius: 1, overflow: 'hidden', mt: 2 }}>
+                            <iframe
+                                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
+                                src={toYoutubeEmbedUrl(trail.youtubeUrl)!}
+                                title={t('trail.video360')}
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope"
+                                allowFullScreen
+                                loading="lazy"
+                            />
+                        </Box>
+                    </Collapse>
+                </Paper>
+            )}
 
             {/* Weather forecast */}
             {isEnabled('weather_forecast') && (

@@ -9,7 +9,7 @@ export type Trail = {
     length: number;
     elevationGain: number;
     elevationLoss: number;
-    status: 'Draft' | 'Published' | 'Flagged' | 'Archived' | 'Deleted';
+    status: 'Draft' | 'Published' | 'Flagged' | 'Archived' | 'Deleted' | 'EventOnly';
     activityType: 'TrailRunning' | 'Running' | 'Cycling' | 'Hiking';
     trailType: 'OutAndBack' | 'Loop' | 'PointToPoint';
     difficulty?: string;
@@ -17,6 +17,7 @@ export type Trail = {
     startLongitude?: number | null;
     locations: { id: string, name: string, slug: string, role: string }[];
     tags?: { name: string, slug: string, color: string | null }[];
+    youtubeUrl?: string | null;
 };
 
 export function useTrails(includeDeleted: boolean = false) {

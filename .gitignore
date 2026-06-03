@@ -36,3 +36,9 @@ Desktop.ini
 supabase/.temp/
 .vercel
 .env*.local
+
+# Claude local settings (machine-specific)
+.claude/settings.local.json
+
+vite.config.js
+vite.config.d.ts

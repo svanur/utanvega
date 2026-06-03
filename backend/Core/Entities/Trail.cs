@@ -8,6 +8,11 @@ public enum ActivityType
     Running,
     Cycling,
     Hiking,
+    FunRun,
+    ObstacleCourse,
+    CrossCountryRun,
+    Social,
+    Other,
 }
 
 public enum TrailStatus
@@ -17,7 +22,7 @@ public enum TrailStatus
     Flagged,
     Archived,
     Deleted,
-    RaceOnly,
+    EventOnly,
 }
 
 public enum Difficulty
@@ -63,6 +68,8 @@ public class Trail
     
     // NetTopologySuite for PostGIS
     public Geometry? GpxData { get; set; }
+    
+    public string? YoutubeUrl { get; set; }
     
     public string? CreatedBy { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
