@@ -74,8 +74,8 @@ async function ensureLocalEnvFiles() {
     'API_EXTERNAL_URL=http://localhost:8000',
     'SITE_URL=http://localhost:5173',
     'ADDITIONAL_REDIRECT_URLS=http://localhost:5173,http://localhost:5174',
-    'LOCAL_SUPABASE_ADMIN_EMAIL=admin@utanvega.local',
-    'LOCAL_SUPABASE_ADMIN_PASSWORD=Utanvega123!',
+    'LOCAL_SUPABASE_ADMIN_EMAIL=admin@hlaupadagskra.local',
+    'LOCAL_SUPABASE_ADMIN_PASSWORD=Hlaupadagskra123!',
     '',
   ].join('\n');
 
@@ -107,8 +107,8 @@ async function ensureLocalEnvFiles() {
     apiExternalUrl: 'http://localhost:8000',
     siteUrl: 'http://localhost:5173',
     redirectUrls: 'http://localhost:5173,http://localhost:5174',
-    adminEmail: 'admin@utanvega.local',
-    adminPassword: 'Utanvega123!',
+    adminEmail: 'admin@hlaupadagskra.local',
+    adminPassword: 'Hlaupadagskra123!',
   };
 }
 
