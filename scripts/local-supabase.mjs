@@ -168,7 +168,7 @@ async function seedAdminUser(env) {
   if (response.ok) return;
 
   const body = await response.text();
-  if (/already exists|already registered|duplicate/i.test(body)) return;
+  if (/already exists|already .* registered|duplicate|email_exists/i.test(body)) return;
 
   throw new Error(`Failed to seed admin user: ${response.status} ${body}`);
 }
