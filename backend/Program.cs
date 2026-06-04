@@ -177,6 +177,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         options.Authority = supabaseUrl is not null ? supabaseUrl + "/auth/v1" : null;
+        options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = !string.IsNullOrEmpty(supabaseUrl),
