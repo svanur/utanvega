@@ -87,6 +87,8 @@ async function ensureLocalEnvFiles() {
   const postgresPassword = existing.POSTGRES_PASSWORD || randomSecret(24);
   const anonKey = existing.ANON_KEY || signJwt(jwtSecret, { role: 'anon' });
   const serviceRoleKey = existing.SERVICE_ROLE_KEY || signJwt(jwtSecret, { role: 'service_role' });
+  const adminEmail = existing.LOCAL_SUPABASE_ADMIN_EMAIL || 'admin@hlaupadagskra.local';
+  const adminPassword = existing.LOCAL_SUPABASE_ADMIN_PASSWORD || randomSecret(16);
   const allocatedPorts = new Set();
   const dbPort = await pickPort(Number(existing.LOCAL_SUPABASE_DB_PORT) || 5432, [5433, 5434, 55432], allocatedPorts);
   const kongPort = await pickPort(Number(existing.LOCAL_SUPABASE_KONG_PORT) || 8000, [8001, 8002, 8003], allocatedPorts);
@@ -105,8 +107,8 @@ async function ensureLocalEnvFiles() {
     `API_EXTERNAL_URL=${supabasePublicUrl}`,
     'SITE_URL=http://localhost:5173',
     'ADDITIONAL_REDIRECT_URLS=http://localhost:5173,http://localhost:5174',
-    'LOCAL_SUPABASE_ADMIN_EMAIL=admin@hlaupadagskra.local',
-    'LOCAL_SUPABASE_ADMIN_PASSWORD=Hlaupadagskra123!',
+    `LOCAL_SUPABASE_ADMIN_EMAIL=${adminEmail}`,
+    `LOCAL_SUPABASE_ADMIN_PASSWORD=${adminPassword}`,
     '',
   ].join('\n');
 
@@ -140,8 +142,8 @@ async function ensureLocalEnvFiles() {
     apiExternalUrl: supabasePublicUrl,
     siteUrl: 'http://localhost:5173',
     redirectUrls: 'http://localhost:5173,http://localhost:5174',
-    adminEmail: 'admin@hlaupadagskra.local',
-    adminPassword: 'Hlaupadagskra123!',
+    adminEmail,
+    adminPassword,
   };
 }
 
