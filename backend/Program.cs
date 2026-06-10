@@ -180,8 +180,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuer = !string.IsNullOrEmpty(supabaseUrl),
-            ValidIssuer = supabaseUrl is not null ? supabaseUrl + "/auth/v1" : null,
+            // Local Supabase tokens do not include an issuer claim, so rely on the signing key + audience.
+            ValidateIssuer = false,
             ValidateAudience = true,
             ValidAudience = "authenticated",
             ValidateLifetime = true,

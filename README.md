@@ -163,26 +163,26 @@ npm run supabase:down
 
 ### Available commands
 
-| Command | What it does |
-|---------|-------------|
+| Command                  | What it does                                                                           |
+|--------------------------|----------------------------------------------------------------------------------------|
 | `npm run supabase:setup` | Full first-time setup (generates env, starts Docker, seeds admin, writes user-secrets) |
-| `npm run supabase:up` | Start Docker containers only (assumes env files exist) |
-| `npm run supabase:down` | Stop Docker containers (data persists in volume) |
-| `npm run supabase:seed` | Re-seed admin user + re-write user-secrets (containers must be running) |
+| `npm run supabase:up`    | Start Docker containers only (assumes env files exist)                                 |
+| `npm run supabase:down`  | Stop Docker containers (data persists in volume)                                       |
+| `npm run supabase:seed`  | Re-seed admin user + re-write user-secrets (containers must be running)                |
 
 All commands are run from the **repo root**.
 
 ### Local endpoints
 
-| Service | URL | Notes |
-|---------|-----|-------|
-| Supabase API gateway | See `supabase/.env.local` (`SUPABASE_PUBLIC_URL`) | Kong routes to auth |
-| Auth health check | `SUPABASE_PUBLIC_URL` + `/auth/v1/health` | Should return `{"status":"ok"}` |
-| Auth (direct) | Internal only | GoTrue runs inside Docker; use the gateway URL above |
-| PostgreSQL | See `supabase/.env.local` (`LOCAL_SUPABASE_DB_PORT`) | User: `postgres`, DB: `postgres` |
-| Backend API | http://localhost:8080 | After running `npm run dev` |
-| Frontend | http://localhost:5173 | After running `npm run dev` |
-| Admin | http://localhost:5174 | After running `npm run dev` |
+| Service              | URL                                                  | Notes                                                |
+|----------------------|------------------------------------------------------|------------------------------------------------------|
+| Supabase API gateway | See `supabase/.env.local` (`SUPABASE_PUBLIC_URL`)    | Kong routes to auth                                  |
+| Auth health check    | `SUPABASE_PUBLIC_URL` + `/auth/v1/health`            | Should return `{"status":"ok"}`                      |
+| Auth (direct)        | Internal only                                        | GoTrue runs inside Docker; use the gateway URL above |
+| PostgreSQL           | See `supabase/.env.local` (`LOCAL_SUPABASE_DB_PORT`) | User: `postgres`, DB: `postgres`                     |
+| Backend API          | http://localhost:8080                                | After running `npm run dev`                          |
+| Frontend             | http://localhost:5173                                | After running `npm run dev`                          |
+| Admin                | http://localhost:5174                                | After running `npm run dev`                          |
 
 ### Connecting with a database client
 
@@ -209,13 +209,13 @@ cd backend && dotnet ef database update
 
 ### Troubleshooting
 
-| Problem | Solution |
-|---------|----------|
-| `port 5432 already in use` | Stop any local PostgreSQL service, or change the port in `docker-compose.local.yml` |
-| Auth container keeps restarting | Check logs: `docker logs hlaupadagskra-supabase-auth` — usually a role password mismatch. Reset with nuclear option above. |
-| `dotnet ef database update` fails | Ensure containers are running (`npm run supabase:up`) and check connection string in user-secrets |
-| Admin login doesn't work | Run `npm run supabase:seed` to re-create the admin user |
-| Docker not found | Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) and ensure it's running |
+| Problem                           | Solution                                                                                                                   |
+|-----------------------------------|----------------------------------------------------------------------------------------------------------------------------|
+| `port 5432 already in use`        | Stop any local PostgreSQL service, or change the port in `docker-compose.local.yml`                                        |
+| Auth container keeps restarting   | Check logs: `docker logs hlaupadagskra-supabase-auth` — usually a role password mismatch. Reset with nuclear option above. |
+| `dotnet ef database update` fails | Ensure containers are running (`npm run supabase:up`) and check connection string in user-secrets                          |
+| Admin login doesn't work          | Run `npm run supabase:seed` to re-create the admin user                                                                    |
+| Docker not found                  | Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) and ensure it's running                          |
 
 ### Notes
 

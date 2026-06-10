@@ -21,6 +21,7 @@ plugins:
         - Authorization
         - apikey
         - x-client-info
+        - x-supabase-api-version
       credentials: true
       max_age: 3600
 
