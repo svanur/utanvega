@@ -89,7 +89,6 @@ async function ensureLocalEnvFiles() {
   const serviceRoleKey = existing.SERVICE_ROLE_KEY || signJwt(jwtSecret, { role: 'service_role' });
   const allocatedPorts = new Set();
   const dbPort = await pickPort(Number(existing.LOCAL_SUPABASE_DB_PORT) || 5432, [5433, 5434, 55432], allocatedPorts);
-  const authPort = await pickPort(Number(existing.LOCAL_SUPABASE_AUTH_PORT) || 9999, [9998, 9997, 10000, 10001], allocatedPorts);
   const kongPort = await pickPort(Number(existing.LOCAL_SUPABASE_KONG_PORT) || 8000, [8001, 8002, 8003], allocatedPorts);
   const supabasePublicUrl = `http://localhost:${kongPort}`;
 
@@ -101,7 +100,6 @@ async function ensureLocalEnvFiles() {
     `ANON_KEY=${anonKey}`,
     `SERVICE_ROLE_KEY=${serviceRoleKey}`,
     `LOCAL_SUPABASE_DB_PORT=${dbPort}`,
-    `LOCAL_SUPABASE_AUTH_PORT=${authPort}`,
     `LOCAL_SUPABASE_KONG_PORT=${kongPort}`,
     `SUPABASE_PUBLIC_URL=${supabasePublicUrl}`,
     `API_EXTERNAL_URL=${supabasePublicUrl}`,
@@ -137,7 +135,6 @@ async function ensureLocalEnvFiles() {
     anonKey,
     serviceRoleKey,
     dbPort,
-    authPort,
     kongPort,
     supabasePublicUrl,
     apiExternalUrl: supabasePublicUrl,
