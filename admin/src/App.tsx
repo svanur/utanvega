@@ -49,19 +49,19 @@ const DRAWER_COLLAPSED = 56;
 type PageKey = 'trails' | 'locations' | 'health' | 'map' | 'tags' | 'analytics' | 'features' | 'events';
 
 const PAGE_PATHS: Record<PageKey, string> = {
-  trails: '/',
+  trails: '/trails',
   locations: '/locations',
   health: '/health',
   map: '/map',
   tags: '/tags',
   analytics: '/analytics',
-  events: '/events',
+  events: '/',
   features: '/features',
 };
 
 function pathToPage(pathname: string): PageKey {
   const entry = Object.entries(PAGE_PATHS).find(([, path]) => path === pathname);
-  return (entry?.[0] as PageKey) ?? 'trails';
+  return (entry?.[0] as PageKey) ?? 'events';
 }
 
 function AdminContent() {
@@ -156,7 +156,7 @@ function AdminContent() {
           </IconButton>
           <Box
             component="button"
-            onClick={() => setCurrentPage('trails')}
+            onClick={() => setCurrentPage('events')}
             sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1, background: 'none', border: 'none', cursor: 'pointer', p: 0, color: 'inherit' }}
           >
             <img src="/images/hlaupadagskra.avif" alt="Hlaupadagskra logo" style={{ height: 32 }} />
@@ -215,13 +215,13 @@ function AdminContent() {
         <Box sx={{ overflow: 'auto' }}>
           <List>
             {[
+              { key: 'events' as const, icon: <EmojiEventsIcon />, label: 'Events' },
               { key: 'trails' as const, icon: <DashboardIcon />, label: 'All Trails' },
               { key: 'locations' as const, icon: <LocationOnIcon />, label: 'Locations' },
               { key: 'health' as const, icon: <HealthAndSafetyIcon />, label: 'Trail Health' },
               { key: 'map' as const, icon: <MapIcon />, label: 'Trail Map' },
               { key: 'tags' as const, icon: <LocalOfferIcon />, label: 'Tags' },
               { key: 'analytics' as const, icon: <BarChartIcon />, label: 'Analytics' },
-              { key: 'events' as const, icon: <EmojiEventsIcon />, label: 'Events' },
               { key: 'features' as const, icon: <ToggleOnIcon />, label: 'Features' },
             ].map(item => (
               <ListItem key={item.key} disablePadding>
