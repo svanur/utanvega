@@ -6,7 +6,7 @@ services:
     container_name: hlaupadagskra-supabase-db
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      - "${LOCAL_SUPABASE_DB_PORT:-5432}:5432"
     environment:
       POSTGRES_DB: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -41,8 +41,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    ports:
-      - "9999:9999"
     environment:
       GOTRUE_API_HOST: 0.0.0.0
       GOTRUE_API_PORT: 9999
@@ -93,7 +91,7 @@ services:
       auth:
         condition: service_healthy
     ports:
-      - "8000:8000"
+      - "${LOCAL_SUPABASE_KONG_PORT:-8000}:8000"
     environment:
       KONG_DATABASE: "off"
       KONG_DECLARATIVE_CONFIG: /home/kong/kong.yml

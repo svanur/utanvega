@@ -61,7 +61,7 @@ If the hosted Supabase project is quota-limited or unavailable, use the local st
 npm run supabase:setup
 ```
 
-This generates local env files, starts Postgres + Auth + Kong in Docker, and seeds a local admin login. The generated credentials are printed by the setup script.
+This generates local env files, starts Postgres + Auth + Kong in Docker, and seeds a local admin login. The generated credentials are printed by the setup script. If a default port is busy, the script automatically picks another free host port and writes it to `supabase/.env.local`.
 
 ### 4. Run database migrations
 
@@ -176,10 +176,10 @@ All commands are run from the **repo root**.
 
 | Service | URL | Notes |
 |---------|-----|-------|
-| Supabase API gateway | http://localhost:8000 | Kong routes to auth |
-| Auth health check | http://localhost:8000/auth/v1/health | Should return `{"status":"ok"}` |
-| Auth (direct) | http://localhost:9999 | GoTrue direct access |
-| PostgreSQL | localhost:5432 | User: `postgres`, DB: `postgres` |
+| Supabase API gateway | See `supabase/.env.local` (`SUPABASE_PUBLIC_URL`) | Kong routes to auth |
+| Auth health check | `SUPABASE_PUBLIC_URL` + `/auth/v1/health` | Should return `{"status":"ok"}` |
+| Auth (direct) | Internal only | GoTrue runs inside Docker; use the gateway URL above |
+| PostgreSQL | See `supabase/.env.local` (`LOCAL_SUPABASE_DB_PORT`) | User: `postgres`, DB: `postgres` |
 | Backend API | http://localhost:8080 | After running `npm run dev` |
 | Frontend | http://localhost:5173 | After running `npm run dev` |
 | Admin | http://localhost:5174 | After running `npm run dev` |
