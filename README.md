@@ -50,6 +50,7 @@ The backend uses [.NET User Secrets](https://learn.microsoft.com/en-us/aspnet/co
 ```bash
 cd backend
 dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=...;Database=...;Username=...;Password=..."
+dotnet user-secrets set "SUPABASE_URL" "https://your-project-ref.supabase.co"
 dotnet user-secrets set "SUPABASE_JWT_SECRET" "your-supabase-jwt-secret"
 ```
 
