@@ -2,7 +2,7 @@
 admin/node_modules/
 admin/dist/
 admin/.vite/
-admin/tsconfig.tsbuildinfo
+admin/tsconfig*.tsbuildinfo
 
 # Backend
 backend/bin/

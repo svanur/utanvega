@@ -173,14 +173,26 @@ else if (!string.IsNullOrEmpty(jwtSecret))
     Log.Information("SUPABASE_JWT_SECRET found (length: {Length})", jwtSecret.Length);
 }
 
+var isLocalSupabase = false;
+if (!string.IsNullOrWhiteSpace(supabaseUrl) && Uri.TryCreate(supabaseUrl, UriKind.Absolute, out var supabaseUri))
+{
+    isLocalSupabase = supabaseUri.IsLoopback || string.Equals(supabaseUri.Host, "localhost", StringComparison.OrdinalIgnoreCase);
+}
+
+var expectedIssuer = !string.IsNullOrWhiteSpace(supabaseUrl)
+    ? $"{supabaseUrl.TrimEnd('/')}/auth/v1"
+    : null;
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
-        options.Authority = supabaseUrl is not null ? supabaseUrl + "/auth/v1" : null;
+        options.Authority = expectedIssuer;
+        options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuer = !string.IsNullOrEmpty(supabaseUrl),
-            ValidIssuer = supabaseUrl is not null ? supabaseUrl + "/auth/v1" : null,
+            // Keep issuer validation for hosted Supabase; local Docker tokens may omit/mismatch issuer.
+            ValidateIssuer = !isLocalSupabase && !string.IsNullOrWhiteSpace(expectedIssuer),
+            ValidIssuer = expectedIssuer,
             ValidateAudience = true,
             ValidAudience = "authenticated",
             ValidateLifetime = true,

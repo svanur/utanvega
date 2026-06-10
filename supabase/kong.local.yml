@@ -1,0 +1,38 @@
+_format_version: "3.0"
+_transform: true
+
+plugins:
+  - name: cors
+    config:
+      origins:
+        - http://localhost:5173
+        - http://localhost:5174
+      methods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - OPTIONS
+      headers:
+        - Accept
+        - Accept-Language
+        - Content-Type
+        - Authorization
+        - apikey
+        - x-client-info
+        - x-supabase-api-version
+      credentials: true
+      max_age: 3600
+
+services:
+  - name: auth
+    url: http://auth:9999
+    routes:
+      - name: auth
+        paths:
+          - /auth/v1
+        strip_path: true
+        preserve_host: false
+        protocols:
+          - http
