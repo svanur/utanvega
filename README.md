@@ -211,7 +211,7 @@ cd backend && dotnet ef database update
 
 | Problem                           | Solution                                                                                                                   |
 |-----------------------------------|----------------------------------------------------------------------------------------------------------------------------|
-| `port 5432 already in use`        | Stop any local PostgreSQL service, or change the port in `docker-compose.local.yml`                                        |
+| `port 5432 already in use`        | Run `npm run supabase:setup` (or re-run it) to auto-pick and persist a free DB port in `supabase/.env.local` (`LOCAL_SUPABASE_DB_PORT`) |
 | Auth container keeps restarting   | Check logs: `docker logs hlaupadagskra-supabase-auth` — usually a role password mismatch. Reset with nuclear option above. |
 | `dotnet ef database update` fails | Ensure containers are running (`npm run supabase:up`) and check connection string in user-secrets                          |
 | Admin login doesn't work          | Run `npm run supabase:seed` to re-create the admin user                                                                    |
