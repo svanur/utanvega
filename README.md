@@ -190,7 +190,7 @@ Use any PostgreSQL client (pgAdmin, DBeaver, DataGrip, `psql`):
 
 ```
 Host: localhost
-Port: 5432
+Port: (check supabase/.env.local → LOCAL_SUPABASE_DB_PORT)
 Database: postgres
 Username: postgres
 Password: (check supabase/.env.local → POSTGRES_PASSWORD)
