@@ -4,8 +4,8 @@ param(
   [string]$SupabaseUrl = "<REPLACE_STAGING_SUPABASE_URL>",
   [string]$SupabaseJwtSecret = "<REPLACE_STAGING_SUPABASE_JWT_SECRET>",
   [string]$SupabaseAnonKey = "<REPLACE_STAGING_SUPABASE_ANON_KEY>",
-  [string]$StagingFrontendUrl = "https://staging.hlaupadagskra.vercel.app",
-  [string]$StagingAdminUrl = "https://admin-staging.hlaupadagskra.vercel.app",
+  [string]$StagingFrontendUrl = "https://staging-hlaupadagskra.vercel.app",
+  [string]$StagingAdminUrl = "https://staging-admin-hlaupadagskra.vercel.app",
   [string]$VercelEnvironment = "production"
 )
 
