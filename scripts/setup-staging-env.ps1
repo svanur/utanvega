@@ -11,7 +11,7 @@ param(
 
 function Assert-Replaced([string]$name, [string]$value) {
   if ([string]::IsNullOrWhiteSpace($value) -or $value -match '^<REPLACE_') {
-    throw "Please set $name before running this script (got: '$value')."
+    throw "Please set $name before running this script."
   }
 }
 
