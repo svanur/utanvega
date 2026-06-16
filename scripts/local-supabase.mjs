@@ -90,8 +90,15 @@ async function ensureLocalEnvFiles() {
   const adminEmail = existing.LOCAL_SUPABASE_ADMIN_EMAIL || 'admin@hlaupadagskra.local';
   const adminPassword = existing.LOCAL_SUPABASE_ADMIN_PASSWORD || randomSecret(16);
   const allocatedPorts = new Set();
-  const dbPort = await pickPort(Number(existing.LOCAL_SUPABASE_DB_PORT) || 5432, [5433, 5434, 55432], allocatedPorts);
-  const kongPort = await pickPort(Number(existing.LOCAL_SUPABASE_KONG_PORT) || 8000, [8001, 8002, 8003], allocatedPorts);
+  // If ports are already configured (containers may be running), reuse them directly
+  // to avoid reassigning to a different port because the existing one appears "in use".
+  const dbPort = existing.LOCAL_SUPABASE_DB_PORT
+    ? Number(existing.LOCAL_SUPABASE_DB_PORT)
+    : await pickPort(5432, [5433, 5434, 55432], allocatedPorts);
+  allocatedPorts.add(dbPort);
+  const kongPort = existing.LOCAL_SUPABASE_KONG_PORT
+    ? Number(existing.LOCAL_SUPABASE_KONG_PORT)
+    : await pickPort(8000, [8001, 8002, 8003], allocatedPorts);
   const supabasePublicUrl = `http://localhost:${kongPort}`;
 
   const supabaseEnv = [
@@ -221,7 +228,7 @@ async function setup() {
   console.log(`Admin password: ${env.adminPassword}`);
   console.log('Frontend: http://localhost:5173');
   console.log('Admin: http://localhost:5174');
-  console.log(`Supabase: ${env.supabasePublicUrl}`);
+  console.log(`Supabase: ${env.supabasePublicUrl}/auth/v1/health`);
 }
 
 async function seed() {
