@@ -994,6 +994,10 @@ export default function EventList({ onNotify }: EventListProps) {
       onNotify('Cutoff Time must be in HH:mm format', 'error');
       return;
     }
+    if (parsedCutoffMinutes === 0) {
+      onNotify('Cutoff Time cannot be 00:00. Clear the field if you want no cutoff.', 'error');
+      return;
+    }
     if (normalizedCutoffTime !== raceForm.cutoffTime) {
       setRaceField('cutoffTime', normalizedCutoffTime);
     }
