@@ -237,7 +237,7 @@ function normalizeCutoffTimeInput(value: string): string {
     const hours = rawHours.replace(/\D/g, '').slice(0, 2);
     const minutes = rawMinutes.replace(/\D/g, '').slice(0, 2);
     if (!hours && !minutes) return '';
-    if (!hours) return minutes;
+    if (!hours) return `0:${minutes}`;
     return `${hours}:${minutes}`;
   }
 
