@@ -1525,7 +1525,7 @@ export default function EventList({ onNotify }: EventListProps) {
                                                       <Chip label={race.ticketStatus} size="small" color={getTicketStatusColor(race.ticketStatus)} variant="outlined" />
                                                       {race.cutoffMinutes != null && (
                                                         <Chip
-                                                          label={`Cutoff ${formatMinutesToHHmm(race.cutoffMinutes)}`}
+                                                          label={`Cutoff ${formatMinutesToHHmm(race.cutoffMinutes) ?? `${race.cutoffMinutes} min`}`}
                                                           size="small"
                                                           variant="outlined"
                                                           color="warning"
