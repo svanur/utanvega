@@ -87,10 +87,20 @@ namespace Utanvega.Backend.Migrations
                 table: "UserTrailActivities",
                 newName: "Id");
 
-            migrationBuilder.RenameColumn(
-                name: "legacy_id",
-                table: "UserTrailActivities",
-                newName: "LegacyId");
+            migrationBuilder.Sql(@"
+                DO $$
+                BEGIN
+                    IF EXISTS (
+                        SELECT 1
+                        FROM information_schema.columns
+                        WHERE table_schema = 'public'
+                          AND table_name = 'UserTrailActivities'
+                          AND column_name = 'legacy_id'
+                    ) THEN
+                        ALTER TABLE public.""UserTrailActivities"" RENAME COLUMN legacy_id TO ""LegacyId"";
+                    END IF;
+                END
+                $$;");
 
             // Rename existing indexes
             migrationBuilder.RenameIndex(

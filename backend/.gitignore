@@ -1,0 +1,14 @@
+# Environment files with secrets
+.env.staging
+.env.production
+.env.local
+
+# Build outputs
+bin/
+obj/
+
+# Build artifacts
+*.user
+*.suo
+*.userosscache
+*.rsuser

@@ -33,6 +33,7 @@ import RunningLoader from '../components/RunningLoader';
 import LostRunner from '../components/LostRunner';
 import { useEventBySlug } from '../hooks/useEvents';
 import type { EventEditionDto, RaceDto } from '../hooks/useEvents';
+import { splitMinutes } from '../utils/cutoffTime';
 
 type EditionHistoryPageProps = {
     mode: PaletteMode;
@@ -50,8 +51,7 @@ function formatNextDate(dateStr: string, t: (key: string, opts?: Record<string, 
 }
 
 function formatCutoff(minutes: number, t: (key: string, opts?: Record<string, unknown>) => string): string {
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
+    const { hours: h, minutes: m } = splitMinutes(minutes);
     if (m === 0) return t('races.cutoffHours', { count: h });
     return `${h}h ${m}m`;
 }

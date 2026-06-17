@@ -5,7 +5,11 @@
     "dev:admin": "npm --prefix admin run dev",
     "dev:backend": "dotnet watch --project backend/backend.csproj run",
     "dev:frontend": "npm --prefix frontend run dev",
-    "dev": "concurrently \"npm run dev:admin\" \"npm run dev:backend\" \"npm run dev:frontend\""
+    "dev": "concurrently \"npm run dev:admin\" \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "supabase:setup": "node scripts/local-supabase.mjs setup",
+    "supabase:up": "node scripts/local-supabase.mjs up",
+    "supabase:down": "node scripts/local-supabase.mjs down",
+    "supabase:seed": "node scripts/local-supabase.mjs seed"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
