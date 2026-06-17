@@ -2017,7 +2017,7 @@ export default function EventList({ onNotify }: EventListProps) {
                   }
                 }}
                 placeholder="Type 0400 or 04:00"
-                helperText="Digits only. Example: 0400 → 04:00 (stored as minutes)"
+                helperText="Accepted formats: 0400 or 04:00 (stored as minutes)"
                 inputProps={{ inputMode: 'numeric' }}
               />
               <TextField
