@@ -70,7 +70,7 @@ import {
 } from '../hooks/useEvents';
 import { useLocations } from '../hooks/useLocations';
 import { useTrails } from '../hooks/useTrails';
-import { formatMinutesToHHmm, parseHHmmToMinutes } from '../../../shared/utils/cutoffTime';
+import { formatMinutesToHHmm, parseHHmmToMinutes } from '../utils/cutoffTime';
 
 interface EventListProps {
   onNotify: (message: ReactNode, severity?: 'success' | 'error') => void;
@@ -967,10 +967,14 @@ export default function EventList({ onNotify }: EventListProps) {
   const handleSaveRace = async () => {
     if (!raceForm.name.trim() || !raceForm.eventEditionId) return;
 
-    const parsedCutoffMinutes = parseHHmmToMinutes(raceForm.cutoffTime);
-    if (raceForm.cutoffTime.trim() && parsedCutoffMinutes == null) {
+    const normalizedCutoffTime = normalizeCutoffTimeOnBlur(raceForm.cutoffTime);
+    const parsedCutoffMinutes = parseHHmmToMinutes(normalizedCutoffTime);
+    if (normalizedCutoffTime.trim() && parsedCutoffMinutes == null) {
       onNotify('Cutoff Time must be in HH:mm format', 'error');
       return;
+    }
+    if (normalizedCutoffTime !== raceForm.cutoffTime) {
+      setRaceField('cutoffTime', normalizedCutoffTime);
     }
 
     setSaving(true);

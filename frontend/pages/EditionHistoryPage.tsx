@@ -33,7 +33,7 @@ import RunningLoader from '../components/RunningLoader';
 import LostRunner from '../components/LostRunner';
 import { useEventBySlug } from '../hooks/useEvents';
 import type { EventEditionDto, RaceDto } from '../hooks/useEvents';
-import { splitMinutes } from '../../shared/utils/cutoffTime';
+import { splitMinutes } from '../utils/cutoffTime';
 
 type EditionHistoryPageProps = {
     mode: PaletteMode;

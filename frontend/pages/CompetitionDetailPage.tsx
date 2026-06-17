@@ -54,7 +54,7 @@ import { useEvents, useEventBySlug } from '../hooks/useEvents';
 import type { EventEditionDto, RaceDto, ScheduleRule } from '../hooks/useEvents';
 import { useTrailWeather } from '../hooks/useTrails';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
-import { splitMinutes } from '../../shared/utils/cutoffTime';
+import { splitMinutes } from '../utils/cutoffTime';
 
 type CompetitionDetailPageProps = {
     mode: PaletteMode;
