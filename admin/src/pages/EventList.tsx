@@ -70,6 +70,7 @@ import {
 } from '../hooks/useEvents';
 import { useLocations } from '../hooks/useLocations';
 import { useTrails } from '../hooks/useTrails';
+import { formatMinutesToHHmm, parseHHmmToMinutes } from '../../../shared/utils/cutoffTime';
 
 interface EventListProps {
   onNotify: (message: ReactNode, severity?: 'success' | 'error') => void;
@@ -120,7 +121,7 @@ interface RaceFormState {
   trailId: string;
   name: string;
   distanceLabel: string;
-  cutoffMinutes: string;
+  cutoffTime: string;
   description: string;
   status: RaceStatus;
   sortOrder: string;
@@ -227,6 +228,38 @@ function formatDateLabel(value: string | null | undefined, fallback = '—'): st
 
 function formatTimeLabel(value: string | null | undefined): string {
   return value ? value.slice(0, 5) : '—';
+}
+
+function normalizeCutoffTimeInput(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 4);
+  if (!digits) return '';
+  if (digits.length <= 2) return digits;
+  if (digits.length === 3) return `${digits.slice(0, 1)}:${digits.slice(1)}`;
+  return `${digits.slice(0, 2)}:${digits.slice(2)}`;
+}
+
+function normalizeCutoffTimeOnBlur(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 4);
+  if (!digits) return '';
+
+  let hours = 0;
+  let minutes = 0;
+
+  if (digits.length <= 2) {
+    hours = Number(digits);
+  } else if (digits.length === 3) {
+    hours = Number(digits.slice(0, 1));
+    minutes = Number(digits.slice(1));
+  } else {
+    hours = Number(digits.slice(0, 2));
+    minutes = Number(digits.slice(2));
+  }
+
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes) || minutes > 59) {
+    return value;
+  }
+
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
 }
 
 function formatDaysUntil(daysUntil: number | null): string | null {
@@ -341,7 +374,7 @@ function createEmptyRaceForm(eventEditionId = '', sortOrder = 0): RaceFormState 
     trailId: '',
     name: '',
     distanceLabel: '',
-    cutoffMinutes: '',
+    cutoffTime: '',
     description: '',
     status: 'Active',
     sortOrder: String(sortOrder),
@@ -425,7 +458,7 @@ function buildRaceForm(race: RaceDto): RaceFormState {
     trailId: race.trailId ?? '',
     name: race.name,
     distanceLabel: race.distanceLabel ?? '',
-    cutoffMinutes: race.cutoffMinutes?.toString() ?? '',
+    cutoffTime: formatMinutesToHHmm(race.cutoffMinutes) ?? '',
     description: race.description ?? '',
     status: race.status,
     sortOrder: race.sortOrder.toString(),
@@ -934,6 +967,12 @@ export default function EventList({ onNotify }: EventListProps) {
   const handleSaveRace = async () => {
     if (!raceForm.name.trim() || !raceForm.eventEditionId) return;
 
+    const parsedCutoffMinutes = parseHHmmToMinutes(raceForm.cutoffTime);
+    if (raceForm.cutoffTime.trim() && parsedCutoffMinutes == null) {
+      onNotify('Cutoff Time must be in HH:mm format', 'error');
+      return;
+    }
+
     setSaving(true);
     try {
       const input = {
@@ -941,7 +980,7 @@ export default function EventList({ onNotify }: EventListProps) {
         trailId: raceForm.trailId || null,
         name: raceForm.name.trim(),
         distanceLabel: trimToUndefined(raceForm.distanceLabel),
-        cutoffMinutes: raceForm.cutoffMinutes.trim() ? Number(raceForm.cutoffMinutes) : null,
+        cutoffMinutes: parsedCutoffMinutes,
         description: trimToUndefined(raceForm.description),
         status: raceForm.status,
         sortOrder: raceForm.sortOrder.trim() ? Number(raceForm.sortOrder) : 0,
@@ -1480,7 +1519,14 @@ export default function EventList({ onNotify }: EventListProps) {
                                                       {race.distanceLabel && <Chip label={race.distanceLabel} size="small" variant="outlined" />}
                                                       <Chip label={race.status} size="small" color={getRaceStatusColor(race.status)} />
                                                       <Chip label={race.ticketStatus} size="small" color={getTicketStatusColor(race.ticketStatus)} variant="outlined" />
-                                                      {race.cutoffMinutes != null && <Chip label={`${race.cutoffMinutes} min cutoff`} size="small" variant="outlined" color="warning" />}
+                                                      {race.cutoffMinutes != null && (
+                                                        <Chip
+                                                          label={`Cutoff ${formatMinutesToHHmm(race.cutoffMinutes)}`}
+                                                          size="small"
+                                                          variant="outlined"
+                                                          color="warning"
+                                                        />
+                                                      )}
                                                     </Stack>
                                                   )}
                                                   secondary={(
@@ -1932,10 +1978,18 @@ export default function EventList({ onNotify }: EventListProps) {
                 placeholder="e.g. 55 km"
               />
               <TextField
-                label="Cutoff Minutes"
-                type="number"
-                value={raceForm.cutoffMinutes}
-                onChange={(event) => setRaceField('cutoffMinutes', event.target.value)}
+                label="Cutoff Time"
+                value={raceForm.cutoffTime}
+                onChange={(event) => setRaceField('cutoffTime', normalizeCutoffTimeInput(event.target.value))}
+                onBlur={() => {
+                  const normalized = normalizeCutoffTimeOnBlur(raceForm.cutoffTime);
+                  if (normalized !== raceForm.cutoffTime) {
+                    setRaceField('cutoffTime', normalized);
+                  }
+                }}
+                placeholder="Type 0400 or 04:00"
+                helperText="Digits only. Example: 0400 → 04:00 (stored as minutes)"
+                inputProps={{ inputMode: 'numeric' }}
               />
               <TextField
                 label="Sort Order"

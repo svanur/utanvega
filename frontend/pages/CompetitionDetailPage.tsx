@@ -54,6 +54,7 @@ import { useEvents, useEventBySlug } from '../hooks/useEvents';
 import type { EventEditionDto, RaceDto, ScheduleRule } from '../hooks/useEvents';
 import { useTrailWeather } from '../hooks/useTrails';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
+import { splitMinutes } from '../../shared/utils/cutoffTime';
 
 type CompetitionDetailPageProps = {
     mode: PaletteMode;
@@ -87,8 +88,7 @@ function formatNextDate(dateStr: string, t: (key: string, opts?: Record<string, 
 }
 
 function formatCutoff(minutes: number, t: (key: string, opts?: Record<string, unknown>) => string): string {
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
+    const { hours: h, minutes: m } = splitMinutes(minutes);
     if (m === 0) return t('races.cutoffHours', { count: h });
     return `${h}h ${m}m`;
 }
