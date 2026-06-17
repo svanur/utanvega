@@ -47,9 +47,9 @@ BEGIN
     IF to_regclass('public."TrailCheckIns"') IS NOT NULL THEN
         EXECUTE 'ALTER TABLE "TrailCheckIns" ENABLE ROW LEVEL SECURITY';
 
-        -- Public read keeps the trail details check-in list/realtime visible.
+        -- Public read only exposes active check-ins; expired rows stay hidden.
         EXECUTE 'DROP POLICY IF EXISTS "Trail check-ins are publicly readable" ON "TrailCheckIns"';
-        EXECUTE 'CREATE POLICY "Trail check-ins are publicly readable" ON "TrailCheckIns" FOR SELECT USING (true)';
+        EXECUTE 'CREATE POLICY "Trail check-ins are publicly readable" ON "TrailCheckIns" FOR SELECT USING ("ExpiresAt" > now())';
     END IF;
 END $$;
 
