@@ -162,12 +162,17 @@ public class UtanvegaDbContext : DbContext
             entity.Property(e => e.ActivityType).HasConversion<string>();
             entity.Property(e => e.Status).HasConversion<string>();
 
-            entity.Property(e => e.ScheduleRule)
-                  .HasColumnType("jsonb")
-                  .HasConversion(
-                      v => v == null ? null : JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-                      v => v == null ? null : JsonSerializer.Deserialize<ScheduleRule>(v, (JsonSerializerOptions?)null)
-                  );
+            entity.OwnsOne(e => e.ScheduleRule, sr =>
+            {
+                sr.Property(r => r.Type).HasColumnName("ScheduleRule_Type").HasConversion<string>();
+                sr.Property(r => r.Month).HasColumnName("ScheduleRule_Month");
+                sr.Property(r => r.WeekOfMonth).HasColumnName("ScheduleRule_WeekOfMonth");
+                sr.Property(r => r.DayOfMonth).HasColumnName("ScheduleRule_DayOfMonth");
+                sr.Property(r => r.DayOfWeek).HasColumnName("ScheduleRule_DayOfWeek").HasConversion<string>();
+                sr.Property(r => r.MonthStart).HasColumnName("ScheduleRule_MonthStart");
+                sr.Property(r => r.MonthEnd).HasColumnName("ScheduleRule_MonthEnd");
+                sr.Property(r => r.Date).HasColumnName("ScheduleRule_Date");
+            });
 
             entity.Property(e => e.SocialLinks)
                   .HasColumnType("jsonb")
