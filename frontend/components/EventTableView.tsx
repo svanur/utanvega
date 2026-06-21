@@ -6,7 +6,7 @@ import {
     TableSortLabel, Paper, Typography, Chip, IconButton, Tooltip, Stack,
     Collapse, Box, Skeleton, Button,
 } from '@mui/material';
-import { getTicketStatusColor } from '../utils/ticketStatus';
+import { getTicketStatusColor, groupDistances } from '../utils/ticketStatus';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
@@ -247,7 +247,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events }) => {
                                     {/* Name — activity icon inline */}
                                     <TableCell>
                                         <Stack direction="row" alignItems="center" spacing={0.5}>
-                                            <Tooltip title={event.activityType}>
+                                            <Tooltip title={t(`races.activityTypes.${event.activityType}`, event.activityType)}>
                                                 <span>{getActivityIcon(event.activityType)}</span>
                                             </Tooltip>
                                             <Typography
@@ -269,7 +269,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events }) => {
 
                                     {/* Type */}
                                     <TableCell align="center">
-                                        <Chip label={event.type} size="small" color={getEventTypeColor(event.type)} variant="outlined" sx={{ fontSize: '0.7rem', height: 22 }} />
+                                        <Chip label={t(`races.eventTypes.${event.type}`, event.type)} size="small" color={getEventTypeColor(event.type)} variant="outlined" sx={{ fontSize: '0.7rem', height: 22 }} />
                                     </TableCell>
 
                                     {/* Location */}
@@ -290,10 +290,10 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events }) => {
                                     <TableCell>
                                         {event.distances && event.distances.length > 0 ? (
                                             <Stack direction="row" flexWrap="wrap" gap={0.5}>
-                                                {event.distances.map((d, i) => (
+                                                {groupDistances(event.distances).map((d, i) => (
                                                     <Tooltip key={i} title={d.ticketStatus && d.ticketStatus !== 'Available' ? t(`races.ticketStatus.${d.ticketStatus}`, d.ticketStatus) : ''}>
                                                         <Chip
-                                                            label={d.label}
+                                                            label={d.count > 1 ? `${d.count} × ${d.label}` : d.label}
                                                             size="small"
                                                             variant="outlined"
                                                             clickable
