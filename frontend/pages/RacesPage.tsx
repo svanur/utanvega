@@ -35,6 +35,7 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import Layout from '../components/Layout';
 import RandomQuote from '../components/RandomQuote';
 import RunningLoader from '../components/RunningLoader';
+import EventDateBadge from '../components/EventDateBadge';
 import { useEvents, type EventSummary } from '../hooks/useEvents';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
@@ -371,7 +372,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
 
                                                     {/* Next date */}
                                                     {(comp.displayDate ?? comp.nextEditionDate) && comp.status !== 'Cancelled' && (
-                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1.5 }}>
+                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1.5, flexWrap: 'wrap' }}>
                                                             <CalendarTodayIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
                                                             <Typography variant="body2" color="text.secondary" sx={{ mr: 0.5 }}>
                                                                 {t('races.nextRace')}
@@ -379,6 +380,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                             <Typography variant="body2" fontWeight={600}>
                                                                 {formatNextDate((comp.displayDate ?? comp.nextEditionDate)!, t)}
                                                             </Typography>
+                                                            <EventDateBadge dateStr={(comp.displayDate ?? comp.nextEditionDate)!} />
                                                         </Box>
                                                     )}
 

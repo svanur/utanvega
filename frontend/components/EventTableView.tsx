@@ -24,6 +24,7 @@ import CampaignIcon from '@mui/icons-material/Campaign';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import type { EventSummary, EventDetail, RaceDto } from '../hooks/useEvents';
 import { API_URL } from '../hooks/useTrails';
+import EventDateBadge from './EventDateBadge';
 
 function getActivityIcon(type: string) {
     switch (type) {
@@ -230,12 +231,15 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events }) => {
                                     </TableCell>
                                     <TableCell align="center">
                                         {(event.displayDate ?? event.nextEditionDate) ? (
-                                            <Typography variant="body2" color="text.secondary" noWrap>
-                                                {new Date((event.displayDate ?? event.nextEditionDate)! + 'T00:00:00').toLocaleDateString(
-                                                    i18n.language === 'is' ? 'is-IS' : 'en-US',
-                                                    { day: 'numeric', month: 'short', year: 'numeric' }
-                                                )}
-                                            </Typography>
+                                            <Stack alignItems="center" spacing={0.5}>
+                                                <Typography variant="body2" color="text.secondary" noWrap>
+                                                    {new Date((event.displayDate ?? event.nextEditionDate)! + 'T00:00:00').toLocaleDateString(
+                                                        i18n.language === 'is' ? 'is-IS' : 'en-US',
+                                                        { day: 'numeric', month: 'short', year: 'numeric' }
+                                                    )}
+                                                </Typography>
+                                                <EventDateBadge dateStr={(event.displayDate ?? event.nextEditionDate)!} />
+                                            </Stack>
                                         ) : (
                                             <Typography variant="body2" color="text.secondary">—</Typography>
                                         )}

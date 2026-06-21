@@ -67,6 +67,7 @@ type PreparedEdition = EventEditionDto & {
 
 import { ACTIVITY_EMOJI } from '../constants/activityEmoji';
 import { googleCalendarUrl, outlookCalendarUrl, downloadIcs } from '../utils/calendarLinks';
+import EventDateBadge from '../components/EventDateBadge';
 
 type RaceDayChecklistKey = 'bib' | 'shoes' | 'gels' | 'goodMood';
 
@@ -646,7 +647,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                     })()}
 
                     {(event.displayDate ?? event.nextEditionDate) && event.status !== 'Cancelled' && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 2, flexWrap: 'wrap' }}>
                             <CalendarTodayIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
                             <Typography variant="body2" color="text.secondary" sx={{ mr: 0.5 }}>
                                 {t(event.daysUntil != null && event.daysUntil < 0 ? 'races.lastRace' : 'races.nextRace')}
@@ -654,6 +655,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             <Typography variant="body1" fontWeight={600}>
                                 {formatNextDate((event.displayDate ?? event.nextEditionDate)!, t)}
                             </Typography>
+                            <EventDateBadge dateStr={(event.displayDate ?? event.nextEditionDate)!} />
                         </Box>
                     )}
 
