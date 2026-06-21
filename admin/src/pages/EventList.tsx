@@ -219,6 +219,12 @@ function formatSchedule(rule: ScheduleRule | null): string {
     return `${weekPart}${rule.dayOfWeek}, ${MONTHS[rule.monthStart]}–${MONTHS[rule.monthEnd]}`;
   }
 
+  if (rule.type === 'Approximate' && rule.month != null) {
+    return rule.monthEnd != null
+      ? `Usually ${MONTHS[rule.month]}–${MONTHS[rule.monthEnd]}`
+      : `Usually in ${MONTHS[rule.month]}`;
+  }
+
   return '—';
 }
 
@@ -450,7 +456,7 @@ function buildEventForm(event: EventSummaryDto): EventFormState {
     scheduleDay: rule?.dayOfWeek ?? 'Saturday',
     scheduleDayOfMonth: rule?.dayOfMonth ?? 1,
     scheduleMonthStart: rule?.monthStart ?? 10,
-    scheduleMonthEnd: rule?.monthEnd ?? 3,
+    scheduleMonthEnd: rule?.monthEnd ?? (rule?.type === 'Approximate' ? 0 : 3),
     scheduleDate: rule?.date ?? '',
     scheduleSeasonalWeek: rule?.type === 'Seasonal' ? (rule.weekOfMonth ?? '') : '',
     socialLinks: event.socialLinks?.map(link => ({ ...link })) ?? [],
@@ -524,10 +530,19 @@ function buildScheduleRule(form: EventFormState): ScheduleRule | null {
     };
   }
 
-  if (form.scheduleDate) {
+  if (form.scheduleType === 'Fixed') {
+    if (!form.scheduleDate) return null;
     return {
       type: 'Fixed',
       date: form.scheduleDate,
+    };
+  }
+
+  if (form.scheduleType === 'Approximate') {
+    return {
+      type: 'Approximate',
+      month: form.scheduleMonth,
+      ...(form.scheduleMonthEnd > 0 && { monthEnd: form.scheduleMonthEnd }),
     };
   }
 
@@ -1749,6 +1764,9 @@ export default function EventList({ onNotify }: EventListProps) {
                     <Button size="small" variant={eventForm.scheduleType === 'Fixed' ? 'contained' : 'outlined'} onClick={() => setEventField('scheduleType', 'Fixed' as ScheduleType)}>
                       Fixed date
                     </Button>
+                    <Button size="small" variant={eventForm.scheduleType === 'Approximate' ? 'contained' : 'outlined'} onClick={() => { setEventField('scheduleType', 'Approximate' as ScheduleType); setEventField('scheduleMonthEnd', 0); }}>
+                      Approximate
+                    </Button>
                   </Box>
 
                   {eventForm.scheduleType === 'Yearly' && (
@@ -1853,6 +1871,29 @@ export default function EventList({ onNotify }: EventListProps) {
                       InputLabelProps={{ shrink: true }}
                       inputProps={{ lang: 'is' }}
                     />
+                  )}
+
+                  {eventForm.scheduleType === 'Approximate' && (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                      <Typography variant="caption" color="text.secondary">
+                        No exact date — shown as "Usually in [month]" on the calendar.
+                      </Typography>
+                      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '150px 150px' }, gap: 2 }}>
+                        <FormControl>
+                          <InputLabel>Month</InputLabel>
+                          <Select value={eventForm.scheduleMonth} label="Month" onChange={(event) => setEventField('scheduleMonth', Number(event.target.value))}>
+                            {MONTHS.slice(1).map((month, index) => <MenuItem key={month} value={index + 1}>{month}</MenuItem>)}
+                          </Select>
+                        </FormControl>
+                        <FormControl>
+                          <InputLabel>Until month (optional)</InputLabel>
+                          <Select value={eventForm.scheduleMonthEnd} label="Until month (optional)" onChange={(event) => setEventField('scheduleMonthEnd', Number(event.target.value))}>
+                            <MenuItem value={0}>—</MenuItem>
+                            {MONTHS.slice(1).map((month, index) => <MenuItem key={month} value={index + 1}>{month}</MenuItem>)}
+                          </Select>
+                        </FormControl>
+                      </Box>
+                    </Box>
                   )}
                 </Box>
               )}

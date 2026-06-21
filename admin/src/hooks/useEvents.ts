@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { apiFetch } from './api';
 
 export type DayOfWeek = 'Sunday' | 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
-export type ScheduleType = 'Yearly' | 'Seasonal' | 'Fixed';
+export type ScheduleType = 'Yearly' | 'Seasonal' | 'Fixed' | 'Approximate';
 export type EventType = 'Race' | 'Series' | 'Advertisement' | 'Festival' | 'Other';
 export type ActivityType = 'TrailRunning' | 'Running' | 'Cycling' | 'Hiking' | 'FunRun' | 'ObstacleCourse' | 'CrossCountryRun' | 'Social' | 'Other';
 export type EventStatus = 'Unconfirmed' | 'Confirmed' | 'Cancelled' | 'Hidden' | 'Unlisted';

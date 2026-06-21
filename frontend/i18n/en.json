@@ -891,6 +891,8 @@
         "scheduleSeasonal": "{{count}} races, every {{ordinal}} {{day}} from {{monthStart}} to {{monthEnd}}",
         "scheduleYearly": "Held annually on the {{ordinal}} {{day}} of {{month}}",
         "scheduleFixed": "One-off event on {{date}}",
+        "scheduleApproximate": "Usually held in {{month}}",
+        "scheduleApproximateRange": "Usually held in {{monthStart}}–{{monthEnd}}",
         "statusCancelled": "Cancelled",
         "statusUpcoming": "Coming soon",
         "raceDayWeather": "Trail Weather – Race Forecast",
