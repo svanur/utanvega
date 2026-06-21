@@ -63,6 +63,7 @@ import { downloadIcs } from '../utils/calendarLinks';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
 import { getTicketStatusColor, groupDistances } from '../utils/ticketStatus';
+import { formatNextDate, getCountdownColor, getCountdownLabel } from '../utils/eventUtils';
 
 const EventTableView = lazy(() => import('../components/EventTableView'));
 const EventMapView = lazy(() => import('../components/EventMapView'));
@@ -76,30 +77,6 @@ type RacesPageProps = {
     showQuote?: boolean;
 };
 
-function formatNextDate(dateStr: string, t: (key: string, opts?: Record<string, unknown>) => string): string {
-    const date = new Date(dateStr + 'T00:00:00');
-    const months = t('races.months', { returnObjects: true }) as unknown as string[];
-    const month = months[date.getMonth()];
-    const formatted = `${date.getDate()}. ${month} ${date.getFullYear()}`;
-    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
-}
-
-function getCountdownColor(daysUntil: number | null): 'success' | 'warning' | 'error' | 'default' {
-    if (daysUntil === null) return 'default';
-    if (daysUntil < 0) return 'success';
-    if (daysUntil <= 7) return 'error';
-    if (daysUntil <= 30) return 'warning';
-    return 'success';
-}
-
-function getCountdownLabel(daysUntil: number | null, t: (key: string, opts?: Record<string, unknown>) => string): string {
-    if (daysUntil === null) return t('races.noDate');
-    if (daysUntil === 0) return t('races.today');
-    if (daysUntil === 1) return t('races.tomorrow');
-    if (daysUntil === -1) return t('races.yesterday');
-    if (daysUntil < -1) return t('races.daysAgo', { count: Math.abs(daysUntil) });
-    return t('races.daysUntil', { count: daysUntil });
-}
 
 interface EventFilters {
     activityTypes: string[];

@@ -69,6 +69,7 @@ type PreparedEdition = EventEditionDto & {
 import { ACTIVITY_EMOJI } from '../constants/activityEmoji';
 import { googleCalendarUrl, outlookCalendarUrl, downloadIcs } from '../utils/calendarLinks';
 import EventDateBadge from '../components/EventDateBadge';
+import { formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime } from '../utils/eventUtils';
 
 type RaceDayChecklistKey = 'bib' | 'shoes' | 'gels' | 'goodMood';
 
@@ -77,14 +78,6 @@ function toAnchorSlug(value: string): string {
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '');
-}
-
-function formatNextDate(dateStr: string, t: (key: string, opts?: Record<string, unknown>) => string): string {
-    const date = new Date(dateStr + 'T00:00:00');
-    const months = t('races.months', { returnObjects: true }) as unknown as string[];
-    const month = months[date.getMonth()];
-    const formatted = `${date.getDate()}. ${month} ${date.getFullYear()}`;
-    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
 }
 
 function formatCutoff(minutes: number, t: (key: string, opts?: Record<string, unknown>) => string): string {
@@ -151,23 +144,6 @@ function formatScheduleDescription(
     return null;
 }
 
-function getCountdownLabel(daysUntil: number | null, t: (key: string, opts?: Record<string, unknown>) => string): string {
-    if (daysUntil === null) return t('races.noDate');
-    if (daysUntil === 0) return t('races.today');
-    if (daysUntil === 1) return t('races.tomorrow');
-    if (daysUntil === -1) return t('races.yesterday');
-    if (daysUntil < -1) return t('races.daysAgo', { count: Math.abs(daysUntil) });
-    return t('races.daysUntil', { count: daysUntil });
-}
-
-function getCountdownColor(daysUntil: number | null): 'success' | 'warning' | 'error' | 'default' {
-    if (daysUntil === null) return 'default';
-    if (daysUntil < 0) return 'success';
-    if (daysUntil <= 7) return 'error';
-    if (daysUntil <= 30) return 'warning';
-    return 'success';
-}
-
 function getRegistrationStatusColor(status: string | null | undefined): 'success' | 'warning' | 'default' {
     if (status === 'Open') return 'success';
     if (status === 'NotStarted') return 'warning';
@@ -178,17 +154,6 @@ function getTicketStatusColor(status: string | null | undefined): 'success' | 'e
     if (status === 'Available') return 'success';
     if (status === 'SoldOut') return 'error';
     return 'default';
-}
-
-function formatRaceDateTime(
-    dateOfRace: string | null,
-    startTime: string | null,
-    t: (key: string, opts?: Record<string, unknown>) => string,
-): string | null {
-    if (!dateOfRace && !startTime) return null;
-    const dateLabel = dateOfRace ? formatNextDate(dateOfRace, t) : null;
-    const timeLabel = startTime ? startTime.slice(0, 5) : null;
-    return [dateLabel, timeLabel].filter(Boolean).join(' · ');
 }
 
 function EditionMeta({
