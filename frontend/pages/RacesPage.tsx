@@ -55,11 +55,9 @@ type RacesPageProps = {
 
 function formatNextDate(dateStr: string, t: (key: string, opts?: Record<string, unknown>) => string): string {
     const date = new Date(dateStr + 'T00:00:00');
-    const weekdays = t('races.weekdays', { returnObjects: true }) as unknown as string[];
     const months = t('races.months', { returnObjects: true }) as unknown as string[];
-    const weekday = weekdays[date.getDay()];
     const month = months[date.getMonth()];
-    const formatted = `${weekday}, ${date.getDate()}. ${month} ${date.getFullYear()}`;
+    const formatted = `${date.getDate()}. ${month} ${date.getFullYear()}`;
     return formatted.charAt(0).toUpperCase() + formatted.slice(1);
 }
 
