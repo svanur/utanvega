@@ -568,15 +568,16 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                         <ClearIcon fontSize="small" />
                                     </IconButton>
                                 )}
-                                <IconButton
-                                    aria-label={t('filters.advancedSearch')}
-                                    onClick={() => setShowAdvanced(!showAdvanced)}
-                                    edge="end"
+                                <Button
                                     size="small"
-                                    color={showAdvanced ? 'primary' : 'default'}
+                                    variant={showAdvanced ? 'contained' : 'outlined'}
+                                    color="inherit"
+                                    onClick={() => setShowAdvanced(!showAdvanced)}
+                                    startIcon={<FilterIcon fontSize="small" />}
+                                    sx={{ textTransform: 'none', borderRadius: 4, px: 1.5, py: 0.5, fontSize: '0.8rem', whiteSpace: 'nowrap' }}
                                 >
-                                    <FilterIcon fontSize="small" />
-                                </IconButton>
+                                    {t('filters.advancedSearch')}
+                                </Button>
                             </InputAdornment>
                         ),
                     }}

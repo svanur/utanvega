@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Box } from '@mui/material';
 
 interface SwipeableCardProps {
@@ -7,6 +7,7 @@ interface SwipeableCardProps {
     revealWidth?: number;
     onSwipeRight?: () => void;
     disabled?: boolean;
+    peek?: boolean;
 }
 
 const LEFT_THRESHOLD = 60;
@@ -18,10 +19,19 @@ export default function SwipeableCard({
     revealWidth = 130,
     onSwipeRight,
     disabled = false,
+    peek = false,
 }: SwipeableCardProps) {
     const [offsetX, setOffsetX] = useState(0);
     const [animating, setAnimating] = useState(false);
     const [revealed, setRevealed] = useState(false);
+
+    useEffect(() => {
+        if (!peek || !leftActions) return;
+        setAnimating(true);
+        setOffsetX(-40);
+        const t = setTimeout(() => { setOffsetX(0); }, 500);
+        return () => clearTimeout(t);
+    }, [peek, leftActions]);
 
     const touchStartX = useRef<number | null>(null);
     const touchStartY = useRef<number | null>(null);
