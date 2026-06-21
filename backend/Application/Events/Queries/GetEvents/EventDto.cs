@@ -32,7 +32,11 @@ public record EventSummaryDto(
     List<RaceDistanceSummaryDto>? Distances = null,
     string? RegistrationUrl = null,
     string? RegistrationStatus = null,
-    string? ResultsUrl = null
+    string? ResultsUrl = null,
+    List<string>? Certifications = null,
+    string? YoutubeUrl = null,
+    List<string>? ChampionshipCategories = null,
+    List<int>? ItraPoints = null
 );
 
 public record RaceDto(

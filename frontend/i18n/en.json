@@ -944,6 +944,38 @@
         "checklistSavedLocally": "Saved on this device only.",
         "predict": "Predict",
         "noUpcoming": "No upcoming races",
+        "filters": {
+            "title": "Filters",
+            "activityType": "Activity",
+            "eventType": "Type",
+            "itraPoints": "ITRA Points",
+            "certifications": "Certified by",
+            "championships": "Championship",
+            "allLocations": "All locations",
+            "month": "Month",
+            "allMonths": "All",
+            "weekendOnly": "Weekend only",
+            "reset": "Reset filters",
+            "noResults": "No events match the selected filters",
+            "activeCount_one": "{{count}} filter active",
+            "activeCount_other": "{{count}} filters active"
+        },
+        "activityTypes": {
+            "TrailRunning": "Trail Running",
+            "Running": "Running",
+            "Hiking": "Hiking",
+            "Cycling": "Cycling",
+            "FunRun": "Fun Run",
+            "ObstacleCourse": "Obstacle Course",
+            "CrossCountryRun": "Cross Country",
+            "Social": "Social"
+        },
+        "eventTypes": {
+            "Race": "Race",
+            "Series": "Series",
+            "Championship": "Championship",
+            "Fun": "Fun"
+        },
         "history": {
             "title": "Event History",
             "backToEvent": "Back to event",
@@ -965,7 +997,8 @@
             "noRaces": "No races for this edition",
             "soldOut": "Sold Out",
             "almostSoldOut": "Almost Full",
-            "cutoff": "Cutoff time"
+            "cutoff": "Cutoff time",
+            "certifications": "Credentials"
         },
         "registrationStatus": {
             "Open": "Open",

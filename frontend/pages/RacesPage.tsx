@@ -21,6 +21,12 @@ import {
     Tooltip,
     CircularProgress,
     Button,
+    Collapse,
+    Badge,
+    FormControlLabel,
+    Checkbox,
+    Divider,
+    Autocomplete,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import SearchIcon from '@mui/icons-material/Search';
@@ -32,14 +38,23 @@ import ListIcon from '@mui/icons-material/List';
 import MapIcon from '@mui/icons-material/Map';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
+import HikingIcon from '@mui/icons-material/Hiking';
+import DirectionsBikeIcon from '@mui/icons-material/DirectionsBike';
+import CelebrationIcon from '@mui/icons-material/Celebration';
+import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
+import GrassIcon from '@mui/icons-material/Grass';
+import LandscapeIcon from '@mui/icons-material/Landscape';
 import Layout from '../components/Layout';
 import RandomQuote from '../components/RandomQuote';
 import RunningLoader from '../components/RunningLoader';
 import EventDateBadge from '../components/EventDateBadge';
+import VideocamIcon from '@mui/icons-material/Videocam';
 import { useEvents, type EventSummary } from '../hooks/useEvents';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
-import { getTicketStatusColor } from '../utils/ticketStatus';
+import { getTicketStatusColor, groupDistances } from '../utils/ticketStatus';
 
 const EventTableView = lazy(() => import('../components/EventTableView'));
 const EventMapView = lazy(() => import('../components/EventMapView'));
@@ -78,6 +93,40 @@ function getCountdownLabel(daysUntil: number | null, t: (key: string, opts?: Rec
     return t('races.daysUntil', { count: daysUntil });
 }
 
+interface EventFilters {
+    activityTypes: string[];
+    eventTypes: string[];
+    months: number[];
+    locations: string[];
+    itraAny: boolean;
+    itraPoints: number[];
+    certifications: string[];
+    championships: string[];
+    weekendOnly: boolean;
+}
+
+const DEFAULT_FILTERS: EventFilters = {
+    activityTypes: [],
+    eventTypes: [],
+    months: [],
+    locations: [],
+    itraAny: false,
+    itraPoints: [],
+    certifications: [],
+    championships: [],
+    weekendOnly: false,
+};
+
+const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
+    TrailRunning: <LandscapeIcon fontSize="small" />,
+    Running: <DirectionsRunIcon fontSize="small" />,
+    Hiking: <HikingIcon fontSize="small" />,
+    Cycling: <DirectionsBikeIcon fontSize="small" />,
+    FunRun: <CelebrationIcon fontSize="small" />,
+    ObstacleCourse: <FitnessCenterIcon fontSize="small" />,
+    CrossCountryRun: <GrassIcon fontSize="small" />,
+};
+
 export default function RacesPage({ mode, onToggleMode, showQuote = false }: RacesPageProps) {
     const { t } = useTranslation();
     const { events, loading, error } = useEvents();
@@ -86,6 +135,8 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
     const navigate = useNavigate();
     const theme = useTheme();
     const [search, setSearch] = useState('');
+    const [showFilters, setShowFilters] = useState(false);
+    const [filters, setFilters] = useState<EventFilters>(DEFAULT_FILTERS);
     const [viewMode, setViewMode] = useState<ViewMode>(() => {
         try {
             const saved = localStorage.getItem('utanvega-events-view-mode');
@@ -93,6 +144,27 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         } catch { /* */ }
         return 'list';
     });
+
+    const activeFilterCount = useMemo(() =>
+        filters.activityTypes.length +
+        filters.eventTypes.length +
+        (filters.months.length > 0 ? 1 : 0) +
+        filters.locations.length +
+        (filters.itraAny ? 1 : filters.itraPoints.length) +
+        filters.certifications.length +
+        filters.championships.length +
+        (filters.weekendOnly ? 1 : 0),
+    [filters]);
+
+    const filterOptions = useMemo(() => {
+        const visible = events.filter(e => e.status !== 'Hidden' && e.status !== 'Unlisted');
+        const activityTypes = [...new Set(visible.map(e => e.activityType))].sort();
+        const eventTypes = [...new Set(visible.map(e => e.type))].sort();
+        const locations = [...new Set(visible.map(e => e.locationName).filter(Boolean) as string[])].sort((a, b) => a.localeCompare(b, 'is'));
+        const certifications = [...new Set(visible.flatMap(e => e.certifications ?? []))].sort();
+        const championships = [...new Set(visible.flatMap(e => e.championshipCategories ?? []))].sort();
+        return { activityTypes, eventTypes, locations, certifications, championships };
+    }, [events]);
 
     const filtered = useMemo(() => {
         const q = search.toLowerCase().trim();
@@ -104,6 +176,44 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                 (c.locationName?.toLowerCase().includes(q)) ||
                 (c.organizerName?.toLowerCase().includes(q))
             );
+        }
+
+        if (filters.locations.length > 0) {
+            result = result.filter(c => c.locationName && filters.locations.includes(c.locationName));
+        }
+
+        if (filters.months.length > 0) {
+            result = result.filter(c => {
+                const d = c.displayDate ?? c.nextEditionDate;
+                if (!d) return false;
+                return filters.months.includes(new Date(d + 'T00:00:00').getMonth());
+            });
+        }
+
+        if (filters.activityTypes.length > 0) {
+            result = result.filter(c => filters.activityTypes.includes(c.activityType));
+        }
+        if (filters.eventTypes.length > 0) {
+            result = result.filter(c => filters.eventTypes.includes(c.type));
+        }
+        if (filters.itraAny) {
+            result = result.filter(c => c.itraPoints && c.itraPoints.length > 0);
+        } else if (filters.itraPoints.length > 0) {
+            result = result.filter(c => c.itraPoints?.some(p => filters.itraPoints.includes(p)));
+        }
+        if (filters.certifications.length > 0) {
+            result = result.filter(c => c.certifications?.some(cert => filters.certifications.includes(cert)));
+        }
+        if (filters.championships.length > 0) {
+            result = result.filter(c => c.championshipCategories?.some(ch => filters.championships.includes(ch)));
+        }
+        if (filters.weekendOnly) {
+            result = result.filter(c => {
+                const d = c.displayDate ?? c.nextEditionDate;
+                if (!d) return false;
+                const day = new Date(d + 'T00:00:00').getDay();
+                return day === 0 || day === 6;
+            });
         }
 
         // Sort: Active/Upcoming first, Cancelled last; then by upcoming date, then name
@@ -124,7 +234,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         });
 
         return result;
-    }, [events, search]);
+    }, [events, search, filters]);
 
     const { justRaced, upcoming } = useMemo(() => {
         const isRecentlyCompleted = (c: EventSummary) =>
@@ -176,36 +286,277 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                     </Typography>
                 </Box>
 
-                {/* Search */}
+                {/* Search + filter icon */}
                 <TextField
                     placeholder={t('races.searchPlaceholder')}
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                     fullWidth
                     size="small"
-                    sx={{ mb: 3 }}
+                    sx={{ mb: 1 }}
                     InputProps={{
                         startAdornment: (
                             <InputAdornment position="start">
                                 <SearchIcon fontSize="small" />
                             </InputAdornment>
                         ),
-                        endAdornment: search ? (
+                        endAdornment: (
                             <InputAdornment position="end">
-                                <IconButton
-                                    size="small"
-                                    onClick={() => setSearch('')}
-                                    aria-label={t('common.clear', 'Clear search')}
-                                >
-                                    <CloseIcon fontSize="small" />
-                                </IconButton>
+                                {search && (
+                                    <IconButton size="small" onClick={() => setSearch('')} sx={{ mr: 0.5 }}>
+                                        <CloseIcon fontSize="small" />
+                                    </IconButton>
+                                )}
+                                <Tooltip title={activeFilterCount > 0 ? t('races.filters.activeCount', { count: activeFilterCount }) : t('races.filters.title')}>
+                                    <IconButton
+                                        size="small"
+                                        onClick={() => setShowFilters(v => !v)}
+                                        color={activeFilterCount > 0 ? 'primary' : 'default'}
+                                    >
+                                        <Badge badgeContent={activeFilterCount} color="primary" overlap="circular">
+                                            <FilterListIcon fontSize="small" />
+                                        </Badge>
+                                    </IconButton>
+                                </Tooltip>
                             </InputAdornment>
-                        ) : undefined,
+                        ),
                     }}
                 />
 
-                {/* View toggle */}
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                {/* Filter panel */}
+                <Collapse in={showFilters}>
+                    <Box sx={{ mb: 2, p: 2, bgcolor: 'background.paper', borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+
+                        {/* Location */}
+                        {filterOptions.locations.length > 0 && (
+                            <Box sx={{ mb: 1.5 }}>
+                                <Autocomplete
+                                    multiple
+                                    size="small"
+                                    options={filterOptions.locations}
+                                    value={filters.locations}
+                                    onChange={(_, value) => setFilters(f => ({ ...f, locations: value }))}
+                                    renderInput={params => (
+                                        <TextField {...params} label={t('trail.location')} placeholder={filters.locations.length === 0 ? t('races.filters.allLocations', 'All locations') : undefined} />
+                                    )}
+                                    renderTags={(value, getTagProps) =>
+                                        value.map((loc, index) => (
+                                            <Chip {...getTagProps({ index })} key={loc} label={loc} size="small" />
+                                        ))
+                                    }
+                                />
+                            </Box>
+                        )}
+
+                        {/* Activity type */}
+                        {filterOptions.activityTypes.length > 0 && (
+                            <Box sx={{ mb: 1.5 }}>
+                                <Typography variant="caption" color="text.secondary" fontWeight={600}>{t('races.filters.activityType')}</Typography>
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                                    {filterOptions.activityTypes.map(type => {
+                                        const selected = filters.activityTypes.includes(type);
+                                        return (
+                                            <Chip
+                                                key={type}
+                                                icon={ACTIVITY_ICONS[type] as React.ReactElement | undefined}
+                                                label={t(`races.activityTypes.${type}`, type)}
+                                                size="small"
+                                                variant={selected ? 'filled' : 'outlined'}
+                                                color={selected ? 'primary' : 'default'}
+                                                onClick={() => setFilters(f => ({
+                                                    ...f,
+                                                    activityTypes: selected ? f.activityTypes.filter(x => x !== type) : [...f.activityTypes, type],
+                                                }))}
+                                                sx={{ cursor: 'pointer' }}
+                                            />
+                                        );
+                                    })}
+                                </Box>
+                            </Box>
+                        )}
+
+                        {/* Event type */}
+                        {filterOptions.eventTypes.length > 0 && (
+                            <Box sx={{ mb: 1.5 }}>
+                                <Typography variant="caption" color="text.secondary" fontWeight={600}>{t('races.filters.eventType')}</Typography>
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                                    {filterOptions.eventTypes.map(type => {
+                                        const selected = filters.eventTypes.includes(type);
+                                        return (
+                                            <Chip
+                                                key={type}
+                                                label={t(`races.eventTypes.${type}`, type)}
+                                                size="small"
+                                                variant={selected ? 'filled' : 'outlined'}
+                                                color={selected ? 'secondary' : 'default'}
+                                                onClick={() => setFilters(f => ({
+                                                    ...f,
+                                                    eventTypes: selected ? f.eventTypes.filter(x => x !== type) : [...f.eventTypes, type],
+                                                }))}
+                                                sx={{ cursor: 'pointer' }}
+                                            />
+                                        );
+                                    })}
+                                </Box>
+                            </Box>
+                        )}
+
+                        {/* Month */}
+                        <Box sx={{ mb: 1.5 }}>
+                            <Typography variant="caption" color="text.secondary" fontWeight={600}>{t('races.filters.month', 'Month')}</Typography>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                                <Chip
+                                    label={t('races.filters.allMonths', 'All')}
+                                    size="small"
+                                    variant={filters.months.length === 0 ? 'filled' : 'outlined'}
+                                    color={filters.months.length === 0 ? 'primary' : 'default'}
+                                    onClick={() => setFilters(f => ({ ...f, months: [] }))}
+                                    sx={{ cursor: 'pointer', fontWeight: 600 }}
+                                />
+                                {(t('races.months', { returnObjects: true }) as string[]).map((name, idx) => {
+                                    const selected = filters.months.includes(idx);
+                                    return (
+                                        <Chip
+                                            key={idx}
+                                            label={name.slice(0, 3)}
+                                            size="small"
+                                            variant={selected ? 'filled' : 'outlined'}
+                                            color={selected ? 'primary' : 'default'}
+                                            onClick={() => setFilters(f => ({
+                                                ...f,
+                                                months: selected ? f.months.filter(m => m !== idx) : [...f.months, idx],
+                                            }))}
+                                            sx={{ cursor: 'pointer' }}
+                                        />
+                                    );
+                                })}
+                            </Box>
+                        </Box>
+
+                        {/* ITRA points */}
+                        <Box sx={{ mb: 1.5 }}>
+                            <Typography variant="caption" color="text.secondary" fontWeight={600}>{t('races.filters.itraPoints')}</Typography>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                                <Chip
+                                    label="ITRA"
+                                    size="small"
+                                    variant={filters.itraAny ? 'filled' : 'outlined'}
+                                    color={filters.itraAny ? 'warning' : 'default'}
+                                    onClick={() => setFilters(f => ({
+                                        ...f,
+                                        itraAny: !f.itraAny,
+                                        itraPoints: [],
+                                    }))}
+                                    sx={{ cursor: 'pointer', fontWeight: 600 }}
+                                />
+                                {[0, 1, 2, 3, 4, 5].map(pts => {
+                                    const selected = !filters.itraAny && filters.itraPoints.includes(pts);
+                                    return (
+                                        <Chip
+                                            key={pts}
+                                            label={`ITRA ${pts}`}
+                                            size="small"
+                                            variant={selected ? 'filled' : 'outlined'}
+                                            color={selected ? 'warning' : 'default'}
+                                            onClick={() => setFilters(f => ({
+                                                ...f,
+                                                itraAny: false,
+                                                itraPoints: f.itraPoints.includes(pts)
+                                                    ? f.itraPoints.filter(x => x !== pts)
+                                                    : [...f.itraPoints, pts],
+                                            }))}
+                                            sx={{ cursor: 'pointer' }}
+                                        />
+                                    );
+                                })}
+                            </Box>
+                        </Box>
+
+                        {/* Certifications */}
+                        {filterOptions.certifications.length > 0 && (
+                            <Box sx={{ mb: 1.5 }}>
+                                <Typography variant="caption" color="text.secondary" fontWeight={600}>{t('races.filters.certifications')}</Typography>
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                                    {filterOptions.certifications.map(cert => {
+                                        const selected = filters.certifications.includes(cert);
+                                        return (
+                                            <Chip
+                                                key={cert}
+                                                label={cert}
+                                                size="small"
+                                                variant={selected ? 'filled' : 'outlined'}
+                                                color={selected ? 'secondary' : 'default'}
+                                                onClick={() => setFilters(f => ({
+                                                    ...f,
+                                                    certifications: selected ? f.certifications.filter(x => x !== cert) : [...f.certifications, cert],
+                                                }))}
+                                                sx={{ cursor: 'pointer' }}
+                                            />
+                                        );
+                                    })}
+                                </Box>
+                            </Box>
+                        )}
+
+                        {/* Championship categories */}
+                        {filterOptions.championships.length > 0 && (
+                            <Box sx={{ mb: 1.5 }}>
+                                <Typography variant="caption" color="text.secondary" fontWeight={600}>{t('races.filters.championships')}</Typography>
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                                    {filterOptions.championships.map(ch => {
+                                        const selected = filters.championships.includes(ch);
+                                        return (
+                                            <Chip
+                                                key={ch}
+                                                label={ch}
+                                                size="small"
+                                                variant={selected ? 'filled' : 'outlined'}
+                                                color={selected ? 'primary' : 'default'}
+                                                onClick={() => setFilters(f => ({
+                                                    ...f,
+                                                    championships: selected ? f.championships.filter(x => x !== ch) : [...f.championships, ch],
+                                                }))}
+                                                sx={{ cursor: 'pointer' }}
+                                            />
+                                        );
+                                    })}
+                                </Box>
+                            </Box>
+                        )}
+
+                        <Divider sx={{ my: 1 }} />
+
+                        {/* Weekend only + reset + close row */}
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+                            <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        size="small"
+                                        checked={filters.weekendOnly}
+                                        onChange={e => setFilters(f => ({ ...f, weekendOnly: e.target.checked }))}
+                                    />
+                                }
+                                label={<Typography variant="body2">{t('races.filters.weekendOnly')}</Typography>}
+                            />
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                                {activeFilterCount > 0 && (
+                                    <Button size="small" onClick={() => setFilters(DEFAULT_FILTERS)}>
+                                        {t('races.filters.reset')}
+                                    </Button>
+                                )}
+                                <Button size="small" variant="outlined" onClick={() => setShowFilters(false)}>
+                                    {t('filters.closeFilters')}
+                                </Button>
+                            </Box>
+                        </Box>
+                    </Box>
+                </Collapse>
+
+                {/* View toggle + result count */}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="body2" color="text.secondary">
+                        {t('races.editionCount', { count: filtered.length })}
+                    </Typography>
                     <ToggleButtonGroup
                         value={viewMode}
                         exclusive
@@ -237,8 +588,13 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                         <Box sx={{ textAlign: 'center', py: 8 }}>
                             <EmojiEventsIcon sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
                             <Typography variant="h6" color="text.secondary">
-                                {search ? t('races.noResults') : t('races.empty')}
+                                {activeFilterCount > 0 ? t('races.filters.noResults') : search ? t('races.noResults') : t('races.empty')}
                             </Typography>
+                            {activeFilterCount > 0 && (
+                                <Button size="small" sx={{ mt: 1 }} onClick={() => setFilters(DEFAULT_FILTERS)}>
+                                    {t('races.filters.reset')}
+                                </Button>
+                            )}
                         </Box>
                     ) : (
                         <>
@@ -271,8 +627,8 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                 )}
                                                                 {comp.distances && comp.distances.length > 0 && (
                                                                     <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.5 }}>
-                                                                        {comp.distances.map((d, i) => (
-                                                                            <Chip key={i} label={d.label} size="small" variant="outlined" color={getTicketStatusColor(d.ticketStatus)} />
+                                                                        {groupDistances(comp.distances).map((d, i) => (
+                                                                            <Chip key={i} label={d.count > 1 ? `${d.count} × ${d.label}` : d.label} size="small" variant="outlined" color={getTicketStatusColor(d.ticketStatus)} />
                                                                         ))}
                                                                     </Stack>
                                                                 )}
@@ -385,10 +741,10 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                     {/* Distances */}
                                                     {comp.distances && comp.distances.length > 0 && (
                                                         <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 1 }}>
-                                                            {comp.distances.map((d, i) => (
+                                                            {groupDistances(comp.distances).map((d, i) => (
                                                                 <Tooltip key={i} title={d.ticketStatus && d.ticketStatus !== 'Available' ? t(`races.ticketStatus.${d.ticketStatus}`, d.ticketStatus) : ''}>
                                                                     <Chip
-                                                                        label={d.label}
+                                                                        label={d.count > 1 ? `${d.count} × ${d.label}` : d.label}
                                                                         size="small"
                                                                         variant="outlined"
                                                                         clickable
@@ -400,21 +756,55 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                         </Stack>
                                                     )}
 
-                                                    {/* Register link */}
-                                                    {comp.registrationUrl && comp.daysUntil != null && comp.daysUntil >= 0 && (
-                                                        <Button
-                                                            size="small"
-                                                            variant="outlined"
-                                                            href={comp.registrationUrl}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
-                                                            onClick={(e) => e.stopPropagation()}
-                                                            sx={{ mt: 1, textTransform: 'none', fontSize: '0.8rem', alignSelf: 'flex-start' }}
-                                                        >
-                                                            {t('races.register', 'Register')}
-                                                        </Button>
+                                                    {/* Credentials */}
+                                                    {(comp.itraPoints?.length || comp.certifications?.length || comp.championshipCategories?.length) && (
+                                                        <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.5 }} alignItems="center">
+                                                            {comp.itraPoints?.map((pts, i) => (
+                                                                <Tooltip key={i} title={`ITRA ${pts} points`}>
+                                                                    <img src={`/images/itra-${pts}.png`} alt={`ITRA ${pts}`} style={{ height: 18, verticalAlign: 'middle' }} />
+                                                                </Tooltip>
+                                                            ))}
+                                                            {comp.certifications?.map((c, i) => (
+                                                                <Chip key={i} label={c} size="small" variant="outlined" color="secondary" />
+                                                            ))}
+                                                            {comp.championshipCategories?.map((c, i) => (
+                                                                <Chip key={i} label={c} size="small" variant="outlined" color="primary" />
+                                                            ))}
+                                                        </Stack>
                                                     )}
+
+                                                    {/* Register / Results / 360° */}
+                                                    <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 1 }}>
+                                                        {comp.registrationUrl && comp.daysUntil != null && comp.daysUntil >= 0 && (
+                                                            <Button
+                                                                size="small"
+                                                                variant="outlined"
+                                                                href={comp.registrationUrl}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                sx={{ textTransform: 'none', fontSize: '0.8rem' }}
+                                                            >
+                                                                {t('races.register', 'Register')}
+                                                            </Button>
+                                                        )}
+                                                        {comp.youtubeUrl && (
+                                                            <Button
+                                                                size="small"
+                                                                variant="outlined"
+                                                                color="error"
+                                                                href={comp.youtubeUrl}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                startIcon={<VideocamIcon sx={{ fontSize: 14 }} />}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                sx={{ textTransform: 'none', fontSize: '0.8rem' }}
+                                                            >
+                                                                360°
+                                                            </Button>
+                                                        )}
+                                                    </Stack>
 
                                                     {comp.description && (
                                                         <Typography
