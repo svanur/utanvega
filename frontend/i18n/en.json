@@ -216,7 +216,7 @@
     "filters": {
         "searchPlaceholder": "Search name or description...",
         "clearSearch": "clear search",
-        "advancedSearch": "advanced search",
+        "advancedSearch": "filters",
         "advancedFilters": "Advanced Filters",
         "trailLength": "Trail Length",
         "elevationGain": "Elevation Gain",
@@ -945,7 +945,7 @@
         "predict": "Predict",
         "noUpcoming": "No upcoming races",
         "filters": {
-            "title": "Filters",
+            "title": "filters",
             "activityType": "Activity",
             "eventType": "Type",
             "itraPoints": "ITRA Points",
