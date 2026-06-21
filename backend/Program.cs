@@ -604,11 +604,23 @@ app.MapGet("/api/v1/admin/analytics", [Authorize] async (IMediator mediator) =>
 })
 .WithName("AdminAnalytics");
 
-app.MapGet("/", () => new
+app.MapGet("/", async (IWebHostEnvironment env, UtanvegaDbContext db) =>
 {
-    message = "Backend API running!",
-    time = DateTime.UtcNow,
-    connection = string.IsNullOrEmpty(connectionString) ? "Missing" : "Configured"
+    var pending = await db.Database.GetPendingMigrationsAsync();
+    var pendingList = pending.ToList();
+    return new
+    {
+        message = "Backend API running!",
+        version = typeof(Program).Assembly.GetName().Version?.ToString() ?? "unknown",
+        environment = env.EnvironmentName,
+        time = DateTime.UtcNow,
+        connection = string.IsNullOrEmpty(connectionString) ? "Missing" : "Configured",
+        migrations = new
+        {
+            status = pendingList.Count == 0 ? "Up to date" : "Pending",
+            pending = pendingList
+        }
+    };
 });
 
 app.MapGet("/api/v1/admin/trails", [Authorize] async (IMediator mediator, bool includeDeleted = false) =>
