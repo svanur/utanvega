@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useState } from 'react';
+import { lazy, Suspense, useMemo, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Container,
@@ -27,6 +27,7 @@ import {
     Checkbox,
     Divider,
     Autocomplete,
+    Fade,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import SearchIcon from '@mui/icons-material/Search';
@@ -39,6 +40,9 @@ import MapIcon from '@mui/icons-material/Map';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import FilterListIcon from '@mui/icons-material/FilterList';
+import ShareIcon from '@mui/icons-material/Share';
+import EventAvailableIcon from '@mui/icons-material/EventAvailable';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
 import HikingIcon from '@mui/icons-material/Hiking';
 import DirectionsBikeIcon from '@mui/icons-material/DirectionsBike';
@@ -50,8 +54,12 @@ import Layout from '../components/Layout';
 import RandomQuote from '../components/RandomQuote';
 import RunningLoader from '../components/RunningLoader';
 import EventDateBadge from '../components/EventDateBadge';
+import SwipeableCard from '../components/SwipeableCard';
+import RaceShareCard from '../components/RaceShareCard';
+import RaceFinishCard from '../components/RaceFinishCard';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import { useEvents, type EventSummary } from '../hooks/useEvents';
+import { downloadIcs } from '../utils/calendarLinks';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
 import { getTicketStatusColor, groupDistances } from '../utils/ticketStatus';
@@ -129,7 +137,7 @@ const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
 
 export default function RacesPage({ mode, onToggleMode, showQuote = false }: RacesPageProps) {
     const { t } = useTranslation();
-    const { events, loading, error } = useEvents();
+    const { events, loading, error, refresh } = useEvents();
     const { isEnabled } = useFeatureFlags();
     const locationsEnabled = isEnabled('locations_page');
     const navigate = useNavigate();
@@ -137,6 +145,30 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
     const [search, setSearch] = useState('');
     const [showFilters, setShowFilters] = useState(false);
     const [filters, setFilters] = useState<EventFilters>(DEFAULT_FILTERS);
+    const [shareEventId, setShareEventId] = useState<string | null>(null);
+    const [pullOffset, setPullOffset] = useState(0);
+    const [refreshing, setRefreshing] = useState(false);
+    const touchStartY = useRef<number | null>(null);
+    const PULL_THRESHOLD = 80;
+
+    const handlePullStart = (e: React.TouchEvent) => {
+        if (window.scrollY === 0) touchStartY.current = e.touches[0].clientY;
+    };
+    const handlePullMove = (e: React.TouchEvent) => {
+        if (touchStartY.current === null || refreshing) return;
+        const delta = e.touches[0].clientY - touchStartY.current;
+        if (delta > 0) setPullOffset(Math.min(delta * 0.4, PULL_THRESHOLD + 20));
+    };
+    const handlePullEnd = async () => {
+        if (pullOffset >= PULL_THRESHOLD) {
+            setRefreshing(true);
+            await refresh();
+            setRefreshing(false);
+        }
+        setPullOffset(0);
+        touchStartY.current = null;
+    };
+
     const [viewMode, setViewMode] = useState<ViewMode>(() => {
         try {
             const saved = localStorage.getItem('utanvega-events-view-mode');
@@ -265,7 +297,30 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
     return (
         <Layout mode={mode} onToggleMode={onToggleMode} maxWidth={viewMode === 'table' ? 'lg' : 'md'}>
             {showQuote && isEnabled('random_quote') && <RandomQuote />}
-            <Container maxWidth={viewMode === 'table' ? 'lg' : 'md'} sx={{ py: 3 }}>
+            <Container
+                maxWidth={viewMode === 'table' ? 'lg' : 'md'}
+                sx={{ py: 3 }}
+                onTouchStart={handlePullStart}
+                onTouchMove={handlePullMove}
+                onTouchEnd={handlePullEnd}
+            >
+                {/* Pull-to-refresh indicator */}
+                <Fade in={pullOffset > 10}>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1, height: 32, alignItems: 'center' }}>
+                        {refreshing ? (
+                            <CircularProgress size={24} />
+                        ) : (
+                            <RefreshIcon
+                                sx={{
+                                    fontSize: 28,
+                                    color: pullOffset >= PULL_THRESHOLD ? 'primary.main' : 'text.disabled',
+                                    transform: `rotate(${(pullOffset / PULL_THRESHOLD) * 360}deg)`,
+                                    transition: 'color 0.2s',
+                                }}
+                            />
+                        )}
+                    </Box>
+                </Fade>
                 {/* Header */}
                 <Box sx={{ mb: 3 }}>
                     <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
@@ -605,8 +660,12 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                     </Typography>
                                     <Stack spacing={1.5}>
                                         {justRaced.map(comp => (
-                                            <Card
+                                            <SwipeableCard
                                                 key={comp.id}
+                                                onSwipeRight={() => setShareEventId(comp.id)}
+                                                revealWidth={0}
+                                            >
+                                            <Card
                                                 sx={{
                                                     transition: 'transform 0.15s, box-shadow 0.15s',
                                                     '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] },
@@ -658,14 +717,82 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                     </CardContent>
                                                 </CardActionArea>
                                             </Card>
+                                            </SwipeableCard>
                                         ))}
                                     </Stack>
                                 </Box>
                             )}
                         <Stack spacing={2}>
                             {upcoming.map(comp => (
-                                <Card
+                                <SwipeableCard
                                     key={comp.id}
+                                    onSwipeRight={comp.status !== 'Cancelled' && comp.daysUntil != null && comp.daysUntil >= 0
+                                        ? () => setShareEventId(comp.id)
+                                        : undefined
+                                    }
+                                    leftActions={
+                                        <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+                                            {comp.registrationUrl && comp.daysUntil != null && comp.daysUntil >= 0 && (
+                                                <Box
+                                                    component="a"
+                                                    href={comp.registrationUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                                                    sx={{
+                                                        flex: 1,
+                                                        display: 'flex',
+                                                        flexDirection: 'column',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        bgcolor: 'success.main',
+                                                        color: 'white',
+                                                        textDecoration: 'none',
+                                                        gap: 0.5,
+                                                        px: 1,
+                                                        fontSize: '0.7rem',
+                                                        fontWeight: 600,
+                                                    }}
+                                                >
+                                                    <OpenInNewIcon sx={{ fontSize: 18 }} />
+                                                    {t('races.register', 'Register')}
+                                                </Box>
+                                            )}
+                                            {(comp.displayDate ?? comp.nextEditionDate) && (
+                                                <Box
+                                                    onClick={(e: React.MouseEvent) => {
+                                                        e.stopPropagation();
+                                                        downloadIcs({
+                                                            title: comp.name,
+                                                            date: (comp.displayDate ?? comp.nextEditionDate)!,
+                                                            location: comp.locationName ?? undefined,
+                                                            url: `https://hlaupadagskra.is/events/${comp.slug}`,
+                                                        });
+                                                    }}
+                                                    sx={{
+                                                        flex: 1,
+                                                        display: 'flex',
+                                                        flexDirection: 'column',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        bgcolor: 'primary.main',
+                                                        color: 'white',
+                                                        cursor: 'pointer',
+                                                        gap: 0.5,
+                                                        px: 1,
+                                                        fontSize: '0.7rem',
+                                                        fontWeight: 600,
+                                                    }}
+                                                >
+                                                    <EventAvailableIcon sx={{ fontSize: 18 }} />
+                                                    {t('races.addToCalendar', 'Calendar')}
+                                                </Box>
+                                            )}
+                                        </Box>
+                                    }
+                                    revealWidth={120}
+                                >
+                                <Card
                                     sx={{
                                         transition: 'transform 0.15s, box-shadow 0.15s',
                                         '&:hover': {
@@ -849,6 +976,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                         </CardContent>
                                     </CardActionArea>
                                 </Card>
+                                </SwipeableCard>
                             ))}
                         </Stack>
                         </>
@@ -862,6 +990,39 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                         <EventMapView events={filtered} />
                     </Suspense>
                 )}
+
+                {/* Swipe-right share dialogs */}
+                {(() => {
+                    const ev = shareEventId ? [...justRaced, ...upcoming].find(e => e.id === shareEventId) : null;
+                    if (!ev) return null;
+                    const isFinished = justRaced.some(e => e.id === shareEventId);
+                    const firstDistance = ev.distances?.[0]?.label ?? null;
+                    if (isFinished) {
+                        return (
+                            <RaceFinishCard
+                                open
+                                onClose={() => setShareEventId(null)}
+                                eventName={ev.name}
+                                raceName={ev.name}
+                                distanceLabel={firstDistance}
+                                date={ev.displayDate ?? ev.nextEditionDate}
+                                activityType={ev.activityType}
+                            />
+                        );
+                    }
+                    return (
+                        <RaceShareCard
+                            open
+                            onClose={() => setShareEventId(null)}
+                            eventName={ev.name}
+                            raceName={ev.name}
+                            distanceLabel={firstDistance}
+                            date={ev.displayDate ?? ev.nextEditionDate}
+                            daysUntil={ev.daysUntil}
+                            activityType={ev.activityType}
+                        />
+                    );
+                })()}
             </Container>
         </Layout>
     );

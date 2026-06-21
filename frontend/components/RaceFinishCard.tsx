@@ -25,6 +25,8 @@ interface RaceFinishCardProps {
     distanceLabel: string | null;
     date: string | null;
     activityType?: string;
+    open?: boolean;
+    onClose?: () => void;
 }
 
 const CARD_WIDTH = 1080;
@@ -228,12 +230,14 @@ function renderFinishCard(
 }
 
 export default function RaceFinishCard(props: RaceFinishCardProps) {
-    const { eventName, raceName, distanceLabel, date, activityType } = props;
+    const { eventName, raceName, distanceLabel, date, activityType, open: openProp, onClose: onCloseProp } = props;
     const { t } = useTranslation();
     const theme = useTheme();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [brandImage, setBrandImage] = useState<HTMLImageElement | null>(null);
-    const [open, setOpen] = useState(false);
+    const [openInternal, setOpenInternal] = useState(false);
+    const open = openProp !== undefined ? openProp : openInternal;
+    const handleClose = () => { onCloseProp ? onCloseProp() : setOpenInternal(false); };
     const [finishTime, setFinishTime] = useState('');
     const [rendered, setRendered] = useState(false);
     const [snackbar, setSnackbar] = useState('');
@@ -310,25 +314,27 @@ export default function RaceFinishCard(props: RaceFinishCardProps) {
 
     return (
         <>
-            <Button
-                variant="contained"
-                color="success"
-                startIcon={<EmojiEventsIcon />}
-                onClick={() => setOpen(true)}
-                sx={{ textTransform: 'none' }}
-            >
-                {t('races.finishCard.button', { defaultValue: 'I finished! 🏁' })}
-            </Button>
+            {openProp === undefined && (
+                <Button
+                    variant="contained"
+                    color="success"
+                    startIcon={<EmojiEventsIcon />}
+                    onClick={() => setOpenInternal(true)}
+                    sx={{ textTransform: 'none' }}
+                >
+                    {t('races.finishCard.button', { defaultValue: 'I finished! 🏁' })}
+                </Button>
+            )}
 
             <Dialog
                 open={open}
-                onClose={() => setOpen(false)}
+                onClose={handleClose}
                 maxWidth="sm"
                 fullWidth
             >
                 <IconButton
                     aria-label="close"
-                    onClick={() => setOpen(false)}
+                    onClick={handleClose}
                     sx={{ position: 'absolute', right: 8, top: 8, zIndex: 1 }}
                 >
                     <CloseIcon />

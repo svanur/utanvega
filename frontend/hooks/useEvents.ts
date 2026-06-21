@@ -97,7 +97,7 @@ export interface EventDetail extends EventSummary {
 }
 
 export function useEvents() {
-    const { data: events = [], isPending, error: queryError } = useQuery<EventSummary[]>({
+    const { data: events = [], isPending, error: queryError, refetch } = useQuery<EventSummary[]>({
         queryKey: ['events'],
         queryFn: () => fetch(`${API_URL}/api/v1/events`)
             .then(res => {
@@ -106,7 +106,7 @@ export function useEvents() {
             }),
         staleTime: 5 * 60 * 1000,
     });
-    return { events, loading: isPending, error: queryError instanceof Error ? queryError.message : null };
+    return { events, loading: isPending, error: queryError instanceof Error ? queryError.message : null, refresh: refetch };
 }
 
 export function useEventBySlug(slug: string | undefined) {
