@@ -15,6 +15,7 @@ import CelebrationIcon from '@mui/icons-material/Celebration';
 import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
 import GrassIcon from '@mui/icons-material/Grass';
 import CampaignIcon from '@mui/icons-material/Campaign';
+import VideocamIcon from '@mui/icons-material/Videocam';
 import type { Trail } from '../hooks/useTrails';
 
 interface TrailTableViewProps {
@@ -200,7 +201,7 @@ const TrailTableView: React.FC<TrailTableViewProps> = ({ trails, favorites, onTo
                                                 rel="noopener noreferrer"
                                                 aria-label="360° video"
                                             >
-                                                <img src="/images/360-play.avif" alt="360°" style={{ width: 20, height: 20 }} />
+                                                <VideocamIcon fontSize="small" color="error" />
                                             </IconButton>
                                         </Tooltip>
                                     ) : null}
