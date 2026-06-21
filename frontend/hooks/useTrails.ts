@@ -16,8 +16,8 @@ export interface TagInfo {
 }
 
 export interface LinkedRace {
-    competitionName: string;
-    competitionSlug: string;
+    eventName: string;
+    eventSlug: string;
     raceName: string;
     distanceLabel: string | null;
     daysUntil: number | null;
