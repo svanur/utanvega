@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { API_URL } from './useTrails';
 
 export interface ScheduleRule {
-    type: 'Yearly' | 'Seasonal' | 'Fixed';
+    type: 'Yearly' | 'Seasonal' | 'Fixed' | 'Approximate';
     month?: number;
     weekOfMonth?: number;
     dayOfMonth?: number;

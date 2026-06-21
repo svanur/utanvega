@@ -3,9 +3,10 @@ namespace Utanvega.Backend.Core.Entities;
 using System.Text.Json.Serialization;
 
 /// <summary>
-/// Recurring schedule pattern stored as JSON on Event.
+/// Recurring schedule pattern stored on Event.
 /// Supports yearly events ("2nd Saturday of July"), seasonal series
-/// ("every Thursday Oct–Mar"), and fixed one-off dates.
+/// ("every Thursday Oct–Mar"), fixed one-off dates, and approximate
+/// month-only patterns ("usually in June") where no exact date is derivable.
 /// </summary>
 public class ScheduleRule
 {
@@ -39,4 +40,5 @@ public enum ScheduleType
     Yearly,
     Seasonal,
     Fixed,
+    Approximate,
 }
