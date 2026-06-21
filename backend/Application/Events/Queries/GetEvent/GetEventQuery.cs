@@ -30,7 +30,11 @@ public record EventDetailDto(
     List<EventEditionDto> Editions,
     DateTime CreatedAt,
     DateTime? UpdatedAt,
-    DateOnly? DisplayDate = null
+    DateOnly? DisplayDate = null,
+    List<string>? Certifications = null,
+    string? YoutubeUrl = null,
+    List<string>? ChampionshipCategories = null,
+    List<int>? ItraPoints = null
 );
 
 public record GetEventQuery(string Slug) : IRequest<EventDetailDto?>, ICacheable
@@ -155,6 +159,37 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
             ))
             .ToList();
 
+        var relevantEdition = recentlyCompleted
+            ? ev.Editions.FirstOrDefault(ed => ed.Date == mostRecentPast)
+            : ev.Editions
+                .Where(ed => ed.Date.HasValue && ed.Date.Value >= today)
+                .OrderBy(ed => ed.Date)
+                .FirstOrDefault();
+
+        var relevantRaces = relevantEdition?.Races
+            .Where(r => r.Status != RaceStatus.Cancelled)
+            .OrderBy(r => r.SortOrder)
+            .ToList();
+
+        var certifications = relevantRaces?
+            .Select(r => r.CertifiedBy)
+            .Where(c => !string.IsNullOrWhiteSpace(c))
+            .Distinct().Cast<string>().ToList();
+
+        var championshipCategories = relevantRaces?
+            .Select(r => r.ChampionshipCategory)
+            .Where(c => !string.IsNullOrWhiteSpace(c))
+            .Distinct().Cast<string>().ToList();
+
+        var itraPoints = relevantRaces?
+            .Where(r => r.ItraPoints.HasValue)
+            .Select(r => r.ItraPoints!.Value)
+            .Distinct().OrderBy(p => p).ToList();
+
+        var youtubeUrl = relevantRaces?
+            .Select(r => r.Trail?.YoutubeUrl)
+            .FirstOrDefault(u => !string.IsNullOrWhiteSpace(u));
+
         return new EventDetailDto(
             ev.Id,
             ev.Name,
@@ -177,7 +212,11 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
             editions,
             ev.CreatedAt,
             ev.UpdatedAt,
-            displayDate
+            displayDate,
+            certifications?.Count > 0 ? certifications : null,
+            youtubeUrl,
+            championshipCategories?.Count > 0 ? championshipCategories : null,
+            itraPoints?.Count > 0 ? itraPoints : null
         );
     }
 }
