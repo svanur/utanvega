@@ -30,6 +30,7 @@ public class ScheduleRuleEngine : IScheduleRuleEngine
             ScheduleType.Fixed => GetNextFixed(rule, fromDate),
             ScheduleType.Yearly => GetNextYearly(rule, fromDate),
             ScheduleType.Seasonal => GetNextSeasonal(rule, fromDate),
+            ScheduleType.Approximate => null, // no exact date derivable
             _ => null,
         };
     }
@@ -44,6 +45,7 @@ public class ScheduleRuleEngine : IScheduleRuleEngine
             ScheduleType.Fixed => GetFixedInRange(rule, from, to),
             ScheduleType.Yearly => GetYearlyInRange(rule, from, to),
             ScheduleType.Seasonal => GetSeasonalInRange(rule, from, to),
+            ScheduleType.Approximate => results, // no exact dates derivable
             _ => results,
         };
     }

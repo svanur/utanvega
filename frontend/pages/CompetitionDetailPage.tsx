@@ -136,6 +136,18 @@ function formatScheduleDescription(
         });
     }
 
+    if (rule.type === 'Approximate' && rule.month) {
+        if (rule.monthEnd && rule.monthEnd !== rule.month) {
+            return t('races.scheduleApproximateRange', {
+                monthStart: months[(rule.month - 1)] ?? '',
+                monthEnd: months[(rule.monthEnd - 1)] ?? '',
+            });
+        }
+        return t('races.scheduleApproximate', {
+            month: months[(rule.month - 1)] ?? '',
+        });
+    }
+
     return null;
 }
 

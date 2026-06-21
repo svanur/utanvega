@@ -5,7 +5,8 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <RootNamespace>Utanvega.Backend</RootNamespace>
         <AssemblyName>Utanvega.Backend</AssemblyName>
-      <UserSecretsId>8d671d16-4005-4aae-a914-79cedf665408</UserSecretsId>
+        <Version>1.0.1</Version>
+        <UserSecretsId>8d671d16-4005-4aae-a914-79cedf665408</UserSecretsId>
     </PropertyGroup>
     <ItemGroup>
         <InternalsVisibleTo Include="backend.Tests" />

@@ -891,6 +891,8 @@
         "scheduleSeasonal": "{{count}} hlaup - {{ordinal}} {{day}} í mánuði frá {{monthStart}} til {{monthEnd}}",
         "scheduleYearly": "Haldið árlega - {{ordinal}} {{day}} í {{month}}",
         "scheduleFixed": "Stakur viðburður: {{date}}",
+        "scheduleApproximate": "Venjulega haldið í {{month}}",
+        "scheduleApproximateRange": "Venjulega haldið í {{monthStart}}–{{monthEnd}}",
         "statusCancelled": "Aflýst",
         "statusUpcoming": "Væntanlegt",
         "raceDayWeather": "Veður á keppnisleiðinni",
