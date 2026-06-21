@@ -45,8 +45,10 @@ public class GetTrailBySlugQueryHandler : IRequestHandler<GetTrailBySlugQuery, T
                 .ThenInclude(ed => ed.Event)
             .AsNoTracking()
             .Where(r => r.TrailId == trail.Id
-                && r.Status == RaceStatus.Active
-                && r.EventEdition.Event.Status == EventStatus.Confirmed)
+                && r.Status != RaceStatus.Cancelled
+                && r.Status != RaceStatus.Hidden
+                && r.EventEdition.Event.Status != EventStatus.Cancelled
+                && r.EventEdition.Event.Status != EventStatus.Hidden)
             .ToListAsync(cancellationToken);
 
         var linkedRaceDtos = linkedRaces
