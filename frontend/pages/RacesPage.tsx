@@ -36,6 +36,7 @@ import Layout from '../components/Layout';
 import RandomQuote from '../components/RandomQuote';
 import RunningLoader from '../components/RunningLoader';
 import EventDateBadge from '../components/EventDateBadge';
+import VideocamIcon from '@mui/icons-material/Videocam';
 import { useEvents, type EventSummary } from '../hooks/useEvents';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
@@ -400,21 +401,55 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                         </Stack>
                                                     )}
 
-                                                    {/* Register link */}
-                                                    {comp.registrationUrl && comp.daysUntil != null && comp.daysUntil >= 0 && (
-                                                        <Button
-                                                            size="small"
-                                                            variant="outlined"
-                                                            href={comp.registrationUrl}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
-                                                            onClick={(e) => e.stopPropagation()}
-                                                            sx={{ mt: 1, textTransform: 'none', fontSize: '0.8rem', alignSelf: 'flex-start' }}
-                                                        >
-                                                            {t('races.register', 'Register')}
-                                                        </Button>
+                                                    {/* Credentials */}
+                                                    {(comp.itraPoints?.length || comp.certifications?.length || comp.championshipCategories?.length) && (
+                                                        <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.5 }} alignItems="center">
+                                                            {comp.itraPoints?.map((pts, i) => (
+                                                                <Tooltip key={i} title={`ITRA ${pts} points`}>
+                                                                    <img src={`/images/itra-${pts}.png`} alt={`ITRA ${pts}`} style={{ height: 18, verticalAlign: 'middle' }} />
+                                                                </Tooltip>
+                                                            ))}
+                                                            {comp.certifications?.map((c, i) => (
+                                                                <Chip key={i} label={c} size="small" variant="outlined" color="secondary" />
+                                                            ))}
+                                                            {comp.championshipCategories?.map((c, i) => (
+                                                                <Chip key={i} label={c} size="small" variant="outlined" color="primary" />
+                                                            ))}
+                                                        </Stack>
                                                     )}
+
+                                                    {/* Register / Results / 360° */}
+                                                    <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 1 }}>
+                                                        {comp.registrationUrl && comp.daysUntil != null && comp.daysUntil >= 0 && (
+                                                            <Button
+                                                                size="small"
+                                                                variant="outlined"
+                                                                href={comp.registrationUrl}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                sx={{ textTransform: 'none', fontSize: '0.8rem' }}
+                                                            >
+                                                                {t('races.register', 'Register')}
+                                                            </Button>
+                                                        )}
+                                                        {comp.youtubeUrl && (
+                                                            <Button
+                                                                size="small"
+                                                                variant="outlined"
+                                                                color="error"
+                                                                href={comp.youtubeUrl}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                startIcon={<VideocamIcon sx={{ fontSize: 14 }} />}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                sx={{ textTransform: 'none', fontSize: '0.8rem' }}
+                                                            >
+                                                                360°
+                                                            </Button>
+                                                        )}
+                                                    </Stack>
 
                                                     {comp.description && (
                                                         <Typography

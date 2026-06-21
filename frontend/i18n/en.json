@@ -965,7 +965,8 @@
             "noRaces": "No races for this edition",
             "soldOut": "Sold Out",
             "almostSoldOut": "Almost Full",
-            "cutoff": "Cutoff time"
+            "cutoff": "Cutoff time",
+            "certifications": "Credentials"
         },
         "registrationStatus": {
             "Open": "Open",

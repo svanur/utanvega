@@ -965,7 +965,8 @@
             "noRaces": "Engar greinar skráðar",
             "soldOut": "Uppselt",
             "almostSoldOut": "Næstum fullt",
-            "cutoff": "Tímamörk"
+            "cutoff": "Tímamörk",
+            "certifications": "Vottun"
         },
         "registrationStatus": {
             "Open": "Opin",

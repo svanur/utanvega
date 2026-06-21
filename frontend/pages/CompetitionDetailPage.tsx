@@ -36,6 +36,7 @@ import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import VideocamIcon from '@mui/icons-material/Videocam';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import TimerIcon from '@mui/icons-material/Timer';
 import StraightenIcon from '@mui/icons-material/Straighten';
@@ -685,6 +686,18 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 sx={{ textTransform: 'none', ...(isPostRace && { fontWeight: 700 }) }}
                             >
                                 {isPostRace ? `🏁 ${t('races.results', { defaultValue: 'Results' })}` : t('races.results', { defaultValue: 'Results' })}
+                            </Button>
+                        )}
+                        {event.youtubeUrl && (
+                            <Button
+                                variant="outlined"
+                                color="error"
+                                size="small"
+                                startIcon={<VideocamIcon sx={{ fontSize: 16 }} />}
+                                onClick={() => window.open(event.youtubeUrl!, '_blank', 'noopener')}
+                                sx={{ textTransform: 'none' }}
+                            >
+                                360°
                             </Button>
                         )}
                         {event.organizerWebsite && (

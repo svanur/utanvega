@@ -41,6 +41,10 @@ export interface EventSummary {
     registrationUrl: string | null;
     registrationStatus: string | null;
     resultsUrl: string | null;
+    certifications: string[] | null;
+    youtubeUrl: string | null;
+    championshipCategories: string[] | null;
+    itraPoints: number[] | null;
     createdAt: string;
     updatedAt: string | null;
 }
