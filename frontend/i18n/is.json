@@ -216,7 +216,7 @@
     "filters": {
         "searchPlaceholder": "Leita eftir nafni eða lýsingu...",
         "clearSearch": "hreinsa leit",
-        "advancedSearch": "ítarleg leit",
+        "advancedSearch": "síur",
         "advancedFilters": "Ítarleg síun",
         "trailLength": "Lengd leiðar",
         "elevationGain": "Hækkun",
@@ -945,7 +945,7 @@
         "predict": "Spá",
         "noUpcoming": "Engin keppni framundan",
         "filters": {
-            "title": "Síur",
+            "title": "síur",
             "activityType": "Tegund viðburðar",
             "eventType": "Tegund viðburðar",
             "itraPoints": "ITRA stig",

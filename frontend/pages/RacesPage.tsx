@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useState, useRef } from 'react';
+import { lazy, Suspense, useMemo, useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Container,
@@ -148,6 +148,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
     const [shareEventId, setShareEventId] = useState<string | null>(null);
     const [pullOffset, setPullOffset] = useState(0);
     const [refreshing, setRefreshing] = useState(false);
+    const [showSwipeHint, setShowSwipeHint] = useState(false);
     const touchStartY = useRef<number | null>(null);
     const PULL_THRESHOLD = 80;
 
@@ -168,6 +169,22 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         setPullOffset(0);
         touchStartY.current = null;
     };
+
+    // One-time swipe hint: show a brief peek animation on the first upcoming card
+    useEffect(() => {
+        try {
+            if (localStorage.getItem('utanvega-swipe-hint-seen')) return;
+        } catch { return; }
+        const timer = setTimeout(() => {
+            setShowSwipeHint(true);
+            setTimeout(() => {
+                setShowSwipeHint(false);
+                try { localStorage.setItem('utanvega-swipe-hint-seen', '1'); } catch { /* */ }
+            }, 800);
+        }, 1200);
+        return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const [viewMode, setViewMode] = useState<ViewMode>(() => {
         try {
@@ -362,17 +379,18 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                         <CloseIcon fontSize="small" />
                                     </IconButton>
                                 )}
-                                <Tooltip title={activeFilterCount > 0 ? t('races.filters.activeCount', { count: activeFilterCount }) : t('races.filters.title')}>
-                                    <IconButton
-                                        size="small"
-                                        onClick={() => setShowFilters(v => !v)}
-                                        color={activeFilterCount > 0 ? 'primary' : 'default'}
-                                    >
-                                        <Badge badgeContent={activeFilterCount} color="primary" overlap="circular">
-                                            <FilterListIcon fontSize="small" />
-                                        </Badge>
-                                    </IconButton>
-                                </Tooltip>
+                                <Button
+                                    size="small"
+                                    variant={showFilters || activeFilterCount > 0 ? 'contained' : 'outlined'}
+                                    color={activeFilterCount > 0 ? 'primary' : 'inherit'}
+                                    onClick={() => setShowFilters(v => !v)}
+                                    startIcon={<FilterListIcon fontSize="small" />}
+                                    sx={{ textTransform: 'none', borderRadius: 4, px: 1.5, py: 0.5, fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+                                >
+                                    {activeFilterCount > 0
+                                        ? t('races.filters.activeCount', { count: activeFilterCount })
+                                        : t('races.filters.title')}
+                                </Button>
                             </InputAdornment>
                         ),
                     }}
@@ -723,9 +741,10 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                 </Box>
                             )}
                         <Stack spacing={2}>
-                            {upcoming.map(comp => (
+                            {upcoming.map((comp, idx) => (
                                 <SwipeableCard
                                     key={comp.id}
+                                    peek={idx === 0 && showSwipeHint}
                                     onSwipeRight={comp.status !== 'Cancelled' && comp.daysUntil != null && comp.daysUntil >= 0
                                         ? () => setShareEventId(comp.id)
                                         : undefined
