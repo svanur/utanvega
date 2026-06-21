@@ -625,7 +625,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                         // Group races by competition slug
                         const byCompetition = trail.linkedRaces!.reduce<Record<string, typeof trail.linkedRaces[0][]>>(
                             (acc, race) => {
-                                (acc[race.competitionSlug] ??= []).push(race);
+                                (acc[race.eventSlug] ??= []).push(race);
                                 return acc;
                             },
                             {}
@@ -635,8 +635,8 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                 {Object.values(byCompetition).map((races) => {
                                     const rep = races[0];
                                     const label = races.length > 1
-                                        ? t('trail.partOfRaceDistances', { competition: rep.competitionName, count: races.length })
-                                        : t('trail.partOfRace', { competition: rep.competitionName });
+                                        ? t('trail.partOfRaceDistances', { competition: rep.eventName, count: races.length })
+                                        : t('trail.partOfRace', { competition: rep.eventName });
                                     // Use the nearest upcoming occurrence across all linked races
                                     const daysUntil = races.reduce<number | null>((min, r) => {
                                         if (r.daysUntil == null || r.daysUntil < 0) return min;
@@ -644,9 +644,9 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                     }, null);
                                     return (
                                         <Paper
-                                            key={rep.competitionSlug}
+                                            key={rep.eventSlug}
                                             component={RouterLink}
-                                            to={`/events/${rep.competitionSlug}`}
+                                            to={`/events/${rep.eventSlug}`}
                                             elevation={0}
                                             sx={{
                                                 display: 'flex',
