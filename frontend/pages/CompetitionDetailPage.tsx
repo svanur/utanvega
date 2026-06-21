@@ -67,6 +67,7 @@ type PreparedEdition = EventEditionDto & {
 
 import { ACTIVITY_EMOJI } from '../constants/activityEmoji';
 import { googleCalendarUrl, outlookCalendarUrl, downloadIcs } from '../utils/calendarLinks';
+import EventDateBadge from '../components/EventDateBadge';
 
 type RaceDayChecklistKey = 'bib' | 'shoes' | 'gels' | 'goodMood';
 
@@ -79,11 +80,9 @@ function toAnchorSlug(value: string): string {
 
 function formatNextDate(dateStr: string, t: (key: string, opts?: Record<string, unknown>) => string): string {
     const date = new Date(dateStr + 'T00:00:00');
-    const weekdays = t('races.weekdays', { returnObjects: true }) as unknown as string[];
     const months = t('races.months', { returnObjects: true }) as unknown as string[];
-    const weekday = weekdays[date.getDay()];
     const month = months[date.getMonth()];
-    const formatted = `${weekday}, ${date.getDate()}. ${month} ${date.getFullYear()}`;
+    const formatted = `${date.getDate()}. ${month} ${date.getFullYear()}`;
     return formatted.charAt(0).toUpperCase() + formatted.slice(1);
 }
 
@@ -646,7 +645,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                     })()}
 
                     {(event.displayDate ?? event.nextEditionDate) && event.status !== 'Cancelled' && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 2, flexWrap: 'wrap' }}>
                             <CalendarTodayIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
                             <Typography variant="body2" color="text.secondary" sx={{ mr: 0.5 }}>
                                 {t(event.daysUntil != null && event.daysUntil < 0 ? 'races.lastRace' : 'races.nextRace')}
@@ -654,6 +653,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             <Typography variant="body1" fontWeight={600}>
                                 {formatNextDate((event.displayDate ?? event.nextEditionDate)!, t)}
                             </Typography>
+                            <EventDateBadge dateStr={(event.displayDate ?? event.nextEditionDate)!} />
                         </Box>
                     )}
 

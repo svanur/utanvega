@@ -32,6 +32,7 @@ import { useEventCalendar, CalendarDay } from '../hooks/useEvents';
 import { useNavigate } from 'react-router-dom';
 import { API_URL } from '../hooks/useTrails';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
+import { useIcelandicHolidays } from '../hooks/useIcelandicHolidays';
 
 type RaceCalendarPageProps = {
     mode: PaletteMode;
@@ -57,6 +58,7 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
 
     const { from, to } = useMemo(() => getMonthRange(year, month), [year, month]);
     const { days, loading } = useEventCalendar(from, to);
+    const { getHolidays } = useIcelandicHolidays();
 
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
     const [selectedDay, setSelectedDay] = useState<CalendarDay | null>(null);
@@ -215,10 +217,22 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
                                 const hasEvents = day !== null && eventsByDate.has(day);
                                 const todayCell = day !== null && isToday(day);
                                 const eventCount = hasEvents ? eventsByDate.get(day)!.events.length : 0;
+                                const colIndex = i % 7; // 0=Mon … 5=Sat, 6=Sun in Mon-first grid
+                                const isWeekendCol = colIndex === 5 || colIndex === 6;
+                                const dateStr = day !== null
+                                    ? `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+                                    : null;
+                                const holidays = dateStr ? getHolidays(dateStr) : [];
+                                const isHoliday = holidays.length > 0;
 
                                 return (
-                                    <Box
+                                    <Tooltip
                                         key={i}
+                                        title={isHoliday ? holidays.map(h => h.name).join(' · ') : ''}
+                                        arrow
+                                        disableHoverListener={!isHoliday}
+                                    >
+                                    <Box
                                         ref={todayCell ? todayRef : undefined}
                                         role={hasEvents ? 'button' : undefined}
                                         tabIndex={hasEvents ? 0 : undefined}
@@ -243,6 +257,12 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
                                             borderColor: 'divider',
                                             cursor: hasEvents ? 'pointer' : 'default',
                                             transition: 'background-color 0.3s',
+                                            ...(isWeekendCol && day !== null && !todayCell && {
+                                                bgcolor: alpha(theme.palette.action.hover, 0.15),
+                                            }),
+                                            ...(isHoliday && !todayCell && {
+                                                bgcolor: alpha(theme.palette.warning.main, 0.08),
+                                            }),
                                             ...(hasEvents && {
                                                 bgcolor: alpha(theme.palette.success.main, 0.08),
                                                 '&:hover': { bgcolor: alpha(theme.palette.success.main, 0.18) },
@@ -262,33 +282,27 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
                                                 <Typography
                                                     variant="body2"
                                                     fontWeight={todayCell ? 800 : hasEvents ? 600 : 400}
-                                                    color={todayCell ? 'primary' : hasEvents ? 'text.primary' : 'text.secondary'}
+                                                    color={todayCell ? 'primary' : isWeekendCol ? 'text.secondary' : hasEvents ? 'text.primary' : 'text.secondary'}
                                                 >
                                                     {day}
                                                 </Typography>
-                                                {hasEvents && (
-                                                    <Stack direction="row" spacing={0.3} sx={{ mt: 0.3 }}>
-                                                        {Array.from({ length: Math.min(eventCount, 3) }).map((_, j) => (
-                                                            <Box
-                                                                key={j}
-                                                                sx={{
-                                                                    width: 6,
-                                                                    height: 6,
-                                                                    borderRadius: '50%',
-                                                                    bgcolor: 'success.main',
-                                                                }}
-                                                            />
-                                                        ))}
-                                                        {eventCount > 3 && (
-                                                            <Typography variant="caption" sx={{ fontSize: '0.6rem', lineHeight: 1 }}>
-                                                                +{eventCount - 3}
-                                                            </Typography>
-                                                        )}
-                                                    </Stack>
-                                                )}
+                                                <Stack direction="row" spacing={0.3} sx={{ mt: 0.3 }}>
+                                                    {isHoliday && (
+                                                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: 'warning.main' }} />
+                                                    )}
+                                                    {hasEvents && Array.from({ length: Math.min(eventCount, 3) }).map((_, j) => (
+                                                        <Box key={j} sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: 'success.main' }} />
+                                                    ))}
+                                                    {hasEvents && eventCount > 3 && (
+                                                        <Typography variant="caption" sx={{ fontSize: '0.6rem', lineHeight: 1 }}>
+                                                            +{eventCount - 3}
+                                                        </Typography>
+                                                    )}
+                                                </Stack>
                                             </>
                                         )}
                                     </Box>
+                                    </Tooltip>
                                 );
                             })}
                         </Box>
@@ -316,11 +330,20 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
                     transformOrigin={{ vertical: 'top', horizontal: 'center' }}
                     slotProps={{ paper: { sx: { borderRadius: 2, minWidth: 240, maxWidth: 320 } } }}
                 >
-                    {selectedDay && (
+                    {selectedDay && (() => {
+                        const popoverHolidays = getHolidays(selectedDay.date);
+                        return (
                         <Box sx={{ p: 1 }}>
                             <Typography variant="subtitle2" sx={{ px: 1, pt: 0.5 }}>
                                 {new Date(selectedDay.date + 'T00:00:00').getDate()}. {months[month]}
                             </Typography>
+                            {popoverHolidays.length > 0 && (
+                                <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ px: 1, pb: 0.5 }}>
+                                    {popoverHolidays.map((h, i) => (
+                                        <Chip key={i} label={h.name} size="small" color="warning" variant="outlined" sx={{ height: 20, fontSize: '0.68rem' }} />
+                                    ))}
+                                </Stack>
+                            )}
                             <List dense disablePadding>
                                 {selectedDay.events.map((ev, i) => (
                                     <ListItemButton
@@ -357,7 +380,8 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
                                 ))}
                             </List>
                         </Box>
-                    )}
+                        );
+                    })()}
                 </Popover>
 
                 <Snackbar
