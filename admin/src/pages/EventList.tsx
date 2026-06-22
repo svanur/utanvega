@@ -174,8 +174,8 @@ const ACTIVITY_TYPE_COLORS: Record<ActivityType, 'primary' | 'secondary' | 'warn
 const ACTIVITY_TYPES: ActivityType[] = ['TrailRunning', 'Running', 'Cycling', 'Hiking', 'FunRun', 'ObstacleCourse', 'CrossCountryRun', 'Social', 'Other'];
 const EVENT_STATUSES: EventStatus[] = ['Unconfirmed', 'Confirmed', 'Cancelled', 'Hidden', 'Unlisted'];
 const REGISTRATION_STATUSES: RegistrationStatus[] = ['NotStarted', 'Open', 'Closed'];
-const RACE_STATUSES: RaceStatus[] = ['Active', 'Upcoming', 'Completed', 'Cancelled', 'Hidden'];
-const TICKET_STATUSES: TicketStatus[] = ['Available', 'SoldOut', 'Closed'];
+const RACE_STATUSES: RaceStatus[] = ['Active', 'Completed', 'Cancelled', 'Hidden'];
+const TICKET_STATUSES: TicketStatus[] = ['Free', 'NotStarted', 'Available', 'AlmostSoldOut', 'SoldOut', 'Closed'];
 const ALERT_SEVERITIES: AlertSeverity[] = ['info', 'success', 'warning', 'error'];
 
 const ACTIVITY_ICONS: Record<string, string> = {
@@ -317,9 +317,12 @@ function getRaceStatusColor(status: RaceStatus): 'default' | 'success' | 'info' 
   return 'default';
 }
 
-function getTicketStatusColor(status: TicketStatus): 'success' | 'error' | 'default' {
+function getTicketStatusColor(status: TicketStatus): 'success' | 'error' | 'warning' | 'info' | 'default' {
   if (status === 'Available') return 'success';
+  if (status === 'Free') return 'success';
   if (status === 'SoldOut') return 'error';
+  if (status === 'AlmostSoldOut') return 'warning';
+  if (status === 'NotStarted') return 'info';
   return 'default';
 }
 

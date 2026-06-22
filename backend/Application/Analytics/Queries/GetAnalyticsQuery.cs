@@ -82,7 +82,7 @@ public class GetAnalyticsQueryHandler : IRequestHandler<GetAnalyticsQuery, Analy
 
         // Top 10 trails (all-time)
         var trailNames = await _context.Trails
-            .Where(t => t.Status != TrailStatus.Deleted)
+            .Where(t => t.Status != TrailStatus.Archived)
             .AsNoTracking()
             .Select(t => new { t.Id, t.Name, t.Slug })
             .ToDictionaryAsync(t => t.Id, cancellationToken);

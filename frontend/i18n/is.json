@@ -1007,7 +1007,10 @@
             "NotStarted": ""
         },
         "ticketStatus": {
+            "Free": "Frítt",
+            "NotStarted": "Bráðum í sölu",
             "Available": "Laust",
+            "AlmostSoldOut": "Næstum uppselt",
             "SoldOut": "Uppselt",
             "Closed": "Lokað"
         }

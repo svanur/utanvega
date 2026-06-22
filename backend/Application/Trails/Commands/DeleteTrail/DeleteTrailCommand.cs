@@ -27,7 +27,7 @@ public class DeleteTrailCommandHandler : IRequestHandler<DeleteTrailCommand, boo
         var slug = trail.Slug;
 
         // Soft delete: Change status and free the slug for reuse
-        trail.Status = TrailStatus.Deleted;
+        trail.Status = TrailStatus.Archived;
         trail.Slug = $"{trail.Slug}-deleted-{Guid.NewGuid().ToString()[..8]}";
         trail.UpdatedAt = DateTime.UtcNow;
 

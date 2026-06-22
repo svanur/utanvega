@@ -70,6 +70,7 @@ import { ACTIVITY_EMOJI } from '../constants/activityEmoji';
 import { googleCalendarUrl, outlookCalendarUrl, downloadIcs } from '../utils/calendarLinks';
 import EventDateBadge from '../components/EventDateBadge';
 import { formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime } from '../utils/eventUtils';
+import { getTicketStatusColor } from '../utils/ticketStatus';
 
 type RaceDayChecklistKey = 'bib' | 'shoes' | 'gels' | 'goodMood';
 
@@ -150,11 +151,6 @@ function getRegistrationStatusColor(status: string | null | undefined): 'success
     return 'default';
 }
 
-function getTicketStatusColor(status: string | null | undefined): 'success' | 'error' | 'default' {
-    if (status === 'Available') return 'success';
-    if (status === 'SoldOut') return 'error';
-    return 'default';
-}
 
 function EditionMeta({
     edition,
