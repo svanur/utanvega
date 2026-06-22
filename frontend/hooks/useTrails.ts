@@ -20,6 +20,9 @@ export interface LinkedRace {
     raceName: string;
     distanceLabel: string | null;
     daysUntil: number | null;
+    startTime: string | null;
+    ticketStatus: string | null;
+    itraPoints: number | null;
 }
 
 export interface Trail {
