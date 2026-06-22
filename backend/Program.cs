@@ -411,7 +411,7 @@ if (app.Environment.IsDevelopment())
 
 app.MapGet("/api/v1/trails", async (IMediator mediator) =>
 {
-    var trails = await mediator.Send(new GetTrailsQuery(IncludeDeleted: false, PublishedOnly: true));
+    var trails = await mediator.Send(new GetTrailsQuery(IncludeArchived: false, PublishedOnly: true));
     return Results.Ok(trails);
 })
 .WithName("GetPublicTrails");
@@ -623,9 +623,9 @@ app.MapGet("/", async (IWebHostEnvironment env, UtanvegaDbContext db) =>
     };
 });
 
-app.MapGet("/api/v1/admin/trails", [Authorize] async (IMediator mediator, bool includeDeleted = false) =>
+app.MapGet("/api/v1/admin/trails", [Authorize] async (IMediator mediator, bool includeArchived = false) =>
 {
-    var trails = await mediator.Send(new GetTrailsQuery(includeDeleted));
+    var trails = await mediator.Send(new GetTrailsQuery(includeArchived));
     return Results.Ok(trails);
 })
 .WithName("GetTrails");
@@ -824,7 +824,7 @@ app.MapPost("/api/v1/admin/trails/{id:guid}/recalculate-difficulty", [Authorize]
 app.MapPost("/api/v1/admin/trails/recalculate-all-difficulties", [Authorize] async (UtanvegaDbContext context) =>
 {
     var trails = await context.Trails
-        .Where(t => t.Status != Utanvega.Backend.Core.Entities.TrailStatus.Deleted)
+        .Where(t => t.Status != Utanvega.Backend.Core.Entities.TrailStatus.Archived)
         .ToListAsync();
 
     foreach (var trail in trails)
@@ -1153,7 +1153,7 @@ app.MapGet("/api/v1/admin/trails/duplicates", [Authorize] async (double? thresho
 app.MapPost("/api/v1/admin/trails/detect-types", [Authorize] async (UtanvegaDbContext context) =>
 {
     var trails = await context.Trails
-        .Where(t => t.GpxData != null && t.Status != TrailStatus.Deleted)
+        .Where(t => t.GpxData != null && t.Status != TrailStatus.Archived)
         .ToListAsync();
 
     var updated = 0;
@@ -1176,7 +1176,7 @@ app.MapPost("/api/v1/admin/trails/detect-types", [Authorize] async (UtanvegaDbCo
 app.MapPost("/api/v1/admin/trails/detect-locations", [Authorize] async (UtanvegaDbContext context, LocationDetector detector) =>
 {
     var trails = await context.Trails
-        .Where(t => t.GpxData != null && t.Status != TrailStatus.Deleted)
+        .Where(t => t.GpxData != null && t.Status != TrailStatus.Archived)
         .ToListAsync();
 
     var updated = 0;

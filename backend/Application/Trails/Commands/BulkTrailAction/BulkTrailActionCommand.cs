@@ -47,7 +47,7 @@ public class BulkTrailActionCommandHandler : IRequestHandler<BulkTrailActionComm
             switch (request.Action)
             {
                 case BulkTrailActionType.Delete:
-                    trail.Status = TrailStatus.Deleted;
+                    trail.Status = TrailStatus.Archived;
                     break;
                 case BulkTrailActionType.UpdateStatus:
                     if (Enum.TryParse<TrailStatus>(request.Value, true, out var status))

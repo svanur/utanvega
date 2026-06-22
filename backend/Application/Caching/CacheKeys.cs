@@ -7,8 +7,8 @@ namespace Utanvega.Backend.Application.Caching;
 public static class CacheKeys
 {
     // Trails
-    public static string Trails(bool includeDeleted, bool publishedOnly) =>
-        $"trails:{includeDeleted}:{publishedOnly}";
+    public static string Trails(bool includeArchived, bool publishedOnly) =>
+        $"trails:{includeArchived}:{publishedOnly}";
     public static string Trail(string slug) => $"trail:{slug}";
     public static string Geometry(string slug) => $"geometry:{slug}";
     public static string GeometriesAll => "geometries:all";

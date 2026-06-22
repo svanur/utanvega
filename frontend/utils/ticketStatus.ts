@@ -17,12 +17,14 @@ export function groupDistances(distances: DistanceEntry[]): GroupedDistance[] {
     return Array.from(map.values());
 }
 
-export function getTicketStatusColor(status: string | null): 'success' | 'error' | 'warning' | 'default' {
+export function getTicketStatusColor(status: string | null): 'success' | 'error' | 'warning' | 'info' | 'default' {
     switch (status) {
+        case 'Free': return 'success';
         case 'Available': return 'success';
-        case 'SoldOut': return 'error';
         case 'AlmostSoldOut': return 'warning';
         case 'WaitingList': return 'warning';
+        case 'SoldOut': return 'error';
+        case 'NotStarted': return 'info';
         case 'Closed': return 'default';
         default: return 'default';
     }
