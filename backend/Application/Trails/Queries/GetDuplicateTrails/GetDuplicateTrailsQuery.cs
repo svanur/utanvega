@@ -22,7 +22,7 @@ public class GetDuplicateTrailsQueryHandler : IRequestHandler<GetDuplicateTrails
     public async Task<List<DuplicatePair>> Handle(GetDuplicateTrailsQuery request, CancellationToken cancellationToken)
     {
         var trails = await _context.Trails
-            .Where(t => t.GpxData != null && t.Status != Core.Entities.TrailStatus.Deleted)
+            .Where(t => t.GpxData != null && t.Status != Core.Entities.TrailStatus.Archived)
             .Select(t => new { t.Id, t.Name, t.GpxData, t.Length })
             .ToListAsync(cancellationToken);
 

@@ -17,7 +17,7 @@ interface TrailFilterBarProps {
   locationFilter: string;
   onLocationFilterChange: (value: string) => void;
   locationOptions: string[];
-  includeDeleted: boolean;
+  includeArchived: boolean;
   onResetFilters: () => void;
 }
 
@@ -35,7 +35,7 @@ export default function TrailFilterBar({
   locationFilter,
   onLocationFilterChange,
   locationOptions,
-  includeDeleted,
+  includeArchived,
   onResetFilters,
 }: TrailFilterBarProps) {
   return (
@@ -73,7 +73,7 @@ export default function TrailFilterBar({
           <MenuItem value="Published">Published</MenuItem>
           <MenuItem value="Archived">Archived</MenuItem>
           <MenuItem value="EventOnly">Event Only</MenuItem>
-          {includeDeleted && <MenuItem value="Deleted">Deleted</MenuItem>}
+          {includeArchived && <MenuItem value="Archived">Archived</MenuItem>}
         </Select>
       </FormControl>
       <FormControl size="small" sx={{ minWidth: 150 }}>

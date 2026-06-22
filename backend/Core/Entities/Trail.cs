@@ -21,7 +21,6 @@ public enum TrailStatus
     Published,
     Flagged,
     Archived,
-    Deleted,
     EventOnly,
 }
 

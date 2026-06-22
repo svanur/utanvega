@@ -8,8 +8,8 @@ import type { TagDto } from '../hooks/useTags';
 interface TrailToolsPanelProps {
   showTools: boolean;
   selectedIds: string[];
-  includeDeleted: boolean;
-  onIncludeDeletedChange: (value: boolean) => void;
+  includeArchived: boolean;
+  onIncludeArchivedChange: (value: boolean) => void;
   onShowBulkUpload: () => void;
   recalculating: boolean;
   bulkActioning: boolean;
@@ -22,8 +22,8 @@ interface TrailToolsPanelProps {
 export default function TrailToolsPanel({
   showTools,
   selectedIds,
-  includeDeleted,
-  onIncludeDeletedChange,
+  includeArchived,
+  onIncludeArchivedChange,
   onShowBulkUpload,
   recalculating,
   bulkActioning,
@@ -69,8 +69,8 @@ export default function TrailToolsPanel({
                   </Button>
                 </Tooltip>
                 <FormControlLabel
-                  control={<Switch size="small" checked={includeDeleted} onChange={(e) => onIncludeDeletedChange(e.target.checked)} />}
-                  label={<Typography variant="body2">Show Deleted</Typography>}
+                  control={<Switch size="small" checked={includeArchived} onChange={(e) => onIncludeArchivedChange(e.target.checked)} />}
+                  label={<Typography variant="body2">Show Archived</Typography>}
                 />
               </Stack>
             </Box>

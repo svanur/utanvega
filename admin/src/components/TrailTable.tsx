@@ -225,7 +225,7 @@ function TrailRow({ trail, selected, onSelect, onViewMap, onEdit, onDelete, onRe
   return (
     <TableRow
       selected={selected}
-      sx={{ opacity: trail.status === 'Deleted' ? 0.6 : 1, bgcolor: trail.status === 'Deleted' ? 'action.hover' : 'inherit' }}
+      sx={{ opacity: trail.status === 'Archived' ? 0.6 : 1, bgcolor: trail.status === 'Archived' ? 'action.hover' : 'inherit' }}
     >
       <TableCell padding="checkbox">
         <Checkbox checked={selected} onChange={onSelect} />
@@ -366,8 +366,8 @@ function TrailRow({ trail, selected, onSelect, onViewMap, onEdit, onDelete, onRe
         </Box>
       </TableCell>
       <TableCell>
-        {trail.status === 'Deleted' ? (
-          <Chip label="Deleted" color="error" size="small" />
+        {trail.status === 'Archived' ? (
+          <Chip label="Archived" color="default" size="small" />
         ) : (
           <InlineEditSelect
             value={trail.status}
@@ -401,7 +401,7 @@ function TrailRow({ trail, selected, onSelect, onViewMap, onEdit, onDelete, onRe
       </TableCell>
       <TableCell align="right">
         <Button size="small" startIcon={<MapIcon />} onClick={onViewMap}>Map</Button>
-        {trail.status === 'Deleted' ? (
+        {trail.status === 'Archived' ? (
           <Button size="small" color="success" startIcon={<RestoreIcon />} onClick={onRestore}>Restore</Button>
         ) : (
           <>

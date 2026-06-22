@@ -1006,7 +1006,10 @@
             "NotStarted": ""
         },
         "ticketStatus": {
+            "Free": "Free",
+            "NotStarted": "Coming Soon",
             "Available": "Available",
+            "AlmostSoldOut": "Almost Full",
             "SoldOut": "Sold Out",
             "Closed": "Closed"
         }

@@ -9,7 +9,7 @@ export type Trail = {
     length: number;
     elevationGain: number;
     elevationLoss: number;
-    status: 'Draft' | 'Published' | 'Flagged' | 'Archived' | 'Deleted' | 'EventOnly';
+    status: 'Draft' | 'Published' | 'Flagged' | 'Archived' | 'EventOnly';
     activityType: 'TrailRunning' | 'Running' | 'Cycling' | 'Hiking';
     trailType: 'OutAndBack' | 'Loop' | 'PointToPoint';
     difficulty?: string;
@@ -20,7 +20,7 @@ export type Trail = {
     youtubeUrl?: string | null;
 };
 
-export function useTrails(includeDeleted: boolean = false) {
+export function useTrails(includeArchived: boolean = false) {
     const [trails, setTrails] = useState<Trail[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -28,7 +28,7 @@ export function useTrails(includeDeleted: boolean = false) {
     const fetchTrails = async () => {
         try {
             setLoading(true);
-            const data = await apiFetch<Trail[]>(`/api/v1/admin/trails?includeDeleted=${includeDeleted}`);
+            const data = await apiFetch<Trail[]>(`/api/v1/admin/trails?includeArchived=${includeArchived}`);
             setTrails(data);
             setError(null);
         } catch (err) {
@@ -40,7 +40,7 @@ export function useTrails(includeDeleted: boolean = false) {
 
     useEffect(() => {
         fetchTrails();
-    }, [includeDeleted]); // eslint-disable-line react-hooks/exhaustive-deps -- only run on mount and when includeDeleted changes
+    }, [includeArchived]); // eslint-disable-line react-hooks/exhaustive-deps -- only run on mount and when includeArchived changes
 
     return { trails, setTrails, loading, error, refresh: fetchTrails };
 }

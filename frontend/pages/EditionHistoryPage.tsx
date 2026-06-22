@@ -35,6 +35,7 @@ import { useEventBySlug } from '../hooks/useEvents';
 import type { EventEditionDto, RaceDto } from '../hooks/useEvents';
 import { splitMinutes } from '../utils/cutoffTime';
 import { formatNextDate, formatRaceDateTime } from '../utils/eventUtils';
+import { getTicketStatusColor } from '../utils/ticketStatus';
 
 type EditionHistoryPageProps = {
     mode: PaletteMode;
@@ -47,11 +48,6 @@ function formatCutoff(minutes: number, t: (key: string, opts?: Record<string, un
     return `${h}h ${m}m`;
 }
 
-function getTicketStatusColor(status: string | null | undefined): 'success' | 'error' | 'default' {
-    if (status === 'Available') return 'success';
-    if (status === 'SoldOut') return 'error';
-    return 'default';
-}
 
 function getRegistrationStatusColor(status: string | null | undefined): 'success' | 'warning' | 'default' {
     if (status === 'Open') return 'success';

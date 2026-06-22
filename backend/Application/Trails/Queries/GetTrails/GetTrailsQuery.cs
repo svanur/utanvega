@@ -7,9 +7,9 @@ using Utanvega.Backend.Infrastructure.Persistence;
 
 namespace Utanvega.Backend.Application.Trails.Queries.GetTrails;
 
-public record GetTrailsQuery(bool IncludeDeleted = false, bool PublishedOnly = false) : IRequest<List<TrailDto>>, ICacheable
+public record GetTrailsQuery(bool IncludeArchived = false, bool PublishedOnly = false) : IRequest<List<TrailDto>>, ICacheable
 {
-    public string CacheKey => CacheKeys.Trails(IncludeDeleted, PublishedOnly);
+    public string CacheKey => CacheKeys.Trails(IncludeArchived, PublishedOnly);
     public TimeSpan CacheDuration => TimeSpan.FromHours(1);
 }
 
@@ -64,9 +64,9 @@ public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailD
                 .ThenInclude(tt => tt.Tag)
             .AsQueryable();
 
-        if (!request.IncludeDeleted)
+        if (!request.IncludeArchived)
         {
-            query = query.Where(t => t.Status != TrailStatus.Deleted);
+            query = query.Where(t => t.Status != TrailStatus.Archived);
         }
 
         if (request.PublishedOnly)

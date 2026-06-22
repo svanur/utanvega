@@ -147,7 +147,7 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
       const result = await apiFetch<{ total: number; updated: number }>('/api/v1/admin/trails/detect-types', { method: 'POST' });
       onNotify(`Trail types re-detected: ${result.updated} of ${result.total} trails updated`);
       // Refresh trail data to show updated types
-      const data = await apiFetch<TrailDto[]>('/api/v1/admin/trails?includeDeleted=false');
+      const data = await apiFetch<TrailDto[]>('/api/v1/admin/trails?includeArchived=false');
       setTrails(data);
     } catch (_err) {
       onNotify('Failed to detect trail types', 'error');
@@ -161,7 +161,7 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
     try {
       const result = await apiFetch<{ total: number; updated: number }>('/api/v1/admin/trails/detect-locations', { method: 'POST' });
       onNotify(`Locations re-detected: ${result.updated} of ${result.total} trails updated`);
-      const data = await apiFetch<TrailDto[]>('/api/v1/admin/trails?includeDeleted=false');
+      const data = await apiFetch<TrailDto[]>('/api/v1/admin/trails?includeArchived=false');
       setTrails(data);
     } catch (_err) {
       onNotify('Failed to detect locations', 'error');
@@ -173,7 +173,7 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
   useEffect(() => {
     (async () => {
       try {
-        const data = await apiFetch<TrailDto[]>('/api/v1/admin/trails?includeDeleted=false');
+        const data = await apiFetch<TrailDto[]>('/api/v1/admin/trails?includeArchived=false');
         setTrails(data);
       } catch (_err) {
         onNotify('Failed to load trails', 'error');

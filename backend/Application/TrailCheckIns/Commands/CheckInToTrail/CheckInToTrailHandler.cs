@@ -20,7 +20,7 @@ public class CheckInToTrailHandler : IRequestHandler<CheckInToTrailCommand, Trai
         var normalizedSlug = request.TrailSlug.Trim().ToLowerInvariant();
         var trail = await _dbContext.Trails
             .AsNoTracking()
-            .Where(t => t.Slug == normalizedSlug && t.Status != TrailStatus.Deleted)
+            .Where(t => t.Slug == normalizedSlug && t.Status != TrailStatus.Archived)
             .Select(t => new { t.Id })
             .FirstOrDefaultAsync(cancellationToken);
 
