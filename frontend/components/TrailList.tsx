@@ -1,17 +1,16 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { 
-    Container, 
-    Typography, 
-    Box, 
-    CircularProgress, 
+import {
+    Container,
+    Typography,
+    Box,
+    CircularProgress,
     Alert,
     TextField,
     InputAdornment,
     IconButton,
     Collapse,
     Button,
-    Slider,
     FormControl,
     InputLabel,
     Select,
@@ -27,7 +26,9 @@ import {
     Skeleton,
     Card,
     CardContent,
-    Stack
+    Stack,
+    Autocomplete,
+    Divider,
 } from '@mui/material';
 import { 
     Search as SearchIcon, 
@@ -59,7 +60,6 @@ import {
 } from '@mui/icons-material';
 import { useTrails, ALL_ACTIVITY_TYPES, DEFAULT_FILTERS, useTrendingTrails } from '../hooks/useTrails';
 import type { SortOption, FilterState } from '../hooks/useTrails';
-import { formatDuration } from '../utils/estimateDuration';
 import { useFavorites } from '../hooks/useFavorites';
 import { useHiddenTrails } from '../hooks/useHiddenTrails';
 import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
@@ -76,7 +76,6 @@ import { getActivePresets } from '../utils/filterPresets';
 import TrailSlotMachine from './TrailSlotMachine';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import ListSubheader from '@mui/material/ListSubheader';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { useEvents } from '../hooks/useEvents';
 import { useOfflineTrails } from '../hooks/useOfflineTrails';
@@ -129,6 +128,19 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
     }, []);
 
     const [showAdvanced, setShowAdvanced] = React.useState(false);
+
+    const activeFilterCount = React.useMemo(() =>
+        filters.lengthBuckets.length +
+        filters.elevationGainBuckets.length +
+        filters.elevationLossBuckets.length +
+        filters.distanceBuckets.length +
+        filters.difficulties.length +
+        filters.trailTypes.length +
+        (filters.locationSlugs.length > 0 ? 1 : 0) +
+        filters.selectedActivityTypes.length +
+        (filters.favoritesOnly ? 1 : 0) +
+        (filters.offlineOnly ? 1 : 0),
+    [filters]);
     const [viewMode, setViewMode] = React.useState<ViewMode>(() => {
         try {
             const saved = localStorage.getItem('utanvega-view-mode');
@@ -213,7 +225,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
         }
 
         // If no difficulty filter active, prefer Easy/Moderate trails
-        if (filters.difficulty === 'All') {
+        if (filters.difficulties.length === 0) {
             const easyMod = nearby.filter(t => t.difficulty === 'Easy' || t.difficulty === 'Moderate');
             if (easyMod.length > 0) nearby = easyMod;
         }
@@ -221,7 +233,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
         const pick = nearby[Math.floor(Math.random() * nearby.length)];
         if (navigator.vibrate) navigator.vibrate(200);
         setSlotMachine({ open: true, winner: pick.name, winnerSlug: pick.slug });
-    }, [filters.difficulty]);
+    }, [filters.difficulties]);
 
     const handleSlotComplete = React.useCallback(() => {
         const slug = slotMachine.winnerSlug;
@@ -259,8 +271,8 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
 
         const updates: Partial<FilterState> = {};
         if (activity) updates.selectedActivityTypes = activity.split(',');
-        if (difficulty && difficulty !== 'All') updates.difficulty = difficulty;
-        if (trailType && trailType !== 'All') updates.trailType = trailType;
+        if (difficulty && difficulty !== 'All') updates.difficulties = difficulty.split(',');
+        if (trailType && trailType !== 'All') updates.trailTypes = trailType.split(',');
         if (sort) updates.sortBy = sort;
         if (favShortcut === 'true') updates.favoritesOnly = true;
 
@@ -288,14 +300,14 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
         if (filters.selectedActivityTypes.length > 0) {
             params.set('activity', filters.selectedActivityTypes.join(','));
         }
-        if (filters.difficulty !== 'All') params.set('difficulty', filters.difficulty);
-        if (filters.trailType !== 'All') params.set('trailType', filters.trailType);
+        if (filters.difficulties.length > 0) params.set('difficulty', filters.difficulties.join(','));
+        if (filters.trailTypes.length > 0) params.set('trailType', filters.trailTypes.join(','));
         if (filters.sortBy !== 'distance') params.set('sort', filters.sortBy);
         if (viewMode !== 'list') params.set('view', viewMode);
 
         setSearchParams(params, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [searchQuery, filters.selectedActivityTypes, filters.difficulty, filters.trailType, filters.sortBy, viewMode]);
+    }, [searchQuery, filters.selectedActivityTypes, filters.difficulties, filters.trailTypes, filters.sortBy, viewMode]);
 
     // Build flat list of locations with depth + descendant slug sets for the dropdown
     const { locationMenuItems, descendantSlugs } = React.useMemo(() => {
@@ -411,19 +423,6 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
         return result;
     }, [recentSlugs, trails]);
 
-    // Derived values for filters
-    const locations = React.useMemo(() => {
-        const locs = new Set<string>();
-        filteredTrails.forEach(t => t.locations?.forEach(l => locs.add(l.name)));
-        return Array.from(locs).sort();
-    }, [filteredTrails]);
-
-    const trailTypes = React.useMemo(() => {
-        const types = new Set<string>();
-        filteredTrails.forEach(t => types.add(t.trailType));
-        return Array.from(types).sort();
-    }, [filteredTrails]);
-
     const availableTags = React.useMemo(() => {
         const tagMap = new Map<string, { name: string; slug: string; color: string | null }>();
         trails.forEach(t => t.tags?.forEach(tag => {
@@ -489,13 +488,17 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
         }
     };
 
-    const handleLocationChange = (slug: string) => {
-        if (slug === 'All') {
-            setFilters({ ...filters, location: 'All', locationSlugs: [] });
-        } else {
-            const expanded = [slug, ...(descendantSlugs.get(slug) ?? [])];
-            setFilters({ ...filters, location: slug, locationSlugs: expanded });
+    const [selectedLocationItems, setSelectedLocationItems] = React.useState<typeof locationMenuItems>([]);
+
+    const handleLocationSelect = (items: typeof locationMenuItems) => {
+        setSelectedLocationItems(items);
+        // Expand each selected slug to include its descendants for OR-based filtering
+        const expanded = new Set<string>();
+        for (const item of items) {
+            expanded.add(item.slug);
+            (descendantSlugs.get(item.slug) ?? new Set()).forEach(s => expanded.add(s));
         }
+        setFilters(f => ({ ...f, locationSlugs: Array.from(expanded) }));
     };
 
     return (
@@ -570,13 +573,15 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                 )}
                                 <Button
                                     size="small"
-                                    variant={showAdvanced ? 'contained' : 'outlined'}
-                                    color="inherit"
+                                    variant={showAdvanced || activeFilterCount > 0 ? 'contained' : 'outlined'}
+                                    color={activeFilterCount > 0 ? 'primary' : 'inherit'}
                                     onClick={() => setShowAdvanced(!showAdvanced)}
                                     startIcon={<FilterIcon fontSize="small" />}
                                     sx={{ textTransform: 'none', borderRadius: 4, px: 1.5, py: 0.5, fontSize: '0.8rem', whiteSpace: 'nowrap' }}
                                 >
-                                    {t('filters.advancedSearch')}
+                                    {activeFilterCount > 0
+                                        ? t('races.filters.activeCount', { count: activeFilterCount })
+                                        : t('filters.advancedSearch')}
                                 </Button>
                             </InputAdornment>
                         ),
@@ -655,12 +660,11 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
             )}
 
             <Collapse in={showAdvanced}>
-                <Box 
-                    p={2} 
-                    pr={4}
-                    mb={3} 
-                    sx={{ 
-                        bgcolor: 'background.paper', 
+                <Box
+                    p={2}
+                    mb={3}
+                    sx={{
+                        bgcolor: 'background.paper',
                         borderRadius: '12px',
                         border: '1px solid',
                         borderColor: 'divider'
@@ -669,270 +673,232 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                     <Typography variant="subtitle2" gutterBottom fontWeight="bold">
                         {t('filters.advancedFilters')}
                     </Typography>
-                    
+
                     <Grid container spacing={2}>
-                        {/* Trail Length — most useful filter first */}
+                        {/* 1. Location Autocomplete — top */}
+                        {locationsPageEnabled && locationMenuItems.length > 0 && (
                         <Grid item xs={12}>
-                            <Typography variant="caption" color="text.secondary">
-                                {t('filters.trailLength')}: {filters.minLength === 0 && filters.maxLength >= 100
-                                    ? t('filters.any')
-                                    : `${filters.minLength} – ${filters.maxLength >= 100 ? '100+' : filters.maxLength} km`}
-                            </Typography>
-                            <Slider
+                            <Autocomplete
+                                multiple
                                 size="small"
-                                value={[filters.minLength, Math.min(filters.maxLength, 100)]}
-                                onChange={(_, v) => {
-                                    const [min, max] = v as number[];
-                                    setFilters({ ...filters, minLength: min, maxLength: max });
-                                }}
-                                valueLabelDisplay="auto"
-                                valueLabelFormat={(v) => v >= 100 ? '100+' : `${v}`}
-                                min={0}
-                                max={100}
-                                step={1}
-                                marks={[
-                                    { value: 0, label: '0' },
-                                    { value: 10, label: '10' },
-                                    { value: 25, label: '25' },
-                                    { value: 50, label: '50' },
-                                    { value: 100, label: '100+' },
-                                ]}
-                                sx={{ mt: 1 }}
+                                options={locationMenuItems.filter(item => item.totalTrails > 0)}
+                                getOptionLabel={(opt) => opt.name}
+                                value={selectedLocationItems}
+                                onChange={(_, selected) => handleLocationSelect(selected)}
+                                isOptionEqualToValue={(opt, val) => opt.slug === val.slug}
+                                renderOption={(props, opt) => (
+                                    <li {...props} key={opt.slug} style={{ paddingLeft: opt.depth > 0 ? (opt.depth * 16 + 8) : undefined }}>
+                                        {opt.depth > 0 && <span style={{ color: '#888', marginRight: 4 }}>↳</span>}
+                                        {opt.name} <span style={{ color: '#999', fontSize: '0.8em', marginLeft: 4 }}>({opt.totalTrails})</span>
+                                    </li>
+                                )}
+                                renderInput={(params) => (
+                                    <TextField {...params} label={t('filters.location')} placeholder={t('filters.allLocations')} />
+                                )}
+                                renderTags={(value, getTagProps) =>
+                                    value.map((opt, index) => (
+                                        <Chip {...getTagProps({ index })} key={opt.slug} label={opt.name} size="small" />
+                                    ))
+                                }
                             />
                         </Grid>
+                        )}
 
-                        {/* Elevation Gain */}
-                        <Grid item xs={12}>
-                            <Typography variant="caption" color="text.secondary">
-                                {t('filters.elevationGain')}: {filters.minElevationGain === 0 && filters.maxElevationGain >= 2000
-                                    ? t('filters.any')
-                                    : `${filters.minElevationGain} – ${filters.maxElevationGain >= 2000 ? '2000+' : filters.maxElevationGain} m`}
-                            </Typography>
-                            <Slider
-                                size="small"
-                                value={[filters.minElevationGain, filters.maxElevationGain]}
-                                onChange={(_, v) => {
-                                    const [min, max] = v as number[];
-                                    setFilters({ ...filters, minElevationGain: min, maxElevationGain: max });
-                                }}
-                                valueLabelDisplay="auto"
-                                valueLabelFormat={(v) => v >= 2000 ? '2000+' : `${v}`}
-                                min={0}
-                                max={2000}
-                                step={25}
-                                marks={[
-                                    { value: 0, label: '0' },
-                                    { value: 250, label: '250' },
-                                    { value: 500, label: '500' },
-                                    { value: 1000, label: '1k' },
-                                    { value: 2000, label: '2k+' },
-                                ]}
-                                sx={{ mt: 1 }}
-                            />
-                        </Grid>
-
-                        {/* Elevation Loss */}
-                        <Grid item xs={12}>
-                            <Typography variant="caption" color="text.secondary">
-                                {t('filters.elevationLoss')}: {filters.minElevationLoss === 0 && filters.maxElevationLoss >= 2000
-                                    ? t('filters.any')
-                                    : `${filters.minElevationLoss} – ${filters.maxElevationLoss >= 2000 ? '2000+' : filters.maxElevationLoss} m`}
-                            </Typography>
-                            <Slider
-                                size="small"
-                                value={[filters.minElevationLoss, filters.maxElevationLoss]}
-                                onChange={(_, v) => {
-                                    const [min, max] = v as number[];
-                                    setFilters({ ...filters, minElevationLoss: min, maxElevationLoss: max });
-                                }}
-                                valueLabelDisplay="auto"
-                                valueLabelFormat={(v) => v >= 2000 ? '2000+' : `${v}`}
-                                min={0}
-                                max={2000}
-                                step={25}
-                                marks={[
-                                    { value: 0, label: '0' },
-                                    { value: 250, label: '250' },
-                                    { value: 500, label: '500' },
-                                    { value: 1000, label: '1k' },
-                                    { value: 2000, label: '2k+' },
-                                ]}
-                                sx={{ mt: 1 }}
-                            />
-                        </Grid>
-
-                        {/* Estimated Duration */}
-                        <Grid item xs={12}>
-                            <Typography variant="caption" color="text.secondary">
-                                {t('filters.duration')}: {filters.minDuration === 0 && filters.maxDuration >= 480
-                                    ? t('filters.any')
-                                    : `${formatDuration(filters.minDuration)} – ${filters.maxDuration >= 480 ? '8h+' : formatDuration(filters.maxDuration)}`}
-                            </Typography>
-                            <Slider
-                                size="small"
-                                value={[filters.minDuration, filters.maxDuration]}
-                                onChange={(_, v) => {
-                                    const [min, max] = v as number[];
-                                    setFilters({ ...filters, minDuration: min, maxDuration: max });
-                                }}
-                                valueLabelDisplay="auto"
-                                valueLabelFormat={(v) => v >= 480 ? '8h+' : formatDuration(v)}
-                                min={0}
-                                max={480}
-                                step={15}
-                                marks={[
-                                    { value: 0, label: '0' },
-                                    { value: 60, label: '1h' },
-                                    { value: 120, label: '2h' },
-                                    { value: 240, label: '4h' },
-                                    { value: 480, label: '8h+' },
-                                ]}
-                                sx={{ mt: 1 }}
-                            />
-                        </Grid>
-
-                        {/* Distance from You */}
+                        {/* 2. Distance from You chips */}
                         {userLocation && (
                             <Grid item xs={12}>
-                                <Typography variant="caption" color="text.secondary">
-                                    {t('filters.distanceFromYou')}: {filters.maxDistance >= 250 ? t('filters.any') : `≤ ${filters.maxDistance} km`}
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>
+                                    {t('filters.distanceFromYou')}
                                 </Typography>
-                                <Slider
-                                    size="small"
-                                    value={Math.min(filters.maxDistance, 250)}
-                                    onChange={(_, v) => handleFilterChange('maxDistance', v as number)}
-                                    valueLabelDisplay="auto"
-                                    valueLabelFormat={(v) => v >= 250 ? t('filters.any') : `${v} km`}
-                                    min={0}
-                                    max={250}
-                                    step={5}
-                                    marks={[
-                                        { value: 0, label: '0 km' },
-                                        { value: 50, label: '50' },
-                                        { value: 100, label: '100' },
-                                        { value: 150, label: '150' },
-                                        { value: 250, label: t('filters.any') },
-                                    ]}
-                                    sx={{
-                                        mt: 1,
-                                        '& .MuiSlider-markLabel[data-index="0"]': {
-                                            pl: '32px',
-                                        },
-                                    }}
-                                />
+                                <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+                                    {([
+                                        { key: '<10', label: '< 10 km' },
+                                        { key: '10-25', label: '10–25 km' },
+                                        { key: '25-50', label: '25–50 km' },
+                                        { key: '50-100', label: '50–100 km' },
+                                        { key: '100+', label: '100 km+' },
+                                    ] as const).map(({ key, label }) => {
+                                        const selected = filters.distanceBuckets.includes(key);
+                                        return (
+                                            <Chip
+                                                key={key}
+                                                label={label}
+                                                size="small"
+                                                variant={selected ? 'filled' : 'outlined'}
+                                                color={selected ? 'primary' : 'default'}
+                                                onClick={() => {
+                                                    const next = selected
+                                                        ? filters.distanceBuckets.filter(b => b !== key)
+                                                        : [...filters.distanceBuckets, key];
+                                                    setFilters(f => ({ ...f, distanceBuckets: next }));
+                                                }}
+                                                sx={{ cursor: 'pointer' }}
+                                            />
+                                        );
+                                    })}
+                                </Box>
                             </Grid>
                         )}
 
-                        <Grid item xs={4}>
-                            <FormControl fullWidth size="small">
-                                <InputLabel>{t('filters.trailType')}</InputLabel>
-                                <Select
-                                    value={filters.trailType}
-                                    label={t('filters.trailType')}
-                                    onChange={(e) => handleFilterChange('trailType', e.target.value)}
-                                >
-                                    <MenuItem value="All">{t('filters.allTypes')}</MenuItem>
-                                    {trailTypes.map(type => {
-                                        const key = type.charAt(0).toLowerCase() + type.slice(1);
-                                        const label = t(`trail.${key}`, { defaultValue: '' }) || t(`difficulty.${key}`, { defaultValue: type });
-                                        return <MenuItem key={type} value={type}>{label}</MenuItem>;
-                                    })}
-                                </Select>
-                            </FormControl>
+                        {/* 3. Trail Length chips */}
+                        <Grid item xs={12}>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>
+                                {t('filters.trailLength')}
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+                                {([
+                                    { key: '<10', label: '< 10 km' },
+                                    { key: '10-21', label: '10–21.1 km' },
+                                    { key: '21-42', label: '21.1–42.2 km' },
+                                    { key: '42-100', label: '42.2–100 km' },
+                                    { key: '100+', label: '100 km+' },
+                                ] as const).map(({ key, label }) => {
+                                    const selected = filters.lengthBuckets.includes(key);
+                                    return (
+                                        <Chip
+                                            key={key}
+                                            label={label}
+                                            size="small"
+                                            variant={selected ? 'filled' : 'outlined'}
+                                            color={selected ? 'primary' : 'default'}
+                                            onClick={() => {
+                                                const next = selected
+                                                    ? filters.lengthBuckets.filter(b => b !== key)
+                                                    : [...filters.lengthBuckets, key];
+                                                setFilters(f => ({ ...f, lengthBuckets: next }));
+                                            }}
+                                            sx={{ cursor: 'pointer' }}
+                                        />
+                                    );
+                                })}
+                            </Box>
                         </Grid>
 
-                        <Grid item xs={4}>
-                            <FormControl fullWidth size="small">
-                                <InputLabel>{t('filters.difficulty')}</InputLabel>
-                                <Select
-                                    value={filters.difficulty}
-                                    label={t('filters.difficulty')}
-                                    onChange={(e) => handleFilterChange('difficulty', e.target.value)}
-                                >
-                                    <MenuItem value="All">{t('filters.allLevels')}</MenuItem>
-                                    {(['Easy', 'Moderate', 'Hard', 'Expert', 'Extreme'] as const).map(d => (
-                                        <MenuItem key={d} value={d}>{t(`difficulty.${d.toLowerCase()}`)}</MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
+                        {/* 4. Elevation Gain chips */}
+                        <Grid item xs={12}>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>
+                                {t('filters.elevationGain')}
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+                                {([
+                                    { key: '<200', label: '< 200 m' },
+                                    { key: '200-500', label: '200–500 m' },
+                                    { key: '500-1000', label: '500–1000 m' },
+                                    { key: '1000+', label: '1000 m+' },
+                                ] as const).map(({ key, label }) => {
+                                    const selected = filters.elevationGainBuckets.includes(key);
+                                    return (
+                                        <Chip
+                                            key={key}
+                                            label={label}
+                                            size="small"
+                                            variant={selected ? 'filled' : 'outlined'}
+                                            color={selected ? 'primary' : 'default'}
+                                            onClick={() => {
+                                                const next = selected
+                                                    ? filters.elevationGainBuckets.filter(b => b !== key)
+                                                    : [...filters.elevationGainBuckets, key];
+                                                setFilters(f => ({ ...f, elevationGainBuckets: next }));
+                                            }}
+                                            sx={{ cursor: 'pointer' }}
+                                        />
+                                    );
+                                })}
+                            </Box>
                         </Grid>
 
-                        {locationsPageEnabled && (
-                        <Grid item xs={4}>
-                            <FormControl fullWidth size="small">
-                                <InputLabel>{t('filters.location')}</InputLabel>
-                                <Select
-                                    value={filters.location}
-                                    label={t('filters.location')}
-                                    onChange={(e) => handleLocationChange(e.target.value)}
-                                >
-                                    <MenuItem value="All">{t('filters.allLocations')}</MenuItem>
-                                    {locationMenuItems.length > 0
-                                        ? locationMenuItems
-                                            .filter(item => item.depth === 0 && item.totalTrails > 0)
-                                            .flatMap(root => {
-                                                const children = locationMenuItems.filter(
-                                                    child => descendantSlugs.get(root.slug)?.has(child.slug) && child.depth === 1 && child.totalTrails > 0
-                                                );
-                                                if (children.length === 0) {
-                                                    return [
-                                                        <MenuItem key={root.slug} value={root.slug}>
-                                                            {root.name} ({root.totalTrails})
-                                                        </MenuItem>
-                                                    ];
-                                                }
-                                                return [
-                                                    <ListSubheader key={`hdr-${root.slug}`} sx={{ lineHeight: '32px', bgcolor: 'background.paper' }}>
-                                                        {root.name}
-                                                    </ListSubheader>,
-                                                    <MenuItem key={root.slug} value={root.slug} sx={{ pl: 2 }}>
-                                                        {t('filters.allIn', { name: root.name })} ({root.totalTrails})
-                                                    </MenuItem>,
-                                                    ...children.map(child => (
-                                                        <MenuItem key={child.slug} value={child.slug} sx={{ pl: 4 }}>
-                                                            {child.name} ({child.totalTrails})
-                                                        </MenuItem>
-                                                    ))
-                                                ];
-                                            })
-                                        : locations.map(loc => (
-                                            <MenuItem key={loc} value={loc}>{loc}</MenuItem>
-                                        ))
-                                    }
-                                </Select>
-                            </FormControl>
+                        {/* 5. Elevation Loss chips */}
+                        <Grid item xs={12}>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>
+                                {t('filters.elevationLoss')}
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+                                {([
+                                    { key: '<200', label: '< 200 m' },
+                                    { key: '200-500', label: '200–500 m' },
+                                    { key: '500-1000', label: '500–1000 m' },
+                                    { key: '1000+', label: '1000 m+' },
+                                ] as const).map(({ key, label }) => {
+                                    const selected = filters.elevationLossBuckets.includes(key);
+                                    return (
+                                        <Chip
+                                            key={key}
+                                            label={label}
+                                            size="small"
+                                            variant={selected ? 'filled' : 'outlined'}
+                                            color={selected ? 'primary' : 'default'}
+                                            onClick={() => {
+                                                const next = selected
+                                                    ? filters.elevationLossBuckets.filter(b => b !== key)
+                                                    : [...filters.elevationLossBuckets, key];
+                                                setFilters(f => ({ ...f, elevationLossBuckets: next }));
+                                            }}
+                                            sx={{ cursor: 'pointer' }}
+                                        />
+                                    );
+                                })}
+                            </Box>
                         </Grid>
-                        )}
 
-                        <Grid item xs={12} sm={6}>
-                            <FormControlLabel
-                                control={
-                                    <Checkbox 
-                                        checked={filters.favoritesOnly}
-                                        onChange={(e) => handleFilterChange('favoritesOnly', e.target.checked)}
-                                        icon={<StarBorderIcon />}
-                                        checkedIcon={<StarIcon sx={{ color: 'warning.main' }} />}
-                                    />
-                                }
-                                label={t('filters.showFavoritesOnly')}
-                            />
+                        {/* 6. Difficulty chips */}
+                        <Grid item xs={12}>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>
+                                {t('filters.difficulty')}
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+                                {(['Easy', 'Moderate', 'Hard', 'Expert', 'Extreme'] as const).map(d => {
+                                    const selected = filters.difficulties.includes(d);
+                                    return (
+                                        <Chip
+                                            key={d}
+                                            label={t(`difficulty.${d.toLowerCase()}`)}
+                                            size="small"
+                                            variant={selected ? 'filled' : 'outlined'}
+                                            color={selected ? 'primary' : 'default'}
+                                            onClick={() => {
+                                                const next = selected
+                                                    ? filters.difficulties.filter(x => x !== d)
+                                                    : [...filters.difficulties, d];
+                                                setFilters(f => ({ ...f, difficulties: next }));
+                                            }}
+                                            sx={{ cursor: 'pointer' }}
+                                        />
+                                    );
+                                })}
+                            </Box>
                         </Grid>
-                        {isEnabled('offline_button') && offlineSlugs.size > 0 && (
-                        <Grid item xs={12} sm={6}>
-                            <FormControlLabel
-                                control={
-                                    <Checkbox
-                                        checked={filters.offlineOnly}
-                                        onChange={(e) => handleFilterChange('offlineOnly', e.target.checked)}
-                                        icon={<OfflinePinIcon />}
-                                        checkedIcon={<OfflinePinIcon sx={{ color: 'success.main' }} />}
-                                    />
-                                }
-                                label={t('filters.showOfflineOnly')}
-                            />
-                        </Grid>
-                        )}
 
+                        {/* 7. Trail Type chips */}
+                        <Grid item xs={12}>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>
+                                {t('filters.trailType')}
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+                                {(['Loop', 'OutAndBack', 'PointToPoint'] as const).map(type => {
+                                    const selected = filters.trailTypes.includes(type);
+                                    const key = type.charAt(0).toLowerCase() + type.slice(1);
+                                    const label = t(`trail.${key}`, { defaultValue: type });
+                                    return (
+                                        <Chip
+                                            key={type}
+                                            label={label}
+                                            size="small"
+                                            variant={selected ? 'filled' : 'outlined'}
+                                            color={selected ? 'primary' : 'default'}
+                                            onClick={() => {
+                                                const next = selected
+                                                    ? filters.trailTypes.filter(x => x !== type)
+                                                    : [...filters.trailTypes, type];
+                                                setFilters(f => ({ ...f, trailTypes: next }));
+                                            }}
+                                            sx={{ cursor: 'pointer' }}
+                                        />
+                                    );
+                                })}
+                            </Box>
+                        </Grid>
+
+                        {/* 8. Tags */}
                         {tagsEnabled && availableTags.length > 0 && (
                             <Grid item xs={12}>
                                 <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>{t('filters.tags')}</Typography>
@@ -964,11 +930,39 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                             </Grid>
                         )}
 
-                        <Grid item xs={12} display="flex" justifyContent="space-between" alignItems="center">
-                            <Box>
+                        {/* 9. Checkboxes row: Favorites · Offline · Hidden */}
+                        <Grid item xs={12}>
+                            <Stack direction="row" flexWrap="wrap" sx={{ gap: 0, mx: -1 }}>
                                 <FormControlLabel
+                                    sx={{ mx: 1 }}
                                     control={
-                                        <Checkbox 
+                                        <Checkbox
+                                            checked={filters.favoritesOnly}
+                                            onChange={(e) => handleFilterChange('favoritesOnly', e.target.checked)}
+                                            icon={<StarBorderIcon />}
+                                            checkedIcon={<StarIcon sx={{ color: 'warning.main' }} />}
+                                        />
+                                    }
+                                    label={t('filters.showFavoritesOnly')}
+                                />
+                                {isEnabled('offline_button') && offlineSlugs.size > 0 && (
+                                    <FormControlLabel
+                                        sx={{ mx: 1 }}
+                                        control={
+                                            <Checkbox
+                                                checked={filters.offlineOnly}
+                                                onChange={(e) => handleFilterChange('offlineOnly', e.target.checked)}
+                                                icon={<OfflinePinIcon />}
+                                                checkedIcon={<OfflinePinIcon sx={{ color: 'success.main' }} />}
+                                            />
+                                        }
+                                        label={t('filters.showOfflineOnly')}
+                                    />
+                                )}
+                                <FormControlLabel
+                                    sx={{ mx: 1 }}
+                                    control={
+                                        <Checkbox
                                             checked={showHidden}
                                             onChange={(e) => setShowHidden(e.target.checked)}
                                             icon={<VisibilityIcon />}
@@ -978,17 +972,24 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                     label={t('filters.showHiddenTrails')}
                                 />
                                 {hiddenSlugs.length > 0 && (
-                                    <Button size="small" color="error" onClick={clearHidden} sx={{ ml: 1 }}>
+                                    <Button size="small" color="error" onClick={clearHidden} sx={{ alignSelf: 'center' }}>
                                         {t('filters.clearHidden', { count: hiddenSlugs.length })}
                                     </Button>
                                 )}
-                            </Box>
+                            </Stack>
+                        </Grid>
+
+                        {/* 10. Divider + Bottom actions: Reset (conditional) + Close */}
+                        <Grid item xs={12}><Divider /></Grid>
+                        <Grid item xs={12} display="flex" justifyContent="flex-end" gap={1}>
+                            {(filters.lengthBuckets.length > 0 || filters.elevationGainBuckets.length > 0 || filters.elevationLossBuckets.length > 0 || filters.distanceBuckets.length > 0 || filters.difficulties.length > 0 || filters.trailTypes.length > 0 || filters.locationSlugs.length > 0 || filters.selectedActivityTypes.length > 0 || filters.favoritesOnly || filters.offlineOnly || showHidden) && (
                             <Button size="small" onClick={() => {
-                                resetFilters();
+                                resetFilters(); setSelectedLocationItems([]);
                                 if (tagSlug) navigate('/', { replace: true });
                             }}>
                                 {t('filters.resetFilters')}
                             </Button>
+                            )}
                             <Button size="small" variant="outlined" onClick={() => setShowAdvanced(false)}>
                                 {t('filters.closeFilters')}
                             </Button>
@@ -1233,9 +1234,9 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
 
             {viewMode === 'list' ? (
                 filteredTrails.length === 0 ? (
-                    <EmptyFilterState 
-                        hasActiveFilters={!!(searchQuery || Object.values(filters).some(v => v !== 'All' && v !== 250 && v !== 0 && v !== 100 && v !== 2000 && v !== false))}
-                        onClearFilters={() => { resetFilters(); setSearchQuery(''); }}
+                    <EmptyFilterState
+                        hasActiveFilters={!!(searchQuery || filters.lengthBuckets.length > 0 || filters.elevationGainBuckets.length > 0 || filters.elevationLossBuckets.length > 0 || filters.distanceBuckets.length > 0 || filters.difficulties.length > 0 || filters.trailTypes.length > 0 || filters.locationSlugs.length > 0 || filters.selectedActivityTypes.length > 0 || filters.favoritesOnly)}
+                        onClearFilters={() => { resetFilters(); setSelectedLocationItems([]); setSearchQuery(''); }}
                         searchQuery={searchQuery}
                     />
                 ) : (

@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { estimateDurationMinutes } from '../utils/estimateDuration';
 
 export interface LocationInfo {
     name: string;
@@ -48,19 +47,13 @@ export interface Trail {
 export type SortOption = 'distance' | 'name' | 'shortest' | 'longest' | 'elevation' | 'popular';
 
 export interface FilterState {
-    minLength: number;
-    maxLength: number;
-    maxDistance: number;
-    minElevationGain: number;
-    maxElevationGain: number;
-    minElevationLoss: number;
-    maxElevationLoss: number;
-    minDuration: number;
-    maxDuration: number;
-    trailType: string;
-    difficulty: string;
-    location: string;
-    locationSlugs: string[]; // Selected location + all descendant slugs for hierarchy-aware filtering
+    lengthBuckets: string[];       // '<10' | '10-21' | '21-42' | '42-100' | '100+'
+    elevationGainBuckets: string[]; // '<200' | '200-500' | '500-1000' | '1000+'
+    elevationLossBuckets: string[]; // same
+    distanceBuckets: string[];     // '<10' | '10-25' | '25-50' | '50-100' | '100+'
+    trailTypes: string[];           // multi-select: 'Loop' | 'OutAndBack' | 'PointToPoint'
+    difficulties: string[];         // multi-select: 'Easy' | 'Moderate' | 'Hard' | 'Expert' | 'Extreme'
+    locationSlugs: string[];        // multi-select Autocomplete (location slugs incl. descendants)
     favoritesOnly: boolean;
     offlineOnly: boolean;
     selectedTags: string[];
@@ -71,18 +64,12 @@ export interface FilterState {
 export const ALL_ACTIVITY_TYPES = ['TrailRunning', 'Running', 'Hiking', 'Cycling', 'FunRun', 'ObstacleCourse', 'CrossCountryRun'];
 
 export const DEFAULT_FILTERS: FilterState = {
-    minLength: 0,
-    maxLength: 100,
-    maxDistance: 250,
-    minElevationGain: 0,
-    maxElevationGain: 2000,
-    minElevationLoss: 0,
-    maxElevationLoss: 2000,
-    minDuration: 0,
-    maxDuration: 480,
-    trailType: 'All',
-    difficulty: 'All',
-    location: 'All',
+    lengthBuckets: [],
+    elevationGainBuckets: [],
+    elevationLossBuckets: [],
+    distanceBuckets: [],
+    trailTypes: [],
+    difficulties: [],
     locationSlugs: [],
     favoritesOnly: false,
     offlineOnly: false,
@@ -207,45 +194,69 @@ export function useTrails(disableGeolocation = false) {
                 if (!filters.selectedActivityTypes.includes(trail.activityType)) return false;
             }
 
-            // Trail length filter (trail.length is in meters, filters are in km)
-            const trailLengthKm = trail.length / 1000;
-            if (trailLengthKm < filters.minLength) return false;
-            if (filters.maxLength < 100 && trailLengthKm > filters.maxLength) return false;
+            // Trail length bucket filter (OR logic across selected buckets)
+            if (filters.lengthBuckets.length > 0) {
+                const km = trail.length / 1000;
+                const inBucket = filters.lengthBuckets.some(b => {
+                    if (b === '<10') return km < 10;
+                    if (b === '10-21') return km >= 10 && km < 21.1;
+                    if (b === '21-42') return km >= 21.1 && km < 42.2;
+                    if (b === '42-100') return km >= 42.2 && km < 100;
+                    if (b === '100+') return km >= 100;
+                    return false;
+                });
+                if (!inBucket) return false;
+            }
 
             // Distance filter (only if user location is available and trail has distance)
-            if (userLocation && trail.distanceToUser !== undefined && trail.distanceToUser !== Infinity) {
-                if (filters.maxDistance < 250 && trail.distanceToUser > filters.maxDistance) return false;
+            if (userLocation && filters.distanceBuckets.length > 0 && trail.distanceToUser !== undefined && trail.distanceToUser !== Infinity) {
+                const d = trail.distanceToUser;
+                const inBucket = filters.distanceBuckets.some(b => {
+                    if (b === '<10') return d < 10;
+                    if (b === '10-25') return d >= 10 && d < 25;
+                    if (b === '25-50') return d >= 25 && d < 50;
+                    if (b === '50-100') return d >= 50 && d < 100;
+                    if (b === '100+') return d >= 100;
+                    return false;
+                });
+                if (!inBucket) return false;
             }
 
-            // Elevation Gain
-            if (trail.elevationGain < filters.minElevationGain) return false;
-            if (filters.maxElevationGain < 2000 && trail.elevationGain > filters.maxElevationGain) return false;
-
-            // Elevation Loss
-            if (trail.elevationLoss < filters.minElevationLoss) return false;
-            if (filters.maxElevationLoss < 2000 && trail.elevationLoss > filters.maxElevationLoss) return false;
-
-            // Estimated Duration
-            if (filters.minDuration > 0 || filters.maxDuration < 480) {
-                const durationMin = estimateDurationMinutes(trail.length, trail.elevationGain, trail.activityType);
-                if (durationMin !== null) {
-                    if (durationMin < filters.minDuration) return false;
-                    if (filters.maxDuration < 480 && durationMin > filters.maxDuration) return false;
-                }
+            // Elevation Gain bucket filter (OR logic)
+            if (filters.elevationGainBuckets.length > 0) {
+                const gain = trail.elevationGain;
+                const inBucket = filters.elevationGainBuckets.some(b => {
+                    if (b === '<200') return gain < 200;
+                    if (b === '200-500') return gain >= 200 && gain < 500;
+                    if (b === '500-1000') return gain >= 500 && gain < 1000;
+                    if (b === '1000+') return gain >= 1000;
+                    return false;
+                });
+                if (!inBucket) return false;
             }
 
-            // Trail Type
-            if (filters.trailType !== 'All' && trail.trailType !== filters.trailType) return false;
+            // Elevation Loss bucket filter (OR logic)
+            if (filters.elevationLossBuckets.length > 0) {
+                const loss = trail.elevationLoss;
+                const inBucket = filters.elevationLossBuckets.some(b => {
+                    if (b === '<200') return loss < 200;
+                    if (b === '200-500') return loss >= 200 && loss < 500;
+                    if (b === '500-1000') return loss >= 500 && loss < 1000;
+                    if (b === '1000+') return loss >= 1000;
+                    return false;
+                });
+                if (!inBucket) return false;
+            }
 
-            // Difficulty
-            if (filters.difficulty !== 'All' && trail.difficulty !== filters.difficulty) return false;
+            // Trail Type (OR logic)
+            if (filters.trailTypes.length > 0 && !filters.trailTypes.includes(trail.trailType)) return false;
 
-            // Location (hierarchy-aware: matches selected location + all descendants)
-            if (filters.location !== 'All') {
-                const slugsToMatch = filters.locationSlugs.length > 0
-                    ? filters.locationSlugs
-                    : [filters.location];
-                if (!trail.locations || !trail.locations.some(l => slugsToMatch.includes(l.slug))) return false;
+            // Difficulty (OR logic)
+            if (filters.difficulties.length > 0 && !filters.difficulties.includes(trail.difficulty)) return false;
+
+            // Location (multi-select, OR logic)
+            if (filters.locationSlugs.length > 0) {
+                if (!trail.locations || !trail.locations.some(l => filters.locationSlugs.includes(l.slug))) return false;
             }
 
             // Tags — trail must have ALL selected tags
