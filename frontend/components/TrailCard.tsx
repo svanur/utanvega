@@ -27,6 +27,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Trail } from '../hooks/useTrails';
+import ElevationSparkline from './ElevationSparkline';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { useLoginEnabled } from '../hooks/useLoginEnabled';
 import { estimateDuration } from '../utils/estimateDuration';
@@ -387,7 +388,7 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                     )}
 
                     {/* 3rd row: distance, gain, loss — icon-only in compact */}
-                    <Stack direction="row" spacing={compact ? 0.5 : 1.5} color="text.secondary" flexWrap="wrap" mt="auto" pt={compact ? 1 : 2} justifyContent={compact ? 'space-between' : 'flex-start'}>
+                    <Stack direction="row" spacing={compact ? 0.5 : 1.5} color="text.secondary" flexWrap="wrap" mt="auto" pt={compact ? 1 : 2} justifyContent={compact ? 'space-between' : 'flex-start'} alignItems="center">
                         <Box display="flex" alignItems="center">
                             <RouteIcon sx={{ mr: compact ? 0 : 0.5, fontSize: compact ? 14 : 18 }} />
                             <Typography variant="body2" fontSize={compact ? '0.75rem' : undefined}>{distanceKm} km</Typography>
@@ -415,6 +416,12 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                             </Box>
                         )}
                     </Stack>
+
+                    {!compact && trail.elevationProfile && trail.elevationProfile.length >= 2 && (
+                        <Box sx={{ mt: 1.5, mx: -0.5, color: 'text.secondary' }}>
+                            <ElevationSparkline profile={trail.elevationProfile} width="100%" height={36} />
+                        </Box>
+                    )}
                     </CardContent>
                 </CardActionArea>
             </Card>
