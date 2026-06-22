@@ -773,6 +773,46 @@ app.MapPost("/api/v1/admin/trails/bulk-action", [Authorize] async (BulkTrailActi
 })
 .WithName("BulkTrailAction");
 
+app.MapPost("/api/v1/admin/trails/backfill-elevation-profiles", [Authorize] async (UtanvegaDbContext context) =>
+{
+    var trails = await context.Trails
+        .Where(t => t.GpxData != null && t.ElevationProfile == null)
+        .ToListAsync();
+
+    foreach (var trail in trails)
+    {
+        var line = trail.GpxData as NetTopologySuite.Geometries.LineString;
+        if (line == null) continue;
+
+        var elevations = line.Coordinates
+            .Select(c => c.Z)
+            .Where(z => !double.IsNaN(z))
+            .ToArray();
+
+        if (elevations.Length < 2) continue;
+
+        trail.ElevationProfile = SampleProfile(elevations, 50);
+    }
+
+    await context.SaveChangesAsync();
+    return Results.Ok(new { updated = trails.Count });
+
+    static double[] SampleProfile(double[] src, int n)
+    {
+        if (src.Length <= n) return src;
+        var result = new double[n];
+        for (var i = 0; i < n; i++)
+        {
+            var idx = (double)i / (n - 1) * (src.Length - 1);
+            var lo = (int)idx;
+            var hi = Math.Min(lo + 1, src.Length - 1);
+            result[i] = src[lo] * (1 - (idx - lo)) + src[hi] * (idx - lo);
+        }
+        return result;
+    }
+})
+.WithName("BackfillElevationProfiles");
+
 app.MapPost("/api/v1/admin/trails/bulk-add-tag", [Authorize] async (BulkAddTagRequest request, UtanvegaDbContext context) =>
 {
     var tag = await context.Tags.FindAsync(request.TagId);
