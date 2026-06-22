@@ -651,14 +651,25 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>-{Math.round(trail.elevationLoss)}m</Typography>
                             </Stack>
                         </Grid>
-                        <Grid item xs={6} sm>
+                        {trail.activityType === 'TrailRunning' && trail.length > 0 && (
+                            <Grid item xs={4} sm>
+                                <Stack alignItems="center" spacing={0.5}>
+                                    <LandscapeIcon color="action" fontSize="small" />
+                                    <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>{t('trail.climbRatio')}</Typography>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                                        {Math.round(trail.elevationGain / (trail.length / 1000))} m/km
+                                    </Typography>
+                                </Stack>
+                            </Grid>
+                        )}
+                        <Grid item xs={4} sm>
                             <Stack alignItems="center" spacing={0.5}>
                                 {getTrailTypeIcon(trail.trailType)}
                                 <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>{t('trail.type')}</Typography>
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold', textAlign: 'center' }}>{getTrailTypeLabel(trail.trailType, t)}</Typography>
                             </Stack>
                         </Grid>
-                        <Grid item xs={6} sm>
+                        <Grid item xs={4} sm>
                             {isEnabled('pace_info') && estTime && <PaceInfo activityType={trail.activityType} formattedDuration={estTime} />}
                         </Grid>
                     </Grid>

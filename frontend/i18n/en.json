@@ -141,6 +141,7 @@
         "noGpsData": "No GPS data available for this trail.",
         "wereYouLookingFor": "Were you looking for one of these?",
         "racesOnTrail": "Races on this trail",
+        "climbRatio": "Climb ratio",
         "video360": "360° Video",
         "role": {
             "Start": "Start",
