@@ -140,8 +140,7 @@
         "loadingMap": "Loading Map...",
         "noGpsData": "No GPS data available for this trail.",
         "wereYouLookingFor": "Were you looking for one of these?",
-        "partOfRace": "Part of {{competition}}",
-        "partOfRaceDistances": "Part of {{competition}} ({{count}} distances)",
+        "racesOnTrail": "Races on this trail",
         "video360": "360° Video",
         "role": {
             "Start": "Start",
@@ -853,6 +852,12 @@
         "backToRaces": "Back to races",
         "wereYouLookingFor": "Were you looking for one of these?",
         "viewTrail": "View trail",
+        "ticketStatus": {
+            "AlmostSoldOut": "Almost sold out",
+            "SoldOut": "Sold out",
+            "Closed": "Registration closed",
+            "Free": "Free entry"
+        },
         "cutoffHours_one": "{{count}} hour cutoff",
         "cutoffHours_other": "{{count}} hours cutoff",
         "cutoffHours": "{{count}}h cutoff",

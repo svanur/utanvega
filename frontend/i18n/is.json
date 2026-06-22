@@ -140,8 +140,7 @@
         "loadingMap": "Hleð korti...",
         "noGpsData": "Engin GPS gögn tiltæk fyrir þessa leið.",
         "wereYouLookingFor": "Varstu kannski að leita að einni af þessum?",
-        "partOfRace": "Hluti af keppni: {{competition}}",
-        "partOfRaceDistances": "Hluti af keppni: {{competition}} ({{count}} vegalengdir)",
+        "racesOnTrail": "Keppnishlaup á þessari leið",
         "video360": "360° Myndband",
         "role": {
             "Start": "Upphaf",
@@ -853,6 +852,12 @@
         "backToRaces": "Til baka í keppni",
         "wereYouLookingFor": "Varstu að leita að einhverju af þessum?",
         "viewTrail": "Skoða leið",
+        "ticketStatus": {
+            "AlmostSoldOut": "Fáar pláss eftir",
+            "SoldOut": "Uppselt",
+            "Closed": "Skráning lokið",
+            "Free": "Ókeypis"
+        },
         "cutoffHours_one": "{{count}} klukkustund hámark",
         "cutoffHours_other": "{{count}} klukkustundir hámark",
         "cutoffHours": "{{count}}klst hámark",

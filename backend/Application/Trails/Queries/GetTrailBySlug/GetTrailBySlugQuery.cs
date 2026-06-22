@@ -65,7 +65,10 @@ public class GetTrailBySlugQueryHandler : IRequestHandler<GetTrailBySlugQuery, T
                     r.EventEdition.Event.Slug,
                     r.Name,
                     r.DistanceLabel,
-                    daysUntil);
+                    daysUntil,
+                    r.StartTime.HasValue ? r.StartTime.Value.ToString("HH:mm") : null,
+                    r.TicketStatus.ToString(),
+                    r.ItraPoints);
             })
             .ToList();
 

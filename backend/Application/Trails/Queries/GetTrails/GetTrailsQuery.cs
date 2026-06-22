@@ -22,7 +22,10 @@ public record LinkedRaceDto(
     string EventSlug,
     string RaceName,
     string? DistanceLabel,
-    int? DaysUntil
+    int? DaysUntil,
+    string? StartTime,
+    string? TicketStatus,
+    int? ItraPoints
 );
 
 public record TrailDto(
