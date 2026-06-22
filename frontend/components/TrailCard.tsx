@@ -401,6 +401,12 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                             <TrendingDownIcon sx={{ mr: compact ? 0 : 0.5, fontSize: compact ? 14 : 18, color: 'error.main' }} />
                             <Typography variant="body2" fontSize={compact ? '0.75rem' : undefined}>-{Math.round(trail.elevationLoss)}</Typography>
                         </Box>
+                        {!compact && trail.activityType === 'TrailRunning' && trail.length > 0 && (
+                            <Box display="flex" alignItems="center">
+                                <LandscapeIcon sx={{ mr: 0.5, fontSize: 18 }} />
+                                <Typography variant="body2">{Math.round(trail.elevationGain / (trail.length / 1000))} m/km</Typography>
+                            </Box>
+                        )}
                         {estTime && (
                         <Box display="flex" alignItems="center">
                             <AccessTimeIcon sx={{ mr: compact ? 0 : 0.5, fontSize: compact ? 14 : 18 }} />
