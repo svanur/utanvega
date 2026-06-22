@@ -40,6 +40,7 @@ public class UpdateTrailGpxCommandHandler : IRequestHandler<UpdateTrailGpxComman
         trail.Length = result.Length;
         trail.ElevationGain = result.ElevationGain;
         trail.ElevationLoss = result.ElevationLoss;
+        trail.ElevationProfile = result.ElevationProfile;
         trail.Type = result.DetectedType;
         trail.Difficulty = result.Difficulty;
         trail.UpdatedAt = DateTime.UtcNow;

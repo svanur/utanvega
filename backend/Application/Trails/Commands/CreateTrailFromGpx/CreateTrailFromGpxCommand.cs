@@ -112,6 +112,7 @@ public class CreateTrailFromGpxCommandHandler : IRequestHandler<CreateTrailFromG
             Length = result.Length,
             ElevationGain = result.ElevationGain,
             ElevationLoss = result.ElevationLoss,
+            ElevationProfile = result.ElevationProfile,
             Type = result.DetectedType,
             Difficulty = result.Difficulty,
             ActivityTypeId = activityType,
