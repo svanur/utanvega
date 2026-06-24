@@ -45,6 +45,7 @@ import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
 import QueryStatsIcon from '@mui/icons-material/QueryStats';
 import confetti from 'canvas-confetti';
 import ShareButtons from '../components/ShareButtons';
+import SendTipButton from '../components/SendTipButton';
 import RaceShareCard from '../components/RaceShareCard';
 import RaceFinishCard from '../components/RaceFinishCard';
 import RaceProgressBar from '../components/RaceProgressBar';
@@ -958,6 +959,10 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                         </Box>
                     </Box>
                 )}
+
+                <Box sx={{ mt: 4, mb: 2 }}>
+                    <SendTipButton type="event" />
+                </Box>
             </Container>
         </Layout>
     );

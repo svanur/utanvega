@@ -359,6 +359,14 @@
         "follow": "Follow",
         "contact": "Contact"
     },
+    "tip": {
+        "button": "Send a tip",
+        "send": "Send",
+        "tooltip": "Suggest a correction, additional info, or other feedback",
+        "placeholder": "Suggest a correction, additional information, or other feedback...",
+        "sent": "Thank you! Your tip has been sent.",
+        "error": "Something went wrong. Please try again."
+    },
     "contact": {
         "title": "Contact us",
         "description": "Have a question or want to get in touch? Click below to get in contact.",
