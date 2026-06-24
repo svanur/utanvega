@@ -361,11 +361,11 @@
     },
     "tip": {
         "button": "Senda ábendingu",
-        "send": "Opna tölvupóst",
+        "send": "Senda",
         "tooltip": "Leggðu til leiðréttingu, viðbótarupplýsingar eða aðrar ábendingar",
-        "body": "URL: {{url}}\nEmail (optional): \n\nTip:\n",
-        "typeTrail": "Leið",
-        "typeEvent": "Viðburður"
+        "placeholder": "Leggðu til leiðréttingu, viðbótarupplýsingar eða aðrar ábendingar...",
+        "sent": "Takk! Ábendingin þín hefur verið send.",
+        "error": "Eitthvað fór úrskeiðis. Vinsamlegast reyndu aftur."
     },
     "contact": {
         "title": "Hafa samband",

@@ -507,7 +507,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                         >
                             {isFavorite(trail.slug) ? <StarIcon /> : <StarBorderIcon />}
                         </IconButton>
-                        <SendTipButton name={trail.name} type="trail" />
+                        <SendTipButton type="trail" />
                         {loginEnabled && (
                         <Tooltip title={tickedSlugs.has(trail.slug) ? t('trail.untick') : t('trail.tick')}>
                             <IconButton

@@ -361,11 +361,11 @@
     },
     "tip": {
         "button": "Send a tip",
-        "send": "Open email",
+        "send": "Send",
         "tooltip": "Suggest a correction, additional info, or other feedback",
-        "body": "URL: {{url}}\nYour email (optional): \n\nTip:\n",
-        "typeTrail": "Trail",
-        "typeEvent": "Event"
+        "placeholder": "Suggest a correction, additional information, or other feedback...",
+        "sent": "Thank you! Your tip has been sent.",
+        "error": "Something went wrong. Please try again."
     },
     "contact": {
         "title": "Contact us",
