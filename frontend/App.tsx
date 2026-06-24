@@ -40,6 +40,8 @@ const RunningTripPage = lazy(() => import('./pages/RunningTripPage'));
 const ServicesPage = lazy(() => import('./pages/ServicesPage'));
 const ChallengePage = lazy(() => import('./pages/ChallengePage'));
 const AnnualReportPage = lazy(() => import('./pages/AnnualReportPage'));
+const NewsletterPage = lazy(() => import('./pages/NewsletterPage'));
+const ContactPage = lazy(() => import('./pages/ContactPage'));
 
 function PageLoader() {
     return (
@@ -208,6 +210,8 @@ export default function App() {
                     <Route path="/challenge/2026" element={<ChallengePage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="/about-us" element={<Navigate to="/about" replace />} />
                     <Route path="/annual-report/2025" element={<AnnualReportPage mode={mode} onToggleMode={handleToggleMode} />} />
+                    <Route path="/newsletter" element={<NewsletterPage mode={mode} onToggleMode={handleToggleMode} />} />
+                    <Route path="/contact" element={<ContactPage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
                 )}

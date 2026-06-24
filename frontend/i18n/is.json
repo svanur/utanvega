@@ -359,6 +359,18 @@
         "follow": "Fylgstu með",
         "contact": "Samband"
     },
+    "contact": {
+        "title": "Hafa samband",
+        "description": "Hefurðu spurningar eða vilt hafa samband? Smelltu hér til að hafa samband.",
+        "descriptionRevealed": "Sendu okkur tölvupóst og við svörum þér.",
+        "showEmail": "Sýna netfang"
+    },
+    "newsletter": {
+        "title": "Skráðu þig á póstlistann",
+        "description": "Viltu fá fréttir og upplýsingar? Skráðu þig á póstlista hlaupadagskra.is.",
+        "comingSoon": "Skráning opnar bráðum.",
+        "subscribe": "Skráðu þig á póstlistann"
+    },
     "announcement": {
         "text": "Nýtt: Útivistaáskorun 2026 er opin til skráningar!",
         "href": "/challenge/2026",
