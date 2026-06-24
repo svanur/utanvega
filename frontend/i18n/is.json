@@ -140,7 +140,7 @@
         "loadingMap": "Hleð korti...",
         "noGpsData": "Engin GPS gögn tiltæk fyrir þessa leið.",
         "wereYouLookingFor": "Varstu kannski að leita að einni af þessum?",
-        "racesOnTrail": "Keppnishlaup á þessari leið",
+        "racesOnTrail": "Tengd keppnishlaup",
         "climbRatio": "Klifurhlutfall",
         "video360": "360° Myndband",
         "role": {
@@ -196,7 +196,7 @@
     "trailCard": {
         "removeFavorite": "Fjarlægja úr eftirlætum",
         "addFavorite": "Bæta í eftirlæti",
-        "hideTrail": "Fela leið",
+        "share": "Deila",
         "kmAway": "km í burtu"
     },
     "quickView": {
@@ -234,8 +234,6 @@
         "showFavoritesOnly": "Sýna eingöngu eftirlæti",
         "showOfflineOnly": "Sýna eingöngu án nets",
         "tags": "Merki",
-        "showHiddenTrails": "Sýna faldar leiðir",
-        "clearHidden": "Hreinsa faldar ({{count}})",
         "resetFilters": "Endurstilla síun",
         "closeFilters": "Loka"
     },
@@ -853,12 +851,6 @@
         "backToRaces": "Til baka í keppni",
         "wereYouLookingFor": "Varstu að leita að einhverju af þessum?",
         "viewTrail": "Skoða leið",
-        "ticketStatus": {
-            "AlmostSoldOut": "Fáar pláss eftir",
-            "SoldOut": "Uppselt",
-            "Closed": "Skráning lokið",
-            "Free": "Ókeypis"
-        },
         "cutoffHours_one": "{{count}} klukkustund hámark",
         "cutoffHours_other": "{{count}} klukkustundir hámark",
         "cutoffHours": "{{count}}klst hámark",
