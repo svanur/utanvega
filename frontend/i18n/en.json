@@ -69,7 +69,7 @@
     "nav": {
         "trails": "Trails",
         "locations": "Locations",
-        "about": "About",
+        "about": "About us",
         "races": "Races",
         "activities": "Activities",
         "disclaimer": "Disclaimer",
@@ -77,7 +77,18 @@
         "darkMode": "Switch to dark mode",
         "lightMode": "Switch to light mode",
         "switchToEnglish": "Switch to English",
-        "switchToIcelandic": "Switch to Icelandic"
+        "switchToIcelandic": "Switch to Icelandic",
+        "events": "Events",
+        "fun": "Fun",
+        "onlineStore": "Online store",
+        "scratchCard": "Scratch card",
+        "runningTrip": "Running trip",
+        "runs360": "360° Runs",
+        "annualReport": "Annual Report 2025",
+        "aboutUs": "About us",
+        "services": "Services",
+        "challenge": "Challenge",
+        "allTrails": "All Trails"
     },
     "spotlight": {
         "placeholder": "Search trails, locations and races...",
@@ -342,7 +353,16 @@
     "footer": {
         "checkingApi": "Checking API…",
         "healthy": "healthy",
-        "apiUnavailable": "API unavailable"
+        "apiUnavailable": "API unavailable",
+        "discover": "Discover",
+        "info": "Info",
+        "follow": "Follow",
+        "contact": "Contact"
+    },
+    "announcement": {
+        "text": "New: Outdoor Challenge 2026 is open for registration!",
+        "href": "/challenge/2026",
+        "linkText": "Learn more"
     },
     "sort": {
         "distance": "Nearest",
@@ -438,6 +458,124 @@
         "contact": "Questions about privacy? Reach out to us through the About page.",
         "lastUpdated": "Last updated: {{date}}"
     },
+    "scratchCard": {
+        "title": "Trail Running Scratch Card",
+        "subtitle": "Scratch off every trail running event you complete — a unique map of Iceland's running calendar",
+        "madeInIceland": "Made in Iceland",
+        "details": "Product details",
+        "size": "Size",
+        "events": "Events",
+        "trailEvents": "trail running events",
+        "design": "Design",
+        "price": "Price",
+        "shipping": "Shipping",
+        "description": "A decorative A2 wall poster featuring 42 trail running events across Iceland, each hiding a unique illustration behind a silver scratch panel. Designed by ARRA Design Studio — handcrafted and packaged in Iceland. The perfect gift for runners, nature enthusiasts, and goal-setters.",
+        "order": "Order by email"
+    },
+    "runningTrip": {
+        "title": "Running Trip to Switzerland 2026",
+        "subtitle": "A guided running adventure in Kandersteg, Swiss Alps — September 3–9, 2026",
+        "description": "Join us for six nights in the Swiss Alps — a guided running trip to Kandersteg, welcoming both runners and non-runners. Organized by Óskar Þór and Tómas G. from hlaupadagskra.is.",
+        "itinerary": "Running itinerary",
+        "day1": "Day 1 (Sept 4)",
+        "day2": "Day 2 (Sept 5)",
+        "day3": "Day 3 (Sept 6)",
+        "day4": "Day 4 (Sept 7)",
+        "day5": "Day 5 (Sept 8)",
+        "restDay": "Rest day",
+        "included": "What's included",
+        "inc1": "6 nights' accommodation with breakfast (Hotel Victoria Kandersteg)",
+        "inc2": "4 guided running days",
+        "inc3": "Cable car passes and attraction fees",
+        "inc4": "Closing dinner",
+        "inc5": "Pre-trip orientation meeting and handbook",
+        "pricing": "Pricing",
+        "standardRoom": "twin room",
+        "suiteUpgrade": "suite upgrade",
+        "register": "Register",
+        "contact": "Contact us"
+    },
+    "services": {
+        "title": "Services",
+        "tagline": "Virtual experience as if you were there",
+        "intro": "We specialise in 360° filming of running routes, hiking trails, running events, and Icelandic nature — designed as marketing content for event organisers and tourism promoters.",
+        "recording": {
+            "title": "360° Recordings",
+            "description": "First-person POV filming of running courses and race atmosphere, with video editing, text, and GPX route guides."
+        },
+        "coursePromo": {
+            "title": "Course Promotions",
+            "description": "360° documentation of trails with route overviews, race day event videos, and virtual reality promotional content."
+        },
+        "marketing": {
+            "title": "Marketing & Distribution",
+            "description": "YouTube distribution via '360 Runs Iceland', social media reels, and custom promotional or teaser videos."
+        },
+        "visibility": {
+            "title": "Visibility & Events",
+            "description": "Platform visibility on hlaupadagskra.is, international promotion, and EXPO booth content for tourism."
+        },
+        "benefitsTitle": "Benefits for event organisers",
+        "benefit1": "Enhanced visibility of event conditions for participants",
+        "benefit2": "Participant preparation resources and course previews",
+        "benefit3": "Ready-made social media and web content",
+        "benefit4": "Attraction of international participants to Icelandic events",
+        "contact": "Get in touch"
+    },
+    "challenge": {
+        "title": "Outdoor Challenge 2026",
+        "tagline": "VERTU ÚT UM ALLT Í SUMAR",
+        "intro": "Collect points and badges by visiting nearly 100 outdoor locations across the greater Reykjavík area — on foot, running, or by bike.",
+        "locations100": "100+ locations",
+        "capitalRegion": "Capital Region",
+        "deadline": "Until September 6",
+        "feature1": { "title": "Explore", "desc": "Visit outdoor sites across the capital region" },
+        "feature2": { "title": "Discover", "desc": "Find hidden creatures at select locations" },
+        "feature3": { "title": "Win", "desc": "Enter prize draws from partner companies" },
+        "howTitle": "How to participate",
+        "step1": "Register for the challenge on the website",
+        "step2": "Choose locations to visit on foot, running, or by bike",
+        "step3": "Check in using GPS or QR codes at each site",
+        "step4": "Earn points, climb the leaderboard, and enter prize draws",
+        "prizesTitle": "Prizes",
+        "prizes": "Participants who complete one or more challenges enter draws throughout the summer and until September 6. Additional prizes are drawn on social media — share your participation with #útivistaáskorun.",
+        "sponsors": "Partners",
+        "register": "Register for the challenge"
+    },
+    "aboutUs": {
+        "title": "About Hlaupadagskra.is",
+        "tagline": "All races in one place, all year round",
+        "p1": "Hlaupadagskra.is is Iceland's comprehensive running event calendar — a neutral platform consolidating confirmed and upcoming running events from across the country, including official road races, ITRA trail runs, and organised charity runs.",
+        "p2": "Events are categorised, linked to registration pages, and connected to relevant social media. Status labels indicate whether events are confirmed, have registration open, or remain unconfirmed.",
+        "teamTitle": "The team",
+        "coFounder": "Co-founder",
+        "goalsTitle": "Our goals",
+        "goal1": "Enable runners to view all annual events in one accessible location",
+        "goal2": "Provide searchable and filterable event information",
+        "goal3": "Support the Icelandic running community through a neutral platform",
+        "followTitle": "Follow us"
+    },
+    "annualReport": {
+        "title": "Annual Report 2025",
+        "intro": "Running in Iceland is growing rapidly. This report documents participation across organised running events throughout 2025.",
+        "stat": {
+            "events": "Running events",
+            "registrations": "Registrations",
+            "growth": "Year-on-year growth",
+            "nationalities": "Nationalities"
+        },
+        "topEventsTitle": "Top events by participation",
+        "highlightsTitle": "Key highlights",
+        "highlight1": "Over 45,000 registrations — a 25.1% increase year-on-year",
+        "highlight2": "61% growth in registrations from 2023 to 2025",
+        "highlight3": "80% increase in foreign participants 2023–2025, with 64 nationalities represented",
+        "highlight4": "Youth participation (under 14) grew by 107%",
+        "genderTitle": "Gender split",
+        "male": "Male",
+        "female": "Female",
+        "genderNote": "Women dominate shorter distances (6–16 km); men predominantly participate in ultra distances (27 km+).",
+        "source": "Data sources"
+    },
     "disclaimer": {
         "title": "Disclaimer",
         "useAtOwnRisk": {
@@ -462,12 +600,13 @@
     "about": {
         "title": "About Hlaupadagskra.is",
         "description": "Hlaupadagskra.is is a trail discovery platform built for runners, hikers, and cyclists exploring Iceland's wild landscapes. Find trails near you, check elevation profiles, and share your favorites with friends.",
-        "authorTitle": "About me",
-        "authorDescription": "Trail runner and developer based in Iceland, building tools to help people discover and enjoy the outdoors.",
-        "authorSignature": "Svanur Karlsson",
-        "techTitle": "Technical Stack",
-        "techDescription": "Hlaupadagskra.is is built with a React frontend, a .NET 9 backend with PostGIS for spatial queries, and PostgreSQL for data storage. Maps are powered by Leaflet with OpenStreetMap tiles.",
-        "aiDescription": "Development assisted by Claude, an AI coding agent by Anthropic, used for code generation, refactoring, and quality improvements.",
+        "authorTitle": "About us",
+        "authorDescription": "The website is maintained by three runners out of a passion for running without any affiliation with any specific company or event, so the support of the running community is important.",
+        "authorSignature": "Óskar Þór, Svanur Þór og Tómas G.",
+        "missionTitle": "Our mission",
+        "missionTagline": "All runs in one place, all year round",
+        "missionDescription": "Our goal with hlaupadagskra.is is to fulfill the desire of runners to see all races throughout the year in one place and be able to search and filter in an accessible way. Races are marked “confirmed, registration open” and such if the event organizers have announced such but “Unconfirmed” or “until there is a correct timing or the race will not be held.",
+        "missionTags": ["Events", "Road races", "Trail races", "Trail discovery"],
         "changelogTitle": "Changelog",
         "changelog": {
             "v2_5": {
