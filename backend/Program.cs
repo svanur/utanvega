@@ -57,6 +57,9 @@ using Utanvega.Backend.Application.Activities.Queries.GetTrailLeaderboard;
 using Utanvega.Backend.Application.TrailCheckIns.Commands.CheckInToTrail;
 using Utanvega.Backend.Application.TrailCheckIns.Commands.CheckOutFromTrail;
 using Utanvega.Backend.Application.TrailCheckIns.Queries.GetTrailCheckIns;
+using Utanvega.Backend.Application.Tips.Commands;
+using Utanvega.Backend.Core.Services;
+using Utanvega.Backend.Infrastructure.Email;
 using MediatR;
 using FluentValidation;
 using Microsoft.Extensions.Caching.Memory;
@@ -290,7 +293,26 @@ builder.Services.AddRateLimiter(options =>
                 SegmentsPerWindow = 6,
                 QueueLimit = 0,
             }));
+    options.AddPolicy("send-tip", httpContext =>
+        RateLimitPartition.GetSlidingWindowLimiter(
+            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new SlidingWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(10),
+                SegmentsPerWindow = 5,
+                QueueLimit = 0,
+            }));
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+});
+
+// Resend email service
+builder.Services.AddHttpClient<IEmailService, ResendEmailService>((sp, client) =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    var apiKey = config["Resend:ApiKey"] ?? "";
+    client.DefaultRequestHeaders.Authorization =
+        new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
 });
 
 var app = builder.Build();
@@ -1724,6 +1746,28 @@ app.MapGet("/api/v1/user/activities", [Authorize] async (IMediator mediator, Htt
 })
 .WithName("GetUserActivities");
 
+app.MapPost("/api/v1/tips", async (SendTipRequest request, IMediator mediator, ILogger<Program> logger) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Message) || request.Message.Length > 2000)
+        return Results.BadRequest("Message is required and must be under 2000 characters.");
+
+    if (string.IsNullOrWhiteSpace(request.PageUrl))
+        return Results.BadRequest("PageUrl is required.");
+
+    try
+    {
+        await mediator.Send(new SendTipCommand(request.PageUrl, request.Message));
+        return Results.Ok();
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Failed to send tip for page {PageUrl}", request.PageUrl);
+        return Results.Problem("Failed to send tip. Please try again later.");
+    }
+})
+.WithName("SendTip")
+.RequireRateLimiting("send-tip");
+
 try
 {
     app.Run();
@@ -1733,6 +1777,7 @@ finally
     Log.CloseAndFlush();
 }
 
+public record SendTipRequest(string PageUrl, string Message);
 public record TagCreateDto(string Name, string? Color);
 public record BulkAddTagRequest(List<Guid> TrailIds, Guid TagId);
 public record TrailLocationAddRequest(Guid LocationId, string? Role);

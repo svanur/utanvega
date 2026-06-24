@@ -68,6 +68,7 @@ import ElevationChart from '../components/ElevationChart';
 import RoutePlayback from '../components/RoutePlayback';
 import ShareButtons from '../components/ShareButtons';
 import QRCodeShare from '../components/QRCodeShare';
+import SendTipButton from '../components/SendTipButton';
 import DifficultyInfo from '../components/DifficultyInfo';
 import RunningLoader from '../components/RunningLoader';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
@@ -496,14 +497,13 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
 
             <Paper elevation={3} sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
                 <Box mb={3}>
-                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' }, flex: 1 }}>
                             {trail.name}
                         </Typography>
-                        <IconButton 
+                        <IconButton
                             onClick={() => toggleFavorite(trail.slug)}
                             color="warning"
-                            sx={{ mt: 0.5 }}
                         >
                             {isFavorite(trail.slug) ? <StarIcon /> : <StarBorderIcon />}
                         </IconButton>
@@ -512,7 +512,6 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                             <IconButton
                                 onClick={() => user ? toggleTick(trail.slug) : setLoginModalOpen(true)}
                                 color="success"
-                                sx={{ mt: 0.5 }}
                             >
                                 {tickedSlugs.has(trail.slug) ? <CheckCircleIcon /> : <CheckCircleOutlineIcon />}
                             </IconButton>
@@ -1048,6 +1047,10 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                     </Box>
                 </Box>
             )}
+
+            <Box sx={{ mt: 4, mb: 2 }}>
+                <SendTipButton type="trail" />
+            </Box>
 
             {/* Fullscreen map + elevation dialog */}
             <Dialog
