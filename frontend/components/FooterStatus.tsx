@@ -71,7 +71,8 @@ export default function FooterStatus() {
                             {t('footer.contact')}
                         </Typography>
                         <Stack spacing={0.5} sx={{ mt: 1 }}>
-                            <MuiLink href="mailto:oskar@hlaupadagskra.is" variant="body2" color="text.secondary" underline="hover">oskar@hlaupadagskra.is</MuiLink>
+                            <MuiLink component={Link} to="/contact" variant="body2" color="text.secondary" underline="hover">{t('contact.title')}</MuiLink>
+                            <MuiLink component={Link} to="/newsletter" variant="body2" color="text.secondary" underline="hover">{t('newsletter.subscribe')}</MuiLink>
                         </Stack>
                     </Box>
                 </Stack>

@@ -69,7 +69,7 @@
     "nav": {
         "trails": "Trails",
         "locations": "Locations",
-        "about": "About us",
+        "about": "About",
         "races": "Races",
         "activities": "Activities",
         "disclaimer": "Disclaimer",
@@ -358,6 +358,18 @@
         "info": "Info",
         "follow": "Follow",
         "contact": "Contact"
+    },
+    "contact": {
+        "title": "Contact us",
+        "description": "Have a question or want to get in touch? Click below to get in contact.",
+        "descriptionRevealed": "Send us an email and we'll get back to you.",
+        "showEmail": "Show email address"
+    },
+    "newsletter": {
+        "title": "Subscribe to the mailing list",
+        "description": "Want to receive news and updates? Subscribe to the hlaupadagskra.is mailing list.",
+        "comingSoon": "Sign-up opening soon.",
+        "subscribe": "Subscribe to mailing list"
     },
     "announcement": {
         "text": "New: Outdoor Challenge 2026 is open for registration!",
