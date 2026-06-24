@@ -23,13 +23,18 @@ import { useTranslation } from 'react-i18next';
 interface QRCodeShareProps {
     slug: string;
     trailName: string;
+    open?: boolean;
+    onClose?: () => void;
 }
 
-export default function QRCodeShare({ slug, trailName }: QRCodeShareProps) {
+export default function QRCodeShare({ slug, trailName, open: openProp, onClose }: QRCodeShareProps) {
     const { t } = useTranslation();
-    const [open, setOpen] = useState(false);
+    const [internalOpen, setInternalOpen] = useState(false);
     const [tab, setTab] = useState(0);
     const [copied, setCopied] = useState(false);
+
+    const open = openProp !== undefined ? openProp : internalOpen;
+    const handleClose = () => { onClose ? onClose() : setInternalOpen(false); };
     
     const baseUrl = window.location.origin;
     const trailUrl = `${baseUrl}/trails/${slug}`;
@@ -38,13 +43,15 @@ export default function QRCodeShare({ slug, trailName }: QRCodeShareProps) {
 
     return (
         <>
-            <Tooltip title={t('qr.showQR')}>
-                <IconButton onClick={() => setOpen(true)} color="primary" size="small">
-                    <QrCode2Icon fontSize="small" />
-                </IconButton>
-            </Tooltip>
+            {openProp === undefined && (
+                <Tooltip title={t('qr.showQR')}>
+                    <IconButton onClick={() => setInternalOpen(true)} color="primary" size="small">
+                        <QrCode2Icon fontSize="small" />
+                    </IconButton>
+                </Tooltip>
+            )}
 
-            <Dialog open={open} onClose={() => setOpen(false)} maxWidth="xs" fullWidth>
+            <Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth>
                 <DialogTitle sx={{ textAlign: 'center', pb: 1 }}>
                     {trailName}
                 </DialogTitle>
@@ -122,7 +129,7 @@ export default function QRCodeShare({ slug, trailName }: QRCodeShareProps) {
                     </Box>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setOpen(false)}>{t('qr.close')}</Button>
+                    <Button onClick={handleClose}>{t('qr.close')}</Button>
                 </DialogActions>
             </Dialog>
         </>
