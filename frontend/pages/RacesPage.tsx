@@ -51,6 +51,7 @@ import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
 import GrassIcon from '@mui/icons-material/Grass';
 import LandscapeIcon from '@mui/icons-material/Landscape';
 import Layout from '../components/Layout';
+import PartnerLinks from '../components/PartnerLinks';
 import RandomQuote from '../components/RandomQuote';
 import RunningLoader from '../components/RunningLoader';
 import EventDateBadge from '../components/EventDateBadge';
@@ -289,7 +290,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
     }
 
     return (
-        <Layout mode={mode} onToggleMode={onToggleMode} maxWidth={viewMode === 'table' ? 'lg' : 'md'}>
+        <Layout mode={mode} onToggleMode={onToggleMode} maxWidth={viewMode === 'table' ? 'lg' : 'md'} bottomContent={<PartnerLinks />}>
             {showQuote && isEnabled('random_quote') && <RandomQuote />}
             <Container
                 maxWidth={viewMode === 'table' ? 'lg' : 'md'}
