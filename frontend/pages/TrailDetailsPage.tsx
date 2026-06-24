@@ -50,6 +50,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
+import QueryStatsIcon from '@mui/icons-material/QueryStats';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import GroupsIcon from '@mui/icons-material/Groups';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -601,6 +602,16 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                 onClick={() => navigate(`/compare?a=${trail.slug}`)}
                             >
                                 <CompareArrowsIcon fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                        )}
+                        {isEnabled('tool_trail_predictor') && (
+                        <Tooltip title={t('tools.trailPredictor.title')} arrow>
+                            <IconButton
+                                size="small"
+                                onClick={() => navigate(`/tools/trail-predictor?trail=${encodeURIComponent(trail.slug)}`)}
+                            >
+                                <QueryStatsIcon fontSize="small" />
                             </IconButton>
                         </Tooltip>
                         )}
