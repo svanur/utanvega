@@ -87,7 +87,8 @@
         "annualReport": "Ársskýrsla 2025",
         "aboutUs": "Um okkur",
         "services": "Þjónusta",
-        "challenge": "Áskorun"
+        "challenge": "Áskorun",
+        "allTrails": "Allar leiðir"
     },
     "spotlight": {
         "placeholder": "Leita að leiðum, stöðum og keppnum...",
@@ -352,7 +353,16 @@
     "footer": {
         "checkingApi": "Athuga API…",
         "healthy": "virkt",
-        "apiUnavailable": "API ekki tiltækt"
+        "apiUnavailable": "API ekki tiltækt",
+        "discover": "Uppgötvaðu",
+        "info": "Upplýsingar",
+        "follow": "Fylgstu með",
+        "contact": "Samband"
+    },
+    "announcement": {
+        "text": "Nýtt: Útivistaáskorun 2026 er opin til skráningar!",
+        "href": "/challenge/2026",
+        "linkText": "Nánar"
     },
     "sort": {
         "distance": "Nálægast",

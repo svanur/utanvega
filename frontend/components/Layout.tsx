@@ -14,6 +14,7 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import FooterStatus from './FooterStatus';
+import AnnouncementBanner from './AnnouncementBanner';
 import LanguageToggle from './LanguageToggle';
 import DynamicHeader from './DynamicHeader';
 import UserAvatar from './UserAvatar';
@@ -63,12 +64,16 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md' }
     // Desktop dropdown: tracks which nav item's dropdown is open
     const [desktopDropdown, setDesktopDropdown] = useState<{ key: string; el: HTMLElement } | null>(null);
 
+    const trailsChildren = [
+        { label: t('nav.allTrails'), path: '/trails' },
+        ...(isEnabled('locations_page') ? [{ label: t('nav.locations'), path: '/locations' }] : []),
+    ];
+
     const navItems: NavItem[] = [
         { key: 'events', label: t('nav.events'), path: '/events' },
-        ...(isEnabled('trails_page') ? [{ key: 'trails', label: t('nav.trails'), path: '/trails' }] : []),
-        ...(isEnabled('locations_page') ? [{ key: 'locations', label: t('nav.locations'), path: '/locations' }] : []),
-        ...(isEnabled('tools_page') ? [{ key: 'tools', label: t('tools.title'), path: '/tools' }] : []),
-        ...(isEnabled('game_fun_page') ? [{ key: 'fun', label: t('nav.fun'), path: '/fun' }] : []),
+        ...(isEnabled('trails_page')
+            ? [{ key: 'trails', label: t('nav.trails'), children: trailsChildren }]
+            : []),
         {
             key: 'shop',
             label: t('nav.onlineStore'),
@@ -78,7 +83,6 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md' }
             ],
         },
         { key: 'services', label: t('nav.services'), path: '/services' },
-        { key: 'challenge', label: t('nav.challenge'), path: '/challenge/2026' },
         {
             key: 'about',
             label: t('nav.about'),
@@ -249,6 +253,8 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md' }
                     {loginEnabled && <UserAvatar />}
                 </Toolbar>
             </DynamicHeader>
+
+            {isEnabled('announcement_banner') && <AnnouncementBanner />}
 
             <Container maxWidth={maxWidth} sx={{ py: 4, flex: 1 }}>
                 {children}

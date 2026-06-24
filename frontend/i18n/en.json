@@ -87,7 +87,8 @@
         "annualReport": "Annual Report 2025",
         "aboutUs": "About us",
         "services": "Services",
-        "challenge": "Challenge"
+        "challenge": "Challenge",
+        "allTrails": "All Trails"
     },
     "spotlight": {
         "placeholder": "Search trails, locations and races...",
@@ -352,7 +353,16 @@
     "footer": {
         "checkingApi": "Checking API…",
         "healthy": "healthy",
-        "apiUnavailable": "API unavailable"
+        "apiUnavailable": "API unavailable",
+        "discover": "Discover",
+        "info": "Info",
+        "follow": "Follow",
+        "contact": "Contact"
+    },
+    "announcement": {
+        "text": "New: Outdoor Challenge 2026 is open for registration!",
+        "href": "/challenge/2026",
+        "linkText": "Learn more"
     },
     "sort": {
         "distance": "Nearest",
