@@ -109,7 +109,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
     } = useTrails();
 
     const { favorites, toggleFavorite } = useFavorites();
-    const { hiddenSlugs, hideTrail, clearHidden } = useHiddenTrails();
+    const { hiddenSlugs } = useHiddenTrails();
     const { recentSlugs } = useRecentlyViewed();
     const { trending } = useTrendingTrails();
     const { tree: locationTree } = useLocationTree();
@@ -148,8 +148,6 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
         } catch { /* storage unavailable */ }
         return 'list';
     });
-    const [showHidden, setShowHidden] = React.useState(false);
-
     // Easter egg: "hin upprunalegu" in search triggers The Originals
     const originalsTriggered = React.useRef(false);
     React.useEffect(() => {
@@ -395,11 +393,9 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
         if (filters.offlineOnly) {
             result = result.filter(t => isOffline(t.slug));
         }
-        if (!showHidden) {
-            result = result.filter(t => !hiddenSlugs.includes(t.slug) || hidingSlugs.includes(t.slug));
-        }
+        result = result.filter(t => !hiddenSlugs.includes(t.slug) || hidingSlugs.includes(t.slug));
         return result;
-    }, [trails, filters.favoritesOnly, filters.offlineOnly, favorites, isOffline, hiddenSlugs, showHidden, hidingSlugs]);
+    }, [trails, filters.favoritesOnly, filters.offlineOnly, favorites, isOffline, hiddenSlugs, hidingSlugs]);
     React.useEffect(() => { filteredTrailsRef.current = filteredTrails; }, [filteredTrails]);
 
     // Gather trail names for the slot machine display
@@ -467,14 +463,6 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
             </Container>
         );
     }
-
-    const handleHideTrail = (slug: string) => {
-        setHidingSlugs(prev => [...prev, slug]);
-        setTimeout(() => {
-            hideTrail(slug);
-            setHidingSlugs(prev => prev.filter(s => s !== slug));
-        }, 300); // Match transition duration in TrailCard
-    };
 
     const handleFilterChange = (key: string, value: string | number | boolean | string[]) => {
         setFilters({ ...filters, [key]: value });
@@ -959,30 +947,13 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                         label={t('filters.showOfflineOnly')}
                                     />
                                 )}
-                                <FormControlLabel
-                                    sx={{ mx: 1 }}
-                                    control={
-                                        <Checkbox
-                                            checked={showHidden}
-                                            onChange={(e) => setShowHidden(e.target.checked)}
-                                            icon={<VisibilityIcon />}
-                                            checkedIcon={<VisibilityOffIcon color="error" />}
-                                        />
-                                    }
-                                    label={t('filters.showHiddenTrails')}
-                                />
-                                {hiddenSlugs.length > 0 && (
-                                    <Button size="small" color="error" onClick={clearHidden} sx={{ alignSelf: 'center' }}>
-                                        {t('filters.clearHidden', { count: hiddenSlugs.length })}
-                                    </Button>
-                                )}
                             </Stack>
                         </Grid>
 
                         {/* 10. Divider + Bottom actions: Reset (conditional) + Close */}
                         <Grid item xs={12}><Divider /></Grid>
                         <Grid item xs={12} display="flex" justifyContent="flex-end" gap={1}>
-                            {(filters.lengthBuckets.length > 0 || filters.elevationGainBuckets.length > 0 || filters.elevationLossBuckets.length > 0 || filters.distanceBuckets.length > 0 || filters.difficulties.length > 0 || filters.trailTypes.length > 0 || filters.locationSlugs.length > 0 || filters.selectedActivityTypes.length > 0 || filters.favoritesOnly || filters.offlineOnly || showHidden) && (
+                            {(filters.lengthBuckets.length > 0 || filters.elevationGainBuckets.length > 0 || filters.elevationLossBuckets.length > 0 || filters.distanceBuckets.length > 0 || filters.difficulties.length > 0 || filters.trailTypes.length > 0 || filters.locationSlugs.length > 0 || filters.selectedActivityTypes.length > 0 || filters.favoritesOnly || filters.offlineOnly) && (
                             <Button size="small" onClick={() => {
                                 resetFilters(); setSelectedLocationItems([]);
                                 if (tagSlug) navigate('/', { replace: true });
@@ -1242,9 +1213,8 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                 ) : (
                     filteredTrails.map(trail => (
                         <Collapse key={trail.id} in={!hidingSlugs.includes(trail.slug)}>
-                            <TrailCard 
-                                trail={trail} 
-                                onHide={handleHideTrail}
+                            <TrailCard
+                                trail={trail}
                                 onToggleFavorite={toggleFavorite}
                                 isFavorited={favorites.includes(trail.slug)}
                                 onTagClick={tagsEnabled ? (tagSlug) => navigate(`/tags/${tagSlug}`) : undefined}
