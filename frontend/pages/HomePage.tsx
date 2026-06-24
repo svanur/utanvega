@@ -2,6 +2,7 @@ import { useState } from 'react';
 import RandomQuote from '../components/RandomQuote';
 import Layout from '../components/Layout';
 import { TrailList } from '../components/TrailList';
+import PartnerLinks from '../components/PartnerLinks';
 import type { PaletteMode } from '@mui/material';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 
@@ -19,7 +20,7 @@ export default function HomePage({ mode, onToggleMode, tagSlug, showQuote = fals
     });
     const maxWidth = viewMode === 'table' ? false as const : 'md' as const;
     return (
-        <Layout mode={mode} onToggleMode={onToggleMode} maxWidth={maxWidth}>
+        <Layout mode={mode} onToggleMode={onToggleMode} maxWidth={maxWidth} bottomContent={<PartnerLinks />}>
             {showQuote && isEnabled('random_quote') && <RandomQuote />}
             <TrailList tagSlug={tagSlug} onViewModeChange={setViewMode} />
         </Layout>
