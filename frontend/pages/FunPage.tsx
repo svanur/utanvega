@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Box, Tabs, Tab, Stack } from '@mui/material';
+import { Box, Tabs, Tab, Stack, Typography } from '@mui/material';
 import type { PaletteMode } from '@mui/material';
 import Layout from '../components/Layout';
 import ShareButtons from '../components/ShareButtons';
