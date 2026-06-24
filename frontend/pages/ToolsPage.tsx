@@ -31,13 +31,15 @@ export default function ToolsPage({ mode, onToggleMode }: { mode: PaletteMode; o
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const prefilledTrail = searchParams.get('trail') ?? undefined;
+    const prefilledFrom = searchParams.get('from') ?? undefined;
+    const prefilledTime = searchParams.get('time') ?? undefined;
 
     const allTools: ToolDef[] = [
         { key: 'pace-calculator', flag: 'tool_pace_calculator', label: t('tools.paceCalc.title'), icon: <TimerIcon />, component: <PaceCalculator /> },
         { key: 'pace-chart', flag: 'tool_pace_chart', label: t('tools.paceChart.title'), icon: <TableChartIcon />, component: <PaceChart /> },
         { key: 'training-paces', flag: 'tool_training_paces', label: t('tools.trainingPaces.title'), icon: <SpeedIcon />, component: <TrainingPaces /> },
         { key: 'race-predictor', flag: 'tool_race_predictor', label: t('tools.racePredictor.title'), icon: <EmojiEventsIcon />, component: <RacePredictor /> },
-        { key: 'trail-predictor', flag: 'tool_trail_predictor', label: t('tools.trailPredictor.title'), icon: <TerrainIcon />, component: <TrailRacePredictor prefilledTrailSlug={prefilledTrail} /> },
+        { key: 'trail-predictor', flag: 'tool_trail_predictor', label: t('tools.trailPredictor.title'), icon: <TerrainIcon />, component: <TrailRacePredictor prefilledTrailSlug={prefilledTrail} prefilledFromSlug={prefilledFrom} prefilledTime={prefilledTime} /> },
     ];
 
     const tools = allTools.filter(tool => isEnabled(tool.flag));

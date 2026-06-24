@@ -42,6 +42,7 @@ import TimerIcon from '@mui/icons-material/Timer';
 import StraightenIcon from '@mui/icons-material/Straighten';
 import TerrainIcon from '@mui/icons-material/Terrain';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
+import QueryStatsIcon from '@mui/icons-material/QueryStats';
 import confetti from 'canvas-confetti';
 import ShareButtons from '../components/ShareButtons';
 import RaceShareCard from '../components/RaceShareCard';
@@ -1077,15 +1078,15 @@ function RaceCard({
                     {(race.trailSlug || showShareCard || showFinishCard) && (
                         <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0, flexWrap: 'wrap' }}>
                             {showPredict && race.trailSlug && (
-                                <Button
-                                    component={RouterLink}
-                                    to={`/tools/trail-predictor?trail=${encodeURIComponent(race.trailSlug)}`}
-                                    size="small"
-                                    variant="text"
-                                    sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: 'auto' }}
-                                >
-                                    🔮 {t('races.predict')}
-                                </Button>
+                                <Tooltip title={t('races.predict')} arrow>
+                                    <IconButton
+                                        component={RouterLink}
+                                        to={`/tools/trail-predictor?trail=${encodeURIComponent(race.trailSlug)}`}
+                                        size="small"
+                                    >
+                                        <QueryStatsIcon fontSize="small" />
+                                    </IconButton>
+                                </Tooltip>
                             )}
                             {race.trailSlug && (
                                 <Button
