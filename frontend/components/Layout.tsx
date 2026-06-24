@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Box, ButtonBase, Collapse, Container, Divider, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Toolbar, Tooltip, Typography, Button, Menu, MenuItem, useMediaQuery, useTheme } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import type { PropsWithChildren } from 'react';
+import type { PropsWithChildren, ReactNode } from 'react';
 import type { PaletteMode } from '@mui/material';
 
 import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
@@ -41,13 +41,14 @@ type LayoutProps = PropsWithChildren<{
     mode: PaletteMode;
     onToggleMode: () => void;
     maxWidth?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | false;
+    bottomContent?: ReactNode;
 }>;
 
 function openExternal(href: string) {
     window.open(href, '_blank', 'noopener,noreferrer');
 }
 
-export default function Layout({ children, mode, onToggleMode, maxWidth = 'md' }: LayoutProps) {
+export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', bottomContent }: LayoutProps) {
     const navigate = useNavigate();
     const { t } = useTranslation();
     const theme = useTheme();
@@ -259,6 +260,8 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md' }
             <Container maxWidth={maxWidth} sx={{ py: 4, flex: 1 }}>
                 {children}
             </Container>
+
+            {bottomContent}
 
             <FooterStatus />
         </Box>
