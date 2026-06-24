@@ -359,6 +359,14 @@
         "follow": "Follow",
         "contact": "Contact"
     },
+    "tip": {
+        "button": "Send a tip",
+        "send": "Open email",
+        "tooltip": "Suggest a correction, additional info, or other feedback",
+        "body": "URL: {{url}}\nYour email (optional): \n\nTip:\n",
+        "typeTrail": "Trail",
+        "typeEvent": "Event"
+    },
     "contact": {
         "title": "Contact us",
         "description": "Have a question or want to get in touch? Click below to get in contact.",

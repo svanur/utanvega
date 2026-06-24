@@ -359,6 +359,14 @@
         "follow": "Fylgstu með",
         "contact": "Samband"
     },
+    "tip": {
+        "button": "Senda ábendingu",
+        "send": "Opna tölvupóst",
+        "tooltip": "Leggðu til leiðréttingu, viðbótarupplýsingar eða aðrar ábendingar",
+        "body": "URL: {{url}}\nEmail (optional): \n\nTip:\n",
+        "typeTrail": "Leið",
+        "typeEvent": "Viðburður"
+    },
     "contact": {
         "title": "Hafa samband",
         "description": "Hefurðu spurningar eða vilt hafa samband? Smelltu hér til að hafa samband.",
