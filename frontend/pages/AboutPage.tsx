@@ -8,8 +8,7 @@ import TimelineConnector from '@mui/lab/TimelineConnector';
 import TimelineContent from '@mui/lab/TimelineContent';
 import TimelineOppositeContent from '@mui/lab/TimelineOppositeContent';
 import TimelineDot from '@mui/lab/TimelineDot';
-import CodeIcon from '@mui/icons-material/Code';
-import SmartToyIcon from '@mui/icons-material/SmartToy';
+import GroupsIcon from '@mui/icons-material/Groups';
 import TimelineIcon from '@mui/icons-material/Timeline';
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import FavoriteIcon from '@mui/icons-material/Favorite';
@@ -103,27 +102,24 @@ export default function AboutPage({ mode, onToggleMode }: AboutPageProps) {
                     */}
                 </Paper>
 
-                {/* Tech Stack */}
+                {/* About hlaupadagskra.is */}
                 <Paper variant="outlined" sx={{ p: 3, mb: 4, borderRadius: 2 }}>
                     <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.5 }}>
-                        <CodeIcon color="primary" />
+                        <GroupsIcon color="primary" />
                         <Typography variant="h6" fontWeight="bold">
-                            {t('about.techTitle')}
+                            {t('about.missionTitle')}
                         </Typography>
                     </Stack>
-                    <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-                        {t('about.techDescription')}
+                    <Typography variant="subtitle2" color="primary" fontStyle="italic" sx={{ mb: 1.5 }}>
+                        {t('about.missionTagline')}
                     </Typography>
-                    <Stack direction="row" flexWrap="wrap" gap={1} sx={{ mb: 2 }}>
-                        {['React', 'TypeScript', '.NET 9', 'PostgreSQL', 'PostGIS', 'Leaflet', 'MUI', 'Vite'].map((tech) => (
-                            <Chip key={tech} label={tech} size="small" variant="outlined" />
+                    <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+                        {t('about.missionDescription')}
+                    </Typography>
+                    <Stack direction="row" flexWrap="wrap" gap={1}>
+                        {(t('about.missionTags', { returnObjects: true }) as string[]).map((tag) => (
+                            <Chip key={tag} label={tag} size="small" variant="outlined" />
                         ))}
-                    </Stack>
-                    <Stack direction="row" alignItems="center" spacing={1}>
-                        <SmartToyIcon fontSize="small" sx={{ color: 'text.secondary' }} />
-                        <Typography variant="body2" color="text.secondary">
-                            {t('about.aiDescription')}
-                        </Typography>
                     </Stack>
                 </Paper>
 
