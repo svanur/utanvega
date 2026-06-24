@@ -69,7 +69,7 @@
     "nav": {
         "trails": "Leiðir",
         "locations": "Staðsetningar",
-        "about": "Um",
+        "about": "Um okkur",
         "races": "Viðburðir",
         "activities": "Athöfn",
         "disclaimer": "Fyrirvari",
@@ -77,7 +77,18 @@
         "darkMode": "Skipta yfir í dökkt þema",
         "lightMode": "Skipta yfir í ljóst þema",
         "switchToEnglish": "Switch to English",
-        "switchToIcelandic": "Skipta yfir á íslensku"
+        "switchToIcelandic": "Skipta yfir á íslensku",
+        "events": "Viðburðir",
+        "fun": "Gaman",
+        "onlineStore": "Verslun",
+        "scratchCard": "Skafkort",
+        "runningTrip": "Hlaupaferð",
+        "runs360": "360° Hlaup",
+        "annualReport": "Ársskýrsla 2025",
+        "aboutUs": "Um okkur",
+        "services": "Þjónusta",
+        "challenge": "Áskorun",
+        "allTrails": "Allar leiðir"
     },
     "spotlight": {
         "placeholder": "Leita að leiðum, stöðum og keppnum...",
@@ -342,7 +353,16 @@
     "footer": {
         "checkingApi": "Athuga API…",
         "healthy": "virkt",
-        "apiUnavailable": "API ekki tiltækt"
+        "apiUnavailable": "API ekki tiltækt",
+        "discover": "Uppgötvaðu",
+        "info": "Upplýsingar",
+        "follow": "Fylgstu með",
+        "contact": "Samband"
+    },
+    "announcement": {
+        "text": "Nýtt: Útivistaáskorun 2026 er opin til skráningar!",
+        "href": "/challenge/2026",
+        "linkText": "Nánar"
     },
     "sort": {
         "distance": "Nálægast",
@@ -438,6 +458,124 @@
         "contact": "Spurningar um persónuvernd? Hafðu samband í gegnum Um síðuna.",
         "lastUpdated": "Síðast uppfært: {{date}}"
     },
+    "scratchCard": {
+        "title": "Utanvegahlaup skafkort",
+        "subtitle": "Skráptu af hvert hlaup sem þú klárar — sérstakt kort af íslenska hlaupakafanum",
+        "madeInIceland": "Gert á Íslandi",
+        "details": "Upplýsingar um vöruna",
+        "size": "Stærð",
+        "events": "Hlaup",
+        "trailEvents": "utanvegahlaup",
+        "design": "Hönnun",
+        "price": "Verð",
+        "shipping": "Sending",
+        "description": "Falleg A2 veggspjaldsmynd með 42 utanvegahlaupum um allt Ísland, hvert með einstaka mynd falin á bak við silfurlaga skaflag. Hannað af ARRA Design Studio — handgert og pakkað á Íslandi. Fullkomið gjöf fyrir hlauparar, náttúruunnendur og markmiðasetjendur.",
+        "order": "Panta með tölvupósti"
+    },
+    "runningTrip": {
+        "title": "Hlaupaferð til Sviss 2026",
+        "subtitle": "Leiðsögnin hlaupaferð í Kandersteg, Svissnesku Alpunum — 3.–9. september 2026",
+        "description": "Komdu með okkur í sex nætur í Svissnesku Alpur — leiðsögnin hlaupaferð í Kandersteg, opin bæði hlauparar og ekki-hlauparar. Skipulögð af Óskari Þór og Tómasi G. frá hlaupadagskra.is.",
+        "itinerary": "Hlaupakafinn",
+        "day1": "Dagur 1 (4. sept)",
+        "day2": "Dagur 2 (5. sept)",
+        "day3": "Dagur 3 (6. sept)",
+        "day4": "Dagur 4 (7. sept)",
+        "day5": "Dagur 5 (8. sept)",
+        "restDay": "Hvíldardagur",
+        "included": "Hvað er innifalið",
+        "inc1": "6 nætur með morgunmat (Hotel Victoria Kandersteg)",
+        "inc2": "4 leiðsagnardagar í hlaupi",
+        "inc3": "Farmiðar í lyftur og aðgangur að náttúruvætti",
+        "inc4": "Lokakvöldmatur",
+        "inc5": "Kynningarfundur fyrir ferð og handbók",
+        "pricing": "Verðlag",
+        "standardRoom": "tvíbýlisherbergi",
+        "suiteUpgrade": "suite uppfærsla",
+        "register": "Skrá sig",
+        "contact": "Hafa samband"
+    },
+    "services": {
+        "title": "Þjónusta",
+        "tagline": "Sýndarupplifun eins og þú sért á staðnum",
+        "intro": "Við sérhæfum okkur í 360° kvikmyndatöku af hlaupaleiðum, gönguleiðum, hlaupaviðburðum og íslenskri náttúru — sem markaðsefni fyrir viðburðaframkvæmdaraðila og ferðaþjónustu.",
+        "recording": {
+            "title": "360° Myndataka",
+            "description": "Fyrstu persónu (POV) myndataka af hlaupakeiðum og viðburðarumhverfi, með myndvinnslu, texta og GPX leiðarlýsingu."
+        },
+        "coursePromo": {
+            "title": "Kynngar á hlaupaleið",
+            "description": "360° skráning á leiðum með leiðaryfirlit, myndbönd frá keppnisdögum og sýndarveruleika kynningarefni."
+        },
+        "marketing": {
+            "title": "Markaðssetning og dreifing",
+            "description": "YouTube dreifing í gegnum '360 Runs Iceland', samfélagsmiðlabrot og sérsniðin kynningar- eða kynningarmyndbönd."
+        },
+        "visibility": {
+            "title": "Sýnileiki og viðburðir",
+            "description": "Sýnileiki á hlaupadagskra.is, alþjóðleg kynning og EXPO-standur efni fyrir ferðaþjónustu."
+        },
+        "benefitsTitle": "Kostir fyrir viðburðaframkvæmdaraðila",
+        "benefit1": "Aukinn sýnileiki á aðstæðum hlaupavegar fyrir þátttakendur",
+        "benefit2": "Undirbúningsefni fyrir þátttakendur og forskoðun á leiðinni",
+        "benefit3": "Tilbúið efni fyrir samfélagsmiðla og vefsíður",
+        "benefit4": "Aðdráttarkraftur fyrir erlendar þátttakendur á íslenska viðburði",
+        "contact": "Hafa samband"
+    },
+    "challenge": {
+        "title": "Útivistaáskorun 2026",
+        "tagline": "VERTU ÚT UM ALLT Í SUMAR",
+        "intro": "Safnaðu stigum og merkjum með því að heimsækja nærri 100 útivistastaði á höfuðborgarsvæðinu — gangandi, hlaupandi eða á hjóli.",
+        "locations100": "100+ staðir",
+        "capitalRegion": "Höfuðborgarsvæðið",
+        "deadline": "Til 6. september",
+        "feature1": { "title": "Kannast", "desc": "Heimsæktu útivistastaði um allt höfuðborgarsvæðið" },
+        "feature2": { "title": "Uppgötvaðu", "desc": "Finndu falin dýr á völdum stöðum" },
+        "feature3": { "title": "Vinndu", "desc": "Taktu þátt í verðlaupadreifingum frá samstarfsaðilum" },
+        "howTitle": "Hvernig tekur þú þátt",
+        "step1": "Skráðu þig í áskoruna á vefsíðunni",
+        "step2": "Veldu staði til að heimsækja gangandi, hlaupandi eða á hjóli",
+        "step3": "Skráðu mætingu með GPS eða QR kóða á hverjum stað",
+        "step4": "Safnaðu stigum, klifraðu upp stigatöfluna og taktu þátt í verðlaupadreifingum",
+        "prizesTitle": "Verðlaun",
+        "prizes": "Þátttakendur sem ljúka einni eða fleiri áskorunum taka þátt í verðlaupadreifingum allt sumarið og til 6. september. Viðbótarverðlaun eru dreifð á samfélagsmiðlum — deildu þátttöku þinni með #útivistaáskorun.",
+        "sponsors": "Samstarfsaðilar",
+        "register": "Skrá sig í áskoruna"
+    },
+    "aboutUs": {
+        "title": "Um hlaupadagskra.is",
+        "tagline": "Öll hlaup á einum stað allt árið",
+        "p1": "Hlaupadagskra.is er heildarhlaupadagskrá Íslands — hlutlæg vettvangur sem safnar saman staðfestum og fyrirhugðum hlaupaviðburðum um allt land, þar á meðal opinber götuhlaupaviðburðir, ITRA utanvegahlaup og skipulögð líknarhlaupaviðburðir.",
+        "p2": "Viðburðir eru flokkaðir, tengdir við skráningarsíður og tengdir við viðeigandi samfélagsmiðla. Stöðumerki gefa til kynna hvort viðburðir séu staðfestir, opnir til skráningar eða óstaðfestir.",
+        "teamTitle": "Teymið",
+        "coFounder": "Meðstofnandi",
+        "goalsTitle": "Markmið okkar",
+        "goal1": "Gera hlauparum kleift að sjá alla árlegaviðburði á einum aðgengilegum stað",
+        "goal2": "Bjóða upp á leitanlegar og síanlegar upplýsingar um viðburði",
+        "goal3": "Styðja íslenska hlaupsamfélagið í gegnum hlutlægan vettvang",
+        "followTitle": "Fylgdu okkur"
+    },
+    "annualReport": {
+        "title": "Ársskýrsla 2025",
+        "intro": "Hlaup á Íslandi eru í hraðri sókn. Þessi skýrsla skráir þátttöku í skipulögðum hlaupaviðburðum á árinu 2025.",
+        "stat": {
+            "events": "Hlaupaviðburðir",
+            "registrations": "Skráningar",
+            "growth": "Vöxtur milli ára",
+            "nationalities": "Þjóðerni"
+        },
+        "topEventsTitle": "Stærstu viðburðir eftir þátttöku",
+        "highlightsTitle": "Helstu niðurstöður",
+        "highlight1": "Yfir 45.000 skráningar — 25,1% aukning milli ára",
+        "highlight2": "61% vöxtur í skráningum frá 2023 til 2025",
+        "highlight3": "80% aukning í erlendum þátttakendum 2023–2025, 64 þjóðerni fulltrúð",
+        "highlight4": "Þátttaka unglinga (undir 14 ára) jókst um 107%",
+        "genderTitle": "Kynjahlutfall",
+        "male": "Karlar",
+        "female": "Konur",
+        "genderNote": "Konur ríkja á skemmri vegalengdum (6–16 km); karlar ríkja á ultra-vegalengdum (27 km+).",
+        "source": "Gagnaveita"
+    },
     "disclaimer": {
         "title": "Fyrirvari",
         "useAtOwnRisk": {
@@ -465,9 +603,10 @@
         "authorTitle": "Um okkur",
         "authorDescription": "Vefnum er haldið uppi af þremur hlaupurum af hlaupaástríðu án beinnar tengingar við tiltekin fyrirtæki eða viðburði og því er stuðningur hlaupasamfélagsins mikilvægur.",
         "authorSignature": "Óskar Þór, Svanur Þór og Tómas G.",
-        "techTitle": "Tæknilausnir",
-        "techDescription": "Hlaupadagskra.is er byggt á React viðmóti, .NET 9 bakenda með PostGIS fyrir staðsetningarleit og PostgreSQL gagnagrunni. Kortin eru búin til með Leaflet og OpenStreetMap.",
-        "aiDescription": "Vefurinn er þróaður með aðstoð Claude, gervigreindar- og kóðunarfulltrúa frá Anthropic. Claude hjálpar til við kóðun, prófanir, endurbætur og gæðaeftirlit.",
+        "missionTitle": "Markmið okkar",
+        "missionTagline": "Öll hlaup á einum stað allt árið",
+        "missionDescription": "Markmiðið okkar með hlaupadagskra.is er uppfylla ósk hlaupara að sjá öll hlaup yfir árið á einum stað og getað leitað á aðgengilegan máta. Hlaup eru merkt “staðfest, skráning hafin” og slíkt ef viðburðarhaldarar hafa tilkynnt slíkt en “Óstaðfest” eða “ þangað til það liggur fyrir rétt tímasetning eða hlaup verður ekki haldið.",
+        "missionTags": ["Viðburðir", "Götuhlaup", "Utanvegahlaup", "Hlaupaleiðir"],
         "changelogTitle": "Breytingasaga",
         "changelog": {
             "v2_5": {

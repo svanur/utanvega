@@ -1,4 +1,4 @@
-import { Box, Chip, Stack, Typography, Link as MuiLink } from '@mui/material';
+import { Box, Chip, Divider, Stack, Typography, Link as MuiLink } from '@mui/material';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -15,41 +15,87 @@ export default function FooterStatus() {
             component="footer"
             sx={{
                 mt: 'auto',
-                px: 2,
-                py: 1.5,
                 borderTop: 1,
                 borderColor: 'divider',
                 bgcolor: 'background.paper',
             }}
         >
-            <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="space-between">
-                <Typography variant="body2" color="text.secondary">
-                    Hlaupadagskra.is - {new Date().getFullYear()}
-                </Typography>
-                <MuiLink component={Link} to="/disclaimer" variant="caption" color="text.secondary" underline="hover" sx={{ opacity: 0.7 }}>
-                    {t('nav.disclaimer')}
-                </MuiLink>
-                <MuiLink component={Link} to="/privacy" variant="caption" color="text.secondary" underline="hover" sx={{ opacity: 0.7 }}>
-                    {t('nav.privacy')}
-                </MuiLink>
-
-                {loading ? (
-                    <Stack direction="row" spacing={1} alignItems="center">
-                        <CircularProgress size={14} thickness={5} />
-                        <Typography variant="body2" color="text.secondary">
-                            {t('footer.checkingApi')}
+            {/* Main footer links */}
+            <Box sx={{ px: 3, py: 3 }}>
+                <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={{ xs: 3, sm: 6 }}
+                    justifyContent="center"
+                >
+                    {/* Discover */}
+                    <Box>
+                        <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
+                            {t('footer.discover')}
                         </Typography>
-                    </Stack>
-                ) : error ? (
-                    <Chip
-                        icon={<ErrorOutlineIcon />}
-                        label={t('footer.apiUnavailable')}
-                        color="error"
-                        variant="outlined"
-                        size="small"
-                    />
-                ) : (
-                    <Stack direction="row" spacing={1} alignItems="center">
+                        <Stack spacing={0.5} sx={{ mt: 1 }}>
+                            <MuiLink component={Link} to="/tools" variant="body2" color="text.secondary" underline="hover">{t('tools.title')}</MuiLink>
+                            <MuiLink component={Link} to="/fun" variant="body2" color="text.secondary" underline="hover">{t('nav.fun')}</MuiLink>
+                            <MuiLink component={Link} to="/challenge/2026" variant="body2" color="text.secondary" underline="hover">{t('nav.challenge')}</MuiLink>
+                        </Stack>
+                    </Box>
+
+                    {/* Info */}
+                    <Box>
+                        <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
+                            {t('footer.info')}
+                        </Typography>
+                        <Stack spacing={0.5} sx={{ mt: 1 }}>
+                            <MuiLink component={Link} to="/about" variant="body2" color="text.secondary" underline="hover">{t('nav.aboutUs')}</MuiLink>
+                            <MuiLink component={Link} to="/services" variant="body2" color="text.secondary" underline="hover">{t('nav.services')}</MuiLink>
+                            <MuiLink component={Link} to="/annual-report/2025" variant="body2" color="text.secondary" underline="hover">{t('nav.annualReport')}</MuiLink>
+                            <MuiLink component={Link} to="/disclaimer" variant="body2" color="text.secondary" underline="hover">{t('nav.disclaimer')}</MuiLink>
+                            <MuiLink component={Link} to="/privacy" variant="body2" color="text.secondary" underline="hover">{t('nav.privacy')}</MuiLink>
+                        </Stack>
+                    </Box>
+
+                    {/* Follow */}
+                    <Box>
+                        <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
+                            {t('footer.follow')}
+                        </Typography>
+                        <Stack spacing={0.5} sx={{ mt: 1 }}>
+                            <MuiLink href="https://www.facebook.com/hlaupadagskra" target="_blank" rel="noopener noreferrer" variant="body2" color="text.secondary" underline="hover">Facebook</MuiLink>
+                            <MuiLink href="https://www.instagram.com/hlaupadagskra" target="_blank" rel="noopener noreferrer" variant="body2" color="text.secondary" underline="hover">Instagram</MuiLink>
+                            <MuiLink href="https://www.youtube.com/@360RunsIceland" target="_blank" rel="noopener noreferrer" variant="body2" color="text.secondary" underline="hover">YouTube · 360° Runs</MuiLink>
+                        </Stack>
+                    </Box>
+
+                    {/* Contact */}
+                    <Box>
+                        <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
+                            {t('footer.contact')}
+                        </Typography>
+                        <Stack spacing={0.5} sx={{ mt: 1 }}>
+                            <MuiLink href="mailto:oskar@hlaupadagskra.is" variant="body2" color="text.secondary" underline="hover">oskar@hlaupadagskra.is</MuiLink>
+                        </Stack>
+                    </Box>
+                </Stack>
+            </Box>
+
+            <Divider />
+
+            {/* Bottom bar */}
+            <Box sx={{ px: 2, py: 1 }}>
+                <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="space-between" flexWrap="wrap">
+                    <Typography variant="caption" color="text.secondary">
+                        © {new Date().getFullYear()} Hlaupadagskra.is
+                    </Typography>
+
+                    {loading ? (
+                        <Stack direction="row" spacing={1} alignItems="center">
+                            <CircularProgress size={14} thickness={5} />
+                            <Typography variant="caption" color="text.secondary">
+                                {t('footer.checkingApi')}
+                            </Typography>
+                        </Stack>
+                    ) : error ? (
+                        <Chip icon={<ErrorOutlineIcon />} label={t('footer.apiUnavailable')} color="error" variant="outlined" size="small" />
+                    ) : (
                         <Chip
                             icon={<CheckCircleOutlineIcon />}
                             label={`${data?.status ?? t('footer.healthy')} • ${data?.version ?? 'v1'}`}
@@ -57,9 +103,9 @@ export default function FooterStatus() {
                             variant="outlined"
                             size="small"
                         />
-                    </Stack>
-                )}
-            </Stack>
+                    )}
+                </Stack>
+            </Box>
         </Box>
     );
 }
