@@ -751,7 +751,7 @@
         },
         "trailPredictor": {
             "title": "Trail Predictor",
-            "subtitle": "Predict your time on a new trail based on a past performance",
+            "subtitle": "Predict your trail or race time based on a past performance",
             "knownRace": "Your completed trail",
             "targetRace": "Target trail",
             "selectTrailA": "Select completed trail",

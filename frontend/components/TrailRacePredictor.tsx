@@ -37,10 +37,14 @@ interface TrailOption {
     name: string;
     distance: number; // km
     elevationGain: number; // m
+    elevationLoss: number; // m
 }
 
-// Minutes added per 100m of elevation gain
-const CLIMB_FACTOR = 0.5;
+// Minutes added per 100m of elevation gain (Naismith-derived, trail running adjusted)
+const CLIMB_FACTOR = 1.0;
+
+// Minutes added per 100m of elevation loss (technical trail descent)
+const DESCENT_FACTOR = 0.1;
 
 // Riegel's fatigue exponent
 const RIEGEL_EXP = 1.06;
@@ -57,10 +61,10 @@ export default function TrailRacePredictor({ prefilledTrailSlug }: { prefilledTr
     useEffect(() => {
         fetch(`${API_URL}/api/v1/trails`)
             .then(r => r.json())
-            .then((data: { name: string; length: number; elevationGain: number; status: string }[]) => {
+            .then((data: { name: string; length: number; elevationGain: number; elevationLoss: number; status: string }[]) => {
                 const mapped = data
                     .filter(t => t.status === 'Published')
-                    .map(t => ({ name: t.name, distance: t.length / 1000, elevationGain: t.elevationGain }))
+                    .map(t => ({ name: t.name, distance: t.length / 1000, elevationGain: t.elevationGain, elevationLoss: t.elevationLoss }))
                     .sort((a, b) => a.name.localeCompare(b.name));
                 setTrails(mapped);
                 setTrailsError(false);
@@ -92,16 +96,18 @@ export default function TrailRacePredictor({ prefilledTrailSlug }: { prefilledTr
         const knownTime = parseTime(timeStr);
         if (!trailA || !trailB || !knownTime || knownTime <= 0) return null;
 
-        // Step 1: Strip elevation from known time → flat equivalent time
+        // Step 1: Strip elevation cost from known time → flat equivalent time
         const climbTimeA = (trailA.elevationGain / 100) * CLIMB_FACTOR;
-        const flatTimeA = Math.max(knownTime - climbTimeA, knownTime * 0.5); // cap at 50% min
+        const descentTimeA = (trailA.elevationLoss / 100) * DESCENT_FACTOR;
+        const flatTimeA = Math.max(knownTime - climbTimeA - descentTimeA, knownTime * 0.3);
 
         // Step 2: Apply Riegel's formula for distance difference
         const flatTimeB = flatTimeA * Math.pow(trailB.distance / trailA.distance, RIEGEL_EXP);
 
-        // Step 3: Add elevation penalty for Trail B
+        // Step 3: Add elevation and descent penalty for Trail B
         const climbTimeB = (trailB.elevationGain / 100) * CLIMB_FACTOR;
-        const predictedTime = flatTimeB + climbTimeB;
+        const descentTimeB = (trailB.elevationLoss / 100) * DESCENT_FACTOR;
+        const predictedTime = flatTimeB + climbTimeB + descentTimeB;
 
         const flatPaceA = flatTimeA / trailA.distance;
         const predictedPace = predictedTime / trailB.distance;
@@ -111,12 +117,13 @@ export default function TrailRacePredictor({ prefilledTrailSlug }: { prefilledTr
             predictedTime: formatTime(predictedTime),
             predictedPace: formatPace(predictedPace),
             flatPace: formatPace(flatPaceA),
-            climbPenaltyA: formatTime(climbTimeA),
             climbPenaltyB: formatTime(climbTimeB),
+            descentPenaltyB: formatTime(descentTimeB),
             timeDiff: `${timeDiff >= 0 ? '+' : ''}${formatTime(Math.abs(timeDiff))}`,
             isSlower: timeDiff >= 0,
             distDiff: trailB.distance - trailA.distance,
             gainDiff: trailB.elevationGain - trailA.elevationGain,
+            lossDiff: trailB.elevationLoss - trailA.elevationLoss,
         };
     }, [trailA, trailB, timeStr]);
 
@@ -162,12 +169,9 @@ export default function TrailRacePredictor({ prefilledTrailSlug }: { prefilledTr
 
                     {trailA && (
                         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                            <Typography variant="caption" color="text.secondary">
-                                📏 {trailA.distance.toFixed(1)} km
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                                ⛰️ ↑{Math.round(trailA.elevationGain)}m
-                            </Typography>
+                            <Typography variant="caption" color="text.secondary">📏 {trailA.distance.toFixed(1)} km</Typography>
+                            <Typography variant="caption" color="text.secondary">↑{Math.round(trailA.elevationGain)}m</Typography>
+                            <Typography variant="caption" color="text.secondary">↓{Math.round(trailA.elevationLoss)}m</Typography>
                         </Box>
                     )}
 
@@ -233,12 +237,9 @@ export default function TrailRacePredictor({ prefilledTrailSlug }: { prefilledTr
 
                     {trailB && (
                         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                            <Typography variant="caption" color="text.secondary">
-                                📏 {trailB.distance.toFixed(1)} km
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                                ⛰️ ↑{Math.round(trailB.elevationGain)}m
-                            </Typography>
+                            <Typography variant="caption" color="text.secondary">📏 {trailB.distance.toFixed(1)} km</Typography>
+                            <Typography variant="caption" color="text.secondary">↑{Math.round(trailB.elevationGain)}m</Typography>
+                            <Typography variant="caption" color="text.secondary">↓{Math.round(trailB.elevationLoss)}m</Typography>
                         </Box>
                     )}
                 </Box>
@@ -311,8 +312,9 @@ export default function TrailRacePredictor({ prefilledTrailSlug }: { prefilledTr
                     <Box sx={{ mt: 1.5, p: 1.5, bgcolor: 'action.hover', borderRadius: 1 }}>
                         <Typography variant="caption" color="text.secondary">
                             {t('tools.trailPredictor.comparison')}: {' '}
-                            {prediction.distDiff >= 0 ? '+' : ''}{prediction.distDiff.toFixed(1)} km, {' '}
-                            {prediction.gainDiff >= 0 ? '+' : ''}{Math.round(prediction.gainDiff)}m ↑
+                            {prediction.distDiff >= 0 ? '+' : ''}{prediction.distDiff.toFixed(1)} km·{' '}
+                            {prediction.gainDiff >= 0 ? '+' : ''}{Math.round(prediction.gainDiff)}m ↑·{' '}
+                            {prediction.lossDiff >= 0 ? '+' : ''}{Math.round(prediction.lossDiff)}m ↓
                         </Typography>
                     </Box>
 

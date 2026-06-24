@@ -751,7 +751,7 @@
         },
         "trailPredictor": {
             "title": "Utanvegaspá",
-            "subtitle": "Spá fyrir um tíma á leið eða keppni út frá árangri í fyrri leið eða keppni.",
+            "subtitle": "Spá fyrir um tíma út frá árangri í fyrri leið eða keppni.",
             "knownRace": "Leið/keppni með þekktum tíma",
             "targetRace": "Finna tíma fyrir aðra leið/keppni",
             "selectTrailA": "Veldu leið",
