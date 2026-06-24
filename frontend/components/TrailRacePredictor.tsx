@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Box, TextField, Typography, Paper, Autocomplete, InputAdornment, IconButton, Divider, Table, TableBody, TableRow, TableCell, Alert } from '@mui/material';
-import { KeyboardArrowUp, KeyboardArrowDown, CompareArrows } from '@mui/icons-material';
+import { Box, TextField, Typography, Paper, Autocomplete, InputAdornment, IconButton, Divider, Table, TableBody, TableRow, TableCell, Alert, Tooltip, Button } from '@mui/material';
+import { KeyboardArrowUp, KeyboardArrowDown, CompareArrows, ContentCopy, Check, ImageOutlined } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { API_URL } from '../hooks/useTrails';
 import TimeSlider from './TimeSlider';
+import PredictionShareCard from './PredictionShareCard';
 
 function parseTime(val: string): number | null {
     const trimmed = val.trim();
@@ -34,6 +35,7 @@ function formatPace(minPerKm: number): string {
 }
 
 interface TrailOption {
+    slug: string;
     name: string;
     distance: number; // km
     elevationGain: number; // m
@@ -49,22 +51,24 @@ const DESCENT_FACTOR = 0.1;
 // Riegel's fatigue exponent
 const RIEGEL_EXP = 1.06;
 
-export default function TrailRacePredictor({ prefilledTrailSlug }: { prefilledTrailSlug?: string }) {
+export default function TrailRacePredictor({ prefilledTrailSlug, prefilledFromSlug, prefilledTime }: { prefilledTrailSlug?: string; prefilledFromSlug?: string; prefilledTime?: string }) {
     const { t } = useTranslation();
 
     const [trails, setTrails] = useState<TrailOption[]>([]);
     const [trailsError, setTrailsError] = useState(false);
     const [trailA, setTrailA] = useState<TrailOption | null>(null);
     const [trailB, setTrailB] = useState<TrailOption | null>(null);
-    const [timeStr, setTimeStr] = useState('');
+    const [timeStr, setTimeStr] = useState(prefilledTime ?? '');
+    const [copied, setCopied] = useState(false);
+    const [shareCardOpen, setShareCardOpen] = useState(false);
 
     useEffect(() => {
         fetch(`${API_URL}/api/v1/trails`)
             .then(r => r.json())
-            .then((data: { name: string; length: number; elevationGain: number; elevationLoss: number; status: string }[]) => {
+            .then((data: { slug: string; name: string; length: number; elevationGain: number; elevationLoss: number; status: string }[]) => {
                 const mapped = data
                     .filter(t => t.status === 'Published')
-                    .map(t => ({ name: t.name, distance: t.length / 1000, elevationGain: t.elevationGain, elevationLoss: t.elevationLoss }))
+                    .map(t => ({ slug: t.slug, name: t.name, distance: t.length / 1000, elevationGain: t.elevationGain, elevationLoss: t.elevationLoss }))
                     .sort((a, b) => a.name.localeCompare(b.name));
                 setTrails(mapped);
                 setTrailsError(false);
@@ -72,19 +76,19 @@ export default function TrailRacePredictor({ prefilledTrailSlug }: { prefilledTr
             .catch(() => setTrailsError(true));
     }, []);
 
-    // Auto-select Trail B when prefilledTrailSlug matches
+    // Auto-select Trail B from ?trail= param
     useEffect(() => {
         if (!prefilledTrailSlug || trails.length === 0) return;
-        // Match by slug-like name comparison (trails don't have slug, match by name)
-        fetch(`${API_URL}/api/v1/trails/${encodeURIComponent(prefilledTrailSlug)}`)
-            .then(r => r.ok ? r.json() : null)
-            .then(data => {
-                if (!data) return;
-                const match = trails.find(t => t.name === data.name);
-                if (match && !trailB) setTrailB(match);
-            })
-            .catch(() => {});
+        const match = trails.find(t => t.slug === prefilledTrailSlug);
+        if (match && !trailB) setTrailB(match);
     }, [prefilledTrailSlug, trails]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Auto-select Trail A from ?from= param
+    useEffect(() => {
+        if (!prefilledFromSlug || trails.length === 0) return;
+        const match = trails.find(t => t.slug === prefilledFromSlug);
+        if (match && !trailA) setTrailA(match);
+    }, [prefilledFromSlug, trails]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const stepTime = (direction: 1 | -1) => {
         const current = parseTime(timeStr) ?? 60;
@@ -248,9 +252,42 @@ export default function TrailRacePredictor({ prefilledTrailSlug }: { prefilledTr
             {/* Prediction results */}
             {prediction && trailA && trailB && (
                 <Paper sx={{ p: 2, mt: 2 }}>
-                    <Typography variant="subtitle2" gutterBottom>
-                        {t('tools.trailPredictor.prediction')}
-                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography variant="subtitle2">
+                            {t('tools.trailPredictor.prediction')}
+                        </Typography>
+                        <Box sx={{ display: 'flex', gap: 0.5 }}>
+                            <Tooltip title={copied ? t('qr.linkCopied') : t('qr.copyLink')} arrow>
+                                <Button
+                                    size="small"
+                                    variant="outlined"
+                                    startIcon={copied ? <Check fontSize="small" /> : <ContentCopy fontSize="small" />}
+                                    color={copied ? 'success' : 'primary'}
+                                    sx={{ textTransform: 'none', fontSize: '0.75rem' }}
+                                    onClick={() => {
+                                        const url = new URL(`${window.location.origin}/tools/trail-predictor`);
+                                        url.searchParams.set('from', trailA.slug);
+                                        url.searchParams.set('trail', trailB.slug);
+                                        url.searchParams.set('time', timeStr);
+                                        navigator.clipboard.writeText(url.toString()).catch(() => {});
+                                        setCopied(true);
+                                        setTimeout(() => setCopied(false), 2000);
+                                    }}
+                                >
+                                    {copied ? t('qr.linkCopied') : t('tools.trailPredictor.copyUrl')}
+                                </Button>
+                            </Tooltip>
+                            <Button
+                                size="small"
+                                variant="outlined"
+                                startIcon={<ImageOutlined fontSize="small" />}
+                                sx={{ textTransform: 'none', fontSize: '0.75rem' }}
+                                onClick={() => setShareCardOpen(true)}
+                            >
+                                {t('tools.trailPredictor.shareImage')}
+                            </Button>
+                        </Box>
+                    </Box>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                         {t('tools.trailPredictor.summaryText', {
                             knownTrail: trailA.name,
@@ -322,6 +359,21 @@ export default function TrailRacePredictor({ prefilledTrailSlug }: { prefilledTr
                         {t('tools.trailPredictor.method')}
                     </Typography>
                 </Paper>
+            )}
+
+            {prediction && trailA && trailB && (
+                <PredictionShareCard
+                    open={shareCardOpen}
+                    onClose={() => setShareCardOpen(false)}
+                    trailAName={trailA.name}
+                    trailBName={trailB.name}
+                    knownTime={timeStr}
+                    predictedTime={prediction.predictedTime}
+                    predictedPace={prediction.predictedPace}
+                    distanceKm={trailB.distance}
+                    elevationGain={trailB.elevationGain}
+                    elevationLoss={trailB.elevationLoss}
+                />
             )}
         </Box>
     );

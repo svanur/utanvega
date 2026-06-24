@@ -765,6 +765,11 @@
             "flatPace": "Flat equivalent pace",
             "comparison": "Trail difference",
             "method": "Grade-adjusted prediction using Riegel's formula + Naismith's rule",
+            "copyUrl": "Copy URL",
+            "shareImage": "Share my prediction",
+            "shareText": "I'm predicted to finish {{trail}} in {{time}}, based on my time on {{fromTrail}} — hlaupadagskra.is",
+            "shareCardLabel": "Hlaupadagskra.is predicted my finish time",
+            "shareCardBasedOn": "Based on my time in {{trail}} · {{time}}",
             "loadError": "Failed to load trails. Please try again.",
             "summaryText": "If you ran {{knownTrail}} in {{yourTime}}, our prediction is that you will run {{targetTrail}} in {{predictedTime}}."
         },

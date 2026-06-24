@@ -765,6 +765,11 @@
             "flatPace": "Jafngildur hraði á sléttu",
             "comparison": "Munur á stígum",
             "method": "Hæðarleiðrétt spá með formúlu Riegels + reglu Naismithrs",
+            "copyUrl": "Afrita hlekk",
+            "shareImage": "Deila spánni",
+            "shareText": "Spáin er að ég ljúki {{trail}} á {{time}}, byggt á tíma mínum á {{fromTrail}} — hlaupadagskra.is",
+            "shareCardLabel": "Hlaupadagskra.is spáði fyrir um lokatíma minn",
+            "shareCardBasedOn": "Byggt á mínum tíma í {{trail}} · {{time}}",
             "loadError": "Ekki tókst að sækja leiðir. Reyndu aftur.",
             "summaryText": "Ef þú hljópst {{knownTrail}} á {{yourTime}}, þá spáum við að þú hlaupir {{targetTrail}} á {{predictedTime}}."
         },
