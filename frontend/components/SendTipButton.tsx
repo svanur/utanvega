@@ -41,7 +41,7 @@ export default function SendTipButton({ type, sx }: SendTipButtonProps) {
     }
 
     return (
-        <Box sx={sx}>
+        <Box sx={{ width: '100%', ...sx }}>
             <Tooltip title={t('tip.tooltip')}>
                 <Button
                     size="small"

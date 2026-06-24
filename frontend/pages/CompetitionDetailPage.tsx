@@ -569,7 +569,6 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 />
                             )}
                             {isEnabled('share_trail') && <ShareButtons title={event.name} />}
-                            <SendTipButton type="event" />
                         </Stack>
                     </Box>
 
@@ -960,6 +959,10 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                         </Box>
                     </Box>
                 )}
+
+                <Box sx={{ mt: 4, mb: 2 }}>
+                    <SendTipButton type="event" />
+                </Box>
             </Container>
         </Layout>
     );

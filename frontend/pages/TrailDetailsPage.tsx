@@ -507,7 +507,6 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                         >
                             {isFavorite(trail.slug) ? <StarIcon /> : <StarBorderIcon />}
                         </IconButton>
-                        <SendTipButton type="trail" />
                         {loginEnabled && (
                         <Tooltip title={tickedSlugs.has(trail.slug) ? t('trail.untick') : t('trail.tick')}>
                             <IconButton
@@ -1048,6 +1047,10 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                     </Box>
                 </Box>
             )}
+
+            <Box sx={{ mt: 4, mb: 2 }}>
+                <SendTipButton type="trail" />
+            </Box>
 
             {/* Fullscreen map + elevation dialog */}
             <Dialog
