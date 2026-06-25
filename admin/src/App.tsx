@@ -28,6 +28,7 @@ import GpxUploadDialog from './components/GpxUploadDialog';
 import LoginPage from './pages/LoginPage';
 import ErrorBoundary from './components/ErrorBoundary';
 import AdminSpotlightSearch from './components/AdminSpotlightSearch';
+import type { PageKey } from './types/PageKey';
 import KeyboardShortcutsDialog from './components/KeyboardShortcutsDialog';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { useAdminShortcuts } from './hooks/useAdminShortcuts';
@@ -48,7 +49,6 @@ const theme = createTheme({
 const DRAWER_WIDTH = 220;
 const DRAWER_COLLAPSED = 56;
 
-type PageKey = 'trails' | 'locations' | 'health' | 'map' | 'tags' | 'analytics' | 'features' | 'events' | 'hero-themes';
 
 const PAGE_PATHS: Record<PageKey, string> = {
   trails: '/trails',
