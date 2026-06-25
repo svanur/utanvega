@@ -1274,6 +1274,75 @@
         "totalDistance": "Total Distance",
         "fasterThanFirst": "Best vs First"
     },
+    "itraGuide": {
+        "title": "🏃‍♂️ Quick Guide: Understanding the ITRA System",
+        "intro": "If you are confused by how ITRA scores work, you are not alone. Here is a clear breakdown of the 5 key concepts you need to know, using a simple \"Distance vs. Speed\" logic.",
+        "concepts": [
+            {
+                "title": "ITRA Points (The \"Length\" Metric)",
+                "items": [
+                    "📌 What it is: A difficulty score assigned to a specific race route based only on distance and elevation. It ranges from 0 to 6.",
+                    "⚙️ How it works: Think of this as a pass/fail completion badge. Everyone who crosses the finish line gets the exact same points, whether they came in 1st place or last place.",
+                    "💡 Keep in mind: Short races (like an 8km or 16km) usually award 0 ITRA Points. This does not mean the race doesn't count — it just means it is a short distance."
+                ]
+            },
+            {
+                "title": "ITRA Performance Index (The \"Speed\" Metric)",
+                "badge": "Most Important",
+                "items": [
+                    "📌 What it is: Your personal global ranking score, ranging from 0 to 1000. It represents your theoretical maximum racing potential.",
+                    "⚙️ How it works: Every time you finish an ITRA-certified race, you receive a personal Race Score based purely on your speed compared to a theoretical world-record pace on that specific course. Your overall Performance Index is the weighted average of your up to 5 best Race Scores over the last 36 months.",
+                    "🏔️ The Laugavegur Rule: To enter the Laugavegur Ultra Trail, organizers don't care how many ITRA Points you have. They strictly require an ITRA Performance Index of 370 or higher. This proves you have the physical engine and speed to clear the mountain safety cut-offs. (For context, finishing the 55km Laugavegur course in 9.5 hours equals roughly a 370 score)."
+                ]
+            },
+            {
+                "title": "Mountain Level (The \"Steepness\" Metric)",
+                "items": [
+                    "📌 What it is: A difficulty rating from 1 to 12 that tells you how technical and steep the terrain is.",
+                    "⚙️ How it works: A 1 means flat roads or smooth paths. A 12 means extreme mountain terrain with massive, steep climbs and technical footing. It helps you understand what kind of gear and training you need for the terrain."
+                ]
+            },
+            {
+                "title": "Finisher Level (The \"Cut-Off\" Metric)",
+                "items": [
+                    "📌 What it is: The minimum personal Performance Index a runner needs to have to successfully cross the finish line before the time limit expires.",
+                    "⚙️ How it works: If a race has a Finisher Level of 220, a runner with a personal index of 220 will likely finish right at the final cut-off second. If it is 0, the time limit is exceptionally generous."
+                ]
+            },
+            {
+                "title": "National League (The \"Local Leaderboard\")",
+                "items": [
+                    "📌 What it is: A yearly ranking system that stacks you up against other runners in your home country.",
+                    "⚙️ How it works: It automatically updates every calendar year. If you run at least 3 ITRA-certified races in your own country during the year, your top 3 scores are aggregated to rank you on your local national leaderboard."
+                ]
+            }
+        ],
+        "section370": {
+            "title": "What does it take to reach a 370 Performance Index?",
+            "p1": "To unlock a 370 ITRA Performance Index score, you need to maintain a flat-equivalent pace of roughly 5:45 to 6:00 per kilometer.",
+            "p2": "Because trail races have hills, ITRA evaluates your speed using Effort-Kilometers (Effort-KM). The formula adds 1 kilometer of distance for every 100 meters of climbing. To reach a 370 score, you need an average pace of roughly 6:00 to 6:15 per Effort-KM."
+        },
+        "table": {
+            "title": "Target Finish Times for a 370 ITRA Score",
+            "distance": "Race Distance",
+            "elevation": "Elevation Gain",
+            "effortKm": "Total Effort-KM",
+            "targetTime": "Target Finish Time",
+            "pace": "Required Race Pace",
+            "rows": [
+                { "distance": "Flat 10K", "elevation": "0 m", "effortKm": "10.0 km", "targetTime": "0:57:30", "pace": "5:45 / km" },
+                { "distance": "8K Short Trail", "elevation": "+100 m", "effortKm": "9.0 km", "targetTime": "0:54:00", "pace": "6:45 / km" },
+                { "distance": "16K Medium Trail", "elevation": "+250 m", "effortKm": "18.5 km", "targetTime": "1:54:00", "pace": "7:07 / km" },
+                { "distance": "Half Marathon Trail", "elevation": "+400 m", "effortKm": "25.1 km", "targetTime": "2:37:00", "pace": "7:26 / km" },
+                { "distance": "Laugavegur Ultra, 53km", "elevation": "+1800 m", "effortKm": "71.0 km", "targetTime": "9:30:00", "pace": "8:02 / km" }
+            ]
+        },
+        "links": {
+            "title": "🔗 Official Resources",
+            "faq": "ITRA Performance Index FAQ",
+            "laugavegur": "Laugavegur Ultra Trail Registration Rules"
+        }
+    },
     "eventDayBanner": {
         "today": "Today",
         "tomorrow": "Tomorrow",

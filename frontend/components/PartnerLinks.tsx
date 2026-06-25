@@ -1,9 +1,11 @@
 import { Box, Card, CardContent, Link, Stack, Typography } from '@mui/material';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import { Link as RouterLink } from 'react-router-dom';
 
 interface Partner {
     title: string;
     links: { label: string; href: string }[];
+    internalLinks?: { label: string; to: string }[];
     description?: string;
 }
 
@@ -24,7 +26,8 @@ const PARTNERS: Partner[] = [
     {
         title: 'ITRA Race Calendar',
         links: [{ label: 'itra.run', href: 'https://itra.run/Races/RaceCalendar' }],
-        description: 'Listi yfir öll hlaup sem hafa fengið staðfesta ITRA punkta. Hægt að leita eftir landi og tímabili.\n\nEinnig úrslit hlaupa.',
+        internalLinks: [{ label: 'Hvað er ITRA?', to: '/itra-guide' }],
+        description: 'Listi yfir öll hlaup sem hafa fengið staðfesta ITRA punkta. Hægt að leita eftir landi og tímabili. Einnig úrslit hlaupa.',
     },
     {
         title: 'Tenglar',
@@ -85,6 +88,18 @@ export default function PartnerLinks() {
                                     </Link>
                                 ))}
                             </Stack>
+                            {partner.internalLinks && partner.internalLinks.map((link) => (
+                                <Link
+                                    key={link.to}
+                                    component={RouterLink}
+                                    to={link.to}
+                                    variant="body2"
+                                    underline="hover"
+                                    sx={{ display: 'inline-block', mb: 0.5 }}
+                                >
+                                    {link.label}
+                                </Link>
+                            ))}
                             {partner.description && (
                                 <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-line' }}>
                                     {partner.description}
