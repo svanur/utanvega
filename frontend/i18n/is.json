@@ -124,7 +124,7 @@
     },
     "trail": {
         "name": "Heiti",
-        "backToTrails": "Til baka í leiðir",
+        "backToTrails": "Til baka",
         "notFound": "Leið fannst ekki",
         "tick": "Merkja sem markverða",
         "ticked": "Markverð",
@@ -151,7 +151,7 @@
         "loadingMap": "Hleð korti...",
         "noGpsData": "Engin GPS gögn tiltæk fyrir þessa leið.",
         "wereYouLookingFor": "Varstu kannski að leita að einni af þessum?",
-        "racesOnTrail": "Tengd keppnishlaup",
+        "racesOnTrail": "Tengdir viðburðir",
         "climbRatio": "Klifurhlutfall",
         "video360": "360° Myndband",
         "role": {
@@ -1012,7 +1012,7 @@
         "scheduleHeading": "Dagsetningar",
         "noRaces": "Engin hlaup skráð enn fyrir þessa keppni.",
         "notFound": "Keppni fannst ekki",
-        "backToRaces": "Til baka í keppni",
+        "backToRaces": "Til baka",
         "wereYouLookingFor": "Varstu að leita að einhverju af þessum?",
         "viewTrail": "Skoða leið",
         "cutoffHours_one": "{{count}} klukkustund hámark",
@@ -1274,5 +1274,17 @@
         "worstTime": "Versti tími",
         "totalDistance": "Heildarfjarlægð",
         "fasterThanFirst": "Besti vs fyrsti"
+    },
+    "eventDayBanner": {
+        "today": "Í dag",
+        "tomorrow": "Á morgun",
+        "monday": "Mánudagur",
+        "tuesday": "Þriðjudagur",
+        "wednesday": "Miðvikudagur",
+        "thursday": "Fimmtudagur",
+        "friday": "Föstudagur",
+        "saturday": "Laugardagur",
+        "sunday": "Sunnudagur",
+        "overflow": "og {{count}} fleiri →"
     }
 }

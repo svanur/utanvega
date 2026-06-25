@@ -16,6 +16,7 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import FooterStatus from './FooterStatus';
 import AnnouncementBanner from './AnnouncementBanner';
 import HeroBand from './HeroBand';
+import EventDayBanner from './EventDayBanner';
 import { useHeroTheme } from '../hooks/useHeroTheme';
 import LanguageToggle from './LanguageToggle';
 import DynamicHeader from './DynamicHeader';
@@ -262,6 +263,7 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
 
             <Container maxWidth={maxWidth} sx={{ py: 4, flex: 1 }}>
                 {isEnabled('hero_band') && heroTheme && <Box sx={{ mb: 3 }}><HeroBand theme={heroTheme} isDark={mode === 'dark'} /></Box>}
+                {isEnabled('event_day_banner') && <EventDayBanner />}
                 {children}
             </Container>
 

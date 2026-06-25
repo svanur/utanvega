@@ -129,6 +129,7 @@ export interface CalendarEvent {
     locationName: string | null;
     editionTitle: string | null;
     raceCount: number;
+    type: string;
 }
 
 export interface CalendarDay {

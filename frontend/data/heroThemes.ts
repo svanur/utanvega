@@ -324,9 +324,9 @@ export const HERO_THEMES: HeroTheme[] = [
         recurring: {
             month: 7, day: 11,
             daysBefore: 100,
-            daysAfter: 2,
+            daysAfter: 1,
             milestones: [100, 90, 80, 70, 60, 50, 40, 30, 20],
-            milestoneRange: [{ from: 10, to: 1 }],
+            milestoneRange: [{ from: 16, to: 1 }],
         },
         priority: 10,
     },
