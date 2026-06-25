@@ -1275,12 +1275,30 @@
         "totalDistance": "Heildarfjarlægð",
         "fasterThanFirst": "Besti vs fyrsti"
     },
+    "partnerLinks": {
+        "hlaupis": {
+            "title": "Hlaup.is",
+            "description": "Miðstöð upplýsinga og fróðleiks fyrir alla þá sem stunda hlaup að einhverju marki.\n\nSkráningar, námskeið, úrslit og hlaupahópar, einkunnir hlaupa og fleira."
+        },
+        "timataka": {
+            "title": "Netskraning.is | Timataka.is",
+            "description": "Tímataka sérhæfir sig í tímatöku með flögutímatökutækjum frá MyLaps.\n\nTimataka hefur séð um tímatöku í eftirfarandi greinum: götuhlaupi, víðavangshlaupi, skíðagöngu, hjólreiðum, sundi og hundasleðakeppni."
+        },
+        "itra": {
+            "title": "ITRA",
+            "description": "Listi yfir öll hlaup sem hafa fengið staðfesta ITRA punkta. Hægt að leita eftir landi og tímabili. Einnig úrslit hlaupa.",
+            "guideLabel": "Hvað er ITRA? Skoðaðu útskýringarnar okkar."
+        },
+        "tenglar": {
+            "title": "Tenglar"
+        }
+    },
     "itraGuide": {
-        "title": "🏃‍♂️ Stuttur leiðarvísir um ITRA hugtökin",
-        "intro": "Ef þú skilur ekki alveg ITRA hugtökin, Points, Index og Mountain Level, þá ert þú ekki ein/n. Hér er yfirlit yfir 5 lykilhugtök sem þú þarft að þekkja, með einfaldri nálgun hvað varðar \"vegalengd vs. hraði\".",
+        "title": "🏃‍♂️ ITRA hugtökin útskýrð í einföldu máli",
+        "intro": "Ef þú skilur ekki alveg ITRA hugtökin, ITRA Endurance Points, ITRA Index, Mountain Level og National League, þá ert þú ekki ein/n. Hér er yfirlit yfir þessi 5 lykilhugtök sem þú þarft að þekkja, með einfaldri nálgun hvað varðar \"vegalengd og hraða\".",
         "concepts": [
             {
-                "title": "ITRA Points - ITRA stig(\"Lengdar\" mælikvarðinn)",
+                "title": "ITRA Endurance Points - ITRA stig (\"Þols\" mælikvarðinn)",
                 "items": [
                     "📌 Hvað er þetta: Erfiðleikaeinkunn sem er gefin á tiltekna keppnisleið og byggist aðeins á vegalengd og hæðarmun. Stigin eru á bilinu 0 til 6.",
                     "⚙️ Hvernig virkar þetta: Hugsaðu um þetta sem staðist/fallinn einkunn. Allir sem komast yfir marklínuna, standast prófð og fá nákvæmlega sömu 0 til 6 stigin, hvort sem þeir enda í 1. eða síðasta sæti.",
@@ -1291,51 +1309,51 @@
                 "title": "ITRA Index - ITRA frammistöðustig(\"Hraða\" mælikvarðinn)",
                 "badge": "Mikilvægast",
                 "items": [
-                    "📌 Hvað er þetta: Þín persónu- og alþjóðlegu stig, á bilinu 0 til 1000. Stigin tákna hámarksgetu þína í keppni.",
+                    "📌 Hvað er þetta: Þín persónu- og alþjóðlegu stig á bilinu 0 til 1000. Stigin tákna hámarksgetu þína í keppni.",
                     "⚙️ Hvernig virkar þetta: Í hvert skipti sem þú lýkur ITRA-vottaðri keppni færð þú stig sem byggist eingöngu á hraða þínum miðað við fræðilegan heimsmetshraða á þeirri leið. Heildarstig þín eru svo vegið meðaltal af allt að 5 bestu niðurstöðum þínum á síðustu 36 mánuðum.",
-                    "🏔️ Hafðu í huga: Til að skrá þig í Laugavegshlaupið, skiptir ekki máli hversu mörg ITRA stig þú hefur. Skipuleggjendur krefjast eingöngu að þú sér með ITRA Index upp á 370 eða hærra. Þetta merkir að þú hafir hraða til að klára hlaupið á þeim tíma sem krafist er. (Sem viðmið, að klára 55 km Laugavegshlaupið á 9,5 tímum. Það jafngildir um 370 stigum)."
+                    "🏔️ Hafðu í huga: Tökum Laugavegshlaupið sem dæmi, þar skiptir ekki máli hversu mörg ITRA stig þú hefur, heldur eingöngu að þú sért með framistöðustig(ITRA Index) upp á 370 eða hærra. Þetta merkir að þú hafir hraða til að klára hlaupið á þeim tíma sem krafist er. (Sem viðmið, að klára 53 km Laugavegshlaupið á 9,5 tímum. Það jafngildir um 370 stigum)."
                 ]
             },
             {
-                "title": "Mountain Level - Fjallastig (\"Brattleika\" mælikvarðinn)",
+                "title": "Mountain Level - Fjallastig (\"Fjalla\" mælikvarðinn)",
                 "items": [
-                    "📌 Hvað er þetta: Erfiðleikaeinkunn frá 1 til 12 sem segir þér hversu tæknileg og brött brautin er.",
-                    "⚙️ Hvernig virkar þetta: 1 þýðir flatur vegur eða sléttar gönguleiðir. 12 þýðir öfgafullt fjallalandslag með miklum, bröttum brekkum og tæknilegu undirlagi. Þetta hjálpar þér að skilja hvaða búnað og þjálfun þú þarft til að klára slíka keppni."
+                    "📌 Hvað er þetta: Erfiðleikastig frá 0 til 12 sem segir þér hversu tæknileg og brött brautin er.",
+                    "⚙️ Hvernig virkar þetta: 1 stig þýðir flatur vegur eða sléttir stígar. 12 þýðir öfgafullt fjallalandslag með miklum, bröttum brekkum og tæknilegu undirlagi. Þetta hjálpar þér að skilja hvaða búnað og þjálfun þú þarft til að klára slíka keppni."
                 ]
             },
             {
                 "title": "Finisher Level - Markmiðastig (\"Tímamörk\" mælikvarðinn)",
                 "items": [
-                    "📌 Hvað er þetta: Lágmarks 'Performance Index' sem hlaupari þarf til að klára keppnina áður en tíminn rennur út.",
-                    "⚙️ Hvernig virkar þetta: Ef keppni hefur 'Finisher Level' 220, mun hlaupari með 220 'Performance Index' stig klára rétt á lokasekúndu tímamarka. Ef það er 0, eru tímamörkin óvenjulega rúm."
+                    "📌 Hvað er þetta: Lágmarks framistöðustig(Performance Index), sem hlaupari þarf til að klára keppnina áður en tíminn rennur út.",
+                    "⚙️ Hvernig virkar þetta: Ef keppni hefur 220 markmiðastig(Finisher Level), mun hlaupari með 220 frammistöðustig(Performance Index) klára keppnina lokasekúndum tímamarkanna. Ef keppni hefur 0 markmiðastig, eru tímamörkin óvenjulega rúm."
                 ]
             },
             {
                 "title": "National League - Þjóðardeild (\"Staðbundinn stigatafla\")",
                 "items": [
                     "📌 Hvað er þetta: Árlegt stigakerfi sem raðar þér á móti öðrum hlaupurum í þínu heimlandi.",
-                    "⚙️ Hvernig virkar þetta: Það uppfærist sjálfkrafa hvert almanaksár. Ef þú hleypur að minnsta kosti 3 ITRA-vottaðar keppnir í þínu landi á árinu, eru efstu 3 stigin þín lögð saman til að raða þér á 'þinn stað' í þjóðardeildinni."
+                    "⚙️ Hvernig virkar þetta: Þjóðardeildin nær yfir eitt almanaksár og uppfærist sjálfkrafa eftir hvert ITRA hlaup. Ef þú hleypur að minnsta kosti 3 ITRA-vottaðar keppnir í þínu landi á árinu, eru efstu 3 stigin þín lögð saman til að raða þér á 'þinn stað' í þjóðardeildinni."
                 ]
             }
         ],
         "section370": {
             "title": "Hvað þarf til að ná 370 'Performance Index' stigum?",
-            "p1": "Til að ná 370 ITRA stigum þarftu að viðhalda jafngildum hraða á flötu á um 5:45 til 6:00 á hvern kílómetra(pace).",
-            "p2": "Þar sem hlaupaleiðir hafa hæðarmun, metur ITRA hraðann þinn með 'áreynslu-kílómetrum'(effor-km). Formúlan bætir við 1 kílómetra vegalengd fyrir hverja 100 metra sem hlaupnir eru upp á við. Til að ná 370 stigum þarftu að meðalhraðinn sé um 6:00 til 6:15 á áreynslu-kílómetra."
+            "p1": "Til að ná 370 frammistöðustigum þarftu að viðhalda meðalhraða á flötum stíg, þar sem þú klárar hvern kílómetra á 5:45 til 6:00 mínútum(pace).",
+            "p2": "Þar sem langflestar utanvegahlaupaleiðir hafa hæðarmun, metur ITRA hraðann þinn með því sem við köllum 'áreynslu-kílómetrum, eða 'effort-km'. Formúlan bætir við 1 kílómetra vegalengd fyrir hverja 100 metra sem hlaupnir eru upp á við. Til að ná 370 stigum þarf meðalhraðinn að vera um 6:00 til 6:15 á hvern 'áreynslu-kílómetra'(effor-km)."
         },
         "table": {
-            "title": "Dæmi um , hvernig maður nær 370 ITRA stigum",
+            "title": "Dæmi um hvernig maður nær 370 ITRA frammistöðustigum",
             "distance": "Keppnisvegalengd",
             "elevation": "Hæðarbreyting",
             "effortKm": "Samtals áreynslu-km",
             "targetTime": "Lokatími",
-            "pace": "Nauðsynlegur hraði",
+            "pace": "Nauðsynlegur hraði(pace)",
             "rows": [
                 { "distance": "Flatir 10 km", "elevation": "0 m", "effortKm": "10,0 km", "targetTime": "0:57:30", "pace": "5:45 / km" },
                 { "distance": "8 km með lítilli hækkun", "elevation": "+100 m", "effortKm": "9,0 km", "targetTime": "0:54:00", "pace": "6:45 / km" },
                 { "distance": "16 km með miðlungs hækkun", "elevation": "+250 m", "effortKm": "18,5 km", "targetTime": "1:54:00", "pace": "7:07 / km" },
                 { "distance": "Hálfmaraþon keppni með þónokkurri hækkun", "elevation": "+400 m", "effortKm": "25,1 km", "targetTime": "2:37:00", "pace": "7:26 / km" },
-                { "distance": "Laugavegur Ultra, 53km", "elevation": "+1800 m", "effortKm": "71,0 km", "targetTime": "9:30:00", "pace": "8:02 / km" }
+                { "distance": "Laugavegur Ultra, 53km", "elevation": "+1900 m", "effortKm": "72,0 km", "targetTime": "9:30:00", "pace": "7:55 / km" }
             ]
         },
         "links": {

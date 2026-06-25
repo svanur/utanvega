@@ -1274,12 +1274,30 @@
         "totalDistance": "Total Distance",
         "fasterThanFirst": "Best vs First"
     },
+    "partnerLinks": {
+        "hlaupis": {
+            "title": "Hlaup.is",
+            "description": "Hub of information and knowledge for everyone who runs at any level.\n\nRegistrations, courses, results, running groups, race ratings, and more."
+        },
+        "timataka": {
+            "title": "Netskraning.is | Timataka.is",
+            "description": "Timataka specialises in timing using chip timing equipment from MyLaps.\n\nTimataka has handled timing in the following disciplines: road running, cross country, ski touring, cycling, swimming, and dog sledding."
+        },
+        "itra": {
+            "title": "ITRA Race Calendar",
+            "description": "List of all races that have received confirmed ITRA points. Searchable by country and period. Also race results.",
+            "guideLabel": "Our quick guide: Understanding the ITRA System"
+        },
+        "tenglar": {
+            "title": "Links"
+        }
+    },
     "itraGuide": {
         "title": "🏃‍♂️ Quick Guide: Understanding the ITRA System",
         "intro": "If you are confused by how ITRA scores work, you are not alone. Here is a clear breakdown of the 5 key concepts you need to know, using a simple \"Distance vs. Speed\" logic.",
         "concepts": [
             {
-                "title": "ITRA Points (The \"Length\" Metric)",
+                "title": "ITRA Endurance Points (The \"Length\" Metric)",
                 "items": [
                     "📌 What it is: A difficulty score assigned to a specific race route based only on distance and elevation. It ranges from 0 to 6.",
                     "⚙️ How it works: Think of this as a pass/fail completion badge. Everyone who crosses the finish line gets the exact same points, whether they came in 1st place or last place.",
@@ -1298,7 +1316,7 @@
             {
                 "title": "Mountain Level (The \"Steepness\" Metric)",
                 "items": [
-                    "📌 What it is: A difficulty rating from 1 to 12 that tells you how technical and steep the terrain is.",
+                    "📌 What it is: A difficulty rating from 0 to 12 that tells you how technical and steep the terrain is.",
                     "⚙️ How it works: A 1 means flat roads or smooth paths. A 12 means extreme mountain terrain with massive, steep climbs and technical footing. It helps you understand what kind of gear and training you need for the terrain."
                 ]
             },
@@ -1334,7 +1352,7 @@
                 { "distance": "8K Short Trail", "elevation": "+100 m", "effortKm": "9.0 km", "targetTime": "0:54:00", "pace": "6:45 / km" },
                 { "distance": "16K Medium Trail", "elevation": "+250 m", "effortKm": "18.5 km", "targetTime": "1:54:00", "pace": "7:07 / km" },
                 { "distance": "Half Marathon Trail", "elevation": "+400 m", "effortKm": "25.1 km", "targetTime": "2:37:00", "pace": "7:26 / km" },
-                { "distance": "Laugavegur Ultra, 53km", "elevation": "+1800 m", "effortKm": "71.0 km", "targetTime": "9:30:00", "pace": "8:02 / km" }
+                { "distance": "Laugavegur Ultra, 53km", "elevation": "+1900 m", "effortKm": "72.0 km", "targetTime": "9:30:00", "pace": "7:55 / km" }
             ]
         },
         "links": {
