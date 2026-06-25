@@ -38,7 +38,7 @@ public class TrailQueryHandlerTests : IDisposable
         using (var ctx = _factory.CreateContext())
         {
             ctx.Trails.Add(CreateTrail("Active Trail", TrailStatus.Published));
-            ctx.Trails.Add(CreateTrail("Deleted Trail", TrailStatus.Deleted));
+            ctx.Trails.Add(CreateTrail("Deleted Trail", TrailStatus.Archived));
             await ctx.SaveChangesAsync();
         }
 
@@ -57,14 +57,14 @@ public class TrailQueryHandlerTests : IDisposable
         using (var ctx = _factory.CreateContext())
         {
             ctx.Trails.Add(CreateTrail("Active", TrailStatus.Published));
-            ctx.Trails.Add(CreateTrail("Deleted", TrailStatus.Deleted));
+            ctx.Trails.Add(CreateTrail("Deleted", TrailStatus.Archived));
             await ctx.SaveChangesAsync();
         }
 
         using (var ctx = _factory.CreateContext())
         {
             var handler = new GetTrailsQueryHandler(ctx);
-            var result = await handler.Handle(new GetTrailsQuery(IncludeDeleted: true), CancellationToken.None);
+            var result = await handler.Handle(new GetTrailsQuery(IncludeArchived: true), CancellationToken.None);
             Assert.Equal(2, result.Count);
         }
     }
