@@ -1273,5 +1273,17 @@
         "worstTime": "Worst Time",
         "totalDistance": "Total Distance",
         "fasterThanFirst": "Best vs First"
+    },
+    "eventDayBanner": {
+        "today": "Today",
+        "tomorrow": "Tomorrow",
+        "monday": "Monday",
+        "tuesday": "Tuesday",
+        "wednesday": "Wednesday",
+        "thursday": "Thursday",
+        "friday": "Friday",
+        "saturday": "Saturday",
+        "sunday": "Sunday",
+        "overflow": "and {{count}} more →"
     }
 }

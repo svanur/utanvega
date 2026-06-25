@@ -12,7 +12,8 @@ public record CalendarEventDto(
     string Slug,
     string? LocationName,
     string? EditionTitle,
-    int RaceCount
+    int RaceCount,
+    string Type
 );
 
 public record CalendarDayDto(
@@ -74,7 +75,8 @@ public class GetEventCalendarQueryHandler : IRequestHandler<GetEventCalendarQuer
                 ed.Event.Slug,
                 ed.Event.Location?.Name,
                 ed.Title,
-                ed.Races.Count
+                ed.Races.Count,
+                ed.Event.Type.ToString()
             ));
         }
 
