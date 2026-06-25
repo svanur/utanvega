@@ -58,7 +58,6 @@ using Utanvega.Backend.Application.TrailCheckIns.Commands.CheckInToTrail;
 using Utanvega.Backend.Application.TrailCheckIns.Commands.CheckOutFromTrail;
 using Utanvega.Backend.Application.TrailCheckIns.Queries.GetTrailCheckIns;
 using Utanvega.Backend.Application.Tips.Commands;
-using Utanvega.Backend.Core.Services;
 using Utanvega.Backend.Infrastructure.Email;
 using MediatR;
 using FluentValidation;
