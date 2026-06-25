@@ -174,7 +174,7 @@ public class TrailCommandHandlerTests : IDisposable
         using (var ctx = _factory.CreateContext())
         {
             var deleted = ctx.Trails.First();
-            Assert.Equal(TrailStatus.Deleted, deleted.Status);
+            Assert.Equal(TrailStatus.Archived, deleted.Status);
             Assert.NotNull(deleted.UpdatedAt);
         }
     }

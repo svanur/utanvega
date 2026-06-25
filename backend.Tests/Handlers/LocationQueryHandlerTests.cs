@@ -231,7 +231,7 @@ public class LocationQueryHandlerTests : IDisposable
         var location = CreateLocation("Vik", LocationType.Place);
         var published = CreatePublishedTrail("Good Trail");
         var deleted = CreatePublishedTrail("Deleted Trail");
-        deleted.Status = TrailStatus.Deleted;
+        deleted.Status = TrailStatus.Archived;
 
         using (var ctx = _factory.CreateContext())
         {
