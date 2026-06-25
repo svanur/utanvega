@@ -139,9 +139,9 @@ export default function App() {
                         element={<PrivacyPage mode={mode} onToggleMode={handleToggleMode} />} 
                     />
                     {isAdmin && isEnabled('game_fun_page') && (
-                    <Route 
-                        path="/fun/:game?" 
-                        element={<FunPage mode={mode} onToggleMode={handleToggleMode} />} 
+                    <Route
+                        path="/fun/:game?"
+                        element={<FunPage mode={mode} onToggleMode={handleToggleMode} />}
                     />
                     )}
                     {isEnabled('tools_page') && (
