@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useTranslation, type TFunction } from 'react-i18next';
+import { useTranslation } from 'react-i18next';
 import { useEventCalendar, type CalendarDay } from './useEvents';
 
 const INCLUDED_TYPES = ['Race', 'Series'];
@@ -39,7 +39,7 @@ export interface BannerDay {
 function buildBannerDays(
     calendarDays: CalendarDay[],
     windowDays: Date[],
-    t: TFunction,
+    t: ReturnType<typeof useTranslation>['t'],
 ): BannerDay[] {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
