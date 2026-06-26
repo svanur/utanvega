@@ -1770,7 +1770,15 @@ app.MapPost("/api/v1/tips", async (SendTipRequest request, IMediator mediator, I
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<UtanvegaDbContext>();
-    db.Database.Migrate();
+    try
+    {
+        db.Database.Migrate();
+        Log.Information("Database migrations applied successfully");
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Failed to apply database migrations — app will still start");
+    }
 }
 
 try
