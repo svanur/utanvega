@@ -7,6 +7,7 @@ import { Link as RouterLink } from 'react-router-dom';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import type { EventSummary } from '../hooks/useEvents';
 import { useLocations } from '../hooks/useLocations';
+import { getCountdownColor } from '../utils/eventUtils';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerIconRetina from 'leaflet/dist/images/marker-icon-2x.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -23,14 +24,6 @@ L.Icon.Default.mergeOptions({
 
 interface EventMapViewProps {
     events: EventSummary[];
-}
-
-function getCountdownColor(daysUntil: number | null): 'success' | 'warning' | 'error' | 'default' {
-    if (daysUntil === null) return 'default';
-    if (daysUntil < 0) return 'default';
-    if (daysUntil <= 7) return 'error';
-    if (daysUntil <= 30) return 'warning';
-    return 'success';
 }
 
 const ICELAND_CENTER: [number, number] = [64.96, -18.5];

@@ -10,7 +10,7 @@ export function formatNextDate(dateStr: string, t: TFunc): string {
 
 export function getCountdownColor(daysUntil: number | null): 'success' | 'warning' | 'error' | 'default' {
     if (daysUntil === null) return 'default';
-    if (daysUntil < 0) return 'success';
+    if (daysUntil < 0) return 'default';
     if (daysUntil <= 7) return 'error';
     if (daysUntil <= 30) return 'warning';
     return 'success';
