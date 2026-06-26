@@ -11,8 +11,6 @@ import SpotlightSearch from './components/SpotlightSearch';
 import { useFeatureFlags } from './hooks/useFeatureFlags';
 import { useLoginEnabled } from './hooks/useLoginEnabled';
 import InstallBanner from './components/InstallBanner';
-import { useAdminMode } from './hooks/useAdminMode';
-import GandalfEntrance from './components/GandalfEntrance';
 import { AuthProvider } from './hooks/useAuth';
 
 // Lazy-loaded pages (not needed on initial load)
@@ -81,7 +79,6 @@ export default function App() {
 
     const { activeEgg, clearEgg } = useEasterEggs();
     const { isEnabled, loaded } = useFeatureFlags();
-    const { isAdmin, gandalfQuote, dismissGandalf } = useAdminMode();
     const loginEnabled = useLoginEnabled();
 
     return (
@@ -139,7 +136,7 @@ export default function App() {
                         path="/privacy" 
                         element={<PrivacyPage mode={mode} onToggleMode={handleToggleMode} />} 
                     />
-                    {isAdmin && isEnabled('game_fun_page') && (
+                    {isEnabled('game_fun_page') && (
                     <Route
                         path="/fun/:game?"
                         element={<FunPage mode={mode} onToggleMode={handleToggleMode} />}
@@ -224,7 +221,6 @@ export default function App() {
                 </AuthProvider>
             </ErrorBoundary>
             <EasterEggs activeEgg={activeEgg} onComplete={clearEgg} />
-            <GandalfEntrance quote={gandalfQuote} onClose={dismissGandalf} />
         </ThemeProvider>
     );
 }
