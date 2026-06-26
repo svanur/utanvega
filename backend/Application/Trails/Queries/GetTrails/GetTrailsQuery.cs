@@ -1,4 +1,5 @@
 using MediatR;
+using Serilog;
 using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
 using Utanvega.Backend.Application.Caching;
@@ -80,11 +81,19 @@ public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailD
 
         var trails = await query.ToListAsync(cancellationToken);
 
-        // Fetch view counts in a single query
-        var viewCounts = await _context.TrailViews
-            .GroupBy(v => v.TrailId)
-            .Select(g => new { TrailId = g.Key, Count = g.Count() })
-            .ToDictionaryAsync(x => x.TrailId, x => x.Count, cancellationToken);
+        Dictionary<Guid, int> viewCounts;
+        try
+        {
+            viewCounts = await _context.TrailViews
+                .GroupBy(v => v.TrailId)
+                .Select(g => new { TrailId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.TrailId, x => x.Count, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to fetch trail view counts, returning zero counts");
+            viewCounts = new Dictionary<Guid, int>();
+        }
 
         var result = trails.Select(t => new TrailDto(
             t.Id,
@@ -109,7 +118,7 @@ public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailD
                 .ToList(),
             viewCounts.GetValueOrDefault(t.Id, 0),
             YoutubeUrl: t.YoutubeUrl,
-            ElevationProfile: t.ElevationProfile
+            ElevationProfile: null
         )).ToList();
 
         return result;

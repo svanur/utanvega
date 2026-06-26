@@ -94,7 +94,8 @@ public class GetTrailBySlugQueryHandler : IRequestHandler<GetTrailBySlugQuery, T
                 .Select(tt => new TagInfoDto(tt.Tag.Name, tt.Tag.Slug, tt.Tag.Color))
                 .ToList(),
             LinkedRaces: linkedRaceDtos.Count > 0 ? linkedRaceDtos : null,
-            YoutubeUrl: trail.YoutubeUrl
+            YoutubeUrl: trail.YoutubeUrl,
+            ElevationProfile: trail.ElevationProfile
         );
     }
 }
