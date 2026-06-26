@@ -15,6 +15,9 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import FooterStatus from './FooterStatus';
 import AnnouncementBanner from './AnnouncementBanner';
+import HeroBand from './HeroBand';
+import EventDayBanner from './EventDayBanner';
+import { useHeroTheme } from '../hooks/useHeroTheme';
 import LanguageToggle from './LanguageToggle';
 import DynamicHeader from './DynamicHeader';
 import UserAvatar from './UserAvatar';
@@ -54,6 +57,7 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const weather = useHeaderWeather();
+    const heroTheme = useHeroTheme();
     const { canPrompt, install } = useInstallPrompt();
     const { isEnabled } = useFeatureFlags();
     const loginEnabled = useLoginEnabled();
@@ -258,6 +262,8 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
             {isEnabled('announcement_banner') && <AnnouncementBanner />}
 
             <Container maxWidth={maxWidth} sx={{ py: 4, flex: 1 }}>
+                {isEnabled('hero_band') && heroTheme && <Box sx={{ mb: 3 }}><HeroBand theme={heroTheme} isDark={mode === 'dark'} /></Box>}
+                {isEnabled('event_day_banner') && <EventDayBanner />}
                 {children}
             </Container>
 

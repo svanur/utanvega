@@ -1,33 +1,40 @@
 import { Box, Card, CardContent, Link, Stack, Typography } from '@mui/material';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import { Link as RouterLink } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+
+interface ExternalLink { label: string; href: string; }
+interface InternalLink { labelKey: string; to: string; }
 
 interface Partner {
-    title: string;
-    links: { label: string; href: string }[];
-    description?: string;
+    titleKey: string;
+    links: ExternalLink[];
+    internalLinks?: InternalLink[];
+    descriptionKey?: string;
 }
 
 const PARTNERS: Partner[] = [
     {
-        title: 'Hlaup.is',
+        titleKey: 'partnerLinks.hlaupis.title',
         links: [{ label: 'hlaup.is', href: 'https://www.hlaup.is' }],
-        description: 'Miðstöð upplýsinga og fróðleiks fyrir alla þá sem stunda hlaup að einhverju marki.\n\nSkráningar, námskeið, úrslit og hlaupahópar, einkunnir hlaupa og fleira.',
+        descriptionKey: 'partnerLinks.hlaupis.description',
     },
     {
-        title: 'Netskraning.is | Timataka.is',
+        titleKey: 'partnerLinks.timataka.title',
         links: [
             { label: 'netskraning.is', href: 'https://www.netskraning.is' },
             { label: 'timataka.is', href: 'https://www.timataka.is' },
         ],
-        description: 'Tímataka sérhæfir sig í tímatöku með flögutímatökutækjum frá MyLaps.\n\nTimataka hefur séð um tímatöku í eftirfarandi greinum: götuhlaupi, víðavangshlaupi, skíðagöngu, hjólreiðum, sundi og hundasleðakeppni.',
+        descriptionKey: 'partnerLinks.timataka.description',
     },
     {
-        title: 'ITRA Race Calendar',
+        titleKey: 'partnerLinks.itra.title',
         links: [{ label: 'itra.run', href: 'https://itra.run/Races/RaceCalendar' }],
-        description: 'Listi yfir öll hlaup sem hafa fengið staðfesta ITRA punkta. Hægt að leita eftir landi og tímabili.\n\nEinnig úrslit hlaupa.',
+        internalLinks: [{ labelKey: 'partnerLinks.itra.guideLabel', to: '/itra-guide' }],
+        descriptionKey: 'partnerLinks.itra.description',
     },
     {
-        title: 'Tenglar',
+        titleKey: 'partnerLinks.tenglar.title',
         links: [
             { label: 'Hlauparar á Íslandi', href: 'https://www.facebook.com/groups/141974679232397' },
             { label: 'Miðaskipti', href: 'https://www.facebook.com/groups/1146319782540776/' },
@@ -37,6 +44,8 @@ const PARTNERS: Partner[] = [
 ];
 
 export default function PartnerLinks() {
+    const { t } = useTranslation();
+
     return (
         <Box
             sx={{
@@ -56,19 +65,19 @@ export default function PartnerLinks() {
             >
                 {PARTNERS.map((partner) => (
                     <Card
-                        key={partner.title}
+                        key={partner.titleKey}
                         variant="outlined"
                         sx={{ flex: '1 1 200px', maxWidth: { sm: 280 } }}
                     >
                         <CardContent sx={{ pb: '12px !important' }}>
                             <Typography variant="subtitle2" fontWeight={700} gutterBottom>
-                                {partner.title}
+                                {t(partner.titleKey)}
                             </Typography>
                             <Stack
-                                direction={partner.description ? 'row' : 'column'}
-                                spacing={partner.description ? 1 : 0.5}
+                                direction={partner.descriptionKey ? 'row' : 'column'}
+                                spacing={partner.descriptionKey ? 1 : 0.5}
                                 flexWrap="wrap"
-                                sx={{ mb: partner.description ? 1 : 0 }}
+                                sx={{ mb: partner.descriptionKey ? 1 : 0 }}
                             >
                                 {partner.links.map((link) => (
                                     <Link
@@ -85,11 +94,23 @@ export default function PartnerLinks() {
                                     </Link>
                                 ))}
                             </Stack>
-                            {partner.description && (
+                            {partner.descriptionKey && (
                                 <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-line' }}>
-                                    {partner.description}
+                                    {t(partner.descriptionKey)}
                                 </Typography>
                             )}
+                            {partner.internalLinks && partner.internalLinks.map((link) => (
+                                <Link
+                                    key={link.to}
+                                    component={RouterLink}
+                                    to={link.to}
+                                    variant="body2"
+                                    underline="hover"
+                                    sx={{ display: 'inline-block', mt: 0.5 }}
+                                >
+                                    {t(link.labelKey)}
+                                </Link>
+                            ))}
                         </CardContent>
                     </Card>
                 ))}

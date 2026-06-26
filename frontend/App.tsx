@@ -42,6 +42,7 @@ const ChallengePage = lazy(() => import('./pages/ChallengePage'));
 const AnnualReportPage = lazy(() => import('./pages/AnnualReportPage'));
 const NewsletterPage = lazy(() => import('./pages/NewsletterPage'));
 const ContactPage = lazy(() => import('./pages/ContactPage'));
+const ItraGuidePage = lazy(() => import('./pages/ItraGuidePage'));
 
 function PageLoader() {
     return (
@@ -139,9 +140,9 @@ export default function App() {
                         element={<PrivacyPage mode={mode} onToggleMode={handleToggleMode} />} 
                     />
                     {isAdmin && isEnabled('game_fun_page') && (
-                    <Route 
-                        path="/fun/:game?" 
-                        element={<FunPage mode={mode} onToggleMode={handleToggleMode} />} 
+                    <Route
+                        path="/fun/:game?"
+                        element={<FunPage mode={mode} onToggleMode={handleToggleMode} />}
                     />
                     )}
                     {isEnabled('tools_page') && (
@@ -212,6 +213,7 @@ export default function App() {
                     <Route path="/annual-report/2025" element={<AnnualReportPage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="/newsletter" element={<NewsletterPage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="/contact" element={<ContactPage mode={mode} onToggleMode={handleToggleMode} />} />
+                    <Route path="/itra-guide" element={<ItraGuidePage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
                 )}

@@ -7,6 +7,7 @@ import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import ToggleOnIcon from '@mui/icons-material/ToggleOn';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
+import ViewDayOutlinedIcon from '@mui/icons-material/ViewDayOutlined';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
@@ -22,10 +23,12 @@ import TagManagement from './pages/TagManagement';
 import AnalyticsPage from './pages/AnalyticsPage';
 import FeatureFlagsPage from './pages/FeatureFlagsPage';
 import EventList from './pages/EventList';
+import HeroThemesPage from './pages/HeroThemesPage';
 import GpxUploadDialog from './components/GpxUploadDialog';
 import LoginPage from './pages/LoginPage';
 import ErrorBoundary from './components/ErrorBoundary';
 import AdminSpotlightSearch from './components/AdminSpotlightSearch';
+import type { PageKey } from './types/PageKey';
 import KeyboardShortcutsDialog from './components/KeyboardShortcutsDialog';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { useAdminShortcuts } from './hooks/useAdminShortcuts';
@@ -46,7 +49,6 @@ const theme = createTheme({
 const DRAWER_WIDTH = 220;
 const DRAWER_COLLAPSED = 56;
 
-type PageKey = 'trails' | 'locations' | 'health' | 'map' | 'tags' | 'analytics' | 'features' | 'events';
 
 const PAGE_PATHS: Record<PageKey, string> = {
   trails: '/trails',
@@ -57,6 +59,7 @@ const PAGE_PATHS: Record<PageKey, string> = {
   analytics: '/analytics',
   events: '/',
   features: '/features',
+  'hero-themes': '/hero-themes',
 };
 
 function pathToPage(pathname: string): PageKey {
@@ -223,6 +226,7 @@ function AdminContent() {
               { key: 'tags' as const, icon: <LocalOfferIcon />, label: 'Tags' },
               { key: 'analytics' as const, icon: <BarChartIcon />, label: 'Analytics' },
               { key: 'features' as const, icon: <ToggleOnIcon />, label: 'Features' },
+              { key: 'hero-themes' as const, icon: <ViewDayOutlinedIcon />, label: 'Hero Themes' },
             ].map(item => (
               <ListItem key={item.key} disablePadding>
                 <Tooltip title={drawerOpen ? '' : item.label} placement="right">
@@ -259,6 +263,8 @@ function AdminContent() {
             <FeatureFlagsPage onNotify={notify} />
           ) : currentPage === 'events' ? (
             <EventList onNotify={notify} />
+          ) : currentPage === 'hero-themes' ? (
+            <HeroThemesPage />
           ) : (
             <LocationList onNotify={notify} />
           )}
