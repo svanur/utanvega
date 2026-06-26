@@ -109,7 +109,7 @@ public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailD
                 .ToList(),
             viewCounts.GetValueOrDefault(t.Id, 0),
             YoutubeUrl: t.YoutubeUrl,
-            ElevationProfile: t.ElevationProfile
+            ElevationProfile: null
         )).ToList();
 
         return result;
