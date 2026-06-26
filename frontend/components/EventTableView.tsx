@@ -26,6 +26,7 @@ import VideocamIcon from '@mui/icons-material/Videocam';
 import type { EventSummary, EventDetail, RaceDto } from '../hooks/useEvents';
 import { API_URL } from '../hooks/useTrails';
 import EventDateBadge from './EventDateBadge';
+import { getCountdownColor } from '../utils/eventUtils';
 
 function getActivityIcon(type: string) {
     switch (type) {
@@ -59,13 +60,6 @@ interface EventTableViewProps {
 type SortField = 'name' | 'daysUntil' | 'nextEditionDate' | 'locationName' | 'activityType' | 'type';
 type SortDir = 'asc' | 'desc';
 
-function getCountdownColor(daysUntil: number | null): 'success' | 'warning' | 'error' | 'default' {
-    if (daysUntil === null) return 'default';
-    if (daysUntil < 0) return 'default';
-    if (daysUntil <= 7) return 'error';
-    if (daysUntil <= 30) return 'warning';
-    return 'success';
-}
 
 
 function getRegistrationStatusColor(status: string): 'success' | 'error' | 'default' {

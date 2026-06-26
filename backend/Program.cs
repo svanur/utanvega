@@ -1767,6 +1767,12 @@ app.MapPost("/api/v1/tips", async (SendTipRequest request, IMediator mediator, I
 .WithName("SendTip")
 .RequireRateLimiting("send-tip");
 
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<UtanvegaDbContext>();
+    db.Database.Migrate();
+}
+
 try
 {
     app.Run();
