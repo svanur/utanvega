@@ -85,9 +85,12 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                     .OrderBy(ed => ed.Date)
                     .FirstOrDefault();
 
-            var distances = relevantEdition?.Races
+            var relevantRaces = relevantEdition?.Races
                 .Where(r => r.Status != RaceStatus.Cancelled)
                 .OrderBy(r => r.SortOrder)
+                .ToList();
+
+            var distances = relevantRaces?
                 .Select(r => {
                     var label = !string.IsNullOrWhiteSpace(r.DistanceLabel)
                         ? r.DistanceLabel
@@ -101,6 +104,31 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 .Where(d => d != null)
                 .Cast<RaceDistanceSummaryDto>()
                 .ToList();
+
+            var certifications = relevantRaces?
+                .Select(r => r.CertifiedBy)
+                .Where(c => !string.IsNullOrWhiteSpace(c))
+                .Distinct()
+                .Cast<string>()
+                .ToList();
+
+            var championshipCategories = relevantRaces?
+                .Select(r => r.ChampionshipCategory)
+                .Where(c => !string.IsNullOrWhiteSpace(c))
+                .Distinct()
+                .Cast<string>()
+                .ToList();
+
+            var itraPoints = relevantRaces?
+                .Where(r => r.ItraPoints.HasValue)
+                .Select(r => r.ItraPoints!.Value)
+                .Distinct()
+                .OrderBy(p => p)
+                .ToList();
+
+            var youtubeUrl = relevantRaces?
+                .Select(r => r.Trail?.YoutubeUrl)
+                .FirstOrDefault(u => !string.IsNullOrWhiteSpace(u));
 
             return new EventSummaryDto(
                 e.Id,
@@ -127,7 +155,11 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 distances?.Count > 0 ? distances : null,
                 relevantEdition?.RegistrationUrl,
                 relevantEdition?.RegistrationStatus.ToString(),
-                relevantEdition?.ResultsUrl
+                relevantEdition?.ResultsUrl,
+                certifications?.Count > 0 ? certifications : null,
+                youtubeUrl,
+                championshipCategories?.Count > 0 ? championshipCategories : null,
+                itraPoints?.Count > 0 ? itraPoints : null
             );
         }).ToList();
     }

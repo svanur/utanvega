@@ -19,14 +19,14 @@ const ALL_PRESETS: FilterPreset[] = [
         id: 'morning-5k',
         emoji: '☀️',
         nameKey: 'presets.morning5k',
-        filters: { minLength: 3, maxLength: 7, maxDuration: 60, maxDistance: 50 },
+        filters: { lengthBuckets: ['<10'], distanceBuckets: ['<10', '10-25', '25-50'] },
         schedule: { hours: [5, 9] },
     },
     {
         id: 'sunrise-trail',
         emoji: '🌅',
         nameKey: 'presets.sunriseTrail',
-        filters: { maxLength: 10, maxDuration: 90, selectedActivityTypes: ['TrailRunning'] },
+        filters: { lengthBuckets: ['<10'], selectedActivityTypes: ['TrailRunning'] },
         schedule: { hours: [5, 9] },
     },
 
@@ -35,14 +35,14 @@ const ALL_PRESETS: FilterPreset[] = [
         id: 'quick-trail',
         emoji: '⚡',
         nameKey: 'presets.quickTrail',
-        filters: { maxLength: 5, maxDuration: 30, maxDistance: 40 },
+        filters: { lengthBuckets: ['<10'], distanceBuckets: ['<10', '10-25'] },
         schedule: { hours: [9, 12], days: [1, 2, 3, 4, 5] },
     },
     {
         id: 'lunch-run',
         emoji: '🏃',
         nameKey: 'presets.lunchRun',
-        filters: { minLength: 5, maxLength: 10, maxDuration: 60, maxDistance: 30, selectedActivityTypes: ['Running', 'TrailRunning'] },
+        filters: { lengthBuckets: ['<10'], distanceBuckets: ['<10', '10-25'], selectedActivityTypes: ['Running', 'TrailRunning'] },
         schedule: { hours: [10, 14], days: [1, 2, 3, 4, 5] },
     },
 
@@ -51,7 +51,7 @@ const ALL_PRESETS: FilterPreset[] = [
         id: 'saturday-long-run',
         emoji: '🏔️',
         nameKey: 'presets.saturdayLongRun',
-        filters: { minLength: 20, maxLength: 42, selectedActivityTypes: ['TrailRunning', 'Running'], sortBy: 'longest' },
+        filters: { lengthBuckets: ['21-42'], selectedActivityTypes: ['TrailRunning', 'Running'], sortBy: 'longest' },
         schedule: { hours: [6, 14], days: [6] },
     },
 
@@ -60,7 +60,7 @@ const ALL_PRESETS: FilterPreset[] = [
         id: 'sunday-recovery',
         emoji: '🧘',
         nameKey: 'presets.sundayRecovery',
-        filters: { difficulty: 'Easy', maxLength: 8, maxDuration: 60, maxDistance: 60 },
+        filters: { difficulties: ['Easy'], lengthBuckets: ['<10'], distanceBuckets: ['<10', '10-25', '25-50'] },
         schedule: { hours: [6, 14], days: [0] },
     },
 
@@ -69,14 +69,14 @@ const ALL_PRESETS: FilterPreset[] = [
         id: 'family-hike',
         emoji: '👨‍👩‍👧',
         nameKey: 'presets.familyHike',
-        filters: { difficulty: 'Easy', selectedActivityTypes: ['Hiking'], maxDuration: 120 },
+        filters: { difficulties: ['Easy'], selectedActivityTypes: ['Hiking'] },
         schedule: { hours: [9, 17], days: [0, 6] },
     },
     {
         id: 'weekend-explorer',
         emoji: '🗺️',
         nameKey: 'presets.weekendExplorer',
-        filters: { minDuration: 120, maxDuration: 300, maxLength: 40, sortBy: 'longest' },
+        filters: { lengthBuckets: ['10-21', '21-42'], sortBy: 'longest' },
         schedule: { hours: [8, 16], days: [0, 6] },
     },
 
@@ -85,14 +85,14 @@ const ALL_PRESETS: FilterPreset[] = [
         id: 'afternoon-10k',
         emoji: '🌤️',
         nameKey: 'presets.afternoon10k',
-        filters: { minLength: 8, maxLength: 15 },
+        filters: { lengthBuckets: ['10-21'] },
         schedule: { hours: [12, 17], days: [1, 2, 3, 4, 5] },
     },
     {
         id: 'easy-hike',
         emoji: '🥾',
         nameKey: 'presets.easyHike',
-        filters: { difficulty: 'Easy', selectedActivityTypes: ['Hiking'] },
+        filters: { difficulties: ['Easy'], selectedActivityTypes: ['Hiking'] },
         schedule: { hours: [12, 17] },
     },
 
@@ -101,54 +101,52 @@ const ALL_PRESETS: FilterPreset[] = [
         id: 'after-work',
         emoji: '🌆',
         nameKey: 'presets.afterWork',
-        filters: { maxLength: 10, maxDuration: 45, maxDistance: 40 },
+        filters: { lengthBuckets: ['<10'], distanceBuckets: ['<10', '10-25'] },
         schedule: { hours: [16, 21], days: [1, 2, 3, 4, 5] },
     },
     {
         id: 'evening-trail',
         emoji: '🏞️',
         nameKey: 'presets.eveningTrail',
-        filters: { maxDuration: 60, maxLength: 10, maxDistance: 50, selectedActivityTypes: ['TrailRunning', 'Hiking'] },
+        filters: { lengthBuckets: ['<10'], distanceBuckets: ['<10', '10-25', '25-50'], selectedActivityTypes: ['TrailRunning', 'Hiking'] },
         schedule: { hours: [17, 21] },
     },
 
     // === Late night / early morning (21+ or 0–5) ===
-    // "Plan Tomorrow" — filters based on what day tomorrow is
     {
         id: 'plan-tomorrow-weekday',
         emoji: '📋',
         nameKey: 'presets.planTomorrow',
-        filters: { minLength: 5, maxLength: 15, maxDuration: 90 },
-        schedule: { hours: [21, 24], days: [0, 1, 2, 3, 4] }, // Sun–Thu evening → tomorrow is Mon–Fri
+        filters: { lengthBuckets: ['<10', '10-21'] },
+        schedule: { hours: [21, 24], days: [0, 1, 2, 3, 4] },
     },
     {
         id: 'plan-tomorrow-saturday',
         emoji: '📋',
         nameKey: 'presets.planTomorrow',
-        filters: { minLength: 15, maxLength: 42, sortBy: 'longest' },
-        schedule: { hours: [21, 24], days: [5] }, // Friday evening → tomorrow is Saturday (long run day)
+        filters: { lengthBuckets: ['10-21', '21-42'], sortBy: 'longest' },
+        schedule: { hours: [21, 24], days: [5] },
     },
     {
         id: 'plan-tomorrow-sunday',
         emoji: '📋',
         nameKey: 'presets.planTomorrow',
-        filters: { minLength: 8, maxLength: 25, sortBy: 'longest' },
-        schedule: { hours: [21, 24], days: [6] }, // Saturday evening → tomorrow is Sunday (recovery/medium)
+        filters: { lengthBuckets: ['10-21'], sortBy: 'longest' },
+        schedule: { hours: [21, 24], days: [6] },
     },
-    // "Can't Sleep" — also day-aware (planning for later today)
     {
         id: 'cant-sleep-weekday',
         emoji: '🌙',
         nameKey: 'presets.cantSleep',
-        filters: { minLength: 5, maxLength: 15, maxDuration: 90 },
-        schedule: { hours: [0, 5], days: [1, 2, 3, 4, 5] }, // Mon–Fri overnight → run later today (weekday)
+        filters: { lengthBuckets: ['<10', '10-21'] },
+        schedule: { hours: [0, 5], days: [1, 2, 3, 4, 5] },
     },
     {
         id: 'cant-sleep-weekend',
         emoji: '🌙',
         nameKey: 'presets.cantSleep',
-        filters: { minLength: 15, maxLength: 42, sortBy: 'longest' },
-        schedule: { hours: [0, 5], days: [0, 6] }, // Sat/Sun overnight → can do a long one today
+        filters: { lengthBuckets: ['10-21', '21-42'], sortBy: 'longest' },
+        schedule: { hours: [0, 5], days: [0, 6] },
     },
 
     // === Always available ===
@@ -156,7 +154,7 @@ const ALL_PRESETS: FilterPreset[] = [
         id: 'nearby',
         emoji: '📍',
         nameKey: 'presets.nearby',
-        filters: { maxDistance: 25, sortBy: 'distance' },
+        filters: { distanceBuckets: ['<10', '10-25'], sortBy: 'distance' },
         schedule: {},
         requiresGeolocation: true,
     },
@@ -164,21 +162,21 @@ const ALL_PRESETS: FilterPreset[] = [
         id: 'short-sweet',
         emoji: '🍬',
         nameKey: 'presets.shortSweet',
-        filters: { maxLength: 5, maxDuration: 30, maxDistance: 50, sortBy: 'shortest' },
+        filters: { lengthBuckets: ['<10'], distanceBuckets: ['<10', '10-25', '25-50'], sortBy: 'shortest' },
         schedule: {},
     },
     {
         id: 'big-climb',
         emoji: '⛰️',
         nameKey: 'presets.bigClimb',
-        filters: { minElevationGain: 500, sortBy: 'elevation' },
+        filters: { elevationGainBuckets: ['500-1000', '1000+'], sortBy: 'elevation' },
         schedule: {},
     },
     {
         id: 'under-1-hour',
         emoji: '⏱️',
         nameKey: 'presets.under1Hour',
-        filters: { maxDuration: 60, maxDistance: 75 },
+        filters: { lengthBuckets: ['<10'], distanceBuckets: ['<10', '10-25', '25-50', '50-100'] },
         schedule: {},
     },
 ];

@@ -50,6 +50,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
+import QueryStatsIcon from '@mui/icons-material/QueryStats';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import GroupsIcon from '@mui/icons-material/Groups';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -67,6 +68,7 @@ import ElevationChart from '../components/ElevationChart';
 import RoutePlayback from '../components/RoutePlayback';
 import ShareButtons from '../components/ShareButtons';
 import QRCodeShare from '../components/QRCodeShare';
+import SendTipButton from '../components/SendTipButton';
 import DifficultyInfo from '../components/DifficultyInfo';
 import RunningLoader from '../components/RunningLoader';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
@@ -495,14 +497,13 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
 
             <Paper elevation={3} sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
                 <Box mb={3}>
-                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' }, flex: 1 }}>
                             {trail.name}
                         </Typography>
-                        <IconButton 
+                        <IconButton
                             onClick={() => toggleFavorite(trail.slug)}
                             color="warning"
-                            sx={{ mt: 0.5 }}
                         >
                             {isFavorite(trail.slug) ? <StarIcon /> : <StarBorderIcon />}
                         </IconButton>
@@ -511,7 +512,6 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                             <IconButton
                                 onClick={() => user ? toggleTick(trail.slug) : setLoginModalOpen(true)}
                                 color="success"
-                                sx={{ mt: 0.5 }}
                             >
                                 {tickedSlugs.has(trail.slug) ? <CheckCircleIcon /> : <CheckCircleOutlineIcon />}
                             </IconButton>
@@ -604,6 +604,16 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                             </IconButton>
                         </Tooltip>
                         )}
+                        {isEnabled('tool_trail_predictor') && (
+                        <Tooltip title={t('tools.trailPredictor.title')} arrow>
+                            <IconButton
+                                size="small"
+                                onClick={() => navigate(`/tools/trail-predictor?trail=${encodeURIComponent(trail.slug)}`)}
+                            >
+                                <QueryStatsIcon fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                        )}
                         {isEnabled('offline_button') && <OfflineButton slug={trail.slug} trailName={trail.name} />}
                         {isEnabled('directions_to_trailhead') && geometry && geometry.coordinates.length > 0 && (
                             <Tooltip title={t('trail.getDirections')} arrow>
@@ -620,68 +630,6 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                         )}
                     </Stack>
 
-                    {/* Linked races banner — grouped by competition */}
-                    {trail.linkedRaces && trail.linkedRaces.length > 0 && isEnabled('races_page') && (() => {
-                        // Group races by competition slug
-                        const byCompetition = trail.linkedRaces!.reduce<Record<string, typeof trail.linkedRaces[0][]>>(
-                            (acc, race) => {
-                                (acc[race.competitionSlug] ??= []).push(race);
-                                return acc;
-                            },
-                            {}
-                        );
-                        return (
-                            <Box sx={{ mb: 2 }}>
-                                {Object.values(byCompetition).map((races) => {
-                                    const rep = races[0];
-                                    const label = races.length > 1
-                                        ? t('trail.partOfRaceDistances', { competition: rep.competitionName, count: races.length })
-                                        : t('trail.partOfRace', { competition: rep.competitionName });
-                                    // Use the nearest upcoming occurrence across all linked races
-                                    const daysUntil = races.reduce<number | null>((min, r) => {
-                                        if (r.daysUntil == null || r.daysUntil < 0) return min;
-                                        return min == null ? r.daysUntil : Math.min(min, r.daysUntil);
-                                    }, null);
-                                    return (
-                                        <Paper
-                                            key={rep.competitionSlug}
-                                            component={RouterLink}
-                                            to={`/events/${rep.competitionSlug}`}
-                                            elevation={0}
-                                            sx={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: 1,
-                                                px: 2,
-                                                py: 1,
-                                                mb: 0.5,
-                                                borderRadius: 2,
-                                                bgcolor: 'action.hover',
-                                                textDecoration: 'none',
-                                                color: 'inherit',
-                                                transition: 'background-color 0.2s',
-                                                '&:hover': { bgcolor: 'action.selected' },
-                                            }}
-                                        >
-                                            <Typography variant="body2" sx={{ flexGrow: 1 }}>
-                                                🏆 {label}
-                                            </Typography>
-                                            {daysUntil != null && (
-                                                <Chip
-                                                    label={daysUntil === 0
-                                                        ? t('races.today')
-                                                        : t('races.daysUntil', { count: daysUntil })}
-                                                    size="small"
-                                                    color="success"
-                                                    sx={{ fontSize: '0.7rem', height: 22 }}
-                                                />
-                                            )}
-                                        </Paper>
-                                    );
-                                })}
-                            </Box>
-                        );
-                    })()}
 
                     {trail.description && (
                         <Typography variant="body1" color="text.secondary" sx={{ mb: 2, lineHeight: 1.7, whiteSpace: 'pre-line' }}>
@@ -713,14 +661,25 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>-{Math.round(trail.elevationLoss)}m</Typography>
                             </Stack>
                         </Grid>
-                        <Grid item xs={6} sm>
+                        {trail.activityType === 'TrailRunning' && trail.length > 0 && (
+                            <Grid item xs={4} sm>
+                                <Stack alignItems="center" spacing={0.5}>
+                                    <LandscapeIcon color="action" fontSize="small" />
+                                    <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>{t('trail.climbRatio')}</Typography>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                                        {Math.round(trail.elevationGain / (trail.length / 1000))} m/km
+                                    </Typography>
+                                </Stack>
+                            </Grid>
+                        )}
+                        <Grid item xs={4} sm>
                             <Stack alignItems="center" spacing={0.5}>
                                 {getTrailTypeIcon(trail.trailType)}
                                 <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>{t('trail.type')}</Typography>
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold', textAlign: 'center' }}>{getTrailTypeLabel(trail.trailType, t)}</Typography>
                             </Stack>
                         </Grid>
-                        <Grid item xs={6} sm>
+                        <Grid item xs={4} sm>
                             {isEnabled('pace_info') && estTime && <PaceInfo activityType={trail.activityType} formattedDuration={estTime} />}
                         </Grid>
                     </Grid>
@@ -949,6 +908,99 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                 </Alert>
             </Snackbar>
 
+            {(() => {
+                const visibleRaces = (trail.linkedRaces ?? []).filter(
+                    r => r.daysUntil == null || r.daysUntil >= -30
+                );
+                if (!visibleRaces.length) return null;
+
+                const byEvent = visibleRaces.reduce<Record<string, typeof visibleRaces>>((acc, r) => {
+                    (acc[r.eventSlug] ??= []).push(r);
+                    return acc;
+                }, {});
+
+                return (
+                    <Box mt={4} mb={3}>
+                        <Typography variant="h5" component="h2" fontWeight="bold" mb={1.5}>
+                            {t('trail.racesOnTrail')}
+                        </Typography>
+                        <Grid container spacing={1.5}>
+                            {Object.values(byEvent).flatMap(races =>
+                                races.map(race => {
+                                    const past = race.daysUntil != null && race.daysUntil < 0;
+                                    return (
+                                        <Grid item xs={12} sm={6} md={4} key={`${race.eventSlug}-${race.raceName}`}>
+                                            <Paper
+                                                component={RouterLink}
+                                                to={`/events/${race.eventSlug}`}
+                                                elevation={0}
+                                                sx={{
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    gap: 0.5,
+                                                    p: 2,
+                                                    borderRadius: 2,
+                                                    bgcolor: 'action.hover',
+                                                    textDecoration: 'none',
+                                                    color: 'inherit',
+                                                    height: '100%',
+                                                    transition: 'background-color 0.2s',
+                                                    '&:hover': { bgcolor: 'action.selected' },
+                                                }}
+                                            >
+                                                <Typography variant="caption" color="text.secondary" noWrap>
+                                                    {race.eventName}
+                                                </Typography>
+                                                <Typography variant="body2" fontWeight={600} noWrap>
+                                                    {race.raceName}
+                                                </Typography>
+                                                {race.startTime && (
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        🕐 {race.startTime}
+                                                    </Typography>
+                                                )}
+                                                <Stack direction="row" spacing={0.75} alignItems="center" mt={0.75} flexWrap="wrap" gap={0.5}>
+                                                    {race.distanceLabel && (
+                                                        <Chip label={race.distanceLabel} size="small" variant="outlined" sx={{ fontSize: '0.7rem', height: 22 }} />
+                                                    )}
+                                                    {race.itraPoints != null && (
+                                                        <Chip label={`ITRA ${race.itraPoints}`} size="small" variant="outlined" sx={{ fontSize: '0.7rem', height: 22 }} />
+                                                    )}
+                                                    {race.ticketStatus && race.ticketStatus !== 'Available' && race.ticketStatus !== 'NotStarted' && (
+                                                        <Chip
+                                                            label={t(`races.ticketStatus.${race.ticketStatus}`)}
+                                                            size="small"
+                                                            color={race.ticketStatus === 'SoldOut' || race.ticketStatus === 'Closed' ? 'error' : race.ticketStatus === 'AlmostSoldOut' ? 'warning' : 'default'}
+                                                            sx={{ fontSize: '0.7rem', height: 22 }}
+                                                        />
+                                                    )}
+                                                    {race.daysUntil != null && (
+                                                        <Chip
+                                                            label={
+                                                                race.daysUntil === 0
+                                                                    ? t('races.today')
+                                                                    : race.daysUntil === 1
+                                                                    ? t('races.tomorrow')
+                                                                    : past
+                                                                    ? t('races.daysAgo_other', { count: Math.abs(race.daysUntil) })
+                                                                    : t('races.daysUntil', { count: race.daysUntil })
+                                                            }
+                                                            size="small"
+                                                            color={past ? 'default' : race.daysUntil <= 7 ? 'warning' : 'success'}
+                                                            sx={{ fontSize: '0.7rem', height: 22 }}
+                                                        />
+                                                    )}
+                                                </Stack>
+                                            </Paper>
+                                        </Grid>
+                                    );
+                                })
+                            )}
+                        </Grid>
+                    </Box>
+                );
+            })()}
+
             {isEnabled('related_trails') && relatedTrails.length > 0 && (
                 <Box mt={4} mb={6}>
                     <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
@@ -995,6 +1047,10 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                     </Box>
                 </Box>
             )}
+
+            <Box sx={{ mt: 4, mb: 2 }}>
+                <SendTipButton type="trail" />
+            </Box>
 
             {/* Fullscreen map + elevation dialog */}
             <Dialog

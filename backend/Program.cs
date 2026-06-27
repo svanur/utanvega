@@ -57,6 +57,8 @@ using Utanvega.Backend.Application.Activities.Queries.GetTrailLeaderboard;
 using Utanvega.Backend.Application.TrailCheckIns.Commands.CheckInToTrail;
 using Utanvega.Backend.Application.TrailCheckIns.Commands.CheckOutFromTrail;
 using Utanvega.Backend.Application.TrailCheckIns.Queries.GetTrailCheckIns;
+using Utanvega.Backend.Application.Tips.Commands;
+using Utanvega.Backend.Infrastructure.Email;
 using MediatR;
 using FluentValidation;
 using Microsoft.Extensions.Caching.Memory;
@@ -99,7 +101,12 @@ builder.Services.Configure<FormOptions>(o =>
 });
 
 // Add Database with PostGIS
-var rawConnectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
+var isMigrateMode = args.Contains("--migrate");
+
+// For migrations, prefer DIRECT_DATABASE_URL (Supabase direct port 5432, bypasses PgBouncer).
+// Falls back to DATABASE_URL / DefaultConnection for both normal and migrate modes.
+var rawConnectionString = (isMigrateMode ? builder.Configuration["DIRECT_DATABASE_URL"] : null)
+    ?? builder.Configuration.GetConnectionString("DefaultConnection")
     ?? builder.Configuration["DATABASE_URL"];
 
 // Fly.io provides DATABASE_URL in the format: postgres://user:password@host:port/dbname
@@ -135,7 +142,8 @@ if (!string.IsNullOrEmpty(rawConnectionString) && rawConnectionString.Contains("
         string host = hostAndPort[0];
         string port = hostAndPort.Length > 1 ? hostAndPort[1] : "5432";
 
-        connectionString = $"Host={host};Port={port};Database={database};Username={user};Password={password};Include Error Detail=true";
+        var migrationExtra = isMigrateMode ? ";Pooling=false;CommandTimeout=120" : "";
+        connectionString = $"Host={host};Port={port};Database={database};Username={user};Password={password};Include Error Detail=true{migrationExtra}";
         Log.Information("Successfully parsed connection string. Host={Host}, Port={Port}, Database={Database}", host, port, database);
     }
     catch (Exception ex)
@@ -290,8 +298,36 @@ builder.Services.AddRateLimiter(options =>
                 SegmentsPerWindow = 6,
                 QueueLimit = 0,
             }));
+    options.AddPolicy("send-tip", httpContext =>
+        RateLimitPartition.GetSlidingWindowLimiter(
+            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new SlidingWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(10),
+                SegmentsPerWindow = 5,
+                QueueLimit = 0,
+            }));
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 });
+
+// Resend email service
+builder.Services.AddHttpClient<IEmailService, ResendEmailService>((sp, client) =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    var apiKey = config["Resend:ApiKey"] ?? "";
+    client.DefaultRequestHeaders.Authorization =
+        new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+});
+
+var tipRecipient = builder.Configuration["Resend:TipRecipient"];
+if (string.IsNullOrEmpty(tipRecipient))
+{
+    if (builder.Environment.IsDevelopment())
+        Log.Warning("Resend:TipRecipient not set; tip emails will not be delivered");
+    else
+        throw new InvalidOperationException("Resend:TipRecipient must be configured in production.");
+}
 
 var app = builder.Build();
 
@@ -411,7 +447,7 @@ if (app.Environment.IsDevelopment())
 
 app.MapGet("/api/v1/trails", async (IMediator mediator) =>
 {
-    var trails = await mediator.Send(new GetTrailsQuery(IncludeDeleted: false, PublishedOnly: true));
+    var trails = await mediator.Send(new GetTrailsQuery(IncludeArchived: false, PublishedOnly: true));
     return Results.Ok(trails);
 })
 .WithName("GetPublicTrails");
@@ -623,9 +659,9 @@ app.MapGet("/", async (IWebHostEnvironment env, UtanvegaDbContext db) =>
     };
 });
 
-app.MapGet("/api/v1/admin/trails", [Authorize] async (IMediator mediator, bool includeDeleted = false) =>
+app.MapGet("/api/v1/admin/trails", [Authorize] async (IMediator mediator, bool includeArchived = false) =>
 {
-    var trails = await mediator.Send(new GetTrailsQuery(includeDeleted));
+    var trails = await mediator.Send(new GetTrailsQuery(includeArchived));
     return Results.Ok(trails);
 })
 .WithName("GetTrails");
@@ -773,6 +809,46 @@ app.MapPost("/api/v1/admin/trails/bulk-action", [Authorize] async (BulkTrailActi
 })
 .WithName("BulkTrailAction");
 
+app.MapPost("/api/v1/admin/trails/backfill-elevation-profiles", [Authorize] async (UtanvegaDbContext context) =>
+{
+    var trails = await context.Trails
+        .Where(t => t.GpxData != null && t.ElevationProfile == null)
+        .ToListAsync();
+
+    foreach (var trail in trails)
+    {
+        var line = trail.GpxData as NetTopologySuite.Geometries.LineString;
+        if (line == null) continue;
+
+        var elevations = line.Coordinates
+            .Select(c => c.Z)
+            .Where(z => !double.IsNaN(z))
+            .ToArray();
+
+        if (elevations.Length < 2) continue;
+
+        trail.ElevationProfile = SampleProfile(elevations, 50);
+    }
+
+    await context.SaveChangesAsync();
+    return Results.Ok(new { updated = trails.Count });
+
+    static double[] SampleProfile(double[] src, int n)
+    {
+        if (src.Length <= n) return src;
+        var result = new double[n];
+        for (var i = 0; i < n; i++)
+        {
+            var idx = (double)i / (n - 1) * (src.Length - 1);
+            var lo = (int)idx;
+            var hi = Math.Min(lo + 1, src.Length - 1);
+            result[i] = src[lo] * (1 - (idx - lo)) + src[hi] * (idx - lo);
+        }
+        return result;
+    }
+})
+.WithName("BackfillElevationProfiles");
+
 app.MapPost("/api/v1/admin/trails/bulk-add-tag", [Authorize] async (BulkAddTagRequest request, UtanvegaDbContext context) =>
 {
     var tag = await context.Tags.FindAsync(request.TagId);
@@ -824,7 +900,7 @@ app.MapPost("/api/v1/admin/trails/{id:guid}/recalculate-difficulty", [Authorize]
 app.MapPost("/api/v1/admin/trails/recalculate-all-difficulties", [Authorize] async (UtanvegaDbContext context) =>
 {
     var trails = await context.Trails
-        .Where(t => t.Status != Utanvega.Backend.Core.Entities.TrailStatus.Deleted)
+        .Where(t => t.Status != Utanvega.Backend.Core.Entities.TrailStatus.Archived)
         .ToListAsync();
 
     foreach (var trail in trails)
@@ -1153,7 +1229,7 @@ app.MapGet("/api/v1/admin/trails/duplicates", [Authorize] async (double? thresho
 app.MapPost("/api/v1/admin/trails/detect-types", [Authorize] async (UtanvegaDbContext context) =>
 {
     var trails = await context.Trails
-        .Where(t => t.GpxData != null && t.Status != TrailStatus.Deleted)
+        .Where(t => t.GpxData != null && t.Status != TrailStatus.Archived)
         .ToListAsync();
 
     var updated = 0;
@@ -1176,7 +1252,7 @@ app.MapPost("/api/v1/admin/trails/detect-types", [Authorize] async (UtanvegaDbCo
 app.MapPost("/api/v1/admin/trails/detect-locations", [Authorize] async (UtanvegaDbContext context, LocationDetector detector) =>
 {
     var trails = await context.Trails
-        .Where(t => t.GpxData != null && t.Status != TrailStatus.Deleted)
+        .Where(t => t.GpxData != null && t.Status != TrailStatus.Archived)
         .ToListAsync();
 
     var updated = 0;
@@ -1684,6 +1760,41 @@ app.MapGet("/api/v1/user/activities", [Authorize] async (IMediator mediator, Htt
 })
 .WithName("GetUserActivities");
 
+app.MapPost("/api/v1/tips", async (SendTipRequest request, IMediator mediator, ILogger<Program> logger) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Message) || request.Message.Length > 2000)
+        return Results.BadRequest("Message is required and must be under 2000 characters.");
+
+    if (string.IsNullOrWhiteSpace(request.PageUrl))
+        return Results.BadRequest("PageUrl is required.");
+
+    try
+    {
+        await mediator.Send(new SendTipCommand(request.PageUrl, request.Message));
+        return Results.Ok();
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Failed to send tip for page {PageUrl}", request.PageUrl);
+        return Results.Problem("Failed to send tip. Please try again later.");
+    }
+})
+.WithName("SendTip")
+.RequireRateLimiting("send-tip");
+
+if (isMigrateMode)
+{
+    var directUrlUsed = builder.Configuration["DIRECT_DATABASE_URL"] is not null;
+    Log.Information("Running database migrations (using {UrlType} connection)...",
+        directUrlUsed ? "DIRECT_DATABASE_URL" : "DATABASE_URL");
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<UtanvegaDbContext>();
+    await db.Database.MigrateAsync();
+    Log.Information("Database migrations applied successfully");
+    Log.CloseAndFlush();
+    return;
+}
+
 try
 {
     app.Run();
@@ -1693,6 +1804,7 @@ finally
     Log.CloseAndFlush();
 }
 
+public record SendTipRequest(string PageUrl, string Message);
 public record TagCreateDto(string Name, string? Color);
 public record BulkAddTagRequest(List<Guid> TrailIds, Guid TagId);
 public record TrailLocationAddRequest(Guid LocationId, string? Role);

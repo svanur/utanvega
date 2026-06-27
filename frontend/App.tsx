@@ -11,8 +11,6 @@ import SpotlightSearch from './components/SpotlightSearch';
 import { useFeatureFlags } from './hooks/useFeatureFlags';
 import { useLoginEnabled } from './hooks/useLoginEnabled';
 import InstallBanner from './components/InstallBanner';
-import { useAdminMode } from './hooks/useAdminMode';
-import GandalfEntrance from './components/GandalfEntrance';
 import { AuthProvider } from './hooks/useAuth';
 
 // Lazy-loaded pages (not needed on initial load)
@@ -35,6 +33,14 @@ const MyProfilePage = lazy(() => import('./pages/MyProfilePage'));
 const MyProfileSettingsPage = lazy(() => import('./pages/MyProfileSettingsPage'));
 const MyTrailsPage = lazy(() => import('./pages/MyTrailsPage'));
 const MyTrailDetailsPage = lazy(() => import('./pages/MyTrailDetailsPage'));
+const ScratchCardPage = lazy(() => import('./pages/ScratchCardPage'));
+const RunningTripPage = lazy(() => import('./pages/RunningTripPage'));
+const ServicesPage = lazy(() => import('./pages/ServicesPage'));
+const ChallengePage = lazy(() => import('./pages/ChallengePage'));
+const AnnualReportPage = lazy(() => import('./pages/AnnualReportPage'));
+const NewsletterPage = lazy(() => import('./pages/NewsletterPage'));
+const ContactPage = lazy(() => import('./pages/ContactPage'));
+const ItraGuidePage = lazy(() => import('./pages/ItraGuidePage'));
 
 function PageLoader() {
     return (
@@ -73,7 +79,6 @@ export default function App() {
 
     const { activeEgg, clearEgg } = useEasterEggs();
     const { isEnabled, loaded } = useFeatureFlags();
-    const { isAdmin, gandalfQuote, dismissGandalf } = useAdminMode();
     const loginEnabled = useLoginEnabled();
 
     return (
@@ -131,10 +136,10 @@ export default function App() {
                         path="/privacy" 
                         element={<PrivacyPage mode={mode} onToggleMode={handleToggleMode} />} 
                     />
-                    {isAdmin && isEnabled('game_fun_page') && (
-                    <Route 
-                        path="/fun/:game?" 
-                        element={<FunPage mode={mode} onToggleMode={handleToggleMode} />} 
+                    {isEnabled('game_fun_page') && (
+                    <Route
+                        path="/fun/:game?"
+                        element={<FunPage mode={mode} onToggleMode={handleToggleMode} />}
                     />
                     )}
                     {isEnabled('tools_page') && (
@@ -197,6 +202,15 @@ export default function App() {
                         path="/my/trails/:slug"
                         element={<MyTrailDetailsPage mode={mode} onToggleMode={handleToggleMode} />}
                     />}
+                    <Route path="/shop/skrafkort/2025" element={<ScratchCardPage mode={mode} onToggleMode={handleToggleMode} />} />
+                    <Route path="/shop/hlaupaferd" element={<RunningTripPage mode={mode} onToggleMode={handleToggleMode} />} />
+                    <Route path="/services" element={<ServicesPage mode={mode} onToggleMode={handleToggleMode} />} />
+                    <Route path="/challenge/2026" element={<ChallengePage mode={mode} onToggleMode={handleToggleMode} />} />
+                    <Route path="/about-us" element={<Navigate to="/about" replace />} />
+                    <Route path="/annual-report/2025" element={<AnnualReportPage mode={mode} onToggleMode={handleToggleMode} />} />
+                    <Route path="/newsletter" element={<NewsletterPage mode={mode} onToggleMode={handleToggleMode} />} />
+                    <Route path="/contact" element={<ContactPage mode={mode} onToggleMode={handleToggleMode} />} />
+                    <Route path="/itra-guide" element={<ItraGuidePage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
                 )}
@@ -207,7 +221,6 @@ export default function App() {
                 </AuthProvider>
             </ErrorBoundary>
             <EasterEggs activeEgg={activeEgg} onComplete={clearEgg} />
-            <GandalfEntrance quote={gandalfQuote} onClose={dismissGandalf} />
         </ThemeProvider>
     );
 }

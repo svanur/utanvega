@@ -14,8 +14,8 @@ import TrailTable from '../components/TrailTable';
 import { TrailMapDialog, DeleteTrailDialog, BulkUploadDialog } from '../components/TrailDialogs';
 
 export default function TrailList({ onNotify, initialTrailId, initialSearch }: { onNotify: (message: React.ReactNode, severity?: 'success' | 'error') => void, initialTrailId?: string | null, initialSearch?: string | null }) {
-  const [includeDeleted, setIncludeDeleted] = useState(false);
-  const { trails, setTrails, loading, error, refresh } = useTrails(includeDeleted);
+  const [includeArchived, setIncludeArchived] = useState(false);
+  const { trails, setTrails, loading, error, refresh } = useTrails(includeArchived);
   const { tags } = useTags();
   const { locations: allLocations } = useLocations();
   const [selectedTrailMap, setSelectedTrailMap] = useState<{ id: string, name: string } | null>(null);
@@ -95,7 +95,7 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
     setLocationFilter('all');
     setOrderBy('name');
     setOrder('asc');
-    setIncludeDeleted(false);
+    setIncludeArchived(false);
   };
 
   const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -341,8 +341,8 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
       <TrailToolsPanel
         showTools={showTools}
         selectedIds={selectedIds}
-        includeDeleted={includeDeleted}
-        onIncludeDeletedChange={setIncludeDeleted}
+        includeArchived={includeArchived}
+        onIncludeArchivedChange={setIncludeArchived}
         onShowBulkUpload={() => setShowBulkUpload(true)}
         recalculating={recalculating}
         bulkActioning={bulkActioning}
@@ -366,7 +366,7 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
         locationFilter={locationFilter}
         onLocationFilterChange={setLocationFilter}
         locationOptions={locationOptions}
-        includeDeleted={includeDeleted}
+        includeArchived={includeArchived}
         onResetFilters={handleResetFilters}
       />
 

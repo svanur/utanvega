@@ -34,21 +34,13 @@ import LostRunner from '../components/LostRunner';
 import { useEventBySlug } from '../hooks/useEvents';
 import type { EventEditionDto, RaceDto } from '../hooks/useEvents';
 import { splitMinutes } from '../utils/cutoffTime';
+import { formatNextDate, formatRaceDateTime } from '../utils/eventUtils';
+import { getTicketStatusColor } from '../utils/ticketStatus';
 
 type EditionHistoryPageProps = {
     mode: PaletteMode;
     onToggleMode: () => void;
 };
-
-function formatNextDate(dateStr: string, t: (key: string, opts?: Record<string, unknown>) => string): string {
-    const date = new Date(dateStr + 'T00:00:00');
-    const weekdays = t('races.weekdays', { returnObjects: true }) as unknown as string[];
-    const months = t('races.months', { returnObjects: true }) as unknown as string[];
-    const weekday = weekdays[date.getDay()];
-    const month = months[date.getMonth()];
-    const formatted = `${weekday}, ${date.getDate()}. ${month} ${date.getFullYear()}`;
-    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
-}
 
 function formatCutoff(minutes: number, t: (key: string, opts?: Record<string, unknown>) => string): string {
     const { hours: h, minutes: m } = splitMinutes(minutes);
@@ -56,22 +48,6 @@ function formatCutoff(minutes: number, t: (key: string, opts?: Record<string, un
     return `${h}h ${m}m`;
 }
 
-function formatRaceDateTime(
-    dateOfRace: string | null,
-    startTime: string | null,
-    t: (key: string, opts?: Record<string, unknown>) => string,
-): string | null {
-    if (!dateOfRace && !startTime) return null;
-    const dateLabel = dateOfRace ? formatNextDate(dateOfRace, t) : null;
-    const timeLabel = startTime ? startTime.slice(0, 5) : null;
-    return [dateLabel, timeLabel].filter(Boolean).join(' · ');
-}
-
-function getTicketStatusColor(status: string | null | undefined): 'success' | 'error' | 'default' {
-    if (status === 'Available') return 'success';
-    if (status === 'SoldOut') return 'error';
-    return 'default';
-}
 
 function getRegistrationStatusColor(status: string | null | undefined): 'success' | 'warning' | 'default' {
     if (status === 'Open') return 'success';

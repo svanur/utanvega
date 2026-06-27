@@ -36,13 +36,16 @@ import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import VideocamIcon from '@mui/icons-material/Videocam';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import TimerIcon from '@mui/icons-material/Timer';
 import StraightenIcon from '@mui/icons-material/Straighten';
 import TerrainIcon from '@mui/icons-material/Terrain';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
+import QueryStatsIcon from '@mui/icons-material/QueryStats';
 import confetti from 'canvas-confetti';
 import ShareButtons from '../components/ShareButtons';
+import SendTipButton from '../components/SendTipButton';
 import RaceShareCard from '../components/RaceShareCard';
 import RaceFinishCard from '../components/RaceFinishCard';
 import RaceProgressBar from '../components/RaceProgressBar';
@@ -67,6 +70,9 @@ type PreparedEdition = EventEditionDto & {
 
 import { ACTIVITY_EMOJI } from '../constants/activityEmoji';
 import { googleCalendarUrl, outlookCalendarUrl, downloadIcs } from '../utils/calendarLinks';
+import EventDateBadge from '../components/EventDateBadge';
+import { formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime } from '../utils/eventUtils';
+import { getTicketStatusColor } from '../utils/ticketStatus';
 
 type RaceDayChecklistKey = 'bib' | 'shoes' | 'gels' | 'goodMood';
 
@@ -75,16 +81,6 @@ function toAnchorSlug(value: string): string {
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '');
-}
-
-function formatNextDate(dateStr: string, t: (key: string, opts?: Record<string, unknown>) => string): string {
-    const date = new Date(dateStr + 'T00:00:00');
-    const weekdays = t('races.weekdays', { returnObjects: true }) as unknown as string[];
-    const months = t('races.months', { returnObjects: true }) as unknown as string[];
-    const weekday = weekdays[date.getDay()];
-    const month = months[date.getMonth()];
-    const formatted = `${weekday}, ${date.getDate()}. ${month} ${date.getFullYear()}`;
-    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
 }
 
 function formatCutoff(minutes: number, t: (key: string, opts?: Record<string, unknown>) => string): string {
@@ -151,45 +147,12 @@ function formatScheduleDescription(
     return null;
 }
 
-function getCountdownLabel(daysUntil: number | null, t: (key: string, opts?: Record<string, unknown>) => string): string {
-    if (daysUntil === null) return t('races.noDate');
-    if (daysUntil === 0) return t('races.today');
-    if (daysUntil === 1) return t('races.tomorrow');
-    if (daysUntil === -1) return t('races.yesterday');
-    if (daysUntil < -1) return t('races.daysAgo', { count: Math.abs(daysUntil) });
-    return t('races.daysUntil', { count: daysUntil });
-}
-
-function getCountdownColor(daysUntil: number | null): 'success' | 'warning' | 'error' | 'default' {
-    if (daysUntil === null) return 'default';
-    if (daysUntil < 0) return 'success';
-    if (daysUntil <= 7) return 'error';
-    if (daysUntil <= 30) return 'warning';
-    return 'success';
-}
-
 function getRegistrationStatusColor(status: string | null | undefined): 'success' | 'warning' | 'default' {
     if (status === 'Open') return 'success';
     if (status === 'NotStarted') return 'warning';
     return 'default';
 }
 
-function getTicketStatusColor(status: string | null | undefined): 'success' | 'error' | 'default' {
-    if (status === 'Available') return 'success';
-    if (status === 'SoldOut') return 'error';
-    return 'default';
-}
-
-function formatRaceDateTime(
-    dateOfRace: string | null,
-    startTime: string | null,
-    t: (key: string, opts?: Record<string, unknown>) => string,
-): string | null {
-    if (!dateOfRace && !startTime) return null;
-    const dateLabel = dateOfRace ? formatNextDate(dateOfRace, t) : null;
-    const timeLabel = startTime ? startTime.slice(0, 5) : null;
-    return [dateLabel, timeLabel].filter(Boolean).join(' · ');
-}
 
 function EditionMeta({
     edition,
@@ -646,7 +609,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                     })()}
 
                     {(event.displayDate ?? event.nextEditionDate) && event.status !== 'Cancelled' && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 2, flexWrap: 'wrap' }}>
                             <CalendarTodayIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
                             <Typography variant="body2" color="text.secondary" sx={{ mr: 0.5 }}>
                                 {t(event.daysUntil != null && event.daysUntil < 0 ? 'races.lastRace' : 'races.nextRace')}
@@ -654,6 +617,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             <Typography variant="body1" fontWeight={600}>
                                 {formatNextDate((event.displayDate ?? event.nextEditionDate)!, t)}
                             </Typography>
+                            <EventDateBadge dateStr={(event.displayDate ?? event.nextEditionDate)!} />
                         </Box>
                     )}
 
@@ -685,6 +649,18 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 sx={{ textTransform: 'none', ...(isPostRace && { fontWeight: 700 }) }}
                             >
                                 {isPostRace ? `🏁 ${t('races.results', { defaultValue: 'Results' })}` : t('races.results', { defaultValue: 'Results' })}
+                            </Button>
+                        )}
+                        {event.youtubeUrl && (
+                            <Button
+                                variant="outlined"
+                                color="error"
+                                size="small"
+                                startIcon={<VideocamIcon sx={{ fontSize: 16 }} />}
+                                onClick={() => window.open(event.youtubeUrl!, '_blank', 'noopener')}
+                                sx={{ textTransform: 'none' }}
+                            >
+                                360°
                             </Button>
                         )}
                         {event.organizerWebsite && (
@@ -983,6 +959,10 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                         </Box>
                     </Box>
                 )}
+
+                <Box sx={{ mt: 4, mb: 2 }}>
+                    <SendTipButton type="event" />
+                </Box>
             </Container>
         </Layout>
     );
@@ -1103,15 +1083,15 @@ function RaceCard({
                     {(race.trailSlug || showShareCard || showFinishCard) && (
                         <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0, flexWrap: 'wrap' }}>
                             {showPredict && race.trailSlug && (
-                                <Button
-                                    component={RouterLink}
-                                    to={`/tools/trail-predictor?trail=${encodeURIComponent(race.trailSlug)}`}
-                                    size="small"
-                                    variant="text"
-                                    sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: 'auto' }}
-                                >
-                                    🔮 {t('races.predict')}
-                                </Button>
+                                <Tooltip title={t('races.predict')} arrow>
+                                    <IconButton
+                                        component={RouterLink}
+                                        to={`/tools/trail-predictor?trail=${encodeURIComponent(race.trailSlug)}`}
+                                        size="small"
+                                    >
+                                        <QueryStatsIcon fontSize="small" />
+                                    </IconButton>
+                                </Tooltip>
                             )}
                             {race.trailSlug && (
                                 <Button

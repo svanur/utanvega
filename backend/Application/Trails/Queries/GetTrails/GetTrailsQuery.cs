@@ -1,4 +1,5 @@
 using MediatR;
+using Serilog;
 using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
 using Utanvega.Backend.Application.Caching;
@@ -7,9 +8,9 @@ using Utanvega.Backend.Infrastructure.Persistence;
 
 namespace Utanvega.Backend.Application.Trails.Queries.GetTrails;
 
-public record GetTrailsQuery(bool IncludeDeleted = false, bool PublishedOnly = false) : IRequest<List<TrailDto>>, ICacheable
+public record GetTrailsQuery(bool IncludeArchived = false, bool PublishedOnly = false) : IRequest<List<TrailDto>>, ICacheable
 {
-    public string CacheKey => CacheKeys.Trails(IncludeDeleted, PublishedOnly);
+    public string CacheKey => CacheKeys.Trails(IncludeArchived, PublishedOnly);
     public TimeSpan CacheDuration => TimeSpan.FromHours(1);
 }
 
@@ -22,7 +23,10 @@ public record LinkedRaceDto(
     string EventSlug,
     string RaceName,
     string? DistanceLabel,
-    int? DaysUntil
+    int? DaysUntil,
+    string? StartTime,
+    string? TicketStatus,
+    int? ItraPoints
 );
 
 public record TrailDto(
@@ -43,7 +47,8 @@ public record TrailDto(
     List<TagInfoDto> Tags,
     int ViewCount = 0,
     List<LinkedRaceDto>? LinkedRaces = null,
-    string? YoutubeUrl = null
+    string? YoutubeUrl = null,
+    double[]? ElevationProfile = null
 );
 
 public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailDto>>
@@ -64,9 +69,9 @@ public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailD
                 .ThenInclude(tt => tt.Tag)
             .AsQueryable();
 
-        if (!request.IncludeDeleted)
+        if (!request.IncludeArchived)
         {
-            query = query.Where(t => t.Status != TrailStatus.Deleted);
+            query = query.Where(t => t.Status != TrailStatus.Archived);
         }
 
         if (request.PublishedOnly)
@@ -76,11 +81,19 @@ public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailD
 
         var trails = await query.ToListAsync(cancellationToken);
 
-        // Fetch view counts in a single query
-        var viewCounts = await _context.TrailViews
-            .GroupBy(v => v.TrailId)
-            .Select(g => new { TrailId = g.Key, Count = g.Count() })
-            .ToDictionaryAsync(x => x.TrailId, x => x.Count, cancellationToken);
+        Dictionary<Guid, int> viewCounts;
+        try
+        {
+            viewCounts = await _context.TrailViews
+                .GroupBy(v => v.TrailId)
+                .Select(g => new { TrailId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.TrailId, x => x.Count, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to fetch trail view counts, returning zero counts");
+            viewCounts = new Dictionary<Guid, int>();
+        }
 
         var result = trails.Select(t => new TrailDto(
             t.Id,
@@ -104,7 +117,8 @@ public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailD
                 .Select(tt => new TagInfoDto(tt.Tag.Name, tt.Tag.Slug, tt.Tag.Color))
                 .ToList(),
             viewCounts.GetValueOrDefault(t.Id, 0),
-            YoutubeUrl: t.YoutubeUrl
+            YoutubeUrl: t.YoutubeUrl,
+            ElevationProfile: null
         )).ToList();
 
         return result;

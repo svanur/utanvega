@@ -11,7 +11,8 @@ public record GpxProcessResult(
     double ElevationLoss,
     TrailType DetectedType,
     Difficulty Difficulty,
-    string? ExtractedName
+    string? ExtractedName,
+    double[]? ElevationProfile = null
 );
 
 public static class GpxProcessor
@@ -76,8 +77,26 @@ public static class GpxProcessor
 
         var detectedType = TrailTypeDetector.Detect(lineString, length);
         var difficulty = DifficultyCalculator.Calculate(length, gain, ActivityType.TrailRunning);
+        var elevationProfile = SampleElevationProfile(points.Select(p => p.Ele).ToArray(), 50);
 
-        return new GpxProcessResult(lineString, length, gain, loss, detectedType, difficulty, extractedName);
+        return new GpxProcessResult(lineString, length, gain, loss, detectedType, difficulty, extractedName, elevationProfile);
+    }
+
+    private static double[] SampleElevationProfile(double[] elevations, int targetSamples)
+    {
+        if (elevations.Length == 0) return [];
+        if (elevations.Length <= targetSamples) return elevations;
+
+        var result = new double[targetSamples];
+        for (var i = 0; i < targetSamples; i++)
+        {
+            var index = (double)i / (targetSamples - 1) * (elevations.Length - 1);
+            var lo = (int)index;
+            var hi = Math.Min(lo + 1, elevations.Length - 1);
+            var t = index - lo;
+            result[i] = elevations[lo] * (1 - t) + elevations[hi] * t;
+        }
+        return result;
     }
 
     private static double CalculateDistance(double lat1, double lon1, double lat2, double lon2)

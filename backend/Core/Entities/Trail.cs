@@ -21,7 +21,6 @@ public enum TrailStatus
     Published,
     Flagged,
     Archived,
-    Deleted,
     EventOnly,
 }
 
@@ -62,6 +61,7 @@ public class Trail
     public double Length { get; set; } // in meters
     public double ElevationGain { get; set; } // in meters
     public double ElevationLoss { get; set; } // in meters
+    public double[]? ElevationProfile { get; set; } // ~50 sampled elevation points
     
     public Difficulty Difficulty { get; set; } = Difficulty.Moderate;
     public Visibility Visibility { get; set; } = Visibility.Public;

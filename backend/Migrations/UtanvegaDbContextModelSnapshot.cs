@@ -436,6 +436,9 @@ namespace Utanvega.Backend.Migrations
                     b.Property<double>("ElevationLoss")
                         .HasColumnType("double precision");
 
+                    b.PrimitiveCollection<double[]>("ElevationProfile")
+                        .HasColumnType("double precision[]");
+
                     b.Property<Geometry>("GpxData")
                         .HasColumnType("geometry(LineStringZ, 4326)");
 

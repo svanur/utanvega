@@ -8,6 +8,7 @@ import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
 import LoopIcon from '@mui/icons-material/Loop';
 import UndoIcon from '@mui/icons-material/Undo';
 import AddIcon from '@mui/icons-material/Add';
+import VideocamIcon from '@mui/icons-material/Videocam';
 import type { Trail } from '../hooks/useTrails';
 import type { LocationDto } from '../hooks/useLocations';
 import type { TagDto } from '../hooks/useTags';
@@ -224,7 +225,7 @@ function TrailRow({ trail, selected, onSelect, onViewMap, onEdit, onDelete, onRe
   return (
     <TableRow
       selected={selected}
-      sx={{ opacity: trail.status === 'Deleted' ? 0.6 : 1, bgcolor: trail.status === 'Deleted' ? 'action.hover' : 'inherit' }}
+      sx={{ opacity: trail.status === 'Archived' ? 0.6 : 1, bgcolor: trail.status === 'Archived' ? 'action.hover' : 'inherit' }}
     >
       <TableCell padding="checkbox">
         <Checkbox checked={selected} onChange={onSelect} />
@@ -365,8 +366,8 @@ function TrailRow({ trail, selected, onSelect, onViewMap, onEdit, onDelete, onRe
         </Box>
       </TableCell>
       <TableCell>
-        {trail.status === 'Deleted' ? (
-          <Chip label="Deleted" color="error" size="small" />
+        {trail.status === 'Archived' ? (
+          <Chip label="Archived" color="default" size="small" />
         ) : (
           <InlineEditSelect
             value={trail.status}
@@ -392,7 +393,7 @@ function TrailRow({ trail, selected, onSelect, onViewMap, onEdit, onDelete, onRe
           {trail.youtubeUrl && /^https?:\/\//i.test(trail.youtubeUrl) && (
             <Tooltip title="360° video">
               <IconButton size="small" component="a" href={trail.youtubeUrl} target="_blank" rel="noopener noreferrer" aria-label={`360° video for ${trail.name}`}>
-                <img src="/images/360-play.avif" alt="360°" style={{ width: 20, height: 20 }} />
+                <VideocamIcon fontSize="small" color="error" />
               </IconButton>
             </Tooltip>
           )}
@@ -400,7 +401,7 @@ function TrailRow({ trail, selected, onSelect, onViewMap, onEdit, onDelete, onRe
       </TableCell>
       <TableCell align="right">
         <Button size="small" startIcon={<MapIcon />} onClick={onViewMap}>Map</Button>
-        {trail.status === 'Deleted' ? (
+        {trail.status === 'Archived' ? (
           <Button size="small" color="success" startIcon={<RestoreIcon />} onClick={onRestore}>Restore</Button>
         ) : (
           <>

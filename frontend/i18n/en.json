@@ -77,7 +77,18 @@
         "darkMode": "Switch to dark mode",
         "lightMode": "Switch to light mode",
         "switchToEnglish": "Switch to English",
-        "switchToIcelandic": "Switch to Icelandic"
+        "switchToIcelandic": "Switch to Icelandic",
+        "events": "Events",
+        "fun": "Fun",
+        "onlineStore": "Online store",
+        "scratchCard": "Scratch card",
+        "runningTrip": "Running trip",
+        "runs360": "360° Runs",
+        "annualReport": "Annual Report 2025",
+        "aboutUs": "About us",
+        "services": "Services",
+        "challenge": "Challenge",
+        "allTrails": "All Trails"
     },
     "spotlight": {
         "placeholder": "Search trails, locations and races...",
@@ -140,8 +151,8 @@
         "loadingMap": "Loading Map...",
         "noGpsData": "No GPS data available for this trail.",
         "wereYouLookingFor": "Were you looking for one of these?",
-        "partOfRace": "Part of {{competition}}",
-        "partOfRaceDistances": "Part of {{competition}} ({{count}} distances)",
+        "racesOnTrail": "Associated races",
+        "climbRatio": "Climb ratio",
         "video360": "360° Video",
         "role": {
             "Start": "Start",
@@ -196,7 +207,7 @@
     "trailCard": {
         "removeFavorite": "Remove Favorite",
         "addFavorite": "Add Favorite",
-        "hideTrail": "Hide Trail",
+        "share": "Share",
         "kmAway": "km away"
     },
     "quickView": {
@@ -216,7 +227,7 @@
     "filters": {
         "searchPlaceholder": "Search name or description...",
         "clearSearch": "clear search",
-        "advancedSearch": "advanced search",
+        "advancedSearch": "filters",
         "advancedFilters": "Advanced Filters",
         "trailLength": "Trail Length",
         "elevationGain": "Elevation Gain",
@@ -234,8 +245,6 @@
         "showFavoritesOnly": "Show Favorites Only",
         "showOfflineOnly": "Show Offline Only",
         "tags": "Tags",
-        "showHiddenTrails": "Show Hidden Trails",
-        "clearHidden": "Clear Hidden ({{count}})",
         "resetFilters": "Reset Filters",
         "closeFilters": "Close"
     },
@@ -344,7 +353,36 @@
     "footer": {
         "checkingApi": "Checking API…",
         "healthy": "healthy",
-        "apiUnavailable": "API unavailable"
+        "apiUnavailable": "API unavailable",
+        "discover": "Discover",
+        "info": "Info",
+        "follow": "Follow",
+        "contact": "Contact"
+    },
+    "tip": {
+        "button": "Send a tip",
+        "send": "Send",
+        "tooltip": "Suggest a correction, additional info, or other feedback",
+        "placeholder": "Suggest a correction, additional information, or other feedback...",
+        "sent": "Thank you! Your tip has been sent.",
+        "error": "Something went wrong. Please try again."
+    },
+    "contact": {
+        "title": "Contact us",
+        "description": "Have a question or want to get in touch? Click below to get in contact.",
+        "descriptionRevealed": "Send us an email and we'll get back to you.",
+        "showEmail": "Show email address"
+    },
+    "newsletter": {
+        "title": "Subscribe to the mailing list",
+        "description": "Want to receive news and updates? Subscribe to the hlaupadagskra.is mailing list.",
+        "comingSoon": "Sign-up opening soon.",
+        "subscribe": "Subscribe to mailing list"
+    },
+    "announcement": {
+        "text": "New: Outdoor Challenge 2026 is open for registration!",
+        "href": "/challenge/2026",
+        "linkText": "Learn more"
     },
     "sort": {
         "distance": "Nearest",
@@ -440,6 +478,124 @@
         "contact": "Questions about privacy? Reach out to us through the About page.",
         "lastUpdated": "Last updated: {{date}}"
     },
+    "scratchCard": {
+        "title": "Trail Running Scratch Card",
+        "subtitle": "Scratch off every trail running event you complete — a unique map of Iceland's running calendar",
+        "madeInIceland": "Made in Iceland",
+        "details": "Product details",
+        "size": "Size",
+        "events": "Events",
+        "trailEvents": "trail running events",
+        "design": "Design",
+        "price": "Price",
+        "shipping": "Shipping",
+        "description": "A decorative A2 wall poster featuring 42 trail running events across Iceland, each hiding a unique illustration behind a silver scratch panel. Designed by ARRA Design Studio — handcrafted and packaged in Iceland. The perfect gift for runners, nature enthusiasts, and goal-setters.",
+        "order": "Order by email"
+    },
+    "runningTrip": {
+        "title": "Running Trip to Switzerland 2026",
+        "subtitle": "A guided running adventure in Kandersteg, Swiss Alps — September 3–9, 2026",
+        "description": "Join us for six nights in the Swiss Alps — a guided running trip to Kandersteg, welcoming both runners and non-runners. Organized by Óskar Þór and Tómas G. from hlaupadagskra.is.",
+        "itinerary": "Running itinerary",
+        "day1": "Day 1 (Sept 4)",
+        "day2": "Day 2 (Sept 5)",
+        "day3": "Day 3 (Sept 6)",
+        "day4": "Day 4 (Sept 7)",
+        "day5": "Day 5 (Sept 8)",
+        "restDay": "Rest day",
+        "included": "What's included",
+        "inc1": "6 nights' accommodation with breakfast (Hotel Victoria Kandersteg)",
+        "inc2": "4 guided running days",
+        "inc3": "Cable car passes and attraction fees",
+        "inc4": "Closing dinner",
+        "inc5": "Pre-trip orientation meeting and handbook",
+        "pricing": "Pricing",
+        "standardRoom": "twin room",
+        "suiteUpgrade": "suite upgrade",
+        "register": "Register",
+        "contact": "Contact us"
+    },
+    "services": {
+        "title": "Services",
+        "tagline": "Virtual experience as if you were there",
+        "intro": "We specialise in 360° filming of running routes, hiking trails, running events, and Icelandic nature — designed as marketing content for event organisers and tourism promoters.",
+        "recording": {
+            "title": "360° Recordings",
+            "description": "First-person POV filming of running courses and race atmosphere, with video editing, text, and GPX route guides."
+        },
+        "coursePromo": {
+            "title": "Course Promotions",
+            "description": "360° documentation of trails with route overviews, race day event videos, and virtual reality promotional content."
+        },
+        "marketing": {
+            "title": "Marketing & Distribution",
+            "description": "YouTube distribution via '360 Runs Iceland', social media reels, and custom promotional or teaser videos."
+        },
+        "visibility": {
+            "title": "Visibility & Events",
+            "description": "Platform visibility on hlaupadagskra.is, international promotion, and EXPO booth content for tourism."
+        },
+        "benefitsTitle": "Benefits for event organisers",
+        "benefit1": "Enhanced visibility of event conditions for participants",
+        "benefit2": "Participant preparation resources and course previews",
+        "benefit3": "Ready-made social media and web content",
+        "benefit4": "Attraction of international participants to Icelandic events",
+        "contact": "Get in touch"
+    },
+    "challenge": {
+        "title": "Outdoor Challenge 2026",
+        "tagline": "VERTU ÚT UM ALLT Í SUMAR",
+        "intro": "Collect points and badges by visiting nearly 100 outdoor locations across the greater Reykjavík area — on foot, running, or by bike.",
+        "locations100": "100+ locations",
+        "capitalRegion": "Capital Region",
+        "deadline": "Until September 6",
+        "feature1": { "title": "Explore", "desc": "Visit outdoor sites across the capital region" },
+        "feature2": { "title": "Discover", "desc": "Find hidden creatures at select locations" },
+        "feature3": { "title": "Win", "desc": "Enter prize draws from partner companies" },
+        "howTitle": "How to participate",
+        "step1": "Register for the challenge on the website",
+        "step2": "Choose locations to visit on foot, running, or by bike",
+        "step3": "Check in using GPS or QR codes at each site",
+        "step4": "Earn points, climb the leaderboard, and enter prize draws",
+        "prizesTitle": "Prizes",
+        "prizes": "Participants who complete one or more challenges enter draws throughout the summer and until September 6. Additional prizes are drawn on social media — share your participation with #útivistaáskorun.",
+        "sponsors": "Partners",
+        "register": "Register for the challenge"
+    },
+    "aboutUs": {
+        "title": "About Hlaupadagskra.is",
+        "tagline": "All races in one place, all year round",
+        "p1": "Hlaupadagskra.is is Iceland's comprehensive running event calendar — a neutral platform consolidating confirmed and upcoming running events from across the country, including official road races, ITRA trail runs, and organised charity runs.",
+        "p2": "Events are categorised, linked to registration pages, and connected to relevant social media. Status labels indicate whether events are confirmed, have registration open, or remain unconfirmed.",
+        "teamTitle": "The team",
+        "coFounder": "Co-founder",
+        "goalsTitle": "Our goals",
+        "goal1": "Enable runners to view all annual events in one accessible location",
+        "goal2": "Provide searchable and filterable event information",
+        "goal3": "Support the Icelandic running community through a neutral platform",
+        "followTitle": "Follow us"
+    },
+    "annualReport": {
+        "title": "Annual Report 2025",
+        "intro": "Running in Iceland is growing rapidly. This report documents participation across organised running events throughout 2025.",
+        "stat": {
+            "events": "Running events",
+            "registrations": "Registrations",
+            "growth": "Year-on-year growth",
+            "nationalities": "Nationalities"
+        },
+        "topEventsTitle": "Top events by participation",
+        "highlightsTitle": "Key highlights",
+        "highlight1": "Over 45,000 registrations — a 25.1% increase year-on-year",
+        "highlight2": "61% growth in registrations from 2023 to 2025",
+        "highlight3": "80% increase in foreign participants 2023–2025, with 64 nationalities represented",
+        "highlight4": "Youth participation (under 14) grew by 107%",
+        "genderTitle": "Gender split",
+        "male": "Male",
+        "female": "Female",
+        "genderNote": "Women dominate shorter distances (6–16 km); men predominantly participate in ultra distances (27 km+).",
+        "source": "Data sources"
+    },
     "disclaimer": {
         "title": "Disclaimer",
         "useAtOwnRisk": {
@@ -464,12 +620,13 @@
     "about": {
         "title": "About Hlaupadagskra.is",
         "description": "Hlaupadagskra.is is a trail discovery platform built for runners, hikers, and cyclists exploring Iceland's wild landscapes. Find trails near you, check elevation profiles, and share your favorites with friends.",
-        "authorTitle": "About me",
-        "authorDescription": "Trail runner and developer based in Iceland, building tools to help people discover and enjoy the outdoors.",
-        "authorSignature": "Svanur Karlsson",
-        "techTitle": "Technical Stack",
-        "techDescription": "Hlaupadagskra.is is built with a React frontend, a .NET 9 backend with PostGIS for spatial queries, and PostgreSQL for data storage. Maps are powered by Leaflet with OpenStreetMap tiles.",
-        "aiDescription": "Development assisted by Claude, an AI coding agent by Anthropic, used for code generation, refactoring, and quality improvements.",
+        "authorTitle": "About us",
+        "authorDescription": "The website is maintained by three runners out of a passion for running without any affiliation with any specific company or event, so the support of the running community is important.",
+        "authorSignature": "Óskar Þór, Svanur Þór og Tómas G.",
+        "missionTitle": "Our mission",
+        "missionTagline": "All runs in one place, all year round",
+        "missionDescription": "Our goal with hlaupadagskra.is is to fulfill the desire of runners to see all races throughout the year in one place and be able to search and filter in an accessible way. Races are marked “confirmed, registration open” and such if the event organizers have announced such but “Unconfirmed” or “until there is a correct timing or the race will not be held.",
+        "missionTags": ["Events", "Road races", "Trail races", "Trail discovery"],
         "changelogTitle": "Changelog",
         "changelog": {
             "v2_5": {
@@ -753,7 +910,7 @@
         },
         "trailPredictor": {
             "title": "Trail Predictor",
-            "subtitle": "Predict your time on a new trail based on a past performance",
+            "subtitle": "Predict your trail or race time based on a past performance",
             "knownRace": "Your completed trail",
             "targetRace": "Target trail",
             "selectTrailA": "Select completed trail",
@@ -767,6 +924,11 @@
             "flatPace": "Flat equivalent pace",
             "comparison": "Trail difference",
             "method": "Grade-adjusted prediction using Riegel's formula + Naismith's rule",
+            "copyUrl": "Copy URL",
+            "shareImage": "Share my prediction",
+            "shareText": "I'm predicted to finish {{trail}} in {{time}}, based on my time on {{fromTrail}} — hlaupadagskra.is",
+            "shareCardLabel": "Hlaupadagskra.is predicted my finish time",
+            "shareCardBasedOn": "Based on my time in {{trail}} · {{time}}",
             "loadError": "Failed to load trails. Please try again.",
             "summaryText": "If you ran {{knownTrail}} in {{yourTime}}, our prediction is that you will run {{targetTrail}} in {{predictedTime}}."
         },
@@ -944,6 +1106,38 @@
         "checklistSavedLocally": "Saved on this device only.",
         "predict": "Predict",
         "noUpcoming": "No upcoming races",
+        "filters": {
+            "title": "filters",
+            "activityType": "Activity",
+            "eventType": "Type",
+            "itraPoints": "ITRA Points",
+            "certifications": "Certified by",
+            "championships": "Championship",
+            "allLocations": "All locations",
+            "month": "Month",
+            "allMonths": "All",
+            "weekendOnly": "Weekend only",
+            "reset": "Reset filters",
+            "noResults": "No events match the selected filters",
+            "activeCount_one": "{{count}} filter active",
+            "activeCount_other": "{{count}} filters active"
+        },
+        "activityTypes": {
+            "TrailRunning": "Trail Running",
+            "Running": "Running",
+            "Hiking": "Hiking",
+            "Cycling": "Cycling",
+            "FunRun": "Fun Run",
+            "ObstacleCourse": "Obstacle Course",
+            "CrossCountryRun": "Cross Country",
+            "Social": "Social"
+        },
+        "eventTypes": {
+            "Race": "Race",
+            "Series": "Series",
+            "Championship": "Championship",
+            "Fun": "Fun"
+        },
         "history": {
             "title": "Event History",
             "backToEvent": "Back to event",
@@ -965,7 +1159,8 @@
             "noRaces": "No races for this edition",
             "soldOut": "Sold Out",
             "almostSoldOut": "Almost Full",
-            "cutoff": "Cutoff time"
+            "cutoff": "Cutoff time",
+            "certifications": "Credentials"
         },
         "registrationStatus": {
             "Open": "Open",
@@ -973,7 +1168,10 @@
             "NotStarted": ""
         },
         "ticketStatus": {
+            "Free": "Free",
+            "NotStarted": "Coming Soon",
             "Available": "Available",
+            "AlmostSoldOut": "Almost Full",
             "SoldOut": "Sold Out",
             "Closed": "Closed"
         }
@@ -1075,5 +1273,111 @@
         "worstTime": "Worst Time",
         "totalDistance": "Total Distance",
         "fasterThanFirst": "Best vs First"
+    },
+    "partnerLinks": {
+        "hlaupis": {
+            "title": "Hlaup.is",
+            "description": "Hub of information and knowledge for everyone who runs at any level.\n\nRegistrations, courses, results, running groups, race ratings, and more."
+        },
+        "timataka": {
+            "title": "Netskraning.is | Timataka.is",
+            "description": "Timataka specialises in timing using chip timing equipment from MyLaps.\n\nTimataka has handled timing in the following disciplines: road running, cross country, ski touring, cycling, swimming, and dog sledding."
+        },
+        "itra": {
+            "title": "ITRA Race Calendar",
+            "description": "List of all races that have received confirmed ITRA points. Searchable by country and period. Also race results.",
+            "guideLabel": "Our quick guide: Understanding the ITRA System"
+        },
+        "tenglar": {
+            "title": "Links"
+        }
+    },
+    "itraGuide": {
+        "title": "🏃‍♂️ Quick Guide: Understanding the ITRA System",
+        "intro": "If you are confused by how ITRA scores work, you are not alone. Here is a clear breakdown of the 5 key concepts you need to know, using a simple \"Distance vs. Speed\" logic.",
+        "concepts": [
+            {
+                "title": "ITRA Endurance Points (The \"Length\" Metric)",
+                "items": [
+                    "📌 What it is: A difficulty score assigned to a specific race route based only on distance and elevation. It ranges from 0 to 6.",
+                    "⚙️ How it works: Think of this as a pass/fail completion badge. Everyone who crosses the finish line gets the exact same points, whether they came in 1st place or last place.",
+                    "💡 Keep in mind: Short races (like an 8km or 16km) usually award 0 ITRA Points. This does not mean the race doesn't count — it just means it is a short distance."
+                ]
+            },
+            {
+                "title": "ITRA Performance Index (The \"Speed\" Metric)",
+                "badge": "Most Important",
+                "items": [
+                    "📌 What it is: Your personal global ranking score, ranging from 0 to 1000. It represents your theoretical maximum racing potential.",
+                    "⚙️ How it works: Every time you finish an ITRA-certified race, you receive a personal Race Score based purely on your speed compared to a theoretical world-record pace on that specific course. Your overall Performance Index is the weighted average of your up to 5 best Race Scores over the last 36 months.",
+                    "🏔️ The Laugavegur Rule: To enter the Laugavegur Ultra Trail, organizers don't care how many ITRA Points you have. They strictly require an ITRA Performance Index of 370 or higher. This proves you have the physical engine and speed to clear the mountain safety cut-offs. (For context, finishing the 55km Laugavegur course in 9.5 hours equals roughly a 370 score)."
+                ]
+            },
+            {
+                "title": "Mountain Level (The \"Steepness\" Metric)",
+                "items": [
+                    "📌 What it is: A difficulty rating from 0 to 12 that tells you how technical and steep the terrain is.",
+                    "⚙️ How it works: A 1 means flat roads or smooth paths. A 12 means extreme mountain terrain with massive, steep climbs and technical footing. It helps you understand what kind of gear and training you need for the terrain."
+                ]
+            },
+            {
+                "title": "Finisher Level (The \"Cut-Off\" Metric)",
+                "items": [
+                    "📌 What it is: The minimum personal Performance Index a runner needs to have to successfully cross the finish line before the time limit expires.",
+                    "⚙️ How it works: If a race has a Finisher Level of 220, a runner with a personal index of 220 will likely finish right at the final cut-off second. If it is 0, the time limit is exceptionally generous."
+                ]
+            },
+            {
+                "title": "National League (The \"Local Leaderboard\")",
+                "items": [
+                    "📌 What it is: A yearly ranking system that stacks you up against other runners in your home country.",
+                    "⚙️ How it works: It automatically updates every calendar year. If you run at least 3 ITRA-certified races in your own country during the year, your top 3 scores are aggregated to rank you on your local national leaderboard."
+                ]
+            }
+        ],
+        "section370": {
+            "title": "What does it take to reach a 370 Performance Index?",
+            "p1": "To unlock a 370 ITRA Performance Index score, you need to maintain a flat-equivalent pace of roughly 5:45 to 6:00 per kilometer.",
+            "p2": "Because trail races have hills, ITRA evaluates your speed using Effort-Kilometers (Effort-KM). The formula adds 1 kilometer of distance for every 100 meters of climbing. To reach a 370 score, you need an average pace of roughly 6:00 to 6:15 per Effort-KM."
+        },
+        "table": {
+            "title": "Target Finish Times for a 370 ITRA Score",
+            "distance": "Race Distance",
+            "elevation": "Elevation Gain",
+            "effortKm": "Total Effort-KM",
+            "targetTime": "Target Finish Time",
+            "pace": "Required Race Pace",
+            "rows": [
+                { "distance": "Flat 10K", "elevation": "0 m", "effortKm": "10.0 km", "targetTime": "0:57:30", "pace": "5:45 / km" },
+                { "distance": "8K Short Trail", "elevation": "+100 m", "effortKm": "9.0 km", "targetTime": "0:54:00", "pace": "6:45 / km" },
+                { "distance": "16K Medium Trail", "elevation": "+250 m", "effortKm": "18.5 km", "targetTime": "1:54:00", "pace": "7:07 / km" },
+                { "distance": "Half Marathon Trail", "elevation": "+400 m", "effortKm": "25.1 km", "targetTime": "2:37:00", "pace": "7:26 / km" },
+                { "distance": "Laugavegur Ultra, 53km", "elevation": "+1900 m", "effortKm": "72.0 km", "targetTime": "9:30:00", "pace": "7:55 / km" }
+            ]
+        },
+        "links": {
+            "title": "🔗 Official Resources",
+            "faq": "ITRA Performance Index FAQ",
+            "laugavegur": "Laugavegur Ultra Trail Registration Rules"
+        }
+    },
+    "eventDayBanner": {
+        "today": "Today",
+        "tomorrow": "Tomorrow",
+        "monday": "Monday",
+        "tuesday": "Tuesday",
+        "wednesday": "Wednesday",
+        "thursday": "Thursday",
+        "friday": "Friday",
+        "saturday": "Saturday",
+        "sunday": "Sunday",
+        "overflow": "and {{count}} more →"
+    },
+    "promos": {
+        "runningTrip": {
+            "title": "Running Trip in the Swiss Alps",
+            "dates": "3–9 September 2026",
+            "cta": "Book your spot"
+        }
     }
 }

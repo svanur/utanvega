@@ -22,16 +22,17 @@ import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
 import StarIcon from '@mui/icons-material/Star';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import ShareIcon from '@mui/icons-material/Share';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Trail } from '../hooks/useTrails';
+import ElevationSparkline from './ElevationSparkline';
+import QRCodeShare from './QRCodeShare';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { useLoginEnabled } from '../hooks/useLoginEnabled';
 import { estimateDuration } from '../utils/estimateDuration';
 import { useFavorites } from '../hooks/useFavorites';
-import { useHiddenTrails } from '../hooks/useHiddenTrails';
 import { useTickedTrails } from '../hooks/useTickedTrails';
 import { TrailQuickView } from './TrailQuickView';
 import DifficultyInfo from './DifficultyInfo';
@@ -39,7 +40,6 @@ import DifficultyInfo from './DifficultyInfo';
 interface TrailCardProps {
     trail: Trail;
     onToggleFavorite?: (slug: string) => void;
-    onHide?: (slug: string) => void;
     onTagClick?: (tagSlug: string) => void;
     isHiding?: boolean;
     isFavorited?: boolean;
@@ -75,7 +75,7 @@ const trailTypeI18nKey = (type: string) => {
     }
 };
 
-export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, onHide, onTagClick, isHiding, isFavorited: isFavoritedProp, compact, disableGestures }) => {
+export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, onTagClick, isHiding, isFavorited: isFavoritedProp, compact, disableGestures }) => {
     const navigate = useNavigate();
     const { t } = useTranslation();
     const { isEnabled } = useFeatureFlags();
@@ -83,13 +83,13 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
     const locationsPageEnabled = isEnabled('locations_page');
     const tagsEnabled = isEnabled('tags_page');
     const { isFavorite, toggleFavorite } = useFavorites();
-    const { hideTrail } = useHiddenTrails();
     const { tickedSlugs } = useTickedTrails();
     const [swipeOffset, setSwipeOffset] = useState(0);
     const touchStart = useRef<number | null>(null);
     const touchYStart = useRef<number | null>(null);
     const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [quickViewOpen, setQuickViewOpen] = useState(false);
+    const [shareOpen, setShareOpen] = useState(false);
     const isFavorited = isFavoritedProp ?? isFavorite(trail.slug);
 
     const distanceKm = (trail.length / 1000).toFixed(1);
@@ -162,15 +162,8 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                 navigator.vibrate(10);
             }
         } else if (swipeOffset < -100) {
-            if (onHide) {
-                onHide(trail.slug);
-            } else {
-                hideTrail(trail.slug);
-            }
-            // Trigger haptic feedback if available
-            if ('vibrate' in navigator) {
-                navigator.vibrate(10);
-            }
+            setShareOpen(true);
+            if ('vibrate' in navigator) navigator.vibrate(10);
         }
         setSwipeOffset(0);
         touchStart.current = null;
@@ -215,16 +208,16 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
             </Box>
             )}
 
-            {/* Right Background Swipe Indicator (Hide) */}
+            {/* Right Background Swipe Indicator (Share) */}
             {!disableGestures && (
-            <Box 
-                sx={{ 
-                    position: 'absolute', 
-                    top: 0, 
-                    left: 0, 
-                    right: 0, 
-                    bottom: 0, 
-                    bgcolor: 'error.main',
+            <Box
+                sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    bgcolor: 'info.main',
                     borderRadius: 1,
                     display: 'flex',
                     alignItems: 'center',
@@ -235,9 +228,9 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                 }}
             >
                 <Typography sx={{ color: 'white', mr: 1, fontWeight: 'bold' }}>
-                    {t('trailCard.hideTrail')}
+                    {t('trailCard.share')}
                 </Typography>
-                <VisibilityOffIcon sx={{ color: 'white' }} />
+                <ShareIcon sx={{ color: 'white' }} />
             </Box>
             )}
 
@@ -387,7 +380,7 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                     )}
 
                     {/* 3rd row: distance, gain, loss — icon-only in compact */}
-                    <Stack direction="row" spacing={compact ? 0.5 : 1.5} color="text.secondary" flexWrap="wrap" mt="auto" pt={compact ? 1 : 2} justifyContent={compact ? 'space-between' : 'flex-start'}>
+                    <Stack direction="row" spacing={compact ? 0.5 : 1.5} color="text.secondary" flexWrap="wrap" mt="auto" pt={compact ? 1 : 2} justifyContent={compact ? 'space-between' : 'flex-start'} alignItems="center">
                         <Box display="flex" alignItems="center">
                             <RouteIcon sx={{ mr: compact ? 0 : 0.5, fontSize: compact ? 14 : 18 }} />
                             <Typography variant="body2" fontSize={compact ? '0.75rem' : undefined}>{distanceKm} km</Typography>
@@ -400,6 +393,12 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                             <TrendingDownIcon sx={{ mr: compact ? 0 : 0.5, fontSize: compact ? 14 : 18, color: 'error.main' }} />
                             <Typography variant="body2" fontSize={compact ? '0.75rem' : undefined}>-{Math.round(trail.elevationLoss)}</Typography>
                         </Box>
+                        {!compact && trail.activityType === 'TrailRunning' && trail.length > 0 && (
+                            <Box display="flex" alignItems="center">
+                                <LandscapeIcon sx={{ mr: 0.5, fontSize: 18 }} />
+                                <Typography variant="body2">{Math.round(trail.elevationGain / (trail.length / 1000))} m/km</Typography>
+                            </Box>
+                        )}
                         {estTime && (
                         <Box display="flex" alignItems="center">
                             <AccessTimeIcon sx={{ mr: compact ? 0 : 0.5, fontSize: compact ? 14 : 18 }} />
@@ -415,15 +414,29 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                             </Box>
                         )}
                     </Stack>
+
+                    {!compact && trail.elevationProfile && trail.elevationProfile.length >= 2 && (
+                        <Box sx={{ mt: 1.5, mx: -0.5, color: 'text.secondary' }}>
+                            <ElevationSparkline profile={trail.elevationProfile} width="100%" height={36} />
+                        </Box>
+                    )}
                     </CardContent>
                 </CardActionArea>
             </Card>
 
             {!disableGestures && (
-                <TrailQuickView 
-                    trail={trail} 
-                    open={quickViewOpen} 
-                    onClose={() => setQuickViewOpen(false)} 
+                <TrailQuickView
+                    trail={trail}
+                    open={quickViewOpen}
+                    onClose={() => setQuickViewOpen(false)}
+                />
+            )}
+            {!disableGestures && (
+                <QRCodeShare
+                    slug={trail.slug}
+                    trailName={trail.name}
+                    open={shareOpen}
+                    onClose={() => setShareOpen(false)}
                 />
             )}
         </Box>

@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
-
-type PageKey = 'trails' | 'locations' | 'health' | 'map' | 'tags' | 'analytics' | 'features' | 'events';
+import type { PageKey } from '../types/PageKey';
 
 interface UseAdminShortcutsOptions {
     onNavigate: (page: PageKey) => void;

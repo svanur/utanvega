@@ -21,6 +21,8 @@ interface RaceShareCardProps {
     date: string | null;
     daysUntil: number | null;
     activityType?: string;
+    open?: boolean;
+    onClose?: () => void;
 }
 
 const CARD_WIDTH = 1080;
@@ -211,12 +213,15 @@ function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number)
 }
 
 export default function RaceShareCard(props: RaceShareCardProps) {
-    const { eventName, raceName, distanceLabel, date, daysUntil, activityType } = props;
+    const { eventName, raceName, distanceLabel, date, daysUntil, activityType, open: openProp, onClose: onCloseProp } = props;
     const { t } = useTranslation();
     const theme = useTheme();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [brandImage, setBrandImage] = useState<HTMLImageElement | null>(null);
-    const [open, setOpen] = useState(false);
+    const [openInternal, setOpenInternal] = useState(false);
+    const open = openProp !== undefined ? openProp : openInternal;
+    const setOpen = openProp !== undefined ? () => {} : setOpenInternal;
+    const handleClose = () => { onCloseProp ? onCloseProp() : setOpenInternal(false); };
     const [rendered, setRendered] = useState(false);
     const [snackbar, setSnackbar] = useState('');
     const isDark = theme.palette.mode === 'dark';
@@ -291,25 +296,27 @@ export default function RaceShareCard(props: RaceShareCardProps) {
 
     return (
         <>
-            <Button
-                variant="contained"
-                color="secondary"
-                startIcon={<ShareIcon />}
-                onClick={() => setOpen(true)}
-                sx={{ textTransform: 'none' }}
-            >
-                {t('races.shareCard.button', { defaultValue: "I'm racing! 💥" })}
-            </Button>
+            {openProp === undefined && (
+                <Button
+                    variant="contained"
+                    color="secondary"
+                    startIcon={<ShareIcon />}
+                    onClick={() => setOpenInternal(true)}
+                    sx={{ textTransform: 'none' }}
+                >
+                    {t('races.shareCard.button', { defaultValue: "I'm racing! 💥" })}
+                </Button>
+            )}
 
             <Dialog
                 open={open}
-                onClose={() => setOpen(false)}
+                onClose={handleClose}
                 maxWidth="sm"
                 fullWidth
             >
                 <IconButton
                     aria-label="close"
-                    onClick={() => setOpen(false)}
+                    onClick={handleClose}
                     sx={{ position: 'absolute', right: 8, top: 8, zIndex: 1 }}
                 >
                     <CloseIcon />

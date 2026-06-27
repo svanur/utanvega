@@ -126,6 +126,7 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [detecting, setDetecting] = useState(false);
   const [detectingLocations, setDetectingLocations] = useState(false);
+  const [backfillingProfiles, setBackfillingProfiles] = useState(false);
 
   const handleDeleteDuplicate = async (trailId: string, trailName: string) => {
     if (!confirm(`Delete "${trailName}"? This will soft-delete the trail.`)) return;
@@ -147,7 +148,7 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
       const result = await apiFetch<{ total: number; updated: number }>('/api/v1/admin/trails/detect-types', { method: 'POST' });
       onNotify(`Trail types re-detected: ${result.updated} of ${result.total} trails updated`);
       // Refresh trail data to show updated types
-      const data = await apiFetch<TrailDto[]>('/api/v1/admin/trails?includeDeleted=false');
+      const data = await apiFetch<TrailDto[]>('/api/v1/admin/trails?includeArchived=false');
       setTrails(data);
     } catch (_err) {
       onNotify('Failed to detect trail types', 'error');
@@ -156,12 +157,24 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
     }
   };
 
+  const handleBackfillElevationProfiles = async () => {
+    setBackfillingProfiles(true);
+    try {
+      const result = await apiFetch<{ updated: number }>('/api/v1/admin/trails/backfill-elevation-profiles', { method: 'POST' });
+      onNotify(`Elevation profiles backfilled: ${result.updated} trails updated`);
+    } catch (_err) {
+      onNotify('Failed to backfill elevation profiles', 'error');
+    } finally {
+      setBackfillingProfiles(false);
+    }
+  };
+
   const handleDetectLocations = async () => {
     setDetectingLocations(true);
     try {
       const result = await apiFetch<{ total: number; updated: number }>('/api/v1/admin/trails/detect-locations', { method: 'POST' });
       onNotify(`Locations re-detected: ${result.updated} of ${result.total} trails updated`);
-      const data = await apiFetch<TrailDto[]>('/api/v1/admin/trails?includeDeleted=false');
+      const data = await apiFetch<TrailDto[]>('/api/v1/admin/trails?includeArchived=false');
       setTrails(data);
     } catch (_err) {
       onNotify('Failed to detect locations', 'error');
@@ -173,7 +186,7 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
   useEffect(() => {
     (async () => {
       try {
-        const data = await apiFetch<TrailDto[]>('/api/v1/admin/trails?includeDeleted=false');
+        const data = await apiFetch<TrailDto[]>('/api/v1/admin/trails?includeArchived=false');
         setTrails(data);
       } catch (_err) {
         onNotify('Failed to load trails', 'error');
@@ -245,7 +258,7 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
             variant="outlined"
             size="small"
             startIcon={detectingLocations ? <CircularProgress size={16} /> : <AutoFixHighIcon />}
-            disabled={detectingLocations || detecting}
+            disabled={detectingLocations || detecting || backfillingProfiles}
             onClick={handleDetectLocations}
           >
             {detectingLocations ? 'Detecting...' : 'Re-detect Locations'}
@@ -254,10 +267,19 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
             variant="outlined"
             size="small"
             startIcon={detecting ? <CircularProgress size={16} /> : <AutoFixHighIcon />}
-            disabled={detecting || detectingLocations}
+            disabled={detecting || detectingLocations || backfillingProfiles}
             onClick={handleDetectTypes}
           >
             {detecting ? 'Detecting...' : 'Re-detect Trail Types'}
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={backfillingProfiles ? <CircularProgress size={16} /> : <AutoFixHighIcon />}
+            disabled={detecting || detectingLocations || backfillingProfiles}
+            onClick={handleBackfillElevationProfiles}
+          >
+            {backfillingProfiles ? 'Backfilling...' : 'Backfill Elevation Profiles'}
           </Button>
         </Stack>
       </Box>

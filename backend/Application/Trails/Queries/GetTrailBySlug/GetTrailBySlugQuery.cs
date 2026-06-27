@@ -45,8 +45,10 @@ public class GetTrailBySlugQueryHandler : IRequestHandler<GetTrailBySlugQuery, T
                 .ThenInclude(ed => ed.Event)
             .AsNoTracking()
             .Where(r => r.TrailId == trail.Id
-                && r.Status == RaceStatus.Active
-                && r.EventEdition.Event.Status == EventStatus.Confirmed)
+                && r.Status != RaceStatus.Cancelled
+                && r.Status != RaceStatus.Hidden
+                && r.EventEdition.Event.Status != EventStatus.Cancelled
+                && r.EventEdition.Event.Status != EventStatus.Hidden)
             .ToListAsync(cancellationToken);
 
         var linkedRaceDtos = linkedRaces
@@ -63,7 +65,10 @@ public class GetTrailBySlugQueryHandler : IRequestHandler<GetTrailBySlugQuery, T
                     r.EventEdition.Event.Slug,
                     r.Name,
                     r.DistanceLabel,
-                    daysUntil);
+                    daysUntil,
+                    r.StartTime.HasValue ? r.StartTime.Value.ToString("HH:mm") : null,
+                    r.TicketStatus.ToString(),
+                    r.ItraPoints);
             })
             .ToList();
 
@@ -89,7 +94,8 @@ public class GetTrailBySlugQueryHandler : IRequestHandler<GetTrailBySlugQuery, T
                 .Select(tt => new TagInfoDto(tt.Tag.Name, tt.Tag.Slug, tt.Tag.Color))
                 .ToList(),
             LinkedRaces: linkedRaceDtos.Count > 0 ? linkedRaceDtos : null,
-            YoutubeUrl: trail.YoutubeUrl
+            YoutubeUrl: trail.YoutubeUrl,
+            ElevationProfile: trail.ElevationProfile
         );
     }
 }
