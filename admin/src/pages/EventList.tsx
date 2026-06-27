@@ -1,4 +1,7 @@
 import { Fragment, useMemo, useState, type ReactNode } from 'react';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import {
   Alert,
   Autocomplete,
@@ -40,7 +43,9 @@ import {
 import {
   Add as AddIcon,
   AutoAwesome as GenerateIcon,
+  CalendarMonth as CalendarIcon,
   Clear as ClearIcon,
+  DragIndicator as DragHandleIcon,
   ContentCopy as CopyIcon,
   Delete as DeleteIcon,
   Edit as EditIcon,
@@ -177,6 +182,19 @@ const REGISTRATION_STATUSES: RegistrationStatus[] = ['NotStarted', 'Open', 'Clos
 const RACE_STATUSES: RaceStatus[] = ['Active', 'Completed', 'Cancelled', 'Hidden'];
 const TICKET_STATUSES: TicketStatus[] = ['Free', 'NotStarted', 'Available', 'AlmostSoldOut', 'SoldOut', 'Closed'];
 const ALERT_SEVERITIES: AlertSeverity[] = ['info', 'success', 'warning', 'error'];
+
+const EDITION_BORDER_COLORS = [
+  '#1976d2', // blue
+  '#9c27b0', // purple
+  '#e65100', // deep orange
+  '#00796b', // teal
+  '#c62828', // red
+  '#558b2f', // green
+  '#f57f17', // amber
+  '#0277bd', // light blue
+  '#6a1b9a', // deep purple
+  '#2e7d32', // dark green
+];
 
 const ACTIVITY_ICONS: Record<string, string> = {
   TrailRunning: '🏃‍♂️',
@@ -324,6 +342,16 @@ function getTicketStatusColor(status: TicketStatus): 'success' | 'error' | 'warn
   if (status === 'AlmostSoldOut') return 'warning';
   if (status === 'NotStarted') return 'info';
   return 'default';
+}
+
+function bumpYearInUrl(url: string, fromYear: number | null | undefined, toYear: number): string {
+  if (!url || !fromYear) return '';
+  return url.split(String(fromYear)).join(String(toYear));
+}
+
+function isPastDate(dateStr: string): boolean {
+  if (!dateStr) return false;
+  return dateStr < new Date().toISOString().slice(0, 10);
 }
 
 function trimToUndefined(value: string): string | undefined {
@@ -552,6 +580,89 @@ function buildScheduleRule(form: EventFormState): ScheduleRule | null {
   return null;
 }
 
+interface SortableRaceItemProps {
+  race: import('../hooks/useEvents').RaceDto;
+  onEdit: () => void;
+  onDelete: () => void;
+  getIcon: (trailId: string | null) => string;
+  formatDateLabel: (d: string | null | undefined, fallback: string) => string;
+  formatTimeLabel: (t: string | null | undefined) => string;
+}
+
+function SortableRaceItem({ race, onEdit, onDelete, getIcon, formatDateLabel, formatTimeLabel }: SortableRaceItemProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: race.id });
+
+  return (
+    <ListItem
+      ref={setNodeRef}
+      sx={{
+        px: 1.5, py: 1.25,
+        border: '1px solid', borderColor: 'divider', borderRadius: 1,
+        alignItems: 'flex-start',
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+        bgcolor: isDragging ? 'action.hover' : 'background.paper',
+      }}
+      secondaryAction={(
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <IconButton size="small" onClick={onEdit}><EditIcon fontSize="small" /></IconButton>
+          <IconButton size="small" color="error" onClick={onDelete}><DeleteIcon fontSize="small" /></IconButton>
+        </Box>
+      )}
+    >
+      <Box sx={{ display: 'flex', alignItems: 'center', mr: 1, cursor: 'grab', color: 'text.disabled', touchAction: 'none' }} {...attributes} {...listeners}>
+        <DragHandleIcon fontSize="small" />
+      </Box>
+      <ListItemText
+        sx={{ pr: 10 }}
+        primary={(
+          <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ alignItems: 'center' }}>
+            <Typography variant="body2" fontWeight={700}>{race.name}</Typography>
+            {race.distanceLabel && <Chip label={race.distanceLabel} size="small" variant="outlined" />}
+            <Chip label={race.status} size="small" color={getRaceStatusColor(race.status)} />
+            <Chip label={race.ticketStatus} size="small" color={getTicketStatusColor(race.ticketStatus)} variant="outlined" />
+            {race.cutoffMinutes != null && (
+              <Chip label={`Cutoff ${formatMinutesToHHmm(race.cutoffMinutes) ?? `${race.cutoffMinutes} min`}`} size="small" variant="outlined" color="warning" />
+            )}
+          </Stack>
+        )}
+        secondary={(
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, mt: 0.75 }}>
+            {race.description && <Typography variant="body2" color="text.secondary">{race.description}</Typography>}
+            <Stack direction="row" spacing={1.5} useFlexGap flexWrap="wrap">
+              {race.trailName && (
+                <Typography variant="caption" color="primary">
+                  {getIcon(race.trailId)} {race.trailName}
+                  {race.trailDistanceMeters != null && ` • ${(race.trailDistanceMeters / 1000).toFixed(1)} km`}
+                  {race.trailElevationGain != null && ` • ↑${Math.round(race.trailElevationGain)} m`}
+                </Typography>
+              )}
+              {race.maxParticipants != null && <Typography variant="caption" color="text.secondary">Max {race.maxParticipants} participants</Typography>}
+              {race.itraPoints != null && (
+                <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                  <img src={`/images/itra-${race.itraPoints}.png`} alt={`ITRA ${race.itraPoints}`} style={{ height: 20 }} />
+                  <Typography variant="caption" color="text.secondary">{race.itraPoints} ITRA pts</Typography>
+                </Box>
+              )}
+              {race.certifiedBy && <Typography variant="caption" color="text.secondary">Certified by {race.certifiedBy}</Typography>}
+              {race.prizeMoney > 0 && <Typography variant="caption" color="text.secondary">Prize {race.prizeMoney}</Typography>}
+              {race.championshipCategory && <Typography variant="caption" color="text.secondary">{race.championshipCategory}</Typography>}
+              {(race.dateOfRace || race.startTime) && (
+                <Typography variant="caption" color="text.secondary">
+                  {formatDateLabel(race.dateOfRace, 'Date TBD')}
+                  {race.startTime ? ` • ${formatTimeLabel(race.startTime)}` : ''}
+                </Typography>
+              )}
+            </Stack>
+          </Box>
+        )}
+        secondaryTypographyProps={{ component: 'div' }}
+      />
+    </ListItem>
+  );
+}
+
 export default function EventList({ onNotify }: EventListProps) {
   const {
     events,
@@ -595,6 +706,10 @@ export default function EventList({ onNotify }: EventListProps) {
   const [editionForm, setEditionForm] = useState<EditionFormState>(createEmptyEditionForm());
   const [raceForm, setRaceForm] = useState<RaceFormState>(createEmptyRaceForm());
   const [applyToAllEditions, setApplyToAllEditions] = useState(false);
+  const [cloneFromEditionId, setCloneFromEditionId] = useState<string>('');
+  const [localRaceOrder, setLocalRaceOrder] = useState<Map<string, string[]>>(new Map());
+  const [showBulkDatesDialog, setShowBulkDatesDialog] = useState(false);
+  const [bulkDates, setBulkDates] = useState<Array<{ race: RaceDto; dateOfRace: string; startTime: string }>>([]);
   const [generateForm, setGenerateForm] = useState<GenerateFormState>({ eventId: '', eventName: '', eventType: 'Race', fromMonth: 1, fromYear: new Date().getFullYear(), toMonth: 12, toYear: new Date().getFullYear(), trailId: '', registrationUrl: '', seasonStartMonth: null, editionName: '' });
 
   const sortedLocations = useMemo(
@@ -755,19 +870,36 @@ export default function EventList({ onNotify }: EventListProps) {
 
   const openCreateEdition = (event: EventSummaryDto) => {
     setEditEditionId(null);
-    setEditionForm(createEmptyEditionForm(event.id, event.type, event.name));
+    const editionsWithRaces = [...(expandedDetail?.editions ?? [])].filter(ed => ed.races.length > 0).sort(sortEditions);
+    const defaultClone = editionsWithRaces[editionsWithRaces.length - 1];
+    const nextYear = defaultClone?.year ? String(defaultClone.year + 1) : String(new Date().getFullYear());
+    const clonedRegUrl = bumpYearInUrl(defaultClone?.registrationUrl ?? '', defaultClone?.year, Number(nextYear));
+    const isPastYear = Number(nextYear) < new Date().getFullYear();
+    setCloneFromEditionId(defaultClone?.id ?? '');
+    setEditionForm({
+      ...createEmptyEditionForm(event.id, event.type, event.name),
+      year: nextYear,
+      registrationUrl: clonedRegUrl,
+      registrationStatus: isPastYear ? 'Closed' : 'NotStarted',
+    });
     setShowEditionDialog(true);
   };
 
   const openEditEdition = (edition: EventEditionDto) => {
     setEditEditionId(edition.id);
+    setCloneFromEditionId('');
     setEditionForm(buildEditionForm(edition, expandedDetail?.type ?? 'Race', expandedDetail?.name ?? ''));
     setShowEditionDialog(true);
   };
 
   const openCreateRace = (edition: EventEditionDto) => {
     setEditRaceId(null);
-    setRaceForm(createEmptyRaceForm(edition.id, edition.races.length));
+    const past = isPastDate(edition.date ?? '');
+    setRaceForm({
+      ...createEmptyRaceForm(edition.id, edition.races.length),
+      status: past ? 'Completed' : 'Active',
+      ticketStatus: past ? 'Closed' : 'Available',
+    });
     setShowRaceDialog(true);
   };
 
@@ -889,24 +1021,61 @@ export default function EventList({ onNotify }: EventListProps) {
         onNotify(`Edition "${editionLabel}" updated`);
       } else {
         const newEditionId = await createEdition(input);
+        const sourceEdition = cloneFromEditionId
+          ? expandedDetail?.editions.find(ed => ed.id === cloneFromEditionId)
+          : null;
 
         if (isRaceOrSeries) {
-          await createRace({
-            eventEditionId: newEditionId,
-            trailId: null,
-            name: editionForm.eventName || 'Race',
-            status: 'Active',
-            sortOrder: 0,
-            ticketStatus: 'Available',
-            itraPoints: null,
-            prizeMoney: 0,
-          });
-          onNotify(`Edition "${editionLabel}" created with default race`);
+          if (sourceEdition && sourceEdition.races.length > 0) {
+            const results = await Promise.allSettled(sourceEdition.races.map(race =>
+              createRace({
+                eventEditionId: newEditionId,
+                trailId: race.trailId ?? null,
+                name: race.name,
+                distanceLabel: race.distanceLabel ?? undefined,
+                cutoffMinutes: race.cutoffMinutes ?? null,
+                description: race.description ?? undefined,
+                status: 'Active',
+                sortOrder: race.sortOrder,
+                ticketStatus: 'Available',
+                maxParticipants: race.maxParticipants ?? null,
+                itraPoints: race.itraPoints ?? null,
+                certifiedBy: race.certifiedBy ?? undefined,
+                prizeMoney: race.prizeMoney,
+                championshipCategory: race.championshipCategory ?? undefined,
+                dateOfRace: null,
+                startTime: null,
+              }),
+            ));
+            const failed = results.filter(r => r.status === 'rejected').length;
+            const succeeded = results.length - failed;
+            if (failed > 0) {
+              onNotify(`Edition "${editionLabel}" created but only ${succeeded}/${results.length} races were cloned — review and add missing ones`, 'error');
+            } else {
+              onNotify(`Edition "${editionLabel}" created with ${succeeded} cloned race${succeeded === 1 ? '' : 's'} — set their dates below`);
+            }
+          } else {
+            await createRace({
+              eventEditionId: newEditionId,
+              trailId: null,
+              name: editionForm.eventName || 'Race',
+              status: 'Active',
+              sortOrder: 0,
+              ticketStatus: 'Available',
+              itraPoints: null,
+              prizeMoney: 0,
+            });
+            onNotify(`Edition "${editionLabel}" created with default race`);
+          }
         } else {
           onNotify(`Edition "${editionLabel}" created`);
         }
+
+        // Auto-expand the new edition so admin can see and set dates immediately
+        setExpandedEditionIds(prev => [...prev, newEditionId]);
       }
 
+      setCloneFromEditionId('');
       setShowEditionDialog(false);
       await refreshExpandedEvent();
     } catch (err) {
@@ -1186,6 +1355,111 @@ export default function EventList({ onNotify }: EventListProps) {
     }
   };
 
+  const handleCycleRegistrationStatus = async (edition: EventEditionDto) => {
+    const cycle: RegistrationStatus[] = ['NotStarted', 'Open', 'Closed'];
+    const next = cycle[(cycle.indexOf(edition.registrationStatus) + 1) % cycle.length];
+    try {
+      await updateEdition(edition.id, {
+        year: edition.year ?? null,
+        date: edition.date ?? null,
+        title: edition.title ?? undefined,
+        registrationUrl: edition.registrationUrl ?? undefined,
+        resultsUrl: edition.resultsUrl ?? undefined,
+        notes: edition.notes ?? undefined,
+        registrationStatus: next,
+        trailId: edition.trailId ?? null,
+      });
+      await refreshExpandedEvent();
+    } catch (err) {
+      onNotify(err instanceof Error ? err.message : 'Failed to update status', 'error');
+    }
+  };
+
+  const openBulkDates = (edition: EventEditionDto) => {
+    setBulkDates(
+      [...edition.races].sort(sortRaces).map(race => ({
+        race,
+        dateOfRace: race.dateOfRace ?? '',
+        startTime: race.startTime ? race.startTime.slice(0, 5) : '',
+      })),
+    );
+    setShowBulkDatesDialog(true);
+  };
+
+  const handleSaveBulkDates = async () => {
+    setSaving(true);
+    try {
+      await Promise.all(bulkDates.map(({ race, dateOfRace, startTime }) =>
+        updateRace(race.id, {
+          trailId: race.trailId ?? null,
+          name: race.name,
+          distanceLabel: race.distanceLabel ?? undefined,
+          cutoffMinutes: race.cutoffMinutes ?? null,
+          description: race.description ?? undefined,
+          status: race.status,
+          sortOrder: race.sortOrder,
+          ticketStatus: race.ticketStatus,
+          maxParticipants: race.maxParticipants ?? null,
+          itraPoints: race.itraPoints ?? null,
+          certifiedBy: race.certifiedBy ?? undefined,
+          prizeMoney: race.prizeMoney,
+          championshipCategory: race.championshipCategory ?? undefined,
+          dateOfRace: dateOfRace || null,
+          startTime: startTime || null,
+        }),
+      ));
+      onNotify(`Dates saved for ${bulkDates.length} race${bulkDates.length === 1 ? '' : 's'}`);
+      setShowBulkDatesDialog(false);
+      await refreshExpandedEvent();
+    } catch (err) {
+      onNotify(err instanceof Error ? err.message : 'Failed to save dates', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const handleRaceDragEnd = async (event: DragEndEvent, edition: EventEditionDto) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const sorted = [...edition.races].sort(sortRaces);
+    const oldIndex = sorted.findIndex(r => r.id === active.id);
+    const newIndex = sorted.findIndex(r => r.id === over.id);
+    const reordered = arrayMove(sorted, oldIndex, newIndex);
+
+    // Optimistic update so the list doesn't snap back during API calls
+    setLocalRaceOrder(prev => new Map(prev).set(edition.id, reordered.map(r => r.id)));
+
+    try {
+      await Promise.all(reordered.map((race, idx) =>
+        idx !== sorted.indexOf(race) ? updateRace(race.id, {
+          trailId: race.trailId ?? null,
+          name: race.name,
+          distanceLabel: race.distanceLabel ?? undefined,
+          cutoffMinutes: race.cutoffMinutes ?? null,
+          description: race.description ?? undefined,
+          status: race.status,
+          sortOrder: idx,
+          ticketStatus: race.ticketStatus,
+          maxParticipants: race.maxParticipants ?? null,
+          itraPoints: race.itraPoints ?? null,
+          certifiedBy: race.certifiedBy ?? undefined,
+          prizeMoney: race.prizeMoney,
+          championshipCategory: race.championshipCategory ?? undefined,
+          dateOfRace: race.dateOfRace ?? null,
+          startTime: race.startTime ?? null,
+        }) : Promise.resolve(),
+      ));
+      await refreshExpandedEvent();
+      setLocalRaceOrder(prev => { const m = new Map(prev); m.delete(edition.id); return m; });
+    } catch (err) {
+      setLocalRaceOrder(prev => { const m = new Map(prev); m.delete(edition.id); return m; });
+      onNotify(err instanceof Error ? err.message : 'Failed to reorder races', 'error');
+    }
+  };
+
   const getTrailActivityIcon = (trailId: string | null) => {
     if (!trailId) return '🏁';
     return ACTIVITY_ICONS[trails.find(trail => trail.id === trailId)?.activityType ?? ''] ?? '🏁';
@@ -1318,7 +1592,7 @@ export default function EventList({ onNotify }: EventListProps) {
             {filteredEvents.map(event => (
               <Fragment key={event.id}>
                 <TableRow hover sx={{ cursor: 'pointer' }} onClick={() => toggleExpand(event)}>
-                  <TableCell>
+                  <TableCell sx={expandedEventId === event.id ? { borderTop: '2px solid', borderLeft: '2px solid', borderColor: 'primary.main' } : {}}>
                     <IconButton size="small">
                       {expandedEventId === event.id ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                     </IconButton>
@@ -1363,7 +1637,7 @@ export default function EventList({ onNotify }: EventListProps) {
                   <TableCell>
                     <Typography variant="body2" color="text.secondary">{event.locationName ?? '—'}</Typography>
                   </TableCell>
-                  <TableCell align="right" onClick={clickEvent => clickEvent.stopPropagation()}>
+                  <TableCell align="right" onClick={clickEvent => clickEvent.stopPropagation()} sx={expandedEventId === event.id ? { borderTop: '2px solid', borderRight: '2px solid', borderColor: 'primary.main' } : {}}>
                     <Tooltip title="Edit event">
                       <IconButton size="small" onClick={() => openEditEvent(event)}>
                         <EditIcon fontSize="small" />
@@ -1377,18 +1651,38 @@ export default function EventList({ onNotify }: EventListProps) {
                   </TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell colSpan={10} sx={{ py: 0, borderBottom: expandedEventId === event.id ? undefined : 'none' }}>
+                  <TableCell colSpan={10} sx={{ py: 0, borderBottom: expandedEventId === event.id ? undefined : 'none', ...(expandedEventId === event.id && { borderLeft: '2px solid', borderRight: '2px solid', borderBottomColor: 'primary.main', borderLeftColor: 'primary.main', borderRightColor: 'primary.main' }) }}>
                     <Collapse in={expandedEventId === event.id} timeout="auto" unmountOnExit>
                       <Box sx={{ px: 2, py: 2, bgcolor: 'action.hover' }}>
                         {loadingDetail ? (
                           <CircularProgress size={24} />
                         ) : expandedDetail ? (
                           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2, flexWrap: 'wrap' }}>
-                              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                {expandedDetail.description && (
-                                  <Typography variant="body2">{expandedDetail.description}</Typography>
+                            {/* Sticky event name header */}
+                            <Box sx={{
+                              position: 'sticky', top: 0, zIndex: 1,
+                              bgcolor: 'background.paper',
+                              borderBottom: 1, borderColor: 'divider',
+                              mx: -2, px: 2, py: 1,
+                              display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1,
+                            }}>
+                              <Typography variant="subtitle1" fontWeight={700}>{expandedDetail.name}</Typography>
+                              <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                                {expandedDetail.scheduleRule && (
+                                  <Button size="small" variant="outlined" startIcon={<GenerateIcon />} onClick={() => openGenerateEditionDialog(event)}>
+                                    Generate Editions
+                                  </Button>
                                 )}
+                                <Button size="small" variant="contained" startIcon={<AddIcon />} onClick={() => openCreateEdition(event)}>
+                                  Add Edition
+                                </Button>
+                              </Stack>
+                            </Box>
+
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                              {expandedDetail.description && (
+                                <Typography variant="body2">{expandedDetail.description}</Typography>
+                              )}
                                 <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
                                   <Chip label={expandedDetail.type} size="small" color={EVENT_TYPE_COLORS[expandedDetail.type as EventType] ?? 'default'} />
                                   <Chip label={`${expandedDetail.editions.length} edition${expandedDetail.editions.length === 1 ? '' : 's'}`} size="small" />
@@ -1402,18 +1696,6 @@ export default function EventList({ onNotify }: EventListProps) {
                                     ))}
                                   </Stack>
                                 )}
-                              </Box>
-
-                              <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-                                {expandedDetail.scheduleRule && (
-                                  <Button size="small" variant="outlined" startIcon={<GenerateIcon />} onClick={() => openGenerateEditionDialog(event)}>
-                                    Generate Editions
-                                  </Button>
-                                )}
-                                <Button size="small" variant="contained" startIcon={<AddIcon />} onClick={() => openCreateEdition(event)}>
-                                  Add Edition
-                                </Button>
-                              </Stack>
                             </Box>
 
                             {(expandedDetail.alertMessage || expandedDetail.socialLinks?.length || expandedDetail.organizerWebsite) && (
@@ -1461,8 +1743,12 @@ export default function EventList({ onNotify }: EventListProps) {
                                   No editions yet. Click "Add Edition" to create the first one.
                                 </Typography>
                               ) : (
-                                [...expandedDetail.editions].sort(sortEditions).map(edition => (
-                                  <Paper key={edition.id} variant="outlined" sx={{ mb: 1.5 }}>
+                                [...expandedDetail.editions].sort(sortEditions).map((edition, idx) => (
+                                  <Paper key={edition.id} variant="outlined" sx={{
+                                    mb: 1.5,
+                                    borderLeft: '4px solid',
+                                    borderLeftColor: EDITION_BORDER_COLORS[idx % EDITION_BORDER_COLORS.length],
+                                  }}>
                                     <Box sx={{ p: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
                                       <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', flexGrow: 1 }}>
                                         <IconButton size="small" onClick={() => toggleEditionExpand(edition.id)}>
@@ -1470,11 +1756,38 @@ export default function EventList({ onNotify }: EventListProps) {
                                         </IconButton>
                                         <Box sx={{ flexGrow: 1 }}>
                                           <Typography variant="body2" fontWeight={700}>{buildEditionLabel(edition)}</Typography>
+                                          {edition.notes && !expandedEditionIds.includes(edition.id) && (
+                                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25, fontStyle: 'italic' }} noWrap>
+                                              {edition.notes}
+                                            </Typography>
+                                          )}
                                           <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ mt: 0.75 }}>
                                             <Chip label={edition.date ?? (edition.year != null ? String(edition.year) : 'Date TBD')} size="small" variant="outlined" />
-                                            <Chip label={edition.registrationStatus} size="small" color={getRegistrationStatusColor(edition.registrationStatus)} />
+                                            <Tooltip title="Click to cycle: NotStarted → Open → Closed">
+                                              <Chip
+                                                label={edition.registrationStatus}
+                                                size="small"
+                                                color={getRegistrationStatusColor(edition.registrationStatus)}
+                                                onClick={() => handleCycleRegistrationStatus(edition)}
+                                                sx={{ cursor: 'pointer' }}
+                                              />
+                                            </Tooltip>
                                             <Chip label={`${edition.races.length} race${edition.races.length === 1 ? '' : 's'}`} size="small" variant="outlined" />
                                             {edition.trailName && <Chip label={`Trail: ${edition.trailName}`} size="small" variant="outlined" />}
+                                            {(() => {
+                                              const missing = edition.races.filter(r => !r.dateOfRace).length;
+                                              return missing > 0 ? (
+                                                <Tooltip title="Click to set dates">
+                                                  <Chip
+                                                    label={`${missing} date${missing === 1 ? '' : 's'} missing`}
+                                                    size="small"
+                                                    color="warning"
+                                                    onClick={() => openBulkDates(edition)}
+                                                    sx={{ cursor: 'pointer' }}
+                                                  />
+                                                </Tooltip>
+                                              ) : null;
+                                            })()}
                                           </Stack>
                                         </Box>
                                       </Box>
@@ -1516,12 +1829,17 @@ export default function EventList({ onNotify }: EventListProps) {
 
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                                           <Typography variant="subtitle2" color="text.secondary">
-                                            Races ({edition.races.length})
+                                            Races · {buildEditionLabel(edition)} ({edition.races.length})
                                           </Typography>
                                           <Stack direction="row" spacing={1}>
                                             {expandedDetail && edition.races.length === 0 && expandedDetail.editions.some(ed => ed.id !== edition.id && ed.races.length > 0) && (
                                               <Button size="small" startIcon={<CopyIcon />} onClick={() => handleCopyRacesFromPrevious(edition)} disabled={saving}>
                                                 Copy races
+                                              </Button>
+                                            )}
+                                            {edition.races.length > 0 && (
+                                              <Button size="small" startIcon={<CalendarIcon />} onClick={() => openBulkDates(edition)}>
+                                                Set Dates
                                               </Button>
                                             )}
                                             <Button size="small" startIcon={<AddIcon />} onClick={() => openCreateRace(edition)}>
@@ -1535,90 +1853,31 @@ export default function EventList({ onNotify }: EventListProps) {
                                             No races yet. Click "Add Race" to attach distances for this edition.
                                           </Typography>
                                         ) : (
-                                          <List disablePadding sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                            {[...edition.races].sort(sortRaces).map(race => (
-                                              <ListItem
-                                                key={race.id}
-                                                sx={{
-                                                  px: 1.5,
-                                                  py: 1.25,
-                                                  border: '1px solid',
-                                                  borderColor: 'divider',
-                                                  borderRadius: 1,
-                                                  alignItems: 'flex-start',
-                                                }}
-                                                secondaryAction={(
-                                                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                                    <IconButton size="small" onClick={() => openEditRace(race)}>
-                                                      <EditIcon fontSize="small" />
-                                                    </IconButton>
-                                                    <IconButton size="small" color="error" onClick={() => handleDeleteRace(race)}>
-                                                      <DeleteIcon fontSize="small" />
-                                                    </IconButton>
-                                                  </Box>
-                                                )}
-                                              >
-                                                <ListItemText
-                                                  sx={{ pr: 10 }}
-                                                  primary={(
-                                                    <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ alignItems: 'center' }}>
-                                                      <Typography variant="body2" fontWeight={700}>{race.name}</Typography>
-                                                      {race.distanceLabel && <Chip label={race.distanceLabel} size="small" variant="outlined" />}
-                                                      <Chip label={race.status} size="small" color={getRaceStatusColor(race.status)} />
-                                                      <Chip label={race.ticketStatus} size="small" color={getTicketStatusColor(race.ticketStatus)} variant="outlined" />
-                                                      {race.cutoffMinutes != null && (
-                                                        <Chip
-                                                          label={`Cutoff ${formatMinutesToHHmm(race.cutoffMinutes) ?? `${race.cutoffMinutes} min`}`}
-                                                          size="small"
-                                                          variant="outlined"
-                                                          color="warning"
-                                                        />
-                                                      )}
-                                                    </Stack>
-                                                  )}
-                                                  secondary={(
-                                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, mt: 0.75 }}>
-                                                      {race.description && <Typography variant="body2" color="text.secondary">{race.description}</Typography>}
-                                                      <Stack direction="row" spacing={1.5} useFlexGap flexWrap="wrap">
-                                                        {race.trailName && (
-                                                          <Typography variant="caption" color="primary">
-                                                            {getTrailActivityIcon(race.trailId)} {race.trailName}
-                                                            {race.trailDistanceMeters != null && ` • ${(race.trailDistanceMeters / 1000).toFixed(1)} km`}
-                                                            {race.trailElevationGain != null && ` • ↑${Math.round(race.trailElevationGain)} m`}
-                                                          </Typography>
-                                                        )}
-                                                        {race.maxParticipants != null && (
-                                                          <Typography variant="caption" color="text.secondary">Max {race.maxParticipants} participants</Typography>
-                                                        )}
-                                                        {race.itraPoints != null && (
-                                                          <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-                                                            <img src={`/images/itra-${race.itraPoints}.png`} alt={`ITRA ${race.itraPoints}`} style={{ height: 20 }} />
-                                                            <Typography variant="caption" color="text.secondary">{race.itraPoints} ITRA pts</Typography>
-                                                          </Box>
-                                                        )}
-                                                        {race.certifiedBy && (
-                                                          <Typography variant="caption" color="text.secondary">Certified by {race.certifiedBy}</Typography>
-                                                        )}
-                                                        {race.prizeMoney > 0 && (
-                                                          <Typography variant="caption" color="text.secondary">Prize {race.prizeMoney}</Typography>
-                                                        )}
-                                                        {race.championshipCategory && (
-                                                          <Typography variant="caption" color="text.secondary">{race.championshipCategory}</Typography>
-                                                        )}
-                                                        {(race.dateOfRace || race.startTime) && (
-                                                          <Typography variant="caption" color="text.secondary">
-                                                            {formatDateLabel(race.dateOfRace, 'Date TBD')}
-                                                            {race.startTime ? ` • ${formatTimeLabel(race.startTime)}` : ''}
-                                                          </Typography>
-                                                        )}
-                                                      </Stack>
-                                                    </Box>
-                                                  )}
-                                                  secondaryTypographyProps={{ component: 'div' }}
-                                                />
-                                              </ListItem>
-                                            ))}
-                                          </List>
+                                          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleRaceDragEnd(e, edition)}>
+                                            {(() => {
+                                              const localOrder = localRaceOrder.get(edition.id);
+                                              const displayRaces = localOrder
+                                                ? localOrder.map(id => edition.races.find(r => r.id === id)!).filter(Boolean)
+                                                : [...edition.races].sort(sortRaces);
+                                              return (
+                                            <SortableContext items={displayRaces.map(r => r.id)} strategy={verticalListSortingStrategy}>
+                                              <List disablePadding sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                                {displayRaces.map(race => (
+                                                  <SortableRaceItem
+                                                    key={race.id}
+                                                    race={race}
+                                                    onEdit={() => openEditRace(race)}
+                                                    onDelete={() => handleDeleteRace(race)}
+                                                    getIcon={getTrailActivityIcon}
+                                                    formatDateLabel={formatDateLabel}
+                                                    formatTimeLabel={formatTimeLabel}
+                                                  />
+                                                ))}
+                                              </List>
+                                            </SortableContext>
+                                              );
+                                            })()}
+                                          </DndContext>
                                         )}
                                       </Box>
                                     </Collapse>
@@ -1948,10 +2207,38 @@ export default function EventList({ onNotify }: EventListProps) {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={showEditionDialog} onClose={() => setShowEditionDialog(false)} maxWidth="sm" fullWidth>
+      <Dialog open={showEditionDialog} onClose={() => { setShowEditionDialog(false); setCloneFromEditionId(''); }} maxWidth="sm" fullWidth>
         <DialogTitle>{editEditionId ? 'Edit Edition' : 'Add Edition'}</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            {/* Clone source — only shown when creating and there are editions to clone from */}
+            {!editEditionId && expandedDetail && expandedDetail.editions.some(ed => ed.races.length > 0) && (
+              <FormControl fullWidth size="small">
+                <InputLabel>Clone races from</InputLabel>
+                <Select
+                  value={cloneFromEditionId}
+                  label="Clone races from"
+                  onChange={(e) => {
+                    const sourceId = e.target.value;
+                    setCloneFromEditionId(sourceId);
+                    if (sourceId) {
+                      const source = expandedDetail.editions.find(ed => ed.id === sourceId);
+                      const nextYear = source?.year ? source.year + 1 : Number(editionForm.year);
+                      if (source?.year) setEditionField('year', String(nextYear));
+                      const newUrl = bumpYearInUrl(source?.registrationUrl ?? '', source?.year, nextYear);
+                      if (newUrl) setEditionField('registrationUrl', newUrl);
+                    }
+                  }}
+                >
+                  <MenuItem value=""><em>Don't clone — start empty</em></MenuItem>
+                  {[...expandedDetail.editions].filter(ed => ed.races.length > 0).sort(sortEditions).map(ed => (
+                    <MenuItem key={ed.id} value={ed.id}>
+                      {buildEditionLabel(ed)} ({ed.races.length} race{ed.races.length === 1 ? '' : 's'})
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
               <TextField
                 label="Year"
@@ -2125,7 +2412,14 @@ export default function EventList({ onNotify }: EventListProps) {
                 label="Date of Race"
                 type="date"
                 value={raceForm.dateOfRace}
-                onChange={(event) => setRaceField('dateOfRace', event.target.value)}
+                onChange={(event) => {
+                  const d = event.target.value;
+                  setRaceField('dateOfRace', d);
+                  if (!editRaceId && isPastDate(d)) {
+                    setRaceField('status', 'Completed');
+                    setRaceField('ticketStatus', 'Closed');
+                  }
+                }}
                 InputLabelProps={{ shrink: true }}
                 inputProps={{ lang: 'is' }}
               />
@@ -2250,6 +2544,49 @@ export default function EventList({ onNotify }: EventListProps) {
           <Button onClick={() => setShowGenerateDialog(false)}>Cancel</Button>
           <Button variant="contained" onClick={handleGenerateEditions} disabled={saving}>
             {saving ? <CircularProgress size={20} /> : 'Generate'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Bulk date entry dialog */}
+      <Dialog open={showBulkDatesDialog} onClose={() => setShowBulkDatesDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Set Race Dates</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            {bulkDates.length === 0 ? (
+              <Typography variant="body2" color="text.secondary">No races in this edition.</Typography>
+            ) : bulkDates.map((entry, i) => (
+              <Box key={entry.race.id}>
+                <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ mb: 0.75, display: 'block' }}>
+                  {entry.race.name}{entry.race.distanceLabel ? ` · ${entry.race.distanceLabel}` : ''}
+                </Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 140px', gap: 1.5 }}>
+                  <TextField
+                    label="Date"
+                    type="date"
+                    size="small"
+                    value={entry.dateOfRace}
+                    onChange={(e) => setBulkDates(prev => prev.map((d, j) => j === i ? { ...d, dateOfRace: e.target.value } : d))}
+                    InputLabelProps={{ shrink: true }}
+                    inputProps={{ lang: 'is' }}
+                  />
+                  <TextField
+                    label="Start time"
+                    type="time"
+                    size="small"
+                    value={entry.startTime}
+                    onChange={(e) => setBulkDates(prev => prev.map((d, j) => j === i ? { ...d, startTime: e.target.value } : d))}
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Box>
+              </Box>
+            ))}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowBulkDatesDialog(false)}>Cancel</Button>
+          <Button variant="contained" onClick={handleSaveBulkDates} disabled={saving}>
+            {saving ? <CircularProgress size={20} /> : 'Save Dates'}
           </Button>
         </DialogActions>
       </Dialog>
