@@ -1509,11 +1509,31 @@ export default function EventList({ onNotify }: EventListProps) {
                           <CircularProgress size={24} />
                         ) : expandedDetail ? (
                           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2, flexWrap: 'wrap' }}>
-                              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                {expandedDetail.description && (
-                                  <Typography variant="body2">{expandedDetail.description}</Typography>
+                            {/* Sticky event name header */}
+                            <Box sx={{
+                              position: 'sticky', top: 0, zIndex: 1,
+                              bgcolor: 'background.paper',
+                              borderBottom: 1, borderColor: 'divider',
+                              mx: -2, px: 2, py: 1,
+                              display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1,
+                            }}>
+                              <Typography variant="subtitle1" fontWeight={700}>{expandedDetail.name}</Typography>
+                              <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                                {expandedDetail.scheduleRule && (
+                                  <Button size="small" variant="outlined" startIcon={<GenerateIcon />} onClick={() => openGenerateEditionDialog(event)}>
+                                    Generate Editions
+                                  </Button>
                                 )}
+                                <Button size="small" variant="contained" startIcon={<AddIcon />} onClick={() => openCreateEdition(event)}>
+                                  Add Edition
+                                </Button>
+                              </Stack>
+                            </Box>
+
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                              {expandedDetail.description && (
+                                <Typography variant="body2">{expandedDetail.description}</Typography>
+                              )}
                                 <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
                                   <Chip label={expandedDetail.type} size="small" color={EVENT_TYPE_COLORS[expandedDetail.type as EventType] ?? 'default'} />
                                   <Chip label={`${expandedDetail.editions.length} edition${expandedDetail.editions.length === 1 ? '' : 's'}`} size="small" />
@@ -1527,18 +1547,6 @@ export default function EventList({ onNotify }: EventListProps) {
                                     ))}
                                   </Stack>
                                 )}
-                              </Box>
-
-                              <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-                                {expandedDetail.scheduleRule && (
-                                  <Button size="small" variant="outlined" startIcon={<GenerateIcon />} onClick={() => openGenerateEditionDialog(event)}>
-                                    Generate Editions
-                                  </Button>
-                                )}
-                                <Button size="small" variant="contained" startIcon={<AddIcon />} onClick={() => openCreateEdition(event)}>
-                                  Add Edition
-                                </Button>
-                              </Stack>
                             </Box>
 
                             {(expandedDetail.alertMessage || expandedDetail.socialLinks?.length || expandedDetail.organizerWebsite) && (
@@ -1587,7 +1595,13 @@ export default function EventList({ onNotify }: EventListProps) {
                                 </Typography>
                               ) : (
                                 [...expandedDetail.editions].sort(sortEditions).map(edition => (
-                                  <Paper key={edition.id} variant="outlined" sx={{ mb: 1.5 }}>
+                                  <Paper key={edition.id} variant="outlined" sx={{
+                                    mb: 1.5,
+                                    borderLeft: '4px solid',
+                                    borderLeftColor: edition.registrationStatus === 'Open' ? 'success.main'
+                                      : edition.registrationStatus === 'NotStarted' ? 'warning.main'
+                                      : 'divider',
+                                  }}>
                                     <Box sx={{ p: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
                                       <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', flexGrow: 1 }}>
                                         <IconButton size="small" onClick={() => toggleEditionExpand(edition.id)}>
@@ -1663,7 +1677,7 @@ export default function EventList({ onNotify }: EventListProps) {
 
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                                           <Typography variant="subtitle2" color="text.secondary">
-                                            Races ({edition.races.length})
+                                            Races · {buildEditionLabel(edition)} ({edition.races.length})
                                           </Typography>
                                           <Stack direction="row" spacing={1}>
                                             {expandedDetail && edition.races.length === 0 && expandedDetail.editions.some(ed => ed.id !== edition.id && ed.races.length > 0) && (
