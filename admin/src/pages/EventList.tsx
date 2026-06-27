@@ -1,4 +1,7 @@
 import { Fragment, useMemo, useState, type ReactNode } from 'react';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import {
   Alert,
   Autocomplete,
@@ -42,6 +45,7 @@ import {
   AutoAwesome as GenerateIcon,
   CalendarMonth as CalendarIcon,
   Clear as ClearIcon,
+  DragIndicator as DragHandleIcon,
   ContentCopy as CopyIcon,
   Delete as DeleteIcon,
   Edit as EditIcon,
@@ -574,6 +578,89 @@ function buildScheduleRule(form: EventFormState): ScheduleRule | null {
   }
 
   return null;
+}
+
+interface SortableRaceItemProps {
+  race: import('../hooks/useEvents').RaceDto;
+  onEdit: () => void;
+  onDelete: () => void;
+  getIcon: (trailId: string | null) => string;
+  formatDateLabel: (d: string | null | undefined, fallback: string) => string;
+  formatTimeLabel: (t: string | null | undefined) => string;
+}
+
+function SortableRaceItem({ race, onEdit, onDelete, getIcon, formatDateLabel, formatTimeLabel }: SortableRaceItemProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: race.id });
+
+  return (
+    <ListItem
+      ref={setNodeRef}
+      sx={{
+        px: 1.5, py: 1.25,
+        border: '1px solid', borderColor: 'divider', borderRadius: 1,
+        alignItems: 'flex-start',
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+        bgcolor: isDragging ? 'action.hover' : 'background.paper',
+      }}
+      secondaryAction={(
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <IconButton size="small" onClick={onEdit}><EditIcon fontSize="small" /></IconButton>
+          <IconButton size="small" color="error" onClick={onDelete}><DeleteIcon fontSize="small" /></IconButton>
+        </Box>
+      )}
+    >
+      <Box sx={{ display: 'flex', alignItems: 'center', mr: 1, cursor: 'grab', color: 'text.disabled', touchAction: 'none' }} {...attributes} {...listeners}>
+        <DragHandleIcon fontSize="small" />
+      </Box>
+      <ListItemText
+        sx={{ pr: 10 }}
+        primary={(
+          <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ alignItems: 'center' }}>
+            <Typography variant="body2" fontWeight={700}>{race.name}</Typography>
+            {race.distanceLabel && <Chip label={race.distanceLabel} size="small" variant="outlined" />}
+            <Chip label={race.status} size="small" color={getRaceStatusColor(race.status)} />
+            <Chip label={race.ticketStatus} size="small" color={getTicketStatusColor(race.ticketStatus)} variant="outlined" />
+            {race.cutoffMinutes != null && (
+              <Chip label={`Cutoff ${formatMinutesToHHmm(race.cutoffMinutes) ?? `${race.cutoffMinutes} min`}`} size="small" variant="outlined" color="warning" />
+            )}
+          </Stack>
+        )}
+        secondary={(
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, mt: 0.75 }}>
+            {race.description && <Typography variant="body2" color="text.secondary">{race.description}</Typography>}
+            <Stack direction="row" spacing={1.5} useFlexGap flexWrap="wrap">
+              {race.trailName && (
+                <Typography variant="caption" color="primary">
+                  {getIcon(race.trailId)} {race.trailName}
+                  {race.trailDistanceMeters != null && ` • ${(race.trailDistanceMeters / 1000).toFixed(1)} km`}
+                  {race.trailElevationGain != null && ` • ↑${Math.round(race.trailElevationGain)} m`}
+                </Typography>
+              )}
+              {race.maxParticipants != null && <Typography variant="caption" color="text.secondary">Max {race.maxParticipants} participants</Typography>}
+              {race.itraPoints != null && (
+                <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                  <img src={`/images/itra-${race.itraPoints}.png`} alt={`ITRA ${race.itraPoints}`} style={{ height: 20 }} />
+                  <Typography variant="caption" color="text.secondary">{race.itraPoints} ITRA pts</Typography>
+                </Box>
+              )}
+              {race.certifiedBy && <Typography variant="caption" color="text.secondary">Certified by {race.certifiedBy}</Typography>}
+              {race.prizeMoney > 0 && <Typography variant="caption" color="text.secondary">Prize {race.prizeMoney}</Typography>}
+              {race.championshipCategory && <Typography variant="caption" color="text.secondary">{race.championshipCategory}</Typography>}
+              {(race.dateOfRace || race.startTime) && (
+                <Typography variant="caption" color="text.secondary">
+                  {formatDateLabel(race.dateOfRace, 'Date TBD')}
+                  {race.startTime ? ` • ${formatTimeLabel(race.startTime)}` : ''}
+                </Typography>
+              )}
+            </Stack>
+          </Box>
+        )}
+        secondaryTypographyProps={{ component: 'div' }}
+      />
+    </ListItem>
+  );
 }
 
 export default function EventList({ onNotify }: EventListProps) {
@@ -1324,6 +1411,43 @@ export default function EventList({ onNotify }: EventListProps) {
     }
   };
 
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const handleRaceDragEnd = async (event: DragEndEvent, edition: EventEditionDto) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const sorted = [...edition.races].sort(sortRaces);
+    const oldIndex = sorted.findIndex(r => r.id === active.id);
+    const newIndex = sorted.findIndex(r => r.id === over.id);
+    const reordered = arrayMove(sorted, oldIndex, newIndex);
+
+    try {
+      await Promise.all(reordered.map((race, idx) =>
+        idx !== sorted.indexOf(race) ? updateRace(race.id, {
+          trailId: race.trailId ?? null,
+          name: race.name,
+          distanceLabel: race.distanceLabel ?? undefined,
+          cutoffMinutes: race.cutoffMinutes ?? null,
+          description: race.description ?? undefined,
+          status: race.status,
+          sortOrder: idx,
+          ticketStatus: race.ticketStatus,
+          maxParticipants: race.maxParticipants ?? null,
+          itraPoints: race.itraPoints ?? null,
+          certifiedBy: race.certifiedBy ?? undefined,
+          prizeMoney: race.prizeMoney,
+          championshipCategory: race.championshipCategory ?? undefined,
+          dateOfRace: race.dateOfRace ?? null,
+          startTime: race.startTime ?? null,
+        }) : Promise.resolve(),
+      ));
+      await refreshExpandedEvent();
+    } catch (err) {
+      onNotify(err instanceof Error ? err.message : 'Failed to reorder races', 'error');
+    }
+  };
+
   const getTrailActivityIcon = (trailId: string | null) => {
     if (!trailId) return '🏁';
     return ACTIVITY_ICONS[trails.find(trail => trail.id === trailId)?.activityType ?? ''] ?? '🏁';
@@ -1620,6 +1744,11 @@ export default function EventList({ onNotify }: EventListProps) {
                                         </IconButton>
                                         <Box sx={{ flexGrow: 1 }}>
                                           <Typography variant="body2" fontWeight={700}>{buildEditionLabel(edition)}</Typography>
+                                          {edition.notes && !expandedEditionIds.includes(edition.id) && (
+                                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25, fontStyle: 'italic' }} noWrap>
+                                              {edition.notes}
+                                            </Typography>
+                                          )}
                                           <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ mt: 0.75 }}>
                                             <Chip label={edition.date ?? (edition.year != null ? String(edition.year) : 'Date TBD')} size="small" variant="outlined" />
                                             <Tooltip title="Click to cycle: NotStarted → Open → Closed">
@@ -1712,90 +1841,23 @@ export default function EventList({ onNotify }: EventListProps) {
                                             No races yet. Click "Add Race" to attach distances for this edition.
                                           </Typography>
                                         ) : (
-                                          <List disablePadding sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                            {[...edition.races].sort(sortRaces).map(race => (
-                                              <ListItem
-                                                key={race.id}
-                                                sx={{
-                                                  px: 1.5,
-                                                  py: 1.25,
-                                                  border: '1px solid',
-                                                  borderColor: 'divider',
-                                                  borderRadius: 1,
-                                                  alignItems: 'flex-start',
-                                                }}
-                                                secondaryAction={(
-                                                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                                    <IconButton size="small" onClick={() => openEditRace(race)}>
-                                                      <EditIcon fontSize="small" />
-                                                    </IconButton>
-                                                    <IconButton size="small" color="error" onClick={() => handleDeleteRace(race)}>
-                                                      <DeleteIcon fontSize="small" />
-                                                    </IconButton>
-                                                  </Box>
-                                                )}
-                                              >
-                                                <ListItemText
-                                                  sx={{ pr: 10 }}
-                                                  primary={(
-                                                    <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ alignItems: 'center' }}>
-                                                      <Typography variant="body2" fontWeight={700}>{race.name}</Typography>
-                                                      {race.distanceLabel && <Chip label={race.distanceLabel} size="small" variant="outlined" />}
-                                                      <Chip label={race.status} size="small" color={getRaceStatusColor(race.status)} />
-                                                      <Chip label={race.ticketStatus} size="small" color={getTicketStatusColor(race.ticketStatus)} variant="outlined" />
-                                                      {race.cutoffMinutes != null && (
-                                                        <Chip
-                                                          label={`Cutoff ${formatMinutesToHHmm(race.cutoffMinutes) ?? `${race.cutoffMinutes} min`}`}
-                                                          size="small"
-                                                          variant="outlined"
-                                                          color="warning"
-                                                        />
-                                                      )}
-                                                    </Stack>
-                                                  )}
-                                                  secondary={(
-                                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, mt: 0.75 }}>
-                                                      {race.description && <Typography variant="body2" color="text.secondary">{race.description}</Typography>}
-                                                      <Stack direction="row" spacing={1.5} useFlexGap flexWrap="wrap">
-                                                        {race.trailName && (
-                                                          <Typography variant="caption" color="primary">
-                                                            {getTrailActivityIcon(race.trailId)} {race.trailName}
-                                                            {race.trailDistanceMeters != null && ` • ${(race.trailDistanceMeters / 1000).toFixed(1)} km`}
-                                                            {race.trailElevationGain != null && ` • ↑${Math.round(race.trailElevationGain)} m`}
-                                                          </Typography>
-                                                        )}
-                                                        {race.maxParticipants != null && (
-                                                          <Typography variant="caption" color="text.secondary">Max {race.maxParticipants} participants</Typography>
-                                                        )}
-                                                        {race.itraPoints != null && (
-                                                          <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-                                                            <img src={`/images/itra-${race.itraPoints}.png`} alt={`ITRA ${race.itraPoints}`} style={{ height: 20 }} />
-                                                            <Typography variant="caption" color="text.secondary">{race.itraPoints} ITRA pts</Typography>
-                                                          </Box>
-                                                        )}
-                                                        {race.certifiedBy && (
-                                                          <Typography variant="caption" color="text.secondary">Certified by {race.certifiedBy}</Typography>
-                                                        )}
-                                                        {race.prizeMoney > 0 && (
-                                                          <Typography variant="caption" color="text.secondary">Prize {race.prizeMoney}</Typography>
-                                                        )}
-                                                        {race.championshipCategory && (
-                                                          <Typography variant="caption" color="text.secondary">{race.championshipCategory}</Typography>
-                                                        )}
-                                                        {(race.dateOfRace || race.startTime) && (
-                                                          <Typography variant="caption" color="text.secondary">
-                                                            {formatDateLabel(race.dateOfRace, 'Date TBD')}
-                                                            {race.startTime ? ` • ${formatTimeLabel(race.startTime)}` : ''}
-                                                          </Typography>
-                                                        )}
-                                                      </Stack>
-                                                    </Box>
-                                                  )}
-                                                  secondaryTypographyProps={{ component: 'div' }}
-                                                />
-                                              </ListItem>
-                                            ))}
-                                          </List>
+                                          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleRaceDragEnd(e, edition)}>
+                                            <SortableContext items={[...edition.races].sort(sortRaces).map(r => r.id)} strategy={verticalListSortingStrategy}>
+                                              <List disablePadding sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                                {[...edition.races].sort(sortRaces).map(race => (
+                                                  <SortableRaceItem
+                                                    key={race.id}
+                                                    race={race}
+                                                    onEdit={() => openEditRace(race)}
+                                                    onDelete={() => handleDeleteRace(race)}
+                                                    getIcon={getTrailActivityIcon}
+                                                    formatDateLabel={formatDateLabel}
+                                                    formatTimeLabel={formatTimeLabel}
+                                                  />
+                                                ))}
+                                              </List>
+                                            </SortableContext>
+                                          </DndContext>
                                         )}
                                       </Box>
                                     </Collapse>
