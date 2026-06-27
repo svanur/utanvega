@@ -5,7 +5,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <RootNamespace>Utanvega.Backend</RootNamespace>
         <AssemblyName>Utanvega.Backend</AssemblyName>
-        <Version>0.8.0</Version>
+        <Version>0.9.0</Version>
         <UserSecretsId>8d671d16-4005-4aae-a914-79cedf665408</UserSecretsId>
     </PropertyGroup>
     <ItemGroup>
