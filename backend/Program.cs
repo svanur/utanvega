@@ -1776,18 +1776,15 @@ app.MapPost("/api/v1/tips", async (SendTipRequest request, IMediator mediator, I
 .WithName("SendTip")
 .RequireRateLimiting("send-tip");
 
-using (var scope = app.Services.CreateScope())
+if (args.Contains("--migrate"))
 {
+    using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<UtanvegaDbContext>();
-    try
-    {
-        db.Database.Migrate();
-        Log.Information("Database migrations applied successfully");
-    }
-    catch (Exception ex)
-    {
-        Log.Error(ex, "Failed to apply database migrations — app will still start");
-    }
+    Log.Information("Running database migrations...");
+    await db.Database.MigrateAsync();
+    Log.Information("Database migrations applied successfully");
+    Log.CloseAndFlush();
+    return;
 }
 
 try

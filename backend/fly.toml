@@ -6,6 +6,9 @@
 app = 'backend-wispy-forest-1686'
 primary_region = 'lhr'
 
+[deploy]
+  release_command = "dotnet /app/Utanvega.Backend.dll --migrate"
+
 [build]
 
 [http_service]
