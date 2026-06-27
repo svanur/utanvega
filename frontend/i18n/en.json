@@ -1372,5 +1372,12 @@
         "saturday": "Saturday",
         "sunday": "Sunday",
         "overflow": "and {{count}} more →"
+    },
+    "promos": {
+        "runningTrip": {
+            "title": "Running Trip in the Swiss Alps",
+            "dates": "3–9 September 2026",
+            "cta": "Book your spot"
+        }
     }
 }

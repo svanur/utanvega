@@ -8,6 +8,7 @@ import BarChartIcon from '@mui/icons-material/BarChart';
 import ToggleOnIcon from '@mui/icons-material/ToggleOn';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import ViewDayOutlinedIcon from '@mui/icons-material/ViewDayOutlined';
+import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
@@ -24,6 +25,7 @@ import AnalyticsPage from './pages/AnalyticsPage';
 import FeatureFlagsPage from './pages/FeatureFlagsPage';
 import EventList from './pages/EventList';
 import HeroThemesPage from './pages/HeroThemesPage';
+import SponsorsPage from './pages/SponsorsPage';
 import GpxUploadDialog from './components/GpxUploadDialog';
 import LoginPage from './pages/LoginPage';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -60,6 +62,7 @@ const PAGE_PATHS: Record<PageKey, string> = {
   events: '/',
   features: '/features',
   'hero-themes': '/hero-themes',
+  'sponsors': '/sponsors',
 };
 
 function pathToPage(pathname: string): PageKey {
@@ -227,6 +230,7 @@ function AdminContent() {
               { key: 'analytics' as const, icon: <BarChartIcon />, label: 'Analytics' },
               { key: 'features' as const, icon: <ToggleOnIcon />, label: 'Features' },
               { key: 'hero-themes' as const, icon: <ViewDayOutlinedIcon />, label: 'Hero Themes' },
+              { key: 'sponsors' as const, icon: <ImageOutlinedIcon />, label: 'Sponsors' },
             ].map(item => (
               <ListItem key={item.key} disablePadding>
                 <Tooltip title={drawerOpen ? '' : item.label} placement="right">
@@ -265,6 +269,8 @@ function AdminContent() {
             <EventList onNotify={notify} />
           ) : currentPage === 'hero-themes' ? (
             <HeroThemesPage />
+          ) : currentPage === 'sponsors' ? (
+            <SponsorsPage />
           ) : (
             <LocationList onNotify={notify} />
           )}
