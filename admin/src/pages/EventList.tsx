@@ -327,6 +327,16 @@ function getTicketStatusColor(status: TicketStatus): 'success' | 'error' | 'warn
   return 'default';
 }
 
+function bumpYearInUrl(url: string, fromYear: number | null | undefined, toYear: number): string {
+  if (!url || !fromYear) return '';
+  return url.split(String(fromYear)).join(String(toYear));
+}
+
+function isPastDate(dateStr: string): boolean {
+  if (!dateStr) return false;
+  return new Date(dateStr) < new Date(new Date().toDateString());
+}
+
 function trimToUndefined(value: string): string | undefined {
   const trimmed = value.trim();
   return trimmed ? trimmed : undefined;
@@ -759,14 +769,17 @@ export default function EventList({ onNotify }: EventListProps) {
 
   const openCreateEdition = (event: EventSummaryDto) => {
     setEditEditionId(null);
-    // Auto-select the most recent edition with races as the clone source
     const editionsWithRaces = [...(expandedDetail?.editions ?? [])].filter(ed => ed.races.length > 0).sort(sortEditions);
     const defaultClone = editionsWithRaces[editionsWithRaces.length - 1];
     const nextYear = defaultClone?.year ? String(defaultClone.year + 1) : String(new Date().getFullYear());
+    const clonedRegUrl = bumpYearInUrl(defaultClone?.registrationUrl ?? '', defaultClone?.year, Number(nextYear));
+    const isPastYear = Number(nextYear) < new Date().getFullYear();
     setCloneFromEditionId(defaultClone?.id ?? '');
     setEditionForm({
       ...createEmptyEditionForm(event.id, event.type, event.name),
       year: nextYear,
+      registrationUrl: clonedRegUrl,
+      registrationStatus: isPastYear ? 'Closed' : 'NotStarted',
     });
     setShowEditionDialog(true);
   };
@@ -780,7 +793,12 @@ export default function EventList({ onNotify }: EventListProps) {
 
   const openCreateRace = (edition: EventEditionDto) => {
     setEditRaceId(null);
-    setRaceForm(createEmptyRaceForm(edition.id, edition.races.length));
+    const past = isPastDate(edition.date ?? '');
+    setRaceForm({
+      ...createEmptyRaceForm(edition.id, edition.races.length),
+      status: past ? 'Completed' : 'Active',
+      ticketStatus: past ? 'Closed' : 'Available',
+    });
     setShowRaceDialog(true);
   };
 
@@ -1230,6 +1248,26 @@ export default function EventList({ onNotify }: EventListProps) {
     }
   };
 
+  const handleCycleRegistrationStatus = async (edition: EventEditionDto) => {
+    const cycle: RegistrationStatus[] = ['NotStarted', 'Open', 'Closed'];
+    const next = cycle[(cycle.indexOf(edition.registrationStatus) + 1) % cycle.length];
+    try {
+      await updateEdition(edition.id, {
+        year: edition.year ?? null,
+        date: edition.date ?? null,
+        title: edition.title ?? undefined,
+        registrationUrl: edition.registrationUrl ?? undefined,
+        resultsUrl: edition.resultsUrl ?? undefined,
+        notes: edition.notes ?? undefined,
+        registrationStatus: next,
+        trailId: edition.trailId ?? null,
+      });
+      await refreshExpandedEvent();
+    } catch (err) {
+      onNotify(err instanceof Error ? err.message : 'Failed to update status', 'error');
+    }
+  };
+
   const openBulkDates = (edition: EventEditionDto) => {
     setBulkDates(
       [...edition.races].sort(sortRaces).map(race => ({
@@ -1559,9 +1597,31 @@ export default function EventList({ onNotify }: EventListProps) {
                                           <Typography variant="body2" fontWeight={700}>{buildEditionLabel(edition)}</Typography>
                                           <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ mt: 0.75 }}>
                                             <Chip label={edition.date ?? (edition.year != null ? String(edition.year) : 'Date TBD')} size="small" variant="outlined" />
-                                            <Chip label={edition.registrationStatus} size="small" color={getRegistrationStatusColor(edition.registrationStatus)} />
+                                            <Tooltip title="Click to cycle: NotStarted → Open → Closed">
+                                              <Chip
+                                                label={edition.registrationStatus}
+                                                size="small"
+                                                color={getRegistrationStatusColor(edition.registrationStatus)}
+                                                onClick={() => handleCycleRegistrationStatus(edition)}
+                                                sx={{ cursor: 'pointer' }}
+                                              />
+                                            </Tooltip>
                                             <Chip label={`${edition.races.length} race${edition.races.length === 1 ? '' : 's'}`} size="small" variant="outlined" />
                                             {edition.trailName && <Chip label={`Trail: ${edition.trailName}`} size="small" variant="outlined" />}
+                                            {(() => {
+                                              const missing = edition.races.filter(r => !r.dateOfRace).length;
+                                              return missing > 0 ? (
+                                                <Tooltip title="Click to set dates">
+                                                  <Chip
+                                                    label={`${missing} date${missing === 1 ? '' : 's'} missing`}
+                                                    size="small"
+                                                    color="warning"
+                                                    onClick={() => openBulkDates(edition)}
+                                                    sx={{ cursor: 'pointer' }}
+                                                  />
+                                                </Tooltip>
+                                              ) : null;
+                                            })()}
                                           </Stack>
                                         </Box>
                                       </Box>
@@ -2056,9 +2116,10 @@ export default function EventList({ onNotify }: EventListProps) {
                     setCloneFromEditionId(sourceId);
                     if (sourceId) {
                       const source = expandedDetail.editions.find(ed => ed.id === sourceId);
-                      if (source?.year) {
-                        setEditionField('year', String(source.year + 1));
-                      }
+                      const nextYear = source?.year ? source.year + 1 : Number(editionForm.year);
+                      if (source?.year) setEditionField('year', String(nextYear));
+                      const newUrl = bumpYearInUrl(source?.registrationUrl ?? '', source?.year, nextYear);
+                      if (newUrl) setEditionField('registrationUrl', newUrl);
                     }
                   }}
                 >
@@ -2244,7 +2305,14 @@ export default function EventList({ onNotify }: EventListProps) {
                 label="Date of Race"
                 type="date"
                 value={raceForm.dateOfRace}
-                onChange={(event) => setRaceField('dateOfRace', event.target.value)}
+                onChange={(event) => {
+                  const d = event.target.value;
+                  setRaceField('dateOfRace', d);
+                  if (!editRaceId && isPastDate(d)) {
+                    setRaceField('status', 'Completed');
+                    setRaceField('ticketStatus', 'Closed');
+                  }
+                }}
                 InputLabelProps={{ shrink: true }}
                 inputProps={{ lang: 'is' }}
               />
