@@ -10,18 +10,14 @@ namespace Utanvega.Backend.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.CreateIndex(
-                name: "IX_TrailViews_TrailId",
-                table: "TrailViews",
-                column: "TrailId");
+            // IF NOT EXISTS guards against re-running on a DB where the index was created manually.
+            migrationBuilder.Sql(@"CREATE INDEX IF NOT EXISTS ""IX_TrailViews_TrailId"" ON ""TrailViews"" (""TrailId"");");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropIndex(
-                name: "IX_TrailViews_TrailId",
-                table: "TrailViews");
+            migrationBuilder.Sql(@"DROP INDEX IF EXISTS ""IX_TrailViews_TrailId"";");
         }
     }
 }
