@@ -266,7 +266,7 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
 
             <Container maxWidth={maxWidth} sx={{ py: 4, flex: 1 }}>
                 {isEnabled('hero_band') && heroTheme && <Box sx={{ mb: 3 }}><HeroBand theme={heroTheme} isDark={mode === 'dark'} /></Box>}
-                {(isEnabled('promo_challenge_2026') || isEnabled('promo_running_trip_2026')) && <PromoStrip />}
+                {(isEnabled('promo_slot_1') || isEnabled('promo_slot_2')) && <PromoStrip />}
                 {isEnabled('event_day_banner') && <EventDayBanner />}
                 {children}
             </Container>

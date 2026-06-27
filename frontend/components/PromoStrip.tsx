@@ -7,8 +7,8 @@ export default function PromoStrip() {
     const { t } = useTranslation();
     const { isEnabled } = useFeatureFlags();
 
-    const showChallenge = isEnabled('promo_challenge_2026');
-    const showTrip = isEnabled('promo_running_trip_2026');
+    const showChallenge = isEnabled('promo_slot_1');
+    const showTrip = isEnabled('promo_slot_2');
 
     if (!showChallenge && !showTrip) return null;
 

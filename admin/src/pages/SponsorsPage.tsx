@@ -38,7 +38,7 @@ const SPONSOR_ADS = [
     },
     {
         name: 'Útivistaáskorun 2026',
-        flag: 'promo_challenge_2026',
+        flag: 'promo_slot_1',
         image: '/sponsors/challenge-2026.avif',
         href: '/challenge/2026',
         type: 'Internal',
@@ -47,7 +47,7 @@ const SPONSOR_ADS = [
     },
     {
         name: 'Hlaupaferð í Svissnesku Alpana',
-        flag: 'promo_running_trip_2026',
+        flag: 'promo_slot_2',
         image: '/sponsors/running-trip-2026.avif',
         href: '/shop/hlaupaferd',
         type: 'Internal',
@@ -267,7 +267,7 @@ export default function SponsorsPage() {
                             { order: 1, name: 'Announcement Banner', flag: 'announcement_banner', component: 'AnnouncementBanner' },
                             { order: 2, name: 'Sponsor Logo Strip', flag: 'sponsor_garmin / sponsor_craft', component: 'SponsorStrip' },
                             { order: 3, name: 'Hero Band', flag: 'hero_band', component: 'HeroBand' },
-                            { order: 4, name: 'Promo Cards', flag: 'promo_challenge_2026 / promo_running_trip_2026', component: 'PromoStrip' },
+                            { order: 4, name: 'Promo Cards', flag: 'promo_slot_1 / promo_slot_2', component: 'PromoStrip' },
                             { order: 5, name: 'Event Day Banner', flag: 'event_day_banner', component: 'EventDayBanner' },
                             { order: 6, name: 'Page Content', flag: '—', component: 'children' },
                         ].map(row => (
