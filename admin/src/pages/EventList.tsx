@@ -179,6 +179,19 @@ const RACE_STATUSES: RaceStatus[] = ['Active', 'Completed', 'Cancelled', 'Hidden
 const TICKET_STATUSES: TicketStatus[] = ['Free', 'NotStarted', 'Available', 'AlmostSoldOut', 'SoldOut', 'Closed'];
 const ALERT_SEVERITIES: AlertSeverity[] = ['info', 'success', 'warning', 'error'];
 
+const EDITION_BORDER_COLORS = [
+  '#1976d2', // blue
+  '#9c27b0', // purple
+  '#e65100', // deep orange
+  '#00796b', // teal
+  '#c62828', // red
+  '#558b2f', // green
+  '#f57f17', // amber
+  '#0277bd', // light blue
+  '#6a1b9a', // deep purple
+  '#2e7d32', // dark green
+];
+
 const ACTIVITY_ICONS: Record<string, string> = {
   TrailRunning: '🏃‍♂️',
   Running: '🏃',
@@ -1594,13 +1607,11 @@ export default function EventList({ onNotify }: EventListProps) {
                                   No editions yet. Click "Add Edition" to create the first one.
                                 </Typography>
                               ) : (
-                                [...expandedDetail.editions].sort(sortEditions).map(edition => (
+                                [...expandedDetail.editions].sort(sortEditions).map((edition, idx) => (
                                   <Paper key={edition.id} variant="outlined" sx={{
                                     mb: 1.5,
                                     borderLeft: '4px solid',
-                                    borderLeftColor: edition.registrationStatus === 'Open' ? 'success.main'
-                                      : edition.registrationStatus === 'NotStarted' ? 'warning.main'
-                                      : 'divider',
+                                    borderLeftColor: EDITION_BORDER_COLORS[idx % EDITION_BORDER_COLORS.length],
                                   }}>
                                     <Box sx={{ p: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
                                       <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', flexGrow: 1 }}>
