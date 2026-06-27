@@ -17,6 +17,8 @@ import FooterStatus from './FooterStatus';
 import AnnouncementBanner from './AnnouncementBanner';
 import HeroBand from './HeroBand';
 import EventDayBanner from './EventDayBanner';
+import SponsorStrip from './SponsorStrip';
+import PromoStrip from './PromoStrip';
 import { useHeroTheme } from '../hooks/useHeroTheme';
 import LanguageToggle from './LanguageToggle';
 import DynamicHeader from './DynamicHeader';
@@ -260,9 +262,11 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
             </DynamicHeader>
 
             {isEnabled('announcement_banner') && <AnnouncementBanner />}
+            <SponsorStrip />
 
             <Container maxWidth={maxWidth} sx={{ py: 4, flex: 1 }}>
                 {isEnabled('hero_band') && heroTheme && <Box sx={{ mb: 3 }}><HeroBand theme={heroTheme} isDark={mode === 'dark'} /></Box>}
+                <PromoStrip />
                 {isEnabled('event_day_banner') && <EventDayBanner />}
                 {children}
             </Container>

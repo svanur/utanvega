@@ -1373,5 +1373,12 @@
         "saturday": "Laugardagur",
         "sunday": "Sunnudagur",
         "overflow": "og {{count}} fleiri →"
+    },
+    "promos": {
+        "runningTrip": {
+            "title": "Hlaupaferð í Svissnesku Alpana",
+            "dates": "3.–9. september 2026",
+            "cta": "8 sæti laus"
+        }
     }
 }
