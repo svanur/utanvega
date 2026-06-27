@@ -40,6 +40,7 @@ import {
 import {
   Add as AddIcon,
   AutoAwesome as GenerateIcon,
+  CalendarMonth as CalendarIcon,
   Clear as ClearIcon,
   ContentCopy as CopyIcon,
   Delete as DeleteIcon,
@@ -595,6 +596,9 @@ export default function EventList({ onNotify }: EventListProps) {
   const [editionForm, setEditionForm] = useState<EditionFormState>(createEmptyEditionForm());
   const [raceForm, setRaceForm] = useState<RaceFormState>(createEmptyRaceForm());
   const [applyToAllEditions, setApplyToAllEditions] = useState(false);
+  const [cloneFromEditionId, setCloneFromEditionId] = useState<string>('');
+  const [showBulkDatesDialog, setShowBulkDatesDialog] = useState(false);
+  const [bulkDates, setBulkDates] = useState<Array<{ race: RaceDto; dateOfRace: string; startTime: string }>>([]);
   const [generateForm, setGenerateForm] = useState<GenerateFormState>({ eventId: '', eventName: '', eventType: 'Race', fromMonth: 1, fromYear: new Date().getFullYear(), toMonth: 12, toYear: new Date().getFullYear(), trailId: '', registrationUrl: '', seasonStartMonth: null, editionName: '' });
 
   const sortedLocations = useMemo(
@@ -755,12 +759,21 @@ export default function EventList({ onNotify }: EventListProps) {
 
   const openCreateEdition = (event: EventSummaryDto) => {
     setEditEditionId(null);
-    setEditionForm(createEmptyEditionForm(event.id, event.type, event.name));
+    // Auto-select the most recent edition with races as the clone source
+    const editionsWithRaces = [...(expandedDetail?.editions ?? [])].filter(ed => ed.races.length > 0).sort(sortEditions);
+    const defaultClone = editionsWithRaces[editionsWithRaces.length - 1];
+    const nextYear = defaultClone?.year ? String(defaultClone.year + 1) : String(new Date().getFullYear());
+    setCloneFromEditionId(defaultClone?.id ?? '');
+    setEditionForm({
+      ...createEmptyEditionForm(event.id, event.type, event.name),
+      year: nextYear,
+    });
     setShowEditionDialog(true);
   };
 
   const openEditEdition = (edition: EventEditionDto) => {
     setEditEditionId(edition.id);
+    setCloneFromEditionId('');
     setEditionForm(buildEditionForm(edition, expandedDetail?.type ?? 'Race', expandedDetail?.name ?? ''));
     setShowEditionDialog(true);
   };
@@ -889,24 +902,55 @@ export default function EventList({ onNotify }: EventListProps) {
         onNotify(`Edition "${editionLabel}" updated`);
       } else {
         const newEditionId = await createEdition(input);
+        const sourceEdition = cloneFromEditionId
+          ? expandedDetail?.editions.find(ed => ed.id === cloneFromEditionId)
+          : null;
 
         if (isRaceOrSeries) {
-          await createRace({
-            eventEditionId: newEditionId,
-            trailId: null,
-            name: editionForm.eventName || 'Race',
-            status: 'Active',
-            sortOrder: 0,
-            ticketStatus: 'Available',
-            itraPoints: null,
-            prizeMoney: 0,
-          });
-          onNotify(`Edition "${editionLabel}" created with default race`);
+          if (sourceEdition && sourceEdition.races.length > 0) {
+            await Promise.all(sourceEdition.races.map(race =>
+              createRace({
+                eventEditionId: newEditionId,
+                trailId: race.trailId ?? null,
+                name: race.name,
+                distanceLabel: race.distanceLabel ?? undefined,
+                cutoffMinutes: race.cutoffMinutes ?? null,
+                description: race.description ?? undefined,
+                status: 'Active',
+                sortOrder: race.sortOrder,
+                ticketStatus: 'Available',
+                maxParticipants: race.maxParticipants ?? null,
+                itraPoints: race.itraPoints ?? null,
+                certifiedBy: race.certifiedBy ?? undefined,
+                prizeMoney: race.prizeMoney,
+                championshipCategory: race.championshipCategory ?? undefined,
+                dateOfRace: null,
+                startTime: null,
+              }),
+            ));
+            onNotify(`Edition "${editionLabel}" created with ${sourceEdition.races.length} cloned race${sourceEdition.races.length === 1 ? '' : 's'} — set their dates below`);
+          } else {
+            await createRace({
+              eventEditionId: newEditionId,
+              trailId: null,
+              name: editionForm.eventName || 'Race',
+              status: 'Active',
+              sortOrder: 0,
+              ticketStatus: 'Available',
+              itraPoints: null,
+              prizeMoney: 0,
+            });
+            onNotify(`Edition "${editionLabel}" created with default race`);
+          }
         } else {
           onNotify(`Edition "${editionLabel}" created`);
         }
+
+        // Auto-expand the new edition so admin can see and set dates immediately
+        setExpandedEditionIds(prev => [...prev, newEditionId]);
       }
 
+      setCloneFromEditionId('');
       setShowEditionDialog(false);
       await refreshExpandedEvent();
     } catch (err) {
@@ -1181,6 +1225,49 @@ export default function EventList({ onNotify }: EventListProps) {
       await refreshExpandedEvent();
     } catch (err) {
       onNotify(err instanceof Error ? err.message : 'Failed to copy races', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openBulkDates = (edition: EventEditionDto) => {
+    setBulkDates(
+      [...edition.races].sort(sortRaces).map(race => ({
+        race,
+        dateOfRace: race.dateOfRace ?? '',
+        startTime: race.startTime ? race.startTime.slice(0, 5) : '',
+      })),
+    );
+    setShowBulkDatesDialog(true);
+  };
+
+  const handleSaveBulkDates = async () => {
+    setSaving(true);
+    try {
+      await Promise.all(bulkDates.map(({ race, dateOfRace, startTime }) =>
+        updateRace(race.id, {
+          trailId: race.trailId ?? null,
+          name: race.name,
+          distanceLabel: race.distanceLabel ?? undefined,
+          cutoffMinutes: race.cutoffMinutes ?? null,
+          description: race.description ?? undefined,
+          status: race.status,
+          sortOrder: race.sortOrder,
+          ticketStatus: race.ticketStatus,
+          maxParticipants: race.maxParticipants ?? null,
+          itraPoints: race.itraPoints ?? null,
+          certifiedBy: race.certifiedBy ?? undefined,
+          prizeMoney: race.prizeMoney,
+          championshipCategory: race.championshipCategory ?? undefined,
+          dateOfRace: dateOfRace || null,
+          startTime: startTime || null,
+        }),
+      ));
+      onNotify(`Dates saved for ${bulkDates.length} race${bulkDates.length === 1 ? '' : 's'}`);
+      setShowBulkDatesDialog(false);
+      await refreshExpandedEvent();
+    } catch (err) {
+      onNotify(err instanceof Error ? err.message : 'Failed to save dates', 'error');
     } finally {
       setSaving(false);
     }
@@ -1522,6 +1609,11 @@ export default function EventList({ onNotify }: EventListProps) {
                                             {expandedDetail && edition.races.length === 0 && expandedDetail.editions.some(ed => ed.id !== edition.id && ed.races.length > 0) && (
                                               <Button size="small" startIcon={<CopyIcon />} onClick={() => handleCopyRacesFromPrevious(edition)} disabled={saving}>
                                                 Copy races
+                                              </Button>
+                                            )}
+                                            {edition.races.length > 0 && (
+                                              <Button size="small" startIcon={<CalendarIcon />} onClick={() => openBulkDates(edition)}>
+                                                Set Dates
                                               </Button>
                                             )}
                                             <Button size="small" startIcon={<AddIcon />} onClick={() => openCreateRace(edition)}>
@@ -1948,10 +2040,37 @@ export default function EventList({ onNotify }: EventListProps) {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={showEditionDialog} onClose={() => setShowEditionDialog(false)} maxWidth="sm" fullWidth>
+      <Dialog open={showEditionDialog} onClose={() => { setShowEditionDialog(false); setCloneFromEditionId(''); }} maxWidth="sm" fullWidth>
         <DialogTitle>{editEditionId ? 'Edit Edition' : 'Add Edition'}</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            {/* Clone source — only shown when creating and there are editions to clone from */}
+            {!editEditionId && expandedDetail && expandedDetail.editions.some(ed => ed.races.length > 0) && (
+              <FormControl fullWidth size="small">
+                <InputLabel>Clone races from</InputLabel>
+                <Select
+                  value={cloneFromEditionId}
+                  label="Clone races from"
+                  onChange={(e) => {
+                    const sourceId = e.target.value;
+                    setCloneFromEditionId(sourceId);
+                    if (sourceId) {
+                      const source = expandedDetail.editions.find(ed => ed.id === sourceId);
+                      if (source?.year) {
+                        setEditionField('year', String(source.year + 1));
+                      }
+                    }
+                  }}
+                >
+                  <MenuItem value=""><em>Don't clone — start empty</em></MenuItem>
+                  {[...expandedDetail.editions].filter(ed => ed.races.length > 0).sort(sortEditions).map(ed => (
+                    <MenuItem key={ed.id} value={ed.id}>
+                      {buildEditionLabel(ed)} ({ed.races.length} race{ed.races.length === 1 ? '' : 's'})
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
               <TextField
                 label="Year"
@@ -2250,6 +2369,49 @@ export default function EventList({ onNotify }: EventListProps) {
           <Button onClick={() => setShowGenerateDialog(false)}>Cancel</Button>
           <Button variant="contained" onClick={handleGenerateEditions} disabled={saving}>
             {saving ? <CircularProgress size={20} /> : 'Generate'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Bulk date entry dialog */}
+      <Dialog open={showBulkDatesDialog} onClose={() => setShowBulkDatesDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Set Race Dates</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            {bulkDates.length === 0 ? (
+              <Typography variant="body2" color="text.secondary">No races in this edition.</Typography>
+            ) : bulkDates.map((entry, i) => (
+              <Box key={entry.race.id}>
+                <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ mb: 0.75, display: 'block' }}>
+                  {entry.race.name}{entry.race.distanceLabel ? ` · ${entry.race.distanceLabel}` : ''}
+                </Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 140px', gap: 1.5 }}>
+                  <TextField
+                    label="Date"
+                    type="date"
+                    size="small"
+                    value={entry.dateOfRace}
+                    onChange={(e) => setBulkDates(prev => prev.map((d, j) => j === i ? { ...d, dateOfRace: e.target.value } : d))}
+                    InputLabelProps={{ shrink: true }}
+                    inputProps={{ lang: 'is' }}
+                  />
+                  <TextField
+                    label="Start time"
+                    type="time"
+                    size="small"
+                    value={entry.startTime}
+                    onChange={(e) => setBulkDates(prev => prev.map((d, j) => j === i ? { ...d, startTime: e.target.value } : d))}
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Box>
+              </Box>
+            ))}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowBulkDatesDialog(false)}>Cancel</Button>
+          <Button variant="contained" onClick={handleSaveBulkDates} disabled={saving}>
+            {saving ? <CircularProgress size={20} /> : 'Save Dates'}
           </Button>
         </DialogActions>
       </Dialog>
