@@ -1442,8 +1442,8 @@ export default function EventList({ onNotify }: EventListProps) {
           <TableBody>
             {filteredEvents.map(event => (
               <Fragment key={event.id}>
-                <TableRow hover sx={{ cursor: 'pointer', ...(expandedEventId === event.id && { borderRight: '4px solid', borderRightColor: 'primary.main' }) }} onClick={() => toggleExpand(event)}>
-                  <TableCell>
+                <TableRow hover sx={{ cursor: 'pointer' }} onClick={() => toggleExpand(event)}>
+                  <TableCell sx={expandedEventId === event.id ? { borderTop: '2px solid', borderLeft: '2px solid', borderColor: 'primary.main' } : {}}>
                     <IconButton size="small">
                       {expandedEventId === event.id ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                     </IconButton>
@@ -1488,7 +1488,7 @@ export default function EventList({ onNotify }: EventListProps) {
                   <TableCell>
                     <Typography variant="body2" color="text.secondary">{event.locationName ?? '—'}</Typography>
                   </TableCell>
-                  <TableCell align="right" onClick={clickEvent => clickEvent.stopPropagation()}>
+                  <TableCell align="right" onClick={clickEvent => clickEvent.stopPropagation()} sx={expandedEventId === event.id ? { borderTop: '2px solid', borderRight: '2px solid', borderColor: 'primary.main' } : {}}>
                     <Tooltip title="Edit event">
                       <IconButton size="small" onClick={() => openEditEvent(event)}>
                         <EditIcon fontSize="small" />
@@ -1502,7 +1502,7 @@ export default function EventList({ onNotify }: EventListProps) {
                   </TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell colSpan={10} sx={{ py: 0, borderBottom: expandedEventId === event.id ? undefined : 'none' }}>
+                  <TableCell colSpan={10} sx={{ py: 0, borderBottom: expandedEventId === event.id ? undefined : 'none', ...(expandedEventId === event.id && { borderLeft: '2px solid', borderRight: '2px solid', borderBottomColor: 'primary.main', borderLeftColor: 'primary.main', borderRightColor: 'primary.main' }) }}>
                     <Collapse in={expandedEventId === event.id} timeout="auto" unmountOnExit>
                       <Box sx={{ px: 2, py: 2, bgcolor: 'action.hover' }}>
                         {loadingDetail ? (
