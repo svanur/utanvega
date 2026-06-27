@@ -36,7 +36,8 @@ public class SendTipCommandHandler : IRequestHandler<SendTipCommand, bool>
 
     public async Task<bool> Handle(SendTipCommand request, CancellationToken cancellationToken)
     {
-        var to = _config["Resend:TipRecipient"] ?? "oskar@hlaupadagskra.is";
+        var to = _config["Resend:TipRecipient"]
+            ?? throw new InvalidOperationException("Resend:TipRecipient is not configured.");
         var subject = $"Tip: {request.PageUrl}";
         var body = $"Page: {request.PageUrl}\n\n{request.Message}";
 

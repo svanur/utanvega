@@ -314,6 +314,15 @@ builder.Services.AddHttpClient<IEmailService, ResendEmailService>((sp, client) =
         new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
 });
 
+var tipRecipient = builder.Configuration["Resend:TipRecipient"];
+if (string.IsNullOrEmpty(tipRecipient))
+{
+    if (builder.Environment.IsDevelopment())
+        Log.Warning("Resend:TipRecipient not set; tip emails will not be delivered");
+    else
+        throw new InvalidOperationException("Resend:TipRecipient must be configured in production.");
+}
+
 var app = builder.Build();
 
 Log.Information("Application built. Starting up...");
