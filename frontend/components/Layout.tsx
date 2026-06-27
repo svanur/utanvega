@@ -262,11 +262,11 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
             </DynamicHeader>
 
             {isEnabled('announcement_banner') && <AnnouncementBanner />}
-            <SponsorStrip />
+            {(isEnabled('sponsor_garmin') || isEnabled('sponsor_craft')) && <SponsorStrip />}
 
             <Container maxWidth={maxWidth} sx={{ py: 4, flex: 1 }}>
                 {isEnabled('hero_band') && heroTheme && <Box sx={{ mb: 3 }}><HeroBand theme={heroTheme} isDark={mode === 'dark'} /></Box>}
-                <PromoStrip />
+                {(isEnabled('promo_challenge_2026') || isEnabled('promo_running_trip_2026')) && <PromoStrip />}
                 {isEnabled('event_day_banner') && <EventDayBanner />}
                 {children}
             </Container>

@@ -37,19 +37,23 @@ export default function PromoStrip() {
 
             {showTrip && (
                 <Box
+                    component={RouterLink}
+                    to="/shop/hlaupaferd"
                     sx={{
                         flex: 1,
                         borderRadius: 2,
                         overflow: 'hidden',
                         position: 'relative',
                         height: 180,
+                        display: 'block',
+                        '&:hover img': { transform: 'scale(1.02)' },
                     }}
                 >
                     <Box
                         component="img"
                         src="/sponsors/running-trip-2026.avif"
                         alt={t('promos.runningTrip.title')}
-                        sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                        sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 0.3s ease' }}
                     />
                     {/* Dark gradient overlay */}
                     <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.2) 60%, transparent 100%)' }} />
