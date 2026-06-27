@@ -1,10 +1,6 @@
 import { Box, Stack } from '@mui/material';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
-
-const SPONSORS = [
-    { flag: 'sponsor_garmin', name: 'Garmin', href: 'https://garminbudin.is/', img: '/sponsors/garmin.avif' },
-    { flag: 'sponsor_craft',  name: 'Craft',  href: 'https://craftverslun.is/', img: '/sponsors/craft.avif' },
-];
+import { SPONSORS } from '../data/sponsors';
 
 export default function SponsorStrip() {
     const { isEnabled } = useFeatureFlags();

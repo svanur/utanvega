@@ -16,45 +16,7 @@ import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
 import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
 import LinkOutlinedIcon from '@mui/icons-material/LinkOutlined';
 import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined';
-
-const SPONSOR_ADS = [
-    {
-        name: 'Garmin',
-        flag: 'sponsor_garmin',
-        image: '/sponsors/garmin.avif',
-        href: 'https://garminbudin.is/',
-        type: 'External',
-        placement: 'SponsorStrip',
-        notes: 'Small logo bar above content',
-    },
-    {
-        name: 'Craft',
-        flag: 'sponsor_craft',
-        image: '/sponsors/craft.avif',
-        href: 'https://craftverslun.is/',
-        type: 'External',
-        placement: 'SponsorStrip',
-        notes: 'Small logo bar above content',
-    },
-    {
-        name: 'Útivistaáskorun 2026',
-        flag: 'promo_slot_1',
-        image: '/sponsors/challenge-2026.avif',
-        href: '/challenge/2026',
-        type: 'Internal',
-        placement: 'PromoStrip',
-        notes: 'Text baked into image — update image file to change copy',
-    },
-    {
-        name: 'Hlaupaferð í Svissnesku Alpana',
-        flag: 'promo_slot_2',
-        image: '/sponsors/running-trip-2026.avif',
-        href: '/shop/hlaupaferd',
-        type: 'Internal',
-        placement: 'PromoStrip',
-        notes: 'Text overlay rendered from i18n — update promos.runningTrip.* keys',
-    },
-];
+import { SPONSOR_ADS } from '../data/sponsors';
 
 export default function SponsorsPage() {
     return (
@@ -181,21 +143,21 @@ export default function SponsorsPage() {
                     <Stack direction="row" spacing={1.5} alignItems="flex-start">
                         <Chip label="3" size="small" color="primary" sx={{ fontWeight: 700, mt: 0.25, flexShrink: 0 }} />
                         <Box>
-                            <Typography variant="subtitle2" fontWeight={700} gutterBottom>Register the ad in the component</Typography>
+                            <Typography variant="subtitle2" fontWeight={700} gutterBottom>Register the ad in the data file</Typography>
                             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                Depending on placement, edit one of these files:
+                                All ad data lives in one file — add an entry to the right array:
                             </Typography>
                             <Stack spacing={1}>
                                 <Box>
                                     <Typography variant="caption" color="text.secondary" display="block">Logo bar (small external sponsors):</Typography>
                                     <Box sx={{ p: 1, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace', fontSize: '0.75rem' }}>
-                                        frontend/components/SponsorStrip.tsx → add entry to SPONSORS array
+                                        frontend/data/sponsors.ts → add entry to SPONSORS array
                                     </Box>
                                 </Box>
                                 <Box>
                                     <Typography variant="caption" color="text.secondary" display="block">Promo cards (50/50 internal promos):</Typography>
                                     <Box sx={{ p: 1, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace', fontSize: '0.75rem' }}>
-                                        frontend/components/PromoStrip.tsx → add isEnabled check + JSX card
+                                        frontend/data/sponsors.ts → add entry to PROMO_SLOTS array
                                     </Box>
                                 </Box>
                             </Stack>
@@ -231,11 +193,13 @@ export default function SponsorsPage() {
                     <Stack direction="row" spacing={1.5} alignItems="flex-start">
                         <Chip label="5" size="small" color="primary" sx={{ fontWeight: 700, mt: 0.25, flexShrink: 0 }} />
                         <Box>
-                            <Typography variant="subtitle2" fontWeight={700} gutterBottom>Update this page</Typography>
-                            <Typography variant="body2" color="text.secondary">
-                                Add the new ad to the <code>SPONSOR_ADS</code> array at the top of{' '}
-                                <code>admin/src/pages/SponsorsPage.tsx</code> so it appears in the table above.
+                            <Typography variant="subtitle2" fontWeight={700} gutterBottom>Sync the admin page</Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                Run the sync script from the repo root — it copies the data file to the admin app so this page stays up to date automatically:
                             </Typography>
+                            <Box sx={{ p: 1, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                                .\scripts\sync-sponsors.ps1
+                            </Box>
                         </Box>
                     </Stack>
                 </Paper>
