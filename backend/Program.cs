@@ -101,7 +101,12 @@ builder.Services.Configure<FormOptions>(o =>
 });
 
 // Add Database with PostGIS
-var rawConnectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
+var isMigrateMode = args.Contains("--migrate");
+
+// For migrations, prefer DIRECT_DATABASE_URL (Supabase direct port 5432, bypasses PgBouncer).
+// Falls back to DATABASE_URL / DefaultConnection for both normal and migrate modes.
+var rawConnectionString = (isMigrateMode ? builder.Configuration["DIRECT_DATABASE_URL"] : null)
+    ?? builder.Configuration.GetConnectionString("DefaultConnection")
     ?? builder.Configuration["DATABASE_URL"];
 
 // Fly.io provides DATABASE_URL in the format: postgres://user:password@host:port/dbname
@@ -137,7 +142,8 @@ if (!string.IsNullOrEmpty(rawConnectionString) && rawConnectionString.Contains("
         string host = hostAndPort[0];
         string port = hostAndPort.Length > 1 ? hostAndPort[1] : "5432";
 
-        connectionString = $"Host={host};Port={port};Database={database};Username={user};Password={password};Include Error Detail=true";
+        var migrationExtra = isMigrateMode ? ";Pooling=false;CommandTimeout=120" : "";
+        connectionString = $"Host={host};Port={port};Database={database};Username={user};Password={password};Include Error Detail=true{migrationExtra}";
         Log.Information("Successfully parsed connection string. Host={Host}, Port={Port}, Database={Database}", host, port, database);
     }
     catch (Exception ex)
@@ -1776,11 +1782,13 @@ app.MapPost("/api/v1/tips", async (SendTipRequest request, IMediator mediator, I
 .WithName("SendTip")
 .RequireRateLimiting("send-tip");
 
-if (args.Contains("--migrate"))
+if (isMigrateMode)
 {
+    var directUrlUsed = builder.Configuration["DIRECT_DATABASE_URL"] is not null;
+    Log.Information("Running database migrations (using {UrlType} connection)...",
+        directUrlUsed ? "DIRECT_DATABASE_URL" : "DATABASE_URL");
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<UtanvegaDbContext>();
-    Log.Information("Running database migrations...");
     await db.Database.MigrateAsync();
     Log.Information("Database migrations applied successfully");
     Log.CloseAndFlush();

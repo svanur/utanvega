@@ -403,14 +403,27 @@ export default function HeroThemesPage() {
                         <Stack spacing={0.5}>
                             {[
                                 '1. Add the image to frontend/public/themes/ and commit.',
-                                '2. Add the entry in both frontend/data/heroThemes.ts AND admin/src/data/heroThemes.ts.',
-                                '3. Deploy frontend + admin — the band appears automatically on the active dates.',
-                                '4. One-off events: remove the theme entry after the event ends.',
-                                '5. Recurring themes: no cleanup needed — they reactivate automatically each year.',
+                                '2. Edit frontend/data/heroThemes.ts — add or remove the entry.',
+                                '3. Run .\\scripts\\sync-hero-themes.ps1 to update the admin copy.',
+                                '4. Deploy frontend + admin — the band appears automatically on the active dates.',
+                                '5. One-off events: remove the theme entry after the event ends.',
+                                '6. Recurring themes: no cleanup needed — they reactivate automatically each year.',
                             ].map((step, i) => (
                                 <Typography key={i} variant="body2">{step}</Typography>
                             ))}
                         </Stack>
+                    </Paper>
+
+                    <Paper variant="outlined" sx={{ p: 2 }}>
+                        <Typography variant="subtitle2" fontWeight={700} gutterBottom>Sync the admin page</Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                            The theme table above is a read-only mirror of{' '}
+                            <code>frontend/data/heroThemes.ts</code>. After editing the frontend file,
+                            run this script from the repo root to keep them in sync:
+                        </Typography>
+                        <Box sx={{ p: 1, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                            .\scripts\sync-hero-themes.ps1
+                        </Box>
                     </Paper>
                 </Stack>
             </Box>

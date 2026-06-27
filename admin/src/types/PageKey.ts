@@ -1,1 +1,1 @@
-export type PageKey = 'trails' | 'locations' | 'health' | 'map' | 'tags' | 'analytics' | 'features' | 'events' | 'hero-themes';
+export type PageKey = 'trails' | 'locations' | 'health' | 'map' | 'tags' | 'analytics' | 'features' | 'events' | 'hero-themes' | 'sponsors';
