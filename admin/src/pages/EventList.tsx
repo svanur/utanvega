@@ -351,7 +351,7 @@ function bumpYearInUrl(url: string, fromYear: number | null | undefined, toYear:
 
 function isPastDate(dateStr: string): boolean {
   if (!dateStr) return false;
-  return new Date(dateStr) < new Date(new Date().toDateString());
+  return dateStr < new Date().toISOString().slice(0, 10);
 }
 
 function trimToUndefined(value: string): string | undefined {
@@ -707,6 +707,7 @@ export default function EventList({ onNotify }: EventListProps) {
   const [raceForm, setRaceForm] = useState<RaceFormState>(createEmptyRaceForm());
   const [applyToAllEditions, setApplyToAllEditions] = useState(false);
   const [cloneFromEditionId, setCloneFromEditionId] = useState<string>('');
+  const [localRaceOrder, setLocalRaceOrder] = useState<Map<string, string[]>>(new Map());
   const [showBulkDatesDialog, setShowBulkDatesDialog] = useState(false);
   const [bulkDates, setBulkDates] = useState<Array<{ race: RaceDto; dateOfRace: string; startTime: string }>>([]);
   const [generateForm, setGenerateForm] = useState<GenerateFormState>({ eventId: '', eventName: '', eventType: 'Race', fromMonth: 1, fromYear: new Date().getFullYear(), toMonth: 12, toYear: new Date().getFullYear(), trailId: '', registrationUrl: '', seasonStartMonth: null, editionName: '' });
@@ -1026,7 +1027,7 @@ export default function EventList({ onNotify }: EventListProps) {
 
         if (isRaceOrSeries) {
           if (sourceEdition && sourceEdition.races.length > 0) {
-            await Promise.all(sourceEdition.races.map(race =>
+            const results = await Promise.allSettled(sourceEdition.races.map(race =>
               createRace({
                 eventEditionId: newEditionId,
                 trailId: race.trailId ?? null,
@@ -1046,7 +1047,13 @@ export default function EventList({ onNotify }: EventListProps) {
                 startTime: null,
               }),
             ));
-            onNotify(`Edition "${editionLabel}" created with ${sourceEdition.races.length} cloned race${sourceEdition.races.length === 1 ? '' : 's'} — set their dates below`);
+            const failed = results.filter(r => r.status === 'rejected').length;
+            const succeeded = results.length - failed;
+            if (failed > 0) {
+              onNotify(`Edition "${editionLabel}" created but only ${succeeded}/${results.length} races were cloned — review and add missing ones`, 'error');
+            } else {
+              onNotify(`Edition "${editionLabel}" created with ${succeeded} cloned race${succeeded === 1 ? '' : 's'} — set their dates below`);
+            }
           } else {
             await createRace({
               eventEditionId: newEditionId,
@@ -1422,6 +1429,9 @@ export default function EventList({ onNotify }: EventListProps) {
     const newIndex = sorted.findIndex(r => r.id === over.id);
     const reordered = arrayMove(sorted, oldIndex, newIndex);
 
+    // Optimistic update so the list doesn't snap back during API calls
+    setLocalRaceOrder(prev => new Map(prev).set(edition.id, reordered.map(r => r.id)));
+
     try {
       await Promise.all(reordered.map((race, idx) =>
         idx !== sorted.indexOf(race) ? updateRace(race.id, {
@@ -1443,7 +1453,9 @@ export default function EventList({ onNotify }: EventListProps) {
         }) : Promise.resolve(),
       ));
       await refreshExpandedEvent();
+      setLocalRaceOrder(prev => { const m = new Map(prev); m.delete(edition.id); return m; });
     } catch (err) {
+      setLocalRaceOrder(prev => { const m = new Map(prev); m.delete(edition.id); return m; });
       onNotify(err instanceof Error ? err.message : 'Failed to reorder races', 'error');
     }
   };
@@ -1842,9 +1854,15 @@ export default function EventList({ onNotify }: EventListProps) {
                                           </Typography>
                                         ) : (
                                           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleRaceDragEnd(e, edition)}>
-                                            <SortableContext items={[...edition.races].sort(sortRaces).map(r => r.id)} strategy={verticalListSortingStrategy}>
+                                            {(() => {
+                                              const localOrder = localRaceOrder.get(edition.id);
+                                              const displayRaces = localOrder
+                                                ? localOrder.map(id => edition.races.find(r => r.id === id)!).filter(Boolean)
+                                                : [...edition.races].sort(sortRaces);
+                                              return (
+                                            <SortableContext items={displayRaces.map(r => r.id)} strategy={verticalListSortingStrategy}>
                                               <List disablePadding sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                                {[...edition.races].sort(sortRaces).map(race => (
+                                                {displayRaces.map(race => (
                                                   <SortableRaceItem
                                                     key={race.id}
                                                     race={race}
@@ -1857,6 +1875,8 @@ export default function EventList({ onNotify }: EventListProps) {
                                                 ))}
                                               </List>
                                             </SortableContext>
+                                              );
+                                            })()}
                                           </DndContext>
                                         )}
                                       </Box>
