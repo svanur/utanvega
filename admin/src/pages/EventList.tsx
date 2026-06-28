@@ -2366,6 +2366,7 @@ export default function EventList({ onNotify }: EventListProps) {
             />
             <TextField
               label="Race Name"
+              placeholder="e.g. 55 km"
               value={raceForm.name}
               onChange={(event) => setRaceField('name', event.target.value)}
               required
@@ -2375,7 +2376,7 @@ export default function EventList({ onNotify }: EventListProps) {
                 label="Distance Label"
                 value={raceForm.distanceLabel}
                 onChange={(event) => setRaceField('distanceLabel', event.target.value)}
-                placeholder="e.g. 55 km"
+                placeholder="e.g. 55"
               />
               <TextField
                 label="Cutoff Time (hrs)"

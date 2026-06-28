@@ -1,4 +1,5 @@
 import { lazy, Suspense, useMemo, useState, useRef, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
     Container,
@@ -164,13 +165,15 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    const [viewMode, setViewMode] = useState<ViewMode>(() => {
-        try {
-            const saved = localStorage.getItem('utanvega-events-view-mode');
-            if (saved === 'list' || saved === 'map' || saved === 'table') return saved;
-        } catch { /* */ }
-        return 'list';
-    });
+    const [searchParams, setSearchParams] = useSearchParams();
+    const viewModeFromUrl = searchParams.get('view');
+    const viewMode: ViewMode = (viewModeFromUrl === 'list' || viewModeFromUrl === 'map' || viewModeFromUrl === 'table')
+        ? viewModeFromUrl
+        : (() => { try { const s = localStorage.getItem('utanvega-events-view-mode'); return (s === 'list' || s === 'map' || s === 'table') ? s : 'list'; } catch { return 'list'; } })();
+    const setViewMode = (v: ViewMode) => {
+        setSearchParams(prev => { const next = new URLSearchParams(prev); next.set('view', v); return next; }, { replace: true });
+        try { localStorage.setItem('utanvega-events-view-mode', v); } catch { /* */ }
+    };
 
     const activeFilterCount = useMemo(() =>
         filters.activityTypes.length +
@@ -611,7 +614,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                     <ToggleButtonGroup
                         value={viewMode}
                         exclusive
-                        onChange={(_, value) => { if (value) { const v = value as ViewMode; setViewMode(v); try { localStorage.setItem('utanvega-events-view-mode', v); } catch {/* */} } }}
+                        onChange={(_, value) => { if (value) setViewMode(value as ViewMode); }}
                         size="small"
                         aria-label={t('home.viewMode')}
                     >
