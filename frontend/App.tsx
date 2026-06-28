@@ -215,7 +215,7 @@ export default function App() {
                         path="/my/trails/:slug"
                         element={<MyTrailDetailsPage mode={mode} onToggleMode={handleToggleMode} />}
                     />}
-                    <Route path="/shop/skrafkort/2025" element={<ScratchCardPage mode={mode} onToggleMode={handleToggleMode} />} />
+                    <Route path="/shop/skafkort/2025" element={<ScratchCardPage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="/shop/hlaupaferd" element={<RunningTripPage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="/services" element={<ServicesPage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="/challenge/2026" element={<ChallengePage mode={mode} onToggleMode={handleToggleMode} />} />
