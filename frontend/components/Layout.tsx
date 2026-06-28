@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { Box, ButtonBase, Collapse, Container, Divider, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Toolbar, Tooltip, Typography, Button, Menu, MenuItem, useMediaQuery, useTheme } from '@mui/material';
+import { useState, useEffect } from 'react';
+import { Box, ButtonBase, Collapse, Container, Divider, Fab, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Toolbar, Tooltip, Typography, Button, Menu, MenuItem, useMediaQuery, useTheme, Zoom } from '@mui/material';
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { PropsWithChildren, ReactNode } from 'react';
@@ -51,6 +52,30 @@ type LayoutProps = PropsWithChildren<{
 
 function openExternal(href: string) {
     window.open(href, '_blank', 'noopener,noreferrer');
+}
+
+function ScrollToTopButton() {
+    const [visible, setVisible] = useState(false);
+
+    useEffect(() => {
+        const onScroll = () => setVisible(window.scrollY > 300);
+        window.addEventListener('scroll', onScroll, { passive: true });
+        return () => window.removeEventListener('scroll', onScroll);
+    }, []);
+
+    return (
+        <Zoom in={visible}>
+            <Fab
+                size="small"
+                color="primary"
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                sx={{ position: 'fixed', bottom: 24, right: 16, zIndex: 1200 }}
+                aria-label="scroll to top"
+            >
+                <KeyboardArrowUpIcon />
+            </Fab>
+        </Zoom>
+    );
 }
 
 export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', bottomContent }: LayoutProps) {
@@ -120,9 +145,9 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
             <DynamicHeader weather={weather} isDark={mode === 'dark'}>
                 <Toolbar sx={{ gap: 1 }}>
                     <ButtonBase
-                        onClick={() => navigate('/events')}
+                        onClick={() => navigate('/')}
                         sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'flex-start', borderRadius: 1 }}
-                        aria-label="Go to Races"
+                        aria-label="Go to hlaupadagskra.is"
                     >
                         <img src="/images/hlaupadagskra.avif" alt="" style={{ height: 32, width: 'auto' }} />
                         <Typography variant="h6" component="div">
@@ -268,12 +293,14 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
                 {isEnabled('hero_band') && heroTheme && <Box sx={{ mb: 3 }}><HeroBand theme={heroTheme} isDark={mode === 'dark'} /></Box>}
                 {(isEnabled('promo_slot_1') || isEnabled('promo_slot_2')) && <PromoStrip />}
                 {isEnabled('event_day_banner') && <EventDayBanner />}
+                <div id="main-content" />
                 {children}
             </Container>
 
             {bottomContent}
 
             <FooterStatus />
+            <ScrollToTopButton />
         </Box>
     );
 }

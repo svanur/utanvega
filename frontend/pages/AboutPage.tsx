@@ -63,7 +63,7 @@ export default function AboutPage({ mode, onToggleMode }: AboutPageProps) {
                 <Typography variant="h4" fontWeight="bold" gutterBottom>
                     {t('about.title')}
                 </Typography>
-                <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                <Typography variant="body1" color="text.secondary" sx={{ mb: 3, whiteSpace: 'pre-wrap' }}>
                     {t('about.description')}
                 </Typography>
 
