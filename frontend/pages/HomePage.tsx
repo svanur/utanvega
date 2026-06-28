@@ -18,7 +18,7 @@ export default function HomePage({ mode, onToggleMode, tagSlug, showQuote = fals
     const [viewMode, setViewMode] = useState(() => {
         try { return localStorage.getItem('utanvega-view-mode') || 'list'; } catch { return 'list'; }
     });
-    const maxWidth = viewMode === 'table' ? false as const : 'md' as const;
+    const maxWidth = viewMode === 'table' ? 'lg' as const : 'md' as const;
     return (
         <Layout mode={mode} onToggleMode={onToggleMode} maxWidth={maxWidth} bottomContent={<PartnerLinks />}>
             {showQuote && isEnabled('random_quote') && <RandomQuote />}
