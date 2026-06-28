@@ -708,6 +708,7 @@ export default function EventList({ onNotify }: EventListProps) {
   const [applyToAllEditions, setApplyToAllEditions] = useState(false);
   const [cloneFromEditionId, setCloneFromEditionId] = useState<string>('');
   const [localRaceOrder, setLocalRaceOrder] = useState<Map<string, string[]>>(new Map());
+  const [prefillRaces, setPrefillRaces] = useState<RaceDto[]>([]);
   const [showBulkDatesDialog, setShowBulkDatesDialog] = useState(false);
   const [bulkDates, setBulkDates] = useState<Array<{ race: RaceDto; dateOfRace: string; startTime: string }>>([]);
   const [generateForm, setGenerateForm] = useState<GenerateFormState>({ eventId: '', eventName: '', eventType: 'Race', fromMonth: 1, fromYear: new Date().getFullYear(), toMonth: 12, toYear: new Date().getFullYear(), trailId: '', registrationUrl: '', seasonStartMonth: null, editionName: '' });
@@ -900,11 +901,13 @@ export default function EventList({ onNotify }: EventListProps) {
       status: past ? 'Completed' : 'Active',
       ticketStatus: past ? 'Closed' : 'Available',
     });
+    setPrefillRaces([...edition.races].sort(sortRaces));
     setShowRaceDialog(true);
   };
 
   const openEditRace = (race: RaceDto) => {
     setEditRaceId(race.id);
+    setPrefillRaces([]);
     setRaceForm(buildRaceForm(race));
     setShowRaceDialog(true);
   };
@@ -2316,10 +2319,47 @@ export default function EventList({ onNotify }: EventListProps) {
         <DialogTitle>{editRaceId ? 'Edit Race' : 'Add Race'}</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            {!editRaceId && prefillRaces.length > 0 && (
+              <FormControl fullWidth size="small">
+                <InputLabel>Prefill from race in this edition</InputLabel>
+                <Select
+                  value=""
+                  label="Prefill from race in this edition"
+                  onChange={(e) => {
+                    const source = prefillRaces.find(r => r.id === e.target.value);
+                    if (!source) return;
+                    const base = buildRaceForm(source);
+                    setRaceForm(prev => ({
+                      ...base,
+                      eventEditionId: prev.eventEditionId,
+                      sortOrder: prev.sortOrder,
+                      startTime: '',
+                    }));
+                  }}
+                >
+                  {prefillRaces.map(r => (
+                    <MenuItem key={r.id} value={r.id}>
+                      {r.name}{r.distanceLabel ? ` · ${r.distanceLabel}` : ''}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
             <Autocomplete
               options={sortedTrails}
               value={sortedTrails.find(trail => trail.id === raceForm.trailId) ?? null}
-              onChange={(_, value) => setRaceField('trailId', value?.id ?? '')}
+              onChange={(_, value) => {
+                setRaceField('trailId', value?.id ?? '');
+                if (value && !editRaceId) {
+                  const rounded = Math.round(value.length / 1000);
+                  setRaceForm(prev => ({
+                    ...prev,
+                    trailId: value.id,
+                    name: prev.name.trim() ? prev.name : `${rounded} km`,
+                    distanceLabel: prev.distanceLabel.trim() ? prev.distanceLabel : `${rounded}`,
+                  }));
+                }
+              }}
               getOptionLabel={(trail) => `${trail.name} (${(trail.length / 1000).toFixed(1)} km)`}
               isOptionEqualToValue={(option, value) => option.id === value.id}
               renderInput={(params) => <TextField {...params} label="Linked Trail" />}
@@ -2338,7 +2378,7 @@ export default function EventList({ onNotify }: EventListProps) {
                 placeholder="e.g. 55 km"
               />
               <TextField
-                label="Cutoff Time"
+                label="Cutoff Time (hrs)"
                 value={raceForm.cutoffTime}
                 onChange={(event) => setRaceField('cutoffTime', normalizeCutoffTimeInput(event.target.value))}
                 onBlur={() => {

@@ -120,9 +120,9 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
             <DynamicHeader weather={weather} isDark={mode === 'dark'}>
                 <Toolbar sx={{ gap: 1 }}>
                     <ButtonBase
-                        onClick={() => navigate('/events')}
+                        onClick={() => navigate('/')}
                         sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'flex-start', borderRadius: 1 }}
-                        aria-label="Go to Races"
+                        aria-label="Go to hlaupadagskra.is"
                     >
                         <img src="/images/hlaupadagskra.avif" alt="" style={{ height: 32, width: 'auto' }} />
                         <Typography variant="h6" component="div">
