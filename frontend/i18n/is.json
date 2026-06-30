@@ -479,9 +479,9 @@
         "lastUpdated": "Síðast uppfært: {{date}}"
     },
     "scratchCard": {
-        "title": "Utanvegahlaup skafkort",
-        "subtitle": "Skráptu af hvert hlaup sem þú klárar — sérstakt kort af íslenska hlaupakafanum",
-        "madeInIceland": "Gert á Íslandi",
+        "title": "Skafkort fyrir utanvegahlaup",
+        "subtitle": "Skafðu af hvert hlaup sem þú klárar — Skemmtilegt kort með 42 utanvegahlaupum á Íslandi",
+        "madeInIceland": "Búið til á Íslandi",
         "details": "Upplýsingar um vöruna",
         "size": "Stærð",
         "events": "Hlaup",
@@ -489,14 +489,14 @@
         "design": "Hönnun",
         "price": "Verð",
         "shipping": "Sending",
-        "description": "Falleg A2 veggspjaldsmynd með 42 utanvegahlaupum um allt Ísland, hvert með einstaka mynd falin á bak við silfurlaga skaflag. Hannað af ARRA Design Studio — handgert og pakkað á Íslandi. Fullkomið gjöf fyrir hlauparar, náttúruunnendur og markmiðasetjendur.",
+        "description": "Falleg A2 veggspjaldsmynd með 42 utanvegahlaupum um allt Ísland, hvert með einstaka mynd falin á bak við silfurlaga skaflag. Hannað af ARRA Design Studio — handgert og pakkað á Íslandi. Fullkomið gjöf fyrir hlaupara og náttúruunnendur.",
         "order": "Panta með tölvupósti"
     },
     "runningTrip": {
         "title": "Hlaupaferð til Sviss 2026",
-        "subtitle": "Leiðsögnin hlaupaferð í Kandersteg, Svissnesku Alpunum — 3.–9. september 2026",
-        "description": "Komdu með okkur í sex nætur í Svissnesku Alpur — leiðsögnin hlaupaferð í Kandersteg, opin bæði hlauparar og ekki-hlauparar. Skipulögð af Óskari Þór og Tómasi G. frá hlaupadagskra.is.",
-        "itinerary": "Hlaupakafinn",
+        "subtitle": "Hlaupaferð til Kandersteg, Svissnesku Alpunum — 3.–9. september 2026",
+        "description": "Komdu með okkur í sex nætur til Svissnesku alpanna — Hlaupaferð með í Kandersteg, opin bæði fyrir vana hlaupara og óvana hlaupara. Í umsjón af Óskars Þórs og Tómasar G. frá hlaupadagskra.is.",
+        "itinerary": "Dagskráin",
         "day1": "Dagur 1 (4. sept)",
         "day2": "Dagur 2 (5. sept)",
         "day3": "Dagur 3 (6. sept)",
@@ -577,7 +577,7 @@
     },
     "annualReport": {
         "title": "Ársskýrsla 2025",
-        "intro": "Hlaup á Íslandi eru í hraðri sókn. Þessi skýrsla skráir þátttöku í skipulögðum hlaupaviðburðum á árinu 2025.",
+        "intro": "Hlaup á Íslandi eru í hraðri sókn. Þessi skýrsla sýnir þátttöku í skipulögðum hlaupaviðburðum á árinu 2025.",
         "stat": {
             "events": "Hlaupaviðburðir",
             "registrations": "Skráningar",

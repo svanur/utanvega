@@ -1,7 +1,7 @@
-import { lazy, Suspense, useMemo, useState } from 'react';
+import { lazy, Suspense, useMemo, useState, useEffect } from 'react';
 import { CssBaseline, ThemeProvider, CircularProgress, Box } from '@mui/material';
 import type { PaletteMode } from '@mui/material';
-import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
 import { createAppTheme } from './theme';
 import ErrorBoundary from './components/ErrorBoundary';
 import HomePage from './pages/HomePage';
@@ -50,6 +50,18 @@ function PageLoader() {
     );
 }
 
+function ScrollToContent() {
+    const { pathname } = useLocation();
+    useEffect(() => {
+        const id = setTimeout(() => {
+            const el = document.getElementById('main-content');
+            if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY, behavior: 'smooth' });
+        }, 50);
+        return () => clearTimeout(id);
+    }, [pathname]);
+    return null;
+}
+
 function TagPage({ mode, onToggleMode }: { mode: PaletteMode; onToggleMode: () => void }) {
     const { slug } = useParams<{ slug: string }>();
     return <HomePage mode={mode} onToggleMode={onToggleMode} tagSlug={slug} />;
@@ -87,6 +99,7 @@ export default function App() {
             <ErrorBoundary>
                 <AuthProvider>
                     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                        <ScrollToContent />
                         <Suspense fallback={<PageLoader />}>
                 {!loaded ? (
                     <PageLoader />
@@ -202,7 +215,7 @@ export default function App() {
                         path="/my/trails/:slug"
                         element={<MyTrailDetailsPage mode={mode} onToggleMode={handleToggleMode} />}
                     />}
-                    <Route path="/shop/skrafkort/2025" element={<ScratchCardPage mode={mode} onToggleMode={handleToggleMode} />} />
+                    <Route path="/shop/skafkort/2025" element={<ScratchCardPage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="/shop/hlaupaferd" element={<RunningTripPage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="/services" element={<ServicesPage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="/challenge/2026" element={<ChallengePage mode={mode} onToggleMode={handleToggleMode} />} />
