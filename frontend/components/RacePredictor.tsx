@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Box, TextField, Typography, Paper, Chip, Table, TableBody, TableRow, TableCell, TableHead, InputAdornment, IconButton } from '@mui/material';
-import { KeyboardArrowUp, KeyboardArrowDown } from '@mui/icons-material';
+import { KeyboardArrowUp, KeyboardArrowDown, RestartAlt } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import TimeSlider from './TimeSlider';
 
@@ -84,9 +84,19 @@ export default function RacePredictor() {
     return (
         <Box sx={{ maxWidth: 480, mx: 'auto' }}>
             <Paper sx={{ p: 3 }}>
-                <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
-                    {t('tools.racePredictor.subtitle')}
-                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="subtitle2" color="text.secondary">
+                        {t('tools.racePredictor.subtitle')}
+                    </Typography>
+                    <IconButton
+                        size="small"
+                        onClick={() => { setTimeStr(''); setSelectedDist(DISTANCES[1]); }}
+                        title={t('common.reset')}
+                        disabled={!timeStr && selectedDist.key === DISTANCES[1].key}
+                    >
+                        <RestartAlt fontSize="small" />
+                    </IconButton>
+                </Box>
 
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     {/* Distance selection */}

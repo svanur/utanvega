@@ -179,6 +179,16 @@ export default function PaceCalculator() {
         compute('distance', paceStr, dStr, timeStr);
     };
 
+    const applyExample = (pace: string, distance: string, time: string) => {
+        setPaceStr(pace);
+        setDistanceStr(distance);
+        setTimeStr(time);
+        // Pass a filled field as `changed` so compute knows which value to derive
+        if (!pace)     compute('distance', pace,     distance, time);
+        else if (!time)     compute('pace',     pace,     distance, time);
+        else           compute('time',     pace,     distance, time);
+    };
+
     const handleTrailSelect = (_: unknown, trail: TrailOption | null) => {
         setSelectedTrail(trail);
         if (!trail) return;
@@ -326,6 +336,24 @@ export default function PaceCalculator() {
                             <ToggleButton value="mi">mi</ToggleButton>
                         </ToggleButtonGroup>
                     </Box>
+                </Box>
+
+                {/* Example scenarios */}
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                    {[
+                        { label: t('tools.paceCalc.examples.paceFor10k'),  pace: '',      distance: '10',           time: '50:00' },
+                        { label: t('tools.paceCalc.examples.timeForHalf'), pace: '4:20',  distance: '21.0975',      time: ''      },
+                        { label: t('tools.paceCalc.examples.distIn1h'),    pace: '5:30',  distance: '',             time: '1:00:00' },
+                    ].map(ex => (
+                        <Chip
+                            key={ex.label}
+                            label={ex.label}
+                            size="small"
+                            variant="outlined"
+                            onClick={() => applyExample(ex.pace, ex.distance, ex.time)}
+                            sx={{ cursor: 'pointer' }}
+                        />
+                    ))}
                 </Box>
 
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>

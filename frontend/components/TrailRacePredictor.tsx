@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Box, TextField, Typography, Paper, Autocomplete, InputAdornment, IconButton, Divider, Table, TableBody, TableRow, TableCell, Alert, Tooltip, Button } from '@mui/material';
-import { KeyboardArrowUp, KeyboardArrowDown, CompareArrows, ContentCopy, Check, ImageOutlined } from '@mui/icons-material';
+import { Box, TextField, Typography, Paper, Autocomplete, InputAdornment, IconButton, Divider, Table, TableBody, TableRow, TableCell, Alert, Tooltip, Button, Chip } from '@mui/material';
+import { KeyboardArrowUp, KeyboardArrowDown, CompareArrows, ContentCopy, Check, ImageOutlined, RestartAlt } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { API_URL } from '../hooks/useTrails';
 import TimeSlider from './TimeSlider';
@@ -141,9 +141,43 @@ export default function TrailRacePredictor({ prefilledTrailSlug, prefilledFromSl
                         {t('tools.trailPredictor.loadError')}
                     </Alert>
                 )}
-                <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
-                    {t('tools.trailPredictor.subtitle')}
-                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="subtitle2" color="text.secondary">
+                        {t('tools.trailPredictor.subtitle')}
+                    </Typography>
+                    <IconButton
+                        size="small"
+                        onClick={() => { setTrailA(null); setTrailB(null); setTimeStr(''); }}
+                        title={t('common.reset')}
+                        disabled={!trailA && !trailB && !timeStr}
+                    >
+                        <RestartAlt fontSize="small" />
+                    </IconButton>
+                </Box>
+
+                {/* Example scenarios */}
+                {trails.length > 0 && (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1 }}>
+                        {[
+                            { label: t('tools.trailPredictor.examples.hengillVsLaugavegur'), from: 'hengill-ultra-52', to: 'laugavegur-ultra' },
+                            { label: t('tools.trailPredictor.examples.puffinVsEsja'),        from: 'the-puffin-run',  to: 'mt-esja-ultra-halfmarathon' },
+                        ].map(ex => {
+                            const fromTrail = trails.find(t => t.slug === ex.from);
+                            const toTrail   = trails.find(t => t.slug === ex.to);
+                            if (!fromTrail || !toTrail) return null;
+                            return (
+                                <Chip
+                                    key={ex.label}
+                                    label={ex.label}
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={() => { setTrailA(fromTrail); setTrailB(toTrail); }}
+                                    sx={{ cursor: 'pointer' }}
+                                />
+                            );
+                        })}
+                    </Box>
+                )}
 
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     {/* Trail A */}
@@ -211,7 +245,15 @@ export default function TrailRacePredictor({ prefilledTrailSlug, prefilledFromSl
                     />
 
                     <Divider>
-                        <CompareArrows color="action" />
+                        <Tooltip title={t('tools.trailPredictor.swap')}>
+                            <IconButton
+                                size="small"
+                                onClick={() => { setTrailA(trailB); setTrailB(trailA); }}
+                                disabled={!trailA && !trailB}
+                            >
+                                <CompareArrows fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
                     </Divider>
 
                     {/* Trail B */}

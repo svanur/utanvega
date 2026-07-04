@@ -3,7 +3,7 @@ import {
     Box, TextField, Typography, Paper, Chip, Table, TableBody, TableRow, TableCell,
     InputAdornment, IconButton, Tooltip,
 } from '@mui/material';
-import { KeyboardArrowUp, KeyboardArrowDown, ContentCopy } from '@mui/icons-material';
+import { KeyboardArrowUp, KeyboardArrowDown, ContentCopy, RestartAlt } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import TimeSlider from './TimeSlider';
@@ -213,9 +213,19 @@ export default function TrainingPaces() {
     return (
         <Box sx={{ maxWidth: 480, mx: 'auto' }}>
             <Paper sx={{ p: 3 }}>
-                <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
-                    {t('tools.trainingPaces.subtitle')}
-                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="subtitle2" color="text.secondary">
+                        {t('tools.trainingPaces.subtitle')}
+                    </Typography>
+                    <IconButton
+                        size="small"
+                        onClick={() => { setTimeStr(''); setSelectedPreset(PRESETS[2]); setSearchParams({}); }}
+                        title={t('common.reset')}
+                        disabled={!timeStr && selectedPreset.key === PRESETS[2].key}
+                    >
+                        <RestartAlt fontSize="small" />
+                    </IconButton>
+                </Box>
 
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     {/* Distance chips */}
