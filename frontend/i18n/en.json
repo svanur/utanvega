@@ -1009,6 +1009,13 @@
             "ageGradedTime": "Age-graded equivalent time",
             "ageGradedTimeDesc": "The time a peak-age athlete (~30) would need to match your effort",
             "tiers": "Performance tiers",
+            "tierNames": {
+                "worldClass": "World Class",
+                "nationalClass": "National Class",
+                "regionalClass": "Regional Class",
+                "localClass": "Local Class",
+                "recreational": "Recreational"
+            },
             "nextTier": "You need to run {{time}} faster to reach {{tier}}",
             "worldClass": "World Class — top tier reached!",
             "invalidInput": "Please enter a valid age (5–100) and finish time.",

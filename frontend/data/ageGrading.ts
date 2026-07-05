@@ -78,7 +78,7 @@ export interface AgeGradeResult {
     ageGradedSeconds: number;
     tier: string;
     tierColor: string;
-    nextTier: { name: string; threshold: number; improveBySeconds: number } | null;
+    nextTier: { key: string; threshold: number; improveBySeconds: number } | null;
 }
 
 export function calculateAgeGrade(
@@ -105,34 +105,35 @@ export function calculateAgeGrade(
     }
 
     const ageFactor = getAgeFactor(gender, age);
-    const percentage = (openStandard / (runnerSeconds * ageFactor)) * 100;
+    const rawPercentage = (openStandard / (runnerSeconds * ageFactor)) * 100;
+    const percentage = Math.round(rawPercentage * 10) / 10;
     const ageGradedSeconds = runnerSeconds * ageFactor;
 
     const { tier, tierColor } = getTier(percentage);
 
     const TIER_THRESHOLDS = [
-        { threshold: 60, name: 'Local Class' },
-        { threshold: 70, name: 'Regional Class' },
-        { threshold: 80, name: 'National Class' },
-        { threshold: 90, name: 'World Class' },
+        { threshold: 60, key: 'localClass' },
+        { threshold: 70, key: 'regionalClass' },
+        { threshold: 80, key: 'nationalClass' },
+        { threshold: 90, key: 'worldClass' },
     ];
-    const nextTierDef = TIER_THRESHOLDS.find(t => t.threshold > percentage);
-    const nextTier = nextTierDef
-        ? (() => {
-            const targetSeconds = openStandard / ((nextTierDef.threshold / 100) * ageFactor);
-            return { ...nextTierDef, improveBySeconds: runnerSeconds - targetSeconds };
-          })()
-        : null;
+    let nextTier: AgeGradeResult['nextTier'] = null;
+    for (const t of TIER_THRESHOLDS) {
+        if (t.threshold <= percentage) continue;
+        const targetSeconds = openStandard / ((t.threshold / 100) * ageFactor);
+        const improveBySeconds = runnerSeconds - targetSeconds;
+        if (improveBySeconds >= 1) { nextTier = { key: t.key, threshold: t.threshold, improveBySeconds }; break; }
+    }
 
     return { percentage, ageGradedSeconds, tier, tierColor, nextTier };
 }
 
 export function getTier(pct: number): { tier: string; tierColor: string } {
-    if (pct >= 90) return { tier: 'World Class',   tierColor: '#f59e0b' };
-    if (pct >= 80) return { tier: 'National Class', tierColor: '#6366f1' };
-    if (pct >= 70) return { tier: 'Regional Class', tierColor: '#22c55e' };
-    if (pct >= 60) return { tier: 'Local Class',    tierColor: '#3b82f6' };
-    return           { tier: 'Recreational',        tierColor: '#94a3b8' };
+    if (pct >= 90) return { tier: 'worldClass',    tierColor: '#f59e0b' };
+    if (pct >= 80) return { tier: 'nationalClass', tierColor: '#6366f1' };
+    if (pct >= 70) return { tier: 'regionalClass', tierColor: '#22c55e' };
+    if (pct >= 60) return { tier: 'localClass',    tierColor: '#3b82f6' };
+    return           { tier: 'recreational',       tierColor: '#94a3b8' };
 }
 
 export function formatSeconds(totalSeconds: number): string {

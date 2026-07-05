@@ -996,9 +996,9 @@
             }
         },
         "ageGrading": {
-            "title": "Aldursflokkar",
-            "desc": "Sjáðu hvernig lokatími þinn ber saman við heimsstaðal fyrir þitt aldur og kyn.",
-            "subtitle": "Berðu frammistöðu þína saman við heimsstaðal fyrir þinn aldur og kyn",
+            "title": "Aldursleiðrétting",
+            "desc": "Sjáðu hvernig lokatími þinn er í samanburði við heimsklassa árangur fyrir þinn aldur og kyn.",
+            "subtitle": "Berðu frammistöðu þína saman við heimsklassa árangur fyrir þinn aldur og kyn",
             "male": "Karl",
             "female": "Kona",
             "age": "Aldur",
@@ -1006,11 +1006,18 @@
             "yourTime": "Tími þinn",
             "timeHelp": "t.d. 22:30 eða 1:45:00",
             "ageGradedPct": "Hlutfall aldursflokks",
-            "ageGradedTime": "Jafngildur aldurflokkatími",
+            "ageGradedTime": "Jafngildur aldursflokkatími",
             "ageGradedTimeDesc": "Tíminn sem ~30 ára hlaupari þyrfti til að jafna tíman þinn",
             "tiers": "Frammistöðuflokkar",
-            "nextTier": "Þú þarft að hlaupa {{time}} hraðar til að ná {{tier}}",
-            "worldClass": "World Class — efsti flokkur náðst!",
+            "tierNames": {
+                "worldClass": "Heimsklassaflokkur",
+                "nationalClass": "Landsliðsflokkur",
+                "regionalClass": "Svæðisflokkur",
+                "localClass": "Innanfélagsflokkur",
+                "recreational": "Tómstundaflokkur"
+            },
+            "nextTier": "Þú þarft að hlaupa {{time}} mín. hraðar til að ná næsta flokki, sem er: {{tier}}",
+            "worldClass": "Heimsklassa árangur — efsti flokkur náðst!",
             "invalidInput": "Sláðu inn aldur (5–100) og lokatíma.",
             "source": "Byggt á WMA 2015 Road Age Grading Tables — Howard Grubb"
         }

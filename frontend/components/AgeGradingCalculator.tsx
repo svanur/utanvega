@@ -151,7 +151,7 @@ export default function AgeGradingCalculator() {
                             }}
                         >
                             <Typography variant="subtitle2" fontWeight={700} sx={{ color: result.tierColor }}>
-                                {result.tier}
+                                {t(`tools.ageGrading.tierNames.${result.tier}`)}
                             </Typography>
                         </Paper>
                     </Box>
@@ -219,7 +219,7 @@ export default function AgeGradingCalculator() {
                                 <Typography variant="body2">
                                     {t('tools.ageGrading.nextTier', {
                                         time: formatSeconds(result.nextTier.improveBySeconds),
-                                        tier: result.nextTier.name,
+                                        tier: t(`tools.ageGrading.tierNames.${result.nextTier.key}`),
                                     })}
                                 </Typography>
                                 <Typography variant="caption" color="text.disabled" sx={{ ml: 'auto', flexShrink: 0 }}>
@@ -240,16 +240,16 @@ export default function AgeGradingCalculator() {
                             {t('tools.ageGrading.tiers')}
                         </Typography>
                         {[
-                            { label: 'World Class',    range: '90%+',       color: '#f59e0b' },
-                            { label: 'National Class', range: '80–89.9%',   color: '#6366f1' },
-                            { label: 'Regional Class', range: '70–79.9%',   color: '#22c55e' },
-                            { label: 'Local Class',    range: '60–69.9%',   color: '#3b82f6' },
-                            { label: 'Recreational',   range: 'Under 60%',  color: '#94a3b8' },
+                            { key: 'worldClass',    range: '90%+',      color: '#f59e0b' },
+                            { key: 'nationalClass', range: '80–89.9%',  color: '#6366f1' },
+                            { key: 'regionalClass', range: '70–79.9%',  color: '#22c55e' },
+                            { key: 'localClass',    range: '60–69.9%',  color: '#3b82f6' },
+                            { key: 'recreational',  range: 'Under 60%', color: '#94a3b8' },
                         ].map(tier => (
-                            <Box key={tier.label} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box key={tier.key} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                 <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: tier.color, flexShrink: 0 }} />
                                 <Typography variant="caption">
-                                    <strong>{tier.label}</strong> — {tier.range}
+                                    <strong>{t(`tools.ageGrading.tierNames.${tier.key}`)}</strong> — {tier.range}
                                 </Typography>
                             </Box>
                         ))}
