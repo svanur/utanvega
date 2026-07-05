@@ -106,6 +106,9 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
         ...(isEnabled('trails_page')
             ? [{ key: 'trails', label: t('nav.trails'), children: trailsChildren }]
             : []),
+        ...(isEnabled('tools_page')
+            ? [{ key: 'tools', label: t('nav.tools'), path: '/tools' }]
+            : []),
         {
             key: 'shop',
             label: t('nav.onlineStore'),
