@@ -914,6 +914,11 @@
                 "50k": "50K",
                 "100k": "100K",
                 "100m": "100M"
+            },
+            "examples": {
+                "sub20_5k":     "5K á 20:00",
+                "half_145":     "Hálfmaraþon á 1:45:00",
+                "marathon_330": "Maraþon á 3:30:00"
             }
         },
         "trailPredictor": {
@@ -967,6 +972,11 @@
             "summaryText": "Miðað við tíma upp á {{time}} í {{race}} er þitt VDOT: {{vdot}}. Hér er ráðlagður æfingahraði miðað við það:",
             "equivalents": "Samsvarandi keppnistími",
             "method": "Byggt á VDOT formúlu Jack Daniels — áætlun, leiðréttið eftir aðstæðum.",
+            "examples": {
+                "5k_22":        "5K á 22:00",
+                "half_150":     "Hálfmaraþon á 1:50:00",
+                "marathon_345": "Maraþon á 3:45:00"
+            },
             "copy": "Afrita",
             "copied": "Afritað!",
             "zones": {
@@ -1019,7 +1029,11 @@
             "nextTier": "Þú þarft að hlaupa {{time}} mín. hraðar til að ná næsta flokki, sem er: {{tier}}",
             "worldClass": "Heimsklassa árangur — efsti flokkur náðst!",
             "invalidInput": "Sláðu inn aldur (5–100) og lokatíma.",
-            "source": "Byggt á WMA 2015 Road Age Grading Tables — Howard Grubb"
+            "source": "Byggt á WMA 2015 Road Age Grading Tables — Howard Grubb",
+            "examples": {
+                "m60_5k":    "Karl 60, 5K á 22:00",
+                "f45_half":  "Kona 45, Hálfmaraþon á 1:50:00"
+            }
         }
     },
     "races": {

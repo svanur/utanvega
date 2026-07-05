@@ -227,6 +227,24 @@ export default function TrainingPaces() {
                     </IconButton>
                 </Box>
 
+                {/* Example scenarios */}
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                    {[
+                        { label: t('tools.trainingPaces.examples.5k_22'),        preset: '5k',       time: '22:00' },
+                        { label: t('tools.trainingPaces.examples.half_150'),      preset: 'half',     time: '1:50:00' },
+                        { label: t('tools.trainingPaces.examples.marathon_345'),  preset: 'marathon', time: '3:45:00' },
+                    ].map(ex => (
+                        <Chip
+                            key={ex.label}
+                            label={ex.label}
+                            size="small"
+                            variant="outlined"
+                            onClick={() => { setSelectedPreset(PRESETS.find(p => p.key === ex.preset)!); setTimeStr(ex.time); }}
+                            sx={{ cursor: 'pointer' }}
+                        />
+                    ))}
+                </Box>
+
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     {/* Distance chips */}
                     <Box>

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Box, TextField, Typography, Paper, Autocomplete, InputAdornment, IconButton, Divider, Table, TableBody, TableRow, TableCell, Alert, Tooltip, Button, Chip } from '@mui/material';
 import { KeyboardArrowUp, KeyboardArrowDown, CompareArrows, ContentCopy, Check, ImageOutlined, RestartAlt } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { API_URL } from '../hooks/useTrails';
 import TimeSlider from './TimeSlider';
 import PredictionShareCard from './PredictionShareCard';
@@ -54,11 +55,16 @@ const RIEGEL_EXP = 1.06;
 export default function TrailRacePredictor({ prefilledTrailSlug, prefilledFromSlug, prefilledTime }: { prefilledTrailSlug?: string; prefilledFromSlug?: string; prefilledTime?: string }) {
     const { t } = useTranslation();
 
+    const [searchParams, setSearchParams] = useSearchParams();
+
     const [trails, setTrails] = useState<TrailOption[]>([]);
     const [trailsError, setTrailsError] = useState(false);
     const [trailA, setTrailA] = useState<TrailOption | null>(null);
     const [trailB, setTrailB] = useState<TrailOption | null>(null);
-    const [timeStr, setTimeStr] = useState(prefilledTime ?? '');
+    const [timeStr, setTimeStr] = useState(() => {
+        const p = searchParams.get('t') ?? prefilledTime;
+        return p ? p.replace(/-/g, ':') : '';
+    });
     const [copied, setCopied] = useState(false);
     const [shareCardOpen, setShareCardOpen] = useState(false);
 
@@ -76,19 +82,31 @@ export default function TrailRacePredictor({ prefilledTrailSlug, prefilledFromSl
             .catch(() => setTrailsError(true));
     }, []);
 
-    // Auto-select Trail B from ?trail= param
+    // Resolve trail A: URL param takes priority over prefill prop
     useEffect(() => {
-        if (!prefilledTrailSlug || trails.length === 0) return;
-        const match = trails.find(t => t.slug === prefilledTrailSlug);
-        if (match && !trailB) setTrailB(match);
+        if (trails.length === 0) return;
+        const slug = searchParams.get('from') ?? prefilledFromSlug;
+        if (slug) { const match = trails.find(t => t.slug === slug); if (match && !trailA) setTrailA(match); }
+    }, [prefilledFromSlug, trails]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Resolve trail B: URL param takes priority over prefill prop
+    useEffect(() => {
+        if (trails.length === 0) return;
+        const slug = searchParams.get('to') ?? prefilledTrailSlug;
+        if (slug) { const match = trails.find(t => t.slug === slug); if (match && !trailB) setTrailB(match); }
     }, [prefilledTrailSlug, trails]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Auto-select Trail A from ?from= param
+    // Sync selections to URL
     useEffect(() => {
-        if (!prefilledFromSlug || trails.length === 0) return;
-        const match = trails.find(t => t.slug === prefilledFromSlug);
-        if (match && !trailA) setTrailA(match);
-    }, [prefilledFromSlug, trails]); // eslint-disable-line react-hooks/exhaustive-deps
+        const urlTime = timeStr.replace(/:/g, '-');
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            if (trailA) next.set('from', trailA.slug); else next.delete('from');
+            if (trailB) next.set('to', trailB.slug); else next.delete('to');
+            if (timeStr) next.set('t', urlTime); else next.delete('t');
+            return next;
+        }, { replace: true });
+    }, [trailA, trailB, timeStr]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const stepTime = (direction: 1 | -1) => {
         const current = parseTime(timeStr) ?? 60;
@@ -147,7 +165,7 @@ export default function TrailRacePredictor({ prefilledTrailSlug, prefilledFromSl
                     </Typography>
                     <IconButton
                         size="small"
-                        onClick={() => { setTrailA(null); setTrailB(null); setTimeStr(''); }}
+                        onClick={() => { setTrailA(null); setTrailB(null); setTimeStr(''); setSearchParams({}); }}
                         title={t('common.reset')}
                         disabled={!trailA && !trailB && !timeStr}
                     >

@@ -914,6 +914,11 @@
                 "50k": "50K",
                 "100k": "100K",
                 "100m": "100 Miles"
+            },
+            "examples": {
+                "sub20_5k":     "5K in 20:00",
+                "half_145":     "Half marathon in 1:45:00",
+                "marathon_330": "Marathon in 3:30:00"
             }
         },
         "trailPredictor": {
@@ -967,6 +972,11 @@
             "summaryText": "Based on your {{race}} time of {{time}}, your VDOT is {{vdot}}. Here are your recommended training paces:",
             "equivalents": "Equivalent Race Times",
             "method": "Based on Jack Daniels' VDOT formula — estimates only, adjust for conditions and feel.",
+            "examples": {
+                "5k_22":        "5K in 22:00",
+                "half_150":     "Half marathon in 1:50:00",
+                "marathon_345": "Marathon in 3:45:00"
+            },
             "copy": "Copy to clipboard",
             "copied": "Copied!",
             "zones": {
@@ -1019,7 +1029,11 @@
             "nextTier": "You need to run {{time}} faster to reach {{tier}}",
             "worldClass": "World Class — top tier reached!",
             "invalidInput": "Please enter a valid age (5–100) and finish time.",
-            "source": "Based on WMA 2015 Road Age Grading Tables — Howard Grubb"
+            "source": "Based on WMA 2015 Road Age Grading Tables — Howard Grubb",
+            "examples": {
+                "m60_5k":    "Male 60, 5K in 22:00",
+                "f45_half":  "Female 45, Half marathon in 1:50:00"
+            }
         }
     },
     "races": {

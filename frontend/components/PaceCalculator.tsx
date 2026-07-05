@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Box, TextField, Typography, Paper, ToggleButtonGroup, ToggleButton, Chip, Divider, IconButton, InputAdornment, Table, TableBody, TableRow, TableCell, Collapse, Autocomplete } from '@mui/material';
 import { KeyboardArrowUp, KeyboardArrowDown, Terrain, ExpandMore, RestartAlt } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { API_URL } from '../hooks/useTrails';
 import { estimateDurationMinutes } from '../utils/estimateDuration';
 import TimeSlider from './TimeSlider';
@@ -86,11 +87,16 @@ interface TrailOption {
 
 export default function PaceCalculator() {
     const { t } = useTranslation();
+    const [searchParams, setSearchParams] = useSearchParams();
 
-    const [paceStr, setPaceStr] = useState('');
-    const [distanceStr, setDistanceStr] = useState('');
-    const [timeStr, setTimeStr] = useState('');
-    const [unit, setUnit] = useState<'km' | 'mi'>('km');
+    const [paceStr, setPaceStr] = useState(() => {
+        const p = searchParams.get('pace'); return p ? p.replace(/-/g, ':') : '';
+    });
+    const [distanceStr, setDistanceStr] = useState(() => searchParams.get('dist') ?? '');
+    const [timeStr, setTimeStr] = useState(() => {
+        const p = searchParams.get('time'); return p ? p.replace(/-/g, ':') : '';
+    });
+    const [unit, setUnit] = useState<'km' | 'mi'>(() => (searchParams.get('unit') as 'km' | 'mi') ?? 'km');
 
     // Trail adjustments
     const [trailOpen, setTrailOpen] = useState(false);
@@ -114,6 +120,18 @@ export default function PaceCalculator() {
             })
             .catch(() => { /* trail picker is optional */ });
     }, []);
+
+    // Sync to URL
+    useEffect(() => {
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            if (paceStr) next.set('pace', paceStr.replace(/:/g, '-')); else next.delete('pace');
+            if (distanceStr) next.set('dist', distanceStr); else next.delete('dist');
+            if (timeStr) next.set('time', timeStr.replace(/:/g, '-')); else next.delete('time');
+            if (unit !== 'km') next.set('unit', unit); else next.delete('unit');
+            return next;
+        }, { replace: true });
+    }, [paceStr, distanceStr, timeStr, unit]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const compute = useCallback((changed: Field, pVal: string, dVal: string, tVal: string) => {
         const pace = parseTime(pVal);
@@ -310,6 +328,7 @@ export default function PaceCalculator() {
         setTimeStr('');
         setElevGainStr('');
         setTerrain('trail');
+        setSearchParams({});
         setSelectedTrail(null);
         setTrailInputValue('');
         setTrailOpen(false);

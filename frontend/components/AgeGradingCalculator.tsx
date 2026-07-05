@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
     Box, TextField, Typography, Paper, ToggleButton, ToggleButtonGroup,
     MenuItem, Select, FormControl, InputLabel, Divider, Alert, Tooltip,
-    IconButton, InputAdornment,
+    IconButton, InputAdornment, Chip,
 } from '@mui/material';
 import { KeyboardArrowUp, KeyboardArrowDown, RestartAlt } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import TimeSlider from './TimeSlider';
 import {
     AG_DISTANCES, calculateAgeGrade, formatSeconds, parseTimeToSeconds,
@@ -14,11 +15,27 @@ import type { Gender } from '../data/ageGrading';
 
 export default function AgeGradingCalculator() {
     const { t } = useTranslation();
+    const [searchParams, setSearchParams] = useSearchParams();
 
-    const [gender, setGender] = useState<Gender>('male');
-    const [age, setAge] = useState('');
-    const [distanceKey, setDistanceKey] = useState('5K');
-    const [timeStr, setTimeStr] = useState('');
+    const [gender, setGender] = useState<Gender>(() => (searchParams.get('gender') as Gender) ?? 'male');
+    const [age, setAge] = useState(() => searchParams.get('age') ?? '');
+    const [distanceKey, setDistanceKey] = useState(() => searchParams.get('dist') ?? '5K');
+    const [timeStr, setTimeStr] = useState(() => {
+        const p = searchParams.get('t');
+        return p ? p.replace(/-/g, ':') : '';
+    });
+
+    useEffect(() => {
+        const urlTime = timeStr.replace(/:/g, '-');
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            if (gender !== 'male') next.set('gender', gender); else next.delete('gender');
+            if (age) next.set('age', age); else next.delete('age');
+            if (distanceKey !== '5K') next.set('dist', distanceKey); else next.delete('dist');
+            if (timeStr) next.set('t', urlTime); else next.delete('t');
+            return next;
+        }, { replace: true });
+    }, [gender, age, distanceKey, timeStr]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const stepTime = (direction: 1 | -1) => {
         const current = parseTimeToSeconds(timeStr) ?? Math.round(distance.km * 5 * 60);
@@ -45,6 +62,7 @@ export default function AgeGradingCalculator() {
         setAge('');
         setDistanceKey('5K');
         setTimeStr('');
+        setSearchParams({});
     };
 
     return (
@@ -73,6 +91,23 @@ export default function AgeGradingCalculator() {
                 <ToggleButton value="male">{t('tools.ageGrading.male')}</ToggleButton>
                 <ToggleButton value="female">{t('tools.ageGrading.female')}</ToggleButton>
             </ToggleButtonGroup>
+
+            {/* Example scenarios */}
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                {[
+                    { label: t('tools.ageGrading.examples.m60_5k'),   gender: 'male'   as Gender, age: '60', dist: '5K',           time: '22:00' },
+                    { label: t('tools.ageGrading.examples.f45_half'),  gender: 'female' as Gender, age: '45', dist: 'Half Marathon', time: '1:50:00' },
+                ].map(ex => (
+                    <Chip
+                        key={ex.label}
+                        label={ex.label}
+                        size="small"
+                        variant="outlined"
+                        onClick={() => { setGender(ex.gender); setAge(ex.age); setDistanceKey(ex.dist); setTimeStr(ex.time); }}
+                        sx={{ cursor: 'pointer' }}
+                    />
+                ))}
+            </Box>
 
             {/* Age + Distance */}
             <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
