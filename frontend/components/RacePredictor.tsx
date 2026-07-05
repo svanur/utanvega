@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Box, TextField, Typography, Paper, Chip, Table, TableBody, TableRow, TableCell, TableHead, InputAdornment, IconButton } from '@mui/material';
-import { KeyboardArrowUp, KeyboardArrowDown } from '@mui/icons-material';
+import { KeyboardArrowUp, KeyboardArrowDown, RestartAlt } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import TimeSlider from './TimeSlider';
 
 function parseTime(val: string): number | null {
@@ -55,9 +56,31 @@ const DISTANCES: RaceDistance[] = [
 
 export default function RacePredictor() {
     const { t } = useTranslation();
+    const [searchParams, setSearchParams] = useSearchParams();
 
-    const [selectedDist, setSelectedDist] = useState<RaceDistance>(DISTANCES[1]); // 5K default
-    const [timeStr, setTimeStr] = useState('');
+    const [selectedDist, setSelectedDist] = useState<RaceDistance>(() => {
+        const d = searchParams.get('d');
+        return DISTANCES.find(x => x.key === d) ?? DISTANCES[1];
+    });
+    const [timeStr, setTimeStr] = useState(() => {
+        const p = searchParams.get('t');
+        return p ? p.replace(/-/g, ':') : '';
+    });
+
+    useEffect(() => {
+        const urlTime = timeStr.replace(/:/g, '-');
+        const currentT = searchParams.get('t') || '';
+        const currentD = searchParams.get('d') || '';
+        const needsUpdate = (timeStr && urlTime !== currentT) || (!timeStr && currentT) || (selectedDist.key !== currentD);
+        if (needsUpdate) {
+            setSearchParams(prev => {
+                const next = new URLSearchParams(prev);
+                if (timeStr) next.set('t', urlTime); else next.delete('t');
+                next.set('d', selectedDist.key);
+                return next;
+            }, { replace: true });
+        }
+    }, [timeStr, selectedDist, searchParams, setSearchParams]);
 
     const knownTime = parseTime(timeStr);
 
@@ -84,9 +107,37 @@ export default function RacePredictor() {
     return (
         <Box sx={{ maxWidth: 480, mx: 'auto' }}>
             <Paper sx={{ p: 3 }}>
-                <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
-                    {t('tools.racePredictor.subtitle')}
-                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="subtitle2" color="text.secondary">
+                        {t('tools.racePredictor.subtitle')}
+                    </Typography>
+                    <IconButton
+                        size="small"
+                        onClick={() => { setTimeStr(''); setSelectedDist(DISTANCES[1]); setSearchParams({}); }}
+                        title={t('common.reset')}
+                        disabled={!timeStr && selectedDist.key === DISTANCES[1].key}
+                    >
+                        <RestartAlt fontSize="small" />
+                    </IconButton>
+                </Box>
+
+                {/* Example scenarios */}
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                    {[
+                        { label: t('tools.racePredictor.examples.sub20_5k'),     dist: '5k',       time: '20:00' },
+                        { label: t('tools.racePredictor.examples.half_145'),      dist: 'half',     time: '1:45:00' },
+                        { label: t('tools.racePredictor.examples.marathon_330'),  dist: 'marathon', time: '3:30:00' },
+                    ].map(ex => (
+                        <Chip
+                            key={ex.label}
+                            label={ex.label}
+                            size="small"
+                            variant="outlined"
+                            onClick={() => { setSelectedDist(DISTANCES.find(d => d.key === ex.dist)!); setTimeStr(ex.time); }}
+                            sx={{ cursor: 'pointer' }}
+                        />
+                    ))}
+                </Box>
 
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     {/* Distance selection */}

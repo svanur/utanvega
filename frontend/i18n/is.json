@@ -798,7 +798,7 @@
             "elevation": "Hæðarmunur",
             "short": "Stutt <5km",
             "medium": "5–21km",
-            "half": "Hálfþrð 21–42km",
+            "half": "Hálft 21–42km",
             "marathon": "Maraþon 42–50km",
             "ultra": "Ultra 50km+",
             "flat": "Slétt <300m",
@@ -848,10 +848,12 @@
     },
     "tools": {
         "title": "Tól",
+        "subtitle": "Reiknivélar og tól til að hjálpa þér að æfa og keppa betur.",
         "noToolsEnabled": "Engin hjálpartól eru virk.",
         "paceCalc": {
             "title": "Hraðareiknir",
-            "subtitle": "Sláðu inn tvö gildi til að reikna það þriðja",
+            "desc": "Reiknaðu hraða, vegalengdar eða tíma — með leiðréttingu fyrir utanvegabrautir.",
+            "subtitle": "Sláðu inn tvö gildi til að reikna það þriðja.",
             "pace": "Hraði (mín/{{unit}})",
             "distance": "Vegalengd ({{unit}})",
             "time": "Tími",
@@ -884,10 +886,16 @@
             "terrainLabel": "yfirborð",
             "climbLabel": "klifur",
             "pickTrail": "Veldu leið (ef þú vilt)",
-            "searchTrail": "Leita að leið..."
+            "searchTrail": "Leita að leið...",
+            "examples": {
+                "paceFor10k":  "10km á 50 mín — hvaða pace?",
+                "timeForHalf": "Hálfmaraþon á 4:20 pace — minn tími?",
+                "distIn1h":    "5:30 pace í 1 klst — Hversu langt?"
+            }
         },
         "racePredictor": {
             "title": "Hlaupaspá",
+            "desc": "Spáðu fyrir um lokatíma þinn í hvaða vegalengd sem er út frá niðurstöðu úr nýlegri keppni.",
             "subtitle": "Sláðu inn nýlegan árangur til að spá fyrir um tíma í öðrum vegalengdum",
             "knownDistance": "Vegalengd hlaups",
             "yourTime": "Tíminn þinn í {{race}}",
@@ -906,10 +914,16 @@
                 "50k": "50K",
                 "100k": "100K",
                 "100m": "100M"
+            },
+            "examples": {
+                "sub20_5k":     "5K á 20:00",
+                "half_145":     "Hálfmaraþon á 1:45:00",
+                "marathon_330": "Maraþon á 3:30:00"
             }
         },
         "trailPredictor": {
             "title": "Utanvegaspá",
+            "desc": "Spáðu fyrir um lokatíma þinn í íslenskum utanvegabrautum út frá fyrri frammistöðu.",
             "subtitle": "Spá fyrir um tíma út frá árangri í fyrri leið eða keppni.",
             "knownRace": "Leið/keppni með þekktum tíma",
             "targetRace": "Finna tíma fyrir aðra leið/keppni",
@@ -930,10 +944,16 @@
             "shareCardLabel": "Hlaupadagskra.is spáði fyrir um lokatíma minn",
             "shareCardBasedOn": "Byggt á mínum tíma í {{trail}} · {{time}}",
             "loadError": "Ekki tókst að sækja leiðir. Reyndu aftur.",
-            "summaryText": "Ef þú hljópst {{knownTrail}} á {{yourTime}}, þá spáum við að þú hlaupir {{targetTrail}} á {{predictedTime}}."
+            "summaryText": "Ef þú hljópst {{knownTrail}} á {{yourTime}}, þá spáum við að þú hlaupir {{targetTrail}} á {{predictedTime}}.",
+            "swap": "Skipta á leiðum",
+            "examples": {
+                "hengillVsLaugavegur": "Hengill Ultra 52 → Laugavegur Ultra",
+                "puffinVsEsja": "Puffin Run → Mt. Esja Ultra HM"
+            }
         },
         "paceChart": {
             "title": "Hraðatafla",
+            "desc": "Hraðatafla frá 2 upp í 9 pace — fullkomin til að skipuleggja keppni.",
             "subtitle": "Finndu tíma í ákveðinni vegalengd, athugaðu svo aðra dálka til að sjá tíma á sama hraða. Fullkomið til að skipuleggja hlaupin þín.",
             "search": "Maraþontími eða 1km hraði",
             "searchHelp": "t.d. 3:30:00 (maraþon) eða 5:00 (1K hraði)",
@@ -943,6 +963,7 @@
         },
         "trainingPaces": {
             "title": "Æfingahraði",
+            "desc": "Fáðu VDOT þjálfunarlotur út frá nýlegum keppnistíma.",
             "subtitle": "Sláðu inn nýlegan keppnistíma til að reikna æfingasvæðin þín út frá VDOT líkamsástandi",
             "raceDistance": "Keppnisvegalengd",
             "yourTime": "Tíminn þinn í {{race}}",
@@ -951,6 +972,11 @@
             "summaryText": "Miðað við tíma upp á {{time}} í {{race}} er þitt VDOT: {{vdot}}. Hér er ráðlagður æfingahraði miðað við það:",
             "equivalents": "Samsvarandi keppnistími",
             "method": "Byggt á VDOT formúlu Jack Daniels — áætlun, leiðréttið eftir aðstæðum.",
+            "examples": {
+                "5k_22":        "5K á 22:00",
+                "half_150":     "Hálfmaraþon á 1:50:00",
+                "marathon_345": "Maraþon á 3:45:00"
+            },
             "copy": "Afrita",
             "copied": "Afritað!",
             "zones": {
@@ -977,6 +1003,36 @@
                 "track10k": "10 km hraði",
                 "track5k": "5 km hraði",
                 "track3k": "3 km hraði"
+            }
+        },
+        "ageGrading": {
+            "title": "Aldursleiðrétting",
+            "desc": "Sjáðu hvernig lokatími þinn er í samanburði við heimsklassa árangur fyrir þinn aldur og kyn.",
+            "subtitle": "Berðu frammistöðu þína saman við heimsklassa árangur fyrir þinn aldur og kyn",
+            "male": "Karl",
+            "female": "Kona",
+            "age": "Aldur",
+            "distance": "Vegalengd",
+            "yourTime": "Tími þinn",
+            "timeHelp": "t.d. 22:30 eða 1:45:00",
+            "ageGradedPct": "Hlutfall aldursflokks",
+            "ageGradedTime": "Jafngildur aldursflokkatími",
+            "ageGradedTimeDesc": "Tíminn sem ~30 ára hlaupari þyrfti til að jafna tíman þinn",
+            "tiers": "Frammistöðuflokkar",
+            "tierNames": {
+                "worldClass": "Heimsklassaflokkur",
+                "nationalClass": "Landsliðsflokkur",
+                "regionalClass": "Svæðisflokkur",
+                "localClass": "Innanfélagsflokkur",
+                "recreational": "Tómstundaflokkur"
+            },
+            "nextTier": "Þú þarft að hlaupa {{time}} mín. hraðar til að ná næsta flokki, sem er: {{tier}}",
+            "worldClass": "Heimsklassa árangur — efsti flokkur náðst!",
+            "invalidInput": "Sláðu inn aldur (5–100) og lokatíma.",
+            "source": "Byggt á WMA 2015 Road Age Grading Tables — Howard Grubb",
+            "examples": {
+                "m60_5k":    "Karl 60, 5K á 22:00",
+                "f45_half":  "Kona 45, Hálfmaraþon á 1:50:00"
             }
         }
     },

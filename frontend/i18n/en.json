@@ -849,9 +849,11 @@
     "tools": {
         "title": "Tools",
         "noToolsEnabled": "No tools are currently enabled.",
+        "subtitle": "Calculators and tools to help you train smarter and race better",
         "paceCalc": {
             "title": "Pace Calculator",
-            "subtitle": "Enter any two fields to compute the third",
+            "desc": "Convert between pace, distance and time — with trail terrain adjustments.",
+            "subtitle": "Enter any two fields to compute the third.",
             "pace": "Pace (min/{{unit}})",
             "distance": "Distance ({{unit}})",
             "time": "Time",
@@ -883,11 +885,17 @@
             "adjustedSummaryTrail": "On {{trail}} ({{terrain}}, ↑{{elevation}}{{elevUnit}}), your adjusted time is {{time}} at {{pace}}/km.",
             "terrainLabel": "terrain",
             "climbLabel": "climb",
-            "pickTrail": "Pick a trail",
-            "searchTrail": "Search trails..."
+            "pickTrail": "Pick a trail (optional)",
+            "searchTrail": "Search trails...",
+            "examples": {
+                "paceFor10k":  "What pace for 10K in 50:00?",
+                "timeForHalf": "Half marathon at 4:20/km — my time?",
+                "distIn1h":    "Distance in 1 hour at 5:30/km?"
+            }
         },
         "racePredictor": {
             "title": "Race Predictor",
+            "desc": "Predict your finish time at any distance from a recent race result.",
             "subtitle": "Enter a recent race result to predict times for other distances",
             "knownDistance": "Race distance",
             "yourTime": "Your {{race}} time",
@@ -906,10 +914,16 @@
                 "50k": "50K",
                 "100k": "100K",
                 "100m": "100 Miles"
+            },
+            "examples": {
+                "sub20_5k":     "5K in 20:00",
+                "half_145":     "Half marathon in 1:45:00",
+                "marathon_330": "Marathon in 3:30:00"
             }
         },
         "trailPredictor": {
             "title": "Trail Predictor",
+            "desc": "Estimate your finish time on any Icelandic trail based on a past performance.",
             "subtitle": "Predict your trail or race time based on a past performance",
             "knownRace": "Your completed trail",
             "targetRace": "Target trail",
@@ -930,10 +944,16 @@
             "shareCardLabel": "Hlaupadagskra.is predicted my finish time",
             "shareCardBasedOn": "Based on my time in {{trail}} · {{time}}",
             "loadError": "Failed to load trails. Please try again.",
-            "summaryText": "If you ran {{knownTrail}} in {{yourTime}}, our prediction is that you will run {{targetTrail}} in {{predictedTime}}."
+            "summaryText": "If you ran {{knownTrail}} in {{yourTime}}, our prediction is that you will run {{targetTrail}} in {{predictedTime}}.",
+            "swap": "Swap trails",
+            "examples": {
+                "hengillVsLaugavegur": "Hengill Ultra 52 → Laugavegur Ultra",
+                "puffinVsEsja": "Puffin Run → Mt. Esja Ultra HM"
+            }
         },
         "paceChart": {
             "title": "Pace Chart",
+            "desc": "Full pace table from 1K splits to marathon finish times — perfect for race planning.",
             "subtitle": "Find your goal time in the Marathon column, then read across for split times at that pace. Perfect for planning races and workouts.",
             "search": "Marathon time or 1K pace",
             "searchHelp": "e.g. 3:30:00 (marathon) or 5:00 (1K pace)",
@@ -943,6 +963,7 @@
         },
         "trainingPaces": {
             "title": "Training Paces",
+            "desc": "Get your VDOT-based training zones from a recent race time.",
             "subtitle": "Enter a recent race result to calculate your training zones based on VDOT fitness level",
             "raceDistance": "Race distance",
             "yourTime": "Your {{race}} time",
@@ -951,6 +972,11 @@
             "summaryText": "Based on your {{race}} time of {{time}}, your VDOT is {{vdot}}. Here are your recommended training paces:",
             "equivalents": "Equivalent Race Times",
             "method": "Based on Jack Daniels' VDOT formula — estimates only, adjust for conditions and feel.",
+            "examples": {
+                "5k_22":        "5K in 22:00",
+                "half_150":     "Half marathon in 1:50:00",
+                "marathon_345": "Marathon in 3:45:00"
+            },
             "copy": "Copy to clipboard",
             "copied": "Copied!",
             "zones": {
@@ -977,6 +1003,36 @@
                 "track10k": "10K pace",
                 "track5k": "5K pace",
                 "track3k": "3K pace"
+            }
+        },
+        "ageGrading": {
+            "title": "Age Grading",
+            "desc": "See how your finish time compares to the world standard for your age and gender.",
+            "subtitle": "Compare your performance against the world standard for your age and gender",
+            "male": "Male",
+            "female": "Female",
+            "age": "Age",
+            "distance": "Distance",
+            "yourTime": "Your finish time",
+            "timeHelp": "e.g. 22:30 or 1:45:00",
+            "ageGradedPct": "Age-graded percentage",
+            "ageGradedTime": "Age-graded equivalent time",
+            "ageGradedTimeDesc": "The time a peak-age athlete (~30) would need to match your effort",
+            "tiers": "Performance tiers",
+            "tierNames": {
+                "worldClass": "World Class",
+                "nationalClass": "National Class",
+                "regionalClass": "Regional Class",
+                "localClass": "Local Class",
+                "recreational": "Recreational"
+            },
+            "nextTier": "You need to run {{time}} faster to reach {{tier}}",
+            "worldClass": "World Class — top tier reached!",
+            "invalidInput": "Please enter a valid age (5–100) and finish time.",
+            "source": "Based on WMA 2015 Road Age Grading Tables — Howard Grubb",
+            "examples": {
+                "m60_5k":    "Male 60, 5K in 22:00",
+                "f45_half":  "Female 45, Half marathon in 1:50:00"
             }
         }
     },
@@ -1136,7 +1192,8 @@
             "Race": "Race",
             "Series": "Series",
             "Championship": "Championship",
-            "Fun": "Fun"
+            "Fun": "Fun",
+            "Festival": "Festival"
         },
         "history": {
             "title": "Event History",
