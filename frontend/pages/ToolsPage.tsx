@@ -34,9 +34,9 @@ export default function ToolsPage({ mode, onToggleMode }: { mode: PaletteMode; o
     const { toolKey } = useParams<{ toolKey?: string }>();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const prefilledTrail = searchParams.get('trail') ?? undefined;
+    const prefilledTrail = (searchParams.get('to') ?? searchParams.get('trail')) ?? undefined;
     const prefilledFrom = searchParams.get('from') ?? undefined;
-    const prefilledTime = searchParams.get('time') ?? undefined;
+    const prefilledTime = (searchParams.get('t') ?? searchParams.get('time'))?.replace(/-/g, ':') ?? undefined;
 
     const allTools: ToolDef[] = [
         { key: 'pace-calculator',  flag: 'tool_pace_calculator',  label: t('tools.paceCalc.title'),       desc: t('tools.paceCalc.desc'),       icon: <TimerIcon />,       component: <PaceCalculator /> },

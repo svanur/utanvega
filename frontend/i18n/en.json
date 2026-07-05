@@ -1192,7 +1192,8 @@
             "Race": "Race",
             "Series": "Series",
             "Championship": "Championship",
-            "Fun": "Fun"
+            "Fun": "Fun",
+            "Festival": "Festival"
         },
         "history": {
             "title": "Event History",
