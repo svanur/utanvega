@@ -60,24 +60,32 @@ namespace Utanvega.Backend.Migrations
                 type: "integer",
                 nullable: true);
 
-            // 2. Copy data out of the JSON column into the flat columns.
+            // 2. Copy data out of the JSON column into the flat columns (if it still exists —
+            //    20260619100001_DropScheduleRuleJsonColumn may have already removed it).
             migrationBuilder.Sql(@"
-                UPDATE ""Events"" SET
-                    ""ScheduleRule_Type""       = ""ScheduleRule"" ->> 'Type',
-                    ""ScheduleRule_Month""       = (""ScheduleRule"" ->> 'Month')::int,
-                    ""ScheduleRule_WeekOfMonth"" = (""ScheduleRule"" ->> 'WeekOfMonth')::int,
-                    ""ScheduleRule_DayOfMonth""  = (""ScheduleRule"" ->> 'DayOfMonth')::int,
-                    ""ScheduleRule_DayOfWeek""   = ""ScheduleRule"" ->> 'DayOfWeek',
-                    ""ScheduleRule_MonthStart""  = (""ScheduleRule"" ->> 'MonthStart')::int,
-                    ""ScheduleRule_MonthEnd""    = (""ScheduleRule"" ->> 'MonthEnd')::int,
-                    ""ScheduleRule_Date""        = (""ScheduleRule"" ->> 'Date')::date
-                WHERE ""ScheduleRule"" IS NOT NULL;
+                DO $$ BEGIN
+                    IF EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name = 'Events' AND column_name = 'ScheduleRule'
+                    ) THEN
+                        UPDATE ""Events"" SET
+                            ""ScheduleRule_Type""       = ""ScheduleRule"" ->> 'Type',
+                            ""ScheduleRule_Month""       = (""ScheduleRule"" ->> 'Month')::int,
+                            ""ScheduleRule_WeekOfMonth"" = (""ScheduleRule"" ->> 'WeekOfMonth')::int,
+                            ""ScheduleRule_DayOfMonth""  = (""ScheduleRule"" ->> 'DayOfMonth')::int,
+                            ""ScheduleRule_DayOfWeek""   = ""ScheduleRule"" ->> 'DayOfWeek',
+                            ""ScheduleRule_MonthStart""  = (""ScheduleRule"" ->> 'MonthStart')::int,
+                            ""ScheduleRule_MonthEnd""    = (""ScheduleRule"" ->> 'MonthEnd')::int,
+                            ""ScheduleRule_Date""        = (""ScheduleRule"" ->> 'Date')::date
+                        WHERE ""ScheduleRule"" IS NOT NULL;
+                    END IF;
+                END $$;
             ");
 
-            // 3. Drop the JSON column now that data has been copied.
-            migrationBuilder.DropColumn(
-                name: "ScheduleRule",
-                table: "Events");
+            // 3. Drop the JSON column now that data has been copied (if not already dropped).
+            migrationBuilder.Sql(@"
+                ALTER TABLE ""Events"" DROP COLUMN IF EXISTS ""ScheduleRule"";
+            ");
         }
 
         /// <inheritdoc />

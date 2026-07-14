@@ -16,7 +16,6 @@ const quotes = {
         'Oh, nú gekk ég of langt...',
         '???',
         'Ég sagði að við hefðum átt að beygja þarna áðan',
-        'FÁÐUÞÉRBÍLHELV**#%&/ö(',
         'Hey, af hverju finnst þetta ekki?',
         'Meiri vitleysan.',
         'Ó, átti að hittast klukkan 6 EFTIR hádegi! :/',
