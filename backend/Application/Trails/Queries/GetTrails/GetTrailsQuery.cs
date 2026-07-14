@@ -14,7 +14,7 @@ public record GetTrailsQuery(bool IncludeArchived = false, bool PublishedOnly = 
     public TimeSpan CacheDuration => TimeSpan.FromHours(1);
 }
 
-public record LocationInfoDto(Guid Id, string Name, string Slug, int Order, string Role);
+public record LocationInfoDto(Guid Id, string Name, string Slug, int Order, string Role, double? CenterLatitude = null, double? CenterLongitude = null);
 
 public record TagInfoDto(string Name, string Slug, string? Color);
 

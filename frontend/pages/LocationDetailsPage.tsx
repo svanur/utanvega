@@ -24,6 +24,8 @@ import StraightenIcon from '@mui/icons-material/Straighten';
 import TerrainIcon from '@mui/icons-material/Terrain';
 import RouteIcon from '@mui/icons-material/Route';
 import Layout from '../components/Layout';
+import PoolCard from '../components/PoolCard';
+import { findPoolsByLocationSlugs } from '../data/pools';
 import { useLocationBySlug, useLocationTree } from '../hooks/useLocations';
 import type { LocationTreeNode } from '../hooks/useLocations';
 import { TrailCard } from '../components/TrailCard';
@@ -446,6 +448,22 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
                         </Typography>
                     </Box>
                 )}
+            {isEnabled('pools') && (() => {
+                const locationPools = findPoolsByLocationSlugs([location.slug]);
+                if (locationPools.length === 0) return null;
+                return (
+                    <Box sx={{ pb: 4 }}>
+                        <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                            {t('pools.poolsInArea', { name: location.name })}
+                        </Typography>
+                        <Box sx={{ mt: 1 }}>
+                            {locationPools.map(pool => (
+                                <PoolCard key={pool.id} pool={pool} />
+                            ))}
+                        </Box>
+                    </Box>
+                );
+            })()}
             </Container>
         </Layout>
     );

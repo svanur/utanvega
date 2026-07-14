@@ -6,6 +6,8 @@ export interface LocationInfo {
     slug: string;
     order: number;
     role: string;
+    centerLatitude: number | null;
+    centerLongitude: number | null;
 }
 
 export interface TagInfo {

@@ -1,0 +1,512 @@
+[
+  {
+    "id": "pool_laugardalslaug",
+    "name": "Laugardalslaug",
+    "type": "municipal",
+    "locationSlug": "reykjavik",
+    "coordinates": { "lat": 64.1407, "lng": -21.8833 },
+    "url": "https://sundlaugar.is/sundlaugasafn/laugardalslaug/",
+    "amenities": { "hot_tubs": true, "sauna": true, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_sundholl_reykjavikur",
+    "name": "Sundhöll Reykjavíkur",
+    "type": "municipal",
+    "locationSlug": "reykjavik",
+    "coordinates": { "lat": 64.1431, "lng": -21.9172 },
+    "url": "https://sundlaugar.is/sundlaugasafn/sundholl-reykjavikur-2/",
+    "amenities": { "hot_tubs": true, "sauna": true, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_arbaejarlaug",
+    "name": "Árbæjarlaug",
+    "type": "municipal",
+    "locationSlug": "reykjavik",
+    "coordinates": { "lat": 64.1112, "lng": -21.8461 },
+    "url": "https://sundlaugar.is/sundlaugasafn/190-2/",
+    "amenities": { "hot_tubs": true, "sauna": true, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_breidholtslaug",
+    "name": "Breiðholtslaug",
+    "type": "municipal",
+    "locationSlug": "reykjavik",
+    "coordinates": { "lat": 64.0986, "lng": -21.8681 },
+    "url": "https://sundlaugar.is/sundlaugasafn/breidholtslaug-2/",
+    "amenities": { "hot_tubs": true, "sauna": false, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_vesturbaejarlaug",
+    "name": "Vesturbæjarlaug",
+    "type": "municipal",
+    "locationSlug": "reykjavik",
+    "coordinates": { "lat": 64.1508, "lng": -21.9617 },
+    "url": "https://sundlaugar.is/sundlaugasafn/vesturbaejarlaug-2/",
+    "amenities": { "hot_tubs": true, "sauna": false, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_grafarvogslaug",
+    "name": "Grafarvogslaug",
+    "type": "municipal",
+    "locationSlug": "reykjavik",
+    "coordinates": { "lat": 64.1578, "lng": -21.8208 },
+    "url": "https://sundlaugar.is/sundlaugasafn/grafarvogslaug-2/",
+    "amenities": { "hot_tubs": true, "sauna": false, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_dalslaug",
+    "name": "Dalslaug",
+    "type": "municipal",
+    "locationSlug": "reykjavik",
+    "coordinates": { "lat": 64.1323, "lng": -21.7367 },
+    "url": "https://sundlaugar.is/sundlaugasafn/dalslaug/",
+    "amenities": { "hot_tubs": true, "sauna": true, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_kopavogslaug",
+    "name": "Kópavogslaug",
+    "type": "municipal",
+    "locationSlug": "kopavogur",
+    "coordinates": { "lat": 64.1067, "lng": -21.9108 },
+    "url": "https://sundlaugar.is/sundlaugasafn/sundlaug-kopavogs-2/",
+    "amenities": { "hot_tubs": true, "sauna": true, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_sky_lagoon",
+    "name": "Sky Lagoon",
+    "type": "spa",
+    "locationSlug": "kopavogur",
+    "coordinates": { "lat": 64.1100, "lng": -21.9989 },
+    "url": "https://sundlaugar.is/sundlaugasafn/sky-lagoon/",
+    "amenities": { "hot_tubs": true, "sauna": true, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_alftaneslaug",
+    "name": "Álftaneslaug",
+    "type": "municipal",
+    "locationSlug": "gardabaer",
+    "coordinates": { "lat": 64.0794, "lng": -22.0456 },
+    "url": "https://sundlaugar.is/sundlaugasafn/alftaneslaug/",
+    "amenities": { "hot_tubs": true, "sauna": false, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_sundholl_hafnarfjardar",
+    "name": "Sundhöll Hafnarfjarðar",
+    "type": "municipal",
+    "locationSlug": "hafnarfjordur",
+    "coordinates": { "lat": 64.0669, "lng": -21.9408 },
+    "url": "https://sundlaugar.is/sundlaugasafn/sundholl-hafnarfjardar/",
+    "amenities": { "hot_tubs": true, "sauna": true, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_lagafellslaug",
+    "name": "Lágafellslaug",
+    "type": "municipal",
+    "locationSlug": "mosfellsbaer",
+    "coordinates": { "lat": 64.1650, "lng": -21.6944 },
+    "url": "https://sundlaugar.is/sundlaugasafn/lagafellslaug-2/",
+    "amenities": { "hot_tubs": true, "sauna": true, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_varmarlaug",
+    "name": "Varmárlaug",
+    "type": "municipal",
+    "locationSlug": "mosfellsbaer",
+    "coordinates": { "lat": 64.1594, "lng": -21.6847 },
+    "url": "https://sundlaugar.is/sundlaugasafn/varmarlaug-2/",
+    "amenities": { "hot_tubs": true, "sauna": false, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_reykjanesbaer_njardvik",
+    "name": "Reykjanesbær – Njarðvík",
+    "type": "municipal",
+    "locationSlug": "reykjanesbaer",
+    "coordinates": { "lat": 63.9983, "lng": -22.5631 },
+    "url": "https://sundlaugar.is/sundlaugasafn/reykjanesbaer-njardvik/",
+    "amenities": { "hot_tubs": true, "sauna": false, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_reykjanesbaer_vatnaverold",
+    "name": "Reykjanesbær – Vatnaveröld",
+    "type": "municipal",
+    "locationSlug": "reykjanesbaer",
+    "coordinates": { "lat": 63.9908, "lng": -22.5553 },
+    "url": "https://sundlaugar.is/sundlaugasafn/reykjanesbaer-vatnaverold/",
+    "amenities": { "hot_tubs": true, "sauna": true, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_blue_lagoon",
+    "name": "Blue Lagoon",
+    "type": "spa",
+    "locationSlug": "reykjanesskagi",
+    "coordinates": { "lat": 63.8803, "lng": -22.4496 },
+    "url": "https://www.bluelagoon.com",
+    "amenities": { "hot_tubs": true, "sauna": true, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_jadarsbakkalaug",
+    "name": "Jaðarsbakkalaug",
+    "type": "municipal",
+    "locationSlug": "akranes",
+    "coordinates": { "lat": 64.3167, "lng": -22.0794 },
+    "url": "https://sundlaugar.is/sundlaugasafn/jadarsbakkalaug-2/",
+    "amenities": { "hot_tubs": true, "sauna": false, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_gudlaug",
+    "name": "Guðlaug",
+    "type": "natural",
+    "locationSlug": "akranes",
+    "coordinates": { "lat": 64.3256, "lng": -22.1017 },
+    "url": "https://sundlaugar.is/sundlaugasafn/gudlaug/",
+    "amenities": { "hot_tubs": false, "sauna": false, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": false, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_reykjadalur",
+    "name": "Reykjadalur Thermal River",
+    "type": "natural",
+    "locationSlug": "reykjadalur",
+    "coordinates": { "lat": 64.0242, "lng": -21.2115 },
+    "url": "https://www.south.is/en/place/reykjadalur-hot-spring-thermal-river",
+    "amenities": { "hot_tubs": false, "sauna": false, "showers": false, "changing_rooms": false },
+    "access": { "is_paid": false, "requires_hiking": true, "requires_4wd": false }
+  },
+  {
+    "id": "pool_borgarnes",
+    "name": "Íþróttamiðstöðin Borgarnesi",
+    "type": "municipal",
+    "locationSlug": "borgarnes",
+    "coordinates": { "lat": 64.5372, "lng": -21.9142 },
+    "url": "https://sundlaugar.is/sundlaugasafn/ithrottamidstodin-borgarnesi-2/",
+    "amenities": { "hot_tubs": true, "sauna": false, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_krauma",
+    "name": "Krauma Geothermal Baths",
+    "type": "spa",
+    "locationSlug": "vesturland",
+    "coordinates": { "lat": 64.6631, "lng": -21.2917 },
+    "url": "https://www.krauma.is",
+    "amenities": { "hot_tubs": true, "sauna": true, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_hvammsvik",
+    "name": "Hvammsvík Hot Springs",
+    "type": "spa",
+    "locationSlug": "vesturland",
+    "coordinates": { "lat": 64.3997, "lng": -21.5558 },
+    "url": "https://sundlaugar.is/sundlaugasafn/hvammsvik/",
+    "amenities": { "hot_tubs": true, "sauna": true, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_budardal",
+    "name": "Íþróttamiðstöðin Búðardal",
+    "type": "municipal",
+    "locationSlug": "budardalur",
+    "coordinates": { "lat": 65.1000, "lng": -21.7833 },
+    "url": "https://sundlaugar.is/sundlaugasafn/ithrottamidstodin-budardal/",
+    "amenities": { "hot_tubs": true, "sauna": false, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_stykkisholmur",
+    "name": "Stykkishólmur",
+    "type": "municipal",
+    "locationSlug": "stykkisholmur",
+    "coordinates": { "lat": 65.0711, "lng": -22.7300 },
+    "url": "https://sundlaugar.is/sundlaugasafn/stykkisholmur/",
+    "amenities": { "hot_tubs": true, "sauna": false, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_grundarfjordur",
+    "name": "Grundarfjörður",
+    "type": "municipal",
+    "locationSlug": "snaefellsnes",
+    "coordinates": { "lat": 64.9244, "lng": -23.2456 },
+    "url": "https://sundlaugar.is/sundlaugasafn/grundarfjordur-2/",
+    "amenities": { "hot_tubs": true, "sauna": false, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_isafjordur",
+    "name": "Sundhöll Ísafjarðar",
+    "type": "municipal",
+    "locationSlug": "vestfirdir",
+    "coordinates": { "lat": 66.0756, "lng": -23.1385 },
+    "url": "https://sundlaugar.is/sundlaugasafn/sundholl-isafjardar/",
+    "amenities": { "hot_tubs": true, "sauna": true, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_hellulaug",
+    "name": "Hellulaug",
+    "type": "natural",
+    "locationSlug": "vestfirdir",
+    "coordinates": { "lat": 65.6447, "lng": -22.0011 },
+    "url": "https://sundlaugar.is/sundlaugasafn/hellulaug/",
+    "amenities": { "hot_tubs": false, "sauna": false, "showers": false, "changing_rooms": false },
+    "access": { "is_paid": false, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_holmavik",
+    "name": "Hólmavík",
+    "type": "municipal",
+    "locationSlug": "holmavik",
+    "coordinates": { "lat": 65.7078, "lng": -21.6894 },
+    "url": "https://sundlaugar.is/sundlaugasafn/holmavik/",
+    "amenities": { "hot_tubs": true, "sauna": false, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_hvammstangi",
+    "name": "Sundlaugin Hvammstanga",
+    "type": "municipal",
+    "locationSlug": "hvammstangi",
+    "coordinates": { "lat": 65.3994, "lng": -20.9456 },
+    "url": "https://sundlaugar.is/sundlaugasafn/sundlaugin-hvammstanga-2/",
+    "amenities": { "hot_tubs": true, "sauna": false, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_saudarkrokur",
+    "name": "Sauðárkrókur",
+    "type": "municipal",
+    "locationSlug": "saudarkrokur",
+    "coordinates": { "lat": 65.7456, "lng": -19.6394 },
+    "url": "https://sundlaugar.is/sundlaugasafn/saudarkrokur/",
+    "amenities": { "hot_tubs": true, "sauna": false, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_hofsos",
+    "name": "Hofsós",
+    "type": "municipal",
+    "locationSlug": "nordurland",
+    "coordinates": { "lat": 65.8944, "lng": -19.4117 },
+    "url": "https://sundlaugar.is/sundlaugasafn/hofsos/",
+    "amenities": { "hot_tubs": false, "sauna": false, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_siglufjordur",
+    "name": "Íþróttamiðstöð Fjallabyggðar – Siglufirði",
+    "type": "municipal",
+    "locationSlug": "siglufjordur",
+    "coordinates": { "lat": 66.1528, "lng": -18.9100 },
+    "url": "https://sundlaugar.is/sundlaugasafn/siglufjordur-2/",
+    "amenities": { "hot_tubs": true, "sauna": false, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_dalvik",
+    "name": "Dalvík",
+    "type": "municipal",
+    "locationSlug": "dalvik",
+    "coordinates": { "lat": 65.9722, "lng": -18.5264 },
+    "url": "https://sundlaugar.is/sundlaugasafn/dalvik/",
+    "amenities": { "hot_tubs": true, "sauna": false, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_olafsfjordur",
+    "name": "Íþróttamiðstöð Fjallabyggðar – Ólafsfirði",
+    "type": "municipal",
+    "locationSlug": "olafsfjordur",
+    "coordinates": { "lat": 66.0772, "lng": -18.6528 },
+    "url": "https://sundlaugar.is/sundlaugasafn/olafsfjordur/",
+    "amenities": { "hot_tubs": true, "sauna": false, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_sundlaug_akureyrar",
+    "name": "Sundlaug Akureyrar",
+    "type": "municipal",
+    "locationSlug": "akureyri",
+    "coordinates": { "lat": 65.6839, "lng": -18.0878 },
+    "url": "https://sundlaugar.is/sundlaugasafn/sundlaug-akureyrar/",
+    "amenities": { "hot_tubs": true, "sauna": true, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_glerarlaug",
+    "name": "Glerárlaug",
+    "type": "municipal",
+    "locationSlug": "akureyri",
+    "coordinates": { "lat": 65.6944, "lng": -18.1100 },
+    "url": "https://sundlaugar.is/sundlaugasafn/glerarlaug/",
+    "amenities": { "hot_tubs": true, "sauna": false, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_forest_lagoon",
+    "name": "Forest Lagoon",
+    "type": "spa",
+    "locationSlug": "akureyri",
+    "coordinates": { "lat": 65.7199, "lng": -18.1311 },
+    "url": "https://www.forestlagoon.is",
+    "amenities": { "hot_tubs": true, "sauna": true, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_sundlaug_husavikur",
+    "name": "Sundlaug Húsavíkur",
+    "type": "municipal",
+    "locationSlug": "husavik",
+    "coordinates": { "lat": 66.0444, "lng": -17.3381 },
+    "url": "https://sundlaugar.is/sundlaugasafn/sundlaug-husavikur/",
+    "amenities": { "hot_tubs": true, "sauna": false, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_geosea",
+    "name": "GeoSea Sjóböð",
+    "type": "spa",
+    "locationSlug": "husavik",
+    "coordinates": { "lat": 66.0456, "lng": -17.3356 },
+    "url": "https://sundlaugar.is/sundlaugasafn/geosea-sjobod/",
+    "amenities": { "hot_tubs": true, "sauna": true, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_myvatn_nature_baths",
+    "name": "Mývatn Nature Baths",
+    "type": "spa",
+    "locationSlug": "myvatn",
+    "coordinates": { "lat": 65.6378, "lng": -16.8423 },
+    "url": "https://www.myvatnnaturebaths.is",
+    "amenities": { "hot_tubs": true, "sauna": true, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_landmannalaugar",
+    "name": "Landmannalaugar",
+    "type": "natural",
+    "locationSlug": "landmannalaugar",
+    "coordinates": { "lat": 63.9908, "lng": -19.0647 },
+    "url": "https://sundlaugar.is/sundlaugasafn/landmannalaugar/",
+    "amenities": { "hot_tubs": false, "sauna": true, "showers": false, "changing_rooms": false },
+    "access": { "is_paid": false, "requires_hiking": false, "requires_4wd": true }
+  },
+  {
+    "id": "pool_sundholl_selfoss",
+    "name": "Sundhöll Selfoss",
+    "type": "municipal",
+    "locationSlug": "sudurland",
+    "coordinates": { "lat": 63.9318, "lng": -20.9989 },
+    "url": "https://sundlaugar.is/sundlaugasafn/sundholl-selfoss/",
+    "amenities": { "hot_tubs": true, "sauna": true, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_hella",
+    "name": "Hella",
+    "type": "municipal",
+    "locationSlug": "sudurland",
+    "coordinates": { "lat": 63.8333, "lng": -20.4008 },
+    "url": "https://sundlaugar.is/sundlaugasafn/hella/",
+    "amenities": { "hot_tubs": true, "sauna": false, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_hvolsvollur",
+    "name": "Hvolsvöllur",
+    "type": "municipal",
+    "locationSlug": "sudurland",
+    "coordinates": { "lat": 63.7522, "lng": -20.2294 },
+    "url": "https://sundlaugar.is/sundlaugasafn/hvolsvollur-2/",
+    "amenities": { "hot_tubs": true, "sauna": false, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_secret_lagoon",
+    "name": "Flúðir – Secret Lagoon",
+    "type": "spa",
+    "locationSlug": "sudurland",
+    "coordinates": { "lat": 64.1407, "lng": -20.3219 },
+    "url": "https://sundlaugar.is/sundlaugasafn/fludir/",
+    "amenities": { "hot_tubs": false, "sauna": false, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_laugarvatn_fontana",
+    "name": "Laugarvatn Fontana",
+    "type": "spa",
+    "locationSlug": "sudurland",
+    "coordinates": { "lat": 64.2224, "lng": -20.7243 },
+    "url": "https://sundlaugar.is/sundlaugasafn/laugarvatn/",
+    "amenities": { "hot_tubs": true, "sauna": true, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_kirkjubaejarklaustur",
+    "name": "Kirkjubæjarklaustur",
+    "type": "municipal",
+    "locationSlug": "sudurland",
+    "coordinates": { "lat": 63.7833, "lng": -18.0556 },
+    "url": "https://sundlaugar.is/sundlaugasafn/kirkjubaejarklaustur/",
+    "amenities": { "hot_tubs": true, "sauna": false, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_vik",
+    "name": "Vík",
+    "type": "municipal",
+    "locationSlug": "vik-i-myrdal",
+    "coordinates": { "lat": 63.4186, "lng": -19.0058 },
+    "url": "https://sundlaugar.is/sundlaugasafn/vik/",
+    "amenities": { "hot_tubs": true, "sauna": false, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_vestmannaeyjar",
+    "name": "Vestmannaeyjar",
+    "type": "municipal",
+    "locationSlug": "vestmannaeyjar",
+    "coordinates": { "lat": 63.4414, "lng": -20.2706 },
+    "url": "https://sundlaugar.is/sundlaugasafn/vestmannaeyjar/",
+    "amenities": { "hot_tubs": true, "sauna": true, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_egilsstadir",
+    "name": "Sundlaugin Egilsstöðum",
+    "type": "municipal",
+    "locationSlug": "austurland",
+    "coordinates": { "lat": 65.2714, "lng": -14.3947 },
+    "url": "https://sundlaugar.is/sundlaugasafn/sundlaugin-egilsstodum/",
+    "amenities": { "hot_tubs": true, "sauna": false, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_vok_baths",
+    "name": "Vök Baths",
+    "type": "spa",
+    "locationSlug": "austurland",
+    "coordinates": { "lat": 65.2583, "lng": -14.3939 },
+    "url": "https://www.vokbaths.is",
+    "amenities": { "hot_tubs": true, "sauna": true, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  }
+]
