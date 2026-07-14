@@ -88,7 +88,7 @@ export default function RunningTripPage({ mode, onToggleMode }: { mode: PaletteM
                 <Button
                     variant="outlined"
                     size="large"
-                    href="mailto:oskar@hlaupadagskra.is?subject=Hlaupaferð í Sviss 2026"
+                    href="mailto:info@hlaupadagskra.is?subject=Hlaupaferð í Sviss 2026"
                     sx={{ textTransform: 'none' }}
                 >
                     {t('runningTrip.contact')}

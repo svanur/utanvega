@@ -41,13 +41,13 @@ export default function ScratchCardPage({ mode, onToggleMode }: { mode: PaletteM
                 <Button
                     variant="contained"
                     size="large"
-                    href="mailto:oskar@hlaupadagskra.is?subject=Skafkort pöntun"
+                    href="mailto:info@hlaupadagskra.is?subject=Skafkort pöntun"
                     sx={{ textTransform: 'none' }}
                 >
                     {t('scratchCard.order')}
                 </Button>
                 <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
-                    oskar@hlaupadagskra.is
+                    info@hlaupadagskra.is
                 </Typography>
             </Box>
         </Layout>
