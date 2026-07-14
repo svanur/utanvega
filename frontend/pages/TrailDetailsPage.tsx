@@ -159,6 +159,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     const tagsEnabled = isEnabled('tags_page');
     const leaderboardEnabled = isEnabled('trail_leaderboard', false);
     const checkInEnabled = isEnabled('trail_checkin', false);
+    const poolsEnabled = isEnabled('pools');
     const { leaderboard, totalEntries, loading: leaderboardLoading, error: leaderboardError } = useTrailLeaderboard(slug, 3, leaderboardEnabled);
     const {
         entries: checkIns,
@@ -173,7 +174,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     const { trails: allTrails } = useTrails();
     const { isFavorite, toggleFavorite } = useFavorites();
     const poolSection = useMemo(() => {
-        if (!trail || !isEnabled('pools')) return null;
+        if (!trail || !poolsEnabled) return null;
         const nearest = trail.startLatitude && trail.startLongitude
             ? findNearestPool(trail.startLatitude, trail.startLongitude)
             : null;
@@ -184,7 +185,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
         const showFinish = nearestFinish && nearestFinish.pool.id !== nearest?.pool.id;
         if (!nearest && !showFinish) return null;
         return { nearest, nearestFinish: showFinish ? nearestFinish : null };
-    }, [trail, isEnabled]);
+    }, [trail, poolsEnabled]);
     const { addRecent } = useRecentlyViewed();
     const { user } = useAuth();
     const { tickedSlugs, toggleTick } = useTickedTrails();
