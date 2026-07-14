@@ -452,7 +452,7 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
                 const locationPools = findPoolsByLocationSlugs([location.slug]);
                 if (locationPools.length === 0) return null;
                 return (
-                    <Container maxWidth="lg" sx={{ pb: 4 }}>
+                    <Box sx={{ pb: 4 }}>
                         <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
                             {t('pools.poolsInArea', { name: location.name })}
                         </Typography>
@@ -461,7 +461,7 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
                                 <PoolCard key={pool.id} pool={pool} />
                             ))}
                         </Box>
-                    </Container>
+                    </Box>
                 );
             })()}
             </Container>

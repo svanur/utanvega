@@ -25,12 +25,15 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+const MAX_POOL_DISTANCE_KM = 50;
+
 export function findNearestPool(lat: number, lng: number): { pool: Pool; distanceKm: number } | null {
     let nearest: { pool: Pool; distanceKm: number } | null = null;
     for (const pool of pools) {
         const d = haversineKm(lat, lng, pool.coordinates.lat, pool.coordinates.lng);
         if (!nearest || d < nearest.distanceKm) nearest = { pool, distanceKm: d };
     }
+    if (nearest && nearest.distanceKm > MAX_POOL_DISTANCE_KM) return null;
     return nearest;
 }
 
