@@ -72,6 +72,8 @@ import SendTipButton from '../components/SendTipButton';
 import DifficultyInfo from '../components/DifficultyInfo';
 import RunningLoader from '../components/RunningLoader';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
+import PoolCard from '../components/PoolCard';
+import { findNearestPool } from '../data/pools';
 import WeatherCard from '../components/WeatherCard';
 import OfflineButton from '../components/OfflineButton';
 import { TrailCard } from '../components/TrailCard';
@@ -757,6 +759,41 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                     </Collapse>
                 </Paper>
             )}
+
+            {/* Nearest pool(s) */}
+            {isEnabled('pools') && (() => {
+                const nearest = trail.startLatitude && trail.startLongitude
+                    ? findNearestPool(trail.startLatitude!, trail.startLongitude!)
+                    : null;
+                const endLocation = trail.locations.find(l => l.role === 'End' && l.centerLatitude && l.centerLongitude);
+                const nearestFinish = endLocation
+                    ? findNearestPool(endLocation.centerLatitude!, endLocation.centerLongitude!)
+                    : null;
+                // Omit finish pool if it's the same as the start pool
+                const showFinish = nearestFinish && nearestFinish.pool.id !== nearest?.pool.id;
+
+                if (!nearest && !showFinish) return null;
+                return (
+                    <Paper elevation={1} sx={{ p: { xs: 2, sm: 3 }, mb: 3, borderRadius: 2 }}>
+                        {nearest && (
+                            <>
+                                <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                    {t('pools.nearestPool')}
+                                </Typography>
+                                <PoolCard pool={nearest.pool} distanceKm={nearest.distanceKm} />
+                            </>
+                        )}
+                        {showFinish && (
+                            <Box sx={{ mt: nearest ? 1.5 : 0 }}>
+                                <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                    {t('pools.nearestPoolFinish')}
+                                </Typography>
+                                <PoolCard pool={nearestFinish!.pool} distanceKm={nearestFinish!.distanceKm} />
+                            </Box>
+                        )}
+                    </Paper>
+                );
+            })()}
 
             {/* Weather forecast */}
             {isEnabled('weather_forecast') && (

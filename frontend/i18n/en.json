@@ -1037,6 +1037,20 @@
             }
         }
     },
+    "pools": {
+        "nearestPool": "Nearest pool",
+        "nearestPoolFinish": "Pool at the finish",
+        "poolsInArea": "Swimming pools in {{name}}",
+        "directions": "Get directions",
+        "type": {
+            "municipal": "Pool",
+            "spa": "Spa",
+            "natural": "Natural pool"
+        },
+        "free": "Free",
+        "hiking": "Hike-in",
+        "fourwd": "4WD"
+    },
     "races": {
         "title": "Events - All Races in one place",
         "subtitle": "Upcoming events and races in Iceland. Be sure to confirm final dates on the race organizer's website.",

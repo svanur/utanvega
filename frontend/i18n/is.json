@@ -1037,6 +1037,20 @@
             }
         }
     },
+    "pools": {
+        "nearestPool": "Næsta laug",
+        "nearestPoolFinish": "Laug næst lokastað",
+        "poolsInArea": "Sundlaugar í {{name}}",
+        "directions": "Leiðarlýsing",
+        "type": {
+            "municipal": "Sundlaug",
+            "spa": "Heilsulind",
+            "natural": "Náttúrulaug"
+        },
+        "free": "Ókeypis",
+        "hiking": "Gönguleið",
+        "fourwd": "4WD"
+    },
     "races": {
         "title": "Viðburðir - Öll hlaup á einum stað",
         "subtitle": "Allar upplýsingar eru birtar með fyrirvara um villur og breytingar. Leitið alltaf eftir nýjustu upplýsingum hjá hlaupahaldara.",
