@@ -21,7 +21,7 @@ export default function PoolCard({ pool, distanceKm }: Props) {
 
     return (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 0.75 }}>
-            <Typography sx={{ fontSize: 20, flexShrink: 0 }}>{TYPE_ICON[pool.type]}</Typography>
+            <Typography sx={{ fontSize: 20, flexShrink: 0 }}>{TYPE_ICON[pool.type] ?? '🏊'}</Typography>
             <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                     <Link
