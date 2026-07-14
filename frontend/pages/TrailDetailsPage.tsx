@@ -171,6 +171,19 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     } = useTrailCheckIns(slug, checkInEnabled);
     const { trails: allTrails } = useTrails();
     const { isFavorite, toggleFavorite } = useFavorites();
+    const poolSection = useMemo(() => {
+        if (!trail || !isEnabled('pools')) return null;
+        const nearest = trail.startLatitude && trail.startLongitude
+            ? findNearestPool(trail.startLatitude, trail.startLongitude)
+            : null;
+        const endLocation = trail.locations.find(l => l.role === 'End' && l.centerLatitude && l.centerLongitude);
+        const nearestFinish = endLocation
+            ? findNearestPool(endLocation.centerLatitude!, endLocation.centerLongitude!)
+            : null;
+        const showFinish = nearestFinish && nearestFinish.pool.id !== nearest?.pool.id;
+        if (!nearest && !showFinish) return null;
+        return { nearest, nearestFinish: showFinish ? nearestFinish : null };
+    }, [trail, isEnabled]);
     const { addRecent } = useRecentlyViewed();
     const { user } = useAuth();
     const { tickedSlugs, toggleTick } = useTickedTrails();
@@ -761,39 +774,26 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
             )}
 
             {/* Nearest pool(s) */}
-            {isEnabled('pools') && (() => {
-                const nearest = trail.startLatitude && trail.startLongitude
-                    ? findNearestPool(trail.startLatitude!, trail.startLongitude!)
-                    : null;
-                const endLocation = trail.locations.find(l => l.role === 'End' && l.centerLatitude && l.centerLongitude);
-                const nearestFinish = endLocation
-                    ? findNearestPool(endLocation.centerLatitude!, endLocation.centerLongitude!)
-                    : null;
-                // Omit finish pool if it's the same as the start pool
-                const showFinish = nearestFinish && nearestFinish.pool.id !== nearest?.pool.id;
-
-                if (!nearest && !showFinish) return null;
-                return (
-                    <Paper elevation={1} sx={{ p: { xs: 2, sm: 3 }, mb: 3, borderRadius: 2 }}>
-                        {nearest && (
-                            <>
-                                <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                                    {t('pools.nearestPool')}
-                                </Typography>
-                                <PoolCard pool={nearest.pool} distanceKm={nearest.distanceKm} />
-                            </>
-                        )}
-                        {showFinish && (
-                            <Box sx={{ mt: nearest ? 1.5 : 0 }}>
-                                <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                                    {t('pools.nearestPoolFinish')}
-                                </Typography>
-                                <PoolCard pool={nearestFinish!.pool} distanceKm={nearestFinish!.distanceKm} />
-                            </Box>
-                        )}
-                    </Paper>
-                );
-            })()}
+            {poolSection && (
+                <Paper elevation={1} sx={{ p: { xs: 2, sm: 3 }, mb: 3, borderRadius: 2 }}>
+                    {poolSection.nearest && (
+                        <>
+                            <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                {t('pools.nearestPool')}
+                            </Typography>
+                            <PoolCard pool={poolSection.nearest.pool} distanceKm={poolSection.nearest.distanceKm} />
+                        </>
+                    )}
+                    {poolSection.nearestFinish && (
+                        <Box sx={{ mt: poolSection.nearest ? 1.5 : 0 }}>
+                            <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                {t('pools.nearestPoolFinish')}
+                            </Typography>
+                            <PoolCard pool={poolSection.nearestFinish.pool} distanceKm={poolSection.nearestFinish.distanceKm} />
+                        </Box>
+                    )}
+                </Paper>
+            )}
 
             {/* Weather forecast */}
             {isEnabled('weather_forecast') && (

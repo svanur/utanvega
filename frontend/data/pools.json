@@ -64,7 +64,7 @@
     "name": "Dalslaug",
     "type": "municipal",
     "locationSlug": "reykjavik",
-    "coordinates": { "lat": 64.1323267925814, "lng": -21.736684192373705 },
+    "coordinates": { "lat": 64.1323, "lng": -21.7367 },
     "url": "https://sundlaugar.is/sundlaugasafn/dalslaug/",
     "amenities": { "hot_tubs": true, "sauna": true, "showers": true, "changing_rooms": true },
     "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
