@@ -24,3 +24,16 @@ jobs:
     name: Frontend
     uses: ./.github/workflows/frontend-build.yml
     secrets: inherit
+
+  sync-check:
+    name: Data sync check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: pools.json in sync
+        run: |
+          if ! diff -q frontend/data/pools.json admin/src/data/pools.json > /dev/null 2>&1; then
+            echo "::error::admin/src/data/pools.json is out of sync with frontend/data/pools.json. Run .\scripts\sync-pools.ps1 and commit the result."
+            diff frontend/data/pools.json admin/src/data/pools.json
+            exit 1
+          fi

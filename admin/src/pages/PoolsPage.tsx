@@ -45,6 +45,12 @@ const TYPE_LABEL: Record<string, string> = {
     natural: 'Natural',
 };
 
+const POOL_COUNTS = {
+    municipal: pools.filter(p => p.type === 'municipal').length,
+    spa: pools.filter(p => p.type === 'spa').length,
+    natural: pools.filter(p => p.type === 'natural').length,
+};
+
 export default function PoolsPage() {
     const [search, setSearch] = useState('');
 
@@ -52,17 +58,12 @@ export default function PoolsPage() {
         const q = search.toLowerCase();
         if (!q) return pools;
         return pools.filter(p =>
+            p.id.toLowerCase().includes(q) ||
             p.name.toLowerCase().includes(q) ||
             p.locationSlug.toLowerCase().includes(q) ||
             p.type.includes(q)
         );
     }, [search]);
-
-    const counts = useMemo(() => ({
-        municipal: pools.filter(p => p.type === 'municipal').length,
-        spa: pools.filter(p => p.type === 'spa').length,
-        natural: pools.filter(p => p.type === 'natural').length,
-    }), []);
 
     return (
         <Box sx={{ maxWidth: 1100, mx: 'auto', p: 3 }}>
@@ -81,9 +82,9 @@ export default function PoolsPage() {
             {/* Summary chips */}
             <Stack direction="row" spacing={1} sx={{ mb: 3 }}>
                 <Chip label={`${pools.length} total`} size="small" />
-                <Chip label={`${counts.municipal} municipal`} size="small" color="primary" variant="outlined" />
-                <Chip label={`${counts.spa} spa`} size="small" color="secondary" variant="outlined" />
-                <Chip label={`${counts.natural} natural`} size="small" color="success" variant="outlined" />
+                <Chip label={`${POOL_COUNTS.municipal} municipal`} size="small" color="primary" variant="outlined" />
+                <Chip label={`${POOL_COUNTS.spa} spa`} size="small" color="secondary" variant="outlined" />
+                <Chip label={`${POOL_COUNTS.natural} natural`} size="small" color="success" variant="outlined" />
             </Stack>
 
             {/* Search */}
