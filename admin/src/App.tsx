@@ -225,7 +225,7 @@ function AdminContent() {
           <List>
             {[
               { key: 'events' as const, icon: <EmojiEventsIcon />, label: 'Events' },
-              { key: 'trails' as const, icon: <DashboardIcon />, label: 'All Trails' },
+              { key: 'trails' as const, icon: <DashboardIcon />, label: 'Trails' },
               { key: 'locations' as const, icon: <LocationOnIcon />, label: 'Locations' },
               { key: 'health' as const, icon: <HealthAndSafetyIcon />, label: 'Trail Health' },
               { key: 'map' as const, icon: <MapIcon />, label: 'Trail Map' },
