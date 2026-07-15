@@ -173,19 +173,22 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     } = useTrailCheckIns(slug, checkInEnabled);
     const { trails: allTrails } = useTrails();
     const { isFavorite, toggleFavorite } = useFavorites();
+    const [geometry, setGeometry] = useState<GeoJsonGeometry | null>(null);
     const poolSection = useMemo(() => {
         if (!trail || !poolsEnabled) return null;
         const nearest = trail.startLatitude && trail.startLongitude
             ? findNearestPool(trail.startLatitude, trail.startLongitude)
             : null;
-        const endLocation = trail.locations.find(l => l.role === 'End' && l.centerLatitude && l.centerLongitude);
-        const nearestFinish = endLocation
-            ? findNearestPool(endLocation.centerLatitude!, endLocation.centerLongitude!)
+        const lastCoord = geometry?.coordinates?.at(-1);
+        const nearestFinish = lastCoord
+            ? findNearestPool(lastCoord[1], lastCoord[0])
             : null;
-        const showFinish = nearestFinish && nearestFinish.pool.id !== nearest?.pool.id;
-        if (!nearest && !showFinish) return null;
-        return { nearest, nearestFinish: showFinish ? nearestFinish : null };
-    }, [trail, poolsEnabled]);
+        const isPointToPoint = nearestFinish !== null;
+        const primary = nearestFinish ?? nearest;
+        const secondary = nearestFinish && nearest && nearestFinish.pool.id !== nearest.pool.id ? nearest : null;
+        if (!primary) return null;
+        return { nearest: primary, nearestFinish: secondary, isPointToPoint };
+    }, [trail, poolsEnabled, geometry]);
     const { addRecent } = useRecentlyViewed();
     const { user } = useAuth();
     const { tickedSlugs, toggleTick } = useTickedTrails();
@@ -205,7 +208,6 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
         isNearby: boolean;
     } | null>(null);
     const { suggestions, loading: suggestionsLoading } = useTrailSuggestions(slug, !!error || (!loading && !trail));
-    const [geometry, setGeometry] = useState<GeoJsonGeometry | null>(null);
     const [hoverPoint, setHoverPoint] = useState<{ lat: number; lng: number } | null>(null);
     const [playbackIndex, setPlaybackIndex] = useState<number | null>(null);
     const [fullscreenOpen, setFullscreenOpen] = useState(false);
@@ -770,7 +772,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                     {poolSection.nearest && (
                         <>
                             <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                                {t('pools.nearestPool')}
+                                {poolSection.isPointToPoint ? t('pools.nearestPoolFinish') : t('pools.nearestPool')}
                             </Typography>
                             <PoolCard pool={poolSection.nearest.pool} distanceKm={poolSection.nearest.distanceKm} />
                         </>
@@ -778,7 +780,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                     {poolSection.nearestFinish && (
                         <Box sx={{ mt: poolSection.nearest ? 1.5 : 0 }}>
                             <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                                {t('pools.nearestPoolFinish')}
+                                {t('pools.nearestPoolStart')}
                             </Typography>
                             <PoolCard pool={poolSection.nearestFinish.pool} distanceKm={poolSection.nearestFinish.distanceKm} />
                         </Box>

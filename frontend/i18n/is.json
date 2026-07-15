@@ -1040,6 +1040,7 @@
     "pools": {
         "nearestPool": "Næsta laug",
         "nearestPoolFinish": "Laug næst lokastað",
+        "nearestPoolStart": "Laug næst byrjunarstað",
         "poolsInArea": "Sundlaugar í {{name}}",
         "directions": "Leiðarlýsing",
         "type": {
