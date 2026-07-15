@@ -14,7 +14,7 @@ public record GetTrailsQuery(bool IncludeArchived = false, bool PublishedOnly = 
     public TimeSpan CacheDuration => TimeSpan.FromHours(1);
 }
 
-public record LocationInfoDto(Guid Id, string Name, string Slug, int Order, string Role);
+public record LocationInfoDto(Guid Id, string Name, string Slug, int Order, string Role, double? CenterLatitude = null, double? CenterLongitude = null);
 
 public record TagInfoDto(string Name, string Slug, string? Color);
 
@@ -111,7 +111,7 @@ public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailD
             (t.GpxData as LineString)?.StartPoint.X,
             t.TrailLocations
                 .OrderBy(tl => tl.Order)
-                .Select(tl => new LocationInfoDto(tl.LocationId, tl.Location.Name, tl.Location.Slug, tl.Order, tl.Role.ToString()))
+                .Select(tl => new LocationInfoDto(tl.LocationId, tl.Location.Name, tl.Location.Slug, tl.Order, tl.Role.ToString(), tl.Location.Center?.Y, tl.Location.Center?.X))
                 .ToList(),
             t.TrailTags
                 .Select(tt => new TagInfoDto(tt.Tag.Name, tt.Tag.Slug, tt.Tag.Color))

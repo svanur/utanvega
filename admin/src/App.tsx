@@ -9,6 +9,7 @@ import ToggleOnIcon from '@mui/icons-material/ToggleOn';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import ViewDayOutlinedIcon from '@mui/icons-material/ViewDayOutlined';
 import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
+import PoolIcon from '@mui/icons-material/Pool';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
@@ -26,6 +27,7 @@ import FeatureFlagsPage from './pages/FeatureFlagsPage';
 import EventList from './pages/EventList';
 import HeroThemesPage from './pages/HeroThemesPage';
 import SponsorsPage from './pages/SponsorsPage';
+import PoolsPage from './pages/PoolsPage';
 import GpxUploadDialog from './components/GpxUploadDialog';
 import LoginPage from './pages/LoginPage';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -63,6 +65,7 @@ const PAGE_PATHS: Record<PageKey, string> = {
   features: '/features',
   'hero-themes': '/hero-themes',
   'sponsors': '/sponsors',
+  'pools': '/pools',
 };
 
 function pathToPage(pathname: string): PageKey {
@@ -222,7 +225,7 @@ function AdminContent() {
           <List>
             {[
               { key: 'events' as const, icon: <EmojiEventsIcon />, label: 'Events' },
-              { key: 'trails' as const, icon: <DashboardIcon />, label: 'All Trails' },
+              { key: 'trails' as const, icon: <DashboardIcon />, label: 'Trails' },
               { key: 'locations' as const, icon: <LocationOnIcon />, label: 'Locations' },
               { key: 'health' as const, icon: <HealthAndSafetyIcon />, label: 'Trail Health' },
               { key: 'map' as const, icon: <MapIcon />, label: 'Trail Map' },
@@ -231,6 +234,7 @@ function AdminContent() {
               { key: 'features' as const, icon: <ToggleOnIcon />, label: 'Features' },
               { key: 'hero-themes' as const, icon: <ViewDayOutlinedIcon />, label: 'Hero Themes' },
               { key: 'sponsors' as const, icon: <ImageOutlinedIcon />, label: 'Sponsors' },
+              { key: 'pools' as const, icon: <PoolIcon />, label: 'Pools' },
             ].map(item => (
               <ListItem key={item.key} disablePadding>
                 <Tooltip title={drawerOpen ? '' : item.label} placement="right">
@@ -271,6 +275,8 @@ function AdminContent() {
             <HeroThemesPage />
           ) : currentPage === 'sponsors' ? (
             <SponsorsPage />
+          ) : currentPage === 'pools' ? (
+            <PoolsPage />
           ) : (
             <LocationList onNotify={notify} />
           )}

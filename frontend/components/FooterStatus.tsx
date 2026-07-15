@@ -1,4 +1,5 @@
 import { Box, Chip, Divider, Stack, Typography, Link as MuiLink } from '@mui/material';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -59,9 +60,17 @@ export default function FooterStatus() {
                             {t('footer.follow')}
                         </Typography>
                         <Stack spacing={0.5} sx={{ mt: 1 }}>
-                            <MuiLink href="https://www.facebook.com/hlaupadagskra" target="_blank" rel="noopener noreferrer" variant="body2" color="text.secondary" underline="hover">Facebook</MuiLink>
-                            <MuiLink href="https://www.instagram.com/hlaupadagskra" target="_blank" rel="noopener noreferrer" variant="body2" color="text.secondary" underline="hover">Instagram</MuiLink>
-                            <MuiLink href="https://www.youtube.com/@360RunsIceland" target="_blank" rel="noopener noreferrer" variant="body2" color="text.secondary" underline="hover">YouTube · 360° Runs</MuiLink>
+                            {[
+                                { label: 'Facebook',         href: 'https://www.facebook.com/hlaupadagskra' },
+                                { label: 'Instagram',        href: 'https://www.instagram.com/hlaupadagskra' },
+                                { label: 'YouTube · 360° Runs', href: 'https://www.youtube.com/@360RunsIceland' },
+                            ].map(({ label, href }) => (
+                                <MuiLink key={label} href={href} target="_blank" rel="noopener noreferrer" variant="body2" color="text.secondary" underline="hover"
+                                    sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                                    {label}
+                                    <OpenInNewIcon sx={{ fontSize: 12 }} />
+                                </MuiLink>
+                            ))}
                         </Stack>
                     </Box>
 

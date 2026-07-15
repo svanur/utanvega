@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { haversineKm as haversineKmRaw } from '../utils/geo';
 import {
     Box, Typography, Button, Stack, Paper, Chip, Fade, LinearProgress, useTheme,
 } from '@mui/material';
@@ -43,14 +44,7 @@ function calcScore(distKm: number): number {
 }
 
 function haversineKm(a: LatLngTuple, b: LatLngTuple): number {
-    const toRad = (d: number) => (d * Math.PI) / 180;
-    const R = 6371;
-    const dLat = toRad(b[0] - a[0]);
-    const dLon = toRad(b[1] - a[1]);
-    const sinLat = Math.sin(dLat / 2);
-    const sinLon = Math.sin(dLon / 2);
-    const h = sinLat * sinLat + Math.cos(toRad(a[0])) * Math.cos(toRad(b[0])) * sinLon * sinLon;
-    return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+    return haversineKmRaw(a[0], a[1], b[0], b[1]);
 }
 
 // Custom pin icons

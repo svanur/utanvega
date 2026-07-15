@@ -72,6 +72,9 @@ import SendTipButton from '../components/SendTipButton';
 import DifficultyInfo from '../components/DifficultyInfo';
 import RunningLoader from '../components/RunningLoader';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
+import PoolCard from '../components/PoolCard';
+import { findNearestPool } from '../data/pools';
+import { haversineKm } from '../utils/geo';
 import WeatherCard from '../components/WeatherCard';
 import OfflineButton from '../components/OfflineButton';
 import { TrailCard } from '../components/TrailCard';
@@ -156,6 +159,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     const tagsEnabled = isEnabled('tags_page');
     const leaderboardEnabled = isEnabled('trail_leaderboard', false);
     const checkInEnabled = isEnabled('trail_checkin', false);
+    const poolsEnabled = isEnabled('pools');
     const { leaderboard, totalEntries, loading: leaderboardLoading, error: leaderboardError } = useTrailLeaderboard(slug, 3, leaderboardEnabled);
     const {
         entries: checkIns,
@@ -169,6 +173,19 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     } = useTrailCheckIns(slug, checkInEnabled);
     const { trails: allTrails } = useTrails();
     const { isFavorite, toggleFavorite } = useFavorites();
+    const poolSection = useMemo(() => {
+        if (!trail || !poolsEnabled) return null;
+        const nearest = trail.startLatitude && trail.startLongitude
+            ? findNearestPool(trail.startLatitude, trail.startLongitude)
+            : null;
+        const endLocation = trail.locations.find(l => l.role === 'End' && l.centerLatitude && l.centerLongitude);
+        const nearestFinish = endLocation
+            ? findNearestPool(endLocation.centerLatitude!, endLocation.centerLongitude!)
+            : null;
+        const showFinish = nearestFinish && nearestFinish.pool.id !== nearest?.pool.id;
+        if (!nearest && !showFinish) return null;
+        return { nearest, nearestFinish: showFinish ? nearestFinish : null };
+    }, [trail, poolsEnabled]);
     const { addRecent } = useRecentlyViewed();
     const { user } = useAuth();
     const { tickedSlugs, toggleTick } = useTickedTrails();
@@ -360,17 +377,6 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
             setNearbyPromptVisible(cached.isNearby);
             return;
         }
-
-        const toRad = (deg: number) => (deg * Math.PI) / 180;
-        const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-            const R = 6371;
-            const dLat = toRad(lat2 - lat1);
-            const dLon = toRad(lon2 - lon1);
-            const a =
-                Math.sin(dLat / 2) ** 2 +
-                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-            return 2 * R * Math.asin(Math.sqrt(a));
-        };
 
         let cancelled = false;
 
@@ -755,6 +761,28 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                             />
                         </Box>
                     </Collapse>
+                </Paper>
+            )}
+
+            {/* Nearest pool(s) */}
+            {poolSection && (
+                <Paper elevation={1} sx={{ p: { xs: 2, sm: 3 }, mb: 3, borderRadius: 2 }}>
+                    {poolSection.nearest && (
+                        <>
+                            <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                {t('pools.nearestPool')}
+                            </Typography>
+                            <PoolCard pool={poolSection.nearest.pool} distanceKm={poolSection.nearest.distanceKm} />
+                        </>
+                    )}
+                    {poolSection.nearestFinish && (
+                        <Box sx={{ mt: poolSection.nearest ? 1.5 : 0 }}>
+                            <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                {t('pools.nearestPoolFinish')}
+                            </Typography>
+                            <PoolCard pool={poolSection.nearestFinish.pool} distanceKm={poolSection.nearestFinish.distanceKm} />
+                        </Box>
+                    )}
                 </Paper>
             )}
 

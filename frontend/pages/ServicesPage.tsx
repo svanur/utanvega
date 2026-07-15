@@ -64,7 +64,7 @@ export default function ServicesPage({ mode, onToggleMode }: { mode: PaletteMode
                 <Button
                     variant="contained"
                     size="large"
-                    href="mailto:oskar@hlaupadagskra.is?subject=Þjónusta"
+                    href="mailto:info@hlaupadagskra.is?subject=Þjónusta"
                     sx={{ textTransform: 'none' }}
                 >
                     {t('services.contact')}
