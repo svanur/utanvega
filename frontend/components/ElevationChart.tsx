@@ -74,6 +74,8 @@ const ElevationChart: React.FC<ElevationChartProps> = ({ coordinates, onHover, a
   const strokeGradientId = `steepnessStroke-${uid}`;
   const fillGradientId = `colorEle-${uid}`;
 
+  const calculateDistance = haversineMeters;
+
   const chartData = useMemo(() => {
     let totalDistance = 0;
     let totalGain = 0;
@@ -162,8 +164,6 @@ const ElevationChart: React.FC<ElevationChartProps> = ({ coordinates, onHover, a
     }
     return stops;
   }, [chartData]);
-
-  const calculateDistance = haversineMeters;
 
   const handleMouseMove: CategoricalChartFunc = (state) => {
     if (state?.isTooltipActive && state.activeTooltipIndex != null) {

@@ -1040,6 +1040,7 @@
     "pools": {
         "nearestPool": "Nearest pool",
         "nearestPoolFinish": "Pool at the finish",
+        "nearestPoolStart": "Pool at the start",
         "poolsInArea": "Swimming pools in {{name}}",
         "directions": "Get directions",
         "type": {
