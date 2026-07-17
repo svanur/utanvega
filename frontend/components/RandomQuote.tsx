@@ -20,7 +20,7 @@ export default function RandomQuote() {
 
     return (
         <Collapse in={isVisible} unmountOnExit>
-            <Paper elevation={4} sx={{ p: { xs: 3, sm: 4 }, mb: 4 }}>
+            <Paper elevation={4} sx={{ py: { xs: 1.5, sm: 2 }, pl: { xs: 3, sm: 4 }, pr: { xs: 1.5, sm: 2 }, mb: 4 }}>
                 <Stack spacing={2} sx={{ position: 'relative' }}>
                     <IconButton 
                         onClick={handleClose} 
@@ -30,20 +30,14 @@ export default function RandomQuote() {
                         <CloseIcon />
                     </IconButton>
                     <Box>
-                        <Typography variant="overline" color="primary">
-                            🏃 Hlaupadagskra.is
-                        </Typography>
-                        <Typography variant="h4" component="h1" gutterBottom>
+                        <Typography variant="h6" component="h1" fontWeight={700} gutterBottom>
                             {quote.text}
                         </Typography>
                         {quote.author && (
-                            <Typography variant="subtitle1" color="text.secondary" gutterBottom sx={{ fontStyle: 'italic', mt: -1, mb: 2 }}>
+                            <Typography variant="subtitle1" color="text.secondary" sx={{ fontStyle: 'italic', mt: -1 }}>
                                 — {quote.author}
                             </Typography>
                         )}
-                        <Typography variant="body1" color="text.secondary">
-                            {t('header.tagline')}
-                        </Typography>
                     </Box>
 
                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
