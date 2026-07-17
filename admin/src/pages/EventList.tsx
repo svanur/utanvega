@@ -702,6 +702,8 @@ export default function EventList({ onNotify }: EventListProps) {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [locationFilter, setLocationFilter] = useState<string>('all');
+  const [yearFilter, setYearFilter] = useState<string>('all');
+  const [monthFilter, setMonthFilter] = useState<string>('all');
   const [eventForm, setEventForm] = useState<EventFormState>(createEmptyEventForm());
   const [editionForm, setEditionForm] = useState<EditionFormState>(createEmptyEditionForm());
   const [raceForm, setRaceForm] = useState<RaceFormState>(createEmptyRaceForm());
@@ -727,8 +729,20 @@ export default function EventList({ onNotify }: EventListProps) {
     [events],
   );
 
-  const hasActiveFilters = activityFilter !== 'all' || typeFilter !== 'all' || statusFilter !== 'all' || locationFilter !== 'all';
-  const resetFilters = () => { setActivityFilter('all'); setTypeFilter('all'); setStatusFilter('all'); setLocationFilter('all'); };
+  const yearOptions = useMemo(() => {
+    const years = events
+      .map(e => e.nextEditionDate?.slice(0, 4))
+      .filter((y): y is string => !!y);
+    return [...new Set(years)].sort((a, b) => b.localeCompare(a));
+  }, [events]);
+
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+  const hasActiveFilters = activityFilter !== 'all' || typeFilter !== 'all' || statusFilter !== 'all' || locationFilter !== 'all' || yearFilter !== 'all' || monthFilter !== 'all';
+  const resetFilters = () => {
+    setActivityFilter('all'); setTypeFilter('all'); setStatusFilter('all'); setLocationFilter('all');
+    setYearFilter('all'); setMonthFilter('all');
+  };
 
   const filteredEvents = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -752,6 +766,13 @@ export default function EventList({ onNotify }: EventListProps) {
         if (locationFilter !== 'all') {
           if (locationFilter === 'none' && event.locationName) return false;
           if (locationFilter !== 'none' && event.locationName !== locationFilter) return false;
+        }
+
+        if (yearFilter !== 'all') {
+          if (!event.nextEditionDate || event.nextEditionDate.slice(0, 4) !== yearFilter) return false;
+        }
+        if (monthFilter !== 'all') {
+          if (!event.nextEditionDate || event.nextEditionDate.slice(5, 7) !== monthFilter) return false;
         }
 
         return true;
@@ -779,7 +800,7 @@ export default function EventList({ onNotify }: EventListProps) {
 
         return cmp !== 0 ? dir * cmp : a.name.localeCompare(b.name);
       });
-  }, [events, searchQuery, sortBy, sortDir, activityFilter, typeFilter, statusFilter, locationFilter]);
+  }, [events, searchQuery, sortBy, sortDir, activityFilter, typeFilter, statusFilter, locationFilter, yearFilter, monthFilter]);
 
   const handleRequestSort = (field: typeof sortBy) => {
     if (sortBy === field) {
@@ -1540,6 +1561,20 @@ export default function EventList({ onNotify }: EventListProps) {
             <MenuItem value="all">All</MenuItem>
             <MenuItem value="none"><em>No location</em></MenuItem>
             {eventLocationOptions.map(loc => <MenuItem key={loc} value={loc}>{loc}</MenuItem>)}
+          </Select>
+        </FormControl>
+        <FormControl size="small" sx={{ minWidth: 100 }}>
+          <InputLabel>Year</InputLabel>
+          <Select value={yearFilter} label="Year" onChange={e => { setYearFilter(e.target.value); setMonthFilter('all'); }}>
+            <MenuItem value="all">All</MenuItem>
+            {yearOptions.map(y => <MenuItem key={y} value={y}>{y}</MenuItem>)}
+          </Select>
+        </FormControl>
+        <FormControl size="small" sx={{ minWidth: 120 }} disabled={yearFilter === 'all'}>
+          <InputLabel>Month</InputLabel>
+          <Select value={monthFilter} label="Month" onChange={e => setMonthFilter(e.target.value)}>
+            <MenuItem value="all">All</MenuItem>
+            {MONTHS.map((m, i) => <MenuItem key={i} value={String(i + 1).padStart(2, '0')}>{m}</MenuItem>)}
           </Select>
         </FormControl>
         {hasActiveFilters && (
