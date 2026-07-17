@@ -290,17 +290,17 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
             </DynamicHeader>
 
             {isEnabled('announcement_banner') && <AnnouncementBanner />}
-            {(isEnabled('ad_top_sponsor_garmin') || isEnabled('ad_top_sponsor_craft')) && <SponsorStrip position="top" />}
+            <SponsorStrip position="top" />
 
             <Container maxWidth={maxWidth} sx={{ py: 4, flex: 1 }}>
                 {isEnabled('hero_band') && heroTheme && <Box sx={{ mb: 3 }}><HeroBand theme={heroTheme} isDark={mode === 'dark'} /></Box>}
-                {(isEnabled('ad_top_promo_1') || isEnabled('ad_top_promo_2')) && <PromoStrip position="top" />}
+                <PromoStrip position="top" />
                 {isEnabled('event_day_banner') && <EventDayBanner />}
                 <div id="main-content" />
                 {children}
-                {(isEnabled('ad_bottom_promo_1') || isEnabled('ad_bottom_promo_2')) && <PromoStrip position="bottom" />}
+                <PromoStrip position="bottom" />
             </Container>
-            {(isEnabled('ad_bottom_sponsor_garmin') || isEnabled('ad_bottom_sponsor_craft')) && <SponsorStrip position="bottom" />}
+            <SponsorStrip position="bottom" />
 
             {bottomContent}
 

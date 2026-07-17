@@ -91,6 +91,47 @@ export default function SponsorsPage() {
                 </Box>
             </Paper>
 
+            {/* Announcement Banner */}
+            <Paper variant="outlined" sx={{ mb: 4 }}>
+                <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+                    <Typography variant="subtitle1" fontWeight={700}>Announcement Banner</Typography>
+                </Box>
+                <Box sx={{ p: 2 }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        A dismissible full-width bar shown directly below the site header. Controlled by a feature flag and three i18n keys.
+                        Once a visitor dismisses it, it stays hidden in their browser (localStorage key <code>announcement_dismissed_v1</code>).
+                    </Typography>
+                    <Stack spacing={1.5}>
+                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'center' }}>
+                            <Chip icon={<FlagOutlinedIcon />} label="announcement_banner" size="small" variant="outlined" sx={{ fontFamily: 'monospace', fontSize: '0.7rem', width: 'fit-content' }} />
+                            <Typography variant="caption" color="text.secondary">— toggle on/off from the Features admin page</Typography>
+                        </Stack>
+                        <Box sx={{ overflowX: 'auto' }}>
+                            <Table size="small">
+                                <TableHead>
+                                    <TableRow sx={{ '& th': { fontWeight: 700 } }}>
+                                        <TableCell>i18n key</TableCell>
+                                        <TableCell>File to edit</TableCell>
+                                    </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                    {[
+                                        'announcement.text',
+                                        'announcement.linkText',
+                                        'announcement.href',
+                                    ].map(key => (
+                                        <TableRow key={key}>
+                                            <TableCell><Typography variant="caption" sx={{ fontFamily: 'monospace' }}>{key}</Typography></TableCell>
+                                            <TableCell><Typography variant="caption" sx={{ fontFamily: 'monospace' }}>frontend/i18n/en.json &amp; is.json</Typography></TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </Box>
+                    </Stack>
+                </Box>
+            </Paper>
+
             <Divider sx={{ my: 4 }} />
 
             {/* How to add a new ad */}
