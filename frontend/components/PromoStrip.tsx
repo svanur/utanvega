@@ -4,11 +4,11 @@ import { useTranslation } from 'react-i18next';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { PROMO_SLOTS } from '../data/sponsors';
 
-export default function PromoStrip() {
+export default function PromoStrip({ position }: { position: 'top' | 'bottom' }) {
     const { t } = useTranslation();
     const { isEnabled } = useFeatureFlags();
 
-    const active = PROMO_SLOTS.filter(slot => isEnabled(slot.flag));
+    const active = PROMO_SLOTS.filter(slot => slot.position === position && isEnabled(slot.flag));
     if (active.length === 0) return null;
 
     return (

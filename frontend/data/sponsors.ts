@@ -14,6 +14,7 @@ export interface Sponsor {
     name: string;
     href: string;
     img: string;
+    position: 'top' | 'bottom';
 }
 
 export interface PromoSlot {
@@ -22,33 +23,56 @@ export interface PromoSlot {
     img: string;
     href: string;
     alt: string;
+    position: 'top' | 'bottom';
     /** If set, renders a text + CTA button overlay from these i18n keys: .title / .dates / .cta */
     textOverlay?: { i18nPrefix: string };
     notes: string;
 }
 
 export const SPONSORS: Sponsor[] = [
-    { flag: 'sponsor_garmin', name: 'Garmin', href: 'https://garminbudin.is/', img: '/sponsors/garmin.avif' },
-    { flag: 'sponsor_craft',  name: 'Craft',  href: 'https://craftverslun.is/', img: '/sponsors/craft.avif' },
+    { flag: 'ad_top_sponsor_garmin',    name: 'Garmin', href: 'https://garminbudin.is/', img: '/sponsors/garmin.avif', position: 'top' },
+    { flag: 'ad_top_sponsor_craft',     name: 'Craft',  href: 'https://craftverslun.is/', img: '/sponsors/craft.avif', position: 'top' },
+    { flag: 'ad_bottom_sponsor_garmin', name: 'Garmin', href: 'https://garminbudin.is/', img: '/sponsors/garmin.avif', position: 'bottom' },
+    { flag: 'ad_bottom_sponsor_craft',  name: 'Craft',  href: 'https://craftverslun.is/', img: '/sponsors/craft.avif', position: 'bottom' },
 ];
 
 export const PROMO_SLOTS: PromoSlot[] = [
     {
-        flag: 'promo_slot_1',
+        flag: 'ad_top_promo_1',
         name: 'Útivistaáskorun 2026',
         img: '/sponsors/challenge-2026.avif',
         href: '/challenge/2026',
         alt: 'Útivistaáskorun 2026',
+        position: 'top',
         notes: 'Text baked into image — update image file to change copy',
     },
     {
-        flag: 'promo_slot_2',
+        flag: 'ad_top_promo_2',
         name: 'Hlaupaferð í Svissnesku Alpana',
         img: '/sponsors/running-trip-2026.avif',
         href: '/shop/hlaupaferd',
         alt: 'Hlaupaferð í Svissnesku Alpana',
+        position: 'top',
         textOverlay: { i18nPrefix: 'promos.runningTrip' },
         notes: 'Text overlay rendered from i18n — update promos.runningTrip.* keys',
+    },
+    {
+        flag: 'ad_bottom_promo_1',
+        name: 'Promo slot (bottom left)',
+        img: '/sponsors/challenge-2026.avif',
+        href: '/',
+        alt: 'Promo slot bottom 1',
+        position: 'bottom',
+        notes: 'Bottom slot — replace img and href when in use',
+    },
+    {
+        flag: 'ad_bottom_promo_2',
+        name: 'Promo slot (bottom right)',
+        img: '/sponsors/running-trip-2026.avif',
+        href: '/',
+        alt: 'Promo slot bottom 2',
+        position: 'bottom',
+        notes: 'Bottom slot — replace img and href when in use',
     },
 ];
 
@@ -60,8 +84,8 @@ export const SPONSOR_ADS = [
         image: s.img,
         href: s.href,
         type: 'External' as const,
-        placement: 'SponsorStrip',
-        notes: 'Small logo bar above content',
+        placement: s.position === 'top' ? 'SponsorStrip (top)' : 'SponsorStrip (bottom)',
+        notes: s.position === 'top' ? 'Small logo bar above content' : 'Small logo bar below content',
     })),
     ...PROMO_SLOTS.map(p => ({
         name: p.name,
@@ -69,7 +93,7 @@ export const SPONSOR_ADS = [
         image: p.img,
         href: p.href,
         type: 'Internal' as const,
-        placement: 'PromoStrip',
+        placement: p.position === 'top' ? 'PromoStrip (top)' : 'PromoStrip (bottom)',
         notes: p.notes,
     })),
 ];

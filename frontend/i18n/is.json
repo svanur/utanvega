@@ -1053,7 +1053,7 @@
         "fourwd": "4WD"
     },
     "races": {
-        "title": "Viðburðir - Öll hlaup á einum stað",
+        "title": "Öll hlaup á einum stað",
         "subtitle": "Allar upplýsingar eru birtar með fyrirvara um villur og breytingar. Leitið alltaf eftir nýjustu upplýsingum hjá hlaupahaldara.",
         "searchPlaceholder": "Leita að viðburði...",
         "noResults": "Enginn viðburður fannst",
@@ -1209,7 +1209,8 @@
             "Series": "Keppnisröð",
             "Championship": "Meistaramót",
             "Fun": "Skemmtun",
-            "Festival": "Hátíð"
+            "Festival": "Hátíð",
+            "Advertisement": "Auglýsing"
         },
         "history": {
             "title": "Saga viðburðar",
