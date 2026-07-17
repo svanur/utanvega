@@ -695,8 +695,8 @@ export default function EventList({ onNotify }: EventListProps) {
   const [expandedEditionIds, setExpandedEditionIds] = useState<string[]>([]);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [sortBy, setSortBy] = useState<'name' | 'activityType' | 'type' | 'nextEditionDate' | 'status' | 'editionCount' | 'locationName'>('name');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const [sortBy, setSortBy] = useState<'name' | 'activityType' | 'type' | 'nextEditionDate' | 'status' | 'editionCount' | 'locationName' | 'updatedAt'>('updatedAt');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [searchQuery, setSearchQuery] = useState('');
   const [activityFilter, setActivityFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
@@ -760,7 +760,11 @@ export default function EventList({ onNotify }: EventListProps) {
         const dir = sortDir === 'asc' ? 1 : -1;
         let cmp = 0;
 
-        if (sortBy === 'nextEditionDate') {
+        if (sortBy === 'updatedAt') {
+          const aTime = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+          const bTime = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+          cmp = aTime - bTime;
+        } else if (sortBy === 'nextEditionDate') {
           if (!a.nextEditionDate && !b.nextEditionDate) cmp = 0;
           else if (!a.nextEditionDate) cmp = 1;
           else if (!b.nextEditionDate) cmp = -1;
@@ -1588,6 +1592,11 @@ export default function EventList({ onNotify }: EventListProps) {
                   Location
                 </TableSortLabel>
               </TableCell>
+              <TableCell sortDirection={sortBy === 'updatedAt' ? sortDir : false}>
+                <TableSortLabel active={sortBy === 'updatedAt'} direction={sortBy === 'updatedAt' ? sortDir : 'desc'} onClick={() => handleRequestSort('updatedAt')}>
+                  Updated
+                </TableSortLabel>
+              </TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -1639,6 +1648,11 @@ export default function EventList({ onNotify }: EventListProps) {
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" color="text.secondary">{event.locationName ?? '—'}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="caption" color="text.secondary">
+                      {event.updatedAt ? new Date(event.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                    </Typography>
                   </TableCell>
                   <TableCell align="right" onClick={clickEvent => clickEvent.stopPropagation()} sx={expandedEventId === event.id ? { borderTop: '2px solid', borderRight: '2px solid', borderColor: 'primary.main' } : {}}>
                     <Tooltip title="Edit event">
