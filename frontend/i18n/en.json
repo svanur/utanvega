@@ -1053,7 +1053,7 @@
         "fourwd": "4WD"
     },
     "races": {
-        "title": "Events - All Races in one place",
+        "title": "All Races in one place",
         "subtitle": "Upcoming events and races in Iceland. Be sure to confirm final dates on the race organizer's website.",
         "searchPlaceholder": "Search events...",
         "noResults": "No events match your search",
@@ -1209,7 +1209,8 @@
             "Series": "Series",
             "Championship": "Championship",
             "Fun": "Fun",
-            "Festival": "Festival"
+            "Festival": "Festival",
+            "Advertisement": "Ad"
         },
         "history": {
             "title": "Event History",
