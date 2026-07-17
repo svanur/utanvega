@@ -18,6 +18,7 @@ export type Trail = {
     locations: { id: string, name: string, slug: string, role: string }[];
     tags?: { name: string, slug: string, color: string | null }[];
     youtubeUrl?: string | null;
+    updatedAt?: string | null;
 };
 
 export function useTrails(includeArchived: boolean = false) {
