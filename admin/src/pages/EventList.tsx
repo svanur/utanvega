@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -24,6 +24,7 @@ import {
   List,
   ListItem,
   ListItemText,
+  Menu,
   MenuItem,
   Paper,
   Select,
@@ -53,6 +54,8 @@ import {
   ExpandMore as ExpandMoreIcon,
   EmojiEvents as TrophyIcon,
   Link as LinkIcon,
+  Map as MapIcon,
+  MyLocation as MyLocationIcon,
   Search as SearchIcon,
 } from '@mui/icons-material';
 import {
@@ -74,8 +77,19 @@ import {
   type TicketStatus,
 } from '../hooks/useEvents';
 import { useLocations } from '../hooks/useLocations';
-import { useTrails } from '../hooks/useTrails';
+import { useTrails, type Trail } from '../hooks/useTrails';
 import { formatMinutesToHHmm, parseHHmmToMinutes } from '../utils/cutoffTime';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+// Fix Leaflet default marker icons
+// @ts-expect-error – Leaflet internal
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: new URL('leaflet/dist/images/marker-icon-2x.png', import.meta.url).href,
+  iconUrl: new URL('leaflet/dist/images/marker-icon.png', import.meta.url).href,
+  shadowUrl: new URL('leaflet/dist/images/marker-shadow.png', import.meta.url).href,
+});
 
 interface EventListProps {
   onNotify: (message: ReactNode, severity?: 'success' | 'error') => void;
@@ -105,6 +119,8 @@ interface EventFormState {
   scheduleDate: string;
   scheduleSeasonalWeek: number | '';
   socialLinks: SocialLink[];
+  gpxPointLat: string;
+  gpxPointLng: string;
 }
 
 interface EditionFormState {
@@ -407,6 +423,8 @@ function createEmptyEventForm(): EventFormState {
     scheduleDate: '',
     scheduleSeasonalWeek: '',
     socialLinks: [],
+    gpxPointLat: '',
+    gpxPointLng: '',
   };
 }
 
@@ -491,6 +509,8 @@ function buildEventForm(event: EventSummaryDto): EventFormState {
     scheduleDate: rule?.date ?? '',
     scheduleSeasonalWeek: rule?.type === 'Seasonal' ? (rule.weekOfMonth ?? '') : '',
     socialLinks: event.socialLinks?.map(link => ({ ...link })) ?? [],
+    gpxPointLat: event.gpxPointLat != null ? String(event.gpxPointLat) : '',
+    gpxPointLng: event.gpxPointLng != null ? String(event.gpxPointLng) : '',
   };
 }
 
@@ -663,6 +683,129 @@ function SortableRaceItem({ race, onEdit, onDelete, getIcon, formatDateLabel, fo
   );
 }
 
+// ── GPX map picker ──────────────────────────────────────────────────────────
+
+const ICELAND_CENTER: [number, number] = [64.96, -18.5];
+
+function ClickHandler({ onPick }: { onPick: (lat: number, lng: number) => void }) {
+  useMapEvents({ click: (e) => onPick(e.latlng.lat, e.latlng.lng) });
+  return null;
+}
+
+interface GpxMapPickerProps {
+  open: boolean;
+  initialLat: number | null;
+  initialLng: number | null;
+  onConfirm: (lat: number, lng: number) => void;
+  onClose: () => void;
+}
+
+function GpxMapPicker({ open, initialLat, initialLng, onConfirm, onClose }: GpxMapPickerProps) {
+  const [pin, setPin] = useState<[number, number] | null>(
+    initialLat != null && initialLng != null ? [initialLat, initialLng] : null
+  );
+
+  // Sync when dialog reopens
+  useEffect(() => {
+    if (open) {
+      setPin(initialLat != null && initialLng != null ? [initialLat, initialLng] : null);
+    }
+  }, [open, initialLat, initialLng]);
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+      <DialogTitle>Pick map pin location</DialogTitle>
+      <DialogContent sx={{ p: 0 }}>
+        <Typography variant="body2" color="text.secondary" sx={{ px: 2, py: 1 }}>
+          Click anywhere on the map to place the pin.
+        </Typography>
+        <Box sx={{ height: 460 }}>
+          <MapContainer
+            center={pin ?? ICELAND_CENTER}
+            zoom={pin ? 11 : 6}
+            style={{ height: '100%', width: '100%' }}
+            scrollWheelZoom
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            <ClickHandler onPick={(lat, lng) => setPin([lat, lng])} />
+            {pin && <Marker position={pin} />}
+          </MapContainer>
+        </Box>
+        {pin && (
+          <Typography variant="caption" color="text.secondary" sx={{ px: 2, pb: 1, display: 'block' }}>
+            {pin[0].toFixed(6)}, {pin[1].toFixed(6)}
+          </Typography>
+        )}
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button
+          variant="contained"
+          disabled={pin == null}
+          onClick={() => { if (pin) { onConfirm(pin[0], pin[1]); onClose(); } }}
+        >
+          Use this location
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+// ── Paste-coordinate parser ──────────────────────────────────────────────────
+
+function parseCoordPaste(text: string): { lat: number; lng: number } | null {
+  // Google Maps URL: @64.1355,-21.8954,
+  const mapsMatch = text.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+  if (mapsMatch) {
+    return { lat: parseFloat(mapsMatch[1]), lng: parseFloat(mapsMatch[2]) };
+  }
+  // Plain "lat, lng" or "lat lng"
+  const plainMatch = text.trim().match(/^(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)$/);
+  if (plainMatch) {
+    return { lat: parseFloat(plainMatch[1]), lng: parseFloat(plainMatch[2]) };
+  }
+  return null;
+}
+
+// ── Trail start-point picker ─────────────────────────────────────────────────
+
+interface TrailPickerProps {
+  trailsWithCoords: Trail[];
+  onPick: (lat: number, lng: number) => void;
+}
+
+function TrailStartPicker({ trailsWithCoords, onPick }: TrailPickerProps) {
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  if (trailsWithCoords.length === 0) return null;
+  return (
+    <>
+      <Tooltip title="Copy start point from a trail linked to this event">
+        <IconButton size="small" onClick={(e) => setAnchor(e.currentTarget)}>
+          <MyLocationIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
+      <Menu anchorEl={anchor} open={Boolean(anchor)} onClose={() => setAnchor(null)}>
+        {trailsWithCoords.map(trail => (
+          <MenuItem
+            key={trail.id}
+            onClick={() => {
+              onPick(trail.startLatitude!, trail.startLongitude!);
+              setAnchor(null);
+            }}
+          >
+            {trail.name}
+          </MenuItem>
+        ))}
+      </Menu>
+    </>
+  );
+}
+
+// ── Main component ───────────────────────────────────────────────────────────
+
 export default function EventList({ onNotify }: EventListProps) {
   const {
     events,
@@ -684,6 +827,7 @@ export default function EventList({ onNotify }: EventListProps) {
   const { trails } = useTrails();
 
   const [showEventDialog, setShowEventDialog] = useState(false);
+  const [showMapPicker, setShowMapPicker] = useState(false);
   const [showEditionDialog, setShowEditionDialog] = useState(false);
   const [showRaceDialog, setShowRaceDialog] = useState(false);
   const [showGenerateDialog, setShowGenerateDialog] = useState(false);
@@ -719,6 +863,15 @@ export default function EventList({ onNotify }: EventListProps) {
     () => [...locations].sort((a, b) => a.name.localeCompare(b.name)),
     [locations],
   );
+
+  // Trails linked to editions of the currently-edited event that have a start point
+  const linkedTrailsWithCoords = useMemo((): Trail[] => {
+    if (!expandedDetail || expandedDetail.id !== editEventId) return [];
+    const trailIds = new Set(
+      expandedDetail.editions.flatMap(ed => ed.races.map(r => r.trailId).filter(Boolean))
+    );
+    return trails.filter(t => trailIds.has(t.id) && t.startLatitude != null && t.startLongitude != null);
+  }, [expandedDetail, editEventId, trails]);
   const sortedTrails = useMemo(
     () => [...trails].filter(t => t.status === 'Published' || t.status === 'EventOnly').sort((a, b) => a.name.localeCompare(b.name)),
     [trails],
@@ -974,6 +1127,8 @@ export default function EventList({ onNotify }: EventListProps) {
         locationId: eventForm.locationId || null,
         scheduleRule: buildScheduleRule(eventForm),
         socialLinks: socialLinks.length > 0 ? socialLinks : null,
+        gpxPointLat: eventForm.gpxPointLat.trim() ? parseFloat(eventForm.gpxPointLat) : null,
+        gpxPointLng: eventForm.gpxPointLng.trim() ? parseFloat(eventForm.gpxPointLng) : null,
       };
 
       if (editEventId) {
@@ -2030,6 +2185,55 @@ export default function EventList({ onNotify }: EventListProps) {
               isOptionEqualToValue={(option, value) => option.id === value.id}
               renderInput={(params) => <TextField {...params} label="Location" />}
             />
+            <Box>
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+                <Typography variant="subtitle2">GPX Pin (overrides location on map)</Typography>
+                <Tooltip title="Pick on map">
+                  <IconButton size="small" onClick={() => setShowMapPicker(true)}>
+                    <MapIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+                <TrailStartPicker
+                  trailsWithCoords={linkedTrailsWithCoords}
+                  onPick={(lat, lng) => {
+                    setEventField('gpxPointLat', String(parseFloat(lat.toFixed(6))));
+                    setEventField('gpxPointLng', String(parseFloat(lng.toFixed(6))));
+                  }}
+                />
+                {(eventForm.gpxPointLat || eventForm.gpxPointLng) && (
+                  <Tooltip title="Clear pin">
+                    <IconButton size="small" onClick={() => { setEventField('gpxPointLat', ''); setEventField('gpxPointLng', ''); }}>
+                      <ClearIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                )}
+              </Stack>
+              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                <TextField
+                  label="Latitude"
+                  value={eventForm.gpxPointLat}
+                  onChange={(e) => setEventField('gpxPointLat', e.target.value)}
+                  onPaste={(e) => {
+                    const text = e.clipboardData.getData('text');
+                    const parsed = parseCoordPaste(text);
+                    if (parsed) {
+                      e.preventDefault();
+                      setEventField('gpxPointLat', String(parseFloat(parsed.lat.toFixed(6))));
+                      setEventField('gpxPointLng', String(parseFloat(parsed.lng.toFixed(6))));
+                    }
+                  }}
+                  placeholder="e.g. 64.1355 — or paste 'lat, lng'"
+                  inputProps={{ inputMode: 'decimal' }}
+                />
+                <TextField
+                  label="Longitude"
+                  value={eventForm.gpxPointLng}
+                  onChange={(e) => setEventField('gpxPointLng', e.target.value)}
+                  placeholder="e.g. -21.8954"
+                  inputProps={{ inputMode: 'decimal' }}
+                />
+              </Box>
+            </Box>
 
             <Box>
               <Typography variant="subtitle2" sx={{ mb: 1 }}>Alert Banner</Typography>
@@ -2257,6 +2461,17 @@ export default function EventList({ onNotify }: EventListProps) {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <GpxMapPicker
+        open={showMapPicker}
+        initialLat={eventForm.gpxPointLat ? parseFloat(eventForm.gpxPointLat) : null}
+        initialLng={eventForm.gpxPointLng ? parseFloat(eventForm.gpxPointLng) : null}
+        onConfirm={(lat, lng) => {
+          setEventField('gpxPointLat', String(parseFloat(lat.toFixed(6))));
+          setEventField('gpxPointLng', String(parseFloat(lng.toFixed(6))));
+        }}
+        onClose={() => setShowMapPicker(false)}
+      />
 
       <Dialog open={showEditionDialog} onClose={() => { setShowEditionDialog(false); setCloneFromEditionId(''); }} maxWidth="sm" fullWidth>
         <DialogTitle>{editEditionId ? 'Edit Edition' : 'Add Edition'}</DialogTitle>

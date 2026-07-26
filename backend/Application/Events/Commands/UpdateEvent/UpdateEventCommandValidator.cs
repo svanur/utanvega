@@ -42,6 +42,20 @@ public class UpdateEventCommandValidator : AbstractValidator<UpdateEventCommand>
             .MaximumLength(5000)
             .When(x => x.Description is not null);
 
+        RuleFor(x => x.GpxPointLat)
+            .InclusiveBetween(-90.0, 90.0)
+            .WithMessage("GpxPointLat must be between -90 and 90.")
+            .When(x => x.GpxPointLat.HasValue);
+
+        RuleFor(x => x.GpxPointLng)
+            .InclusiveBetween(-180.0, 180.0)
+            .WithMessage("GpxPointLng must be between -180 and 180.")
+            .When(x => x.GpxPointLng.HasValue);
+
+        RuleFor(x => x)
+            .Must(x => (x.GpxPointLat.HasValue) == (x.GpxPointLng.HasValue))
+            .WithMessage("GpxPointLat and GpxPointLng must both be set or both be null.");
+
         RuleForEach(x => x.SocialLinks)
             .ChildRules(link =>
             {

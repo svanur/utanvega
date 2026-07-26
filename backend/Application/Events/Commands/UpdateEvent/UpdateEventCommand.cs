@@ -19,7 +19,9 @@ public record UpdateEventCommand(
     string? AlertSeverity,
     Guid? LocationId,
     ScheduleRule? ScheduleRule,
-    List<SocialLink>? SocialLinks
+    List<SocialLink>? SocialLinks,
+    double? GpxPointLat,
+    double? GpxPointLng
 ) : IRequest<bool>;
 
 public class UpdateEventCommandHandler : IRequestHandler<UpdateEventCommand, bool>
@@ -56,6 +58,8 @@ public class UpdateEventCommandHandler : IRequestHandler<UpdateEventCommand, boo
         ev.LocationId = request.LocationId;
         ev.ScheduleRule = request.ScheduleRule;
         ev.SocialLinks = request.SocialLinks;
+        ev.GpxPointLat = request.GpxPointLat;
+        ev.GpxPointLng = request.GpxPointLng;
         ev.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync(cancellationToken);
