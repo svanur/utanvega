@@ -288,6 +288,14 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                 rows.push({ kind: 'event', comp });
             }
         }
+        rows.sort((a, b) => {
+            const dateA = a.kind === 'series-race' ? a.race.dateOfRace : (a.comp.displayDate ?? a.comp.nextEditionDate);
+            const dateB = b.kind === 'series-race' ? b.race.dateOfRace : (b.comp.displayDate ?? b.comp.nextEditionDate);
+            if (!dateA && !dateB) return 0;
+            if (!dateA) return 1;
+            if (!dateB) return -1;
+            return dateA < dateB ? -1 : dateA > dateB ? 1 : 0;
+        });
         return rows;
     }, [upcoming]);
 
@@ -669,7 +677,6 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                         </Box>
                     ) : (
                         <>
-                            {console.log('[debug] justRaced', justRaced )}
                             {justRaced.length > 0 && (
                                 <Box sx={{ mb: 3 }}>
                                     <Typography variant="h6" fontWeight={700} sx={{ mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -807,15 +814,6 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                             {formatNextDate(race.dateOfRace, t)}
                                                                         </Typography>
                                                                         <EventDateBadge dateStr={race.dateOfRace} />
-                                                                        {raceDaysUntil != null && (
-                                                                            <Chip
-                                                                                label={getCountdownLabel(raceDaysUntil, t)}
-                                                                                size="small"
-                                                                                color={getCountdownColor(raceDaysUntil)}
-                                                                                variant="outlined"
-                                                                                sx={{ height: 20, fontSize: '0.68rem' }}
-                                                                            />
-                                                                        )}
                                                                     </Box>
                                                                 )}
                                                                 {race.distanceLabel && (
