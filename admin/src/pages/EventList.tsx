@@ -736,8 +736,6 @@ export default function EventList({ onNotify }: EventListProps) {
     return [...new Set(years)].sort((a, b) => b.localeCompare(a));
   }, [events]);
 
-  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-
   const hasActiveFilters = activityFilter !== 'all' || typeFilter !== 'all' || statusFilter !== 'all' || locationFilter !== 'all' || yearFilter !== 'all' || monthFilter !== 'all';
   const resetFilters = () => {
     setActivityFilter('all'); setTypeFilter('all'); setStatusFilter('all'); setLocationFilter('all');
@@ -1574,7 +1572,7 @@ export default function EventList({ onNotify }: EventListProps) {
           <InputLabel>Month</InputLabel>
           <Select value={monthFilter} label="Month" onChange={e => setMonthFilter(e.target.value)}>
             <MenuItem value="all">All</MenuItem>
-            {MONTHS.map((m, i) => <MenuItem key={i} value={String(i + 1).padStart(2, '0')}>{m}</MenuItem>)}
+            {MONTHS.slice(1).map((m, i) => <MenuItem key={i} value={String(i + 1).padStart(2, '0')}>{m}</MenuItem>)}
           </Select>
         </FormControl>
         {hasActiveFilters && (

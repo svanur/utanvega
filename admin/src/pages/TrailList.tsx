@@ -13,6 +13,8 @@ import TrailFilterBar from '../components/TrailFilterBar';
 import TrailTable from '../components/TrailTable';
 import { TrailMapDialog, DeleteTrailDialog, BulkUploadDialog } from '../components/TrailDialogs';
 
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
 export default function TrailList({ onNotify, initialTrailId, initialSearch }: { onNotify: (message: React.ReactNode, severity?: 'success' | 'error') => void, initialTrailId?: string | null, initialSearch?: string | null }) {
   const [includeArchived, setIncludeArchived] = useState(false);
   const { trails, setTrails, loading, error, refresh } = useTrails(includeArchived);
@@ -57,8 +59,6 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
       .filter((y): y is string => !!y);
     return [...new Set(years)].sort((a, b) => b.localeCompare(a));
   }, [trails]);
-
-  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
   const filteredAndSortedTrails = useMemo(() => {
     return trails
