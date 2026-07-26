@@ -71,7 +71,7 @@ type PreparedEdition = EventEditionDto & {
 import { ACTIVITY_EMOJI } from '../constants/activityEmoji';
 import { googleCalendarUrl, outlookCalendarUrl, downloadIcs } from '../utils/calendarLinks';
 import EventDateBadge from '../components/EventDateBadge';
-import { formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime } from '../utils/eventUtils';
+import { formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor } from '../utils/eventUtils';
 import { getTicketStatusColor } from '../utils/ticketStatus';
 
 type RaceDayChecklistKey = 'bib' | 'shoes' | 'gels' | 'goodMood';
@@ -573,17 +573,25 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                     </Box>
 
                     <Stack direction="row" spacing={1} sx={{ mt: 1.5, flexWrap: 'wrap', gap: 0.5 }}>
+                        <Chip
+                            label={t(`races.eventTypes.${event.type}`, event.type)}
+                            size="small"
+                            color={getEventTypeColor(event.type)}
+                            variant="outlined"
+                        />
                         {event.locationName && locationsEnabled && (
                             <Chip icon={<LocationOnIcon />} label={event.locationName} size="small" variant="outlined" />
                         )}
                         {event.organizerName && (
                             <Chip label={event.organizerName} size="small" variant="outlined" />
                         )}
-                        <Chip
-                            label={t('races.raceCount', { count: visibleRaces.length })}
-                            size="small"
-                            color="primary"
-                        />
+                        {event.type !== 'Advertisement' && (
+                            <Chip
+                                label={t('races.raceCount', { count: visibleRaces.length })}
+                                size="small"
+                                color="primary"
+                            />
+                        )}
                     </Stack>
 
                     {event.alertMessage && (

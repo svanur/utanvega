@@ -26,7 +26,7 @@ import VideocamIcon from '@mui/icons-material/Videocam';
 import type { EventSummary, EventDetail, RaceDto, SeriesRaceDto } from '../hooks/useEvents';
 import { API_URL } from '../hooks/useTrails';
 import EventDateBadge from './EventDateBadge';
-import { getCountdownColor } from '../utils/eventUtils';
+import { getCountdownColor, getEventTypeColor } from '../utils/eventUtils';
 
 function getActivityIcon(type: string) {
     switch (type) {
@@ -42,16 +42,6 @@ function getActivityIcon(type: string) {
     }
 }
 
-function getEventTypeColor(type: string): 'primary' | 'secondary' | 'success' | 'warning' | 'info' | 'error' | 'default' {
-    switch (type) {
-        case 'Race': return 'primary';
-        case 'Series': return 'secondary';
-        case 'FunRun': return 'success';
-        case 'Training': return 'info';
-        case 'Advertisement': return 'warning';
-        default: return 'default';
-    }
-}
 
 interface EventTableViewProps {
     events: EventSummary[];

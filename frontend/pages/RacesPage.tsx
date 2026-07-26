@@ -65,7 +65,7 @@ import { downloadIcs } from '../utils/calendarLinks';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
 import { getTicketStatusColor, groupDistances } from '../utils/ticketStatus';
-import { formatNextDate, getCountdownColor, getCountdownLabel } from '../utils/eventUtils';
+import { formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor } from '../utils/eventUtils';
 
 const EventTableView = lazy(() => import('../components/EventTableView'));
 const EventMapView = lazy(() => import('../components/EventMapView'));
@@ -796,7 +796,10 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1, flexWrap: 'wrap' }}>
                                                             <Box sx={{ flex: 1, minWidth: 200 }}>
                                                                 <Typography variant="h6" fontWeight={700}>{race.raceName}</Typography>
-                                                                <Typography variant="body2" color="text.secondary">{comp.name}</Typography>
+                                                                <Stack direction="row" spacing={1} sx={{ mt: 0.5, flexWrap: 'wrap' }}>
+                                                                    <Chip label={t(`races.eventTypes.Series`, 'Series')} size="small" color={getEventTypeColor('Series')} variant="outlined" />
+                                                                    <Typography variant="body2" color="text.secondary" sx={{ alignSelf: 'center' }}>{comp.name}</Typography>
+                                                                </Stack>
                                                                 {race.dateOfRace && (
                                                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1.5, flexWrap: 'wrap' }}>
                                                                         <CalendarTodayIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
@@ -804,6 +807,15 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                             {formatNextDate(race.dateOfRace, t)}
                                                                         </Typography>
                                                                         <EventDateBadge dateStr={race.dateOfRace} />
+                                                                        {raceDaysUntil != null && (
+                                                                            <Chip
+                                                                                label={getCountdownLabel(raceDaysUntil, t)}
+                                                                                size="small"
+                                                                                color={getCountdownColor(raceDaysUntil)}
+                                                                                variant="outlined"
+                                                                                sx={{ height: 20, fontSize: '0.68rem' }}
+                                                                            />
+                                                                        )}
                                                                     </Box>
                                                                 )}
                                                                 {race.distanceLabel && (
@@ -937,6 +949,12 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
 
                                                     {/* Location + organizer */}
                                                     <Stack direction="row" spacing={1} sx={{ mt: 0.5, flexWrap: 'wrap' }}>
+                                                        <Chip
+                                                            label={t(`races.eventTypes.${comp.type}`, comp.type)}
+                                                            size="small"
+                                                            color={getEventTypeColor(comp.type)}
+                                                            variant="outlined"
+                                                        />
                                                         {locationsEnabled && comp.locationName && (
                                                             <Chip
                                                                 icon={<LocationOnIcon />}
@@ -952,12 +970,14 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                 variant="outlined"
                                                             />
                                                         )}
-                                                        <Chip
-                                                            label={t('races.editionCount', { count: comp.editionCount })}
-                                                            size="small"
-                                                            variant="outlined"
-                                                            color="primary"
-                                                        />
+                                                        {comp.type !== 'Advertisement' && (
+                                                            <Chip
+                                                                label={t('races.editionCount', { count: comp.editionCount })}
+                                                                size="small"
+                                                                variant="outlined"
+                                                                color="primary"
+                                                            />
+                                                        )}
                                                     </Stack>
 
                                                     {/* Alert banner */}
@@ -981,6 +1001,15 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                 {formatNextDate((comp.displayDate ?? comp.nextEditionDate)!, t)}
                                                             </Typography>
                                                             <EventDateBadge dateStr={(comp.displayDate ?? comp.nextEditionDate)!} />
+                                                            {comp.daysUntil !== null && (
+                                                                <Chip
+                                                                    label={getCountdownLabel(comp.daysUntil, t)}
+                                                                    size="small"
+                                                                    color={getCountdownColor(comp.daysUntil)}
+                                                                    variant="outlined"
+                                                                    sx={{ height: 20, fontSize: '0.68rem' }}
+                                                                />
+                                                            )}
                                                         </Box>
                                                     )}
 
