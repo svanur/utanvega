@@ -34,7 +34,9 @@ public record EventDetailDto(
     List<string>? Certifications = null,
     string? YoutubeUrl = null,
     List<string>? ChampionshipCategories = null,
-    List<int>? ItraPoints = null
+    List<int>? ItraPoints = null,
+    double? GpxPointLat = null,
+    double? GpxPointLng = null
 );
 
 public record GetEventQuery(string Slug) : IRequest<EventDetailDto?>, ICacheable
@@ -216,7 +218,9 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
             certifications?.Count > 0 ? certifications : null,
             youtubeUrl,
             championshipCategories?.Count > 0 ? championshipCategories : null,
-            itraPoints?.Count > 0 ? itraPoints : null
+            itraPoints?.Count > 0 ? itraPoints : null,
+            ev.GpxPointLat,
+            ev.GpxPointLng
         );
     }
 }

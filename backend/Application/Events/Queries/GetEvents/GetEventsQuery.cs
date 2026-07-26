@@ -185,7 +185,9 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 youtubeUrl,
                 championshipCategories?.Count > 0 ? championshipCategories : null,
                 itraPoints?.Count > 0 ? itraPoints : null,
-                seriesRaces?.Count > 0 ? seriesRaces : null
+                seriesRaces?.Count > 0 ? seriesRaces : null,
+                e.GpxPointLat,
+                e.GpxPointLng
             );
         }).ToList();
     }

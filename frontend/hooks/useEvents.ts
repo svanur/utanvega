@@ -58,6 +58,8 @@ export interface EventSummary {
     createdAt: string;
     updatedAt: string | null;
     seriesRaces: SeriesRaceDto[] | null;
+    gpxPointLat: number | null;
+    gpxPointLng: number | null;
 }
 
 export interface RaceDto {

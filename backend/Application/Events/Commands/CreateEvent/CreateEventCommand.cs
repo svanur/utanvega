@@ -19,7 +19,9 @@ public record CreateEventCommand(
     string? AlertSeverity,
     Guid? LocationId,
     ScheduleRule? ScheduleRule,
-    List<SocialLink>? SocialLinks
+    List<SocialLink>? SocialLinks,
+    double? GpxPointLat = null,
+    double? GpxPointLng = null
 ) : IRequest<Guid>;
 
 public class CreateEventCommandHandler : IRequestHandler<CreateEventCommand, Guid>
@@ -56,6 +58,8 @@ public class CreateEventCommandHandler : IRequestHandler<CreateEventCommand, Gui
             LocationId = request.LocationId,
             ScheduleRule = request.ScheduleRule,
             SocialLinks = request.SocialLinks,
+            GpxPointLat = request.GpxPointLat,
+            GpxPointLng = request.GpxPointLng,
             CreatedAt = DateTime.UtcNow,
         };
 

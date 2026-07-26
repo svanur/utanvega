@@ -101,6 +101,8 @@ export interface EventSummaryDto {
     createdAt: string;
     updatedAt: string | null;
     seriesRaces: SeriesRaceDto[] | null;
+    gpxPointLat: number | null;
+    gpxPointLng: number | null;
 }
 
 export interface EventDetailDto extends EventSummaryDto {
@@ -122,6 +124,8 @@ export interface CreateEventInput {
     locationId?: string | null;
     scheduleRule?: ScheduleRule | null;
     socialLinks?: SocialLink[] | null;
+    gpxPointLat?: number | null;
+    gpxPointLng?: number | null;
 }
 
 export interface UpdateEventInput {
@@ -138,6 +142,8 @@ export interface UpdateEventInput {
     locationId?: string | null;
     scheduleRule?: ScheduleRule | null;
     socialLinks?: SocialLink[] | null;
+    gpxPointLat?: number | null;
+    gpxPointLng?: number | null;
 }
 
 export interface CreateEditionInput {

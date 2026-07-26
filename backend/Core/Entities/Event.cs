@@ -44,6 +44,9 @@ public class Event
     public Guid? LocationId { get; set; }
     public Location? Location { get; set; }
 
+    public double? GpxPointLat { get; set; }
+    public double? GpxPointLng { get; set; }
+
     public ScheduleRule? ScheduleRule { get; set; }
 
     public List<SocialLink>? SocialLinks { get; set; }

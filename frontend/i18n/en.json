@@ -565,7 +565,7 @@
     },
     "aboutUs": {
         "title": "About Hlaupadagskra.is",
-        "tagline": "All races in one place, all year round",
+        "tagline": "All events in one place, all year round",
         "p1": "Hlaupadagskra.is is Iceland's comprehensive running event calendar — a neutral platform consolidating confirmed and upcoming running events from across the country, including official road races, ITRA trail runs, and organised charity runs.",
         "p2": "Events are categorised, linked to registration pages, and connected to relevant social media. Status labels indicate whether events are confirmed, have registration open, or remain unconfirmed.",
         "teamTitle": "The team",
@@ -1053,7 +1053,7 @@
         "fourwd": "4WD"
     },
     "races": {
-        "title": "All Races in one place",
+        "title": "All events in one place",
         "subtitle": "Upcoming events and races in Iceland. Be sure to confirm final dates on the race organizer's website.",
         "searchPlaceholder": "Search events...",
         "noResults": "No events match your search",
@@ -1078,13 +1078,14 @@
         "register": "Register",
         "results": "Results",
         "organizerSite": "Organizer website",
+        "directionsToEvent": "Directions to event",
         "addToCalendar": "Add to Calendar",
         "downloadIcs": "Download .ics (Apple/Other)",
         "racesHeading": "Races",
         "scheduleHeading": "Upcoming dates",
         "noRaces": "No races listed yet for this event.",
         "notFound": "Event not found",
-        "backToRaces": "Back to races",
+        "backToRaces": "Back to events",
         "wereYouLookingFor": "Were you looking for one of these?",
         "viewTrail": "View trail",
         "cutoffHours_one": "{{count}} hour cutoff",

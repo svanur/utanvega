@@ -47,7 +47,9 @@ public record EventSummaryDto(
     string? YoutubeUrl = null,
     List<string>? ChampionshipCategories = null,
     List<int>? ItraPoints = null,
-    List<SeriesRaceDto>? SeriesRaces = null
+    List<SeriesRaceDto>? SeriesRaces = null,
+    double? GpxPointLat = null,
+    double? GpxPointLng = null
 );
 
 public record RaceDto(

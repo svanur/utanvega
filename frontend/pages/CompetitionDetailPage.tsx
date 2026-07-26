@@ -38,6 +38,8 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
+import MyLocationIcon from '@mui/icons-material/MyLocation';
 import TimerIcon from '@mui/icons-material/Timer';
 import StraightenIcon from '@mui/icons-material/Straighten';
 import TerrainIcon from '@mui/icons-material/Terrain';
@@ -56,8 +58,46 @@ import WeatherCard from '../components/WeatherCard';
 import { useEvents, useEventBySlug } from '../hooks/useEvents';
 import type { EventEditionDto, RaceDto, ScheduleRule } from '../hooks/useEvents';
 import { useTrailWeather } from '../hooks/useTrails';
+import { useLocations } from '../hooks/useLocations';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
+import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerIconRetina from 'leaflet/dist/images/marker-icon-2x.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+import 'leaflet/dist/leaflet.css';
+// @ts-expect-error - Leaflet internal
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({ iconRetinaUrl: markerIconRetina, iconUrl: markerIcon, shadowUrl: markerShadow });
 import { splitMinutes } from '../utils/cutoffTime';
+
+function EventMapFollowController({
+    followMe,
+    userLocation,
+    pinLat,
+    pinLng,
+    onDrag,
+}: {
+    followMe: boolean;
+    userLocation: { lat: number; lng: number } | null;
+    pinLat: number;
+    pinLng: number;
+    onDrag: () => void;
+}) {
+    const map = useMap();
+    const wasFollowing = useRef(false);
+    useMapEvents({ dragstart: onDrag });
+    useEffect(() => {
+        if (followMe && userLocation) {
+            wasFollowing.current = true;
+            map.setView([userLocation.lat, userLocation.lng], map.getZoom());
+        } else if (!followMe && wasFollowing.current) {
+            wasFollowing.current = false;
+            map.setView([pinLat, pinLng], 12);
+        }
+    }, [followMe, userLocation, map, pinLat, pinLng]);
+    return null;
+}
 
 type CompetitionDetailPageProps = {
     mode: PaletteMode;
@@ -241,6 +281,34 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     const theme = useTheme();
     const { isEnabled } = useFeatureFlags();
     const locationsEnabled = isEnabled('locations_page');
+    const { locations } = useLocations();
+
+    const [followMe, setFollowMe] = useState(false);
+    const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+
+    useEffect(() => {
+        if (!navigator.geolocation) return;
+        const watchId = navigator.geolocation.watchPosition(
+            (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+            (err) => console.warn('Geolocation error:', err),
+            { enableHighAccuracy: true },
+        );
+        return () => navigator.geolocation.clearWatch(watchId);
+    }, []);
+
+    const mapPin = useMemo(() => {
+        if (!event) return null;
+        if (event.gpxPointLat != null && event.gpxPointLng != null) {
+            return { lat: event.gpxPointLat, lng: event.gpxPointLng };
+        }
+        if (event.locationId) {
+            const loc = locations.find(l => l.id === event.locationId);
+            if (loc?.latitude != null && loc?.longitude != null) {
+                return { lat: loc.latitude, lng: loc.longitude };
+            }
+        }
+        return null;
+    }, [event, locations]);
     const confettiFiredForEvent = useRef<string | null>(null);
 
     const isRaceDay = event?.status !== 'Cancelled' && event?.daysUntil === 0;
@@ -635,6 +703,70 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                         </Typography>
                     )}
 
+                    {mapPin && (
+                        <Box
+                            sx={{
+                                mt: 2,
+                                borderRadius: 2,
+                                overflow: 'hidden',
+                                height: 220,
+                                border: '1px solid',
+                                borderColor: 'divider',
+                                position: 'relative',
+                            }}
+                        >
+                            <Paper
+                                elevation={3}
+                                sx={{
+                                    position: 'absolute',
+                                    top: 10,
+                                    right: 10,
+                                    zIndex: 1100,
+                                    borderRadius: '50%',
+                                    overflow: 'hidden',
+                                }}
+                            >
+                                <IconButton
+                                    size="small"
+                                    onClick={() => setFollowMe(f => !f)}
+                                    color={followMe ? 'primary' : 'default'}
+                                    title={followMe ? t('map.stopFollowing') : t('map.followLocation')}
+                                    aria-label="follow my location"
+                                    sx={{
+                                        backgroundColor: followMe ? 'rgba(25,118,210,0.1)' : 'white',
+                                        '&:hover': { backgroundColor: followMe ? 'rgba(25,118,210,0.2)' : '#f5f5f5' },
+                                    }}
+                                >
+                                    <MyLocationIcon fontSize="small" />
+                                </IconButton>
+                            </Paper>
+                            <MapContainer
+                                center={[mapPin.lat, mapPin.lng]}
+                                zoom={12}
+                                style={{ height: '100%', width: '100%' }}
+                                scrollWheelZoom={false}
+                                attributionControl={false}
+                            >
+                                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                                <Marker position={[mapPin.lat, mapPin.lng]} />
+                                {userLocation && (
+                                    <Marker
+                                        position={[userLocation.lat, userLocation.lng]}
+                                        icon={L.icon({
+                                            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+                                            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                                            iconSize: [25, 41],
+                                            iconAnchor: [12, 41],
+                                            popupAnchor: [1, -34],
+                                            shadowSize: [41, 41],
+                                        })}
+                                    />
+                                )}
+                                <EventMapFollowController followMe={followMe} userLocation={userLocation} pinLat={mapPin.lat} pinLng={mapPin.lng} onDrag={() => setFollowMe(false)} />
+                            </MapContainer>
+                        </Box>
+                    )}
+
                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mt: 2.5 }} alignItems={{ sm: 'center' }}>
                         {!showEditionSections && primaryEdition?.registrationUrl && (
                             <Button
@@ -684,6 +816,19 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                         )}
                         {isEnabled('calendar_integration', false) && (event.displayDate ?? event.nextEditionDate) && event.status !== 'Cancelled' && event.daysUntil != null && event.daysUntil >= 0 && (
                             <AddToCalendarButton event={event} t={t} />
+                        )}
+                        {isEnabled('directions_to_trailhead') && mapPin && (
+                            <Tooltip title={t('races.directionsToEvent', 'Directions to event')} arrow>
+                                <IconButton
+                                    size="small"
+                                    component="a"
+                                    href={`https://www.google.com/maps/dir/?api=1&destination=${mapPin.lat},${mapPin.lng}`}
+                                    target="_blank"
+                                    rel="noopener"
+                                >
+                                    <DirectionsCarIcon fontSize="small" />
+                                </IconButton>
+                            </Tooltip>
                         )}
                         {event.socialLinks && event.socialLinks.length > 0 && (
                             <Stack direction="row" spacing={0.5}>
