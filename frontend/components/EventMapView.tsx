@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
+import React, { useEffect, useMemo, useState } from 'react';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import { Box, Typography, Chip, Button, Paper, IconButton } from '@mui/material';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
@@ -9,12 +9,13 @@ import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import type { EventSummary } from '../hooks/useEvents';
 import { useLocations } from '../hooks/useLocations';
 import { getCountdownColor } from '../utils/eventUtils';
+import MapFollowController from './MapFollowController';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerIconRetina from 'leaflet/dist/images/marker-icon-2x.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 import 'leaflet/dist/leaflet.css';
 
-// Fix Leaflet marker icons
+// Fix Leaflet default marker icons
 // @ts-expect-error - Leaflet internal _getIconUrl not in type definitions
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -23,13 +24,15 @@ L.Icon.Default.mergeOptions({
     shadowUrl: markerShadow,
 });
 
-const userLocationIcon = L.icon({
-    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34],
-    shadowSize: [41, 41],
+const userLocationIcon = L.divIcon({
+    className: '',
+    html: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+        <circle cx="10" cy="10" r="8" fill="#1976d2" fill-opacity="0.9" stroke="white" stroke-width="2"/>
+        <circle cx="10" cy="10" r="3" fill="white"/>
+    </svg>`,
+    iconSize: [20, 20],
+    iconAnchor: [10, 10],
+    popupAnchor: [0, -12],
 });
 
 interface EventMapViewProps {
@@ -39,45 +42,22 @@ interface EventMapViewProps {
 const ICELAND_CENTER: [number, number] = [64.96, -18.5];
 const ICELAND_ZOOM = 6;
 
-function FollowController({
-    followMe,
-    userLocation,
-    onDrag,
-}: {
-    followMe: boolean;
-    userLocation: { lat: number; lng: number } | null;
-    onDrag: () => void;
-}) {
-    const map = useMap();
-    const wasFollowing = useRef(false);
-    useMapEvents({ dragstart: onDrag });
-    useEffect(() => {
-        if (followMe && userLocation) {
-            wasFollowing.current = true;
-            map.setView([userLocation.lat, userLocation.lng], map.getZoom());
-        } else if (!followMe && wasFollowing.current) {
-            wasFollowing.current = false;
-            map.setView(ICELAND_CENTER, ICELAND_ZOOM);
-        }
-    }, [followMe, userLocation, map]);
-    return null;
-}
-
 const EventMapView: React.FC<EventMapViewProps> = ({ events }) => {
     const { t } = useTranslation();
     const { locations } = useLocations();
     const [followMe, setFollowMe] = useState(false);
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
 
+    // Start watching position only when the user activates follow mode
     useEffect(() => {
-        if (!navigator.geolocation) return;
+        if (!followMe || !navigator.geolocation) return;
         const watchId = navigator.geolocation.watchPosition(
             (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
             (err) => console.warn('Geolocation error:', err),
             { enableHighAccuracy: true },
         );
         return () => navigator.geolocation.clearWatch(watchId);
-    }, []);
+    }, [followMe]);
 
     const eventsWithCoords = useMemo(() => {
         const locationMap = new Map(locations.map(l => [l.id, l]));
@@ -134,9 +114,11 @@ const EventMapView: React.FC<EventMapViewProps> = ({ events }) => {
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
-                <FollowController
+                <MapFollowController
                     followMe={followMe}
                     userLocation={userLocation}
+                    returnCenter={ICELAND_CENTER}
+                    returnZoom={ICELAND_ZOOM}
                     onDrag={() => setFollowMe(false)}
                 />
                 {eventsWithCoords.map(event => (

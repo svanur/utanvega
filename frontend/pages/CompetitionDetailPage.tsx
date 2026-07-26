@@ -60,7 +60,8 @@ import type { EventEditionDto, RaceDto, ScheduleRule } from '../hooks/useEvents'
 import { useTrailWeather } from '../hooks/useTrails';
 import { useLocations } from '../hooks/useLocations';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
-import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import MapFollowController from '../components/MapFollowController';
 import L from 'leaflet';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerIconRetina from 'leaflet/dist/images/marker-icon-2x.png';
@@ -69,35 +70,19 @@ import 'leaflet/dist/leaflet.css';
 // @ts-expect-error - Leaflet internal
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({ iconRetinaUrl: markerIconRetina, iconUrl: markerIcon, shadowUrl: markerShadow });
-import { splitMinutes } from '../utils/cutoffTime';
 
-function EventMapFollowController({
-    followMe,
-    userLocation,
-    pinLat,
-    pinLng,
-    onDrag,
-}: {
-    followMe: boolean;
-    userLocation: { lat: number; lng: number } | null;
-    pinLat: number;
-    pinLng: number;
-    onDrag: () => void;
-}) {
-    const map = useMap();
-    const wasFollowing = useRef(false);
-    useMapEvents({ dragstart: onDrag });
-    useEffect(() => {
-        if (followMe && userLocation) {
-            wasFollowing.current = true;
-            map.setView([userLocation.lat, userLocation.lng], map.getZoom());
-        } else if (!followMe && wasFollowing.current) {
-            wasFollowing.current = false;
-            map.setView([pinLat, pinLng], 12);
-        }
-    }, [followMe, userLocation, map, pinLat, pinLng]);
-    return null;
-}
+const userLocationIcon = L.divIcon({
+    className: '',
+    html: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+        <circle cx="10" cy="10" r="8" fill="#1976d2" fill-opacity="0.9" stroke="white" stroke-width="2"/>
+        <circle cx="10" cy="10" r="3" fill="white"/>
+    </svg>`,
+    iconSize: [20, 20],
+    iconAnchor: [10, 10],
+    popupAnchor: [0, -12],
+});
+
+import { splitMinutes } from '../utils/cutoffTime';
 
 type CompetitionDetailPageProps = {
     mode: PaletteMode;
@@ -287,14 +272,14 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
 
     useEffect(() => {
-        if (!navigator.geolocation) return;
+        if (!followMe || !navigator.geolocation) return;
         const watchId = navigator.geolocation.watchPosition(
             (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
             (err) => console.warn('Geolocation error:', err),
             { enableHighAccuracy: true },
         );
         return () => navigator.geolocation.clearWatch(watchId);
-    }, []);
+    }, [followMe]);
 
     const mapPin = useMemo(() => {
         if (!event) return null;
@@ -750,19 +735,17 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                                 <Marker position={[mapPin.lat, mapPin.lng]} />
                                 {userLocation && (
-                                    <Marker
-                                        position={[userLocation.lat, userLocation.lng]}
-                                        icon={L.icon({
-                                            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
-                                            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-                                            iconSize: [25, 41],
-                                            iconAnchor: [12, 41],
-                                            popupAnchor: [1, -34],
-                                            shadowSize: [41, 41],
-                                        })}
-                                    />
+                                    <Marker position={[userLocation.lat, userLocation.lng]} icon={userLocationIcon}>
+                                        <Popup>{t('map.yourLocation', 'Your location')}</Popup>
+                                    </Marker>
                                 )}
-                                <EventMapFollowController followMe={followMe} userLocation={userLocation} pinLat={mapPin.lat} pinLng={mapPin.lng} onDrag={() => setFollowMe(false)} />
+                                <MapFollowController
+                                    followMe={followMe}
+                                    userLocation={userLocation}
+                                    returnCenter={[mapPin.lat, mapPin.lng]}
+                                    returnZoom={12}
+                                    onDrag={() => setFollowMe(false)}
+                                />
                             </MapContainer>
                         </Box>
                     )}
@@ -824,7 +807,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                     component="a"
                                     href={`https://www.google.com/maps/dir/?api=1&destination=${mapPin.lat},${mapPin.lng}`}
                                     target="_blank"
-                                    rel="noopener"
+                                    rel="noopener noreferrer"
                                 >
                                     <DirectionsCarIcon fontSize="small" />
                                 </IconButton>
