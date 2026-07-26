@@ -800,6 +800,7 @@ export default function EventList({ onNotify }: EventListProps) {
       });
   }, [events, searchQuery, sortBy, sortDir, activityFilter, typeFilter, statusFilter, locationFilter, yearFilter, monthFilter]);
 
+  
   const handleRequestSort = (field: typeof sortBy) => {
     if (sortBy === field) {
       setSortDir(d => d === 'asc' ? 'desc' : 'asc');

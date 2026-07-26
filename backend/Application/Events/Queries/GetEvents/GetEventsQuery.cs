@@ -42,6 +42,7 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
             .ToListAsync(cancellationToken);
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var oneYearAhead = today.AddYears(1);
 
         return events.Select(e =>
         {
@@ -130,6 +131,30 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 .Select(r => r.Trail?.YoutubeUrl)
                 .FirstOrDefault(u => !string.IsNullOrWhiteSpace(u));
 
+            List<SeriesRaceDto>? seriesRaces = null;
+            if (e.Type == EventType.Series)
+            {
+                seriesRaces = e.Editions
+                    .SelectMany(ed => ed.Races
+                        .Where(r => r.Status != RaceStatus.Cancelled
+                            && r.DateOfRace.HasValue
+                            && r.DateOfRace.Value >= today
+                            && r.DateOfRace.Value <= oneYearAhead)
+                        .Select(r => new SeriesRaceDto(
+                            r.Id,
+                            r.Name,
+                            r.DateOfRace,
+                            r.StartTime,
+                            !string.IsNullOrWhiteSpace(r.DistanceLabel) ? r.DistanceLabel
+                                : r.Trail != null && r.Trail.Length > 0 ? $"{r.Trail.Length / 1000.0:0.#} km"
+                                : null,
+                            r.TicketStatus.ToString(),
+                            ed.RegistrationUrl
+                        )))
+                    .OrderBy(r => r.DateOfRace)
+                    .ToList();
+            }
+
             return new EventSummaryDto(
                 e.Id,
                 e.Name,
@@ -159,7 +184,8 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 certifications?.Count > 0 ? certifications : null,
                 youtubeUrl,
                 championshipCategories?.Count > 0 ? championshipCategories : null,
-                itraPoints?.Count > 0 ? itraPoints : null
+                itraPoints?.Count > 0 ? itraPoints : null,
+                seriesRaces?.Count > 0 ? seriesRaces : null
             );
         }).ToList();
     }

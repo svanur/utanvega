@@ -17,6 +17,16 @@ export interface SocialLink {
     url: string;
 }
 
+export interface SeriesRaceDto {
+    raceId: string;
+    raceName: string;
+    dateOfRace: string | null;
+    startTime: string | null;
+    distanceLabel: string | null;
+    ticketStatus: string;
+    registrationUrl: string | null;
+}
+
 export interface EventSummary {
     id: string;
     name: string;
@@ -47,6 +57,7 @@ export interface EventSummary {
     itraPoints: number[] | null;
     createdAt: string;
     updatedAt: string | null;
+    seriesRaces: SeriesRaceDto[] | null;
 }
 
 export interface RaceDto {

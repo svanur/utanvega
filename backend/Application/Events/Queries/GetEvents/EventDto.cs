@@ -7,6 +7,16 @@ public record RaceDistanceSummaryDto(
     string? TicketStatus
 );
 
+public record SeriesRaceDto(
+    Guid RaceId,
+    string RaceName,
+    DateOnly? DateOfRace,
+    TimeOnly? StartTime,
+    string? DistanceLabel,
+    string TicketStatus,
+    string? RegistrationUrl
+);
+
 public record EventSummaryDto(
     Guid Id,
     string Name,
@@ -36,7 +46,8 @@ public record EventSummaryDto(
     List<string>? Certifications = null,
     string? YoutubeUrl = null,
     List<string>? ChampionshipCategories = null,
-    List<int>? ItraPoints = null
+    List<int>? ItraPoints = null,
+    List<SeriesRaceDto>? SeriesRaces = null
 );
 
 public record RaceDto(

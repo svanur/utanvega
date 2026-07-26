@@ -60,7 +60,7 @@ import SwipeableCard from '../components/SwipeableCard';
 import RaceShareCard from '../components/RaceShareCard';
 import RaceFinishCard from '../components/RaceFinishCard';
 import VideocamIcon from '@mui/icons-material/Videocam';
-import { useEvents, type EventSummary } from '../hooks/useEvents';
+import { useEvents, type EventSummary, type SeriesRaceDto } from '../hooks/useEvents';
 import { downloadIcs } from '../utils/calendarLinks';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
@@ -273,6 +273,23 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         const up = filtered.filter(c => !isRecentlyCompleted(c));
         return { justRaced: jr, upcoming: up };
     }, [filtered]);
+    type UpcomingRow =
+        | { kind: 'event'; comp: EventSummary }
+        | { kind: 'series-race'; comp: EventSummary; race: SeriesRaceDto };
+
+    const flattenedUpcoming = useMemo((): UpcomingRow[] => {
+        const rows: UpcomingRow[] = [];
+        for (const comp of upcoming) {
+            if (comp.type === 'Series' && comp.seriesRaces && comp.seriesRaces.length > 0) {
+                for (const race of comp.seriesRaces) {
+                    rows.push({ kind: 'series-race', comp, race });
+                }
+            } else {
+                rows.push({ kind: 'event', comp });
+            }
+        }
+        return rows;
+    }, [upcoming]);
 
     if (loading) {
         return (
@@ -652,6 +669,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                         </Box>
                     ) : (
                         <>
+                            {console.log('[debug] justRaced', justRaced )}
                             {justRaced.length > 0 && (
                                 <Box sx={{ mb: 3 }}>
                                     <Typography variant="h6" fontWeight={700} sx={{ mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -721,8 +739,109 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                     </Stack>
                                 </Box>
                             )}
+                            
                         <Stack spacing={2}>
-                            {upcoming.map((comp, idx) => (
+                            {flattenedUpcoming.map((row, idx) => {
+                                if (row.kind === 'series-race') {
+                                    const { comp, race } = row;
+                                    const raceDaysUntil = race.dateOfRace
+                                        ? Math.round((new Date(race.dateOfRace + 'T00:00:00').getTime() - Date.now()) / 86400000)
+                                        : null;
+                                    return (
+                                        <SwipeableCard
+                                            key={`${comp.id}-${race.raceId}`}
+                                            onSwipeRight={race.registrationUrl && raceDaysUntil != null && raceDaysUntil >= 0
+                                                ? () => setShareEventId(comp.id)
+                                                : undefined
+                                            }
+                                            leftActions={
+                                                <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+                                                    {race.registrationUrl && raceDaysUntil != null && raceDaysUntil >= 0 && (
+                                                        <Box
+                                                            component="a"
+                                                            href={race.registrationUrl}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                                                            sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', bgcolor: 'success.main', color: 'white', textDecoration: 'none', gap: 0.5, px: 1, fontSize: '0.7rem', fontWeight: 600 }}
+                                                        >
+                                                            <OpenInNewIcon sx={{ fontSize: 18 }} />
+                                                            {t('races.register', 'Register')}
+                                                        </Box>
+                                                    )}
+                                                    {race.dateOfRace && (
+                                                        <Box
+                                                            onClick={(e: React.MouseEvent) => {
+                                                                e.stopPropagation();
+                                                                downloadIcs({
+                                                                    title: race.raceName,
+                                                                    date: race.dateOfRace!,
+                                                                    location: comp.locationName ?? undefined,
+                                                                    url: `https://hlaupadagskra.is/events/${comp.slug}`,
+                                                                });
+                                                            }}
+                                                            sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', bgcolor: 'primary.main', color: 'white', cursor: 'pointer', gap: 0.5, px: 1, fontSize: '0.7rem', fontWeight: 600 }}
+                                                        >
+                                                            <EventAvailableIcon sx={{ fontSize: 18 }} />
+                                                            {t('races.addToCalendar', 'Calendar')}
+                                                        </Box>
+                                                    )}
+                                                </Box>
+                                            }
+                                            revealWidth={120}
+                                        >
+                                            <Card sx={{ transition: 'transform 0.15s, box-shadow 0.15s', '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] } }}>
+                                                <CardActionArea onClick={() => navigate(`/events/${comp.slug}`)}>
+                                                    <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+                                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1, flexWrap: 'wrap' }}>
+                                                            <Box sx={{ flex: 1, minWidth: 200 }}>
+                                                                <Typography variant="h6" fontWeight={700}>{race.raceName}</Typography>
+                                                                <Typography variant="body2" color="text.secondary">{comp.name}</Typography>
+                                                                {race.dateOfRace && (
+                                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1.5, flexWrap: 'wrap' }}>
+                                                                        <CalendarTodayIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                                                                        <Typography variant="body2" fontWeight={600}>
+                                                                            {formatNextDate(race.dateOfRace, t)}
+                                                                        </Typography>
+                                                                        <EventDateBadge dateStr={race.dateOfRace} />
+                                                                    </Box>
+                                                                )}
+                                                                {race.distanceLabel && (
+                                                                    <Stack direction="row" gap={0.5} sx={{ mt: 1 }}>
+                                                                        <Chip
+                                                                            label={race.distanceLabel}
+                                                                            size="small"
+                                                                            variant="outlined"
+                                                                            color={getTicketStatusColor(race.ticketStatus)}
+                                                                        />
+                                                                    </Stack>
+                                                                )}
+                                                                {race.registrationUrl && raceDaysUntil != null && raceDaysUntil >= 0 && (
+                                                                    <Stack direction="row" gap={0.5} sx={{ mt: 1 }}>
+                                                                        <Button size="small" variant="outlined" href={race.registrationUrl} target="_blank" rel="noopener noreferrer" endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.8rem' }}>
+                                                                            {t('races.register', 'Register')}
+                                                                        </Button>
+                                                                    </Stack>
+                                                                )}
+                                                            </Box>
+                                                            {raceDaysUntil != null && (
+                                                                <Chip
+                                                                    label={getCountdownLabel(raceDaysUntil, t)}
+                                                                    color={getCountdownColor(raceDaysUntil)}
+                                                                    variant="filled"
+                                                                    size="medium"
+                                                                    sx={{ fontWeight: 700, fontSize: '0.9rem', px: 1 }}
+                                                                />
+                                                            )}
+                                                        </Box>
+                                                    </CardContent>
+                                                </CardActionArea>
+                                            </Card>
+                                        </SwipeableCard>
+                                    );
+                                }
+                                const comp = row.comp;
+                                return (
                                 <SwipeableCard
                                     key={comp.id}
                                     peek={idx === 0 && showSwipeHint}
@@ -977,7 +1096,8 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                     </CardActionArea>
                                 </Card>
                                 </SwipeableCard>
-                            ))}
+                                );
+                            })}
                         </Stack>
                         </>
                     )

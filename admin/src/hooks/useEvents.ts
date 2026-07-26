@@ -69,6 +69,16 @@ export interface EventEditionDto {
     updatedAt: string | null;
 }
 
+export interface SeriesRaceDto {
+    raceId: string;
+    raceName: string;
+    dateOfRace: string | null;
+    startTime: string | null;
+    distanceLabel: string | null;
+    ticketStatus: string;
+    registrationUrl: string | null;
+}
+
 export interface EventSummaryDto {
     id: string;
     name: string;
@@ -90,6 +100,7 @@ export interface EventSummaryDto {
     editionCount: number;
     createdAt: string;
     updatedAt: string | null;
+    seriesRaces: SeriesRaceDto[] | null;
 }
 
 export interface EventDetailDto extends EventSummaryDto {
