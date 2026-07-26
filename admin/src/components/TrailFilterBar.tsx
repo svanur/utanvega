@@ -10,13 +10,17 @@ interface TrailFilterBarProps {
   onStatusFilterChange: (value: string) => void;
   typeFilter: string;
   onTypeFilterChange: (value: string) => void;
-  difficultyFilter: string;
-  onDifficultyFilterChange: (value: string) => void;
   activityFilter: string;
   onActivityFilterChange: (value: string) => void;
   locationFilter: string;
   onLocationFilterChange: (value: string) => void;
   locationOptions: string[];
+  yearFilter: string;
+  onYearFilterChange: (value: string) => void;
+  monthFilter: string;
+  onMonthFilterChange: (value: string) => void;
+  yearOptions: string[];
+  months: string[];
   includeArchived: boolean;
   onResetFilters: () => void;
 }
@@ -28,13 +32,17 @@ export default function TrailFilterBar({
   onStatusFilterChange,
   typeFilter,
   onTypeFilterChange,
-  difficultyFilter,
-  onDifficultyFilterChange,
   activityFilter,
   onActivityFilterChange,
   locationFilter,
   onLocationFilterChange,
   locationOptions,
+  yearFilter,
+  onYearFilterChange,
+  monthFilter,
+  onMonthFilterChange,
+  yearOptions,
+  months,
   includeArchived,
   onResetFilters,
 }: TrailFilterBarProps) {
@@ -90,20 +98,6 @@ export default function TrailFilterBar({
         </Select>
       </FormControl>
       <FormControl size="small" sx={{ minWidth: 150 }}>
-        <InputLabel>Difficulty</InputLabel>
-        <Select
-          value={difficultyFilter}
-          label="Difficulty"
-          onChange={(e) => onDifficultyFilterChange(e.target.value)}
-        >
-          <MenuItem value="all">All Difficulties</MenuItem>
-          <MenuItem value="Easy">Easy</MenuItem>
-          <MenuItem value="Moderate">Moderate</MenuItem>
-          <MenuItem value="Hard">Hard</MenuItem>
-          <MenuItem value="Expert">Expert</MenuItem>
-        </Select>
-      </FormControl>
-      <FormControl size="small" sx={{ minWidth: 150 }}>
         <InputLabel>Activity</InputLabel>
         <Select
           value={activityFilter}
@@ -129,6 +123,20 @@ export default function TrailFilterBar({
           {locationOptions.map(name => (
             <MenuItem key={name} value={name}>{name}</MenuItem>
           ))}
+        </Select>
+      </FormControl>
+      <FormControl size="small" sx={{ minWidth: 100 }}>
+        <InputLabel>Year</InputLabel>
+        <Select value={yearFilter} label="Year" onChange={(e) => onYearFilterChange(e.target.value)}>
+          <MenuItem value="all">All</MenuItem>
+          {yearOptions.map(y => <MenuItem key={y} value={y}>{y}</MenuItem>)}
+        </Select>
+      </FormControl>
+      <FormControl size="small" sx={{ minWidth: 120 }} disabled={yearFilter === 'all'}>
+        <InputLabel>Month</InputLabel>
+        <Select value={monthFilter} label="Month" onChange={(e) => onMonthFilterChange(e.target.value)}>
+          <MenuItem value="all">All</MenuItem>
+          {months.map((m, i) => <MenuItem key={i} value={String(i + 1).padStart(2, '0')}>{m}</MenuItem>)}
         </Select>
       </FormControl>
       <Tooltip title="Reset all filters">

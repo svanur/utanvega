@@ -290,15 +290,17 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
             </DynamicHeader>
 
             {isEnabled('announcement_banner') && <AnnouncementBanner />}
-            {(isEnabled('sponsor_garmin') || isEnabled('sponsor_craft')) && <SponsorStrip />}
+            <SponsorStrip position="top" />
 
             <Container maxWidth={maxWidth} sx={{ py: 4, flex: 1 }}>
                 {isEnabled('hero_band') && heroTheme && <Box sx={{ mb: 3 }}><HeroBand theme={heroTheme} isDark={mode === 'dark'} /></Box>}
-                {(isEnabled('promo_slot_1') || isEnabled('promo_slot_2')) && <PromoStrip />}
+                <PromoStrip position="top" />
                 {isEnabled('event_day_banner') && <EventDayBanner />}
                 <div id="main-content" />
                 {children}
+                <PromoStrip position="bottom" />
             </Container>
+            <SponsorStrip position="bottom" />
 
             {bottomContent}
 

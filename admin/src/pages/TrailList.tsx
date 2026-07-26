@@ -13,6 +13,8 @@ import TrailFilterBar from '../components/TrailFilterBar';
 import TrailTable from '../components/TrailTable';
 import { TrailMapDialog, DeleteTrailDialog, BulkUploadDialog } from '../components/TrailDialogs';
 
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
 export default function TrailList({ onNotify, initialTrailId, initialSearch }: { onNotify: (message: React.ReactNode, severity?: 'success' | 'error') => void, initialTrailId?: string | null, initialSearch?: string | null }) {
   const [includeArchived, setIncludeArchived] = useState(false);
   const { trails, setTrails, loading, error, refresh } = useTrails(includeArchived);
@@ -38,16 +40,24 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
   const [search, setSearch] = useState(initialSearch || '');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
-  const [difficultyFilter, setDifficultyFilter] = useState<string>('all');
   const [activityFilter, setActivityFilter] = useState<string>('all');
   const [locationFilter, setLocationFilter] = useState<string>('all');
-  const [orderBy, setOrderBy] = useState<string>('name');
-  const [order, setOrder] = useState<'asc' | 'desc'>('asc');
+  const [yearFilter, setYearFilter] = useState<string>('all');
+  const [monthFilter, setMonthFilter] = useState<string>('all');
+  const [orderBy, setOrderBy] = useState<string>('updatedAt');
+  const [order, setOrder] = useState<'asc' | 'desc'>('desc');
 
   const locationOptions = useMemo(() => {
     const names = new Set<string>();
     trails.forEach(t => t.locations?.forEach(l => names.add(l.name)));
     return [...names].sort();
+  }, [trails]);
+
+  const yearOptions = useMemo(() => {
+    const years = trails
+      .map(t => t.updatedAt?.slice(0, 4))
+      .filter((y): y is string => !!y);
+    return [...new Set(years)].sort((a, b) => b.localeCompare(a));
   }, [trails]);
 
   const filteredAndSortedTrails = useMemo(() => {
@@ -59,26 +69,32 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
           (trail.description?.toLowerCase().includes(search.toLowerCase()) ?? false);
         const matchesStatus = statusFilter === 'all' || trail.status === statusFilter;
         const matchesType = typeFilter === 'all' || trail.trailType === typeFilter;
-        const matchesDifficulty = difficultyFilter === 'all' || trail.difficulty === difficultyFilter;
         const matchesActivity = activityFilter === 'all' || trail.activityType === activityFilter;
-        const matchesLocation = locationFilter === 'all' 
+        const matchesLocation = locationFilter === 'all'
           || (locationFilter === 'none' && (!trail.locations || trail.locations.length === 0))
           || trail.locations?.some(l => l.name === locationFilter);
-        return matchesSearch && matchesStatus && matchesType && matchesDifficulty && matchesActivity && matchesLocation;
+        const matchesYear = yearFilter === 'all' || (trail.updatedAt ?? '').slice(0, 4) === yearFilter;
+        const matchesMonth = monthFilter === 'all' || (trail.updatedAt ?? '').slice(5, 7) === monthFilter;
+        return matchesSearch && matchesStatus && matchesType && matchesActivity && matchesLocation && matchesYear && matchesMonth;
       })
       .sort((a, b) => {
         const isAsc = order === 'asc';
         let comparison = 0;
-        
-        const aValue = (a as unknown as Record<string, string | number>)[orderBy];
-        const bValue = (b as unknown as Record<string, string | number>)[orderBy];
 
-        if (aValue < bValue) comparison = -1;
-        if (aValue > bValue) comparison = 1;
-        
+        if (orderBy === 'updatedAt') {
+          const aTime = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+          const bTime = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+          comparison = aTime - bTime;
+        } else {
+          const aValue = (a as unknown as Record<string, string | number>)[orderBy];
+          const bValue = (b as unknown as Record<string, string | number>)[orderBy];
+          if (aValue < bValue) comparison = -1;
+          if (aValue > bValue) comparison = 1;
+        }
+
         return isAsc ? comparison : -comparison;
       });
-  }, [trails, search, statusFilter, typeFilter, difficultyFilter, activityFilter, locationFilter, orderBy, order]);
+  }, [trails, search, statusFilter, typeFilter, activityFilter, locationFilter, yearFilter, monthFilter, orderBy, order]);
 
   const handleRequestSort = (property: string) => {
     const isAsc = orderBy === property && order === 'asc';
@@ -90,11 +106,12 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
     setSearch('');
     setStatusFilter('all');
     setTypeFilter('all');
-    setDifficultyFilter('all');
     setActivityFilter('all');
     setLocationFilter('all');
-    setOrderBy('name');
-    setOrder('asc');
+    setYearFilter('all');
+    setMonthFilter('all');
+    setOrderBy('updatedAt');
+    setOrder('desc');
     setIncludeArchived(false);
   };
 
@@ -359,13 +376,17 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
         onStatusFilterChange={setStatusFilter}
         typeFilter={typeFilter}
         onTypeFilterChange={setTypeFilter}
-        difficultyFilter={difficultyFilter}
-        onDifficultyFilterChange={setDifficultyFilter}
         activityFilter={activityFilter}
         onActivityFilterChange={setActivityFilter}
         locationFilter={locationFilter}
         onLocationFilterChange={setLocationFilter}
         locationOptions={locationOptions}
+        yearFilter={yearFilter}
+        onYearFilterChange={(y) => { setYearFilter(y); setMonthFilter('all'); }}
+        monthFilter={monthFilter}
+        onMonthFilterChange={setMonthFilter}
+        yearOptions={yearOptions}
+        months={MONTHS}
         includeArchived={includeArchived}
         onResetFilters={handleResetFilters}
       />

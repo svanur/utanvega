@@ -20,7 +20,7 @@ import { SPONSOR_ADS } from '../data/sponsors';
 
 export default function SponsorsPage() {
     return (
-        <Box sx={{ maxWidth: 900, mx: 'auto', p: 3 }}>
+        <Box sx={{ maxWidth: 1200, mx: 'auto', p: 3 }}>
             <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1 }}>
                 <ImageOutlinedIcon color="primary" />
                 <Typography variant="h5" fontWeight={700}>Sponsors & Promotions</Typography>
@@ -35,6 +35,7 @@ export default function SponsorsPage() {
                 <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
                     <Typography variant="subtitle1" fontWeight={700}>Current Ads</Typography>
                 </Box>
+                <Box sx={{ overflowX: 'auto' }}>
                 <Table size="small">
                     <TableHead>
                         <TableRow sx={{ '& th': { fontWeight: 700 } }}>
@@ -87,6 +88,48 @@ export default function SponsorsPage() {
                         ))}
                     </TableBody>
                 </Table>
+                </Box>
+            </Paper>
+
+            {/* Announcement Banner */}
+            <Paper variant="outlined" sx={{ mb: 4 }}>
+                <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+                    <Typography variant="subtitle1" fontWeight={700}>Announcement Banner</Typography>
+                </Box>
+                <Box sx={{ p: 2 }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        A dismissible full-width bar shown directly below the site header. Controlled by a feature flag and three i18n keys.
+                        Once a visitor dismisses it, it stays hidden in their browser (localStorage key <code>announcement_dismissed_v1</code>).
+                    </Typography>
+                    <Stack spacing={1.5}>
+                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'center' }}>
+                            <Chip icon={<FlagOutlinedIcon />} label="announcement_banner" size="small" variant="outlined" sx={{ fontFamily: 'monospace', fontSize: '0.7rem', width: 'fit-content' }} />
+                            <Typography variant="caption" color="text.secondary">— toggle on/off from the Features admin page</Typography>
+                        </Stack>
+                        <Box sx={{ overflowX: 'auto' }}>
+                            <Table size="small">
+                                <TableHead>
+                                    <TableRow sx={{ '& th': { fontWeight: 700 } }}>
+                                        <TableCell>i18n key</TableCell>
+                                        <TableCell>File to edit</TableCell>
+                                    </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                    {[
+                                        'announcement.text',
+                                        'announcement.linkText',
+                                        'announcement.href',
+                                    ].map(key => (
+                                        <TableRow key={key}>
+                                            <TableCell><Typography variant="caption" sx={{ fontFamily: 'monospace' }}>{key}</Typography></TableCell>
+                                            <TableCell><Typography variant="caption" sx={{ fontFamily: 'monospace' }}>frontend/i18n/en.json &amp; is.json</Typography></TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </Box>
+                    </Stack>
+                </Box>
             </Paper>
 
             <Divider sx={{ my: 4 }} />
@@ -127,12 +170,14 @@ export default function SponsorsPage() {
                                 Go to <strong>Features</strong> in this admin and add a new flag. Use the naming convention:
                             </Typography>
                             <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: 'wrap', gap: 0.5 }}>
-                                <Chip label="sponsor_name" size="small" variant="outlined" sx={{ fontFamily: 'monospace' }} />
-                                <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center' }}>for external partners (logo strip)</Typography>
+                                <Chip label="ad_top_sponsor_name" size="small" variant="outlined" sx={{ fontFamily: 'monospace' }} />
+                                <Chip label="ad_bottom_sponsor_name" size="small" variant="outlined" sx={{ fontFamily: 'monospace' }} />
+                                <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center' }}>external partners (logo strip)</Typography>
                             </Stack>
                             <Stack direction="row" spacing={1} sx={{ mt: 0.5, flexWrap: 'wrap', gap: 0.5 }}>
-                                <Chip label="promo_name_year" size="small" variant="outlined" sx={{ fontFamily: 'monospace' }} />
-                                <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center' }}>for internal promotions (promo cards)</Typography>
+                                <Chip label="ad_top_promo_N" size="small" variant="outlined" sx={{ fontFamily: 'monospace' }} />
+                                <Chip label="ad_bottom_promo_N" size="small" variant="outlined" sx={{ fontFamily: 'monospace' }} />
+                                <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center' }}>internal promotions (promo cards)</Typography>
                             </Stack>
                         </Box>
                     </Stack>
@@ -228,12 +273,14 @@ export default function SponsorsPage() {
                     </TableHead>
                     <TableBody>
                         {[
-                            { order: 1, name: 'Announcement Banner', flag: 'announcement_banner', component: 'AnnouncementBanner' },
-                            { order: 2, name: 'Sponsor Logo Strip', flag: 'sponsor_garmin / sponsor_craft', component: 'SponsorStrip' },
-                            { order: 3, name: 'Hero Band', flag: 'hero_band', component: 'HeroBand' },
-                            { order: 4, name: 'Promo Cards', flag: 'promo_slot_1 / promo_slot_2', component: 'PromoStrip' },
-                            { order: 5, name: 'Event Day Banner', flag: 'event_day_banner', component: 'EventDayBanner' },
-                            { order: 6, name: 'Page Content', flag: '—', component: 'children' },
+                            { order: 1, name: 'Announcement Banner',       flag: 'announcement_banner',                              component: 'AnnouncementBanner' },
+                            { order: 2, name: 'Sponsor Strip (top)',        flag: 'ad_top_sponsor_garmin / ad_top_sponsor_craft',     component: 'SponsorStrip' },
+                            { order: 3, name: 'Hero Band',                  flag: 'hero_band',                                        component: 'HeroBand' },
+                            { order: 4, name: 'Promo Cards (top)',          flag: 'ad_top_promo_1 / ad_top_promo_2',                  component: 'PromoStrip' },
+                            { order: 5, name: 'Event Day Banner',           flag: 'event_day_banner',                                 component: 'EventDayBanner' },
+                            { order: 6, name: 'Page Content',               flag: '—',                                                component: 'children' },
+                            { order: 7, name: 'Promo Cards (bottom)',       flag: 'ad_bottom_promo_1 / ad_bottom_promo_2',            component: 'PromoStrip' },
+                            { order: 8, name: 'Sponsor Strip (bottom)',     flag: 'ad_bottom_sponsor_garmin / ad_bottom_sponsor_craft', component: 'SponsorStrip' },
                         ].map(row => (
                             <TableRow key={row.order}>
                                 <TableCell>{row.order}</TableCell>
