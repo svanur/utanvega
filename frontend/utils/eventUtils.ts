@@ -1,5 +1,16 @@
 type TFunc = (key: string, opts?: Record<string, unknown>) => string;
 
+export function getEventTypeColor(type: string): 'primary' | 'secondary' | 'success' | 'warning' | 'info' | 'error' | 'default' {
+    switch (type) {
+        case 'Race': return 'primary';
+        case 'Series': return 'secondary';
+        case 'FunRun': return 'success';
+        case 'Training': return 'info';
+        case 'Advertisement': return 'warning';
+        default: return 'default';
+    }
+}
+
 export function formatNextDate(dateStr: string, t: TFunc): string {
     const date = new Date(dateStr + 'T00:00:00');
     const months = t('races.months', { returnObjects: true }) as unknown as string[];
