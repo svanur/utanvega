@@ -695,13 +695,15 @@ export default function EventList({ onNotify }: EventListProps) {
   const [expandedEditionIds, setExpandedEditionIds] = useState<string[]>([]);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [sortBy, setSortBy] = useState<'name' | 'activityType' | 'type' | 'nextEditionDate' | 'status' | 'editionCount' | 'locationName'>('name');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const [sortBy, setSortBy] = useState<'name' | 'activityType' | 'type' | 'nextEditionDate' | 'status' | 'editionCount' | 'locationName' | 'updatedAt'>('updatedAt');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [searchQuery, setSearchQuery] = useState('');
   const [activityFilter, setActivityFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [locationFilter, setLocationFilter] = useState<string>('all');
+  const [yearFilter, setYearFilter] = useState<string>('all');
+  const [monthFilter, setMonthFilter] = useState<string>('all');
   const [eventForm, setEventForm] = useState<EventFormState>(createEmptyEventForm());
   const [editionForm, setEditionForm] = useState<EditionFormState>(createEmptyEditionForm());
   const [raceForm, setRaceForm] = useState<RaceFormState>(createEmptyRaceForm());
@@ -727,8 +729,20 @@ export default function EventList({ onNotify }: EventListProps) {
     [events],
   );
 
-  const hasActiveFilters = activityFilter !== 'all' || typeFilter !== 'all' || statusFilter !== 'all' || locationFilter !== 'all';
-  const resetFilters = () => { setActivityFilter('all'); setTypeFilter('all'); setStatusFilter('all'); setLocationFilter('all'); };
+  const yearOptions = useMemo(() => {
+    const years = events
+      .map(e => e.nextEditionDate?.slice(0, 4))
+      .filter((y): y is string => !!y);
+    return [...new Set(years)].sort((a, b) => b.localeCompare(a));
+  }, [events]);
+
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+  const hasActiveFilters = activityFilter !== 'all' || typeFilter !== 'all' || statusFilter !== 'all' || locationFilter !== 'all' || yearFilter !== 'all' || monthFilter !== 'all';
+  const resetFilters = () => {
+    setActivityFilter('all'); setTypeFilter('all'); setStatusFilter('all'); setLocationFilter('all');
+    setYearFilter('all'); setMonthFilter('all');
+  };
 
   const filteredEvents = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -754,13 +768,24 @@ export default function EventList({ onNotify }: EventListProps) {
           if (locationFilter !== 'none' && event.locationName !== locationFilter) return false;
         }
 
+        if (yearFilter !== 'all') {
+          if (!event.nextEditionDate || event.nextEditionDate.slice(0, 4) !== yearFilter) return false;
+        }
+        if (monthFilter !== 'all') {
+          if (!event.nextEditionDate || event.nextEditionDate.slice(5, 7) !== monthFilter) return false;
+        }
+
         return true;
       })
       .sort((a, b) => {
         const dir = sortDir === 'asc' ? 1 : -1;
         let cmp = 0;
 
-        if (sortBy === 'nextEditionDate') {
+        if (sortBy === 'updatedAt') {
+          const aTime = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+          const bTime = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+          cmp = aTime - bTime;
+        } else if (sortBy === 'nextEditionDate') {
           if (!a.nextEditionDate && !b.nextEditionDate) cmp = 0;
           else if (!a.nextEditionDate) cmp = 1;
           else if (!b.nextEditionDate) cmp = -1;
@@ -775,7 +800,7 @@ export default function EventList({ onNotify }: EventListProps) {
 
         return cmp !== 0 ? dir * cmp : a.name.localeCompare(b.name);
       });
-  }, [events, searchQuery, sortBy, sortDir, activityFilter, typeFilter, statusFilter, locationFilter]);
+  }, [events, searchQuery, sortBy, sortDir, activityFilter, typeFilter, statusFilter, locationFilter, yearFilter, monthFilter]);
 
   const handleRequestSort = (field: typeof sortBy) => {
     if (sortBy === field) {
@@ -1538,6 +1563,20 @@ export default function EventList({ onNotify }: EventListProps) {
             {eventLocationOptions.map(loc => <MenuItem key={loc} value={loc}>{loc}</MenuItem>)}
           </Select>
         </FormControl>
+        <FormControl size="small" sx={{ minWidth: 100 }}>
+          <InputLabel>Year</InputLabel>
+          <Select value={yearFilter} label="Year" onChange={e => { setYearFilter(e.target.value); setMonthFilter('all'); }}>
+            <MenuItem value="all">All</MenuItem>
+            {yearOptions.map(y => <MenuItem key={y} value={y}>{y}</MenuItem>)}
+          </Select>
+        </FormControl>
+        <FormControl size="small" sx={{ minWidth: 120 }} disabled={yearFilter === 'all'}>
+          <InputLabel>Month</InputLabel>
+          <Select value={monthFilter} label="Month" onChange={e => setMonthFilter(e.target.value)}>
+            <MenuItem value="all">All</MenuItem>
+            {MONTHS.map((m, i) => <MenuItem key={i} value={String(i + 1).padStart(2, '0')}>{m}</MenuItem>)}
+          </Select>
+        </FormControl>
         {hasActiveFilters && (
           <Tooltip title="Clear all filters">
             <IconButton size="small" aria-label="Clear all filters" onClick={resetFilters}>
@@ -1586,6 +1625,11 @@ export default function EventList({ onNotify }: EventListProps) {
               <TableCell sortDirection={sortBy === 'locationName' ? sortDir : false}>
                 <TableSortLabel active={sortBy === 'locationName'} direction={sortBy === 'locationName' ? sortDir : 'asc'} onClick={() => handleRequestSort('locationName')}>
                   Location
+                </TableSortLabel>
+              </TableCell>
+              <TableCell sortDirection={sortBy === 'updatedAt' ? sortDir : false}>
+                <TableSortLabel active={sortBy === 'updatedAt'} direction={sortBy === 'updatedAt' ? sortDir : 'desc'} onClick={() => handleRequestSort('updatedAt')}>
+                  Updated
                 </TableSortLabel>
               </TableCell>
               <TableCell align="right">Actions</TableCell>
@@ -1639,6 +1683,11 @@ export default function EventList({ onNotify }: EventListProps) {
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" color="text.secondary">{event.locationName ?? '—'}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="caption" color="text.secondary">
+                      {event.updatedAt ? new Date(event.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                    </Typography>
                   </TableCell>
                   <TableCell align="right" onClick={clickEvent => clickEvent.stopPropagation()} sx={expandedEventId === event.id ? { borderTop: '2px solid', borderRight: '2px solid', borderColor: 'primary.main' } : {}}>
                     <Tooltip title="Edit event">
