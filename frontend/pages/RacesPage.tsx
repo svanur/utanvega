@@ -67,7 +67,7 @@ import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
 import { getTicketStatusColor, groupDistances } from '../utils/ticketStatus';
 import { formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor } from '../utils/eventUtils';
-import { haversineKm, formatDistanceKm } from '../utils/distance';
+import { haversineKm, formatDistanceKm } from '../utils/geo';
 
 const EventTableView = lazy(() => import('../components/EventTableView'));
 const EventMapView = lazy(() => import('../components/EventMapView'));
@@ -711,7 +711,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                         disabled={locationLoading || locationDenied}
                                         sx={{
                                             textTransform: 'none', borderRadius: 4, px: 1.5, py: 0.5, fontSize: '0.8rem', minWidth: 0,
-                                            display: viewMode === 'map' ? 'none' : viewMode === 'table' ? { xs: 'inline-flex', md: 'none' } : 'inline-flex',
+                                            display: (viewMode === 'map' || viewMode === 'table') ? 'none' : 'inline-flex',
                                         }}
                                     >
                                         {t('races.nearMe.label')}

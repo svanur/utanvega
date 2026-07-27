@@ -128,8 +128,7 @@ const EventMapView: React.FC<EventMapViewProps> = ({ events }) => {
                 </Marker>
             ))}
         </MarkerClusterGroup>
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    ), [eventsWithCoords]);
+    ), [eventsWithCoords, t]);
 
     return (
         <Box sx={{ height: 500, borderRadius: 2, overflow: 'hidden', position: 'relative' }}>
