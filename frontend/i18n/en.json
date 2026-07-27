@@ -1237,6 +1237,15 @@
             "cutoff": "Cutoff time",
             "certifications": "Credentials"
         },
+        "nearMe": {
+            "label": "Near me",
+            "enable": "Sort by distance",
+            "disable": "Disable distance sort",
+            "denied": "Location access denied — enable it in your browser settings",
+            "noGps": "No GPS location set for this event",
+            "enableLocation": "Allow location access to see distance",
+            "distanceToStart": "Distance to the start location"
+        },
         "registrationStatus": {
             "Open": "Open",
             "Closed": "Closed",

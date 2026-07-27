@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import MarkerClusterGroup from '@changey/react-leaflet-markercluster';
 import L from 'leaflet';
 import { Box, Typography, Chip, Button, Paper, IconButton } from '@mui/material';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
@@ -14,6 +15,8 @@ import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerIconRetina from 'leaflet/dist/images/marker-icon-2x.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet.markercluster/dist/MarkerCluster.css';
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 
 // Fix Leaflet default marker icons
 // @ts-expect-error - Leaflet internal _getIconUrl not in type definitions
@@ -77,6 +80,57 @@ const EventMapView: React.FC<EventMapViewProps> = ({ events }) => {
             .filter((e): e is NonNullable<typeof e> => e !== null);
     }, [events, locations]);
 
+    const markerCluster = useMemo(() => (
+        <MarkerClusterGroup
+            chunkedLoading
+            maxClusterRadius={50}
+            spiderfyOnMaxZoom
+            showCoverageOnHover={false}
+        >
+            {eventsWithCoords.map(event => (
+                <Marker key={event.id} position={[event.lat, event.lng]}>
+                    <Popup>
+                        <Box sx={{ minWidth: 180 }}>
+                            <Typography variant="subtitle2" fontWeight={700}>
+                                {event.name}
+                            </Typography>
+                            {event.locationName && (
+                                <Typography variant="caption" color="text.secondary" display="block">
+                                    📍 {event.locationName}
+                                </Typography>
+                            )}
+                            {event.daysUntil !== null && event.status !== 'Cancelled' && (
+                                <Chip
+                                    icon={<CalendarTodayIcon sx={{ fontSize: 12 }} />}
+                                    label={
+                                        event.daysUntil === 0 ? t('races.today')
+                                        : event.daysUntil === 1 ? t('races.tomorrow')
+                                        : event.daysUntil === -1 ? t('races.yesterday')
+                                        : event.daysUntil < -1 ? t('races.daysAgo', { count: Math.abs(event.daysUntil) })
+                                        : t('races.daysUntil', { count: event.daysUntil })
+                                    }
+                                    size="small"
+                                    color={getCountdownColor(event.daysUntil)}
+                                    variant="outlined"
+                                    sx={{ mt: 0.5 }}
+                                />
+                            )}
+                            <Button
+                                component={RouterLink}
+                                to={`/events/${event.slug}`}
+                                size="small"
+                                sx={{ mt: 1, display: 'block' }}
+                            >
+                                {t('common.viewDetails', 'View Details')}
+                            </Button>
+                        </Box>
+                    </Popup>
+                </Marker>
+            ))}
+        </MarkerClusterGroup>
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    ), [eventsWithCoords]);
+
     return (
         <Box sx={{ height: 500, borderRadius: 2, overflow: 'hidden', position: 'relative' }}>
             <Paper
@@ -121,46 +175,7 @@ const EventMapView: React.FC<EventMapViewProps> = ({ events }) => {
                     returnZoom={ICELAND_ZOOM}
                     onDrag={() => setFollowMe(false)}
                 />
-                {eventsWithCoords.map(event => (
-                    <Marker key={event.id} position={[event.lat, event.lng]}>
-                        <Popup>
-                            <Box sx={{ minWidth: 180 }}>
-                                <Typography variant="subtitle2" fontWeight={700}>
-                                    {event.name}
-                                </Typography>
-                                {event.locationName && (
-                                    <Typography variant="caption" color="text.secondary" display="block">
-                                        📍 {event.locationName}
-                                    </Typography>
-                                )}
-                                {event.daysUntil !== null && event.status !== 'Cancelled' && (
-                                    <Chip
-                                        icon={<CalendarTodayIcon sx={{ fontSize: 12 }} />}
-                                        label={
-                                            event.daysUntil === 0 ? t('races.today')
-                                            : event.daysUntil === 1 ? t('races.tomorrow')
-                                            : event.daysUntil === -1 ? t('races.yesterday')
-                                            : event.daysUntil < -1 ? t('races.daysAgo', { count: Math.abs(event.daysUntil) })
-                                            : t('races.daysUntil', { count: event.daysUntil })
-                                        }
-                                        size="small"
-                                        color={getCountdownColor(event.daysUntil)}
-                                        variant="outlined"
-                                        sx={{ mt: 0.5 }}
-                                    />
-                                )}
-                                <Button
-                                    component={RouterLink}
-                                    to={`/events/${event.slug}`}
-                                    size="small"
-                                    sx={{ mt: 1, display: 'block' }}
-                                >
-                                    {t('common.viewDetails', 'View Details')}
-                                </Button>
-                            </Box>
-                        </Popup>
-                    </Marker>
-                ))}
+                {markerCluster}
                 {userLocation && (
                     <Marker position={[userLocation.lat, userLocation.lng]} icon={userLocationIcon} />
                 )}
