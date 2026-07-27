@@ -51,6 +51,7 @@ import CelebrationIcon from '@mui/icons-material/Celebration';
 import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
 import GrassIcon from '@mui/icons-material/Grass';
 import LandscapeIcon from '@mui/icons-material/Landscape';
+import NearMeIcon from '@mui/icons-material/NearMe';
 import Layout from '../components/Layout';
 import PartnerLinks from '../components/PartnerLinks';
 import RandomQuote from '../components/RandomQuote';
@@ -66,6 +67,7 @@ import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
 import { getTicketStatusColor, groupDistances } from '../utils/ticketStatus';
 import { formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor } from '../utils/eventUtils';
+import { haversineKm, formatDistanceKm } from '../utils/geo';
 
 const EventTableView = lazy(() => import('../components/EventTableView'));
 const EventMapView = lazy(() => import('../components/EventMapView'));
@@ -118,13 +120,16 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
     const { t } = useTranslation();
     const { events, loading, error, refresh } = useEvents();
     const { isEnabled } = useFeatureFlags();
-    const locationsEnabled = isEnabled('locations_page');
     const navigate = useNavigate();
     const theme = useTheme();
     const [search, setSearch] = useState('');
     const [showFilters, setShowFilters] = useState(false);
     const [filters, setFilters] = useState<EventFilters>(DEFAULT_FILTERS);
     const [shareEventId, setShareEventId] = useState<string | null>(null);
+    const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+    const [locationLoading, setLocationLoading] = useState(false);
+    const [locationDenied, setLocationDenied] = useState(false);
+    const [distanceSortActive, setDistanceSortActive] = useState(false);
     const [pullOffset, setPullOffset] = useState(0);
     const [refreshing, setRefreshing] = useState(false);
     const [showSwipeHint, setShowSwipeHint] = useState(false);
@@ -147,6 +152,39 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         }
         setPullOffset(0);
         touchStartY.current = null;
+    };
+
+    useEffect(() => {
+        if (!navigator.geolocation) return;
+        navigator.geolocation.getCurrentPosition(
+            pos => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+            err => { if (err.code === err.PERMISSION_DENIED) setLocationDenied(true); },
+        );
+    }, []);
+
+    const handleDistanceSort = () => {
+        if (distanceSortActive) {
+            setDistanceSortActive(false);
+            return;
+        }
+        if (userLocation) {
+            setDistanceSortActive(true);
+            return;
+        }
+        if (!navigator.geolocation) return;
+        setLocationLoading(true);
+        navigator.geolocation.getCurrentPosition(
+            pos => {
+                setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+                setLocationDenied(false);
+                setDistanceSortActive(true);
+                setLocationLoading(false);
+            },
+            err => {
+                if (err.code === err.PERMISSION_DENIED) setLocationDenied(true);
+                setLocationLoading(false);
+            },
+        );
     };
 
     // One-time swipe hint: show a brief peek animation on the first upcoming card
@@ -266,13 +304,29 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         return result;
     }, [events, search, filters]);
 
+    const sortedFiltered = useMemo(() => {
+        if (!distanceSortActive || !userLocation) return filtered;
+        const getKm = (e: EventSummary) =>
+            e.gpxPointLat != null && e.gpxPointLng != null
+                ? haversineKm(userLocation.lat, userLocation.lng, e.gpxPointLat, e.gpxPointLng)
+                : null;
+        return [...filtered].sort((a, b) => {
+            const da = getKm(a);
+            const db = getKm(b);
+            if (da == null && db == null) return 0;
+            if (da == null) return 1;
+            if (db == null) return -1;
+            return da - db;
+        });
+    }, [filtered, distanceSortActive, userLocation]);
+
     const { justRaced, upcoming } = useMemo(() => {
         const isRecentlyCompleted = (c: EventSummary) =>
             c.daysUntil != null && c.daysUntil < 0 && c.daysUntil >= -3 && c.status !== 'Cancelled';
-        const jr = filtered.filter(isRecentlyCompleted);
-        const up = filtered.filter(c => !isRecentlyCompleted(c));
+        const jr = sortedFiltered.filter(isRecentlyCompleted);
+        const up = sortedFiltered.filter(c => !isRecentlyCompleted(c));
         return { justRaced: jr, upcoming: up };
-    }, [filtered]);
+    }, [sortedFiltered]);
     type UpcomingRow =
         | { kind: 'event'; comp: EventSummary }
         | { kind: 'series-race'; comp: EventSummary; race: SeriesRaceDto };
@@ -288,16 +342,18 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                 rows.push({ kind: 'event', comp });
             }
         }
-        rows.sort((a, b) => {
-            const dateA = a.kind === 'series-race' ? a.race.dateOfRace : (a.comp.displayDate ?? a.comp.nextEditionDate);
-            const dateB = b.kind === 'series-race' ? b.race.dateOfRace : (b.comp.displayDate ?? b.comp.nextEditionDate);
-            if (!dateA && !dateB) return 0;
-            if (!dateA) return 1;
-            if (!dateB) return -1;
-            return dateA < dateB ? -1 : dateA > dateB ? 1 : 0;
-        });
+        if (!distanceSortActive) {
+            rows.sort((a, b) => {
+                const dateA = a.kind === 'series-race' ? a.race.dateOfRace : (a.comp.displayDate ?? a.comp.nextEditionDate);
+                const dateB = b.kind === 'series-race' ? b.race.dateOfRace : (b.comp.displayDate ?? b.comp.nextEditionDate);
+                if (!dateA && !dateB) return 0;
+                if (!dateA) return 1;
+                if (!dateB) return -1;
+                return dateA < dateB ? -1 : dateA > dateB ? 1 : 0;
+            });
+        }
         return rows;
-    }, [upcoming]);
+    }, [upcoming, distanceSortActive]);
 
     if (loading) {
         return (
@@ -633,9 +689,37 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
 
                 {/* View toggle + result count */}
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                    <Typography variant="body2" color="text.secondary">
-                        {t('races.editionCount', { count: filtered.length })}
-                    </Typography>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                        <Typography variant="body2" color="text.secondary">
+                            {t('races.editionCount', { count: filtered.length })}
+                        </Typography>
+                        {navigator.geolocation && (
+                            <Tooltip title={
+                                locationDenied
+                                    ? t('races.nearMe.denied')
+                                    : distanceSortActive
+                                        ? t('races.nearMe.disable')
+                                        : t('races.nearMe.enable')
+                            }>
+                                <span>
+                                    <Button
+                                        size="small"
+                                        variant={distanceSortActive ? 'contained' : 'outlined'}
+                                        color={locationDenied ? 'error' : distanceSortActive ? 'primary' : 'inherit'}
+                                        onClick={handleDistanceSort}
+                                        startIcon={locationLoading ? <CircularProgress size={14} color="inherit" /> : <NearMeIcon fontSize="small" />}
+                                        disabled={locationLoading || locationDenied}
+                                        sx={{
+                                            textTransform: 'none', borderRadius: 4, px: 1.5, py: 0.5, fontSize: '0.8rem', minWidth: 0,
+                                            display: (viewMode === 'map' || viewMode === 'table') ? 'none' : 'inline-flex',
+                                        }}
+                                    >
+                                        {t('races.nearMe.label')}
+                                    </Button>
+                                </span>
+                            </Tooltip>
+                        )}
+                    </Stack>
                     <ToggleButtonGroup
                         value={viewMode}
                         exclusive
@@ -707,6 +791,11 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                     <Typography variant="body2" color="text.secondary">
                                                                         {formatNextDate((comp.displayDate ?? comp.nextEditionDate)!, t)}
                                                                     </Typography>
+                                                                )}
+                                                                {userLocation && comp.gpxPointLat != null && comp.gpxPointLng != null && (
+                                                                    <Tooltip title={t('races.nearMe.distanceToStart')}>
+                                                                        <Chip icon={<NearMeIcon />} label={formatDistanceKm(haversineKm(userLocation.lat, userLocation.lng, comp.gpxPointLat, comp.gpxPointLng))} size="small" variant="outlined" color="primary" sx={{ mt: 0.5 }} />
+                                                                    </Tooltip>
                                                                 )}
                                                                 {comp.distances && comp.distances.length > 0 && (
                                                                     <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.5 }}>
@@ -806,6 +895,15 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                 <Stack direction="row" spacing={1} sx={{ mt: 0.5, flexWrap: 'wrap' }}>
                                                                     <Chip label={t(`races.eventTypes.Series`, 'Series')} size="small" color={getEventTypeColor('Series')} variant="outlined" />
                                                                     <Typography variant="body2" color="text.secondary" sx={{ alignSelf: 'center' }}>{comp.name}</Typography>
+                                                                    {comp.locationName && (
+                                                                        <Chip icon={<LocationOnIcon />} label={comp.locationName} size="small" variant="outlined" />
+                                                                    )}
+                                                                    <Chip label={t('races.editionCount', { count: comp.editionCount })} size="small" variant="outlined" color="primary" />
+                                                                    {userLocation && comp.gpxPointLat != null && comp.gpxPointLng != null && (
+                                                                        <Tooltip title={t('races.nearMe.distanceToStart')}>
+                                                                            <Chip icon={<NearMeIcon />} label={formatDistanceKm(haversineKm(userLocation.lat, userLocation.lng, comp.gpxPointLat, comp.gpxPointLng))} size="small" variant="outlined" color="primary" />
+                                                                        </Tooltip>
+                                                                    )}
                                                                 </Stack>
                                                                 {race.dateOfRace && (
                                                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1.5, flexWrap: 'wrap' }}>
@@ -953,13 +1051,24 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                             color={getEventTypeColor(comp.type)}
                                                             variant="outlined"
                                                         />
-                                                        {locationsEnabled && comp.locationName && (
+                                                        {comp.locationName && (
                                                             <Chip
                                                                 icon={<LocationOnIcon />}
                                                                 label={comp.locationName}
                                                                 size="small"
                                                                 variant="outlined"
                                                             />
+                                                        )}
+                                                        {userLocation && comp.gpxPointLat != null && comp.gpxPointLng != null && (
+                                                            <Tooltip title={t('races.nearMe.distanceToStart')}>
+                                                                <Chip
+                                                                    icon={<NearMeIcon />}
+                                                                    label={formatDistanceKm(haversineKm(userLocation.lat, userLocation.lng, comp.gpxPointLat, comp.gpxPointLng))}
+                                                                    size="small"
+                                                                    variant="outlined"
+                                                                    color="primary"
+                                                                />
+                                                            </Tooltip>
                                                         )}
                                                         {comp.organizerName && (
                                                             <Chip
@@ -1130,7 +1239,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                     )
                 ) : viewMode === 'table' ? (
                     <Suspense fallback={<Box display="flex" justifyContent="center" py={4}><CircularProgress /></Box>}>
-                        <EventTableView events={filtered} />
+                        <EventTableView events={sortedFiltered} userLocation={userLocation} />
                     </Suspense>
                 ) : (
                     <Suspense fallback={<Box display="flex" justifyContent="center" py={4}><CircularProgress /></Box>}>

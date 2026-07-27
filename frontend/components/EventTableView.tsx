@@ -25,6 +25,8 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import type { EventSummary, EventDetail, RaceDto, SeriesRaceDto } from '../hooks/useEvents';
 import { API_URL } from '../hooks/useTrails';
+import { haversineKm, formatDistanceKm } from '../utils/geo';
+import NearMeIcon from '@mui/icons-material/NearMe';
 import EventDateBadge from './EventDateBadge';
 import { getCountdownColor, getEventTypeColor } from '../utils/eventUtils';
 
@@ -45,9 +47,10 @@ function getActivityIcon(type: string) {
 
 interface EventTableViewProps {
     events: EventSummary[];
+    userLocation: { lat: number; lng: number } | null;
 }
 
-type SortField = 'name' | 'daysUntil' | 'nextEditionDate' | 'locationName' | 'activityType' | 'type';
+type SortField = 'name' | 'daysUntil' | 'nextEditionDate' | 'locationName' | 'activityType' | 'type' | 'distance';
 type SortDir = 'asc' | 'desc';
 
 type TableRow =
@@ -64,7 +67,7 @@ function getRegistrationStatusColor(status: string): 'success' | 'error' | 'defa
     }
 }
 
-const EventTableView: React.FC<EventTableViewProps> = ({ events }) => {
+const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation }) => {
     const { t, i18n } = useTranslation();
     const navigate = useNavigate();
     const [sortField, setSortField] = useState<SortField>('daysUntil');
@@ -102,6 +105,11 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events }) => {
         }
     };
 
+    const getDistanceKm = (e: EventSummary): number | null =>
+        userLocation && e.gpxPointLat != null && e.gpxPointLng != null
+            ? haversineKm(userLocation.lat, userLocation.lng, e.gpxPointLat, e.gpxPointLng)
+            : null;
+
     const sortedRows = useMemo((): TableRow[] => {
         const dir = sortDir === 'asc' ? 1 : -1;
         const sorted = [...events].sort((a, b) => {
@@ -127,6 +135,14 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events }) => {
                     return dir * (a.locationName ?? '').localeCompare(b.locationName ?? '', 'is');
                 case 'activityType':
                     return dir * a.activityType.localeCompare(b.activityType);
+                case 'distance': {
+                    const da = getDistanceKm(a);
+                    const db = getDistanceKm(b);
+                    if (da == null && db == null) return 0;
+                    if (da == null) return 1;
+                    if (db == null) return -1;
+                    return dir * (da - db);
+                }
                 default:
                     return 0;
             }
@@ -154,13 +170,14 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events }) => {
             });
         }
         return rows;
-    }, [events, sortField, sortDir]);
+    }, [events, sortField, sortDir, userLocation]);
 
     const columns: { field: SortField; label: string; align?: 'left' | 'right' | 'center' }[] = [
         { field: 'daysUntil', label: t('races.table.date', 'Date'), align: 'center' },
         { field: 'name', label: t('races.table.name', 'Name') },
         { field: 'type', label: t('races.table.type', 'Type'), align: 'center' },
         { field: 'locationName', label: t('trail.location', 'Location') },
+        { field: 'distance', label: t('trail.kmAway', 'km away'), align: 'right' },
     ];
 
     // +1 expand, +3 non-sortable (Distances, Certifications, Links)
@@ -265,6 +282,23 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events }) => {
                                             <Typography variant="body2" color="text.secondary">—</Typography>
                                         )}
                                     </TableCell>
+                                    {(() => {
+                                        const km = getDistanceKm(event);
+                                        return (
+                                            <TableCell align="right">
+                                                {km != null ? (
+                                                    <Stack direction="row" alignItems="center" justifyContent="flex-end" spacing={0.5}>
+                                                        <NearMeIcon sx={{ fontSize: 13, color: 'primary.main' }} />
+                                                        <Typography variant="body2" noWrap>{formatDistanceKm(km)}</Typography>
+                                                    </Stack>
+                                                ) : (
+                                                    <Tooltip title={userLocation ? t('races.nearMe.noGps') : t('races.nearMe.enableLocation')}>
+                                                        <Typography variant="body2" color="text.secondary" sx={{ cursor: 'help' }}>—</Typography>
+                                                    </Tooltip>
+                                                )}
+                                            </TableCell>
+                                        );
+                                    })()}
                                     <TableCell>
                                         {race.distanceLabel ? (
                                             <Chip label={race.distanceLabel} size="small" variant="outlined" color={getTicketStatusColor(race.ticketStatus)} />
@@ -393,6 +427,25 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events }) => {
                                             <Typography variant="body2" color="text.secondary">—</Typography>
                                         )}
                                     </TableCell>
+
+                                    {/* Distance to user */}
+                                    {(() => {
+                                        const km = getDistanceKm(event);
+                                        return (
+                                            <TableCell align="right">
+                                                {km != null ? (
+                                                    <Stack direction="row" alignItems="center" justifyContent="flex-end" spacing={0.5}>
+                                                        <NearMeIcon sx={{ fontSize: 13, color: 'primary.main' }} />
+                                                        <Typography variant="body2" noWrap>{formatDistanceKm(km)}</Typography>
+                                                    </Stack>
+                                                ) : (
+                                                    <Tooltip title={userLocation ? t('races.nearMe.noGps') : t('races.nearMe.enableLocation')}>
+                                                        <Typography variant="body2" color="text.secondary" sx={{ cursor: 'help' }}>—</Typography>
+                                                    </Tooltip>
+                                                )}
+                                            </TableCell>
+                                        );
+                                    })()}
 
                                     {/* Distances */}
                                     <TableCell>

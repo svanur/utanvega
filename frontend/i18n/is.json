@@ -1237,6 +1237,15 @@
             "cutoff": "Tímamörk",
             "certifications": "Vottun"
         },
+        "nearMe": {
+            "label": "Nærri mér",
+            "enable": "Raða eftir fjarlægð",
+            "disable": "Slökkva á röðun eftir fjarlægð",
+            "denied": "Aðgangur að staðsetningu synjað — virkjaðu hann í stillingum vafrans",
+            "noGps": "Engar GPS-upplýsingar skráðar fyrir þetta viðburð",
+            "enableLocation": "Leyfðu aðgang að staðsetningu til að sjá fjarlægð",
+            "distanceToStart": "Fjarlægð að upphafsstað"
+        },
         "registrationStatus": {
             "Open": "Opin",
             "Closed": "Lokuð",
