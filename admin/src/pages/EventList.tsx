@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -837,6 +837,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
   const [editEditionId, setEditEditionId] = useState<string | null>(null);
   const [editRaceId, setEditRaceId] = useState<string | null>(null);
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
+  const deepLinkScrollTarget = useRef<string | null>(null);
   const [expandedDetail, setExpandedDetail] = useState<EventDetailDto | null>(null);
   const [expandedEditionIds, setExpandedEditionIds] = useState<string[]>([]);
   const [loadingDetail, setLoadingDetail] = useState(false);
@@ -902,13 +903,20 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
     if (!initialEventId || loading || events.length === 0) return;
     const target = events.find(e => e.id === initialEventId);
     if (!target) return;
+    deepLinkScrollTarget.current = target.id;
     loadExpandedEvent(target.id, target.slug);
     onEventIdConsumed?.();
-    setTimeout(() => {
-      document.getElementById(`event-row-${target.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 200);
   // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount after events load
   }, [initialEventId, loading]);
+
+  // Scroll to the deep-linked row after it has actually rendered (expandedEventId is set)
+  useEffect(() => {
+    if (!expandedEventId || expandedEventId !== deepLinkScrollTarget.current) return;
+    deepLinkScrollTarget.current = null;
+    requestAnimationFrame(() => {
+      document.getElementById(`event-row-${expandedEventId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, [expandedEventId]);
 
   const filteredEvents = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();

@@ -21,11 +21,11 @@ export const GO_TO_PAGES: Record<string, PageKey> = {
     h: 'health',
     v: 'event-health', // e[v]ent health
     m: 'map',
-    g: 'tags',          // ta[g]s
+    s: 'tags',          // tag[s]
     a: 'analytics',
     f: 'features',
     r: 'hero-themes',   // he[r]o themes
-    s: 'sponsors',
+    o: 'sponsors',      // spons[o]rs
     p: 'pools',
 };
 

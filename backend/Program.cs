@@ -1566,7 +1566,7 @@ app.MapPost("/api/v1/admin/events/detect-gpx", [Authorize] async (UtanvegaDbCont
         updated++;
     }
 
-    await context.SaveChangesWithAuditAsync("system");
+    if (updated > 0) await context.SaveChangesWithAuditAsync("system");
     return Results.Ok(new { total, updated, skipped });
 })
 .WithName("DetectEventGpx")

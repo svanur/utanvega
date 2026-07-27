@@ -4,8 +4,9 @@ import {
   TableHead, TableRow, TableSortLabel, Chip, LinearProgress, Card,
   CardContent, Stack, Tooltip, IconButton, TextField, InputAdornment,
   Button, CircularProgress, Dialog, DialogTitle, DialogContent,
-  DialogContentText, DialogActions,
+  DialogContentText, DialogActions, useTheme,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import EditIcon from '@mui/icons-material/Edit';
@@ -82,22 +83,16 @@ function getHealthChecks(event: EventSummaryDto): HealthCheck[] {
   ];
 }
 
-function getHealthScore(event: EventSummaryDto): number {
-  const checks = getHealthChecks(event).filter(c => !c.na);
-  if (checks.length === 0) return 100;
-  return Math.round((checks.filter(c => c.passed).length / checks.length) * 100);
+function scoreFromChecks(checks: HealthCheck[]): number {
+  const applicable = checks.filter(c => !c.na);
+  if (applicable.length === 0) return 100;
+  return Math.round((applicable.filter(c => c.passed).length / applicable.length) * 100);
 }
 
 function scoreColor(score: number): 'success' | 'warning' | 'error' {
   if (score >= 100) return 'success';
   if (score >= 50) return 'warning';
   return 'error';
-}
-
-function scoreBgColor(score: number): string {
-  if (score >= 100) return '#e8f5e9';
-  if (score >= 50) return '#fff8e1';
-  return '#fce4ec';
 }
 
 type SortField = 'name' | 'score' | 'status' | 'type';
@@ -109,6 +104,7 @@ interface EventHealthProps {
 }
 
 export default function EventHealth({ onEditEvent, onNotify }: EventHealthProps) {
+  const theme = useTheme();
   const [events, setEvents] = useState<EventSummaryDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortField, setSortField] = useState<SortField>('score');
@@ -152,9 +148,18 @@ export default function EventHealth({ onEditEvent, onNotify }: EventHealthProps)
   };
 
   const scored = useMemo(
-    () => events.map(e => ({ event: e, score: getHealthScore(e), checks: getHealthChecks(e) })),
+    () => events.map(e => {
+      const checks = getHealthChecks(e);
+      return { event: e, score: scoreFromChecks(checks), checks };
+    }),
     [events],
   );
+
+  const scoreBgColor = (score: number) => {
+    if (score >= 100) return alpha(theme.palette.success.main, 0.1);
+    if (score >= 50) return alpha(theme.palette.warning.main, 0.1);
+    return alpha(theme.palette.error.main, 0.1);
+  };
 
   const filtered = useMemo(() => {
     let result = scored;
