@@ -1528,6 +1528,50 @@ app.MapDelete("/api/v1/admin/races/{id:guid}", [Authorize] async (Guid id, IMedi
 .WithName("DeleteRace")
 .RequireAuthorization();
 
+app.MapPost("/api/v1/admin/events/detect-gpx", [Authorize] async (UtanvegaDbContext context) =>
+{
+    var events = await context.Events
+        .Where(e => e.GpxPointLat == null)
+        .Include(e => e.Editions)
+            .ThenInclude(ed => ed.Races)
+                .ThenInclude(r => r.Trail)
+        .Include(e => e.Editions)
+            .ThenInclude(ed => ed.Trail)
+        .ToListAsync();
+
+    var total = events.Count;
+    var updated = 0;
+    var skipped = 0;
+
+    foreach (var ev in events)
+    {
+        // Collect candidate trails: edition-level trail first, then race-level trails
+        var candidateTrails = ev.Editions
+            .SelectMany(ed =>
+            {
+                var trails = new List<Trail?>();
+                if (ed.Trail?.GpxData != null) trails.Add(ed.Trail);
+                trails.AddRange(ed.Races.Select(r => r.Trail).Where(t => t?.GpxData != null));
+                return trails;
+            })
+            .Where(t => t?.GpxData != null && t.GpxData.NumPoints > 0)
+            .ToList();
+
+        if (candidateTrails.Count == 0) { skipped++; continue; }
+
+        var trail = candidateTrails.First();
+        var start = trail!.GpxData!.Coordinates[0];
+        ev.GpxPointLat = start.Y;
+        ev.GpxPointLng = start.X;
+        updated++;
+    }
+
+    await context.SaveChangesWithAuditAsync("system");
+    return Results.Ok(new { total, updated, skipped });
+})
+.WithName("DetectEventGpx")
+.RequireAuthorization();
+
 // User Trail Activities Endpoints
 app.MapPost("/api/v1/user/activities", [Authorize] async (IMediator mediator, HttpContext context, CreateUserTrailActivityDto dto) =>
 {
