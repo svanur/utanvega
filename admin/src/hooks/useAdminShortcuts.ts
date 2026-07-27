@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import type { PageKey } from '../types/PageKey';
 
 interface UseAdminShortcutsOptions {
@@ -9,8 +9,25 @@ interface UseAdminShortcutsOptions {
     onToggleTools: () => void;
     onShowHelp: () => void;
     onFocusSearch: () => void;
+    onPendingNavigation?: (pending: boolean) => void;
     currentPage: PageKey;
 }
+
+// g+letter → page mapping (mnemonic letters match the underlined char in the sidebar label)
+export const GO_TO_PAGES: Record<string, PageKey> = {
+    e: 'events',
+    t: 'trails',
+    l: 'locations',
+    h: 'health',
+    v: 'event-health', // e[v]ent health
+    m: 'map',
+    s: 'tags',          // tag[s]
+    a: 'analytics',
+    f: 'features',
+    r: 'hero-themes',   // he[r]o themes
+    o: 'sponsors',      // spons[o]rs
+    p: 'pools',
+};
 
 function isInputFocused(): boolean {
     const el = document.activeElement;
@@ -27,76 +44,71 @@ export function useAdminShortcuts({
     onToggleTools,
     onShowHelp,
     onFocusSearch,
+    onPendingNavigation,
     currentPage,
 }: UseAdminShortcutsOptions) {
+    const pendingG = useRef(false);
+    const pendingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const onPendingNavigationRef = useRef(onPendingNavigation);
+    onPendingNavigationRef.current = onPendingNavigation;
+
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            // Ctrl+? (Ctrl+Shift+/) — show help
+            // Ctrl+? — show help (works even in inputs)
             if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === '?' || e.key === '/')) {
                 e.preventDefault();
                 onShowHelp();
                 return;
             }
 
-            // Don't intercept when typing in inputs (except for Ctrl combos above)
             if (isInputFocused()) return;
 
-            // Alt+number — navigate
-            if (e.altKey && !e.ctrlKey && !e.metaKey) {
-                const pages: Record<string, PageKey> = {
-                    '1': 'trails',
-                    '2': 'locations',
-                    '3': 'health',
-                    '4': 'map',
-                    '5': 'tags',
-                    '6': 'analytics',
-                    '7': 'events',
-                    '8': 'features',
-                };
-                if (pages[e.key]) {
-                    e.preventDefault();
-                    onNavigate(pages[e.key]);
+            // g+letter navigation
+            if (!e.altKey && !e.ctrlKey && !e.metaKey) {
+                if (pendingG.current) {
+                    pendingG.current = false;
+                    if (pendingTimeout.current) clearTimeout(pendingTimeout.current);
+                    onPendingNavigationRef.current?.(false);
+                    const page = GO_TO_PAGES[e.key.toLowerCase()];
+                    if (page) {
+                        e.preventDefault();
+                        onNavigate(page);
+                    }
                     return;
                 }
 
-                // Alt+N — new trail
-                if (e.key === 'n' || e.key === 'N') {
+                if (e.key === 'g') {
                     e.preventDefault();
-                    onNewTrail();
+                    pendingG.current = true;
+                    onPendingNavigationRef.current?.(true);
+                    pendingTimeout.current = setTimeout(() => {
+                        pendingG.current = false;
+                        onPendingNavigationRef.current?.(false);
+                    }, 1500);
                     return;
                 }
 
-                // Alt+R — refresh
-                if (e.key === 'r' || e.key === 'R') {
+                // "/" — focus search
+                if (e.key === '/') {
                     e.preventDefault();
-                    onRefresh();
-                    return;
-                }
-
-                // Alt+T — toggle tools
-                if ((e.key === 't' || e.key === 'T') && currentPage === 'trails') {
-                    e.preventDefault();
-                    onToggleTools();
-                    return;
-                }
-
-                // Alt+S — toggle sidebar
-                if (e.key === 's' || e.key === 'S') {
-                    e.preventDefault();
-                    onToggleSidebar();
+                    onFocusSearch();
                     return;
                 }
             }
 
-            // "/" — focus search (when not in input)
-            if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey) {
-                e.preventDefault();
-                onFocusSearch();
-                return;
+            // Alt+letter actions
+            if (e.altKey && !e.ctrlKey && !e.metaKey) {
+                if (e.key === 'n' || e.key === 'N') { e.preventDefault(); onNewTrail(); return; }
+                if (e.key === 'r' || e.key === 'R') { e.preventDefault(); onRefresh(); return; }
+                if ((e.key === 't' || e.key === 'T') && currentPage === 'trails') { e.preventDefault(); onToggleTools(); return; }
+                if (e.key === 's' || e.key === 'S') { e.preventDefault(); onToggleSidebar(); return; }
             }
         };
 
         window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            if (pendingTimeout.current) clearTimeout(pendingTimeout.current);
+        };
     }, [onNavigate, onToggleSidebar, onNewTrail, onRefresh, onToggleTools, onShowHelp, onFocusSearch, currentPage]);
 }

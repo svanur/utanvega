@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -93,6 +93,8 @@ L.Icon.Default.mergeOptions({
 
 interface EventListProps {
   onNotify: (message: ReactNode, severity?: 'success' | 'error') => void;
+  initialEventId?: string | null;
+  onEventIdConsumed?: () => void;
 }
 
 interface EventFormState {
@@ -806,7 +808,7 @@ function TrailStartPicker({ trailsWithCoords, onPick }: TrailPickerProps) {
 
 // ── Main component ───────────────────────────────────────────────────────────
 
-export default function EventList({ onNotify }: EventListProps) {
+export default function EventList({ onNotify, initialEventId, onEventIdConsumed }: EventListProps) {
   const {
     events,
     loading,
@@ -835,6 +837,7 @@ export default function EventList({ onNotify }: EventListProps) {
   const [editEditionId, setEditEditionId] = useState<string | null>(null);
   const [editRaceId, setEditRaceId] = useState<string | null>(null);
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
+  const deepLinkScrollTarget = useRef<string | null>(null);
   const [expandedDetail, setExpandedDetail] = useState<EventDetailDto | null>(null);
   const [expandedEditionIds, setExpandedEditionIds] = useState<string[]>([]);
   const [loadingDetail, setLoadingDetail] = useState(false);
@@ -894,6 +897,26 @@ export default function EventList({ onNotify }: EventListProps) {
     setActivityFilter('all'); setTypeFilter('all'); setStatusFilter('all'); setLocationFilter('all');
     setYearFilter('all'); setMonthFilter('all');
   };
+
+  // Deep-link: expand and scroll to the target event once events are loaded
+  useEffect(() => {
+    if (!initialEventId || loading || events.length === 0) return;
+    const target = events.find(e => e.id === initialEventId);
+    if (!target) return;
+    deepLinkScrollTarget.current = target.id;
+    loadExpandedEvent(target.id, target.slug);
+    onEventIdConsumed?.();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount after events load
+  }, [initialEventId, loading]);
+
+  // Scroll to the deep-linked row after it has actually rendered (expandedEventId is set)
+  useEffect(() => {
+    if (!expandedEventId || expandedEventId !== deepLinkScrollTarget.current) return;
+    deepLinkScrollTarget.current = null;
+    requestAnimationFrame(() => {
+      document.getElementById(`event-row-${expandedEventId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, [expandedEventId]);
 
   const filteredEvents = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -1792,7 +1815,7 @@ export default function EventList({ onNotify }: EventListProps) {
           <TableBody>
             {filteredEvents.map(event => (
               <Fragment key={event.id}>
-                <TableRow hover sx={{ cursor: 'pointer' }} onClick={() => toggleExpand(event)}>
+                <TableRow id={`event-row-${event.id}`} hover sx={{ cursor: 'pointer' }} onClick={() => toggleExpand(event)}>
                   <TableCell sx={expandedEventId === event.id ? { borderTop: '2px solid', borderLeft: '2px solid', borderColor: 'primary.main' } : {}}>
                     <IconButton size="small">
                       {expandedEventId === event.id ? <ExpandLessIcon /> : <ExpandMoreIcon />}
