@@ -60,6 +60,7 @@ export interface EventSummary {
     seriesRaces: SeriesRaceDto[] | null;
     gpxPointLat: number | null;
     gpxPointLng: number | null;
+    isMountainRace: boolean;
 }
 
 export interface RaceDto {
@@ -84,6 +85,9 @@ export interface RaceDto {
     startTime: string | null;
     trailDistanceMeters: number | null;
     trailElevationGain: number | null;
+    trailTerrainType: string | null;
+    trailDifficulty: string | null;
+    trailActivityType: string | null;
 }
 
 export interface EventEditionDto {

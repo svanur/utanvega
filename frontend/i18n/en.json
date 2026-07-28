@@ -203,7 +203,13 @@
         "checkInToastJoined_one": "{{count}} runner just checked in.",
         "checkInToastJoined_other": "{{count}} runners just checked in.",
         "checkInToastLeft_one": "{{count}} runner checked out.",
-        "checkInToastLeft_other": "{{count}} runners checked out."
+        "checkInToastLeft_other": "{{count}} runners checked out.",
+        "terrainType": {
+            "Mountainous": "Mountainous",
+            "Hilly": "Hilly",
+            "Flat": "Flat",
+            "label": "Terrain Type"
+        }
     },
     "trailCard": {
         "removeFavorite": "Remove Favorite",
@@ -247,7 +253,13 @@
         "showOfflineOnly": "Show Offline Only",
         "tags": "Tags",
         "resetFilters": "Reset Filters",
-        "closeFilters": "Close"
+        "closeFilters": "Close",
+        "terrainType": {
+            "Mountainous": "Mountainous / Mountain Race",
+            "Hilly": "Hilly / Fell",
+            "Flat": "Flat / Rolling hills",
+            "label": "Terrain Type"
+        }
     },
     "difficulty": {
         "easy": "Easy",
@@ -258,9 +270,9 @@
         "dialogTitle": "Difficulty Rating Criteria",
         "explanation": "Difficulty is calculated using **effort distance**: the trail distance plus elevation gain divided by 100. For road running, only distance is used. Thresholds vary by activity type.",
         "level": "Level",
-        "trailRunning": "Trail Running",
-        "running": "Running",
-        "hiking": "Hiking",
+        "trailRunning": "Trail Run",
+        "running": "Road Run",
+        "hiking": "Hike",
         "cycling": "Cycling",
         "funRun": "Fun Run",
         "obstacleCourse": "Obstacle Course",
@@ -1088,6 +1100,7 @@
         "backToRaces": "Back to events",
         "wereYouLookingFor": "Were you looking for one of these?",
         "viewTrail": "View trail",
+        "mountainRace": "Mountain race",
         "cutoffHours_one": "{{count}} hour cutoff",
         "cutoffHours_other": "{{count}} hours cutoff",
         "cutoffHours": "{{count}}h cutoff",
@@ -1196,9 +1209,9 @@
             "activeCount_other": "{{count}} filters active"
         },
         "activityTypes": {
-            "TrailRunning": "Trail Running",
-            "Running": "Running",
-            "Hiking": "Hiking",
+            "TrailRunning": "Trail Run",
+            "Running": "Road Run",
+            "Hiking": "Hike",
             "Cycling": "Cycling",
             "FunRun": "Fun Run",
             "ObstacleCourse": "Obstacle Course",

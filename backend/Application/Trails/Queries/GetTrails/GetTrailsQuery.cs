@@ -49,7 +49,8 @@ public record TrailDto(
     List<LinkedRaceDto>? LinkedRaces = null,
     string? YoutubeUrl = null,
     double[]? ElevationProfile = null,
-    DateTime? UpdatedAt = null
+    DateTime? UpdatedAt = null,
+    string? TerrainType = null
 );
 
 public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailDto>>
@@ -120,7 +121,8 @@ public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailD
             viewCounts.GetValueOrDefault(t.Id, 0),
             YoutubeUrl: t.YoutubeUrl,
             ElevationProfile: null,
-            UpdatedAt: t.UpdatedAt
+            UpdatedAt: t.UpdatedAt,
+            TerrainType: t.TerrainType?.ToString()
         )).ToList();
 
         return result;

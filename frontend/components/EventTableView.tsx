@@ -633,6 +633,36 @@ function RaceChipCard({ race, editionDate }: { race: RaceDto; editionDate?: stri
                         {formattedDate}
                     </Typography>
                 )}
+                {(race.trailDifficulty || race.trailTerrainType || race.trailActivityType) && (
+                    <Stack direction="row" flexWrap="wrap" gap={0.5} alignItems="center">
+                        {race.trailDifficulty && (
+                            <Chip
+                                label={t(`difficulty.${race.trailDifficulty.toLowerCase()}`, race.trailDifficulty)}
+                                size="small"
+                                variant="outlined"
+                                sx={{ height: 20, fontSize: '0.65rem' }}
+                            />
+                        )}
+                        {race.trailTerrainType && (
+                            <Chip
+                                label={t(`trail.terrainType.${race.trailTerrainType}`, { defaultValue: race.trailTerrainType })}
+                                size="small"
+                                variant="outlined"
+                                sx={{ height: 20, fontSize: '0.65rem' }}
+                            />
+                        )}
+                        {race.trailActivityType && (
+                            <Chip
+                                icon={getActivityIcon(race.trailActivityType)}
+                                label={t(`difficulty.${race.trailActivityType.charAt(0).toLowerCase() + race.trailActivityType.slice(1)}`, race.trailActivityType)}
+                                size="small"
+                                variant="outlined"
+                                color="primary"
+                                sx={{ height: 20, fontSize: '0.65rem' }}
+                            />
+                        )}
+                    </Stack>
+                )}
                 <Stack direction="row" flexWrap="wrap" gap={0.5} alignItems="center">
                     {race.distanceLabel && (
                         <Chip

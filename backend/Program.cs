@@ -695,6 +695,8 @@ app.MapGet("/api/v1/admin/trails/{idOrSlug}", [Authorize] async (string idOrSlug
         trail.ElevationGain,
         trail.ElevationLoss,
         trail.YoutubeUrl,
+        TerrainType = trail.TerrainType?.ToString(),
+        MaxAltitude = trail.ElevationProfile != null && trail.ElevationProfile.Length > 0 ? trail.ElevationProfile.Max() : (double?)null,
         Locations = trail.TrailLocations
             .OrderBy(tl => tl.Order)
             .Select(tl => new { tl.LocationId, Role = tl.Role.ToString(), tl.Order })
@@ -1267,6 +1269,54 @@ app.MapPost("/api/v1/admin/trails/detect-locations", [Authorize] async (Utanvega
     return Results.Ok(new { total = trails.Count, updated });
 })
 .WithName("DetectTrailLocations");
+
+app.MapPost("/api/v1/admin/trails/detect-terrain-types", [Authorize] async (UtanvegaDbContext context, ICacheInvalidator cacheInvalidator) =>
+{
+    var trails = await context.Trails
+        .Where(t => t.TerrainType == null && t.GpxData != null)
+        .ToListAsync();
+
+    var updated = 0;
+    var skipped = 0;
+
+    foreach (var trail in trails)
+    {
+        if (trail.Length <= 1000 || trail.ElevationProfile == null || trail.ElevationProfile.Length == 0)
+        {
+            skipped++;
+            continue;
+        }
+
+        var climbRatio = trail.ElevationGain / (trail.Length / 1000.0);
+        var maxAltitude = trail.ElevationProfile.Max();
+
+        // Mountain Index — high-latitude (Iceland) thresholds
+        Utanvega.Backend.Core.Entities.TerrainType terrainType;
+        if (climbRatio < 20)
+            terrainType = Utanvega.Backend.Core.Entities.TerrainType.Flat;
+        else if (maxAltitude > 600 && climbRatio >= 30)
+            terrainType = Utanvega.Backend.Core.Entities.TerrainType.Mountainous;
+        else if (maxAltitude < 400)
+            terrainType = Utanvega.Backend.Core.Entities.TerrainType.Hilly;
+        else
+            terrainType = climbRatio >= 50
+                ? Utanvega.Backend.Core.Entities.TerrainType.Mountainous
+                : Utanvega.Backend.Core.Entities.TerrainType.Hilly;
+
+        trail.TerrainType = terrainType;
+        updated++;
+    }
+
+    if (updated > 0)
+    {
+        await context.SaveChangesWithAuditAsync("system");
+        cacheInvalidator.InvalidateTrail();
+        cacheInvalidator.InvalidateEvent();
+    }
+
+    return Results.Ok(new { total = trails.Count, updated, skipped });
+})
+.WithName("DetectTerrainTypes");
 
 // --- Feature Flags ---
 app.MapGet("/api/v1/features", async (UtanvegaDbContext context, IMemoryCache cache) =>

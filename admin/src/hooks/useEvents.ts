@@ -103,6 +103,8 @@ export interface EventSummaryDto {
     seriesRaces: SeriesRaceDto[] | null;
     gpxPointLat: number | null;
     gpxPointLng: number | null;
+    isMountainRace: boolean;
+    terrainType: string | null;
 }
 
 export interface EventDetailDto extends EventSummaryDto {

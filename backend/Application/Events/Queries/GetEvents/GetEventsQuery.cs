@@ -155,6 +155,19 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                     .ToList();
             }
 
+            var isMountainRace = e.Editions
+                .SelectMany(ed => ed.Races)
+                .Any(r => r.Trail?.TerrainType == Core.Entities.TerrainType.Mountainous);
+
+            var terrainType = e.Editions
+                .SelectMany(ed => ed.Races)
+                .Select(r => r.Trail?.TerrainType)
+                .Where(t => t != null)
+                .GroupBy(t => t)
+                .OrderByDescending(g => g.Count())
+                .Select(g => g.Key!.Value.ToString())
+                .FirstOrDefault();
+
             return new EventSummaryDto(
                 e.Id,
                 e.Name,
@@ -187,7 +200,9 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 itraPoints?.Count > 0 ? itraPoints : null,
                 seriesRaces?.Count > 0 ? seriesRaces : null,
                 e.GpxPointLat,
-                e.GpxPointLng
+                e.GpxPointLng,
+                IsMountainRace: isMountainRace,
+                TerrainType: terrainType
             );
         }).ToList();
     }

@@ -138,6 +138,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
         filters.trailTypes.length +
         (filters.locationSlugs.length > 0 ? 1 : 0) +
         filters.selectedActivityTypes.length +
+        filters.terrainTypes.length +
         (filters.favoritesOnly ? 1 : 0) +
         (filters.offlineOnly ? 1 : 0),
     [filters]);
@@ -886,7 +887,35 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                             </Box>
                         </Grid>
 
-                        {/* 8. Tags */}
+                        {/* 8. Terrain Type chips */}
+                        <Grid item xs={12}>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>
+                                {t('filters.terrainType.label', 'Terrain Type')}
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+                                {(['Mountainous', 'Hilly', 'Flat'] as const).map(tt => {
+                                    const selected = filters.terrainTypes.includes(tt);
+                                    return (
+                                        <Chip
+                                            key={tt}
+                                            label={t(`filters.terrainType.${tt}`, tt)}
+                                            size="small"
+                                            variant={selected ? 'filled' : 'outlined'}
+                                            color={selected ? 'primary' : 'default'}
+                                            onClick={() => {
+                                                const next = selected
+                                                    ? filters.terrainTypes.filter(x => x !== tt)
+                                                    : [...filters.terrainTypes, tt];
+                                                setFilters(f => ({ ...f, terrainTypes: next }));
+                                            }}
+                                            sx={{ cursor: 'pointer' }}
+                                        />
+                                    );
+                                })}
+                            </Box>
+                        </Grid>
+
+                        {/* 9. Tags */}
                         {tagsEnabled && availableTags.length > 0 && (
                             <Grid item xs={12}>
                                 <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>{t('filters.tags')}</Typography>

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NetTopologySuite.Geometries;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -12,9 +13,11 @@ using Utanvega.Backend.Infrastructure.Persistence;
 namespace Utanvega.Backend.Migrations
 {
     [DbContext(typeof(UtanvegaDbContext))]
-    partial class UtanvegaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260727211122_AddTerrainTypeToTrail")]
+    partial class AddTerrainTypeToTrail
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -465,8 +468,8 @@ namespace Utanvega.Backend.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("TerrainType")
-                        .HasColumnType("text");
+                    b.Property<int?>("TerrainType")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Type")
                         .IsRequired()

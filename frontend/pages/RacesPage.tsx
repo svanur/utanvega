@@ -92,6 +92,7 @@ interface EventFilters {
     certifications: string[];
     championships: string[];
     weekendOnly: boolean;
+    mountainRaceOnly: boolean;
 }
 
 const DEFAULT_FILTERS: EventFilters = {
@@ -104,6 +105,7 @@ const DEFAULT_FILTERS: EventFilters = {
     certifications: [],
     championships: [],
     weekendOnly: false,
+    mountainRaceOnly: false,
 };
 
 const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
@@ -221,7 +223,8 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         (filters.itraAny ? 1 : filters.itraPoints.length) +
         filters.certifications.length +
         filters.championships.length +
-        (filters.weekendOnly ? 1 : 0),
+        (filters.weekendOnly ? 1 : 0) +
+        (filters.mountainRaceOnly ? 1 : 0),
     [filters]);
 
     const filterOptions = useMemo(() => {
@@ -282,6 +285,10 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                 const day = new Date(d + 'T00:00:00').getDay();
                 return day === 0 || day === 6;
             });
+        }
+
+        if (filters.mountainRaceOnly) {
+            result = result.filter(c => c.isMountainRace === true);
         }
 
         // Sort: Active/Upcoming first, Cancelled last; then by upcoming date, then name
@@ -663,6 +670,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
 
                         {/* Weekend only + reset + close row */}
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
                             <FormControlLabel
                                 control={
                                     <Checkbox
@@ -673,6 +681,15 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                 }
                                 label={<Typography variant="body2">{t('races.filters.weekendOnly')}</Typography>}
                             />
+                            <Chip
+                                label={`⛰ ${t('races.mountainRace', 'Mountain race')}`}
+                                size="small"
+                                variant={filters.mountainRaceOnly ? 'filled' : 'outlined'}
+                                color={filters.mountainRaceOnly ? 'warning' : 'default'}
+                                onClick={() => setFilters(f => ({ ...f, mountainRaceOnly: !f.mountainRaceOnly }))}
+                                sx={{ cursor: 'pointer' }}
+                            />
+                            </Box>
                             <Box sx={{ display: 'flex', gap: 1 }}>
                                 {activeFilterCount > 0 && (
                                     <Button size="small" onClick={() => setFilters(DEFAULT_FILTERS)}>

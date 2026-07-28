@@ -153,7 +153,9 @@ public class EventValidatorTests
         AlertSeverity: null,
         LocationId: null,
         ScheduleRule: null,
-        SocialLinks: null
+        SocialLinks: null,
+        GpxPointLat: null,
+        GpxPointLng: null
     );
 
     [Fact]

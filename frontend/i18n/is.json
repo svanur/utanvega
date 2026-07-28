@@ -136,7 +136,7 @@
         "type": "Tegund",
         "estTime": "Áætlaður tími",
         "difficulty": "Erfiðleiki",
-        "activity": "Tegund æfingar",
+        "activity": "Tegund",
         "location": "Staðsetning",
         "kmAway": "km í burtu",
         "routeMap": "Leiðarkort",
@@ -203,7 +203,13 @@
         "checkInToastJoined_one": "{{count}} hlaupari mætti rétt í þessu.",
         "checkInToastJoined_other": "{{count}} hlauparar mættu rétt í þessu.",
         "checkInToastLeft_one": "{{count}} hlaupari skráði sig út.",
-        "checkInToastLeft_other": "{{count}} hlauparar skráðu sig út."
+        "checkInToastLeft_other": "{{count}} hlauparar skráðu sig út.",
+        "terrainType": {
+            "Mountainous": "Fjalllendi",
+            "Hilly": "Hæðótt",
+            "Flat": "Flatt",
+            "label": "Landslag"
+        }
     },
     "trailCard": {
         "removeFavorite": "Fjarlægja úr eftirlætum",
@@ -247,7 +253,13 @@
         "showOfflineOnly": "Sýna eingöngu án nets",
         "tags": "Merki",
         "resetFilters": "Endurstilla síun",
-        "closeFilters": "Loka"
+        "closeFilters": "Loka",
+        "terrainType": {
+            "Mountainous": "Fjalllendi / Fjallahlaup",
+            "Hilly": "Hæðótt / Fell",
+            "Flat": "Flatt / Rúllandi",
+            "label": "Landslag"
+        }
     },
     "difficulty": {
         "easy": "Auðvelt",
@@ -259,7 +271,7 @@
         "explanation": "Erfiðleiki er reiknaður út frá **álagsvegalengd**: vegalengd leiðarinnar að viðbættri hækkun deilt með 100. Fyrir hlaupaleiðir á vegi er eingöngu vegalengd notuð. Viðmið eru mismunandi eftir tegund.",
         "level": "Stig",
         "trailRunning": "Utanvegahlaup",
-        "running": "Hlaup",
+        "running": "Götulaup",
         "hiking": "Ganga",
         "cycling": "Hjólreiðar",
         "funRun": "Skemmtiskokk",
@@ -1088,6 +1100,7 @@
         "backToRaces": "Til baka",
         "wereYouLookingFor": "Varstu að leita að einhverju af þessum?",
         "viewTrail": "Skoða leið",
+        "mountainRace": "Fjallahlaup",
         "cutoffHours_one": "{{count}} klukkustund hámark",
         "cutoffHours_other": "{{count}} klukkustundir hámark",
         "cutoffHours": "{{count}}klst hámark",
@@ -1197,7 +1210,7 @@
         },
         "activityTypes": {
             "TrailRunning": "Utanvegahlaup",
-            "Running": "Hlaup",
+            "Running": "Götuhlaup",
             "Hiking": "Ganga",
             "Cycling": "Hjólreiðar",
             "FunRun": "Skemmtiskokk",
@@ -1230,7 +1243,7 @@
             "distances": "Vegalengdir",
             "register": "Skráning",
             "links": "Tenglar",
-            "races": "Hlaupagreinar",
+            "races": "Hlaup",
             "noRaces": "Engar greinar skráðar",
             "soldOut": "Uppselt",
             "almostSoldOut": "Næstum fullt",

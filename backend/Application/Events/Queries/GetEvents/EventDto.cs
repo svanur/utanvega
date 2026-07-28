@@ -49,7 +49,9 @@ public record EventSummaryDto(
     List<int>? ItraPoints = null,
     List<SeriesRaceDto>? SeriesRaces = null,
     double? GpxPointLat = null,
-    double? GpxPointLng = null
+    double? GpxPointLng = null,
+    bool IsMountainRace = false,
+    string? TerrainType = null
 );
 
 public record RaceDto(
@@ -73,7 +75,10 @@ public record RaceDto(
     DateOnly? DateOfRace,
     TimeOnly? StartTime,
     double? TrailDistanceMeters,
-    double? TrailElevationGain
+    double? TrailElevationGain,
+    string? TrailTerrainType = null,
+    string? TrailDifficulty = null,
+    string? TrailActivityType = null
 );
 
 public record EventEditionDto(
