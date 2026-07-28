@@ -75,7 +75,6 @@ const EventMapView = lazy(() => import('../components/EventMapView'));
 type ViewMode = 'list' | 'map' | 'table';
 
 
-
 type RacesPageProps = {
     mode: PaletteMode;
     onToggleMode: () => void;

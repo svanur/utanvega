@@ -177,8 +177,8 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
         { field: 'name', label: t('races.table.name', 'Name') },
     ];
 
-    // +1 expand, +3 non-sortable (Distances, Certifications, Links)
-    const totalColumns = columns.length + 4;
+    // +1 expand, +5 manual headers (Distances, Certifications, km away, Location, Links)
+    const totalColumns = columns.length + 6;
 
     return (
         <TableContainer component={Paper} elevation={1} sx={{ borderRadius: 2, width: '100%', overflowX: 'auto' }}>
