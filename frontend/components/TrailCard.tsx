@@ -315,12 +315,11 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                             )}
                         </Stack>
                     ) : (
-                    <Box 
+                    <Box
                         mt={1}
-                        display="flex" 
-                        flexWrap="wrap" 
+                        display="flex"
+                        flexWrap="wrap"
                         gap={1}
-                        justifyContent="flex-end"
                     >
                         {trail.difficulty && (
                             <DifficultyInfo difficulty={trail.difficulty} activityType={trail.activityType} />

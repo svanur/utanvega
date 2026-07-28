@@ -1815,7 +1815,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
           <TableBody>
             {filteredEvents.map(event => (
               <Fragment key={event.id}>
-                <TableRow id={`event-row-${event.id}`} hover sx={{ cursor: 'pointer' }} onClick={() => toggleExpand(event)}>
+                <TableRow id={`event-row-${event.id}`} hover sx={{ cursor: 'pointer', ...(event.type === 'Advertisement' && { bgcolor: 'rgba(255, 193, 7, 0.08)' }) }} onClick={() => toggleExpand(event)}>
                   <TableCell sx={expandedEventId === event.id ? { borderTop: '2px solid', borderLeft: '2px solid', borderColor: 'primary.main' } : {}}>
                     <IconButton size="small">
                       {expandedEventId === event.id ? <ExpandLessIcon /> : <ExpandMoreIcon />}

@@ -1142,7 +1142,7 @@
         "scheduleApproximate": "Venjulega haldið í {{month}}",
         "scheduleApproximateRange": "Venjulega haldið í {{monthStart}}–{{monthEnd}}",
         "statusCancelled": "Aflýst",
-        "statusUpcoming": "Væntanlegt",
+        "statusUpcoming": "Óstaðfest",
         "raceDayWeather": "Veður á keppnisleiðinni",
         "raceDayWeatherDesc": "Núverandi veður og 7 daga spá. Keppnisdagurinn er auðkenndur.",
         "checklistTitle": "Tékklisti fyrir keppnisdag",
@@ -1224,7 +1224,7 @@
             "Championship": "Meistaramót",
             "Fun": "Skemmtun",
             "Festival": "Hátíð",
-            "Advertisement": "Auglýsing"
+            "Advertisement": "Styrkt"
         },
         "history": {
             "title": "Saga viðburðar",
@@ -1262,7 +1262,7 @@
         "registrationStatus": {
             "Open": "Opin",
             "Closed": "Lokuð",
-            "NotStarted": ""
+            "NotStarted": "Væntanlegt"
         },
         "ticketStatus": {
             "Free": "Frítt",
