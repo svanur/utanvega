@@ -1142,7 +1142,7 @@
         "scheduleApproximate": "Usually held in {{month}}",
         "scheduleApproximateRange": "Usually held in {{monthStart}}–{{monthEnd}}",
         "statusCancelled": "Cancelled",
-        "statusUpcoming": "Coming soon",
+        "statusUpcoming": "Unconfirmed",
         "raceDayWeather": "Trail Weather – Race Forecast",
         "raceDayWeatherDesc": "Current conditions and 7-day forecast at the race route. Race day is highlighted.",
         "checklistTitle": "Race day checklist",
@@ -1224,7 +1224,7 @@
             "Championship": "Championship",
             "Fun": "Fun",
             "Festival": "Festival",
-            "Advertisement": "Ad"
+            "Advertisement": "Sponsored"
         },
         "history": {
             "title": "Event History",
@@ -1262,7 +1262,7 @@
         "registrationStatus": {
             "Open": "Open",
             "Closed": "Closed",
-            "NotStarted": ""
+            "NotStarted": "Coming Soon"
         },
         "ticketStatus": {
             "Free": "Free",

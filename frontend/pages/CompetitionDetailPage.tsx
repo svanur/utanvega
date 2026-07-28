@@ -214,13 +214,6 @@ function EditionMeta({
                         variant="outlined"
                     />
                 )}
-                {edition.registrationStatus && (
-                    <Chip
-                        label={edition.registrationStatus}
-                        size="small"
-                        color={getRegistrationStatusColor(edition.registrationStatus)}
-                    />
-                )}
             </Stack>
             {edition.notes && (
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5, whiteSpace: 'pre-line' }}>
@@ -239,6 +232,13 @@ function EditionMeta({
                         >
                             {t('races.register')}
                         </Button>
+                    )}
+                    {edition.registrationStatus && (
+                        <Chip
+                            label={t(`races.registrationStatus.${edition.registrationStatus}`, { defaultValue: edition.registrationStatus })}
+                            size="small"
+                            color={getRegistrationStatusColor(edition.registrationStatus)}
+                        />
                     )}
                     {edition.resultsUrl && (
                         <Button
