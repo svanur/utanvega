@@ -539,11 +539,18 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                         {trail.difficulty && (
                             <DifficultyInfo difficulty={trail.difficulty} activityType={trail.activityType} />
                         )}
-                        <Chip 
-                            icon={getActivityIcon(trail.activityType)} 
-                            label={t(`difficulty.${trail.activityType.charAt(0).toLowerCase() + trail.activityType.slice(1)}`)} 
-                            color="primary" 
-                            variant="outlined" 
+                        {trail.terrainType && (
+                            <Chip
+                                label={t(`trail.terrainType.${trail.terrainType}`, { defaultValue: trail.terrainType })}
+                                size="small"
+                                variant="outlined"
+                            />
+                        )}
+                        <Chip
+                            icon={getActivityIcon(trail.activityType)}
+                            label={t(`difficulty.${trail.activityType.charAt(0).toLowerCase() + trail.activityType.slice(1)}`)}
+                            color="primary"
+                            variant="outlined"
                             size="small"
                         />
                         {locationsPageEnabled && trail.locations && trail.locations.length > 0 && trail.locations.map((loc) => {

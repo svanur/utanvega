@@ -325,11 +325,18 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                         {trail.difficulty && (
                             <DifficultyInfo difficulty={trail.difficulty} activityType={trail.activityType} />
                         )}
-                        <Chip 
-                            icon={getActivityIcon(trail.activityType)} 
-                            label={t(`difficulty.${trail.activityType.charAt(0).toLowerCase() + trail.activityType.slice(1)}`)} 
-                            size="small" 
-                            variant="outlined" 
+                        {trail.terrainType && (
+                            <Chip
+                                label={t(`trail.terrainType.${trail.terrainType}`, { defaultValue: trail.terrainType })}
+                                size="small"
+                                variant="outlined"
+                            />
+                        )}
+                        <Chip
+                            icon={getActivityIcon(trail.activityType)}
+                            label={t(`difficulty.${trail.activityType.charAt(0).toLowerCase() + trail.activityType.slice(1)}`)}
+                            size="small"
+                            variant="outlined"
                             color="primary"
                         />
                         {trail.trailType && trail.trailType !== 'Unknown' && (

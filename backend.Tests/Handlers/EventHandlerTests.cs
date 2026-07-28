@@ -181,7 +181,9 @@ public class EventHandlerTests : IDisposable
                 AlertSeverity: null,
                 LocationId: null,
                 ScheduleRule: null,
-                SocialLinks: null
+                SocialLinks: null,
+                GpxPointLat: null,
+                GpxPointLng: null
             ), CancellationToken.None);
 
             Assert.True(result);
@@ -215,7 +217,9 @@ public class EventHandlerTests : IDisposable
             AlertSeverity: null,
             LocationId: null,
             ScheduleRule: null,
-            SocialLinks: null
+            SocialLinks: null,
+            GpxPointLat: null,
+            GpxPointLng: null
         ), CancellationToken.None);
 
         Assert.False(result);

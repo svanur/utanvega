@@ -25,7 +25,8 @@ public record UpdateTrailCommand(
     string? UpdatedBy,
     string? YoutubeUrl = null,
     List<TrailLocationUpdateDto>? Locations = null,
-    List<Guid>? TagIds = null
+    List<Guid>? TagIds = null,
+    string? TerrainType = null
 ) : IRequest<bool>;
 
 public class UpdateTrailCommandHandler : IRequestHandler<UpdateTrailCommand, bool>
@@ -87,7 +88,11 @@ public class UpdateTrailCommandHandler : IRequestHandler<UpdateTrailCommand, boo
             
         if (Enum.TryParse<TrailType>(request.Type, true, out var trailType))
             trail.Type = trailType;
-            
+
+        trail.TerrainType = request.TerrainType != null
+            ? Enum.Parse<TerrainType>(request.TerrainType)
+            : (TerrainType?)null;
+
         trail.UpdatedBy = request.UpdatedBy;
         trail.UpdatedAt = DateTime.UtcNow;
 
@@ -160,6 +165,17 @@ public class UpdateTrailCommandHandler : IRequestHandler<UpdateTrailCommand, boo
         _cacheInvalidator.InvalidateTrail(oldSlug);
         if (oldSlug != request.Slug)
             _cacheInvalidator.InvalidateTrail(request.Slug);
+
+        // Invalidate events that have races linked to this trail
+        var affectedEventSlugs = await _context.Races
+            .Where(r => r.TrailId == trail.Id)
+            .Select(r => r.EventEdition.Event.Slug)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+        _cacheInvalidator.InvalidateEvent();
+        foreach (var slug in affectedEventSlugs)
+            _cacheInvalidator.InvalidateEvent(slug);
+
         return true;
     }
 }

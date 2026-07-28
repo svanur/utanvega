@@ -88,7 +88,10 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
                             r.DateOfRace,
                             r.StartTime,
                             r.Trail?.Length,
-                            r.Trail?.ElevationGain
+                            r.Trail?.ElevationGain,
+                            r.Trail?.TerrainType?.ToString(),
+                            r.Trail?.Difficulty.ToString(),
+                            r.Trail?.ActivityTypeId.ToString()
                         ))
                         .ToList(),
                     ed.CreatedAt,

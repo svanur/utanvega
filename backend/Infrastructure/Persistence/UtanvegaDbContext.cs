@@ -55,6 +55,8 @@ public class UtanvegaDbContext : DbContext
                   .HasConversion<string>();
             entity.Property(e => e.Visibility)
                   .HasConversion<string>();
+            entity.Property(e => e.TerrainType)
+                  .HasConversion<string>();
         });
 
         modelBuilder.Entity<Location>(entity =>

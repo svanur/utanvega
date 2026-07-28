@@ -1276,6 +1276,9 @@ function RaceCard({
                     {race.trailElevationGain && (
                         <Chip icon={<TerrainIcon />} label={`↑ ${Math.round(race.trailElevationGain)} m`} size="small" variant="outlined" />
                     )}
+                    {race.trailTerrainType === 'Mountainous' && (
+                        <Chip label={t('races.mountainRace', { defaultValue: 'Mountain race' })} size="small" color="warning" variant="filled" />
+                    )}
                     {race.cutoffMinutes != null && (
                         <Chip icon={<TimerIcon />} label={formatCutoff(race.cutoffMinutes, t)} size="small" variant="outlined" color="warning" />
                     )}

@@ -34,9 +34,9 @@ const ACTIVITY_EMOJI: Record<string, string> = {
 };
 
 const ACTIVITY_LABELS: Record<string, string> = {
-  TrailRunning: 'Trail Running',
-  Running: 'Running',
-  Hiking: 'Hiking',
+  TrailRunning: 'Trail Run',
+  Running: 'Road Run',
+  Hiking: 'Hike',
   Cycling: 'Cycling',
 };
 

@@ -209,9 +209,9 @@ const difficultyOptions = [
 ];
 
 const activityOptions = [
-  { value: 'TrailRunning', label: 'Trail Running' },
-  { value: 'Running', label: 'Running' },
-  { value: 'Hiking', label: 'Hiking' },
+  { value: 'TrailRunning', label: 'Trail Run' },
+  { value: 'Running', label: 'Road Run' },
+  { value: 'Hiking', label: 'Hike' },
   { value: 'Cycling', label: 'Cycling' },
 ];
 
@@ -260,6 +260,14 @@ function TrailRow({ trail, selected, onSelect, onViewMap, onEdit, onDelete, onRe
             onSave={(v) => onPatchTrail(trail.id, 'difficulty', v)}
             renderDisplay={(v) => <DifficultyChip difficulty={v} />}
           />
+          {trail.terrainType && (
+            <Chip
+              label={trail.terrainType}
+              size="small"
+              variant="outlined"
+              sx={{ fontSize: '0.7rem', height: 24, alignSelf: 'flex-start' }}
+            />
+          )}
           <InlineEditSelect
             value={trail.activityType}
             options={activityOptions}
