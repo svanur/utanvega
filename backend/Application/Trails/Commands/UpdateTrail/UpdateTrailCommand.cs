@@ -1,3 +1,4 @@
+using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Utanvega.Backend.Application.Caching;
@@ -89,9 +90,16 @@ public class UpdateTrailCommandHandler : IRequestHandler<UpdateTrailCommand, boo
         if (Enum.TryParse<TrailType>(request.Type, true, out var trailType))
             trail.Type = trailType;
 
-        trail.TerrainType = request.TerrainType != null
-            ? Enum.Parse<TerrainType>(request.TerrainType)
-            : (TerrainType?)null;
+        if (request.TerrainType != null)
+        {
+            if (!Enum.TryParse<TerrainType>(request.TerrainType, ignoreCase: true, out var parsedTerrain))
+                throw new ValidationException($"Invalid TerrainType value: '{request.TerrainType}'.");
+            trail.TerrainType = parsedTerrain;
+        }
+        else
+        {
+            trail.TerrainType = null;
+        }
 
         trail.UpdatedBy = request.UpdatedBy;
         trail.UpdatedAt = DateTime.UtcNow;
@@ -172,7 +180,6 @@ public class UpdateTrailCommandHandler : IRequestHandler<UpdateTrailCommand, boo
             .Select(r => r.EventEdition.Event.Slug)
             .Distinct()
             .ToListAsync(cancellationToken);
-        _cacheInvalidator.InvalidateEvent();
         foreach (var slug in affectedEventSlugs)
             _cacheInvalidator.InvalidateEvent(slug);
 

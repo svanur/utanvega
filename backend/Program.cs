@@ -1281,7 +1281,7 @@ app.MapPost("/api/v1/admin/trails/detect-terrain-types", [Authorize] async (Utan
 
     foreach (var trail in trails)
     {
-        if (trail.Length <= 0 || trail.ElevationProfile == null || trail.ElevationProfile.Length == 0)
+        if (trail.Length <= 1000 || trail.ElevationProfile == null || trail.ElevationProfile.Length == 0)
         {
             skipped++;
             continue;
