@@ -102,7 +102,14 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
     ];
 
     const navItems: NavItem[] = [
-        { key: 'events', label: t('nav.events'), path: '/events' },
+        {
+            key: 'events',
+            label: t('nav.events'),
+            children: [
+                { label: t('nav.allEvents'), path: '/events' },
+                { label: t('nav.eventsCalendar'), path: '/events/calendar' },
+            ],
+        },
         ...(isEnabled('trails_page')
             ? [{ key: 'trails', label: t('nav.trails'), children: trailsChildren }]
             : []),
