@@ -89,7 +89,9 @@
         "aboutUs": "Um okkur",
         "services": "Þjónusta",
         "challenge": "Áskorun",
-        "allTrails": "Allar leiðir"
+        "allTrails": "Allar leiðir",
+        "allEvents": "Allir viðburðir",
+        "eventsCalendar": "Dagatal"
     },
     "spotlight": {
         "placeholder": "Leita að leiðum, stöðum og keppnum...",

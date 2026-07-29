@@ -89,7 +89,9 @@
         "aboutUs": "About us",
         "services": "Services",
         "challenge": "Challenge",
-        "allTrails": "All Trails"
+        "allTrails": "All Trails",
+        "allEvents": "All Events",
+        "eventsCalendar": "Calendar"
     },
     "spotlight": {
         "placeholder": "Search trails, locations and races...",
