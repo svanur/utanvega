@@ -38,6 +38,9 @@ public class Event
     public string? OrganizerName { get; set; }
     public string? OrganizerWebsite { get; set; }
 
+    public Guid? OrganizerId { get; set; }
+    public Organizer? Organizer { get; set; }
+
     public string? AlertMessage { get; set; }
     public string? AlertSeverity { get; set; }
 

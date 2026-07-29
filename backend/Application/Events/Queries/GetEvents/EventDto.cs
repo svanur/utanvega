@@ -27,6 +27,7 @@ public record EventSummaryDto(
     string Status,
     string? OrganizerName,
     string? OrganizerWebsite,
+    Guid? OrganizerId,
     string? AlertMessage,
     string? AlertSeverity,
     Guid? LocationId,

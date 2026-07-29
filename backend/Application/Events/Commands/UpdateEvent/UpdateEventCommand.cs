@@ -15,6 +15,7 @@ public record UpdateEventCommand(
     string Status,
     string? OrganizerName,
     string? OrganizerWebsite,
+    Guid? OrganizerId,
     string? AlertMessage,
     string? AlertSeverity,
     Guid? LocationId,
@@ -53,6 +54,7 @@ public class UpdateEventCommandHandler : IRequestHandler<UpdateEventCommand, boo
         ev.Status = status;
         ev.OrganizerName = request.OrganizerName;
         ev.OrganizerWebsite = request.OrganizerWebsite;
+        ev.OrganizerId = request.OrganizerId;
         ev.AlertMessage = request.AlertMessage;
         ev.AlertSeverity = request.AlertSeverity;
         ev.LocationId = request.LocationId;

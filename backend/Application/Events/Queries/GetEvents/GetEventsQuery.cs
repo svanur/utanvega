@@ -29,6 +29,7 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
         var query = _context.Events
             .AsNoTracking()
             .Include(e => e.Location)
+            .Include(e => e.Organizer)
             .Include(e => e.Editions)
                 .ThenInclude(ed => ed.Races)
                     .ThenInclude(r => r.Trail)
@@ -176,8 +177,9 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 e.Type.ToString(),
                 e.ActivityType.ToString(),
                 e.Status.ToString(),
-                e.OrganizerName,
-                e.OrganizerWebsite,
+                e.Organizer?.Name ?? e.OrganizerName,
+                e.OrganizerWebsite ?? e.Organizer?.Website,
+                e.OrganizerId,
                 e.AlertMessage,
                 e.AlertSeverity,
                 e.LocationId,

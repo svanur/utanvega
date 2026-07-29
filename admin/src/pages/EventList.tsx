@@ -77,6 +77,7 @@ import {
   type TicketStatus,
 } from '../hooks/useEvents';
 import { useLocations } from '../hooks/useLocations';
+import { useOrganizers } from '../hooks/useOrganizers';
 import { useTrails, type Trail } from '../hooks/useTrails';
 import { formatMinutesToHHmm, parseHHmmToMinutes } from '../utils/cutoffTime';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
@@ -106,6 +107,7 @@ interface EventFormState {
   status: EventStatus;
   organizerName: string;
   organizerWebsite: string;
+  organizerId: string;
   alertMessage: string;
   alertSeverity: AlertSeverity;
   locationId: string;
@@ -410,6 +412,7 @@ function createEmptyEventForm(): EventFormState {
     status: 'Unconfirmed',
     organizerName: '',
     organizerWebsite: '',
+    organizerId: '',
     alertMessage: '',
     alertSeverity: 'info',
     locationId: '',
@@ -496,6 +499,7 @@ function buildEventForm(event: EventSummaryDto): EventFormState {
     status: event.status,
     organizerName: event.organizerName ?? '',
     organizerWebsite: event.organizerWebsite ?? '',
+    organizerId: event.organizerId ?? '',
     alertMessage: event.alertMessage ?? '',
     alertSeverity: event.alertSeverity ?? 'info',
     locationId: event.locationId ?? '',
@@ -826,6 +830,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
     deleteRace,
   } = useEvents();
   const { locations } = useLocations();
+  const { organizers } = useOrganizers();
   const { trails } = useTrails();
 
   const [showEventDialog, setShowEventDialog] = useState(false);
@@ -1145,6 +1150,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
         status: eventForm.status,
         organizerName: trimToUndefined(eventForm.organizerName),
         organizerWebsite: trimToUndefined(eventForm.organizerWebsite),
+        organizerId: eventForm.organizerId || null,
         alertMessage: trimToUndefined(eventForm.alertMessage),
         alertSeverity: eventForm.alertMessage.trim() ? eventForm.alertSeverity : undefined,
         locationId: eventForm.locationId || null,
@@ -2186,18 +2192,21 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
               fullWidth
             />
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
-              <TextField
-                label="Organizer Name"
-                value={eventForm.organizerName}
-                onChange={(event) => setEventField('organizerName', event.target.value)}
-                fullWidth
+              <Autocomplete
+                options={organizers}
+                value={organizers.find(o => o.id === eventForm.organizerId) ?? null}
+                onChange={(_, value) => setEventField('organizerId', value?.id ?? '')}
+                getOptionLabel={(o) => o.name}
+                isOptionEqualToValue={(o, v) => o.id === v.id}
+                renderInput={(params) => <TextField {...params} label="Organizer" placeholder="Search organizers…" />}
               />
               <TextField
-                label="Organizer Website"
+                label="Organizer Website (override)"
                 value={eventForm.organizerWebsite}
                 onChange={(event) => setEventField('organizerWebsite', event.target.value)}
-                placeholder="https://..."
+                placeholder="https://…"
                 fullWidth
+                helperText="Leave blank to use the organizer's website"
               />
             </Box>
             <Autocomplete

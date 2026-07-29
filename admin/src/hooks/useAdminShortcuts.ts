@@ -25,8 +25,9 @@ export const GO_TO_PAGES: Record<string, PageKey> = {
     a: 'analytics',
     f: 'features',
     r: 'hero-themes',   // he[r]o themes
-    o: 'sponsors',      // spons[o]rs
+    n: 'sponsors',      // spo[n]sors
     p: 'pools',
+    o: 'organizers',    // [o]rganizers
 };
 
 function isInputFocused(): boolean {
