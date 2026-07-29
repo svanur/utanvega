@@ -16,16 +16,13 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
-import HikingIcon from '@mui/icons-material/Hiking';
-import DirectionsBikeIcon from '@mui/icons-material/DirectionsBike';
-import LandscapeIcon from '@mui/icons-material/Landscape';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Trail, API_URL } from '../hooks/useTrails';
 import { estimateDuration } from '../utils/estimateDuration';
 import DifficultyInfo from './DifficultyInfo';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
+import { getActivityIcon } from '../utils/activityIcon';
 
 // Mini SVG elevation silhouette for background
 function ElevationSilhouette({ coordinates, color }: { coordinates: number[][]; color: string }) {
@@ -78,15 +75,6 @@ interface TrailQuickViewProps {
     onClose: () => void;
 }
 
-const getActivityIcon = (type: string) => {
-    switch (type.toLowerCase()) {
-        case 'trailrunning': return <LandscapeIcon fontSize="small" />;
-        case 'running': return <DirectionsRunIcon fontSize="small" />;
-        case 'cycling': return <DirectionsBikeIcon fontSize="small" />;
-        case 'hiking': return <HikingIcon fontSize="small" />;
-        default: return <RouteIcon fontSize="small" />;
-    }
-};
 
 const getTrailTypeLabelTranslated = (type: string, t: (key: string) => string) => {
     switch (type) {

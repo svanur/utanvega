@@ -9,11 +9,8 @@ import {
     CardActionArea,
     Tooltip
 } from '@mui/material';
-import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
-import HikingIcon from '@mui/icons-material/Hiking';
-import DirectionsBikeIcon from '@mui/icons-material/DirectionsBike';
-import LandscapeIcon from '@mui/icons-material/Landscape';
 import RouteIcon from '@mui/icons-material/Route';
+import LandscapeIcon from '@mui/icons-material/Landscape';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
@@ -35,6 +32,7 @@ import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { useLoginEnabled } from '../hooks/useLoginEnabled';
 import { estimateDuration } from '../utils/estimateDuration';
 import { useFavorites } from '../hooks/useFavorites';
+import { getActivityIcon } from '../utils/activityIcon';
 import { useTickedTrails } from '../hooks/useTickedTrails';
 import { TrailQuickView } from './TrailQuickView';
 import DifficultyInfo from './DifficultyInfo';
@@ -49,15 +47,6 @@ interface TrailCardProps {
     disableGestures?: boolean;
 }
 
-const getActivityIcon = (type: string) => {
-    switch (type.toLowerCase()) {
-        case 'trailrunning': return <LandscapeIcon fontSize="small" />;
-        case 'running': return <DirectionsRunIcon fontSize="small" />;
-        case 'cycling': return <DirectionsBikeIcon fontSize="small" />;
-        case 'hiking': return <HikingIcon fontSize="small" />;
-        default: return <RouteIcon fontSize="small" />;
-    }
-};
 
 const getTrailTypeIcon = (type: string) => {
     switch (type) {

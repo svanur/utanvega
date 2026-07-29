@@ -1461,7 +1461,7 @@
                 { "distance": "8 km með lítilli hækkun", "elevation": "+100 m", "effortKm": "9,0 km", "targetTime": "0:54:00", "pace": "6:45 / km" },
                 { "distance": "16 km með miðlungs hækkun", "elevation": "+250 m", "effortKm": "18,5 km", "targetTime": "1:54:00", "pace": "7:07 / km" },
                 { "distance": "Hálfmaraþon keppni með þónokkurri hækkun", "elevation": "+400 m", "effortKm": "25,1 km", "targetTime": "2:37:00", "pace": "7:26 / km" },
-                { "distance": "Laugavegur Ultra, 53km", "elevation": "+1900 m", "effortKm": "72,0 km", "targetTime": "9:30:00", "pace": "7:55 / km" }
+                { "distance": "Laugavegur Ultra, 53km", "elevation": "+1900 m", "effortKm": "72,0 km", "targetTime": "9:15:00", "pace": "7:55 / km" }
             ]
         },
         "links": {

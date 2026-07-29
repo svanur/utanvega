@@ -1290,13 +1290,13 @@ function RaceCard({
                         </Tooltip>
                     )}
                     {race.cutoffMinutes != null && (
-                        <Tooltip title={t('races.cutoffTime', { defaultValue: 'Cut-off time' })}>
+                        <Tooltip title={t('races.cutoffTime', { defaultValue: 'Time limit' })}>
                             <Chip icon={<TimerIcon />} label={formatCutoff(race.cutoffMinutes, t)} size="small" variant="outlined" color="warning" />
                         </Tooltip>
                     )}
                     {race.ticketStatus && (
                         <Tooltip title={t('races.ticketStatusLabel', { defaultValue: 'Registration status' })}>
-                            <Chip label={race.ticketStatus} size="small" color={getTicketStatusColor(race.ticketStatus)} />
+                            <Chip label={t(`races.ticketStatus.${race.ticketStatus}`, { defaultValue: race.ticketStatus })} size="small" color={getTicketStatusColor(race.ticketStatus)} />
                         </Tooltip>
                     )}
                     {race.maxParticipants != null && (

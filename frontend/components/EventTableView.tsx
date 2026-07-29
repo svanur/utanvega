@@ -13,14 +13,6 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import StraightenIcon from '@mui/icons-material/Straighten';
 import TimerIcon from '@mui/icons-material/Timer';
-import LandscapeIcon from '@mui/icons-material/Landscape';
-import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
-import HikingIcon from '@mui/icons-material/Hiking';
-import DirectionsBikeIcon from '@mui/icons-material/DirectionsBike';
-import CelebrationIcon from '@mui/icons-material/Celebration';
-import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
-import GrassIcon from '@mui/icons-material/Grass';
-import CampaignIcon from '@mui/icons-material/Campaign';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import type { EventSummary, EventDetail, RaceDto, SeriesRaceDto } from '../hooks/useEvents';
@@ -29,20 +21,8 @@ import { haversineKm, formatDistanceKm } from '../utils/geo';
 import NearMeIcon from '@mui/icons-material/NearMe';
 import EventDateBadge from './EventDateBadge';
 import { getCountdownColor, getEventTypeColor, formatNextDate } from '../utils/eventUtils';
+import { getActivityIcon } from '../utils/activityIcon';
 
-function getActivityIcon(type: string) {
-    switch (type) {
-        case 'TrailRunning': return <LandscapeIcon fontSize="small" />;
-        case 'Running': return <DirectionsRunIcon fontSize="small" />;
-        case 'Hiking': return <HikingIcon fontSize="small" />;
-        case 'Cycling': return <DirectionsBikeIcon fontSize="small" />;
-        case 'FunRun': return <CelebrationIcon fontSize="small" />;
-        case 'ObstacleCourse': return <FitnessCenterIcon fontSize="small" />;
-        case 'CrossCountryRun': return <GrassIcon fontSize="small" />;
-        case 'Advertisement': return <CampaignIcon fontSize="small" />;
-        default: return <DirectionsRunIcon fontSize="small" />;
-    }
-}
 
 
 interface EventTableViewProps {
@@ -283,9 +263,9 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                     {(() => {
                                         const km = getDistanceKm(event);
                                         return (
-                                            <TableCell align="right">
+                                            <TableCell>
                                                 {km != null ? (
-                                                    <Stack direction="row" alignItems="center" justifyContent="flex-end" spacing={0.5}>
+                                                    <Stack direction="row" alignItems="center" spacing={0.5}>
                                                         <NearMeIcon sx={{ fontSize: 13, color: 'primary.main' }} />
                                                         <Typography variant="body2" noWrap>{formatDistanceKm(km)}</Typography>
                                                     </Stack>
@@ -445,9 +425,9 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                     {(() => {
                                         const km = getDistanceKm(event);
                                         return (
-                                            <TableCell align="right">
+                                            <TableCell>
                                                 {km != null ? (
-                                                    <Stack direction="row" alignItems="center" justifyContent="flex-end" spacing={0.5}>
+                                                    <Stack direction="row" alignItems="center" spacing={0.5}>
                                                         <NearMeIcon sx={{ fontSize: 13, color: 'primary.main' }} />
                                                         <Typography variant="body2" noWrap>{formatDistanceKm(km)}</Typography>
                                                     </Stack>

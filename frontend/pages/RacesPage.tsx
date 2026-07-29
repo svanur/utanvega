@@ -44,15 +44,7 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import ShareIcon from '@mui/icons-material/Share';
 import EventAvailableIcon from '@mui/icons-material/EventAvailable';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
-import HikingIcon from '@mui/icons-material/Hiking';
-import DirectionsBikeIcon from '@mui/icons-material/DirectionsBike';
-import CelebrationIcon from '@mui/icons-material/Celebration';
-import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
-import GrassIcon from '@mui/icons-material/Grass';
-import LandscapeIcon from '@mui/icons-material/Landscape';
 import NearMeIcon from '@mui/icons-material/NearMe';
-import CampaignIcon from '@mui/icons-material/Campaign';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import Layout from '../components/Layout';
 import PartnerLinks from '../components/PartnerLinks';
@@ -69,26 +61,20 @@ import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
 import { getTicketStatusColor, groupDistances } from '../utils/ticketStatus';
 import { formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor } from '../utils/eventUtils';
+import { getActivityIcon } from '../utils/activityIcon';
+import LandscapeIcon from '@mui/icons-material/Landscape';
+import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
+import HikingIcon from '@mui/icons-material/Hiking';
+import DirectionsBikeIcon from '@mui/icons-material/DirectionsBike';
+import CelebrationIcon from '@mui/icons-material/Celebration';
+import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
+import GrassIcon from '@mui/icons-material/Grass';
 import { haversineKm, formatDistanceKm } from '../utils/geo';
 
 const EventTableView = lazy(() => import('../components/EventTableView'));
 const EventMapView = lazy(() => import('../components/EventMapView'));
 
 type ViewMode = 'list' | 'map' | 'table';
-
-function getActivityIcon(type: string) {
-    switch (type) {
-        case 'TrailRunning': return <LandscapeIcon fontSize="small" />;
-        case 'Running': return <DirectionsRunIcon fontSize="small" />;
-        case 'Hiking': return <HikingIcon fontSize="small" />;
-        case 'Cycling': return <DirectionsBikeIcon fontSize="small" />;
-        case 'FunRun': return <CelebrationIcon fontSize="small" />;
-        case 'ObstacleCourse': return <FitnessCenterIcon fontSize="small" />;
-        case 'CrossCountryRun': return <GrassIcon fontSize="small" />;
-        case 'Advertisement': return <CampaignIcon fontSize="small" />;
-        default: return <DirectionsRunIcon fontSize="small" />;
-    }
-}
 
 
 type RacesPageProps = {
