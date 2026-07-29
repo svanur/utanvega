@@ -11,6 +11,9 @@ import {
 } from '@mui/material';
 import RouteIcon from '@mui/icons-material/Route';
 import LandscapeIcon from '@mui/icons-material/Landscape';
+import ShowChartIcon from '@mui/icons-material/ShowChart';
+import HorizontalRuleIcon from '@mui/icons-material/HorizontalRule';
+import FilterHdrIcon from '@mui/icons-material/FilterHdr';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
@@ -63,6 +66,15 @@ const trailTypeI18nKey = (type: string) => {
         case 'OutAndBack': return 'trail.outAndBack';
         case 'PointToPoint': return 'trail.pointToPoint';
         default: return type;
+    }
+};
+
+const getTerrainIcon = (type: string) => {
+    switch (type) {
+        case 'Flat': return <HorizontalRuleIcon sx={{ fontSize: 14 }} />;
+        case 'Hilly': return <ShowChartIcon sx={{ fontSize: 14 }} />;
+        case 'Mountainous': return <FilterHdrIcon sx={{ fontSize: 14 }} />;
+        default: return undefined;
     }
 };
 
@@ -330,6 +342,7 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                         )}
                         {trail.terrainType && (
                             <Chip
+                                icon={getTerrainIcon(trail.terrainType)}
                                 label={t(`trail.terrainType.${trail.terrainType}`, { defaultValue: trail.terrainType })}
                                 size="small"
                                 variant="outlined"
