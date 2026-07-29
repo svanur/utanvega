@@ -49,6 +49,7 @@ using Utanvega.Backend.Application.Events.Commands.CreateRace;
 using Utanvega.Backend.Application.Events.Commands.UpdateRace;
 using Utanvega.Backend.Application.Events.Commands.DeleteRace;
 using Utanvega.Backend.Application.Events.Commands.GenerateEditionsForSeason;
+using Utanvega.Backend.Application.Organizers;
 using Utanvega.Backend.Application.Activities.Commands.CreateUserTrailActivity;
 using Utanvega.Backend.Application.Activities.Commands.UpdateUserTrailActivity;
 using Utanvega.Backend.Application.Activities.Commands.DeleteUserTrailActivity;
@@ -1513,6 +1514,48 @@ app.MapDelete("/api/v1/admin/events/{id:guid}", [Authorize] async (Guid id, IMed
     return success ? Results.NoContent() : Results.NotFound();
 })
 .WithName("DeleteEvent")
+.RequireAuthorization();
+
+// Organizers (public list for dropdowns — trimmed DTO, no PII)
+app.MapGet("/api/v1/organizers", async (IMediator mediator) =>
+{
+    var organizers = await mediator.Send(new GetOrganizersPublicQuery());
+    return Results.Ok(organizers);
+})
+.WithName("GetOrganizers");
+
+// Admin Organizer CRUD
+app.MapGet("/api/v1/admin/organizers", [Authorize] async (IMediator mediator) =>
+{
+    var organizers = await mediator.Send(new GetOrganizersQuery());
+    return Results.Ok(organizers);
+})
+.WithName("GetAdminOrganizers")
+.RequireAuthorization();
+
+app.MapPost("/api/v1/admin/organizers", [Authorize] async (CreateOrganizerCommand command, IMediator mediator) =>
+{
+    var id = await mediator.Send(command);
+    return Results.Created($"/api/v1/organizers/{id}", new { id });
+})
+.WithName("CreateOrganizer")
+.RequireAuthorization();
+
+app.MapPut("/api/v1/admin/organizers/{id:guid}", [Authorize] async (Guid id, UpdateOrganizerCommand command, IMediator mediator) =>
+{
+    if (id != command.Id) return Results.BadRequest("ID mismatch");
+    var success = await mediator.Send(command);
+    return success ? Results.NoContent() : Results.NotFound();
+})
+.WithName("UpdateOrganizer")
+.RequireAuthorization();
+
+app.MapDelete("/api/v1/admin/organizers/{id:guid}", [Authorize] async (Guid id, IMediator mediator) =>
+{
+    var success = await mediator.Send(new DeleteOrganizerCommand(id));
+    return success ? Results.NoContent() : Results.NotFound();
+})
+.WithName("DeleteOrganizer")
 .RequireAuthorization();
 
 // Admin Edition CRUD

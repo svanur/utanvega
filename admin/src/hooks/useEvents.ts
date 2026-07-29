@@ -89,6 +89,7 @@ export interface EventSummaryDto {
     status: EventStatus;
     organizerName: string | null;
     organizerWebsite: string | null;
+    organizerId: string | null;
     alertMessage: string | null;
     alertSeverity: AlertSeverity | null;
     locationId: string | null;
@@ -121,6 +122,7 @@ export interface CreateEventInput {
     status: EventStatus;
     organizerName?: string;
     organizerWebsite?: string;
+    organizerId?: string | null;
     alertMessage?: string;
     alertSeverity?: AlertSeverity;
     locationId?: string | null;
@@ -139,6 +141,7 @@ export interface UpdateEventInput {
     status: EventStatus;
     organizerName?: string;
     organizerWebsite?: string;
+    organizerId?: string | null;
     alertMessage?: string;
     alertSeverity?: AlertSeverity;
     locationId?: string | null;

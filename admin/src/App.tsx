@@ -10,6 +10,7 @@ import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import ViewDayOutlinedIcon from '@mui/icons-material/ViewDayOutlined';
 import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
 import PoolIcon from '@mui/icons-material/Pool';
+import GroupIcon from '@mui/icons-material/Group';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
@@ -28,6 +29,7 @@ import FeatureFlagsPage from './pages/FeatureFlagsPage';
 import EventList from './pages/EventList';
 import HeroThemesPage from './pages/HeroThemesPage';
 import SponsorsPage from './pages/SponsorsPage';
+import OrganizersPage from './pages/OrganizersPage';
 import PoolsPage from './pages/PoolsPage';
 import GpxUploadDialog from './components/GpxUploadDialog';
 import LoginPage from './pages/LoginPage';
@@ -68,6 +70,7 @@ const PAGE_PATHS: Record<PageKey, string> = {
   'hero-themes': '/hero-themes',
   'sponsors': '/sponsors',
   'pools': '/pools',
+  'organizers': '/organizers',
 };
 
 function pathToPage(pathname: string): PageKey {
@@ -245,6 +248,7 @@ function AdminContent() {
               { key: 'events' as const, icon: <EmojiEventsIcon />, label: 'Events' },
               { key: 'trails' as const, icon: <DashboardIcon />, label: 'Trails' },
               { key: 'locations' as const, icon: <LocationOnIcon />, label: 'Locations' },
+              { key: 'organizers' as const, icon: <GroupIcon />, label: 'Organizers' },
               { key: 'health' as const, icon: <HealthAndSafetyIcon />, label: 'Trail Health' },
               { key: 'event-health' as const, icon: <HealthAndSafetyIcon sx={{ color: '#ed6c02' }} />, label: 'Event Health' },
               { key: 'map' as const, icon: <MapIcon />, label: 'Trail Map' },
@@ -305,6 +309,8 @@ function AdminContent() {
             <SponsorsPage />
           ) : currentPage === 'pools' ? (
             <PoolsPage />
+          ) : currentPage === 'organizers' ? (
+            <OrganizersPage onNotify={notify} />
           ) : (
             <LocationList onNotify={notify} />
           )}

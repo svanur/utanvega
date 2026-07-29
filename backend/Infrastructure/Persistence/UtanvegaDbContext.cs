@@ -25,6 +25,7 @@ public class UtanvegaDbContext : DbContext
     public DbSet<UserTrailActivity> UserTrailActivities => Set<UserTrailActivity>();
     public DbSet<Profile> Profiles => Set<Profile>();
     public DbSet<TrailCheckIn> TrailCheckIns => Set<TrailCheckIn>();
+    public DbSet<Organizer> Organizers => Set<Organizer>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -192,6 +193,23 @@ public class UtanvegaDbContext : DbContext
                   .WithMany()
                   .HasForeignKey(e => e.LocationId)
                   .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.Organizer)
+                  .WithMany(o => o.Events)
+                  .HasForeignKey(e => e.OrganizerId)
+                  .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<Organizer>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.HasIndex(e => e.Name);
+            entity.Property(e => e.Kennitala).HasMaxLength(20);
+            entity.Property(e => e.Phone).HasMaxLength(50);
+            entity.Property(e => e.Email).HasMaxLength(200);
+            entity.Property(e => e.Website).HasMaxLength(500);
+            entity.Property(e => e.ContactName).HasMaxLength(200);
         });
 
         modelBuilder.Entity<EventEdition>(entity =>

@@ -18,6 +18,7 @@ public record EventDetailDto(
     string Status,
     string? OrganizerName,
     string? OrganizerWebsite,
+    Guid? OrganizerId,
     string? AlertMessage,
     string? AlertSeverity,
     Guid? LocationId,
@@ -61,6 +62,7 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
         var ev = await _context.Events
             .AsNoTracking()
             .Include(e => e.Location)
+            .Include(e => e.Organizer)
             .Include(e => e.Editions)
                 .ThenInclude(ed => ed.Trail)
             .Include(e => e.Editions)
@@ -203,8 +205,9 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
             ev.Type.ToString(),
             ev.ActivityType.ToString(),
             ev.Status.ToString(),
-            ev.OrganizerName,
-            ev.OrganizerWebsite,
+            ev.Organizer?.Name ?? ev.OrganizerName,
+            ev.OrganizerWebsite ?? ev.Organizer?.Website,
+            ev.OrganizerId,
             ev.AlertMessage,
             ev.AlertSeverity,
             ev.LocationId,
