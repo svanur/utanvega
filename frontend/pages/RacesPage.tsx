@@ -29,6 +29,8 @@ import {
     Divider,
     Autocomplete,
     Fade,
+    Select,
+    MenuItem,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import SearchIcon from '@mui/icons-material/Search';
@@ -45,6 +47,7 @@ import ShareIcon from '@mui/icons-material/Share';
 import EventAvailableIcon from '@mui/icons-material/EventAvailable';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import NearMeIcon from '@mui/icons-material/NearMe';
+import SortIcon from '@mui/icons-material/Sort';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import Layout from '../components/Layout';
 import PartnerLinks from '../components/PartnerLinks';
@@ -133,7 +136,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
     const [locationLoading, setLocationLoading] = useState(false);
     const [locationDenied, setLocationDenied] = useState(false);
-    const [distanceSortActive, setDistanceSortActive] = useState(false);
+    const [sortBy, setSortBy] = useState<'date' | 'distance' | 'name'>('date');
     const [pullOffset, setPullOffset] = useState(0);
     const [refreshing, setRefreshing] = useState(false);
     const [showSwipeHint, setShowSwipeHint] = useState(false);
@@ -166,22 +169,16 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         );
     }, []);
 
-    const handleDistanceSort = () => {
-        if (distanceSortActive) {
-            setDistanceSortActive(false);
-            return;
-        }
-        if (userLocation) {
-            setDistanceSortActive(true);
-            return;
-        }
+    const handleSortChange = (value: 'date' | 'distance' | 'name') => {
+        if (value !== 'distance') { setSortBy(value); return; }
+        if (userLocation) { setSortBy('distance'); return; }
         if (!navigator.geolocation) return;
         setLocationLoading(true);
         navigator.geolocation.getCurrentPosition(
             pos => {
                 setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
                 setLocationDenied(false);
-                setDistanceSortActive(true);
+                setSortBy('distance');
                 setLocationLoading(false);
             },
             err => {
@@ -314,20 +311,25 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
     }, [events, search, filters]);
 
     const sortedFiltered = useMemo(() => {
-        if (!distanceSortActive || !userLocation) return filtered;
-        const getKm = (e: EventSummary) =>
-            e.gpxPointLat != null && e.gpxPointLng != null
-                ? haversineKm(userLocation.lat, userLocation.lng, e.gpxPointLat, e.gpxPointLng)
-                : null;
-        return [...filtered].sort((a, b) => {
-            const da = getKm(a);
-            const db = getKm(b);
-            if (da == null && db == null) return 0;
-            if (da == null) return 1;
-            if (db == null) return -1;
-            return da - db;
-        });
-    }, [filtered, distanceSortActive, userLocation]);
+        if (sortBy === 'distance' && userLocation) {
+            const getKm = (e: EventSummary) =>
+                e.gpxPointLat != null && e.gpxPointLng != null
+                    ? haversineKm(userLocation.lat, userLocation.lng, e.gpxPointLat, e.gpxPointLng)
+                    : null;
+            return [...filtered].sort((a, b) => {
+                const da = getKm(a);
+                const db = getKm(b);
+                if (da == null && db == null) return 0;
+                if (da == null) return 1;
+                if (db == null) return -1;
+                return da - db;
+            });
+        }
+        if (sortBy === 'name') {
+            return [...filtered].sort((a, b) => a.name.localeCompare(b.name, 'is'));
+        }
+        return filtered;
+    }, [filtered, sortBy, userLocation]);
 
     const { justRaced, upcoming } = useMemo(() => {
         const isRecentlyCompleted = (c: EventSummary) =>
@@ -351,7 +353,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                 rows.push({ kind: 'event', comp });
             }
         }
-        if (!distanceSortActive) {
+        if (sortBy === 'date') {
             rows.sort((a, b) => {
                 const dateA = a.kind === 'series-race' ? a.race.dateOfRace : (a.comp.displayDate ?? a.comp.nextEditionDate);
                 const dateB = b.kind === 'series-race' ? b.race.dateOfRace : (b.comp.displayDate ?? b.comp.nextEditionDate);
@@ -362,7 +364,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
             });
         }
         return rows;
-    }, [upcoming, distanceSortActive]);
+    }, [upcoming, sortBy]);
 
     if (loading) {
         return (
@@ -708,38 +710,27 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
 
                 {/* View toggle + result count */}
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="body2" color="text.secondary">
+                        {t('races.editionCount', { count: filtered.length })}
+                    </Typography>
                     <Stack direction="row" spacing={1} alignItems="center">
-                        <Typography variant="body2" color="text.secondary">
-                            {t('races.editionCount', { count: filtered.length })}
-                        </Typography>
-                        {navigator.geolocation && (
-                            <Tooltip title={
-                                locationDenied
-                                    ? t('races.nearMe.denied')
-                                    : distanceSortActive
-                                        ? t('races.nearMe.disable')
-                                        : t('races.nearMe.enable')
-                            }>
-                                <span>
-                                    <Button
-                                        size="small"
-                                        variant={distanceSortActive ? 'contained' : 'outlined'}
-                                        color={locationDenied ? 'error' : distanceSortActive ? 'primary' : 'inherit'}
-                                        onClick={handleDistanceSort}
-                                        startIcon={locationLoading ? <CircularProgress size={14} color="inherit" /> : <NearMeIcon fontSize="small" />}
-                                        disabled={locationLoading || locationDenied}
-                                        sx={{
-                                            textTransform: 'none', borderRadius: 4, px: 1.5, py: 0.5, fontSize: '0.8rem', minWidth: 0,
-                                            display: (viewMode === 'map' || viewMode === 'table') ? 'none' : 'inline-flex',
-                                        }}
-                                    >
-                                        {t('races.nearMe.label')}
-                                    </Button>
-                                </span>
-                            </Tooltip>
+                        {viewMode === 'list' && (
+                            <Select
+                                value={sortBy}
+                                onChange={(e) => handleSortChange(e.target.value as 'date' | 'distance' | 'name')}
+                                size="small"
+                                variant="outlined"
+                                startAdornment={locationLoading ? <CircularProgress size={14} sx={{ mr: 0.5 }} /> : <SortIcon fontSize="small" sx={{ mr: 0.5, color: 'text.secondary' }} />}
+                                sx={{ minWidth: 140, fontSize: '0.85rem' }}
+                            >
+                                <MenuItem value="date">{t('sort.date')}</MenuItem>
+                                <MenuItem value="name">{t('sort.name')}</MenuItem>
+                                <MenuItem value="distance" disabled={locationDenied || !navigator.geolocation}>
+                                    {locationDenied ? t('races.nearMe.denied') : t('sort.distance')}
+                                </MenuItem>
+                            </Select>
                         )}
-                    </Stack>
-                    <ToggleButtonGroup
+                        <ToggleButtonGroup
                         value={viewMode}
                         exclusive
                         onChange={(_, value) => { if (value) setViewMode(value as ViewMode); }}
@@ -762,6 +753,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                             </ToggleButton>
                         </Tooltip>
                     </ToggleButtonGroup>
+                    </Stack>
                 </Box>
 
                 {/* Views */}

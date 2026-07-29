@@ -400,6 +400,7 @@
         "linkText": "Learn more"
     },
     "sort": {
+        "date": "Date",
         "distance": "Nearest",
         "name": "Name (A–Ö)",
         "shortest": "Shortest",
