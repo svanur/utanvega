@@ -1,4 +1,4 @@
-import { Box, CssBaseline, ThemeProvider, createTheme, AppBar, Toolbar, Typography, Container, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Fab, Snackbar, Alert, Button, CircularProgress, Link, IconButton, Tooltip } from '@mui/material';
+import { Box, CssBaseline, ThemeProvider, createTheme, AppBar, Toolbar, Typography, Container, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Snackbar, Alert, Button, CircularProgress, Link, IconButton, Tooltip } from '@mui/material';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
@@ -11,7 +11,6 @@ import ViewDayOutlinedIcon from '@mui/icons-material/ViewDayOutlined';
 import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
 import PoolIcon from '@mui/icons-material/Pool';
 import GroupIcon from '@mui/icons-material/Group';
-import AddCircleIcon from '@mui/icons-material/AddCircle';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
@@ -315,17 +314,6 @@ function AdminContent() {
             <LocationList onNotify={notify} />
           )}
           
-          {currentPage === 'trails' && (
-            <Fab 
-                color="primary" 
-                aria-label="add" 
-                sx={{ position: 'fixed', bottom: 32, right: 32 }}
-                onClick={() => setIsUploadOpen(true)}
-            >
-                <AddCircleIcon />
-            </Fab>
-          )}
-
           <GpxUploadDialog 
               open={isUploadOpen} 
               onClose={() => setIsUploadOpen(false)} 

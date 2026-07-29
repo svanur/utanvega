@@ -2,6 +2,7 @@ import { Typography, CircularProgress, Alert, Box, Link, Stack, Button, Chip } f
 import RefreshIcon from '@mui/icons-material/Refresh';
 import BuildIcon from '@mui/icons-material/Build';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import AddIcon from '@mui/icons-material/Add';
 import { useEffect, useMemo, useState } from 'react';
 import { useTrails, Trail } from '../hooks/useTrails';
 import { useTags } from '../hooks/useTags';
@@ -351,6 +352,9 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
             onClick={() => setShowTools(!showTools)}
           >
             Tools
+          </Button>
+          <Button variant="contained" startIcon={<AddIcon />} size="small" onClick={() => setShowBulkUpload(true)}>
+            New Trail
           </Button>
         </Stack>
       </Box>
