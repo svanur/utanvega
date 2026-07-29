@@ -1516,10 +1516,10 @@ app.MapDelete("/api/v1/admin/events/{id:guid}", [Authorize] async (Guid id, IMed
 .WithName("DeleteEvent")
 .RequireAuthorization();
 
-// Organizers (public list for dropdowns)
+// Organizers (public list for dropdowns — trimmed DTO, no PII)
 app.MapGet("/api/v1/organizers", async (IMediator mediator) =>
 {
-    var organizers = await mediator.Send(new GetOrganizersQuery());
+    var organizers = await mediator.Send(new GetOrganizersPublicQuery());
     return Results.Ok(organizers);
 })
 .WithName("GetOrganizers");

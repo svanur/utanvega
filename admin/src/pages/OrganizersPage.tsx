@@ -26,6 +26,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import GroupIcon from '@mui/icons-material/Group';
 import { useOrganizers, type OrganizerDto } from '../hooks/useOrganizers';
+import { trimToUndefined } from '../utils/strings';
 
 interface Props {
     onNotify: (message: ReactNode, severity?: 'success' | 'error') => void;
@@ -43,10 +44,6 @@ const EMPTY_FORM = {
 
 type FormState = typeof EMPTY_FORM;
 
-function trimToUndefined(v: string): string | undefined {
-    return v.trim() || undefined;
-}
-
 export default function OrganizersPage({ onNotify }: Props) {
     const { organizers, loading, error, createOrganizer, updateOrganizer, deleteOrganizer } = useOrganizers();
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -54,6 +51,7 @@ export default function OrganizersPage({ onNotify }: Props) {
     const [form, setForm] = useState<FormState>(EMPTY_FORM);
     const [saving, setSaving] = useState(false);
     const [deleteConfirm, setDeleteConfirm] = useState<OrganizerDto | null>(null);
+    const [deleting, setDeleting] = useState(false);
 
     const setField = (field: keyof FormState, value: string) =>
         setForm(prev => ({ ...prev, [field]: value }));
@@ -108,13 +106,15 @@ export default function OrganizersPage({ onNotify }: Props) {
 
     const handleDelete = async () => {
         if (!deleteConfirm) return;
+        setDeleting(true);
         try {
             await deleteOrganizer(deleteConfirm.id);
             onNotify(`Organizer '${deleteConfirm.name}' deleted`);
+            setDeleteConfirm(null);
         } catch (err) {
             onNotify(err instanceof Error ? err.message : 'Failed to delete organizer', 'error');
         } finally {
-            setDeleteConfirm(null);
+            setDeleting(false);
         }
     };
 
@@ -290,7 +290,9 @@ export default function OrganizersPage({ onNotify }: Props) {
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setDeleteConfirm(null)}>Cancel</Button>
-                    <Button variant="contained" color="error" onClick={handleDelete}>Delete</Button>
+                    <Button variant="contained" color="error" onClick={handleDelete} disabled={deleting}>
+                        {deleting ? <CircularProgress size={20} /> : 'Delete'}
+                    </Button>
                 </DialogActions>
             </Dialog>
         </Box>

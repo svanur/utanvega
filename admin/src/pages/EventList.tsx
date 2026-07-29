@@ -80,6 +80,7 @@ import { useLocations } from '../hooks/useLocations';
 import { useOrganizers } from '../hooks/useOrganizers';
 import { useTrails, type Trail } from '../hooks/useTrails';
 import { formatMinutesToHHmm, parseHHmmToMinutes } from '../utils/cutoffTime';
+import { trimToUndefined } from '../utils/strings';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -374,10 +375,6 @@ function isPastDate(dateStr: string): boolean {
   return dateStr < new Date().toISOString().slice(0, 10);
 }
 
-function trimToUndefined(value: string): string | undefined {
-  const trimmed = value.trim();
-  return trimmed ? trimmed : undefined;
-}
 
 function buildEditionLabel(edition: Pick<EventEditionDto, 'title' | 'year' | 'date'>): string {
   if (edition.title?.trim()) return edition.title;

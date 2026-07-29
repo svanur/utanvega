@@ -34,7 +34,6 @@ public class CreateOrganizerCommandHandler : IRequestHandler<CreateOrganizerComm
             Website = request.Website,
             Description = request.Description,
             ContactName = request.ContactName,
-            CreatedAt = DateTime.UtcNow,
         };
 
         _context.Organizers.Add(organizer);
