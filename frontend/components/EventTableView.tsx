@@ -28,7 +28,7 @@ import { API_URL } from '../hooks/useTrails';
 import { haversineKm, formatDistanceKm } from '../utils/geo';
 import NearMeIcon from '@mui/icons-material/NearMe';
 import EventDateBadge from './EventDateBadge';
-import { getCountdownColor, getEventTypeColor } from '../utils/eventUtils';
+import { getCountdownColor, getEventTypeColor, formatNextDate } from '../utils/eventUtils';
 
 function getActivityIcon(type: string) {
     switch (type) {
@@ -177,8 +177,8 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
         { field: 'name', label: t('races.table.name', 'Name') },
     ];
 
-    // +1 expand, +5 manual headers (Distances, Certifications, km away, Location, Links)
-    const totalColumns = columns.length + 6;
+    // +1 expand, +4 manual headers (Distances, km away, Location, Links)
+    const totalColumns = columns.length + 5;
 
     return (
         <TableContainer component={Paper} elevation={1} sx={{ borderRadius: 2, width: '100%', overflowX: 'auto' }}>
@@ -198,8 +198,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                             </TableCell>
                         ))}
                         <TableCell>{t('races.table.distances', 'Distances')}</TableCell>
-                        <TableCell>{t('races.table.certifications', 'Vottun')}</TableCell>
-                        <TableCell align="right">
+                        <TableCell>
                             <TableSortLabel active={sortField === 'distance'} direction={sortField === 'distance' ? sortDir : 'asc'} onClick={() => handleSort('distance')}>
                                 {t('trail.kmAway', 'km away')}
                             </TableSortLabel>
@@ -234,10 +233,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                         {race.dateOfRace ? (
                                             <Stack alignItems="center" spacing={0.5}>
                                                 <Typography variant="body2" noWrap>
-                                                    {new Date(race.dateOfRace + 'T00:00:00').toLocaleDateString(
-                                                        i18n.language === 'is' ? 'is-IS' : 'en-US',
-                                                        { day: 'numeric', month: 'short', year: 'numeric' }
-                                                    )}
+                                                    {formatNextDate(race.dateOfRace, t)}
                                                 </Typography>
                                                 <Stack direction="row" alignItems="center" gap={0.5} flexWrap="wrap" justifyContent="center">
                                                     <EventDateBadge dateStr={race.dateOfRace} />
@@ -284,7 +280,6 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                             <Typography variant="body2" color="text.secondary">—</Typography>
                                         )}
                                     </TableCell>
-                                    <TableCell><Typography variant="body2" color="text.secondary">—</Typography></TableCell>
                                     {(() => {
                                         const km = getDistanceKm(event);
                                         return (
@@ -364,10 +359,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                         {(event.displayDate ?? event.nextEditionDate) ? (
                                             <Stack alignItems="center" spacing={0.5}>
                                                 <Typography variant="body2" noWrap>
-                                                    {new Date((event.displayDate ?? event.nextEditionDate)! + 'T00:00:00').toLocaleDateString(
-                                                        i18n.language === 'is' ? 'is-IS' : 'en-US',
-                                                        { day: 'numeric', month: 'short', year: 'numeric' }
-                                                    )}
+                                                    {formatNextDate((event.displayDate ?? event.nextEditionDate)!, t)}
                                                 </Typography>
                                                 <Stack direction="row" alignItems="center" gap={0.5} flexWrap="wrap" justifyContent="center">
                                                     <EventDateBadge dateStr={(event.displayDate ?? event.nextEditionDate)!} />
@@ -448,30 +440,6 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                         )}
                                     </TableCell>
 
-                                    {/* Credentials */}
-                                    <TableCell>
-                                        {(event.certifications?.length || event.championshipCategories?.length || event.itraPoints?.length) ? (
-                                            <Stack direction="row" flexWrap="wrap" gap={0.5} alignItems="center">
-                                                {event.itraPoints?.map((pts, i) => (
-                                                    <Tooltip key={i} title={`ITRA ${pts} points`}>
-                                                        <img
-                                                            src={`/images/itra-${pts}.png`}
-                                                            alt={`ITRA ${pts}`}
-                                                            style={{ height: 20, verticalAlign: 'middle' }}
-                                                        />
-                                                    </Tooltip>
-                                                ))}
-                                                {event.certifications?.map((c, i) => (
-                                                    <Chip key={i} label={c} size="small" variant="outlined" color="secondary" sx={{ fontSize: '0.68rem', height: 20 }} />
-                                                ))}
-                                                {event.championshipCategories?.map((c, i) => (
-                                                    <Chip key={i} label={c} size="small" variant="outlined" color="primary" sx={{ fontSize: '0.68rem', height: 20 }} />
-                                                ))}
-                                            </Stack>
-                                        ) : (
-                                            <Typography variant="body2" color="text.secondary">—</Typography>
-                                        )}
-                                    </TableCell>
 
                                     {/* Distance to user */}
                                     {(() => {

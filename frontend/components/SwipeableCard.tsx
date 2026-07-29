@@ -112,10 +112,12 @@ export default function SwipeableCard({
         if (revealed) snapTo(0, false);
     };
 
+    const showPanel = offsetX < 0 || revealed;
+
     return (
-        <Box sx={{ position: 'relative', overflow: 'hidden', borderRadius: 'inherit' }}>
-            {/* Left-swipe action panel — sits behind the card on the right */}
-            {leftActions && (
+        <Box sx={{ position: 'relative', overflow: 'hidden', borderRadius: '4px' }}>
+            {/* Left-swipe action panel — only rendered while swiping or revealed */}
+            {leftActions && showPanel && (
                 <Box sx={{
                     position: 'absolute',
                     right: 0,
