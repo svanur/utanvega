@@ -221,7 +221,7 @@ const TrailTableView: React.FC<TrailTableViewProps> = ({ trails, favorites, onTo
                                                     <Chip icon={getTerrainIcon(trail.terrainType)} label={t(`trail.terrainType.${trail.terrainType}`, { defaultValue: trail.terrainType })} size="small" variant="outlined" sx={{ height: 18, fontSize: '0.65rem' }} />
                                                 )}
                                                 {trail.activityType && (
-                                                    <Chip icon={getActivityIcon(trail.activityType)} label={t(`difficulty.${trail.activityType.charAt(0).toLowerCase() + trail.activityType.slice(1)}`, { defaultValue: trail.activityType })} size="small" color="primary" variant="outlined" sx={{ height: 18, fontSize: '0.65rem' }} />
+                                                    <Chip icon={getActivityIcon(trail.activityType)} label={t(`trail.activityType.${trail.activityType}`, { defaultValue: trail.activityType })} size="small" color="primary" variant="outlined" sx={{ height: 18, fontSize: '0.65rem' }} />
                                                 )}
                                                 {trail.trailType && trail.trailType !== 'Unknown' && trailTypeI18nKey(trail.trailType) && (
                                                     <Chip icon={getTrailTypeIcon(trail.trailType)} label={t(trailTypeI18nKey(trail.trailType)!)} size="small" variant="outlined" sx={{ height: 18, fontSize: '0.65rem' }} />

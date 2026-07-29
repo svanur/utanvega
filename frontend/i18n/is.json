@@ -1168,7 +1168,7 @@
         "raceDayShareCta": "Ég tek þátt í dag 💥",
         "raceDayShareText": "{{raceName}} er í dag og ég er með 💥",
         "raceDayShareRaceCta": "Ég tek þátt 💥",
-        "raceDayShareRaceText": "Í dag ég þátt í {{competitionName}} - {{raceName}} 💥",
+        "raceDayShareRaceText": "Í dag tek ég þátt í {{competitionName}} - {{raceName}} 💥",
         "shareCard": {
             "button": "Ég tek þátt! 💥",
             "racingToday": "Í dag er keppnisdagur!",
