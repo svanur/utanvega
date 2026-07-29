@@ -31,10 +31,6 @@ import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import RouteIcon from '@mui/icons-material/Route';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
-import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
-import HikingIcon from '@mui/icons-material/Hiking';
-import DirectionsBikeIcon from '@mui/icons-material/DirectionsBike';
-import LandscapeIcon from '@mui/icons-material/Landscape';
 import LoopIcon from '@mui/icons-material/Loop';
 import SyncAltIcon from '@mui/icons-material/SyncAlt';
 import EastIcon from '@mui/icons-material/East';
@@ -59,6 +55,8 @@ import VideocamIcon from '@mui/icons-material/Videocam';
 import Layout from '../components/Layout';
 import { useTrailBySlug, useTrails, useTrailSuggestions, useTrailWeather, useTrailLeaderboard, recordTrailView, API_URL } from '../hooks/useTrails';
 import { estimateDuration } from '../utils/estimateDuration';
+import { getActivityIcon } from '../utils/activityIcon';
+import LandscapeIcon from '@mui/icons-material/Landscape';
 import PaceInfo from '../components/PaceInfo';
 import LostRunner from '../components/LostRunner';
 import { useFavorites } from '../hooks/useFavorites';
@@ -108,15 +106,6 @@ function toYoutubeEmbedUrl(url: string): string | null {
     }
 }
 
-const getActivityIcon = (type: string) => {
-    switch (type.toLowerCase()) {
-        case 'trailrunning': return <LandscapeIcon />;
-        case 'running': return <DirectionsRunIcon />;
-        case 'cycling': return <DirectionsBikeIcon />;
-        case 'hiking': return <HikingIcon />;
-        default: return <RouteIcon />;
-    }
-};
 
 const getTrailTypeIcon = (type: string) => {
     switch (type) {

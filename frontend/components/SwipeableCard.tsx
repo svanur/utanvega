@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Box } from '@mui/material';
+import { Box, useTheme } from '@mui/material';
 
 interface SwipeableCardProps {
     children: React.ReactNode;
@@ -21,6 +21,7 @@ export default function SwipeableCard({
     disabled = false,
     peek = false,
 }: SwipeableCardProps) {
+    const theme = useTheme();
     const [offsetX, setOffsetX] = useState(0);
     const [animating, setAnimating] = useState(false);
     const [revealed, setRevealed] = useState(false);
@@ -112,10 +113,12 @@ export default function SwipeableCard({
         if (revealed) snapTo(0, false);
     };
 
+    const showPanel = offsetX < 0 || revealed;
+
     return (
-        <Box sx={{ position: 'relative', overflow: 'hidden', borderRadius: 'inherit' }}>
-            {/* Left-swipe action panel — sits behind the card on the right */}
-            {leftActions && (
+        <Box sx={{ position: 'relative', overflow: 'hidden', borderRadius: `${theme.shape.borderRadius}px` }}>
+            {/* Left-swipe action panel — only rendered while swiping or revealed */}
+            {leftActions && showPanel && (
                 <Box sx={{
                     position: 'absolute',
                     right: 0,

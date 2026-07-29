@@ -9,11 +9,8 @@ import {
     CardActionArea,
     Tooltip
 } from '@mui/material';
-import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
-import HikingIcon from '@mui/icons-material/Hiking';
-import DirectionsBikeIcon from '@mui/icons-material/DirectionsBike';
-import LandscapeIcon from '@mui/icons-material/Landscape';
 import RouteIcon from '@mui/icons-material/Route';
+import LandscapeIcon from '@mui/icons-material/Landscape';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
@@ -22,6 +19,8 @@ import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
 import StarIcon from '@mui/icons-material/Star';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import NearMeIcon from '@mui/icons-material/NearMe';
+import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import ShareIcon from '@mui/icons-material/Share';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { useNavigate } from 'react-router-dom';
@@ -33,6 +32,7 @@ import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { useLoginEnabled } from '../hooks/useLoginEnabled';
 import { estimateDuration } from '../utils/estimateDuration';
 import { useFavorites } from '../hooks/useFavorites';
+import { getActivityIcon } from '../utils/activityIcon';
 import { useTickedTrails } from '../hooks/useTickedTrails';
 import { TrailQuickView } from './TrailQuickView';
 import DifficultyInfo from './DifficultyInfo';
@@ -47,15 +47,6 @@ interface TrailCardProps {
     disableGestures?: boolean;
 }
 
-const getActivityIcon = (type: string) => {
-    switch (type.toLowerCase()) {
-        case 'trailrunning': return <LandscapeIcon fontSize="small" />;
-        case 'running': return <DirectionsRunIcon fontSize="small" />;
-        case 'cycling': return <DirectionsBikeIcon fontSize="small" />;
-        case 'hiking': return <HikingIcon fontSize="small" />;
-        default: return <RouteIcon fontSize="small" />;
-    }
-};
 
 const getTrailTypeIcon = (type: string) => {
     switch (type) {
@@ -251,49 +242,62 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
             >
                 <CardActionArea onClick={handleClick} sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'flex-start' }}>
                     <CardContent sx={{ display: 'flex', flexDirection: 'column', flex: 1, ...(compact ? { p: 1.5, '&:last-child': { pb: 1.5 } } : {}) }}>
-                        {/* 1st row: Trail name and favorite star */}
-                        <Box display="flex" justifyContent="space-between" alignItems="center">
-                            <Typography 
-                                variant={compact ? 'body1' : 'h6'} 
-                                component="div" 
-                                fontWeight="bold"
-                                sx={compact ? { 
-                                    fontSize: '0.85rem', 
-                                    lineHeight: 1.3,
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap',
-                                } : undefined}
-                            >
-                                {trail.name}
-                            </Typography>
-                            <Box display="flex" alignItems="center" gap={0.25}>
-                                {loginEnabled && tickedSlugs.has(trail.slug) && (
-                                    <CheckCircleIcon color="success" sx={{ fontSize: compact ? 14 : 20 }} />
-                                )}
-                                {isFavorited && <StarIcon color="warning" sx={{ fontSize: compact ? 14 : 20 }} />}
-                            </Box>
-                        </Box>
+                        {/* 1st row: activity icon + Trail name + favorite/ticked */}
+                        <Stack direction="row" alignItems="flex-start" justifyContent="space-between" gap={1}>
+                            {compact ? (
+                                <>
+                                    <Typography
+                                        variant="body1"
+                                        component="div"
+                                        fontWeight="bold"
+                                        sx={{ fontSize: '0.85rem', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}
+                                    >
+                                        {trail.name}
+                                    </Typography>
+                                    <Box display="flex" alignItems="center" gap={0.25}>
+                                        {loginEnabled && tickedSlugs.has(trail.slug) && <CheckCircleIcon color="success" sx={{ fontSize: 14 }} />}
+                                        {isFavorited && <StarIcon color="warning" sx={{ fontSize: 14 }} />}
+                                    </Box>
+                                </>
+                            ) : (
+                                <>
+                                    <Stack direction="row" alignItems="flex-start" gap={1} sx={{ flex: 1, minWidth: 0 }}>
+                                        <Tooltip title={t(`difficulty.${trail.activityType.charAt(0).toLowerCase() + trail.activityType.slice(1)}`, trail.activityType)}>
+                                            <Box sx={{ color: 'text.secondary', pt: 0.3, flexShrink: 0 }}>{getActivityIcon(trail.activityType)}</Box>
+                                        </Tooltip>
+                                        <Typography variant="subtitle1" component="div" fontWeight="bold" sx={{ minWidth: 0 }}>
+                                            {trail.name}
+                                        </Typography>
+                                    </Stack>
+                                    <Box display="flex" alignItems="center" gap={0.25}>
+                                        {loginEnabled && tickedSlugs.has(trail.slug) && <CheckCircleIcon color="success" sx={{ fontSize: 20 }} />}
+                                        {isFavorited && <StarIcon color="warning" sx={{ fontSize: 20 }} />}
+                                    </Box>
+                                </>
+                            )}
+                        </Stack>
 
-                        {/* Description snippet — hidden in compact mode */}
-                        {!compact && trail.description && (
-                            <Typography
-                                variant="body2"
-                                color="text.secondary"
-                                sx={{
-                                    mt: 0.5,
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    display: '-webkit-box',
-                                    WebkitLineClamp: 2,
-                                    WebkitBoxOrient: 'vertical',
-                                    fontSize: '0.8rem',
-                                    lineHeight: 1.4,
-                                }}
-                            >
-                                {trail.description}
-                            </Typography>
+                        {/* Meta line: primary location · km away (non-compact only) */}
+                        {!compact && (trail.locations.length > 0 || userDist) && (
+                            <Stack direction="row" alignItems="center" gap={0.5} sx={{ mt: 0.5 }} flexWrap="wrap">
+                                {trail.locations.length > 0 && (
+                                    <>
+                                        <LocationOnIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
+                                        <Typography variant="body2" color="text.secondary" noWrap>
+                                            {[...trail.locations].sort((a, b) => a.order - b.order)[0].name}
+                                        </Typography>
+                                    </>
+                                )}
+                                {userDist && trail.locations.length > 0 && <FiberManualRecordIcon sx={{ fontSize: 5, color: 'text.disabled' }} />}
+                                {userDist && (
+                                    <>
+                                        <NearMeIcon sx={{ fontSize: 13, color: 'primary.main' }} />
+                                        <Typography variant="body2" color="primary.main" fontWeight={500} noWrap>{userDist}</Typography>
+                                    </>
+                                )}
+                            </Stack>
                         )}
+
 
                     {/* 2nd row: icons-only in compact, full chips in normal */}
                     {compact ? (
@@ -347,21 +351,6 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                                 sx={{ fontSize: '0.7rem' }}
                             />
                         )}
-                        {locationsPageEnabled && [...trail.locations]
-                            .sort((a, b) => a.order - b.order)
-                            .map(loc => (
-                                <Chip
-                                    key={loc.slug}
-                                    label={loc.name}
-                                    size="small"
-                                    variant="outlined"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        navigate(`/locations/${loc.slug}`);
-                                    }}
-                                    sx={{ cursor: 'pointer' }}
-                                />
-                            ))}
                         {tagsEnabled && trail.tags && trail.tags.length > 0 && trail.tags
                             .map(tag => (
                                 <Chip
@@ -411,10 +400,10 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                             <Typography variant="body2" fontSize={compact ? '0.75rem' : undefined}>~{estTime}</Typography>
                         </Box>
                         )}
-                        {userDist && !compact && (
+                        {userDist && compact && (
                             <Box display="flex" alignItems="center">
-                                <LocationOnIcon sx={{ mr: 0.5, fontSize: 18, color: 'primary.main' }} />
-                                <Typography variant="body2" color="primary.main" fontWeight="medium">
+                                <LocationOnIcon sx={{ mr: 0, fontSize: 14, color: 'primary.main' }} />
+                                <Typography variant="body2" fontSize="0.75rem" color="primary.main" fontWeight="medium">
                                     {userDist}
                                 </Typography>
                             </Box>

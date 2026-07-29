@@ -1265,39 +1265,69 @@ function RaceCard({
 
                 <Stack direction="row" spacing={1} sx={{ mt: 0.5, flexWrap: 'wrap', gap: 0.5 }}>
                     {race.distanceLabel && (
-                        <Chip icon={<StraightenIcon />} label={race.distanceLabel} size="small" color="primary" variant="outlined" />
+                        <Tooltip title={t('races.raceDistance', { defaultValue: 'Race distance' })}>
+                            <Chip icon={<StraightenIcon />} label={race.distanceLabel} size="small" color="primary" variant="outlined" />
+                        </Tooltip>
                     )}
                     {raceDateTime && (
-                        <Chip icon={<CalendarTodayIcon />} label={raceDateTime} size="small" variant="outlined" />
+                        <Tooltip title={t('races.raceDateTime', { defaultValue: 'Date & start time' })}>
+                            <Chip icon={<CalendarTodayIcon />} label={raceDateTime} size="small" variant="outlined" />
+                        </Tooltip>
                     )}
                     {race.trailDistanceMeters && (
-                        <Chip label={`${(race.trailDistanceMeters / 1000).toFixed(1)} km`} size="small" variant="outlined" />
+                        <Tooltip title={t('races.trailDistance', { defaultValue: 'Trail distance' })}>
+                            <Chip label={`${(race.trailDistanceMeters / 1000).toFixed(1)} km`} size="small" variant="outlined" />
+                        </Tooltip>
                     )}
                     {race.trailElevationGain && (
-                        <Chip icon={<TerrainIcon />} label={`↑ ${Math.round(race.trailElevationGain)} m`} size="small" variant="outlined" />
+                        <Tooltip title={t('races.elevationGain', { defaultValue: 'Elevation gain' })}>
+                            <Chip icon={<TerrainIcon />} label={`↑ ${Math.round(race.trailElevationGain)} m`} size="small" variant="outlined" />
+                        </Tooltip>
                     )}
                     {race.trailTerrainType === 'Mountainous' && (
-                        <Chip label={t('races.mountainRace', { defaultValue: 'Mountain race' })} size="small" color="warning" variant="filled" />
+                        <Tooltip title={t('races.terrainType', { defaultValue: 'Terrain type' })}>
+                            <Chip label={t('races.mountainRace', { defaultValue: 'Mountain race' })} size="small" color="warning" variant="filled" />
+                        </Tooltip>
                     )}
                     {race.cutoffMinutes != null && (
-                        <Chip icon={<TimerIcon />} label={formatCutoff(race.cutoffMinutes, t)} size="small" variant="outlined" color="warning" />
+                        <Tooltip title={t('races.cutoffTime', { defaultValue: 'Time limit' })}>
+                            <Chip icon={<TimerIcon />} label={formatCutoff(race.cutoffMinutes, t)} size="small" variant="outlined" color="warning" />
+                        </Tooltip>
                     )}
                     {race.ticketStatus && (
-                        <Chip label={race.ticketStatus} size="small" color={getTicketStatusColor(race.ticketStatus)} />
+                        <Tooltip title={t('races.ticketStatusLabel', { defaultValue: 'Registration status' })}>
+                            <Chip label={t(`races.ticketStatus.${race.ticketStatus}`, { defaultValue: race.ticketStatus })} size="small" color={getTicketStatusColor(race.ticketStatus)} />
+                        </Tooltip>
                     )}
                     {race.maxParticipants != null && (
-                        <Chip label={`👥 ${race.maxParticipants}`} size="small" variant="outlined" />
-                    )}
-                    {race.itraPoints != null && (
-                        <Tooltip title={`ITRA ${race.itraPoints}`}>
-                            <img
-                                src={`/images/itra-${race.itraPoints}.png`}
-                                alt={`ITRA ${race.itraPoints}`}
-                                style={{ height: 20, verticalAlign: 'middle' }}
-                            />
+                        <Tooltip title={t('races.maxParticipants', { defaultValue: 'Max participants' })}>
+                            <Chip label={`👥 ${race.maxParticipants}`} size="small" variant="outlined" />
                         </Tooltip>
                     )}
                 </Stack>
+                {(race.itraPoints != null || race.certifiedBy || race.championshipCategory) && (
+                    <Stack direction="row" flexWrap="wrap" gap={0.5} alignItems="center" sx={{ mt: 0.5 }}>
+                        {race.itraPoints != null && (
+                            <Tooltip title={`ITRA ${race.itraPoints}`}>
+                                <img
+                                    src={`/images/itra-${race.itraPoints}.png`}
+                                    alt={`ITRA ${race.itraPoints}`}
+                                    style={{ height: 20, verticalAlign: 'middle' }}
+                                />
+                            </Tooltip>
+                        )}
+                        {race.certifiedBy && (
+                            <Tooltip title={t('races.certifiedBy', { defaultValue: 'Certified by' })}>
+                                <Chip label={race.certifiedBy} size="small" variant="outlined" color="secondary" />
+                            </Tooltip>
+                        )}
+                        {race.championshipCategory && (
+                            <Tooltip title={t('races.championshipCategory', { defaultValue: 'Championship category' })}>
+                                <Chip label={race.championshipCategory} size="small" variant="outlined" color="primary" />
+                            </Tooltip>
+                        )}
+                    </Stack>
+                )}
 
                 {/* Race progress bar on race day */}
                 {daysUntil === 0 && race.status !== 'Cancelled' && race.dateOfRace && race.startTime && race.cutoffMinutes != null && (

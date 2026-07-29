@@ -7,19 +7,12 @@ import {
 } from '@mui/material';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
-import LandscapeIcon from '@mui/icons-material/Landscape';
-import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
-import HikingIcon from '@mui/icons-material/Hiking';
-import DirectionsBikeIcon from '@mui/icons-material/DirectionsBike';
-import CelebrationIcon from '@mui/icons-material/Celebration';
-import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
-import GrassIcon from '@mui/icons-material/Grass';
-import CampaignIcon from '@mui/icons-material/Campaign';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import NearMeIcon from '@mui/icons-material/NearMe';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import { formatDistanceKm } from '../utils/geo';
+import { getActivityIcon } from '../utils/activityIcon';
 import { estimateDuration, estimateDurationMinutes } from '../utils/estimateDuration';
 import type { Trail } from '../hooks/useTrails';
 
@@ -46,19 +39,6 @@ function getDifficultyColor(d: string): 'success' | 'info' | 'warning' | 'error'
     }
 }
 
-function getActivityIcon(type: string) {
-    switch (type) {
-        case 'TrailRunning': return <LandscapeIcon fontSize="small" />;
-        case 'Running': return <DirectionsRunIcon fontSize="small" />;
-        case 'Hiking': return <HikingIcon fontSize="small" />;
-        case 'Cycling': return <DirectionsBikeIcon fontSize="small" />;
-        case 'FunRun': return <CelebrationIcon fontSize="small" />;
-        case 'ObstacleCourse': return <FitnessCenterIcon fontSize="small" />;
-        case 'CrossCountryRun': return <GrassIcon fontSize="small" />;
-        case 'Advertisement': return <CampaignIcon fontSize="small" />;
-        default: return <DirectionsRunIcon fontSize="small" />;
-    }
-}
 
 const TrailTableView: React.FC<TrailTableViewProps> = ({ trails, favorites, onToggleFavorite, userLocation }) => {
     const { t } = useTranslation();

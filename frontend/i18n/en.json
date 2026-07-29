@@ -1103,9 +1103,9 @@
         "wereYouLookingFor": "Were you looking for one of these?",
         "viewTrail": "View trail",
         "mountainRace": "Mountain race",
-        "cutoffHours_one": "{{count}} hour cutoff",
-        "cutoffHours_other": "{{count}} hours cutoff",
-        "cutoffHours": "{{count}}h cutoff",
+        "cutoffHours_one": "{{count}} hour time limit",
+        "cutoffHours_other": "{{count}} hours time limit",
+        "cutoffHours": "{{count}}h time limit",
         "dateLocale": "en",
         "months": [
             "January",
@@ -1144,6 +1144,16 @@
         "scheduleApproximate": "Usually held in {{month}}",
         "scheduleApproximateRange": "Usually held in {{monthStart}}–{{monthEnd}}",
         "statusCancelled": "Cancelled",
+        "certifiedBy": "Certified by",
+        "championshipCategory": "Championship category",
+        "raceDistance": "Race distance",
+        "raceDateTime": "Date & start time",
+        "trailDistance": "Trail distance",
+        "elevationGain": "Elevation gain",
+        "terrainType": "Terrain type",
+        "cutoffTime": "Time limit",
+        "ticketStatusLabel": "Registration status",
+        "maxParticipants": "Max participants",
         "statusUpcoming": "Unconfirmed",
         "raceDayWeather": "Trail Weather – Race Forecast",
         "raceDayWeatherDesc": "Current conditions and 7-day forecast at the race route. Race day is highlighted.",
@@ -1188,7 +1198,7 @@
         "raceFinished": "🏁 Finished",
         "progressBar": {
             "waiting": "Waiting for start...",
-            "cutoffReached": "Cutoff time reached",
+            "cutoffReached": "Time limit reached",
             "remaining": "{{time}} remaining"
         },
         "checklistSavedLocally": "Saved on this device only.",
@@ -1249,7 +1259,7 @@
             "noRaces": "No races for this edition",
             "soldOut": "Sold Out",
             "almostSoldOut": "Almost Full",
-            "cutoff": "Cutoff time",
+            "cutoff": "Time Limit",
             "certifications": "Credentials"
         },
         "nearMe": {
@@ -1409,7 +1419,7 @@
                 "items": [
                     "📌 What it is: Your personal global ranking score, ranging from 0 to 1000. It represents your theoretical maximum racing potential.",
                     "⚙️ How it works: Every time you finish an ITRA-certified race, you receive a personal Race Score based purely on your speed compared to a theoretical world-record pace on that specific course. Your overall Performance Index is the weighted average of your up to 5 best Race Scores over the last 36 months.",
-                    "🏔️ The Laugavegur Rule: To enter the Laugavegur Ultra Trail, organizers don't care how many ITRA Points you have. They strictly require an ITRA Performance Index of 370 or higher. This proves you have the physical engine and speed to clear the mountain safety cut-offs. (For context, finishing the 55km Laugavegur course in 9.5 hours equals roughly a 370 score)."
+                    "🏔️ The Laugavegur Rule: To enter the Laugavegur Ultra Trail, organizers don't care how many ITRA Points you have. They strictly require an ITRA Performance Index of 370 or higher. This proves you have the physical engine and speed to clear the mountain safety time limits. (For context, finishing the 55km Laugavegur course in 9 hours and 15 minutes equals roughly a 370 score)."
                 ]
             },
             {
