@@ -1,41 +1,9 @@
 import React, { useState } from 'react';
-import {
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    IconButton,
-    Typography,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    Paper,
-    Box,
-    Stack,
-    useTheme,
-} from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, IconButton, Typography, Box, Stack, useTheme } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import { useTranslation } from 'react-i18next';
-
-interface PaceRow {
-    activity: string;
-    i18nKey: string;
-    speed: string;
-    climbPenalty: string;
-}
-
-const rows: PaceRow[] = [
-    { activity: 'trailrunning',   i18nKey: 'difficulty.trailRunning',   speed: '10 km/h', climbPenalty: '2.5 min / 100m' },
-    { activity: 'running',        i18nKey: 'difficulty.running',        speed: '11 km/h', climbPenalty: '1.5 min / 100m' },
-    { activity: 'hiking',         i18nKey: 'difficulty.hiking',         speed: '4 km/h',  climbPenalty: '10 min / 100m' },
-    { activity: 'cycling',        i18nKey: 'difficulty.cycling',        speed: '20 km/h', climbPenalty: '3 min / 100m' },
-    { activity: 'funrun',           i18nKey: 'difficulty.funRun',           speed: '9 km/h',   climbPenalty: '1.5 min / 100m' },
-    { activity: 'obstaclecourse',   i18nKey: 'difficulty.obstacleCourse',   speed: '5 km/h',   climbPenalty: '4 min / 100m' },
-    { activity: 'crosscountryrun',  i18nKey: 'difficulty.crossCountryRun',  speed: '9.5 km/h', climbPenalty: '2 min / 100m' },
-];
+import PaceModelTable from './PaceModelTable';
 
 interface PaceInfoProps {
     activityType?: string;
@@ -44,10 +12,8 @@ interface PaceInfoProps {
 
 export default function PaceInfo({ activityType, formattedDuration }: PaceInfoProps) {
     const { t } = useTranslation();
-    const [open, setOpen] = useState(false);
     const theme = useTheme();
-
-    const activeRow = activityType?.toLowerCase();
+    const [open, setOpen] = useState(false);
 
     return (
         <>
@@ -81,41 +47,7 @@ export default function PaceInfo({ activityType, formattedDuration }: PaceInfoPr
                     </IconButton>
                 </DialogTitle>
                 <DialogContent>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        {t('paceModel.explanation')}
-                    </Typography>
-
-                    <TableContainer component={Paper} variant="outlined">
-                        <Table size="small">
-                            <TableHead>
-                                <TableRow sx={{ bgcolor: theme.palette.action.hover }}>
-                                    <TableCell sx={{ fontWeight: 'bold' }}>{t('paceModel.activity')}</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold' }}>{t('paceModel.baseSpeed')}</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold' }}>{t('paceModel.climbPenalty')}</TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {rows.map((row) => (
-                                    <TableRow
-                                        key={row.activity}
-                                        sx={row.activity === activeRow ? { bgcolor: theme.palette.action.selected } : undefined}
-                                    >
-                                        <TableCell sx={{ fontWeight: row.activity === activeRow ? 'bold' : undefined }}>
-                                            {t(row.i18nKey)}
-                                        </TableCell>
-                                        <TableCell>{row.speed}</TableCell>
-                                        <TableCell>{row.climbPenalty}</TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
-
-                    <Box mt={2}>
-                        <Typography variant="caption" color="text.secondary">
-                            {t('paceModel.formula')}
-                        </Typography>
-                    </Box>
+                    <PaceModelTable highlightActivity={activityType} />
                 </DialogContent>
             </Dialog>
         </>
