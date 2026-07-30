@@ -19,7 +19,8 @@ export const GO_TO_PAGES: Record<string, PageKey> = {
     t: 'trails',
     l: 'locations',
     h: 'health',
-    v: 'event-health', // e[v]ent health
+    v: 'event-health',   // e[v]ent health
+    d: 'edition-health', // e[d]ition health
     m: 'map',
     s: 'tags',          // tag[s]
     a: 'analytics',

@@ -21,6 +21,7 @@ import TrailList from './pages/TrailList';
 import { LocationList } from './pages/LocationList';
 import TrailHealth from './pages/TrailHealth';
 import EventHealth from './pages/EventHealth';
+import EditionHealth from './pages/EditionHealth';
 import TrailMapView from './pages/TrailMapView';
 import TagManagement from './pages/TagManagement';
 import AnalyticsPage from './pages/AnalyticsPage';
@@ -61,6 +62,7 @@ const PAGE_PATHS: Record<PageKey, string> = {
   locations: '/locations',
   health: '/health',
   'event-health': '/event-health',
+  'edition-health': '/edition-health',
   map: '/map',
   tags: '/tags',
   analytics: '/analytics',
@@ -250,6 +252,7 @@ function AdminContent() {
               { key: 'organizers' as const, icon: <GroupIcon />, label: 'Organizers' },
               { key: 'health' as const, icon: <HealthAndSafetyIcon />, label: 'Trail Health' },
               { key: 'event-health' as const, icon: <HealthAndSafetyIcon sx={{ color: '#ed6c02' }} />, label: 'Event Health' },
+              { key: 'edition-health' as const, icon: <HealthAndSafetyIcon sx={{ color: '#9c27b0' }} />, label: 'Edition Health' },
               { key: 'map' as const, icon: <MapIcon />, label: 'Trail Map' },
               { key: 'tags' as const, icon: <LocalOfferIcon />, label: 'Tags' },
               { key: 'analytics' as const, icon: <BarChartIcon />, label: 'Analytics' },
@@ -292,6 +295,8 @@ function AdminContent() {
             <TrailHealth onEditTrail={(id) => { setSelectedTrailId(id); setCurrentPage('trails'); }} onNotify={notify} />
           ) : currentPage === 'event-health' ? (
             <EventHealth onEditEvent={(id) => { setSelectedEventId(id); setCurrentPage('events'); }} onNotify={notify} />
+          ) : currentPage === 'edition-health' ? (
+            <EditionHealth onEditEvent={(id) => { setSelectedEventId(id); setCurrentPage('events'); }} onNotify={notify} />
           ) : currentPage === 'map' ? (
             <TrailMapView onEditTrail={(id) => { setSelectedTrailId(id); setCurrentPage('trails'); }} />
           ) : currentPage === 'tags' ? (
