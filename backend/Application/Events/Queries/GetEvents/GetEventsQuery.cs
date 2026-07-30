@@ -48,6 +48,7 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
         return events.Select(e =>
         {
             var nextDate = ResolveNextDate(e, today);
+            var hasNextEdition = e.Editions.Any(ed => ed.Date.HasValue && ed.Date.Value >= today);
 
             // Check for recently-past editions (up to 3 days ago)
             // so events with schedule rules still show as "recently completed"
@@ -204,7 +205,8 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 e.GpxPointLat,
                 e.GpxPointLng,
                 IsMountainRace: isMountainRace,
-                TerrainType: terrainType
+                TerrainType: terrainType,
+                HasNextEdition: hasNextEdition
             );
         }).ToList();
     }
