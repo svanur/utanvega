@@ -1,5 +1,6 @@
 import { Box, Typography, Accordion, AccordionSummary, AccordionDetails, Divider, Link as MuiLink } from '@mui/material';
 import type { PaletteMode } from '@mui/material';
+import type { ReactNode } from 'react';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { useTranslation } from 'react-i18next';
@@ -14,8 +15,8 @@ interface FaqPageProps {
 
 interface FaqItem {
     key: string;
-    content?: React.ReactNode;
-    footer?: React.ReactNode;
+    content?: ReactNode;
+    footer?: ReactNode;
 }
 
 export default function FaqPage({ mode, onToggleMode }: FaqPageProps) {
