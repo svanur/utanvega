@@ -672,7 +672,7 @@ function SortableRaceItem({ race, onEdit, onDelete, getIcon, formatDateLabel, fo
             <Chip label={race.status} size="small" color={getRaceStatusColor(race.status)} />
             <Chip label={race.ticketStatus} size="small" color={getTicketStatusColor(race.ticketStatus)} variant="outlined" />
             {race.cutoffMinutes != null && (
-              <Chip label={`Cutoff ${formatMinutesToHHmm(race.cutoffMinutes) ?? `${race.cutoffMinutes} min`}`} size="small" variant="outlined" color="warning" />
+              <Chip label={`Time limit: ${formatMinutesToHHmm(race.cutoffMinutes) ?? `${race.cutoffMinutes} min`}`} size="small" variant="outlined" color="warning" />
             )}
             <Chip
               size="small"
@@ -681,6 +681,12 @@ function SortableRaceItem({ race, onEdit, onDelete, getIcon, formatDateLabel, fo
               label={race.dateOfRace
                 ? `${formatDateLabel(race.dateOfRace, '')}${race.startTime ? ` • ${formatTimeLabel(race.startTime)}` : ''}`
                 : 'Date missing'}
+            />
+            <Chip
+              size="small"
+              variant={race.trailId ? 'outlined' : 'filled'}
+              color={race.trailId ? 'default' : 'warning'}
+              label={race.trailName ?? 'No trail linked'}
             />
           </Stack>
         )}
