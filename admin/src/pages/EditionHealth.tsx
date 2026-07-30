@@ -124,6 +124,10 @@ interface ScoredEdition {
   score: number;
   editionChecks: HealthCheck[];
   raceRows: { race: RaceDto; checks: HealthCheck[]; score: number }[];
+  // Pre-computed flags — avoids brittle label-string lookups in filter/count logic
+  hasTrail: boolean;
+  hasResults: boolean;
+  hasGoodStatus: boolean;
 }
 
 type SortField = 'event' | 'year' | 'score';
@@ -172,12 +176,18 @@ export default function EditionHealth({ onEditEvent, onNotify }: EditionHealthPr
           ...editionChecks,
           ...raceRows.flatMap(rr => rr.checks),
         ];
+        const hasTrail = editionChecks.find(c => c.label === 'Trail')!.passed;
+        const hasResults = editionChecks.find(c => c.label === 'Results URL')!.passed;
+        const hasGoodStatus = editionChecks.find(c => c.label === 'Reg. Status')!.passed;
         result.push({
           event,
           edition,
           score: scoreFromChecks(allChecks),
           editionChecks,
           raceRows,
+          hasTrail,
+          hasResults,
+          hasGoodStatus,
         });
       }
     }
@@ -203,9 +213,9 @@ export default function EditionHealth({ onEditEvent, onNotify }: EditionHealthPr
       case 'critical':    result = result.filter(s => s.score < 50); break;
       case 'no-date':     result = result.filter(s => !s.edition.date); break;
       case 'no-races':    result = result.filter(s => s.edition.races.length === 0); break;
-      case 'no-trail':    result = result.filter(s => !s.editionChecks.find(c => c.label === 'Trail')?.passed); break;
-      case 'no-results':  result = result.filter(s => !s.editionChecks.find(c => c.label === 'Results URL')?.passed && isPast(s.edition.date)); break;
-      case 'bad-status':  result = result.filter(s => !s.editionChecks.find(c => c.label === 'Reg. Status')?.passed); break;
+      case 'no-trail':    result = result.filter(s => !s.hasTrail); break;
+      case 'no-results':  result = result.filter(s => !s.hasResults); break;
+      case 'bad-status':  result = result.filter(s => !s.hasGoodStatus); break;
     }
     return [...result].sort((a, b) => {
       let cmp = 0;
@@ -223,9 +233,9 @@ export default function EditionHealth({ onEditEvent, onNotify }: EditionHealthPr
   const criticalCount = scored.filter(s => s.score < 50).length;
   const noDateCount = scored.filter(s => !s.edition.date).length;
   const noRacesCount = scored.filter(s => s.edition.races.length === 0).length;
-  const noTrailCount = scored.filter(s => !s.editionChecks.find(c => c.label === 'Trail')?.passed).length;
-  const noResultsCount = scored.filter(s => !s.editionChecks.find(c => c.label === 'Results URL')?.passed && isPast(s.edition.date)).length;
-  const badStatusCount = scored.filter(s => !s.editionChecks.find(c => c.label === 'Reg. Status')?.passed).length;
+  const noTrailCount = scored.filter(s => !s.hasTrail).length;
+  const noResultsCount = scored.filter(s => !s.hasResults).length;
+  const badStatusCount = scored.filter(s => !s.hasGoodStatus).length;
   const avgScore = scored.length > 0 ? Math.round(scored.reduce((s, e) => s + e.score, 0) / scored.length) : 0;
 
   const handleSort = (field: SortField) => {
@@ -254,8 +264,7 @@ export default function EditionHealth({ onEditEvent, onNotify }: EditionHealthPr
       <Stack direction="row" spacing={2} sx={{ mb: activeFilter ? 1.5 : 3 }} flexWrap="wrap" useFlexGap>
         <SummaryCard title="Total Editions" value={totalEditions} color="#1976d2" />
         <SummaryCard title="Avg Health" value={`${avgScore}%`} color={avgScore >= 80 ? '#2e7d32' : avgScore >= 50 ? '#ed6c02' : '#d32f2f'} />
-        <SummaryCard title="Perfect (100%)" value={perfectCount} color="#2e7d32"
-          filter="perfect" activeFilter={null} onFilter={() => {}} />
+        <SummaryCard title="Perfect (100%)" value={perfectCount} color="#2e7d32" />
         <SummaryCard title="Critical (<50%)" value={criticalCount} color="#d32f2f"
           filter="critical" activeFilter={activeFilter} onFilter={setActiveFilter} />
         <SummaryCard title="No Date" value={noDateCount} color={noDateCount > 0 ? '#ed6c02' : '#2e7d32'}
