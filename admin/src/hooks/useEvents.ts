@@ -106,7 +106,7 @@ export interface EventSummaryDto {
     gpxPointLng: number | null;
     isMountainRace: boolean;
     terrainType: string | null;
-    hasNextEdition: boolean;
+    hasFutureEdition: boolean;
 }
 
 export interface EventDetailDto extends EventSummaryDto {

@@ -974,10 +974,12 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
         }
 
         if (yearFilter !== 'all') {
-          if (event.hasNextEdition && (!event.nextEditionDate || event.nextEditionDate.slice(0, 4) !== yearFilter)) return false;
+          if (!event.hasFutureEdition) return true; // always show events missing a future edition regardless of year filter
+          if (!event.nextEditionDate || event.nextEditionDate.slice(0, 4) !== yearFilter) return false;
         }
         if (monthFilter !== 'all') {
-          if (event.hasNextEdition && (!event.nextEditionDate || event.nextEditionDate.slice(5, 7) !== monthFilter)) return false;
+          if (!event.hasFutureEdition) return true;
+          if (!event.nextEditionDate || event.nextEditionDate.slice(5, 7) !== monthFilter) return false;
         }
 
         return true;
@@ -1627,7 +1629,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
     if (editionsWithRaces.length === 0) return;
     const source = editionsWithRaces.reduce((best, ed) =>
       Math.abs((ed.year ?? 0) - toYear) < Math.abs((best.year ?? 0) - toYear) ? ed : best,
-    );
+    editionsWithRaces[0]);
     if (source.year === toYear) return;
     setCloneFromEditionId(source.id);
     const suggestedDate = suggestEditionDateForYear(source.date, toYear);
@@ -1917,7 +1919,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                             sx={{ mt: 0.5 }}
                           />
                         )}
-                        {event.status !== 'Cancelled' && !event.hasNextEdition && (
+                        {event.status !== 'Cancelled' && !event.hasFutureEdition && (
                           <Chip
                             label="Edition missing"
                             size="small"
@@ -1927,7 +1929,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                           />
                         )}
                       </Box>
-                    ) : event.status !== 'Cancelled' && !event.hasNextEdition ? (
+                    ) : event.status !== 'Cancelled' && !event.hasFutureEdition ? (
                       <Chip
                         label={event.editionCount === 0 ? 'No editions' : 'Edition missing'}
                         size="small"
@@ -2990,7 +2992,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setCopyRacesConfirm(null)}>Cancel</Button>
-          <Button variant="contained" onClick={handleConfirmCopyRaces}>Copy Races</Button>
+          <Button variant="contained" onClick={handleConfirmCopyRaces} disabled={saving}>{saving ? <CircularProgress size={20} /> : 'Copy Races'}</Button>
         </DialogActions>
       </Dialog>
 
@@ -3009,7 +3011,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                   </Typography>
                   {entry.prevDateOfRace && (
                     <Typography variant="caption" color="text.disabled">
-                      prev: {entry.prevDateOfRace}
+                      prev: {formatDateLabel(entry.prevDateOfRace, entry.prevDateOfRace)}
                     </Typography>
                   )}
                 </Box>

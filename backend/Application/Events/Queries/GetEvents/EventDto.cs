@@ -53,7 +53,7 @@ public record EventSummaryDto(
     double? GpxPointLng = null,
     bool IsMountainRace = false,
     string? TerrainType = null,
-    bool HasNextEdition = false
+    bool HasFutureEdition = false
 );
 
 public record RaceDto(
