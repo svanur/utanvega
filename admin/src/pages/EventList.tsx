@@ -13,6 +13,7 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
+  DialogContentText,
   DialogTitle,
   Divider,
   FormControl,
@@ -888,6 +889,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
   const [localRaceOrder, setLocalRaceOrder] = useState<Map<string, string[]>>(new Map());
   const [prefillRaces, setPrefillRaces] = useState<RaceDto[]>([]);
   const [showBulkDatesDialog, setShowBulkDatesDialog] = useState(false);
+  const [copyRacesConfirm, setCopyRacesConfirm] = useState<{ edition: EventEditionDto; source: EventEditionDto } | null>(null);
   const [bulkDates, setBulkDates] = useState<Array<{ race: RaceDto; dateOfRace: string; startTime: string; prevDateOfRace?: string }>>([]);
   const [generateForm, setGenerateForm] = useState<GenerateFormState>({ eventId: '', eventName: '', eventType: 'Race', fromMonth: 1, fromYear: new Date().getFullYear(), toMonth: 12, toYear: new Date().getFullYear(), trailId: '', registrationUrl: '', seasonStartMonth: null, editionName: '' });
 
@@ -972,10 +974,10 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
         }
 
         if (yearFilter !== 'all') {
-          if (!event.nextEditionDate || event.nextEditionDate.slice(0, 4) !== yearFilter) return false;
+          if (event.hasNextEdition && (!event.nextEditionDate || event.nextEditionDate.slice(0, 4) !== yearFilter)) return false;
         }
         if (monthFilter !== 'all') {
-          if (!event.nextEditionDate || event.nextEditionDate.slice(5, 7) !== monthFilter) return false;
+          if (event.hasNextEdition && (!event.nextEditionDate || event.nextEditionDate.slice(5, 7) !== monthFilter)) return false;
         }
 
         return true;
@@ -1115,6 +1117,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
       registrationUrl: clonedRegUrl,
       resultsUrl: clonedResultsUrl,
       registrationStatus: isPastYear ? 'Closed' : 'NotStarted',
+      trailId: defaultClone?.trailId ?? '',
     });
     setShowEditionDialog(true);
   };
@@ -1539,31 +1542,31 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
     }
   };
 
-  const handleCopyRacesFromPrevious = async (edition: EventEditionDto) => {
+  const handleCopyRacesFromPrevious = (edition: EventEditionDto) => {
     if (!expandedDetail) return;
 
-    // Sort all editions chronologically and find the target's position
     const allSorted = [...expandedDetail.editions].sort(sortEditions);
     const targetIndex = allSorted.findIndex(ed => ed.id === edition.id);
 
-    // Look backwards for the closest earlier edition with races
     let sourceEdition: EventEditionDto | undefined;
     for (let i = targetIndex - 1; i >= 0; i--) {
-      if (allSorted[i].races.length > 0) {
-        sourceEdition = allSorted[i];
-        break;
-      }
+      if (allSorted[i].races.length > 0) { sourceEdition = allSorted[i]; break; }
     }
-    // Fallback: use the most recent edition with races (any position)
     if (!sourceEdition) {
       sourceEdition = [...allSorted].reverse().find(ed => ed.id !== edition.id && ed.races.length > 0);
     }
     if (!sourceEdition) return;
 
+    setCopyRacesConfirm({ edition, source: sourceEdition });
+  };
+
+  const handleConfirmCopyRaces = async () => {
+    if (!copyRacesConfirm) return;
+    const { edition, source: sourceEdition } = copyRacesConfirm;
+    setCopyRacesConfirm(null);
+
     const raceCount = sourceEdition.races.length;
     const label = buildEditionLabel(sourceEdition);
-    if (!window.confirm(`Copy ${raceCount} race${raceCount === 1 ? '' : 's'} from "${label}" into this edition?`)) return;
-
     setSaving(true);
     try {
       await Promise.all(sourceEdition.races.map(race =>
@@ -2968,6 +2971,26 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
           <Button variant="contained" onClick={handleGenerateEditions} disabled={saving}>
             {saving ? <CircularProgress size={20} /> : 'Generate'}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Copy races confirmation dialog */}
+      <Dialog open={!!copyRacesConfirm} onClose={() => setCopyRacesConfirm(null)} maxWidth="sm" fullWidth>
+        <DialogTitle>Copy Races</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Copy <strong>{copyRacesConfirm?.source.races.length} race{copyRacesConfirm?.source.races.length === 1 ? '' : 's'}</strong> from edition <strong>{copyRacesConfirm ? buildEditionLabel(copyRacesConfirm.source) : ''}</strong> into this edition?
+          </DialogContentText>
+          <DialogContentText sx={{ mt: 1.5 }}>
+            Races will be cloned with statuses reset to Active/Available.
+            {copyRacesConfirm?.edition.date && copyRacesConfirm?.source.date
+              ? ' Dates will be pre-filled based on the offset from the previous edition.'
+              : ' Dates will need to be set manually.'}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCopyRacesConfirm(null)}>Cancel</Button>
+          <Button variant="contained" onClick={handleConfirmCopyRaces}>Copy Races</Button>
         </DialogActions>
       </Dialog>
 
