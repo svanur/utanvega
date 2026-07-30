@@ -380,6 +380,18 @@ function isPastDate(dateStr: string): boolean {
 }
 
 
+interface BulkMissingItem {
+  event: EventSummaryDto;
+  detail: EventDetailDto | null;
+  sourceEdition: EventEditionDto | null;
+  year: number;
+  date: string;
+  registrationUrl: string;
+  resultsUrl: string;
+  registrationStatus: RegistrationStatus;
+  selected: boolean;
+}
+
 function buildEditionLabel(edition: Pick<EventEditionDto, 'title' | 'year' | 'date'>): string {
   if (edition.title?.trim()) return edition.title;
   if (edition.date) return edition.date;
@@ -903,17 +915,6 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
   const [showBulkMissingDialog, setShowBulkMissingDialog] = useState(false);
   const [bulkMissingLoading, setBulkMissingLoading] = useState(false);
   const [bulkMissingProgress, setBulkMissingProgress] = useState<{ done: number; total: number } | null>(null);
-  interface BulkMissingItem {
-    event: EventSummaryDto;
-    detail: EventDetailDto | null;
-    sourceEdition: EventEditionDto | null;
-    year: number;
-    date: string;
-    registrationUrl: string;
-    resultsUrl: string;
-    registrationStatus: RegistrationStatus;
-    selected: boolean;
-  }
   const [bulkMissingItems, setBulkMissingItems] = useState<BulkMissingItem[]>([]);
   const [bulkDates, setBulkDates] = useState<Array<{ race: RaceDto; dateOfRace: string; startTime: string; prevDateOfRace?: string }>>([]);
   const [generateForm, setGenerateForm] = useState<GenerateFormState>({ eventId: '', eventName: '', eventType: 'Race', fromMonth: 1, fromYear: new Date().getFullYear(), toMonth: 12, toYear: new Date().getFullYear(), trailId: '', registrationUrl: '', seasonStartMonth: null, editionName: '' });
@@ -1868,6 +1869,8 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
       </Box>
     );
   }
+
+  const selectedBulkCount = bulkMissingItems.filter(i => i.selected).length;
 
   return (
     <Box>
@@ -3193,9 +3196,9 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
             variant="contained"
             startIcon={<BulkAddIcon />}
             onClick={handleBulkCreateMissingEditions}
-            disabled={bulkMissingLoading || !!bulkMissingProgress || !bulkMissingItems.some(i => i.selected)}
+            disabled={bulkMissingLoading || !!bulkMissingProgress || selectedBulkCount === 0}
           >
-            Create {bulkMissingItems.filter(i => i.selected).length || ''} Edition{bulkMissingItems.filter(i => i.selected).length !== 1 ? 's' : ''}
+            Create {selectedBulkCount || ''} Edition{selectedBulkCount !== 1 ? 's' : ''}
           </Button>
         </DialogActions>
       </Dialog>
