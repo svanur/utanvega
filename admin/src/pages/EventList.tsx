@@ -13,6 +13,7 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
+  DialogContentText,
   DialogTitle,
   Divider,
   FormControl,
@@ -394,6 +395,31 @@ function sortEditions(a: EventEditionDto, b: EventEditionDto): number {
   return buildEditionLabel(b).localeCompare(buildEditionLabel(a));
 }
 
+function suggestEditionDateForYear(prevDateStr: string | null | undefined, toYear: number): string {
+  if (!prevDateStr) return '';
+  const prev = new Date(prevDateStr + 'T00:00:00');
+  const candidate = new Date(prev);
+  candidate.setFullYear(toYear);
+  // Snap to the same day of the week as the source edition
+  const diff = prev.getDay() - candidate.getDay();
+  candidate.setDate(candidate.getDate() + (Math.abs(diff) <= 3 ? diff : diff > 0 ? diff - 7 : diff + 7));
+  return candidate.toISOString().slice(0, 10);
+}
+
+function computeClonedRaceDate(
+  sourceEditionDate: string | null | undefined,
+  raceDateOfRace: string | null | undefined,
+  newEditionDate: string | null | undefined,
+): string | null {
+  if (!sourceEditionDate || !raceDateOfRace || !newEditionDate) return null;
+  const srcEd = new Date(sourceEditionDate + 'T00:00:00');
+  const srcRace = new Date(raceDateOfRace + 'T00:00:00');
+  const offsetDays = Math.round((srcRace.getTime() - srcEd.getTime()) / (1000 * 60 * 60 * 24));
+  const newDate = new Date(newEditionDate + 'T00:00:00');
+  newDate.setDate(newDate.getDate() + offsetDays);
+  return newDate.toISOString().slice(0, 10);
+}
+
 function sortRaces(a: RaceDto, b: RaceDto): number {
   if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
   return a.name.localeCompare(b.name);
@@ -648,6 +674,14 @@ function SortableRaceItem({ race, onEdit, onDelete, getIcon, formatDateLabel, fo
             {race.cutoffMinutes != null && (
               <Chip label={`Cutoff ${formatMinutesToHHmm(race.cutoffMinutes) ?? `${race.cutoffMinutes} min`}`} size="small" variant="outlined" color="warning" />
             )}
+            <Chip
+              size="small"
+              variant={race.dateOfRace ? 'outlined' : 'filled'}
+              color={race.dateOfRace ? 'default' : 'warning'}
+              label={race.dateOfRace
+                ? `${formatDateLabel(race.dateOfRace, '')}${race.startTime ? ` • ${formatTimeLabel(race.startTime)}` : ''}`
+                : 'Date missing'}
+            />
           </Stack>
         )}
         secondary={(
@@ -671,12 +705,6 @@ function SortableRaceItem({ race, onEdit, onDelete, getIcon, formatDateLabel, fo
               {race.certifiedBy && <Typography variant="caption" color="text.secondary">Certified by {race.certifiedBy}</Typography>}
               {race.prizeMoney > 0 && <Typography variant="caption" color="text.secondary">Prize {race.prizeMoney}</Typography>}
               {race.championshipCategory && <Typography variant="caption" color="text.secondary">{race.championshipCategory}</Typography>}
-              {(race.dateOfRace || race.startTime) && (
-                <Typography variant="caption" color="text.secondary">
-                  {formatDateLabel(race.dateOfRace, 'Date TBD')}
-                  {race.startTime ? ` • ${formatTimeLabel(race.startTime)}` : ''}
-                </Typography>
-              )}
             </Stack>
           </Box>
         )}
@@ -861,7 +889,8 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
   const [localRaceOrder, setLocalRaceOrder] = useState<Map<string, string[]>>(new Map());
   const [prefillRaces, setPrefillRaces] = useState<RaceDto[]>([]);
   const [showBulkDatesDialog, setShowBulkDatesDialog] = useState(false);
-  const [bulkDates, setBulkDates] = useState<Array<{ race: RaceDto; dateOfRace: string; startTime: string }>>([]);
+  const [copyRacesConfirm, setCopyRacesConfirm] = useState<{ edition: EventEditionDto; source: EventEditionDto } | null>(null);
+  const [bulkDates, setBulkDates] = useState<Array<{ race: RaceDto; dateOfRace: string; startTime: string; prevDateOfRace?: string }>>([]);
   const [generateForm, setGenerateForm] = useState<GenerateFormState>({ eventId: '', eventName: '', eventType: 'Race', fromMonth: 1, fromYear: new Date().getFullYear(), toMonth: 12, toYear: new Date().getFullYear(), trailId: '', registrationUrl: '', seasonStartMonth: null, editionName: '' });
 
   const sortedLocations = useMemo(
@@ -945,9 +974,11 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
         }
 
         if (yearFilter !== 'all') {
+          if (!event.hasFutureEdition) return true; // always show events missing a future edition regardless of year filter
           if (!event.nextEditionDate || event.nextEditionDate.slice(0, 4) !== yearFilter) return false;
         }
         if (monthFilter !== 'all') {
+          if (!event.hasFutureEdition) return true;
           if (!event.nextEditionDate || event.nextEditionDate.slice(5, 7) !== monthFilter) return false;
         }
 
@@ -1076,14 +1107,19 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
     const editionsWithRaces = [...(expandedDetail?.editions ?? [])].filter(ed => ed.races.length > 0).sort(sortEditions);
     const defaultClone = editionsWithRaces[editionsWithRaces.length - 1];
     const nextYear = defaultClone?.year ? String(defaultClone.year + 1) : String(new Date().getFullYear());
-    const clonedRegUrl = bumpYearInUrl(defaultClone?.registrationUrl ?? '', defaultClone?.year, Number(nextYear));
-    const isPastYear = Number(nextYear) < new Date().getFullYear();
+    const clonedRegUrl = bumpYearInUrl(defaultClone?.registrationUrl ?? '', defaultClone?.year, Number(nextYear)) || (defaultClone?.registrationUrl ?? '');
+    const clonedResultsUrl = bumpYearInUrl(defaultClone?.resultsUrl ?? '', defaultClone?.year, Number(nextYear)) || (defaultClone?.resultsUrl ?? '');
+    const suggestedDate = suggestEditionDateForYear(defaultClone?.date, Number(nextYear));
+    const isPastYear = suggestedDate ? isPastDate(suggestedDate) : Number(nextYear) < new Date().getFullYear();
     setCloneFromEditionId(defaultClone?.id ?? '');
     setEditionForm({
       ...createEmptyEditionForm(event.id, event.type, event.name),
       year: nextYear,
+      date: suggestedDate,
       registrationUrl: clonedRegUrl,
+      resultsUrl: clonedResultsUrl,
       registrationStatus: isPastYear ? 'Closed' : 'NotStarted',
+      trailId: defaultClone?.trailId ?? '',
     });
     setShowEditionDialog(true);
   };
@@ -1235,6 +1271,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
 
         if (isRaceOrSeries) {
           if (sourceEdition && sourceEdition.races.length > 0) {
+            const datesPreFilled = !!editionForm.date && !!sourceEdition.date && sourceEdition.races.some(r => r.dateOfRace);
             const results = await Promise.allSettled(sourceEdition.races.map(race =>
               createRace({
                 eventEditionId: newEditionId,
@@ -1251,8 +1288,8 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                 certifiedBy: race.certifiedBy ?? undefined,
                 prizeMoney: race.prizeMoney,
                 championshipCategory: race.championshipCategory ?? undefined,
-                dateOfRace: null,
-                startTime: null,
+                dateOfRace: computeClonedRaceDate(sourceEdition.date, race.dateOfRace, editionForm.date),
+                startTime: race.startTime ? race.startTime.slice(0, 5) : null,
               }),
             ));
             const failed = results.filter(r => r.status === 'rejected').length;
@@ -1260,7 +1297,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
             if (failed > 0) {
               onNotify(`Edition "${editionLabel}" created but only ${succeeded}/${results.length} races were cloned — review and add missing ones`, 'error');
             } else {
-              onNotify(`Edition "${editionLabel}" created with ${succeeded} cloned race${succeeded === 1 ? '' : 's'} — set their dates below`);
+              onNotify(`Edition "${editionLabel}" created with ${succeeded} cloned race${succeeded === 1 ? '' : 's'}${datesPreFilled ? ' — dates pre-filled, review below' : ' — set their dates below'}`);
             }
           } else {
             await createRace({
@@ -1507,31 +1544,31 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
     }
   };
 
-  const handleCopyRacesFromPrevious = async (edition: EventEditionDto) => {
+  const handleCopyRacesFromPrevious = (edition: EventEditionDto) => {
     if (!expandedDetail) return;
 
-    // Sort all editions chronologically and find the target's position
     const allSorted = [...expandedDetail.editions].sort(sortEditions);
     const targetIndex = allSorted.findIndex(ed => ed.id === edition.id);
 
-    // Look backwards for the closest earlier edition with races
     let sourceEdition: EventEditionDto | undefined;
     for (let i = targetIndex - 1; i >= 0; i--) {
-      if (allSorted[i].races.length > 0) {
-        sourceEdition = allSorted[i];
-        break;
-      }
+      if (allSorted[i].races.length > 0) { sourceEdition = allSorted[i]; break; }
     }
-    // Fallback: use the most recent edition with races (any position)
     if (!sourceEdition) {
       sourceEdition = [...allSorted].reverse().find(ed => ed.id !== edition.id && ed.races.length > 0);
     }
     if (!sourceEdition) return;
 
+    setCopyRacesConfirm({ edition, source: sourceEdition });
+  };
+
+  const handleConfirmCopyRaces = async () => {
+    if (!copyRacesConfirm) return;
+    const { edition, source: sourceEdition } = copyRacesConfirm;
+    setCopyRacesConfirm(null);
+
     const raceCount = sourceEdition.races.length;
     const label = buildEditionLabel(sourceEdition);
-    if (!window.confirm(`Copy ${raceCount} race${raceCount === 1 ? '' : 's'} from "${label}" into this edition?`)) return;
-
     setSaving(true);
     try {
       await Promise.all(sourceEdition.races.map(race =>
@@ -1550,11 +1587,12 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
           certifiedBy: race.certifiedBy ?? undefined,
           prizeMoney: race.prizeMoney,
           championshipCategory: race.championshipCategory ?? undefined,
-          dateOfRace: null,
-          startTime: race.startTime ?? null,
+          dateOfRace: computeClonedRaceDate(sourceEdition.date, race.dateOfRace, edition.date),
+          startTime: race.startTime ? race.startTime.slice(0, 5) : null,
         }),
       ));
-      onNotify(`Copied ${raceCount} race${raceCount === 1 ? '' : 's'} from "${label}"`);
+      const datesPreFilled = !!edition.date && !!sourceEdition.date && sourceEdition.races.some(r => r.dateOfRace);
+      onNotify(`Copied ${raceCount} race${raceCount === 1 ? '' : 's'} from "${label}"${datesPreFilled ? ' — dates pre-filled, review below' : ''}`);
       await refreshExpandedEvent();
     } catch (err) {
       onNotify(err instanceof Error ? err.message : 'Failed to copy races', 'error');
@@ -1583,13 +1621,44 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
     }
   };
 
+  const handleEditionYearChange = (yearStr: string) => {
+    setEditionField('year', yearStr);
+    if (editEditionId || yearStr.length !== 4 || !expandedDetail) return;
+    const toYear = Number(yearStr);
+    const editionsWithRaces = expandedDetail.editions.filter(ed => ed.races.length > 0 && ed.year != null);
+    if (editionsWithRaces.length === 0) return;
+    const source = editionsWithRaces.reduce((best, ed) =>
+      Math.abs((ed.year ?? 0) - toYear) < Math.abs((best.year ?? 0) - toYear) ? ed : best,
+    editionsWithRaces[0]);
+    if (source.year === toYear) return;
+    setCloneFromEditionId(source.id);
+    const suggestedDate = suggestEditionDateForYear(source.date, toYear);
+    if (suggestedDate) {
+      setEditionField('date', suggestedDate);
+      if (isPastDate(suggestedDate)) setEditionField('registrationStatus', 'Closed');
+    }
+    setEditionField('registrationUrl', bumpYearInUrl(source.registrationUrl ?? '', source.year, toYear) || (source.registrationUrl ?? ''));
+    setEditionField('resultsUrl', bumpYearInUrl(source.resultsUrl ?? '', source.year, toYear) || (source.resultsUrl ?? ''));
+  };
+
   const openBulkDates = (edition: EventEditionDto) => {
+    // Find the nearest older edition with races to show previous-year date hints
+    const allSorted = [...(expandedDetail?.editions ?? [])].sort(sortEditions); // newest first
+    const idx = allSorted.findIndex(ed => ed.id === edition.id);
+    let prevEdition: EventEditionDto | undefined;
+    for (let i = idx + 1; i < allSorted.length; i++) {
+      if (allSorted[i].races.length > 0) { prevEdition = allSorted[i]; break; }
+    }
     setBulkDates(
-      [...edition.races].sort(sortRaces).map(race => ({
-        race,
-        dateOfRace: race.dateOfRace ?? '',
-        startTime: race.startTime ? race.startTime.slice(0, 5) : '',
-      })),
+      [...edition.races].sort(sortRaces).map(race => {
+        const prevRace = prevEdition?.races.find(r => r.name === race.name);
+        return {
+          race,
+          dateOfRace: race.dateOfRace ?? '',
+          startTime: race.startTime ? race.startTime.slice(0, 5) : '',
+          prevDateOfRace: prevRace?.dateOfRace ?? undefined,
+        };
+      }),
     );
     setShowBulkDatesDialog(true);
   };
@@ -1850,7 +1919,23 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                             sx={{ mt: 0.5 }}
                           />
                         )}
+                        {event.status !== 'Cancelled' && !event.hasFutureEdition && (
+                          <Chip
+                            label="Edition missing"
+                            size="small"
+                            color="warning"
+                            variant="outlined"
+                            sx={{ mt: 0.5 }}
+                          />
+                        )}
                       </Box>
+                    ) : event.status !== 'Cancelled' && !event.hasFutureEdition ? (
+                      <Chip
+                        label={event.editionCount === 0 ? 'No editions' : 'Edition missing'}
+                        size="small"
+                        color="warning"
+                        variant="outlined"
+                      />
                     ) : (
                       <Typography variant="body2" color="text.secondary">—</Typography>
                     )}
@@ -2539,13 +2624,17 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                 label="Year"
                 type="number"
                 value={editionForm.year}
-                onChange={(event) => setEditionField('year', event.target.value)}
+                onChange={(event) => handleEditionYearChange(event.target.value)}
               />
               <TextField
                 label="Date"
                 type="date"
                 value={editionForm.date}
-                onChange={(event) => setEditionField('date', event.target.value)}
+                onChange={(event) => {
+                  const d = event.target.value;
+                  setEditionField('date', d);
+                  if (!editEditionId && isPastDate(d)) setEditionField('registrationStatus', 'Closed');
+                }}
                 InputLabelProps={{ shrink: true }}
                 inputProps={{ lang: 'is' }}
               />
@@ -2576,20 +2665,26 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                 renderInput={(params) => <TextField {...params} label="Linked Trail" />}
               />
             )}
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
-              <TextField
-                label="Registration URL"
-                value={editionForm.registrationUrl}
-                onChange={(event) => setEditionField('registrationUrl', event.target.value)}
-                placeholder="https://..."
-              />
-              <TextField
-                label="Results URL"
-                value={editionForm.resultsUrl}
-                onChange={(event) => setEditionField('resultsUrl', event.target.value)}
-                placeholder="https://..."
-              />
-            </Box>
+            <TextField
+              label="Registration URL"
+              fullWidth
+              value={editionForm.registrationUrl}
+              onChange={(event) => setEditionField('registrationUrl', event.target.value)}
+              placeholder="https://..."
+              InputProps={{ endAdornment: editionForm.registrationUrl ? (
+                <IconButton size="small" onClick={() => setEditionField('registrationUrl', '')}><ClearIcon fontSize="small" /></IconButton>
+              ) : null }}
+            />
+            <TextField
+              label="Results URL"
+              fullWidth
+              value={editionForm.resultsUrl}
+              onChange={(event) => setEditionField('resultsUrl', event.target.value)}
+              placeholder="https://..."
+              InputProps={{ endAdornment: editionForm.resultsUrl ? (
+                <IconButton size="small" onClick={() => setEditionField('resultsUrl', '')}><ClearIcon fontSize="small" /></IconButton>
+              ) : null }}
+            />
             <TextField
               label="Notes"
               value={editionForm.notes}
@@ -2881,6 +2976,26 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
         </DialogActions>
       </Dialog>
 
+      {/* Copy races confirmation dialog */}
+      <Dialog open={!!copyRacesConfirm} onClose={() => setCopyRacesConfirm(null)} maxWidth="sm" fullWidth>
+        <DialogTitle>Copy Races</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Copy <strong>{copyRacesConfirm?.source.races.length} race{copyRacesConfirm?.source.races.length === 1 ? '' : 's'}</strong> from edition <strong>{copyRacesConfirm ? buildEditionLabel(copyRacesConfirm.source) : ''}</strong> into this edition?
+          </DialogContentText>
+          <DialogContentText sx={{ mt: 1.5 }}>
+            Races will be cloned with statuses reset to Active/Available.
+            {copyRacesConfirm?.edition.date && copyRacesConfirm?.source.date
+              ? ' Dates will be pre-filled based on the offset from the previous edition.'
+              : ' Dates will need to be set manually.'}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCopyRacesConfirm(null)}>Cancel</Button>
+          <Button variant="contained" onClick={handleConfirmCopyRaces} disabled={saving}>{saving ? <CircularProgress size={20} /> : 'Copy Races'}</Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Bulk date entry dialog */}
       <Dialog open={showBulkDatesDialog} onClose={() => setShowBulkDatesDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Set Race Dates</DialogTitle>
@@ -2890,9 +3005,16 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
               <Typography variant="body2" color="text.secondary">No races in this edition.</Typography>
             ) : bulkDates.map((entry, i) => (
               <Box key={entry.race.id}>
-                <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ mb: 0.75, display: 'block' }}>
-                  {entry.race.name}{entry.race.distanceLabel ? ` · ${entry.race.distanceLabel}` : ''}
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 0.75 }}>
+                  <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                    {entry.race.name}{entry.race.distanceLabel ? ` · ${entry.race.distanceLabel}` : ''}
+                  </Typography>
+                  {entry.prevDateOfRace && (
+                    <Typography variant="caption" color="text.disabled">
+                      prev: {formatDateLabel(entry.prevDateOfRace, entry.prevDateOfRace)}
+                    </Typography>
+                  )}
+                </Box>
                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 140px', gap: 1.5 }}>
                   <TextField
                     label="Date"

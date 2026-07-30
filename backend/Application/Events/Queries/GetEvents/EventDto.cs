@@ -52,7 +52,8 @@ public record EventSummaryDto(
     double? GpxPointLat = null,
     double? GpxPointLng = null,
     bool IsMountainRace = false,
-    string? TerrainType = null
+    string? TerrainType = null,
+    bool HasFutureEdition = false
 );
 
 public record RaceDto(
