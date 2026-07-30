@@ -7,6 +7,7 @@ import {
   Autocomplete,
   Box,
   Button,
+  Checkbox,
   Chip,
   CircularProgress,
   Collapse,
@@ -21,6 +22,7 @@ import {
   IconButton,
   InputAdornment,
   InputLabel,
+  LinearProgress,
   Link,
   List,
   ListItem,
@@ -45,6 +47,7 @@ import {
 import {
   Add as AddIcon,
   AutoAwesome as GenerateIcon,
+  PlaylistAdd as BulkAddIcon,
   CalendarMonth as CalendarIcon,
   Clear as ClearIcon,
   DragIndicator as DragHandleIcon,
@@ -376,6 +379,18 @@ function isPastDate(dateStr: string): boolean {
   return dateStr < new Date().toISOString().slice(0, 10);
 }
 
+
+interface BulkMissingItem {
+  event: EventSummaryDto;
+  detail: EventDetailDto | null;
+  sourceEdition: EventEditionDto | null;
+  year: number;
+  date: string;
+  registrationUrl: string;
+  resultsUrl: string;
+  registrationStatus: RegistrationStatus;
+  selected: boolean;
+}
 
 function buildEditionLabel(edition: Pick<EventEditionDto, 'title' | 'year' | 'date'>): string {
   if (edition.title?.trim()) return edition.title;
@@ -848,6 +863,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
     events,
     loading,
     error,
+    refresh: refreshEvents,
     createEvent,
     updateEvent,
     deleteEvent,
@@ -896,6 +912,10 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
   const [prefillRaces, setPrefillRaces] = useState<RaceDto[]>([]);
   const [showBulkDatesDialog, setShowBulkDatesDialog] = useState(false);
   const [copyRacesConfirm, setCopyRacesConfirm] = useState<{ edition: EventEditionDto; source: EventEditionDto } | null>(null);
+  const [showBulkMissingDialog, setShowBulkMissingDialog] = useState(false);
+  const [bulkMissingLoading, setBulkMissingLoading] = useState(false);
+  const [bulkMissingProgress, setBulkMissingProgress] = useState<{ done: number; total: number } | null>(null);
+  const [bulkMissingItems, setBulkMissingItems] = useState<BulkMissingItem[]>([]);
   const [bulkDates, setBulkDates] = useState<Array<{ race: RaceDto; dateOfRace: string; startTime: string; prevDateOfRace?: string }>>([]);
   const [generateForm, setGenerateForm] = useState<GenerateFormState>({ eventId: '', eventName: '', eventType: 'Race', fromMonth: 1, fromYear: new Date().getFullYear(), toMonth: 12, toYear: new Date().getFullYear(), trailId: '', registrationUrl: '', seasonStartMonth: null, editionName: '' });
 
@@ -1607,6 +1627,100 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
     }
   };
 
+  const openBulkMissingEditions = async () => {
+    const missing = events.filter(e => (e.type === 'Race' || e.type === 'Series') && e.status !== 'Cancelled' && !e.hasFutureEdition);
+    if (missing.length === 0) return;
+    setBulkMissingLoading(true);
+    setShowBulkMissingDialog(true);
+    setBulkMissingItems([]);
+    try {
+      const details = await Promise.all(missing.map(e => getEvent(e.slug)));
+      const items: BulkMissingItem[] = details.map((detail, i) => {
+        const event = missing[i];
+        const editionsWithRaces = [...(detail?.editions ?? [])].filter(ed => ed.races.length > 0).sort(sortEditions);
+        const source = editionsWithRaces[editionsWithRaces.length - 1] ?? detail?.editions.sort(sortEditions)[detail.editions.length - 1] ?? null;
+        const nextYear = source?.year ? source.year + 1 : new Date().getFullYear();
+        const suggestedDate = suggestEditionDateForYear(source?.date, nextYear);
+        const isPast = suggestedDate ? isPastDate(suggestedDate) : nextYear < new Date().getFullYear();
+        return {
+          event,
+          detail: detail ?? null,
+          sourceEdition: source ?? null,
+          year: nextYear,
+          date: suggestedDate,
+          registrationUrl: bumpYearInUrl(source?.registrationUrl ?? '', source?.year, nextYear) || (source?.registrationUrl ?? ''),
+          resultsUrl: bumpYearInUrl(source?.resultsUrl ?? '', source?.year, nextYear) || (source?.resultsUrl ?? ''),
+          registrationStatus: isPast ? 'Closed' : 'NotStarted',
+          selected: true,
+        };
+      });
+      setBulkMissingItems(items);
+    } catch {
+      onNotify('Failed to load event details', 'error');
+      setShowBulkMissingDialog(false);
+    } finally {
+      setBulkMissingLoading(false);
+    }
+  };
+
+  const handleBulkCreateMissingEditions = async () => {
+    const selected = bulkMissingItems.filter(i => i.selected);
+    if (selected.length === 0) return;
+    setBulkMissingProgress({ done: 0, total: selected.length });
+    let succeeded = 0;
+    let failed = 0;
+    for (const item of selected) {
+      try {
+        const isRaceOrSeries = item.event.type === 'Race' || item.event.type === 'Series';
+        const newEditionId = await createEdition({
+          eventId: item.event.id,
+          year: item.year,
+          title: String(item.year),
+          date: item.date || null,
+          registrationUrl: item.registrationUrl || undefined,
+          resultsUrl: item.resultsUrl || undefined,
+          registrationStatus: item.registrationStatus,
+          trailId: isRaceOrSeries ? null : (item.sourceEdition?.trailId ?? null),
+        });
+        if (isRaceOrSeries && item.sourceEdition && item.sourceEdition.races.length > 0) {
+          await Promise.allSettled(item.sourceEdition.races.map(race =>
+            createRace({
+              eventEditionId: newEditionId,
+              trailId: race.trailId ?? null,
+              name: race.name,
+              distanceLabel: race.distanceLabel ?? undefined,
+              cutoffMinutes: race.cutoffMinutes ?? null,
+              description: race.description ?? undefined,
+              status: 'Active',
+              sortOrder: race.sortOrder,
+              ticketStatus: 'Available',
+              maxParticipants: race.maxParticipants ?? null,
+              itraPoints: race.itraPoints ?? null,
+              certifiedBy: race.certifiedBy ?? undefined,
+              prizeMoney: race.prizeMoney,
+              championshipCategory: race.championshipCategory ?? undefined,
+              dateOfRace: computeClonedRaceDate(item.sourceEdition!.date, race.dateOfRace, item.date),
+              startTime: race.startTime ? race.startTime.slice(0, 5) : null,
+            }),
+          ));
+        }
+        succeeded++;
+      } catch {
+        failed++;
+      }
+      setBulkMissingProgress(p => p ? { ...p, done: p.done + 1 } : null);
+    }
+    setBulkMissingProgress(null);
+    setShowBulkMissingDialog(false);
+    setBulkMissingItems([]);
+    await refreshEvents();
+    if (failed > 0) {
+      onNotify(`Created ${succeeded} edition${succeeded !== 1 ? 's' : ''}, ${failed} failed`, 'error');
+    } else {
+      onNotify(`Created ${succeeded} edition${succeeded !== 1 ? 's' : ''} with cloned races`);
+    }
+  };
+
   const handleCycleRegistrationStatus = async (edition: EventEditionDto) => {
     const cycle: RegistrationStatus[] = ['NotStarted', 'Open', 'Closed'];
     const next = cycle[(cycle.indexOf(edition.registrationStatus) + 1) % cycle.length];
@@ -1756,6 +1870,8 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
     );
   }
 
+  const selectedBulkCount = bulkMissingItems.filter(i => i.selected).length;
+
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
@@ -1764,9 +1880,16 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
           <Typography variant="h5">Events</Typography>
           <Chip label={searchQuery.trim() || hasActiveFilters ? `${filteredEvents.length} / ${events.length}` : events.length} size="small" color="primary" />
         </Box>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateEvent}>
-          New Event
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          {events.some(e => (e.type === 'Race' || e.type === 'Series') && e.status !== 'Cancelled' && !e.hasFutureEdition) && (
+            <Button variant="outlined" startIcon={<BulkAddIcon />} onClick={openBulkMissingEditions}>
+              Create Missing Editions
+            </Button>
+          )}
+          <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateEvent}>
+            New Event
+          </Button>
+        </Box>
       </Box>
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
@@ -2999,6 +3122,84 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
         <DialogActions>
           <Button onClick={() => setCopyRacesConfirm(null)}>Cancel</Button>
           <Button variant="contained" onClick={handleConfirmCopyRaces} disabled={saving}>{saving ? <CircularProgress size={20} /> : 'Copy Races'}</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Bulk create missing editions dialog */}
+      <Dialog open={showBulkMissingDialog} onClose={() => !bulkMissingLoading && !bulkMissingProgress && setShowBulkMissingDialog(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Create Missing Editions</DialogTitle>
+        <DialogContent>
+          {bulkMissingLoading ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 3 }}>
+              <CircularProgress size={24} />
+              <Typography>Loading event details…</Typography>
+            </Box>
+          ) : bulkMissingProgress ? (
+            <Box sx={{ py: 2 }}>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                Creating editions… {bulkMissingProgress.done} / {bulkMissingProgress.total}
+              </Typography>
+              <LinearProgress variant="determinate" value={(bulkMissingProgress.done / bulkMissingProgress.total) * 100} />
+            </Box>
+          ) : (
+            <Box sx={{ pt: 1 }}>
+              <DialogContentText sx={{ mb: 2 }}>
+                The following events have no upcoming edition. Review the proposals below and select which ones to create.
+              </DialogContentText>
+              <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse' }}>
+                <Box component="thead">
+                  <Box component="tr">
+                    <Box component="th" sx={{ width: 40, textAlign: 'left', pb: 1, pr: 1 }}>
+                      <Checkbox
+                        size="small"
+                        checked={bulkMissingItems.length > 0 && bulkMissingItems.every(i => i.selected)}
+                        indeterminate={bulkMissingItems.some(i => i.selected) && !bulkMissingItems.every(i => i.selected)}
+                        onChange={(_, checked) => setBulkMissingItems(prev => prev.map(i => ({ ...i, selected: checked })))}
+                      />
+                    </Box>
+                    <Box component="th" sx={{ textAlign: 'left', pb: 1, pr: 1 }}><Typography variant="caption" fontWeight={600}>Event</Typography></Box>
+                    <Box component="th" sx={{ textAlign: 'left', pb: 1, pr: 1 }}><Typography variant="caption" fontWeight={600}>Year</Typography></Box>
+                    <Box component="th" sx={{ textAlign: 'left', pb: 1, pr: 1 }}><Typography variant="caption" fontWeight={600}>Proposed date</Typography></Box>
+                    <Box component="th" sx={{ textAlign: 'left', pb: 1 }}><Typography variant="caption" fontWeight={600}>Races to clone</Typography></Box>
+                  </Box>
+                </Box>
+                <Box component="tbody">
+                  {bulkMissingItems.map((item, i) => (
+                    <Box component="tr" key={item.event.id} sx={{ borderTop: '1px solid', borderColor: 'divider', opacity: item.selected ? 1 : 0.45 }}>
+                      <Box component="td" sx={{ py: 1, pr: 1 }}>
+                        <Checkbox size="small" checked={item.selected} onChange={(_, checked) => setBulkMissingItems(prev => prev.map((x, j) => j === i ? { ...x, selected: checked } : x))} />
+                      </Box>
+                      <Box component="td" sx={{ py: 1, pr: 1 }}>
+                        <Typography variant="body2">{item.event.name}</Typography>
+                      </Box>
+                      <Box component="td" sx={{ py: 1, pr: 1 }}>
+                        <Typography variant="body2">{item.year}</Typography>
+                      </Box>
+                      <Box component="td" sx={{ py: 1, pr: 1 }}>
+                        <Typography variant="body2">{item.date || <em style={{ color: 'gray' }}>TBD</em>}</Typography>
+                      </Box>
+                      <Box component="td" sx={{ py: 1 }}>
+                        <Typography variant="body2">
+                          {item.sourceEdition ? `${item.sourceEdition.races.length} race${item.sourceEdition.races.length !== 1 ? 's' : ''}` : '—'}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowBulkMissingDialog(false)} disabled={!!bulkMissingProgress || bulkMissingLoading}>Cancel</Button>
+          <Button
+            variant="contained"
+            startIcon={<BulkAddIcon />}
+            onClick={handleBulkCreateMissingEditions}
+            disabled={bulkMissingLoading || !!bulkMissingProgress || selectedBulkCount === 0}
+          >
+            Create {selectedBulkCount || ''} Edition{selectedBulkCount !== 1 ? 's' : ''}
+          </Button>
         </DialogActions>
       </Dialog>
 
