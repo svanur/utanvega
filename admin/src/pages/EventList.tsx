@@ -1939,7 +1939,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                                   {expandedDetail.organizerWebsite && (
                                     <Chip
                                       icon={<LinkIcon />}
-                                      label="Organizer website"
+                                      label="Event website"
                                       component="a"
                                       clickable
                                       href={expandedDetail.organizerWebsite}
@@ -2198,7 +2198,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                 renderInput={(params) => <TextField {...params} label="Organizer" placeholder="Search organizers…" />}
               />
               <TextField
-                label="Organizer Website (override)"
+                label="Event Website (override)"
                 value={eventForm.organizerWebsite}
                 onChange={(event) => setEventField('organizerWebsite', event.target.value)}
                 placeholder="https://…"

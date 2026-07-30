@@ -11,6 +11,12 @@ import VideocamIcon from '@mui/icons-material/Videocam';
 import NearMeIcon from '@mui/icons-material/NearMe';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
+import AllInclusiveIcon from '@mui/icons-material/AllInclusive';
+import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
+import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
+import ShowChartIcon from '@mui/icons-material/ShowChart';
+import HorizontalRuleIcon from '@mui/icons-material/HorizontalRule';
+import FilterHdrIcon from '@mui/icons-material/FilterHdr';
 import { formatDistanceKm } from '../utils/geo';
 import { getActivityIcon } from '../utils/activityIcon';
 import { estimateDuration, estimateDurationMinutes } from '../utils/estimateDuration';
@@ -27,6 +33,33 @@ type SortField = 'name' | 'length' | 'elevationGain' | 'difficulty' | 'activityT
 type SortDir = 'asc' | 'desc';
 
 const DIFFICULTY_ORDER: Record<string, number> = { Easy: 0, Moderate: 1, Hard: 2, Expert: 3, Extreme: 4 };
+
+const trailTypeI18nKey = (type: string) => {
+    switch (type) {
+        case 'Loop': return 'trail.loop';
+        case 'OutAndBack': return 'trail.outAndBack';
+        case 'PointToPoint': return 'trail.pointToPoint';
+        default: return null;
+    }
+};
+
+const getTerrainIcon = (type: string) => {
+    switch (type) {
+        case 'Flat': return <HorizontalRuleIcon sx={{ fontSize: 14 }} />;
+        case 'Hilly': return <ShowChartIcon sx={{ fontSize: 14 }} />;
+        case 'Mountainous': return <FilterHdrIcon sx={{ fontSize: 14 }} />;
+        default: return undefined;
+    }
+};
+
+const getTrailTypeIcon = (type: string) => {
+    switch (type) {
+        case 'Loop': return <AllInclusiveIcon sx={{ fontSize: 14 }} />;
+        case 'OutAndBack': return <CompareArrowsIcon sx={{ fontSize: 14 }} />;
+        case 'PointToPoint': return <TrendingFlatIcon sx={{ fontSize: 14 }} />;
+        default: return undefined;
+    }
+};
 
 function getDifficultyColor(d: string): 'success' | 'info' | 'warning' | 'error' | 'default' {
     switch (d) {
@@ -182,13 +215,16 @@ const TrailTableView: React.FC<TrailTableViewProps> = ({ trails, favorites, onTo
                                             </Stack>
                                             <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
                                                 {trail.difficulty && (
-                                                    <Chip label={trail.difficulty} size="small" color={getDifficultyColor(trail.difficulty)} variant="outlined" sx={{ height: 18, fontSize: '0.65rem' }} />
+                                                    <Chip label={t(`difficulty.${trail.difficulty.toLowerCase()}`, { defaultValue: trail.difficulty })} size="small" color={getDifficultyColor(trail.difficulty)} sx={{ height: 18, fontSize: '0.65rem' }} />
                                                 )}
                                                 {trail.terrainType && (
-                                                    <Chip label={t(`trail.terrainType.${trail.terrainType}`, { defaultValue: trail.terrainType })} size="small" variant="outlined" sx={{ height: 18, fontSize: '0.65rem' }} />
+                                                    <Chip icon={getTerrainIcon(trail.terrainType)} label={t(`trail.terrainType.${trail.terrainType}`, { defaultValue: trail.terrainType })} size="small" variant="outlined" sx={{ height: 18, fontSize: '0.65rem' }} />
                                                 )}
-                                                {trail.trailType && trail.trailType !== 'Unknown' && (
-                                                    <Chip label={trail.trailType} size="small" variant="outlined" sx={{ height: 18, fontSize: '0.65rem' }} />
+                                                {trail.activityType && (
+                                                    <Chip icon={getActivityIcon(trail.activityType)} label={t(`trail.activityType.${trail.activityType}`, { defaultValue: trail.activityType })} size="small" color="primary" variant="outlined" sx={{ height: 18, fontSize: '0.65rem' }} />
+                                                )}
+                                                {trail.trailType && trail.trailType !== 'Unknown' && trailTypeI18nKey(trail.trailType) && (
+                                                    <Chip icon={getTrailTypeIcon(trail.trailType)} label={t(trailTypeI18nKey(trail.trailType)!)} size="small" variant="outlined" sx={{ height: 18, fontSize: '0.65rem' }} />
                                                 )}
                                             </Stack>
                                         </Stack>

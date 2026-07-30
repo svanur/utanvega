@@ -2,6 +2,7 @@ import { Typography, CircularProgress, Alert, Box, Link, Stack, Button, Chip } f
 import RefreshIcon from '@mui/icons-material/Refresh';
 import BuildIcon from '@mui/icons-material/Build';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import AddIcon from '@mui/icons-material/Add';
 import { useEffect, useMemo, useState } from 'react';
 import { useTrails, Trail } from '../hooks/useTrails';
 import { useTags } from '../hooks/useTags';
@@ -28,7 +29,6 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkActioning, setBulkActioning] = useState(false);
-  const [recalculating, setRecalculating] = useState(false);
   const [showTools, setShowTools] = useState(false);
 
   useEffect(() => {
@@ -319,18 +319,6 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
     }
   };
 
-  const handleRecalculateDifficulties = async () => {
-    setRecalculating(true);
-    try {
-        const data = await apiFetch<{ count: number }>('/api/v1/admin/trails/recalculate-all-difficulties', { method: 'POST' });
-        onNotify(`Recalculated difficulty for ${data.count} trails`);
-        refresh();
-    } catch (_err) {
-        onNotify('Failed to recalculate difficulties', 'error');
-    } finally {
-        setRecalculating(false);
-    }
-  };
 
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>;
   if (error) return <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>;
@@ -352,6 +340,9 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
           >
             Tools
           </Button>
+          <Button variant="contained" startIcon={<AddIcon />} size="small" onClick={() => setShowBulkUpload(true)}>
+            New Trail
+          </Button>
         </Stack>
       </Box>
 
@@ -361,10 +352,8 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
         includeArchived={includeArchived}
         onIncludeArchivedChange={setIncludeArchived}
         onShowBulkUpload={() => setShowBulkUpload(true)}
-        recalculating={recalculating}
         bulkActioning={bulkActioning}
         tags={tags}
-        onRecalculateDifficulties={handleRecalculateDifficulties}
         onBulkAction={handleBulkAction}
         onBulkTag={handleBulkTag}
       />

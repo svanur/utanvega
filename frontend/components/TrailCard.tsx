@@ -1,16 +1,20 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { 
-    Card, 
-    CardContent, 
-    Typography, 
-    Box, 
-    Stack, 
+    Card,
+    CardContent,
+    Typography,
+    Box,
+    Stack,
     Chip,
     CardActionArea,
-    Tooltip
+    Tooltip,
+    IconButton
 } from '@mui/material';
 import RouteIcon from '@mui/icons-material/Route';
 import LandscapeIcon from '@mui/icons-material/Landscape';
+import ShowChartIcon from '@mui/icons-material/ShowChart';
+import HorizontalRuleIcon from '@mui/icons-material/HorizontalRule';
+import FilterHdrIcon from '@mui/icons-material/FilterHdr';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
@@ -23,6 +27,7 @@ import NearMeIcon from '@mui/icons-material/NearMe';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import ShareIcon from '@mui/icons-material/Share';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import VideocamIcon from '@mui/icons-material/Videocam';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Trail } from '../hooks/useTrails';
@@ -63,6 +68,15 @@ const trailTypeI18nKey = (type: string) => {
         case 'OutAndBack': return 'trail.outAndBack';
         case 'PointToPoint': return 'trail.pointToPoint';
         default: return type;
+    }
+};
+
+const getTerrainIcon = (type: string) => {
+    switch (type) {
+        case 'Flat': return <HorizontalRuleIcon sx={{ fontSize: 14 }} />;
+        case 'Hilly': return <ShowChartIcon sx={{ fontSize: 14 }} />;
+        case 'Mountainous': return <FilterHdrIcon sx={{ fontSize: 14 }} />;
+        default: return undefined;
     }
 };
 
@@ -255,6 +269,13 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                                         {trail.name}
                                     </Typography>
                                     <Box display="flex" alignItems="center" gap={0.25}>
+                                        {trail.youtubeUrl && (
+                                            <Tooltip title={t('trail.video360', '360° Video')}>
+                                                <IconButton size="small" component="a" href={trail.youtubeUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} sx={{ p: 0.25 }}>
+                                                    <VideocamIcon sx={{ fontSize: 14 }} color="error" />
+                                                </IconButton>
+                                            </Tooltip>
+                                        )}
                                         {loginEnabled && tickedSlugs.has(trail.slug) && <CheckCircleIcon color="success" sx={{ fontSize: 14 }} />}
                                         {isFavorited && <StarIcon color="warning" sx={{ fontSize: 14 }} />}
                                     </Box>
@@ -270,6 +291,13 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                                         </Typography>
                                     </Stack>
                                     <Box display="flex" alignItems="center" gap={0.25}>
+                                        {trail.youtubeUrl && (
+                                            <Tooltip title={t('trail.video360', '360° Video')}>
+                                                <IconButton size="small" component="a" href={trail.youtubeUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} sx={{ p: 0.25 }}>
+                                                    <VideocamIcon sx={{ fontSize: 18 }} color="error" />
+                                                </IconButton>
+                                            </Tooltip>
+                                        )}
                                         {loginEnabled && tickedSlugs.has(trail.slug) && <CheckCircleIcon color="success" sx={{ fontSize: 20 }} />}
                                         {isFavorited && <StarIcon color="warning" sx={{ fontSize: 20 }} />}
                                     </Box>
@@ -330,6 +358,7 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                         )}
                         {trail.terrainType && (
                             <Chip
+                                icon={getTerrainIcon(trail.terrainType)}
                                 label={t(`trail.terrainType.${trail.terrainType}`, { defaultValue: trail.terrainType })}
                                 size="small"
                                 variant="outlined"
