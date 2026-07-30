@@ -74,6 +74,7 @@
         "activities": "Athöfn",
         "disclaimer": "Fyrirvari",
         "privacy": "Persónuvernd",
+        "faq": "Algengar spurningar",
         "darkMode": "Skipta yfir í dökkt þema",
         "lightMode": "Skipta yfir í ljóst þema",
         "switchToEnglish": "Switch to English",
@@ -364,6 +365,39 @@
         "copyLink": "Afrita hlekk",
         "linkCopied": "Hlekkur afritaður!",
         "messengerNotConfigured": "Messenger-deiling þarf app-stillingu hér. Hlekkur var afritaður í staðinn."
+    },
+    "faq": {
+        "title": "Algengar spurningar",
+        "subtitle": "Hér svörum við algengum spurningum um leiðir, tíma og viðburði á Hlaupadagskra.is",
+        "estimatedTime": {
+            "q": "Hvernig er áætlaður tími fyrir leiðir reiknaður?",
+            "a": "Sjá líkanið hér að neðan. Tímar eru einungis áætlaðir — raunverulegur tími fer eftir líkamsástandi, yfirborði og veðri."
+        },
+        "terrainType": {
+            "q": "Hvernig er yfirborðsgerð leiða ákveðin (flatt / hæðótt / fjallaleiðir)?",
+            "a": "Yfirborðsgerð er reiknuð sjálfkrafa út frá GPS-gögnum leiðarinnar með tveimur þáttum: hækkun á hvern km og hámarkshæð yfir sjávarmáli. Flatt: undir 20 m hækkun á km. Fjallaleiðir: hæð yfir 600 m og að minnsta kosti 30 m hækkun á km, eða hvers kyns leið með yfir 50 m hækkun á km. Hæðótt: allt þar á milli. Þröskuldar eru kvarðaðir sérstaklega fyrir íslenskar aðstæður."
+        },
+        "relatedTrails": {
+            "q": "Hvernig eru tengdar leiðir fundnar?",
+            "a": "Tengdar leiðir eru valdar með stigagjöf. Leiðir í sömu keppnisröð fá hæstu stigin. Síðan bætast stig við fyrir sameiginleg svæði, sameiginleg merki og sömu tegund hreyfingar. Aðeins leiðir með eitt eða fleiri stig eru sýndar."
+        },
+        "difficulty": {
+            "q": "Hvernig er erfiðleikastig (Auðvelt / Miðlungs erfitt / Krefjandi / Erfitt / Mjög erfitt) reiknað?",
+            "a": "Erfiðleikastig byggir á svokölluðu álagskilómetrum: álag = fjarlægð (km) + hækkun (m) ÷ 100. Þetta sameinar lengd og hækkun í eina tölu sem er síðan borin saman við þröskulda sem eru mismunandi eftir tegund hreyfingar. Þröskuldar fyrir hlaupaleiðir og gönguleiðir eru lægri en fyrir hjólreiðar, þar sem álag á hvern km er meira. Götuhlaup notar t.d. aðeins fjarlægð, þar sem hækkun er yfirleitt lítil."
+        },
+        "itraIndex": {
+            "q": "Hvað er ITRA Performance Index?",
+            "a": "ITRA Performance Index er persónulegt stig (0–1000) sem endurspeglar hlaupagetu þína. Í hvert skipti sem þú lýkur ITRA-vottuðum hlaupi færð þú Race Score byggt á hraða þínum miðað við fræðilegan heimsmetahraða á þeirri braut. Performance Index þinn er vegið meðaltal bestu 5 Race Score þinna síðustu 36 mánuði. Sumar keppnir, eins og Laugavegur Ultra Trail, krefjast lágmarksindexs upp á 370 til að mega þátttaka. Sjá nánari lýsingu í ITRA leiðbeiningum.",
+            "link": "Opna ITRA leiðbeiningar →"
+        },
+        "gpsDistance": {
+            "q": "Hversu nákvæm er lengd leiðarinnar?",
+            "a": "Fjarlægðir eru reiknaðar beint út frá GPS-skrá leiðarinnar (GPX-skrá) með hnitum meðlangrar leiðar. Nákvæmni fer eftir gæðum upprunagagnanna — vel skráð GPS-ferill er yfirleitt nákvæmur að innan 1–2%. Fjarlægðir eru sýndar með einum aukastaf."
+        },
+        "trailSuggestion": {
+            "q": "Get ég lagt til leið eða sent inn leiðréttingu?",
+            "a": "Já — notaðu ábendingarhnappin á hverri leiðarsíðu til að senda tillögu, leiðréttingu eða viðbótarupplýsingar. Til að leggja til alveg nýja leið getur þú líka haft samband við okkur í gegnum sambandssíðuna."
+        }
     },
     "footer": {
         "checkingApi": "Athuga API…",
