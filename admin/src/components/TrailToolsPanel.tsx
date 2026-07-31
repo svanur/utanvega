@@ -1,6 +1,5 @@
-import { Paper, Typography, Button, CircularProgress, Box, FormControlLabel, Switch, Collapse, Divider, Stack, Chip, Tooltip } from '@mui/material';
+import { Paper, Typography, Button, Box, FormControlLabel, Switch, Collapse, Divider, Stack, Chip } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import CalculateIcon from '@mui/icons-material/Calculate';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import type { TagDto } from '../hooks/useTags';
@@ -11,10 +10,8 @@ interface TrailToolsPanelProps {
   includeArchived: boolean;
   onIncludeArchivedChange: (value: boolean) => void;
   onShowBulkUpload: () => void;
-  recalculating: boolean;
   bulkActioning: boolean;
   tags: TagDto[];
-  onRecalculateDifficulties: () => void;
   onBulkAction: (action: 'Delete' | 'UpdateStatus', value?: string) => void;
   onBulkTag: (tagId: string, action: 'add' | 'remove') => void;
 }
@@ -25,10 +22,8 @@ export default function TrailToolsPanel({
   includeArchived,
   onIncludeArchivedChange,
   onShowBulkUpload,
-  recalculating,
   bulkActioning,
   tags,
-  onRecalculateDifficulties,
   onBulkAction,
   onBulkTag,
 }: TrailToolsPanelProps) {
@@ -56,23 +51,10 @@ export default function TrailToolsPanel({
             {/* Maintenance Section */}
             <Box>
               <Typography variant="subtitle2" color="text.secondary" gutterBottom>🔧 Maintenance</Typography>
-              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                <Tooltip title="Recalculate difficulty for all trails based on distance, elevation and activity type">
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    startIcon={recalculating ? <CircularProgress size={16} /> : <CalculateIcon />}
-                    onClick={onRecalculateDifficulties}
-                    disabled={recalculating}
-                  >
-                    Recalculate Difficulties
-                  </Button>
-                </Tooltip>
-                <FormControlLabel
-                  control={<Switch size="small" checked={includeArchived} onChange={(e) => onIncludeArchivedChange(e.target.checked)} />}
-                  label={<Typography variant="body2">Show Archived</Typography>}
-                />
-              </Stack>
+              <FormControlLabel
+                control={<Switch size="small" checked={includeArchived} onChange={(e) => onIncludeArchivedChange(e.target.checked)} />}
+                label={<Typography variant="body2">Show Archived</Typography>}
+              />
             </Box>
 
             {/* Bulk Actions Section (visible when items selected) */}

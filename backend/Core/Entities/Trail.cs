@@ -47,6 +47,13 @@ public enum TrailType
     PointToPoint,
 }
 
+public enum TerrainType
+{
+    Mountainous,
+    Hilly,
+    Flat,
+}
+
 public class Trail
 {
     public Guid Id { get; set; } = Guid.NewGuid();
@@ -65,6 +72,7 @@ public class Trail
     
     public Difficulty Difficulty { get; set; } = Difficulty.Moderate;
     public Visibility Visibility { get; set; } = Visibility.Public;
+    public TerrainType? TerrainType { get; set; }
     
     // NetTopologySuite for PostGIS
     public Geometry? GpxData { get; set; }

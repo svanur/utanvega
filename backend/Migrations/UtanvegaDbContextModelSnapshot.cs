@@ -18,7 +18,7 @@ namespace Utanvega.Backend.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.17")
+                .HasAnnotation("ProductVersion", "9.0.18")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "postgis");
@@ -91,6 +91,12 @@ namespace Utanvega.Backend.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
+                    b.Property<double?>("GpxPointLat")
+                        .HasColumnType("double precision");
+
+                    b.Property<double?>("GpxPointLng")
+                        .HasColumnType("double precision");
+
                     b.Property<Guid?>("LocationId")
                         .HasColumnType("uuid");
 
@@ -98,6 +104,9 @@ namespace Utanvega.Backend.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<Guid?>("OrganizerId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("OrganizerName")
                         .HasMaxLength(200)
@@ -132,6 +141,8 @@ namespace Utanvega.Backend.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("LocationId");
+
+                    b.HasIndex("OrganizerId");
 
                     b.HasIndex("Slug")
                         .IsUnique();
@@ -274,6 +285,53 @@ namespace Utanvega.Backend.Migrations
                         .IsUnique();
 
                     b.ToTable("Locations");
+                });
+
+            modelBuilder.Entity("Utanvega.Backend.Core.Entities.Organizer", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContactName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Kennitala")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Website")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name");
+
+                    b.ToTable("Organizers");
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.Profile", b =>
@@ -457,6 +515,9 @@ namespace Utanvega.Backend.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TerrainType")
                         .HasColumnType("text");
 
                     b.Property<string>("Type")
@@ -675,6 +736,11 @@ namespace Utanvega.Backend.Migrations
                         .HasForeignKey("LocationId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("Utanvega.Backend.Core.Entities.Organizer", "Organizer")
+                        .WithMany("Events")
+                        .HasForeignKey("OrganizerId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.OwnsOne("Utanvega.Backend.Core.Entities.ScheduleRule", "ScheduleRule", b1 =>
                         {
                             b1.Property<Guid>("EventId")
@@ -722,6 +788,8 @@ namespace Utanvega.Backend.Migrations
                         });
 
                     b.Navigation("Location");
+
+                    b.Navigation("Organizer");
 
                     b.Navigation("ScheduleRule");
                 });
@@ -847,6 +915,11 @@ namespace Utanvega.Backend.Migrations
                     b.Navigation("Children");
 
                     b.Navigation("TrailLocations");
+                });
+
+            modelBuilder.Entity("Utanvega.Backend.Core.Entities.Organizer", b =>
+                {
+                    b.Navigation("Events");
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.Tag", b =>

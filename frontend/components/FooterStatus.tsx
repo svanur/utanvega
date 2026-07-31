@@ -49,6 +49,7 @@ export default function FooterStatus() {
                             <MuiLink component={Link} to="/about" variant="body2" color="text.secondary" underline="hover">{t('nav.aboutUs')}</MuiLink>
                             <MuiLink component={Link} to="/services" variant="body2" color="text.secondary" underline="hover">{t('nav.services')}</MuiLink>
                             <MuiLink component={Link} to="/annual-report/2025" variant="body2" color="text.secondary" underline="hover">{t('nav.annualReport')}</MuiLink>
+                            <MuiLink component={Link} to="/faq" variant="body2" color="text.secondary" underline="hover">{t('nav.faq')}</MuiLink>
                             <MuiLink component={Link} to="/disclaimer" variant="body2" color="text.secondary" underline="hover">{t('nav.disclaimer')}</MuiLink>
                             <MuiLink component={Link} to="/privacy" variant="body2" color="text.secondary" underline="hover">{t('nav.privacy')}</MuiLink>
                         </Stack>

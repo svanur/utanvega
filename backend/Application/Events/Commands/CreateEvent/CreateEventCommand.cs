@@ -15,11 +15,14 @@ public record CreateEventCommand(
     string Status,
     string? OrganizerName,
     string? OrganizerWebsite,
+    Guid? OrganizerId,
     string? AlertMessage,
     string? AlertSeverity,
     Guid? LocationId,
     ScheduleRule? ScheduleRule,
-    List<SocialLink>? SocialLinks
+    List<SocialLink>? SocialLinks,
+    double? GpxPointLat = null,
+    double? GpxPointLng = null
 ) : IRequest<Guid>;
 
 public class CreateEventCommandHandler : IRequestHandler<CreateEventCommand, Guid>
@@ -51,11 +54,14 @@ public class CreateEventCommandHandler : IRequestHandler<CreateEventCommand, Gui
             Status = status,
             OrganizerName = request.OrganizerName,
             OrganizerWebsite = request.OrganizerWebsite,
+            OrganizerId = request.OrganizerId,
             AlertMessage = request.AlertMessage,
             AlertSeverity = request.AlertSeverity,
             LocationId = request.LocationId,
             ScheduleRule = request.ScheduleRule,
             SocialLinks = request.SocialLinks,
+            GpxPointLat = request.GpxPointLat,
+            GpxPointLng = request.GpxPointLng,
             CreatedAt = DateTime.UtcNow,
         };
 

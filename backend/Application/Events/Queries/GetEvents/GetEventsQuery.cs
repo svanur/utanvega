@@ -29,6 +29,7 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
         var query = _context.Events
             .AsNoTracking()
             .Include(e => e.Location)
+            .Include(e => e.Organizer)
             .Include(e => e.Editions)
                 .ThenInclude(ed => ed.Races)
                     .ThenInclude(r => r.Trail)
@@ -42,10 +43,13 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
             .ToListAsync(cancellationToken);
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var oneYearAhead = today.AddYears(1);
 
         return events.Select(e =>
         {
             var nextDate = ResolveNextDate(e, today);
+            // True only when an actual edition record with a future date exists — does not count schedule-rule projections
+            var hasFutureEdition = e.Editions.Any(ed => ed.Date.HasValue && ed.Date.Value >= today);
 
             // Check for recently-past editions (up to 3 days ago)
             // so events with schedule rules still show as "recently completed"
@@ -130,6 +134,43 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 .Select(r => r.Trail?.YoutubeUrl)
                 .FirstOrDefault(u => !string.IsNullOrWhiteSpace(u));
 
+            List<SeriesRaceDto>? seriesRaces = null;
+            if (e.Type == EventType.Series)
+            {
+                seriesRaces = e.Editions
+                    .SelectMany(ed => ed.Races
+                        .Where(r => r.Status != RaceStatus.Cancelled
+                            && r.DateOfRace.HasValue
+                            && r.DateOfRace.Value >= today
+                            && r.DateOfRace.Value <= oneYearAhead)
+                        .Select(r => new SeriesRaceDto(
+                            r.Id,
+                            r.Name,
+                            r.DateOfRace,
+                            r.StartTime,
+                            !string.IsNullOrWhiteSpace(r.DistanceLabel) ? r.DistanceLabel
+                                : r.Trail != null && r.Trail.Length > 0 ? $"{r.Trail.Length / 1000.0:0.#} km"
+                                : null,
+                            r.TicketStatus.ToString(),
+                            ed.RegistrationUrl
+                        )))
+                    .OrderBy(r => r.DateOfRace)
+                    .ToList();
+            }
+
+            var isMountainRace = e.Editions
+                .SelectMany(ed => ed.Races)
+                .Any(r => r.Trail?.TerrainType == Core.Entities.TerrainType.Mountainous);
+
+            var terrainType = e.Editions
+                .SelectMany(ed => ed.Races)
+                .Select(r => r.Trail?.TerrainType)
+                .Where(t => t != null)
+                .GroupBy(t => t)
+                .OrderByDescending(g => g.Count())
+                .Select(g => g.Key!.Value.ToString())
+                .FirstOrDefault();
+
             return new EventSummaryDto(
                 e.Id,
                 e.Name,
@@ -138,8 +179,9 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 e.Type.ToString(),
                 e.ActivityType.ToString(),
                 e.Status.ToString(),
-                e.OrganizerName,
-                e.OrganizerWebsite,
+                e.Organizer?.Name ?? e.OrganizerName,
+                e.OrganizerWebsite ?? e.Organizer?.Website,
+                e.OrganizerId,
                 e.AlertMessage,
                 e.AlertSeverity,
                 e.LocationId,
@@ -159,7 +201,13 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 certifications?.Count > 0 ? certifications : null,
                 youtubeUrl,
                 championshipCategories?.Count > 0 ? championshipCategories : null,
-                itraPoints?.Count > 0 ? itraPoints : null
+                itraPoints?.Count > 0 ? itraPoints : null,
+                seriesRaces?.Count > 0 ? seriesRaces : null,
+                e.GpxPointLat,
+                e.GpxPointLng,
+                IsMountainRace: isMountainRace,
+                TerrainType: terrainType,
+                HasFutureEdition: hasFutureEdition
             );
         }).ToList();
     }

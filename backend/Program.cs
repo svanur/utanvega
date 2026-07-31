@@ -49,6 +49,7 @@ using Utanvega.Backend.Application.Events.Commands.CreateRace;
 using Utanvega.Backend.Application.Events.Commands.UpdateRace;
 using Utanvega.Backend.Application.Events.Commands.DeleteRace;
 using Utanvega.Backend.Application.Events.Commands.GenerateEditionsForSeason;
+using Utanvega.Backend.Application.Organizers;
 using Utanvega.Backend.Application.Activities.Commands.CreateUserTrailActivity;
 using Utanvega.Backend.Application.Activities.Commands.UpdateUserTrailActivity;
 using Utanvega.Backend.Application.Activities.Commands.DeleteUserTrailActivity;
@@ -695,6 +696,8 @@ app.MapGet("/api/v1/admin/trails/{idOrSlug}", [Authorize] async (string idOrSlug
         trail.ElevationGain,
         trail.ElevationLoss,
         trail.YoutubeUrl,
+        TerrainType = trail.TerrainType?.ToString(),
+        MaxAltitude = trail.ElevationProfile != null && trail.ElevationProfile.Length > 0 ? trail.ElevationProfile.Max() : (double?)null,
         Locations = trail.TrailLocations
             .OrderBy(tl => tl.Order)
             .Select(tl => new { tl.LocationId, Role = tl.Role.ToString(), tl.Order })
@@ -1268,6 +1271,54 @@ app.MapPost("/api/v1/admin/trails/detect-locations", [Authorize] async (Utanvega
 })
 .WithName("DetectTrailLocations");
 
+app.MapPost("/api/v1/admin/trails/detect-terrain-types", [Authorize] async (UtanvegaDbContext context, ICacheInvalidator cacheInvalidator) =>
+{
+    var trails = await context.Trails
+        .Where(t => t.TerrainType == null && t.GpxData != null)
+        .ToListAsync();
+
+    var updated = 0;
+    var skipped = 0;
+
+    foreach (var trail in trails)
+    {
+        if (trail.Length <= 1000 || trail.ElevationProfile == null || trail.ElevationProfile.Length == 0)
+        {
+            skipped++;
+            continue;
+        }
+
+        var climbRatio = trail.ElevationGain / (trail.Length / 1000.0);
+        var maxAltitude = trail.ElevationProfile.Max();
+
+        // Mountain Index — high-latitude (Iceland) thresholds
+        Utanvega.Backend.Core.Entities.TerrainType terrainType;
+        if (climbRatio < 20)
+            terrainType = Utanvega.Backend.Core.Entities.TerrainType.Flat;
+        else if (maxAltitude > 600 && climbRatio >= 30)
+            terrainType = Utanvega.Backend.Core.Entities.TerrainType.Mountainous;
+        else if (maxAltitude < 400)
+            terrainType = Utanvega.Backend.Core.Entities.TerrainType.Hilly;
+        else
+            terrainType = climbRatio >= 50
+                ? Utanvega.Backend.Core.Entities.TerrainType.Mountainous
+                : Utanvega.Backend.Core.Entities.TerrainType.Hilly;
+
+        trail.TerrainType = terrainType;
+        updated++;
+    }
+
+    if (updated > 0)
+    {
+        await context.SaveChangesWithAuditAsync("system");
+        cacheInvalidator.InvalidateTrail();
+        cacheInvalidator.InvalidateEvent();
+    }
+
+    return Results.Ok(new { total = trails.Count, updated, skipped });
+})
+.WithName("DetectTerrainTypes");
+
 // --- Feature Flags ---
 app.MapGet("/api/v1/features", async (UtanvegaDbContext context, IMemoryCache cache) =>
 {
@@ -1465,6 +1516,48 @@ app.MapDelete("/api/v1/admin/events/{id:guid}", [Authorize] async (Guid id, IMed
 .WithName("DeleteEvent")
 .RequireAuthorization();
 
+// Organizers (public list for dropdowns — trimmed DTO, no PII)
+app.MapGet("/api/v1/organizers", async (IMediator mediator) =>
+{
+    var organizers = await mediator.Send(new GetOrganizersPublicQuery());
+    return Results.Ok(organizers);
+})
+.WithName("GetOrganizers");
+
+// Admin Organizer CRUD
+app.MapGet("/api/v1/admin/organizers", [Authorize] async (IMediator mediator) =>
+{
+    var organizers = await mediator.Send(new GetOrganizersQuery());
+    return Results.Ok(organizers);
+})
+.WithName("GetAdminOrganizers")
+.RequireAuthorization();
+
+app.MapPost("/api/v1/admin/organizers", [Authorize] async (CreateOrganizerCommand command, IMediator mediator) =>
+{
+    var id = await mediator.Send(command);
+    return Results.Created($"/api/v1/organizers/{id}", new { id });
+})
+.WithName("CreateOrganizer")
+.RequireAuthorization();
+
+app.MapPut("/api/v1/admin/organizers/{id:guid}", [Authorize] async (Guid id, UpdateOrganizerCommand command, IMediator mediator) =>
+{
+    if (id != command.Id) return Results.BadRequest("ID mismatch");
+    var success = await mediator.Send(command);
+    return success ? Results.NoContent() : Results.NotFound();
+})
+.WithName("UpdateOrganizer")
+.RequireAuthorization();
+
+app.MapDelete("/api/v1/admin/organizers/{id:guid}", [Authorize] async (Guid id, IMediator mediator) =>
+{
+    var success = await mediator.Send(new DeleteOrganizerCommand(id));
+    return success ? Results.NoContent() : Results.NotFound();
+})
+.WithName("DeleteOrganizer")
+.RequireAuthorization();
+
 // Admin Edition CRUD
 app.MapPost("/api/v1/admin/events/{eventId:guid}/editions", [Authorize] async (Guid eventId, CreateEditionCommand command, IMediator mediator) =>
 {
@@ -1526,6 +1619,50 @@ app.MapDelete("/api/v1/admin/races/{id:guid}", [Authorize] async (Guid id, IMedi
     return success ? Results.NoContent() : Results.NotFound();
 })
 .WithName("DeleteRace")
+.RequireAuthorization();
+
+app.MapPost("/api/v1/admin/events/detect-gpx", [Authorize] async (UtanvegaDbContext context) =>
+{
+    var events = await context.Events
+        .Where(e => e.GpxPointLat == null)
+        .Include(e => e.Editions)
+            .ThenInclude(ed => ed.Races)
+                .ThenInclude(r => r.Trail)
+        .Include(e => e.Editions)
+            .ThenInclude(ed => ed.Trail)
+        .ToListAsync();
+
+    var total = events.Count;
+    var updated = 0;
+    var skipped = 0;
+
+    foreach (var ev in events)
+    {
+        // Collect candidate trails: edition-level trail first, then race-level trails
+        var candidateTrails = ev.Editions
+            .SelectMany(ed =>
+            {
+                var trails = new List<Trail?>();
+                if (ed.Trail?.GpxData != null) trails.Add(ed.Trail);
+                trails.AddRange(ed.Races.Select(r => r.Trail).Where(t => t?.GpxData != null));
+                return trails;
+            })
+            .Where(t => t?.GpxData != null && t.GpxData.NumPoints > 0)
+            .ToList();
+
+        if (candidateTrails.Count == 0) { skipped++; continue; }
+
+        var trail = candidateTrails.First();
+        var start = trail!.GpxData!.Coordinates[0];
+        ev.GpxPointLat = start.Y;
+        ev.GpxPointLng = start.X;
+        updated++;
+    }
+
+    if (updated > 0) await context.SaveChangesWithAuditAsync("system");
+    return Results.Ok(new { total, updated, skipped });
+})
+.WithName("DetectEventGpx")
 .RequireAuthorization();
 
 // User Trail Activities Endpoints

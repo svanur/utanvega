@@ -69,6 +69,16 @@ export interface EventEditionDto {
     updatedAt: string | null;
 }
 
+export interface SeriesRaceDto {
+    raceId: string;
+    raceName: string;
+    dateOfRace: string | null;
+    startTime: string | null;
+    distanceLabel: string | null;
+    ticketStatus: string;
+    registrationUrl: string | null;
+}
+
 export interface EventSummaryDto {
     id: string;
     name: string;
@@ -79,6 +89,7 @@ export interface EventSummaryDto {
     status: EventStatus;
     organizerName: string | null;
     organizerWebsite: string | null;
+    organizerId: string | null;
     alertMessage: string | null;
     alertSeverity: AlertSeverity | null;
     locationId: string | null;
@@ -90,6 +101,12 @@ export interface EventSummaryDto {
     editionCount: number;
     createdAt: string;
     updatedAt: string | null;
+    seriesRaces: SeriesRaceDto[] | null;
+    gpxPointLat: number | null;
+    gpxPointLng: number | null;
+    isMountainRace: boolean;
+    terrainType: string | null;
+    hasFutureEdition: boolean;
 }
 
 export interface EventDetailDto extends EventSummaryDto {
@@ -106,11 +123,14 @@ export interface CreateEventInput {
     status: EventStatus;
     organizerName?: string;
     organizerWebsite?: string;
+    organizerId?: string | null;
     alertMessage?: string;
     alertSeverity?: AlertSeverity;
     locationId?: string | null;
     scheduleRule?: ScheduleRule | null;
     socialLinks?: SocialLink[] | null;
+    gpxPointLat?: number | null;
+    gpxPointLng?: number | null;
 }
 
 export interface UpdateEventInput {
@@ -122,11 +142,14 @@ export interface UpdateEventInput {
     status: EventStatus;
     organizerName?: string;
     organizerWebsite?: string;
+    organizerId?: string | null;
     alertMessage?: string;
     alertSeverity?: AlertSeverity;
     locationId?: string | null;
     scheduleRule?: ScheduleRule | null;
     socialLinks?: SocialLink[] | null;
+    gpxPointLat?: number | null;
+    gpxPointLng?: number | null;
 }
 
 export interface CreateEditionInput {

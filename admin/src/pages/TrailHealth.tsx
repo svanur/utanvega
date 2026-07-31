@@ -4,7 +4,8 @@ import {
   TableHead, TableRow, TableSortLabel, Chip, LinearProgress, Card,
   CardContent, Stack, Tooltip, IconButton, TextField, InputAdornment,
   Collapse, Alert, AlertTitle, List, ListItem, ListItemText, ListItemIcon,
-  Button, CircularProgress,
+  Button, CircularProgress, Dialog, DialogTitle, DialogContent,
+  DialogContentText, DialogActions,
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
@@ -15,6 +16,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
+import CalculateIcon from '@mui/icons-material/Calculate';
 import { apiFetch } from '../hooks/api';
 
 interface LocationInfo {
@@ -39,6 +41,7 @@ interface TrailDto {
   startLatitude: number | null;
   startLongitude: number | null;
   locations: LocationInfo[];
+  terrainType?: string | null;
 }
 
 interface HealthCheck {
@@ -87,6 +90,15 @@ function getHealthChecks(trail: TrailDto): HealthCheck[] {
       passed: trail.status === 'Published',
       tooltip: `Status: ${trail.status}`,
     },
+    {
+      label: 'Terrain',
+      passed: trail.startLatitude == null ? true : trail.terrainType != null,
+      tooltip: trail.startLatitude == null
+        ? 'N/A — no GPX data'
+        : trail.terrainType
+          ? `Terrain type: ${trail.terrainType}`
+          : 'Terrain type not set',
+    },
   ];
 }
 
@@ -126,7 +138,14 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [detecting, setDetecting] = useState(false);
   const [detectingLocations, setDetectingLocations] = useState(false);
+  const [detectingTerrain, setDetectingTerrain] = useState(false);
   const [backfillingProfiles, setBackfillingProfiles] = useState(false);
+  const [recalculating, setRecalculating] = useState(false);
+  const [locationsDialogOpen, setLocationsDialogOpen] = useState(false);
+  const [terrainDialogOpen, setTerrainDialogOpen] = useState(false);
+  const [typesDialogOpen, setTypesDialogOpen] = useState(false);
+  const [elevationDialogOpen, setElevationDialogOpen] = useState(false);
+  const [recalcDialogOpen, setRecalcDialogOpen] = useState(false);
 
   const handleDeleteDuplicate = async (trailId: string, trailName: string) => {
     if (!confirm(`Delete "${trailName}"? This will soft-delete the trail.`)) return;
@@ -166,6 +185,34 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
       onNotify('Failed to backfill elevation profiles', 'error');
     } finally {
       setBackfillingProfiles(false);
+    }
+  };
+
+  const handleDetectTerrainTypes = async () => {
+    setDetectingTerrain(true);
+    try {
+      const result = await apiFetch<{ total: number; updated: number; skipped: number }>('/api/v1/admin/trails/detect-terrain-types', { method: 'POST' });
+      onNotify(`Terrain types detected: ${result.updated} of ${result.total} trails updated (${result.skipped} skipped)`);
+      const data = await apiFetch<TrailDto[]>('/api/v1/admin/trails?includeArchived=false');
+      setTrails(data);
+    } catch (_err) {
+      onNotify('Failed to detect terrain types', 'error');
+    } finally {
+      setDetectingTerrain(false);
+    }
+  };
+
+  const handleRecalculateDifficulties = async () => {
+    setRecalculating(true);
+    try {
+      const data = await apiFetch<{ count: number }>('/api/v1/admin/trails/recalculate-all-difficulties', { method: 'POST' });
+      onNotify(`Recalculated difficulty for ${data.count} trails`);
+      const trails = await apiFetch<TrailDto[]>('/api/v1/admin/trails?includeArchived=false');
+      setTrails(trails);
+    } catch (_err) {
+      onNotify('Failed to recalculate difficulties', 'error');
+    } finally {
+      setRecalculating(false);
     }
   };
 
@@ -258,17 +305,26 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
             variant="outlined"
             size="small"
             startIcon={detectingLocations ? <CircularProgress size={16} /> : <AutoFixHighIcon />}
-            disabled={detectingLocations || detecting || backfillingProfiles}
-            onClick={handleDetectLocations}
+            disabled={detectingLocations || detecting || detectingTerrain || backfillingProfiles || recalculating}
+            onClick={() => setLocationsDialogOpen(true)}
           >
             {detectingLocations ? 'Detecting...' : 'Re-detect Locations'}
           </Button>
           <Button
             variant="outlined"
             size="small"
+            startIcon={detectingTerrain ? <CircularProgress size={16} /> : <AutoFixHighIcon />}
+            disabled={detecting || detectingLocations || detectingTerrain || backfillingProfiles || recalculating}
+            onClick={() => setTerrainDialogOpen(true)}
+          >
+            {detectingTerrain ? 'Detecting...' : 'Re-detect Terrain Types'}
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
             startIcon={detecting ? <CircularProgress size={16} /> : <AutoFixHighIcon />}
-            disabled={detecting || detectingLocations || backfillingProfiles}
-            onClick={handleDetectTypes}
+            disabled={detecting || detectingLocations || detectingTerrain || backfillingProfiles || recalculating}
+            onClick={() => setTypesDialogOpen(true)}
           >
             {detecting ? 'Detecting...' : 'Re-detect Trail Types'}
           </Button>
@@ -276,12 +332,111 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
             variant="outlined"
             size="small"
             startIcon={backfillingProfiles ? <CircularProgress size={16} /> : <AutoFixHighIcon />}
-            disabled={detecting || detectingLocations || backfillingProfiles}
-            onClick={handleBackfillElevationProfiles}
+            disabled={detecting || detectingLocations || detectingTerrain || backfillingProfiles || recalculating}
+            onClick={() => setElevationDialogOpen(true)}
           >
             {backfillingProfiles ? 'Backfilling...' : 'Backfill Elevation Profiles'}
           </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={recalculating ? <CircularProgress size={16} /> : <CalculateIcon />}
+            disabled={detecting || detectingLocations || detectingTerrain || backfillingProfiles || recalculating}
+            onClick={() => setRecalcDialogOpen(true)}
+          >
+            {recalculating ? 'Recalculating...' : 'Recalculate Difficulties'}
+          </Button>
         </Stack>
+
+        <Dialog open={locationsDialogOpen} onClose={() => { if (!detectingLocations) setLocationsDialogOpen(false); }} maxWidth="sm" fullWidth>
+          <DialogTitle>Re-detect Locations</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              This will scan all trails and automatically assign a <strong>location</strong> based on the trail's GPS coordinates — matching against the known regions and areas in the database.
+            </DialogContentText>
+            <DialogContentText sx={{ mt: 1.5 }}>
+              Trails that already have a location assigned will be <strong>updated</strong> if a better match is found. Trails with no GPS data will be skipped.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setLocationsDialogOpen(false)} disabled={detectingLocations}>Cancel</Button>
+            <Button variant="contained" startIcon={<AutoFixHighIcon />} onClick={() => { setLocationsDialogOpen(false); handleDetectLocations(); }}>
+              Run detection
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog open={terrainDialogOpen} onClose={() => { if (!detectingTerrain) setTerrainDialogOpen(false); }} maxWidth="sm" fullWidth>
+          <DialogTitle>Re-detect Terrain Types</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              This will classify each trail as <strong>Flat</strong>, <strong>Hilly</strong>, or <strong>Mountainous</strong> based on its elevation profile and elevation-gain-per-km ratio.
+            </DialogContentText>
+            <DialogContentText sx={{ mt: 1.5 }}>
+              Existing terrain type values will be <strong>overwritten</strong>. Trails without GPX data will be skipped.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setTerrainDialogOpen(false)} disabled={detectingTerrain}>Cancel</Button>
+            <Button variant="contained" startIcon={<AutoFixHighIcon />} onClick={() => { setTerrainDialogOpen(false); handleDetectTerrainTypes(); }}>
+              Run detection
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog open={typesDialogOpen} onClose={() => { if (!detecting) setTypesDialogOpen(false); }} maxWidth="sm" fullWidth>
+          <DialogTitle>Re-detect Trail Types</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              This will classify each trail as <strong>Loop</strong>, <strong>Out & Back</strong>, or <strong>Point to Point</strong> by analysing the shape of the GPS track — comparing start and end coordinates and route geometry.
+            </DialogContentText>
+            <DialogContentText sx={{ mt: 1.5 }}>
+              Existing trail type values will be <strong>overwritten</strong>. Trails without GPX data will be skipped.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setTypesDialogOpen(false)} disabled={detecting}>Cancel</Button>
+            <Button variant="contained" startIcon={<AutoFixHighIcon />} onClick={() => { setTypesDialogOpen(false); handleDetectTypes(); }}>
+              Run detection
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog open={elevationDialogOpen} onClose={() => { if (!backfillingProfiles) setElevationDialogOpen(false); }} maxWidth="sm" fullWidth>
+          <DialogTitle>Backfill Elevation Profiles</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              This will generate a <strong>sampled elevation profile</strong> for any trail that is missing one, by extracting elevation data points along its GPS track at regular intervals.
+            </DialogContentText>
+            <DialogContentText sx={{ mt: 1.5 }}>
+              Only trails <strong>without</strong> an existing elevation profile are updated — already-backfilled trails are left untouched. Trails without GPX data will be skipped.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setElevationDialogOpen(false)} disabled={backfillingProfiles}>Cancel</Button>
+            <Button variant="contained" startIcon={<AutoFixHighIcon />} onClick={() => { setElevationDialogOpen(false); handleBackfillElevationProfiles(); }}>
+              Run backfill
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog open={recalcDialogOpen} onClose={() => { if (!recalculating) setRecalcDialogOpen(false); }} maxWidth="sm" fullWidth>
+          <DialogTitle>Recalculate Difficulties</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              This will recalculate the difficulty rating for <strong>all trails</strong> based on their distance, elevation gain, and activity type using the standard effort-distance formula.
+            </DialogContentText>
+            <DialogContentText sx={{ mt: 1.5 }}>
+              Any manually-set difficulty values will be <strong>overwritten</strong>. Trails without GPX data will be skipped.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setRecalcDialogOpen(false)} disabled={recalculating}>Cancel</Button>
+            <Button variant="contained" startIcon={<CalculateIcon />} onClick={() => { setRecalcDialogOpen(false); handleRecalculateDifficulties(); }}>
+              Recalculate
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Box>
 
       {/* Summary Cards */}

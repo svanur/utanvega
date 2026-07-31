@@ -38,6 +38,8 @@ type TrailDetail = {
     elevationGain: number;
     elevationLoss: number;
     youtubeUrl?: string | null;
+    terrainType?: string | null;
+    maxAltitude?: number | null;
     locations: TrailLocationInfo[];
     tags: TrailTagInfo[];
 };
@@ -68,10 +70,10 @@ function buildEditionLabel(edition: Pick<EventEditionDto, 'title' | 'year' | 'da
 }
 
 const activityTypes = [
-    { value: 'TrailRunning', label: 'Trail Running' },
-    { value: 'Running', label: 'Running' },
+    { value: 'TrailRunning', label: 'Trail Run' },
+    { value: 'Running', label: 'Road Run' },
     { value: 'Cycling', label: 'Cycling' },
-    { value: 'Hiking', label: 'Hiking' },
+    { value: 'Hiking', label: 'Hike' },
 ];
 
 const trailStatuses = [
@@ -100,6 +102,13 @@ const visibilities = [
     { value: 'Public', label: 'Public' },
     { value: 'Friends', label: 'Friends' },
     { value: 'Private', label: 'Private' },
+];
+
+const terrainTypes = [
+    { value: '', label: 'None' },
+    { value: 'Mountainous', label: 'Mountainous' },
+    { value: 'Hilly', label: 'Hilly' },
+    { value: 'Flat', label: 'Flat' },
 ];
 
 export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess }: { open: boolean, trailId: string | null, onClose: () => void, onSaveSuccess: (trail?: { id: string, slug: string, name: string }) => void }) {
@@ -200,6 +209,7 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
                     difficulty: trail.difficulty,
                     visibility: trail.visibility,
                     youtubeUrl: trail.youtubeUrl || null,
+                    terrainType: trail.terrainType || null,
                     updatedBy: 'admin', // Simple for now
                     locations: trail.locations.map(l => ({
                         locationId: l.locationId,
@@ -380,6 +390,43 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
                                 <TextField select label="Trail Type" value={trail.type} onChange={(e) => handleChange('type', e.target.value)}>
                                     {trailTypes.map(opt => <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>)}
                                 </TextField>
+                            </Box>
+                            <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+                                <TextField select label="Terrain Type" value={trail.terrainType || ''} onChange={(e) => handleChange('terrainType', e.target.value)} sx={{ minWidth: 180 }}>
+                                    {terrainTypes.map(opt => <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>)}
+                                </TextField>
+                                {trail.length > 0 && trail.elevationGain > 0 && (
+                                    <Button
+                                        variant="outlined"
+                                        size="small"
+                                        sx={{ mt: 1 }}
+                                        disabled={trail.maxAltitude == null}
+                                        title={trail.maxAltitude == null ? 'Requires GPX data with altitude information' : undefined}
+                                        onClick={() => {
+                                            const distanceKm = trail.length / 1000;
+                                            const climbRatio = trail.elevationGain / distanceKm;
+                                            const maxAlt = trail.maxAltitude ?? 0;
+                                            // Mountain Index (high-latitude / Iceland thresholds)
+                                            // Rule 1: low climb ratio (<20 m/km) → Flat
+                                            // Rule 2: high altitude (>600m) + climb ratio ≥ 30 m/km → Mountainous
+                                            // Rule 3: low altitude (<400m) → Hilly
+                                            // Rule 4: grey zone (400–600m) → Mountainous if climb ratio ≥ 50 m/km
+                                            let suggested: string;
+                                            if (climbRatio < 20) {
+                                                suggested = 'Flat';
+                                            } else if (maxAlt > 600 && climbRatio >= 30) {
+                                                suggested = 'Mountainous';
+                                            } else if (maxAlt < 400) {
+                                                suggested = 'Hilly';
+                                            } else {
+                                                suggested = climbRatio >= 50 ? 'Mountainous' : 'Hilly';
+                                            }
+                                            handleChange('terrainType', suggested);
+                                        }}
+                                    >
+                                        Auto suggest
+                                    </Button>
+                                )}
                             </Box>
 
                             <Typography variant="subtitle1" sx={{ mt: 2 }}>Linked Locations</Typography>

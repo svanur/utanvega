@@ -18,6 +18,7 @@ public record EventDetailDto(
     string Status,
     string? OrganizerName,
     string? OrganizerWebsite,
+    Guid? OrganizerId,
     string? AlertMessage,
     string? AlertSeverity,
     Guid? LocationId,
@@ -34,7 +35,9 @@ public record EventDetailDto(
     List<string>? Certifications = null,
     string? YoutubeUrl = null,
     List<string>? ChampionshipCategories = null,
-    List<int>? ItraPoints = null
+    List<int>? ItraPoints = null,
+    double? GpxPointLat = null,
+    double? GpxPointLng = null
 );
 
 public record GetEventQuery(string Slug) : IRequest<EventDetailDto?>, ICacheable
@@ -59,6 +62,7 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
         var ev = await _context.Events
             .AsNoTracking()
             .Include(e => e.Location)
+            .Include(e => e.Organizer)
             .Include(e => e.Editions)
                 .ThenInclude(ed => ed.Trail)
             .Include(e => e.Editions)
@@ -151,7 +155,10 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
                         r.DateOfRace,
                         r.StartTime,
                         r.Trail?.Length,
-                        r.Trail?.ElevationGain
+                        r.Trail?.ElevationGain,
+                        r.Trail?.TerrainType?.ToString(),
+                        r.Trail?.Difficulty.ToString(),
+                        r.Trail?.ActivityTypeId.ToString()
                     ))
                     .ToList(),
                 ed.CreatedAt,
@@ -198,8 +205,9 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
             ev.Type.ToString(),
             ev.ActivityType.ToString(),
             ev.Status.ToString(),
-            ev.OrganizerName,
-            ev.OrganizerWebsite,
+            ev.Organizer?.Name ?? ev.OrganizerName,
+            ev.OrganizerWebsite ?? ev.Organizer?.Website,
+            ev.OrganizerId,
             ev.AlertMessage,
             ev.AlertSeverity,
             ev.LocationId,
@@ -216,7 +224,9 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
             certifications?.Count > 0 ? certifications : null,
             youtubeUrl,
             championshipCategories?.Count > 0 ? championshipCategories : null,
-            itraPoints?.Count > 0 ? itraPoints : null
+            itraPoints?.Count > 0 ? itraPoints : null,
+            ev.GpxPointLat,
+            ev.GpxPointLng
         );
     }
 }

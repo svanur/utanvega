@@ -106,6 +106,7 @@ public class EventHandlerTests : IDisposable
             Status: "Confirmed",
             OrganizerName: "ÍSÍ",
             OrganizerWebsite: "https://marathon.is",
+            OrganizerId: null,
             AlertMessage: null,
             AlertSeverity: null,
             LocationId: null,
@@ -139,6 +140,7 @@ public class EventHandlerTests : IDisposable
             Status: "Confirmed",
             OrganizerName: null,
             OrganizerWebsite: null,
+            OrganizerId: null,
             AlertMessage: null,
             AlertSeverity: null,
             LocationId: null,
@@ -177,11 +179,14 @@ public class EventHandlerTests : IDisposable
                 Status: "Cancelled",
                 OrganizerName: "New Org",
                 OrganizerWebsite: "https://new.is",
+                OrganizerId: null,
                 AlertMessage: null,
                 AlertSeverity: null,
                 LocationId: null,
                 ScheduleRule: null,
-                SocialLinks: null
+                SocialLinks: null,
+                GpxPointLat: null,
+                GpxPointLng: null
             ), CancellationToken.None);
 
             Assert.True(result);
@@ -211,11 +216,14 @@ public class EventHandlerTests : IDisposable
             Status: "Confirmed",
             OrganizerName: null,
             OrganizerWebsite: null,
+            OrganizerId: null,
             AlertMessage: null,
             AlertSeverity: null,
             LocationId: null,
             ScheduleRule: null,
-            SocialLinks: null
+            SocialLinks: null,
+            GpxPointLat: null,
+            GpxPointLng: null
         ), CancellationToken.None);
 
         Assert.False(result);

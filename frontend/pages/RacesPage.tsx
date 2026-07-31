@@ -29,6 +29,8 @@ import {
     Divider,
     Autocomplete,
     Fade,
+    Select,
+    MenuItem,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import SearchIcon from '@mui/icons-material/Search';
@@ -44,13 +46,9 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import ShareIcon from '@mui/icons-material/Share';
 import EventAvailableIcon from '@mui/icons-material/EventAvailable';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
-import HikingIcon from '@mui/icons-material/Hiking';
-import DirectionsBikeIcon from '@mui/icons-material/DirectionsBike';
-import CelebrationIcon from '@mui/icons-material/Celebration';
-import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
-import GrassIcon from '@mui/icons-material/Grass';
-import LandscapeIcon from '@mui/icons-material/Landscape';
+import NearMeIcon from '@mui/icons-material/NearMe';
+import SortIcon from '@mui/icons-material/Sort';
+import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import Layout from '../components/Layout';
 import PartnerLinks from '../components/PartnerLinks';
 import RandomQuote from '../components/RandomQuote';
@@ -60,12 +58,21 @@ import SwipeableCard from '../components/SwipeableCard';
 import RaceShareCard from '../components/RaceShareCard';
 import RaceFinishCard from '../components/RaceFinishCard';
 import VideocamIcon from '@mui/icons-material/Videocam';
-import { useEvents, type EventSummary } from '../hooks/useEvents';
+import { useEvents, type EventSummary, type SeriesRaceDto } from '../hooks/useEvents';
 import { downloadIcs } from '../utils/calendarLinks';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
 import { getTicketStatusColor, groupDistances } from '../utils/ticketStatus';
-import { formatNextDate, getCountdownColor, getCountdownLabel } from '../utils/eventUtils';
+import { formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor } from '../utils/eventUtils';
+import { getActivityIcon } from '../utils/activityIcon';
+import LandscapeIcon from '@mui/icons-material/Landscape';
+import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
+import HikingIcon from '@mui/icons-material/Hiking';
+import DirectionsBikeIcon from '@mui/icons-material/DirectionsBike';
+import CelebrationIcon from '@mui/icons-material/Celebration';
+import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
+import GrassIcon from '@mui/icons-material/Grass';
+import { haversineKm, formatDistanceKm } from '../utils/geo';
 
 const EventTableView = lazy(() => import('../components/EventTableView'));
 const EventMapView = lazy(() => import('../components/EventMapView'));
@@ -90,6 +97,7 @@ interface EventFilters {
     certifications: string[];
     championships: string[];
     weekendOnly: boolean;
+    mountainRaceOnly: boolean;
 }
 
 const DEFAULT_FILTERS: EventFilters = {
@@ -102,6 +110,7 @@ const DEFAULT_FILTERS: EventFilters = {
     certifications: [],
     championships: [],
     weekendOnly: false,
+    mountainRaceOnly: false,
 };
 
 const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
@@ -118,13 +127,16 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
     const { t } = useTranslation();
     const { events, loading, error, refresh } = useEvents();
     const { isEnabled } = useFeatureFlags();
-    const locationsEnabled = isEnabled('locations_page');
     const navigate = useNavigate();
     const theme = useTheme();
     const [search, setSearch] = useState('');
     const [showFilters, setShowFilters] = useState(false);
     const [filters, setFilters] = useState<EventFilters>(DEFAULT_FILTERS);
     const [shareEventId, setShareEventId] = useState<string | null>(null);
+    const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+    const [locationLoading, setLocationLoading] = useState(false);
+    const [locationDenied, setLocationDenied] = useState(false);
+    const [sortBy, setSortBy] = useState<'date' | 'distance' | 'name'>('date');
     const [pullOffset, setPullOffset] = useState(0);
     const [refreshing, setRefreshing] = useState(false);
     const [showSwipeHint, setShowSwipeHint] = useState(false);
@@ -147,6 +159,33 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         }
         setPullOffset(0);
         touchStartY.current = null;
+    };
+
+    useEffect(() => {
+        if (!navigator.geolocation) return;
+        navigator.geolocation.getCurrentPosition(
+            pos => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+            err => { if (err.code === err.PERMISSION_DENIED) setLocationDenied(true); },
+        );
+    }, []);
+
+    const handleSortChange = (value: 'date' | 'distance' | 'name') => {
+        if (value !== 'distance') { setSortBy(value); return; }
+        if (userLocation) { setSortBy('distance'); return; }
+        if (!navigator.geolocation) return;
+        setLocationLoading(true);
+        navigator.geolocation.getCurrentPosition(
+            pos => {
+                setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+                setLocationDenied(false);
+                setSortBy('distance');
+                setLocationLoading(false);
+            },
+            err => {
+                if (err.code === err.PERMISSION_DENIED) setLocationDenied(true);
+                setLocationLoading(false);
+            },
+        );
     };
 
     // One-time swipe hint: show a brief peek animation on the first upcoming card
@@ -183,7 +222,8 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         (filters.itraAny ? 1 : filters.itraPoints.length) +
         filters.certifications.length +
         filters.championships.length +
-        (filters.weekendOnly ? 1 : 0),
+        (filters.weekendOnly ? 1 : 0) +
+        (filters.mountainRaceOnly ? 1 : 0),
     [filters]);
 
     const filterOptions = useMemo(() => {
@@ -246,6 +286,10 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
             });
         }
 
+        if (filters.mountainRaceOnly) {
+            result = result.filter(c => c.isMountainRace === true);
+        }
+
         // Sort: Active/Upcoming first, Cancelled last; then by upcoming date, then name
         result.sort((a, b) => {
             const cancelledA = a.status === 'Cancelled' ? 1 : 0;
@@ -266,13 +310,61 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         return result;
     }, [events, search, filters]);
 
+    const sortedFiltered = useMemo(() => {
+        if (sortBy === 'distance' && userLocation) {
+            const getKm = (e: EventSummary) =>
+                e.gpxPointLat != null && e.gpxPointLng != null
+                    ? haversineKm(userLocation.lat, userLocation.lng, e.gpxPointLat, e.gpxPointLng)
+                    : null;
+            return [...filtered].sort((a, b) => {
+                const da = getKm(a);
+                const db = getKm(b);
+                if (da == null && db == null) return 0;
+                if (da == null) return 1;
+                if (db == null) return -1;
+                return da - db;
+            });
+        }
+        if (sortBy === 'name') {
+            return [...filtered].sort((a, b) => a.name.localeCompare(b.name, 'is'));
+        }
+        return filtered;
+    }, [filtered, sortBy, userLocation]);
+
     const { justRaced, upcoming } = useMemo(() => {
         const isRecentlyCompleted = (c: EventSummary) =>
             c.daysUntil != null && c.daysUntil < 0 && c.daysUntil >= -3 && c.status !== 'Cancelled';
-        const jr = filtered.filter(isRecentlyCompleted);
-        const up = filtered.filter(c => !isRecentlyCompleted(c));
+        const jr = sortedFiltered.filter(isRecentlyCompleted);
+        const up = sortedFiltered.filter(c => !isRecentlyCompleted(c));
         return { justRaced: jr, upcoming: up };
-    }, [filtered]);
+    }, [sortedFiltered]);
+    type UpcomingRow =
+        | { kind: 'event'; comp: EventSummary }
+        | { kind: 'series-race'; comp: EventSummary; race: SeriesRaceDto };
+
+    const flattenedUpcoming = useMemo((): UpcomingRow[] => {
+        const rows: UpcomingRow[] = [];
+        for (const comp of upcoming) {
+            if (comp.type === 'Series' && comp.seriesRaces && comp.seriesRaces.length > 0) {
+                for (const race of comp.seriesRaces) {
+                    rows.push({ kind: 'series-race', comp, race });
+                }
+            } else {
+                rows.push({ kind: 'event', comp });
+            }
+        }
+        if (sortBy === 'date') {
+            rows.sort((a, b) => {
+                const dateA = a.kind === 'series-race' ? a.race.dateOfRace : (a.comp.displayDate ?? a.comp.nextEditionDate);
+                const dateB = b.kind === 'series-race' ? b.race.dateOfRace : (b.comp.displayDate ?? b.comp.nextEditionDate);
+                if (!dateA && !dateB) return 0;
+                if (!dateA) return 1;
+                if (!dateB) return -1;
+                return dateA < dateB ? -1 : dateA > dateB ? 1 : 0;
+            });
+        }
+        return rows;
+    }, [upcoming, sortBy]);
 
     if (loading) {
         return (
@@ -582,6 +674,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
 
                         {/* Weekend only + reset + close row */}
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
                             <FormControlLabel
                                 control={
                                     <Checkbox
@@ -592,6 +685,15 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                 }
                                 label={<Typography variant="body2">{t('races.filters.weekendOnly')}</Typography>}
                             />
+                            <Chip
+                                label={`⛰ ${t('races.mountainRace', 'Mountain race')}`}
+                                size="small"
+                                variant={filters.mountainRaceOnly ? 'filled' : 'outlined'}
+                                color={filters.mountainRaceOnly ? 'warning' : 'default'}
+                                onClick={() => setFilters(f => ({ ...f, mountainRaceOnly: !f.mountainRaceOnly }))}
+                                sx={{ cursor: 'pointer' }}
+                            />
+                            </Box>
                             <Box sx={{ display: 'flex', gap: 1 }}>
                                 {activeFilterCount > 0 && (
                                     <Button size="small" onClick={() => setFilters(DEFAULT_FILTERS)}>
@@ -611,7 +713,24 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                     <Typography variant="body2" color="text.secondary">
                         {t('races.editionCount', { count: filtered.length })}
                     </Typography>
-                    <ToggleButtonGroup
+                    <Stack direction="row" spacing={1} alignItems="center">
+                        {viewMode === 'list' && (
+                            <Select
+                                value={sortBy}
+                                onChange={(e) => handleSortChange(e.target.value as 'date' | 'distance' | 'name')}
+                                size="small"
+                                variant="outlined"
+                                startAdornment={locationLoading ? <CircularProgress size={14} sx={{ mr: 0.5 }} /> : <SortIcon fontSize="small" sx={{ mr: 0.5, color: 'text.secondary' }} />}
+                                sx={{ minWidth: 140, fontSize: '0.85rem' }}
+                            >
+                                <MenuItem value="date">{t('sort.date')}</MenuItem>
+                                <MenuItem value="name">{t('sort.name')}</MenuItem>
+                                <MenuItem value="distance" disabled={locationDenied || !navigator.geolocation}>
+                                    {locationDenied ? t('races.nearMe.denied') : t('sort.distance')}
+                                </MenuItem>
+                            </Select>
+                        )}
+                        <ToggleButtonGroup
                         value={viewMode}
                         exclusive
                         onChange={(_, value) => { if (value) setViewMode(value as ViewMode); }}
@@ -634,6 +753,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                             </ToggleButton>
                         </Tooltip>
                     </ToggleButtonGroup>
+                    </Stack>
                 </Box>
 
                 {/* Views */}
@@ -683,6 +803,11 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                         {formatNextDate((comp.displayDate ?? comp.nextEditionDate)!, t)}
                                                                     </Typography>
                                                                 )}
+                                                                {userLocation && comp.gpxPointLat != null && comp.gpxPointLng != null && (
+                                                                    <Tooltip title={t('races.nearMe.distanceToStart')}>
+                                                                        <Chip icon={<NearMeIcon />} label={formatDistanceKm(haversineKm(userLocation.lat, userLocation.lng, comp.gpxPointLat, comp.gpxPointLng))} size="small" variant="outlined" color="primary" sx={{ mt: 0.5 }} />
+                                                                    </Tooltip>
+                                                                )}
                                                                 {comp.distances && comp.distances.length > 0 && (
                                                                     <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.5 }}>
                                                                         {groupDistances(comp.distances).map((d, i) => (
@@ -721,8 +846,128 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                     </Stack>
                                 </Box>
                             )}
+                            
                         <Stack spacing={2}>
-                            {upcoming.map((comp, idx) => (
+                            {flattenedUpcoming.map((row, idx) => {
+                                if (row.kind === 'series-race') {
+                                    const { comp, race } = row;
+                                    const raceDaysUntil = race.dateOfRace
+                                        ? Math.round((new Date(race.dateOfRace + 'T00:00:00').getTime() - Date.now()) / 86400000)
+                                        : null;
+                                    return (
+                                        <SwipeableCard
+                                            key={`${comp.id}-${race.raceId}`}
+                                            onSwipeRight={race.registrationUrl && raceDaysUntil != null && raceDaysUntil >= 0
+                                                ? () => setShareEventId(comp.id)
+                                                : undefined
+                                            }
+                                            leftActions={
+                                                <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+                                                    {race.registrationUrl && raceDaysUntil != null && raceDaysUntil >= 0 && (
+                                                        <Box
+                                                            component="a"
+                                                            href={race.registrationUrl}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                                                            sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', bgcolor: 'success.main', color: 'white', textDecoration: 'none', gap: 0.5, px: 1, fontSize: '0.7rem', fontWeight: 600 }}
+                                                        >
+                                                            <OpenInNewIcon sx={{ fontSize: 18 }} />
+                                                            {t('races.register', 'Register')}
+                                                        </Box>
+                                                    )}
+                                                    {race.dateOfRace && (
+                                                        <Box
+                                                            onClick={(e: React.MouseEvent) => {
+                                                                e.stopPropagation();
+                                                                downloadIcs({
+                                                                    title: race.raceName,
+                                                                    date: race.dateOfRace!,
+                                                                    location: comp.locationName ?? undefined,
+                                                                    url: `https://hlaupadagskra.is/events/${comp.slug}`,
+                                                                });
+                                                            }}
+                                                            sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', bgcolor: 'primary.main', color: 'white', cursor: 'pointer', gap: 0.5, px: 1, fontSize: '0.7rem', fontWeight: 600 }}
+                                                        >
+                                                            <EventAvailableIcon sx={{ fontSize: 18 }} />
+                                                            {t('races.addToCalendar', 'Calendar')}
+                                                        </Box>
+                                                    )}
+                                                </Box>
+                                            }
+                                            revealWidth={120}
+                                        >
+                                            <Card sx={{ transition: 'transform 0.15s, box-shadow 0.15s', '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] } }}>
+                                                <CardActionArea onClick={() => navigate(`/events/${comp.slug}`)}>
+                                                    <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                                                        {/* Name + countdown */}
+                                                        <Stack direction="row" alignItems="flex-start" justifyContent="space-between" gap={1}>
+                                                            <Stack direction="row" alignItems="flex-start" gap={1} sx={{ flex: 1, minWidth: 0 }}>
+                                                                <Tooltip title={t(`races.activityTypes.${comp.activityType}`, comp.activityType)}>
+                                                                    <Box sx={{ color: 'text.secondary', pt: 0.3, flexShrink: 0 }}>{getActivityIcon(comp.activityType)}</Box>
+                                                                </Tooltip>
+                                                                <Box sx={{ minWidth: 0 }}>
+                                                                    <Typography variant="subtitle1" fontWeight={700} noWrap>{race.raceName}</Typography>
+                                                                </Box>
+                                                            </Stack>
+                                                            <Stack direction="row" alignItems="center" gap={0.5} sx={{ flexShrink: 0 }}>
+                                                                {race.dateOfRace && (
+                                                                    <>
+                                                                        <CalendarTodayIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
+                                                                        <Typography variant="body2" color="text.secondary" noWrap>{formatNextDate(race.dateOfRace, t)}</Typography>
+                                                                        <EventDateBadge dateStr={race.dateOfRace} />
+                                                                    </>
+                                                                )}
+                                                                {raceDaysUntil != null && (
+                                                                    <Chip label={getCountdownLabel(raceDaysUntil, t)} color={getCountdownColor(raceDaysUntil)} size="small" sx={{ fontWeight: 700 }} />
+                                                                )}
+                                                            </Stack>
+                                                        </Stack>
+                                                        {/* location · km away */}
+                                                        {(comp.locationName || (userLocation && comp.gpxPointLat != null)) && (
+                                                            <Stack direction="row" alignItems="center" gap={0.5} sx={{ mt: 0.25 }} flexWrap="wrap">
+                                                                {comp.locationName && (
+                                                                    <>
+                                                                        <LocationOnIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
+                                                                        <Typography variant="body2" color="text.secondary" noWrap>{comp.locationName}</Typography>
+                                                                    </>
+                                                                )}
+                                                                {userLocation && comp.gpxPointLat != null && comp.gpxPointLng != null && (
+                                                                    <>
+                                                                        {comp.locationName && <FiberManualRecordIcon sx={{ fontSize: 5, color: 'text.disabled' }} />}
+                                                                        <NearMeIcon sx={{ fontSize: 13, color: 'primary.main' }} />
+                                                                        <Typography variant="body2" color="primary.main" fontWeight={500} noWrap>
+                                                                            {formatDistanceKm(haversineKm(userLocation.lat, userLocation.lng, comp.gpxPointLat, comp.gpxPointLng))}
+                                                                        </Typography>
+                                                                    </>
+                                                                )}
+                                                            </Stack>
+                                                        )}
+                                                        <Stack direction="row" alignItems="center" gap={0.5} sx={{ mt: 0.25 }}>
+                                                            <Chip label={t('races.eventTypes.Series', 'Series')} size="small" color={getEventTypeColor('Series')} variant="outlined" sx={{ height: 18, fontSize: '0.65rem' }} />
+                                                            <Typography variant="caption" color="text.secondary" noWrap>{comp.name}</Typography>
+                                                        </Stack>
+                                                        {/* Distance chip + register */}
+                                                        {race.distanceLabel && (
+                                                            <Box sx={{ mt: 0.75 }}>
+                                                                <Chip label={race.distanceLabel} size="small" variant="outlined" color={getTicketStatusColor(race.ticketStatus)} />
+                                                            </Box>
+                                                        )}
+                                                        {race.registrationUrl && raceDaysUntil != null && raceDaysUntil >= 0 && (
+                                                            <Box sx={{ mt: 0.75 }}>
+                                                                <Button size="small" variant="outlined" href={race.registrationUrl} target="_blank" rel="noopener noreferrer" endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.8rem' }}>
+                                                                    {t('races.register', 'Register')}
+                                                                </Button>
+                                                            </Box>
+                                                        )}
+                                                    </CardContent>
+                                                </CardActionArea>
+                                            </Card>
+                                        </SwipeableCard>
+                                    );
+                                }
+                                const comp = row.comp;
+                                return (
                                 <SwipeableCard
                                     key={comp.id}
                                     peek={idx === 0 && showSwipeHint}
@@ -795,195 +1040,150 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                 <Card
                                     sx={{
                                         transition: 'transform 0.15s, box-shadow 0.15s',
-                                        '&:hover': {
-                                            transform: 'translateY(-2px)',
-                                            boxShadow: theme.shadows[4],
-                                        },
+                                        '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] },
+                                        ...(comp.type === 'Advertisement' && { bgcolor: 'rgba(255, 193, 7, 0.08)' }),
                                         ...(comp.status === 'Cancelled' && { opacity: 0.65 }),
                                     }}
                                 >
                                     <CardActionArea onClick={() => navigate(`/events/${comp.slug}`)}>
-                                        <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
-                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1, flexWrap: 'wrap' }}>
-                                                <Box sx={{ flex: 1, minWidth: 200 }}>
-                                                    <Typography variant="h6" fontWeight={700} sx={comp.status === 'Cancelled' ? { textDecoration: 'line-through' } : undefined}>
-                                                        {comp.name}
-                                                    </Typography>
-                                                    {comp.status === 'Cancelled' && (
-                                                        <Chip label={t('races.statusCancelled')} size="small" color="error" sx={{ ml: 1, fontWeight: 600 }} />
-                                                    )}
-                                                    {comp.status === 'Unconfirmed' && (
-                                                        <Chip label={t('races.statusUpcoming')} size="small" color="info" sx={{ ml: 1, fontWeight: 600 }} />
-                                                    )}
-
-                                                    {/* Location + organizer */}
-                                                    <Stack direction="row" spacing={1} sx={{ mt: 0.5, flexWrap: 'wrap' }}>
-                                                        {locationsEnabled && comp.locationName && (
-                                                            <Chip
-                                                                icon={<LocationOnIcon />}
-                                                                label={comp.locationName}
-                                                                size="small"
-                                                                variant="outlined"
-                                                            />
-                                                        )}
-                                                        {comp.organizerName && (
-                                                            <Chip
-                                                                label={comp.organizerName}
-                                                                size="small"
-                                                                variant="outlined"
-                                                            />
-                                                        )}
-                                                        <Chip
-                                                            label={t('races.editionCount', { count: comp.editionCount })}
-                                                            size="small"
-                                                            variant="outlined"
-                                                            color="primary"
-                                                        />
-                                                    </Stack>
-
-                                                    {/* Alert banner */}
-                                                    {comp.alertMessage && (
-                                                        <Alert
-                                                            severity={(comp.alertSeverity as 'info' | 'success' | 'warning' | 'error') ?? 'info'}
-                                                            sx={{ mt: 1, borderRadius: 1.5, py: 0, alignItems: 'center', '& .MuiAlert-message': { py: 0.5 } }}
-                                                        >
-                                                            <Typography variant="body2">{comp.alertMessage}</Typography>
-                                                        </Alert>
-                                                    )}
-
-                                                    {/* Next date */}
-                                                    {(comp.displayDate ?? comp.nextEditionDate) && comp.status !== 'Cancelled' && (
-                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1.5, flexWrap: 'wrap' }}>
-                                                            <CalendarTodayIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                                                            <Typography variant="body2" color="text.secondary" sx={{ mr: 0.5 }}>
-                                                                {t('races.nextRace')}
+                                        <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                                            {/* Row 1: activity icon + name + status chips + countdown */}
+                                            <Stack direction="row" alignItems="flex-start" justifyContent="space-between" gap={1}>
+                                                <Stack direction="row" alignItems="flex-start" gap={1} sx={{ flex: 1, minWidth: 0 }}>
+                                                    <Tooltip title={t(`races.activityTypes.${comp.activityType}`, comp.activityType)}>
+                                                        <Box sx={{ color: 'text.secondary', pt: 0.3, flexShrink: 0 }}>{getActivityIcon(comp.activityType)}</Box>
+                                                    </Tooltip>
+                                                    <Box sx={{ minWidth: 0 }}>
+                                                        <Stack direction="row" alignItems="center" gap={0.5} flexWrap="wrap">
+                                                            <Typography variant="subtitle1" fontWeight={700} sx={comp.status === 'Cancelled' ? { textDecoration: 'line-through' } : undefined}>
+                                                                {comp.name}
                                                             </Typography>
-                                                            <Typography variant="body2" fontWeight={600}>
-                                                                {formatNextDate((comp.displayDate ?? comp.nextEditionDate)!, t)}
-                                                            </Typography>
-                                                            <EventDateBadge dateStr={(comp.displayDate ?? comp.nextEditionDate)!} />
-                                                        </Box>
-                                                    )}
-
-                                                    {/* Distances */}
-                                                    {comp.distances && comp.distances.length > 0 && (
-                                                        <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 1 }}>
-                                                            {groupDistances(comp.distances).map((d, i) => (
-                                                                <Tooltip key={i} title={d.ticketStatus && d.ticketStatus !== 'Available' ? t(`races.ticketStatus.${d.ticketStatus}`, d.ticketStatus) : ''}>
-                                                                    <Chip
-                                                                        label={d.count > 1 ? `${d.count} × ${d.label}` : d.label}
-                                                                        size="small"
-                                                                        variant="outlined"
-                                                                        clickable
-                                                                        color={getTicketStatusColor(d.ticketStatus)}
-                                                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/events/${comp.slug}`); }}
-                                                                    />
-                                                                </Tooltip>
-                                                            ))}
+                                                            {comp.type === 'Advertisement' && (
+                                                                <Chip label={t('races.eventTypes.Advertisement', 'Sponsored')} size="small" color="warning" sx={{ height: 18, fontSize: '0.65rem' }} />
+                                                            )}
+                                                            {comp.status === 'Cancelled' && (
+                                                                <Chip label={t('races.statusCancelled')} size="small" color="error" sx={{ height: 18, fontSize: '0.65rem' }} />
+                                                            )}
+                                                            {comp.status === 'Unconfirmed' && (
+                                                                <Chip label={t('races.statusUpcoming')} size="small" color="info" sx={{ height: 18, fontSize: '0.65rem' }} />
+                                                            )}
                                                         </Stack>
-                                                    )}
-
-                                                    {/* Credentials */}
-                                                    {(comp.itraPoints?.length || comp.certifications?.length || comp.championshipCategories?.length) && (
-                                                        <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.5 }} alignItems="center">
-                                                            {comp.itraPoints?.map((pts, i) => (
-                                                                <Tooltip key={i} title={`ITRA ${pts} points`}>
-                                                                    <img src={`/images/itra-${pts}.png`} alt={`ITRA ${pts}`} style={{ height: 18, verticalAlign: 'middle' }} />
-                                                                </Tooltip>
-                                                            ))}
-                                                            {comp.certifications?.map((c, i) => (
-                                                                <Chip key={i} label={c} size="small" variant="outlined" color="secondary" />
-                                                            ))}
-                                                            {comp.championshipCategories?.map((c, i) => (
-                                                                <Chip key={i} label={c} size="small" variant="outlined" color="primary" />
-                                                            ))}
-                                                        </Stack>
-                                                    )}
-
-                                                    {/* Register / Results / 360° */}
-                                                    <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 1 }}>
-                                                        {comp.registrationUrl && comp.daysUntil != null && comp.daysUntil >= 0 && (
-                                                            <Button
-                                                                size="small"
-                                                                variant="outlined"
-                                                                href={comp.registrationUrl}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
-                                                                onClick={(e) => e.stopPropagation()}
-                                                                sx={{ textTransform: 'none', fontSize: '0.8rem' }}
-                                                            >
-                                                                {t('races.register', 'Register')}
-                                                            </Button>
-                                                        )}
-                                                        {comp.youtubeUrl && (
-                                                            <Button
-                                                                size="small"
-                                                                variant="outlined"
-                                                                color="error"
-                                                                href={comp.youtubeUrl}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                startIcon={<VideocamIcon sx={{ fontSize: 14 }} />}
-                                                                onClick={(e) => e.stopPropagation()}
-                                                                sx={{ textTransform: 'none', fontSize: '0.8rem' }}
-                                                            >
-                                                                360°
-                                                            </Button>
-                                                        )}
-                                                    </Stack>
-
-                                                    {comp.description && (
-                                                        <Typography
-                                                            variant="body2"
-                                                            color="text.secondary"
-                                                            sx={{
-                                                                mt: 1,
-                                                                overflow: 'hidden',
-                                                                textOverflow: 'ellipsis',
-                                                                display: '-webkit-box',
-                                                                WebkitLineClamp: 2,
-                                                                WebkitBoxOrient: 'vertical',
-                                                            }}
-                                                        >
-                                                            {comp.description}
-                                                        </Typography>
-                                                    )}
-                                                </Box>
-
-                                                {/* Countdown chip */}
+                                                    </Box>
+                                                </Stack>
                                                 {comp.status !== 'Cancelled' && (
-                                                    <Chip
-                                                        label={getCountdownLabel(comp.daysUntil, t)}
-                                                        color={getCountdownColor(comp.daysUntil)}
-                                                        variant="filled"
-                                                        size="medium"
-                                                        sx={{
-                                                            fontWeight: 700,
-                                                            fontSize: '0.9rem',
-                                                            px: 1,
-                                                            ...(comp.daysUntil === 0 && {
-                                                                animation: 'pulse 1.5s ease-in-out infinite',
-                                                                '@keyframes pulse': {
-                                                                    '0%, 100%': { transform: 'scale(1)', boxShadow: 'none' },
-                                                                    '50%': { transform: 'scale(1.06)', boxShadow: `0 0 8px ${alpha(theme.palette.error.main, 0.6)}` },
-                                                                },
-                                                            }),
-                                                        }}
-                                                    />
+                                                    <Stack direction="row" alignItems="center" gap={0.5} sx={{ flexShrink: 0 }}>
+                                                        {(comp.displayDate ?? comp.nextEditionDate) && (
+                                                            <>
+                                                                <CalendarTodayIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
+                                                                <Typography variant="body2" color="text.secondary" noWrap>
+                                                                    {formatNextDate((comp.displayDate ?? comp.nextEditionDate)!, t)}
+                                                                </Typography>
+                                                                <EventDateBadge dateStr={(comp.displayDate ?? comp.nextEditionDate)!} />
+                                                            </>
+                                                        )}
+                                                        {comp.daysUntil != null && (
+                                                            <Chip
+                                                                label={getCountdownLabel(comp.daysUntil, t)}
+                                                                color={getCountdownColor(comp.daysUntil)}
+                                                                size="small"
+                                                                sx={{
+                                                                    fontWeight: 700,
+                                                                    ...(comp.daysUntil === 0 && {
+                                                                        animation: 'pulse 1.5s ease-in-out infinite',
+                                                                        '@keyframes pulse': {
+                                                                            '0%, 100%': { transform: 'scale(1)', boxShadow: 'none' },
+                                                                            '50%': { transform: 'scale(1.06)', boxShadow: `0 0 8px ${alpha(theme.palette.error.main, 0.6)}` },
+                                                                        },
+                                                                    }),
+                                                                }}
+                                                            />
+                                                        )}
+                                                    </Stack>
                                                 )}
-                                            </Box>
+                                            </Stack>
+
+                                            {/* location · km away */}
+                                            {(comp.locationName || (userLocation && comp.gpxPointLat != null)) && comp.status !== 'Cancelled' && (
+                                                <Stack direction="row" alignItems="center" gap={0.5} sx={{ mt: 0.25 }} flexWrap="wrap">
+                                                    {comp.locationName && (
+                                                        <>
+                                                            <LocationOnIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
+                                                            <Typography variant="body2" color="text.secondary" noWrap>{comp.locationName}</Typography>
+                                                        </>
+                                                    )}
+                                                    {userLocation && comp.gpxPointLat != null && comp.gpxPointLng != null && (
+                                                        <>
+                                                            {comp.locationName && <FiberManualRecordIcon sx={{ fontSize: 5, color: 'text.disabled' }} />}
+                                                            <NearMeIcon sx={{ fontSize: 13, color: 'primary.main' }} />
+                                                            <Typography variant="body2" color="primary.main" fontWeight={500} noWrap>
+                                                                {formatDistanceKm(haversineKm(userLocation.lat, userLocation.lng, comp.gpxPointLat, comp.gpxPointLng))}
+                                                            </Typography>
+                                                        </>
+                                                    )}
+                                                </Stack>
+                                            )}
+                                            {comp.type !== 'Advertisement' && (
+                                                <Chip label={t(`races.eventTypes.${comp.type}`, comp.type)} size="small" color={getEventTypeColor(comp.type)} variant="outlined" sx={{ height: 18, fontSize: '0.65rem', mt: 0.25 }} />
+                                            )}
+
+                                            {/* Alert */}
+                                            {comp.alertMessage && (
+                                                <Alert severity={(comp.alertSeverity as 'info' | 'success' | 'warning' | 'error') ?? 'info'} sx={{ mt: 0.75, borderRadius: 1.5, py: 0, alignItems: 'center', '& .MuiAlert-message': { py: 0.5 } }}>
+                                                    <Typography variant="body2">{comp.alertMessage}</Typography>
+                                                </Alert>
+                                            )}
+
+                                            {/* Row 3: distances */}
+                                            {comp.distances && comp.distances.length > 0 && (
+                                                <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.75 }} alignItems="center">
+                                                    {groupDistances(comp.distances).map((d, i) => (
+                                                        <Tooltip key={i} title={d.ticketStatus && d.ticketStatus !== 'Available' ? t(`races.ticketStatus.${d.ticketStatus}`, d.ticketStatus) : ''}>
+                                                            <Chip
+                                                                label={d.count > 1 ? `${d.count} × ${d.label}` : d.label}
+                                                                size="small"
+                                                                variant="outlined"
+                                                                clickable
+                                                                color={getTicketStatusColor(d.ticketStatus)}
+                                                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/events/${comp.slug}`); }}
+                                                            />
+                                                        </Tooltip>
+                                                    ))}
+                                                </Stack>
+                                            )}
+
+                                            {/* Row 4: actions */}
+                                            {(comp.registrationUrl || comp.youtubeUrl) && (
+                                                <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.75 }}>
+                                                    {comp.registrationUrl && comp.daysUntil != null && comp.daysUntil >= 0 && (
+                                                        <Button size="small" variant="outlined" href={comp.registrationUrl} target="_blank" rel="noopener noreferrer" endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.8rem' }}>
+                                                            {t('races.register', 'Register')}
+                                                        </Button>
+                                                    )}
+                                                    {comp.youtubeUrl && (
+                                                        <Button size="small" variant="outlined" color="error" href={comp.youtubeUrl} target="_blank" rel="noopener noreferrer" startIcon={<VideocamIcon sx={{ fontSize: 14 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.8rem' }}>
+                                                            360°
+                                                        </Button>
+                                                    )}
+                                                </Stack>
+                                            )}
+
+                                            {comp.description && (
+                                                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                                                    {comp.description}
+                                                </Typography>
+                                            )}
                                         </CardContent>
                                     </CardActionArea>
                                 </Card>
                                 </SwipeableCard>
-                            ))}
+                                );
+                            })}
                         </Stack>
                         </>
                     )
                 ) : viewMode === 'table' ? (
                     <Suspense fallback={<Box display="flex" justifyContent="center" py={4}><CircularProgress /></Box>}>
-                        <EventTableView events={filtered} />
+                        <EventTableView events={sortedFiltered} userLocation={userLocation} />
                     </Suspense>
                 ) : (
                     <Suspense fallback={<Box display="flex" justifyContent="center" py={4}><CircularProgress /></Box>}>

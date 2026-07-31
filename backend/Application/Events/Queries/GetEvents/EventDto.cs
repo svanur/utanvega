@@ -7,6 +7,16 @@ public record RaceDistanceSummaryDto(
     string? TicketStatus
 );
 
+public record SeriesRaceDto(
+    Guid RaceId,
+    string RaceName,
+    DateOnly? DateOfRace,
+    TimeOnly? StartTime,
+    string? DistanceLabel,
+    string TicketStatus,
+    string? RegistrationUrl
+);
+
 public record EventSummaryDto(
     Guid Id,
     string Name,
@@ -17,6 +27,7 @@ public record EventSummaryDto(
     string Status,
     string? OrganizerName,
     string? OrganizerWebsite,
+    Guid? OrganizerId,
     string? AlertMessage,
     string? AlertSeverity,
     Guid? LocationId,
@@ -36,7 +47,13 @@ public record EventSummaryDto(
     List<string>? Certifications = null,
     string? YoutubeUrl = null,
     List<string>? ChampionshipCategories = null,
-    List<int>? ItraPoints = null
+    List<int>? ItraPoints = null,
+    List<SeriesRaceDto>? SeriesRaces = null,
+    double? GpxPointLat = null,
+    double? GpxPointLng = null,
+    bool IsMountainRace = false,
+    string? TerrainType = null,
+    bool HasFutureEdition = false
 );
 
 public record RaceDto(
@@ -60,7 +77,10 @@ public record RaceDto(
     DateOnly? DateOfRace,
     TimeOnly? StartTime,
     double? TrailDistanceMeters,
-    double? TrailElevationGain
+    double? TrailElevationGain,
+    string? TrailTerrainType = null,
+    string? TrailDifficulty = null,
+    string? TrailActivityType = null
 );
 
 public record EventEditionDto(

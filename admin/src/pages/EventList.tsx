@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -7,12 +7,14 @@ import {
   Autocomplete,
   Box,
   Button,
+  Checkbox,
   Chip,
   CircularProgress,
   Collapse,
   Dialog,
   DialogActions,
   DialogContent,
+  DialogContentText,
   DialogTitle,
   Divider,
   FormControl,
@@ -20,10 +22,12 @@ import {
   IconButton,
   InputAdornment,
   InputLabel,
+  LinearProgress,
   Link,
   List,
   ListItem,
   ListItemText,
+  Menu,
   MenuItem,
   Paper,
   Select,
@@ -43,6 +47,7 @@ import {
 import {
   Add as AddIcon,
   AutoAwesome as GenerateIcon,
+  PlaylistAdd as BulkAddIcon,
   CalendarMonth as CalendarIcon,
   Clear as ClearIcon,
   DragIndicator as DragHandleIcon,
@@ -53,6 +58,8 @@ import {
   ExpandMore as ExpandMoreIcon,
   EmojiEvents as TrophyIcon,
   Link as LinkIcon,
+  Map as MapIcon,
+  MyLocation as MyLocationIcon,
   Search as SearchIcon,
 } from '@mui/icons-material';
 import {
@@ -74,11 +81,26 @@ import {
   type TicketStatus,
 } from '../hooks/useEvents';
 import { useLocations } from '../hooks/useLocations';
-import { useTrails } from '../hooks/useTrails';
+import { useOrganizers } from '../hooks/useOrganizers';
+import { useTrails, type Trail } from '../hooks/useTrails';
 import { formatMinutesToHHmm, parseHHmmToMinutes } from '../utils/cutoffTime';
+import { trimToUndefined } from '../utils/strings';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+// Fix Leaflet default marker icons
+// @ts-expect-error – Leaflet internal
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: new URL('leaflet/dist/images/marker-icon-2x.png', import.meta.url).href,
+  iconUrl: new URL('leaflet/dist/images/marker-icon.png', import.meta.url).href,
+  shadowUrl: new URL('leaflet/dist/images/marker-shadow.png', import.meta.url).href,
+});
 
 interface EventListProps {
   onNotify: (message: ReactNode, severity?: 'success' | 'error') => void;
+  initialEventId?: string | null;
+  onEventIdConsumed?: () => void;
 }
 
 interface EventFormState {
@@ -90,6 +112,7 @@ interface EventFormState {
   status: EventStatus;
   organizerName: string;
   organizerWebsite: string;
+  organizerId: string;
   alertMessage: string;
   alertSeverity: AlertSeverity;
   locationId: string;
@@ -105,6 +128,8 @@ interface EventFormState {
   scheduleDate: string;
   scheduleSeasonalWeek: number | '';
   socialLinks: SocialLink[];
+  gpxPointLat: string;
+  gpxPointLng: string;
 }
 
 interface EditionFormState {
@@ -354,9 +379,17 @@ function isPastDate(dateStr: string): boolean {
   return dateStr < new Date().toISOString().slice(0, 10);
 }
 
-function trimToUndefined(value: string): string | undefined {
-  const trimmed = value.trim();
-  return trimmed ? trimmed : undefined;
+
+interface BulkMissingItem {
+  event: EventSummaryDto;
+  detail: EventDetailDto | null;
+  sourceEdition: EventEditionDto | null;
+  year: number;
+  date: string;
+  registrationUrl: string;
+  resultsUrl: string;
+  registrationStatus: RegistrationStatus;
+  selected: boolean;
 }
 
 function buildEditionLabel(edition: Pick<EventEditionDto, 'title' | 'year' | 'date'>): string {
@@ -377,6 +410,31 @@ function sortEditions(a: EventEditionDto, b: EventEditionDto): number {
   return buildEditionLabel(b).localeCompare(buildEditionLabel(a));
 }
 
+function suggestEditionDateForYear(prevDateStr: string | null | undefined, toYear: number): string {
+  if (!prevDateStr) return '';
+  const prev = new Date(prevDateStr + 'T00:00:00');
+  const candidate = new Date(prev);
+  candidate.setFullYear(toYear);
+  // Snap to the same day of the week as the source edition
+  const diff = prev.getDay() - candidate.getDay();
+  candidate.setDate(candidate.getDate() + (Math.abs(diff) <= 3 ? diff : diff > 0 ? diff - 7 : diff + 7));
+  return candidate.toISOString().slice(0, 10);
+}
+
+function computeClonedRaceDate(
+  sourceEditionDate: string | null | undefined,
+  raceDateOfRace: string | null | undefined,
+  newEditionDate: string | null | undefined,
+): string | null {
+  if (!sourceEditionDate || !raceDateOfRace || !newEditionDate) return null;
+  const srcEd = new Date(sourceEditionDate + 'T00:00:00');
+  const srcRace = new Date(raceDateOfRace + 'T00:00:00');
+  const offsetDays = Math.round((srcRace.getTime() - srcEd.getTime()) / (1000 * 60 * 60 * 24));
+  const newDate = new Date(newEditionDate + 'T00:00:00');
+  newDate.setDate(newDate.getDate() + offsetDays);
+  return newDate.toISOString().slice(0, 10);
+}
+
 function sortRaces(a: RaceDto, b: RaceDto): number {
   if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
   return a.name.localeCompare(b.name);
@@ -392,6 +450,7 @@ function createEmptyEventForm(): EventFormState {
     status: 'Unconfirmed',
     organizerName: '',
     organizerWebsite: '',
+    organizerId: '',
     alertMessage: '',
     alertSeverity: 'info',
     locationId: '',
@@ -407,6 +466,8 @@ function createEmptyEventForm(): EventFormState {
     scheduleDate: '',
     scheduleSeasonalWeek: '',
     socialLinks: [],
+    gpxPointLat: '',
+    gpxPointLng: '',
   };
 }
 
@@ -476,6 +537,7 @@ function buildEventForm(event: EventSummaryDto): EventFormState {
     status: event.status,
     organizerName: event.organizerName ?? '',
     organizerWebsite: event.organizerWebsite ?? '',
+    organizerId: event.organizerId ?? '',
     alertMessage: event.alertMessage ?? '',
     alertSeverity: event.alertSeverity ?? 'info',
     locationId: event.locationId ?? '',
@@ -491,6 +553,8 @@ function buildEventForm(event: EventSummaryDto): EventFormState {
     scheduleDate: rule?.date ?? '',
     scheduleSeasonalWeek: rule?.type === 'Seasonal' ? (rule.weekOfMonth ?? '') : '',
     socialLinks: event.socialLinks?.map(link => ({ ...link })) ?? [],
+    gpxPointLat: event.gpxPointLat != null ? String(event.gpxPointLat) : '',
+    gpxPointLng: event.gpxPointLng != null ? String(event.gpxPointLng) : '',
   };
 }
 
@@ -623,8 +687,22 @@ function SortableRaceItem({ race, onEdit, onDelete, getIcon, formatDateLabel, fo
             <Chip label={race.status} size="small" color={getRaceStatusColor(race.status)} />
             <Chip label={race.ticketStatus} size="small" color={getTicketStatusColor(race.ticketStatus)} variant="outlined" />
             {race.cutoffMinutes != null && (
-              <Chip label={`Cutoff ${formatMinutesToHHmm(race.cutoffMinutes) ?? `${race.cutoffMinutes} min`}`} size="small" variant="outlined" color="warning" />
+              <Chip label={`Time limit: ${formatMinutesToHHmm(race.cutoffMinutes) ?? `${race.cutoffMinutes} min`}`} size="small" variant="outlined" color="warning" />
             )}
+            <Chip
+              size="small"
+              variant={race.dateOfRace ? 'outlined' : 'filled'}
+              color={race.dateOfRace ? 'default' : 'warning'}
+              label={race.dateOfRace
+                ? `${formatDateLabel(race.dateOfRace, '')}${race.startTime ? ` • ${formatTimeLabel(race.startTime)}` : ''}`
+                : 'Date missing'}
+            />
+            <Chip
+              size="small"
+              variant={race.trailId ? 'outlined' : 'filled'}
+              color={race.trailId ? 'default' : 'warning'}
+              label={race.trailName ?? 'No trail linked'}
+            />
           </Stack>
         )}
         secondary={(
@@ -648,12 +726,6 @@ function SortableRaceItem({ race, onEdit, onDelete, getIcon, formatDateLabel, fo
               {race.certifiedBy && <Typography variant="caption" color="text.secondary">Certified by {race.certifiedBy}</Typography>}
               {race.prizeMoney > 0 && <Typography variant="caption" color="text.secondary">Prize {race.prizeMoney}</Typography>}
               {race.championshipCategory && <Typography variant="caption" color="text.secondary">{race.championshipCategory}</Typography>}
-              {(race.dateOfRace || race.startTime) && (
-                <Typography variant="caption" color="text.secondary">
-                  {formatDateLabel(race.dateOfRace, 'Date TBD')}
-                  {race.startTime ? ` • ${formatTimeLabel(race.startTime)}` : ''}
-                </Typography>
-              )}
             </Stack>
           </Box>
         )}
@@ -663,11 +735,135 @@ function SortableRaceItem({ race, onEdit, onDelete, getIcon, formatDateLabel, fo
   );
 }
 
-export default function EventList({ onNotify }: EventListProps) {
+// ── GPX map picker ──────────────────────────────────────────────────────────
+
+const ICELAND_CENTER: [number, number] = [64.96, -18.5];
+
+function ClickHandler({ onPick }: { onPick: (lat: number, lng: number) => void }) {
+  useMapEvents({ click: (e) => onPick(e.latlng.lat, e.latlng.lng) });
+  return null;
+}
+
+interface GpxMapPickerProps {
+  open: boolean;
+  initialLat: number | null;
+  initialLng: number | null;
+  onConfirm: (lat: number, lng: number) => void;
+  onClose: () => void;
+}
+
+function GpxMapPicker({ open, initialLat, initialLng, onConfirm, onClose }: GpxMapPickerProps) {
+  const [pin, setPin] = useState<[number, number] | null>(
+    initialLat != null && initialLng != null ? [initialLat, initialLng] : null
+  );
+
+  // Sync when dialog reopens
+  useEffect(() => {
+    if (open) {
+      setPin(initialLat != null && initialLng != null ? [initialLat, initialLng] : null);
+    }
+  }, [open, initialLat, initialLng]);
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+      <DialogTitle>Pick map pin location</DialogTitle>
+      <DialogContent sx={{ p: 0 }}>
+        <Typography variant="body2" color="text.secondary" sx={{ px: 2, py: 1 }}>
+          Click anywhere on the map to place the pin.
+        </Typography>
+        <Box sx={{ height: 460 }}>
+          <MapContainer
+            center={pin ?? ICELAND_CENTER}
+            zoom={pin ? 11 : 6}
+            style={{ height: '100%', width: '100%' }}
+            scrollWheelZoom
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            <ClickHandler onPick={(lat, lng) => setPin([lat, lng])} />
+            {pin && <Marker position={pin} />}
+          </MapContainer>
+        </Box>
+        {pin && (
+          <Typography variant="caption" color="text.secondary" sx={{ px: 2, pb: 1, display: 'block' }}>
+            {pin[0].toFixed(6)}, {pin[1].toFixed(6)}
+          </Typography>
+        )}
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button
+          variant="contained"
+          disabled={pin == null}
+          onClick={() => { if (pin) { onConfirm(pin[0], pin[1]); onClose(); } }}
+        >
+          Use this location
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+// ── Paste-coordinate parser ──────────────────────────────────────────────────
+
+function parseCoordPaste(text: string): { lat: number; lng: number } | null {
+  // Google Maps URL: @64.1355,-21.8954,
+  const mapsMatch = text.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+  if (mapsMatch) {
+    return { lat: parseFloat(mapsMatch[1]), lng: parseFloat(mapsMatch[2]) };
+  }
+  // Plain "lat, lng" or "lat lng"
+  const plainMatch = text.trim().match(/^(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)$/);
+  if (plainMatch) {
+    return { lat: parseFloat(plainMatch[1]), lng: parseFloat(plainMatch[2]) };
+  }
+  return null;
+}
+
+// ── Trail start-point picker ─────────────────────────────────────────────────
+
+interface TrailPickerProps {
+  trailsWithCoords: Trail[];
+  onPick: (lat: number, lng: number) => void;
+}
+
+function TrailStartPicker({ trailsWithCoords, onPick }: TrailPickerProps) {
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  if (trailsWithCoords.length === 0) return null;
+  return (
+    <>
+      <Tooltip title="Copy start point from a trail linked to this event">
+        <IconButton size="small" onClick={(e) => setAnchor(e.currentTarget)}>
+          <MyLocationIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
+      <Menu anchorEl={anchor} open={Boolean(anchor)} onClose={() => setAnchor(null)}>
+        {trailsWithCoords.map(trail => (
+          <MenuItem
+            key={trail.id}
+            onClick={() => {
+              onPick(trail.startLatitude!, trail.startLongitude!);
+              setAnchor(null);
+            }}
+          >
+            {trail.name}
+          </MenuItem>
+        ))}
+      </Menu>
+    </>
+  );
+}
+
+// ── Main component ───────────────────────────────────────────────────────────
+
+export default function EventList({ onNotify, initialEventId, onEventIdConsumed }: EventListProps) {
   const {
     events,
     loading,
     error,
+    refresh: refreshEvents,
     createEvent,
     updateEvent,
     deleteEvent,
@@ -681,9 +877,11 @@ export default function EventList({ onNotify }: EventListProps) {
     deleteRace,
   } = useEvents();
   const { locations } = useLocations();
+  const { organizers } = useOrganizers();
   const { trails } = useTrails();
 
   const [showEventDialog, setShowEventDialog] = useState(false);
+  const [showMapPicker, setShowMapPicker] = useState(false);
   const [showEditionDialog, setShowEditionDialog] = useState(false);
   const [showRaceDialog, setShowRaceDialog] = useState(false);
   const [showGenerateDialog, setShowGenerateDialog] = useState(false);
@@ -691,6 +889,7 @@ export default function EventList({ onNotify }: EventListProps) {
   const [editEditionId, setEditEditionId] = useState<string | null>(null);
   const [editRaceId, setEditRaceId] = useState<string | null>(null);
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
+  const deepLinkScrollTarget = useRef<string | null>(null);
   const [expandedDetail, setExpandedDetail] = useState<EventDetailDto | null>(null);
   const [expandedEditionIds, setExpandedEditionIds] = useState<string[]>([]);
   const [loadingDetail, setLoadingDetail] = useState(false);
@@ -712,13 +911,27 @@ export default function EventList({ onNotify }: EventListProps) {
   const [localRaceOrder, setLocalRaceOrder] = useState<Map<string, string[]>>(new Map());
   const [prefillRaces, setPrefillRaces] = useState<RaceDto[]>([]);
   const [showBulkDatesDialog, setShowBulkDatesDialog] = useState(false);
-  const [bulkDates, setBulkDates] = useState<Array<{ race: RaceDto; dateOfRace: string; startTime: string }>>([]);
+  const [copyRacesConfirm, setCopyRacesConfirm] = useState<{ edition: EventEditionDto; source: EventEditionDto } | null>(null);
+  const [showBulkMissingDialog, setShowBulkMissingDialog] = useState(false);
+  const [bulkMissingLoading, setBulkMissingLoading] = useState(false);
+  const [bulkMissingProgress, setBulkMissingProgress] = useState<{ done: number; total: number } | null>(null);
+  const [bulkMissingItems, setBulkMissingItems] = useState<BulkMissingItem[]>([]);
+  const [bulkDates, setBulkDates] = useState<Array<{ race: RaceDto; dateOfRace: string; startTime: string; prevDateOfRace?: string }>>([]);
   const [generateForm, setGenerateForm] = useState<GenerateFormState>({ eventId: '', eventName: '', eventType: 'Race', fromMonth: 1, fromYear: new Date().getFullYear(), toMonth: 12, toYear: new Date().getFullYear(), trailId: '', registrationUrl: '', seasonStartMonth: null, editionName: '' });
 
   const sortedLocations = useMemo(
     () => [...locations].sort((a, b) => a.name.localeCompare(b.name)),
     [locations],
   );
+
+  // Trails linked to editions of the currently-edited event that have a start point
+  const linkedTrailsWithCoords = useMemo((): Trail[] => {
+    if (!expandedDetail || expandedDetail.id !== editEventId) return [];
+    const trailIds = new Set(
+      expandedDetail.editions.flatMap(ed => ed.races.map(r => r.trailId).filter(Boolean))
+    );
+    return trails.filter(t => trailIds.has(t.id) && t.startLatitude != null && t.startLongitude != null);
+  }, [expandedDetail, editEventId, trails]);
   const sortedTrails = useMemo(
     () => [...trails].filter(t => t.status === 'Published' || t.status === 'EventOnly').sort((a, b) => a.name.localeCompare(b.name)),
     [trails],
@@ -741,6 +954,26 @@ export default function EventList({ onNotify }: EventListProps) {
     setActivityFilter('all'); setTypeFilter('all'); setStatusFilter('all'); setLocationFilter('all');
     setYearFilter('all'); setMonthFilter('all');
   };
+
+  // Deep-link: expand and scroll to the target event once events are loaded
+  useEffect(() => {
+    if (!initialEventId || loading || events.length === 0) return;
+    const target = events.find(e => e.id === initialEventId);
+    if (!target) return;
+    deepLinkScrollTarget.current = target.id;
+    loadExpandedEvent(target.id, target.slug);
+    onEventIdConsumed?.();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount after events load
+  }, [initialEventId, loading]);
+
+  // Scroll to the deep-linked row after it has actually rendered (expandedEventId is set)
+  useEffect(() => {
+    if (!expandedEventId || expandedEventId !== deepLinkScrollTarget.current) return;
+    deepLinkScrollTarget.current = null;
+    requestAnimationFrame(() => {
+      document.getElementById(`event-row-${expandedEventId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, [expandedEventId]);
 
   const filteredEvents = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -767,9 +1000,11 @@ export default function EventList({ onNotify }: EventListProps) {
         }
 
         if (yearFilter !== 'all') {
+          if (!event.hasFutureEdition) return true; // always show events missing a future edition regardless of year filter
           if (!event.nextEditionDate || event.nextEditionDate.slice(0, 4) !== yearFilter) return false;
         }
         if (monthFilter !== 'all') {
+          if (!event.hasFutureEdition) return true;
           if (!event.nextEditionDate || event.nextEditionDate.slice(5, 7) !== monthFilter) return false;
         }
 
@@ -800,6 +1035,7 @@ export default function EventList({ onNotify }: EventListProps) {
       });
   }, [events, searchQuery, sortBy, sortDir, activityFilter, typeFilter, statusFilter, locationFilter, yearFilter, monthFilter]);
 
+  
   const handleRequestSort = (field: typeof sortBy) => {
     if (sortBy === field) {
       setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -897,14 +1133,19 @@ export default function EventList({ onNotify }: EventListProps) {
     const editionsWithRaces = [...(expandedDetail?.editions ?? [])].filter(ed => ed.races.length > 0).sort(sortEditions);
     const defaultClone = editionsWithRaces[editionsWithRaces.length - 1];
     const nextYear = defaultClone?.year ? String(defaultClone.year + 1) : String(new Date().getFullYear());
-    const clonedRegUrl = bumpYearInUrl(defaultClone?.registrationUrl ?? '', defaultClone?.year, Number(nextYear));
-    const isPastYear = Number(nextYear) < new Date().getFullYear();
+    const clonedRegUrl = bumpYearInUrl(defaultClone?.registrationUrl ?? '', defaultClone?.year, Number(nextYear)) || (defaultClone?.registrationUrl ?? '');
+    const clonedResultsUrl = bumpYearInUrl(defaultClone?.resultsUrl ?? '', defaultClone?.year, Number(nextYear)) || (defaultClone?.resultsUrl ?? '');
+    const suggestedDate = suggestEditionDateForYear(defaultClone?.date, Number(nextYear));
+    const isPastYear = suggestedDate ? isPastDate(suggestedDate) : Number(nextYear) < new Date().getFullYear();
     setCloneFromEditionId(defaultClone?.id ?? '');
     setEditionForm({
       ...createEmptyEditionForm(event.id, event.type, event.name),
       year: nextYear,
+      date: suggestedDate,
       registrationUrl: clonedRegUrl,
+      resultsUrl: clonedResultsUrl,
       registrationStatus: isPastYear ? 'Closed' : 'NotStarted',
+      trailId: defaultClone?.trailId ?? '',
     });
     setShowEditionDialog(true);
   };
@@ -968,11 +1209,14 @@ export default function EventList({ onNotify }: EventListProps) {
         status: eventForm.status,
         organizerName: trimToUndefined(eventForm.organizerName),
         organizerWebsite: trimToUndefined(eventForm.organizerWebsite),
+        organizerId: eventForm.organizerId || null,
         alertMessage: trimToUndefined(eventForm.alertMessage),
         alertSeverity: eventForm.alertMessage.trim() ? eventForm.alertSeverity : undefined,
         locationId: eventForm.locationId || null,
         scheduleRule: buildScheduleRule(eventForm),
         socialLinks: socialLinks.length > 0 ? socialLinks : null,
+        gpxPointLat: eventForm.gpxPointLat.trim() ? parseFloat(eventForm.gpxPointLat) : null,
+        gpxPointLng: eventForm.gpxPointLng.trim() ? parseFloat(eventForm.gpxPointLng) : null,
       };
 
       if (editEventId) {
@@ -1053,6 +1297,7 @@ export default function EventList({ onNotify }: EventListProps) {
 
         if (isRaceOrSeries) {
           if (sourceEdition && sourceEdition.races.length > 0) {
+            const datesPreFilled = !!editionForm.date && !!sourceEdition.date && sourceEdition.races.some(r => r.dateOfRace);
             const results = await Promise.allSettled(sourceEdition.races.map(race =>
               createRace({
                 eventEditionId: newEditionId,
@@ -1069,8 +1314,8 @@ export default function EventList({ onNotify }: EventListProps) {
                 certifiedBy: race.certifiedBy ?? undefined,
                 prizeMoney: race.prizeMoney,
                 championshipCategory: race.championshipCategory ?? undefined,
-                dateOfRace: null,
-                startTime: null,
+                dateOfRace: computeClonedRaceDate(sourceEdition.date, race.dateOfRace, editionForm.date),
+                startTime: race.startTime ? race.startTime.slice(0, 5) : null,
               }),
             ));
             const failed = results.filter(r => r.status === 'rejected').length;
@@ -1078,7 +1323,7 @@ export default function EventList({ onNotify }: EventListProps) {
             if (failed > 0) {
               onNotify(`Edition "${editionLabel}" created but only ${succeeded}/${results.length} races were cloned — review and add missing ones`, 'error');
             } else {
-              onNotify(`Edition "${editionLabel}" created with ${succeeded} cloned race${succeeded === 1 ? '' : 's'} — set their dates below`);
+              onNotify(`Edition "${editionLabel}" created with ${succeeded} cloned race${succeeded === 1 ? '' : 's'}${datesPreFilled ? ' — dates pre-filled, review below' : ' — set their dates below'}`);
             }
           } else {
             await createRace({
@@ -1325,31 +1570,31 @@ export default function EventList({ onNotify }: EventListProps) {
     }
   };
 
-  const handleCopyRacesFromPrevious = async (edition: EventEditionDto) => {
+  const handleCopyRacesFromPrevious = (edition: EventEditionDto) => {
     if (!expandedDetail) return;
 
-    // Sort all editions chronologically and find the target's position
     const allSorted = [...expandedDetail.editions].sort(sortEditions);
     const targetIndex = allSorted.findIndex(ed => ed.id === edition.id);
 
-    // Look backwards for the closest earlier edition with races
     let sourceEdition: EventEditionDto | undefined;
     for (let i = targetIndex - 1; i >= 0; i--) {
-      if (allSorted[i].races.length > 0) {
-        sourceEdition = allSorted[i];
-        break;
-      }
+      if (allSorted[i].races.length > 0) { sourceEdition = allSorted[i]; break; }
     }
-    // Fallback: use the most recent edition with races (any position)
     if (!sourceEdition) {
       sourceEdition = [...allSorted].reverse().find(ed => ed.id !== edition.id && ed.races.length > 0);
     }
     if (!sourceEdition) return;
 
+    setCopyRacesConfirm({ edition, source: sourceEdition });
+  };
+
+  const handleConfirmCopyRaces = async () => {
+    if (!copyRacesConfirm) return;
+    const { edition, source: sourceEdition } = copyRacesConfirm;
+    setCopyRacesConfirm(null);
+
     const raceCount = sourceEdition.races.length;
     const label = buildEditionLabel(sourceEdition);
-    if (!window.confirm(`Copy ${raceCount} race${raceCount === 1 ? '' : 's'} from "${label}" into this edition?`)) return;
-
     setSaving(true);
     try {
       await Promise.all(sourceEdition.races.map(race =>
@@ -1368,16 +1613,111 @@ export default function EventList({ onNotify }: EventListProps) {
           certifiedBy: race.certifiedBy ?? undefined,
           prizeMoney: race.prizeMoney,
           championshipCategory: race.championshipCategory ?? undefined,
-          dateOfRace: null,
-          startTime: race.startTime ?? null,
+          dateOfRace: computeClonedRaceDate(sourceEdition.date, race.dateOfRace, edition.date),
+          startTime: race.startTime ? race.startTime.slice(0, 5) : null,
         }),
       ));
-      onNotify(`Copied ${raceCount} race${raceCount === 1 ? '' : 's'} from "${label}"`);
+      const datesPreFilled = !!edition.date && !!sourceEdition.date && sourceEdition.races.some(r => r.dateOfRace);
+      onNotify(`Copied ${raceCount} race${raceCount === 1 ? '' : 's'} from "${label}"${datesPreFilled ? ' — dates pre-filled, review below' : ''}`);
       await refreshExpandedEvent();
     } catch (err) {
       onNotify(err instanceof Error ? err.message : 'Failed to copy races', 'error');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const openBulkMissingEditions = async () => {
+    const missing = events.filter(e => (e.type === 'Race' || e.type === 'Series') && e.status !== 'Cancelled' && !e.hasFutureEdition);
+    if (missing.length === 0) return;
+    setBulkMissingLoading(true);
+    setShowBulkMissingDialog(true);
+    setBulkMissingItems([]);
+    try {
+      const details = await Promise.all(missing.map(e => getEvent(e.slug)));
+      const items: BulkMissingItem[] = details.map((detail, i) => {
+        const event = missing[i];
+        const editionsWithRaces = [...(detail?.editions ?? [])].filter(ed => ed.races.length > 0).sort(sortEditions);
+        const source = editionsWithRaces[editionsWithRaces.length - 1] ?? detail?.editions.sort(sortEditions)[detail.editions.length - 1] ?? null;
+        const nextYear = source?.year ? source.year + 1 : new Date().getFullYear();
+        const suggestedDate = suggestEditionDateForYear(source?.date, nextYear);
+        const isPast = suggestedDate ? isPastDate(suggestedDate) : nextYear < new Date().getFullYear();
+        return {
+          event,
+          detail: detail ?? null,
+          sourceEdition: source ?? null,
+          year: nextYear,
+          date: suggestedDate,
+          registrationUrl: bumpYearInUrl(source?.registrationUrl ?? '', source?.year, nextYear) || (source?.registrationUrl ?? ''),
+          resultsUrl: bumpYearInUrl(source?.resultsUrl ?? '', source?.year, nextYear) || (source?.resultsUrl ?? ''),
+          registrationStatus: isPast ? 'Closed' : 'NotStarted',
+          selected: true,
+        };
+      });
+      setBulkMissingItems(items);
+    } catch {
+      onNotify('Failed to load event details', 'error');
+      setShowBulkMissingDialog(false);
+    } finally {
+      setBulkMissingLoading(false);
+    }
+  };
+
+  const handleBulkCreateMissingEditions = async () => {
+    const selected = bulkMissingItems.filter(i => i.selected);
+    if (selected.length === 0) return;
+    setBulkMissingProgress({ done: 0, total: selected.length });
+    let succeeded = 0;
+    let failed = 0;
+    for (const item of selected) {
+      try {
+        const isRaceOrSeries = item.event.type === 'Race' || item.event.type === 'Series';
+        const newEditionId = await createEdition({
+          eventId: item.event.id,
+          year: item.year,
+          title: String(item.year),
+          date: item.date || null,
+          registrationUrl: item.registrationUrl || undefined,
+          resultsUrl: item.resultsUrl || undefined,
+          registrationStatus: item.registrationStatus,
+          trailId: isRaceOrSeries ? null : (item.sourceEdition?.trailId ?? null),
+        });
+        if (isRaceOrSeries && item.sourceEdition && item.sourceEdition.races.length > 0) {
+          await Promise.allSettled(item.sourceEdition.races.map(race =>
+            createRace({
+              eventEditionId: newEditionId,
+              trailId: race.trailId ?? null,
+              name: race.name,
+              distanceLabel: race.distanceLabel ?? undefined,
+              cutoffMinutes: race.cutoffMinutes ?? null,
+              description: race.description ?? undefined,
+              status: 'Active',
+              sortOrder: race.sortOrder,
+              ticketStatus: 'Available',
+              maxParticipants: race.maxParticipants ?? null,
+              itraPoints: race.itraPoints ?? null,
+              certifiedBy: race.certifiedBy ?? undefined,
+              prizeMoney: race.prizeMoney,
+              championshipCategory: race.championshipCategory ?? undefined,
+              dateOfRace: computeClonedRaceDate(item.sourceEdition!.date, race.dateOfRace, item.date),
+              startTime: race.startTime ? race.startTime.slice(0, 5) : null,
+            }),
+          ));
+        }
+        succeeded++;
+      } catch {
+        failed++;
+      }
+      setBulkMissingProgress(p => p ? { ...p, done: p.done + 1 } : null);
+    }
+    setBulkMissingProgress(null);
+    setShowBulkMissingDialog(false);
+    setBulkMissingItems([]);
+    await refreshEvents();
+    if (failed > 0) {
+      onNotify(`Created ${succeeded} edition${succeeded !== 1 ? 's' : ''}, ${failed} failed`, 'error');
+    } else {
+      onNotify(`Created ${succeeded} edition${succeeded !== 1 ? 's' : ''} with cloned races`);
     }
   };
 
@@ -1401,13 +1741,44 @@ export default function EventList({ onNotify }: EventListProps) {
     }
   };
 
+  const handleEditionYearChange = (yearStr: string) => {
+    setEditionField('year', yearStr);
+    if (editEditionId || yearStr.length !== 4 || !expandedDetail) return;
+    const toYear = Number(yearStr);
+    const editionsWithRaces = expandedDetail.editions.filter(ed => ed.races.length > 0 && ed.year != null);
+    if (editionsWithRaces.length === 0) return;
+    const source = editionsWithRaces.reduce((best, ed) =>
+      Math.abs((ed.year ?? 0) - toYear) < Math.abs((best.year ?? 0) - toYear) ? ed : best,
+    editionsWithRaces[0]);
+    if (source.year === toYear) return;
+    setCloneFromEditionId(source.id);
+    const suggestedDate = suggestEditionDateForYear(source.date, toYear);
+    if (suggestedDate) {
+      setEditionField('date', suggestedDate);
+      if (isPastDate(suggestedDate)) setEditionField('registrationStatus', 'Closed');
+    }
+    setEditionField('registrationUrl', bumpYearInUrl(source.registrationUrl ?? '', source.year, toYear) || (source.registrationUrl ?? ''));
+    setEditionField('resultsUrl', bumpYearInUrl(source.resultsUrl ?? '', source.year, toYear) || (source.resultsUrl ?? ''));
+  };
+
   const openBulkDates = (edition: EventEditionDto) => {
+    // Find the nearest older edition with races to show previous-year date hints
+    const allSorted = [...(expandedDetail?.editions ?? [])].sort(sortEditions); // newest first
+    const idx = allSorted.findIndex(ed => ed.id === edition.id);
+    let prevEdition: EventEditionDto | undefined;
+    for (let i = idx + 1; i < allSorted.length; i++) {
+      if (allSorted[i].races.length > 0) { prevEdition = allSorted[i]; break; }
+    }
     setBulkDates(
-      [...edition.races].sort(sortRaces).map(race => ({
-        race,
-        dateOfRace: race.dateOfRace ?? '',
-        startTime: race.startTime ? race.startTime.slice(0, 5) : '',
-      })),
+      [...edition.races].sort(sortRaces).map(race => {
+        const prevRace = prevEdition?.races.find(r => r.name === race.name);
+        return {
+          race,
+          dateOfRace: race.dateOfRace ?? '',
+          startTime: race.startTime ? race.startTime.slice(0, 5) : '',
+          prevDateOfRace: prevRace?.dateOfRace ?? undefined,
+        };
+      }),
     );
     setShowBulkDatesDialog(true);
   };
@@ -1499,6 +1870,8 @@ export default function EventList({ onNotify }: EventListProps) {
     );
   }
 
+  const selectedBulkCount = bulkMissingItems.filter(i => i.selected).length;
+
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
@@ -1507,9 +1880,16 @@ export default function EventList({ onNotify }: EventListProps) {
           <Typography variant="h5">Events</Typography>
           <Chip label={searchQuery.trim() || hasActiveFilters ? `${filteredEvents.length} / ${events.length}` : events.length} size="small" color="primary" />
         </Box>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateEvent}>
-          New Event
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          {events.some(e => (e.type === 'Race' || e.type === 'Series') && e.status !== 'Cancelled' && !e.hasFutureEdition) && (
+            <Button variant="outlined" startIcon={<BulkAddIcon />} onClick={openBulkMissingEditions}>
+              Create Missing Editions
+            </Button>
+          )}
+          <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateEvent}>
+            New Event
+          </Button>
+        </Box>
       </Box>
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
@@ -1636,7 +2016,7 @@ export default function EventList({ onNotify }: EventListProps) {
           <TableBody>
             {filteredEvents.map(event => (
               <Fragment key={event.id}>
-                <TableRow hover sx={{ cursor: 'pointer' }} onClick={() => toggleExpand(event)}>
+                <TableRow id={`event-row-${event.id}`} hover sx={{ cursor: 'pointer', ...(event.type === 'Advertisement' && { bgcolor: 'rgba(255, 193, 7, 0.08)' }) }} onClick={() => toggleExpand(event)}>
                   <TableCell sx={expandedEventId === event.id ? { borderTop: '2px solid', borderLeft: '2px solid', borderColor: 'primary.main' } : {}}>
                     <IconButton size="small">
                       {expandedEventId === event.id ? <ExpandLessIcon /> : <ExpandMoreIcon />}
@@ -1668,7 +2048,23 @@ export default function EventList({ onNotify }: EventListProps) {
                             sx={{ mt: 0.5 }}
                           />
                         )}
+                        {event.status !== 'Cancelled' && !event.hasFutureEdition && (
+                          <Chip
+                            label="Edition missing"
+                            size="small"
+                            color="warning"
+                            variant="outlined"
+                            sx={{ mt: 0.5 }}
+                          />
+                        )}
                       </Box>
+                    ) : event.status !== 'Cancelled' && !event.hasFutureEdition ? (
+                      <Chip
+                        label={event.editionCount === 0 ? 'No editions' : 'Edition missing'}
+                        size="small"
+                        color="warning"
+                        variant="outlined"
+                      />
                     ) : (
                       <Typography variant="body2" color="text.secondary">—</Typography>
                     )}
@@ -1757,7 +2153,7 @@ export default function EventList({ onNotify }: EventListProps) {
                                   {expandedDetail.organizerWebsite && (
                                     <Chip
                                       icon={<LinkIcon />}
-                                      label="Organizer website"
+                                      label="Event website"
                                       component="a"
                                       clickable
                                       href={expandedDetail.organizerWebsite}
@@ -2007,18 +2403,21 @@ export default function EventList({ onNotify }: EventListProps) {
               fullWidth
             />
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
-              <TextField
-                label="Organizer Name"
-                value={eventForm.organizerName}
-                onChange={(event) => setEventField('organizerName', event.target.value)}
-                fullWidth
+              <Autocomplete
+                options={organizers}
+                value={organizers.find(o => o.id === eventForm.organizerId) ?? null}
+                onChange={(_, value) => setEventField('organizerId', value?.id ?? '')}
+                getOptionLabel={(o) => o.name}
+                isOptionEqualToValue={(o, v) => o.id === v.id}
+                renderInput={(params) => <TextField {...params} label="Organizer" placeholder="Search organizers…" />}
               />
               <TextField
-                label="Organizer Website"
+                label="Event Website (override)"
                 value={eventForm.organizerWebsite}
                 onChange={(event) => setEventField('organizerWebsite', event.target.value)}
-                placeholder="https://..."
+                placeholder="https://…"
                 fullWidth
+                helperText="Leave blank to use the organizer's website"
               />
             </Box>
             <Autocomplete
@@ -2029,6 +2428,55 @@ export default function EventList({ onNotify }: EventListProps) {
               isOptionEqualToValue={(option, value) => option.id === value.id}
               renderInput={(params) => <TextField {...params} label="Location" />}
             />
+            <Box>
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+                <Typography variant="subtitle2">GPX Pin (overrides location on map)</Typography>
+                <Tooltip title="Pick on map">
+                  <IconButton size="small" onClick={() => setShowMapPicker(true)}>
+                    <MapIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+                <TrailStartPicker
+                  trailsWithCoords={linkedTrailsWithCoords}
+                  onPick={(lat, lng) => {
+                    setEventField('gpxPointLat', String(parseFloat(lat.toFixed(6))));
+                    setEventField('gpxPointLng', String(parseFloat(lng.toFixed(6))));
+                  }}
+                />
+                {(eventForm.gpxPointLat || eventForm.gpxPointLng) && (
+                  <Tooltip title="Clear pin">
+                    <IconButton size="small" onClick={() => { setEventField('gpxPointLat', ''); setEventField('gpxPointLng', ''); }}>
+                      <ClearIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                )}
+              </Stack>
+              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                <TextField
+                  label="Latitude"
+                  value={eventForm.gpxPointLat}
+                  onChange={(e) => setEventField('gpxPointLat', e.target.value)}
+                  onPaste={(e) => {
+                    const text = e.clipboardData.getData('text');
+                    const parsed = parseCoordPaste(text);
+                    if (parsed) {
+                      e.preventDefault();
+                      setEventField('gpxPointLat', String(parseFloat(parsed.lat.toFixed(6))));
+                      setEventField('gpxPointLng', String(parseFloat(parsed.lng.toFixed(6))));
+                    }
+                  }}
+                  placeholder="e.g. 64.1355 — or paste 'lat, lng'"
+                  inputProps={{ inputMode: 'decimal' }}
+                />
+                <TextField
+                  label="Longitude"
+                  value={eventForm.gpxPointLng}
+                  onChange={(e) => setEventField('gpxPointLng', e.target.value)}
+                  placeholder="e.g. -21.8954"
+                  inputProps={{ inputMode: 'decimal' }}
+                />
+              </Box>
+            </Box>
 
             <Box>
               <Typography variant="subtitle2" sx={{ mb: 1 }}>Alert Banner</Typography>
@@ -2257,6 +2705,17 @@ export default function EventList({ onNotify }: EventListProps) {
         </DialogActions>
       </Dialog>
 
+      <GpxMapPicker
+        open={showMapPicker}
+        initialLat={eventForm.gpxPointLat ? parseFloat(eventForm.gpxPointLat) : null}
+        initialLng={eventForm.gpxPointLng ? parseFloat(eventForm.gpxPointLng) : null}
+        onConfirm={(lat, lng) => {
+          setEventField('gpxPointLat', String(parseFloat(lat.toFixed(6))));
+          setEventField('gpxPointLng', String(parseFloat(lng.toFixed(6))));
+        }}
+        onClose={() => setShowMapPicker(false)}
+      />
+
       <Dialog open={showEditionDialog} onClose={() => { setShowEditionDialog(false); setCloneFromEditionId(''); }} maxWidth="sm" fullWidth>
         <DialogTitle>{editEditionId ? 'Edit Edition' : 'Add Edition'}</DialogTitle>
         <DialogContent>
@@ -2294,13 +2753,17 @@ export default function EventList({ onNotify }: EventListProps) {
                 label="Year"
                 type="number"
                 value={editionForm.year}
-                onChange={(event) => setEditionField('year', event.target.value)}
+                onChange={(event) => handleEditionYearChange(event.target.value)}
               />
               <TextField
                 label="Date"
                 type="date"
                 value={editionForm.date}
-                onChange={(event) => setEditionField('date', event.target.value)}
+                onChange={(event) => {
+                  const d = event.target.value;
+                  setEditionField('date', d);
+                  if (!editEditionId && isPastDate(d)) setEditionField('registrationStatus', 'Closed');
+                }}
                 InputLabelProps={{ shrink: true }}
                 inputProps={{ lang: 'is' }}
               />
@@ -2331,20 +2794,26 @@ export default function EventList({ onNotify }: EventListProps) {
                 renderInput={(params) => <TextField {...params} label="Linked Trail" />}
               />
             )}
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
-              <TextField
-                label="Registration URL"
-                value={editionForm.registrationUrl}
-                onChange={(event) => setEditionField('registrationUrl', event.target.value)}
-                placeholder="https://..."
-              />
-              <TextField
-                label="Results URL"
-                value={editionForm.resultsUrl}
-                onChange={(event) => setEditionField('resultsUrl', event.target.value)}
-                placeholder="https://..."
-              />
-            </Box>
+            <TextField
+              label="Registration URL"
+              fullWidth
+              value={editionForm.registrationUrl}
+              onChange={(event) => setEditionField('registrationUrl', event.target.value)}
+              placeholder="https://..."
+              InputProps={{ endAdornment: editionForm.registrationUrl ? (
+                <IconButton size="small" onClick={() => setEditionField('registrationUrl', '')}><ClearIcon fontSize="small" /></IconButton>
+              ) : null }}
+            />
+            <TextField
+              label="Results URL"
+              fullWidth
+              value={editionForm.resultsUrl}
+              onChange={(event) => setEditionField('resultsUrl', event.target.value)}
+              placeholder="https://..."
+              InputProps={{ endAdornment: editionForm.resultsUrl ? (
+                <IconButton size="small" onClick={() => setEditionField('resultsUrl', '')}><ClearIcon fontSize="small" /></IconButton>
+              ) : null }}
+            />
             <TextField
               label="Notes"
               value={editionForm.notes}
@@ -2636,6 +3105,104 @@ export default function EventList({ onNotify }: EventListProps) {
         </DialogActions>
       </Dialog>
 
+      {/* Copy races confirmation dialog */}
+      <Dialog open={!!copyRacesConfirm} onClose={() => setCopyRacesConfirm(null)} maxWidth="sm" fullWidth>
+        <DialogTitle>Copy Races</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Copy <strong>{copyRacesConfirm?.source.races.length} race{copyRacesConfirm?.source.races.length === 1 ? '' : 's'}</strong> from edition <strong>{copyRacesConfirm ? buildEditionLabel(copyRacesConfirm.source) : ''}</strong> into this edition?
+          </DialogContentText>
+          <DialogContentText sx={{ mt: 1.5 }}>
+            Races will be cloned with statuses reset to Active/Available.
+            {copyRacesConfirm?.edition.date && copyRacesConfirm?.source.date
+              ? ' Dates will be pre-filled based on the offset from the previous edition.'
+              : ' Dates will need to be set manually.'}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCopyRacesConfirm(null)}>Cancel</Button>
+          <Button variant="contained" onClick={handleConfirmCopyRaces} disabled={saving}>{saving ? <CircularProgress size={20} /> : 'Copy Races'}</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Bulk create missing editions dialog */}
+      <Dialog open={showBulkMissingDialog} onClose={() => !bulkMissingLoading && !bulkMissingProgress && setShowBulkMissingDialog(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Create Missing Editions</DialogTitle>
+        <DialogContent>
+          {bulkMissingLoading ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 3 }}>
+              <CircularProgress size={24} />
+              <Typography>Loading event details…</Typography>
+            </Box>
+          ) : bulkMissingProgress ? (
+            <Box sx={{ py: 2 }}>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                Creating editions… {bulkMissingProgress.done} / {bulkMissingProgress.total}
+              </Typography>
+              <LinearProgress variant="determinate" value={(bulkMissingProgress.done / bulkMissingProgress.total) * 100} />
+            </Box>
+          ) : (
+            <Box sx={{ pt: 1 }}>
+              <DialogContentText sx={{ mb: 2 }}>
+                The following events have no upcoming edition. Review the proposals below and select which ones to create.
+              </DialogContentText>
+              <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse' }}>
+                <Box component="thead">
+                  <Box component="tr">
+                    <Box component="th" sx={{ width: 40, textAlign: 'left', pb: 1, pr: 1 }}>
+                      <Checkbox
+                        size="small"
+                        checked={bulkMissingItems.length > 0 && bulkMissingItems.every(i => i.selected)}
+                        indeterminate={bulkMissingItems.some(i => i.selected) && !bulkMissingItems.every(i => i.selected)}
+                        onChange={(_, checked) => setBulkMissingItems(prev => prev.map(i => ({ ...i, selected: checked })))}
+                      />
+                    </Box>
+                    <Box component="th" sx={{ textAlign: 'left', pb: 1, pr: 1 }}><Typography variant="caption" fontWeight={600}>Event</Typography></Box>
+                    <Box component="th" sx={{ textAlign: 'left', pb: 1, pr: 1 }}><Typography variant="caption" fontWeight={600}>Year</Typography></Box>
+                    <Box component="th" sx={{ textAlign: 'left', pb: 1, pr: 1 }}><Typography variant="caption" fontWeight={600}>Proposed date</Typography></Box>
+                    <Box component="th" sx={{ textAlign: 'left', pb: 1 }}><Typography variant="caption" fontWeight={600}>Races to clone</Typography></Box>
+                  </Box>
+                </Box>
+                <Box component="tbody">
+                  {bulkMissingItems.map((item, i) => (
+                    <Box component="tr" key={item.event.id} sx={{ borderTop: '1px solid', borderColor: 'divider', opacity: item.selected ? 1 : 0.45 }}>
+                      <Box component="td" sx={{ py: 1, pr: 1 }}>
+                        <Checkbox size="small" checked={item.selected} onChange={(_, checked) => setBulkMissingItems(prev => prev.map((x, j) => j === i ? { ...x, selected: checked } : x))} />
+                      </Box>
+                      <Box component="td" sx={{ py: 1, pr: 1 }}>
+                        <Typography variant="body2">{item.event.name}</Typography>
+                      </Box>
+                      <Box component="td" sx={{ py: 1, pr: 1 }}>
+                        <Typography variant="body2">{item.year}</Typography>
+                      </Box>
+                      <Box component="td" sx={{ py: 1, pr: 1 }}>
+                        <Typography variant="body2">{item.date || <em style={{ color: 'gray' }}>TBD</em>}</Typography>
+                      </Box>
+                      <Box component="td" sx={{ py: 1 }}>
+                        <Typography variant="body2">
+                          {item.sourceEdition ? `${item.sourceEdition.races.length} race${item.sourceEdition.races.length !== 1 ? 's' : ''}` : '—'}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowBulkMissingDialog(false)} disabled={!!bulkMissingProgress || bulkMissingLoading}>Cancel</Button>
+          <Button
+            variant="contained"
+            startIcon={<BulkAddIcon />}
+            onClick={handleBulkCreateMissingEditions}
+            disabled={bulkMissingLoading || !!bulkMissingProgress || selectedBulkCount === 0}
+          >
+            Create {selectedBulkCount || ''} Edition{selectedBulkCount !== 1 ? 's' : ''}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Bulk date entry dialog */}
       <Dialog open={showBulkDatesDialog} onClose={() => setShowBulkDatesDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Set Race Dates</DialogTitle>
@@ -2645,9 +3212,16 @@ export default function EventList({ onNotify }: EventListProps) {
               <Typography variant="body2" color="text.secondary">No races in this edition.</Typography>
             ) : bulkDates.map((entry, i) => (
               <Box key={entry.race.id}>
-                <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ mb: 0.75, display: 'block' }}>
-                  {entry.race.name}{entry.race.distanceLabel ? ` · ${entry.race.distanceLabel}` : ''}
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 0.75 }}>
+                  <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                    {entry.race.name}{entry.race.distanceLabel ? ` · ${entry.race.distanceLabel}` : ''}
+                  </Typography>
+                  {entry.prevDateOfRace && (
+                    <Typography variant="caption" color="text.disabled">
+                      prev: {formatDateLabel(entry.prevDateOfRace, entry.prevDateOfRace)}
+                    </Typography>
+                  )}
+                </Box>
                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 140px', gap: 1.5 }}>
                   <TextField
                     label="Date"

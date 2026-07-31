@@ -22,16 +22,22 @@ interface ShortcutGroup {
 
 const shortcutGroups: ShortcutGroup[] = [
     {
-        title: 'Navigation',
+        title: 'Navigation  (press g, then the letter)',
         shortcuts: [
-            { keys: ['Alt', '1'], description: 'All Trails' },
-            { keys: ['Alt', '2'], description: 'Locations' },
-            { keys: ['Alt', '3'], description: 'Trail Health' },
-            { keys: ['Alt', '4'], description: 'Trail Map' },
-            { keys: ['Alt', '5'], description: 'Tags' },
-            { keys: ['Alt', '6'], description: 'Analytics' },
-            { keys: ['Alt', '7'], description: 'Events' },
-            { keys: ['Alt', '8'], description: 'Features' },
+            { keys: ['g', 'e'], description: 'Events' },
+            { keys: ['g', 't'], description: 'Trails' },
+            { keys: ['g', 'l'], description: 'Locations' },
+            { keys: ['g', 'o'], description: 'Organizers' },
+            { keys: ['g', 'h'], description: 'Trail Health' },
+            { keys: ['g', 'v'], description: 'Event Health' },
+            { keys: ['g', 'd'], description: 'Edition Health' },
+            { keys: ['g', 'm'], description: 'Trail Map' },
+            { keys: ['g', 's'], description: 'Tags' },
+            { keys: ['g', 'a'], description: 'Analytics' },
+            { keys: ['g', 'f'], description: 'Features' },
+            { keys: ['g', 'r'], description: 'Hero Themes' },
+            { keys: ['g', 'n'], description: 'Sponsors' },
+            { keys: ['g', 'p'], description: 'Pools' },
         ],
     },
     {

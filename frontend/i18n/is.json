@@ -74,6 +74,7 @@
         "activities": "Athöfn",
         "disclaimer": "Fyrirvari",
         "privacy": "Persónuvernd",
+        "faq": "Algengar spurningar",
         "darkMode": "Skipta yfir í dökkt þema",
         "lightMode": "Skipta yfir í ljóst þema",
         "switchToEnglish": "Switch to English",
@@ -89,7 +90,9 @@
         "aboutUs": "Um okkur",
         "services": "Þjónusta",
         "challenge": "Áskorun",
-        "allTrails": "Allar leiðir"
+        "allTrails": "Allar leiðir",
+        "allEvents": "Allir viðburðir",
+        "eventsCalendar": "Dagatal"
     },
     "spotlight": {
         "placeholder": "Leita að leiðum, stöðum og keppnum...",
@@ -136,7 +139,7 @@
         "type": "Tegund",
         "estTime": "Áætlaður tími",
         "difficulty": "Erfiðleiki",
-        "activity": "Tegund æfingar",
+        "activity": "Tegund",
         "location": "Staðsetning",
         "kmAway": "km í burtu",
         "routeMap": "Leiðarkort",
@@ -203,7 +206,13 @@
         "checkInToastJoined_one": "{{count}} hlaupari mætti rétt í þessu.",
         "checkInToastJoined_other": "{{count}} hlauparar mættu rétt í þessu.",
         "checkInToastLeft_one": "{{count}} hlaupari skráði sig út.",
-        "checkInToastLeft_other": "{{count}} hlauparar skráðu sig út."
+        "checkInToastLeft_other": "{{count}} hlauparar skráðu sig út.",
+        "terrainType": {
+            "Mountainous": "Fjalllendi",
+            "Hilly": "Hæðótt",
+            "Flat": "Flatt",
+            "label": "Landslag"
+        }
     },
     "trailCard": {
         "removeFavorite": "Fjarlægja úr eftirlætum",
@@ -247,7 +256,13 @@
         "showOfflineOnly": "Sýna eingöngu án nets",
         "tags": "Merki",
         "resetFilters": "Endurstilla síun",
-        "closeFilters": "Loka"
+        "closeFilters": "Loka",
+        "terrainType": {
+            "Mountainous": "Fjalllendi / Fjallahlaup",
+            "Hilly": "Hæðótt / Fell",
+            "Flat": "Flatt / Rúllandi",
+            "label": "Landslag"
+        }
     },
     "difficulty": {
         "easy": "Auðvelt",
@@ -259,7 +274,7 @@
         "explanation": "Erfiðleiki er reiknaður út frá **álagsvegalengd**: vegalengd leiðarinnar að viðbættri hækkun deilt með 100. Fyrir hlaupaleiðir á vegi er eingöngu vegalengd notuð. Viðmið eru mismunandi eftir tegund.",
         "level": "Stig",
         "trailRunning": "Utanvegahlaup",
-        "running": "Hlaup",
+        "running": "Götulaup",
         "hiking": "Ganga",
         "cycling": "Hjólreiðar",
         "funRun": "Skemmtiskokk",
@@ -351,6 +366,39 @@
         "linkCopied": "Hlekkur afritaður!",
         "messengerNotConfigured": "Messenger-deiling þarf app-stillingu hér. Hlekkur var afritaður í staðinn."
     },
+    "faq": {
+        "title": "Algengar spurningar",
+        "subtitle": "Hér svörum við algengum spurningum um leiðir, tíma og viðburði á Hlaupadagskra.is",
+        "estimatedTime": {
+            "q": "Hvernig er áætlaður tími fyrir leiðir reiknaður?",
+            "a": "Sjá líkanið hér að neðan. Tímar eru einungis áætlaðir — raunverulegur tími fer eftir líkamsástandi, yfirborði og veðri."
+        },
+        "terrainType": {
+            "q": "Hvernig er yfirborðsgerð leiða ákveðin (flatt / hæðótt / fjallaleiðir)?",
+            "a": "Yfirborðsgerð er reiknuð sjálfkrafa út frá GPS-gögnum leiðarinnar með tveimur þáttum: hækkun á hvern km og hámarkshæð yfir sjávarmáli. Flatt: undir 20 m hækkun á km. Fjallaleiðir: hæð yfir 600 m og að minnsta kosti 30 m hækkun á km, eða hvers kyns leið með yfir 50 m hækkun á km. Hæðótt: allt þar á milli. Þröskuldar eru kvarðaðir sérstaklega fyrir íslenskar aðstæður."
+        },
+        "relatedTrails": {
+            "q": "Hvernig eru tengdar leiðir fundnar?",
+            "a": "Tengdar leiðir eru valdar með stigagjöf. Leiðir í sömu keppnisröð fá hæstu stigin. Síðan bætast stig við fyrir sameiginleg svæði, sameiginleg merki og sömu tegund hreyfingar. Aðeins leiðir með eitt eða fleiri stig eru sýndar."
+        },
+        "difficulty": {
+            "q": "Hvernig er erfiðleikastig (Auðvelt / Miðlungs erfitt / Krefjandi / Erfitt / Mjög erfitt) reiknað?",
+            "a": "Erfiðleikastig byggir á svokölluðu álagskilómetrum: álag = fjarlægð (km) + hækkun (m) ÷ 100. Þetta sameinar lengd og hækkun í eina tölu sem er síðan borin saman við þröskulda sem eru mismunandi eftir tegund hreyfingar. Þröskuldar fyrir hlaupaleiðir og gönguleiðir eru lægri en fyrir hjólreiðar, þar sem álag á hvern km er meira. Götuhlaup notar t.d. aðeins fjarlægð, þar sem hækkun er yfirleitt lítil."
+        },
+        "itraIndex": {
+            "q": "Hvað er ITRA Performance Index?",
+            "a": "ITRA Performance Index er persónulegt stig (0–1000) sem endurspeglar hlaupagetu þína. Í hvert skipti sem þú lýkur ITRA-vottuðum hlaupi færð þú Race Score byggt á hraða þínum miðað við fræðilegan heimsmetahraða á þeirri braut. Performance Index þinn er vegið meðaltal bestu 5 Race Score þinna síðustu 36 mánuði. Sumar keppnir, eins og Laugavegur Ultra Trail, krefjast lágmarksindexs upp á 370 til að mega þátttaka. Sjá nánari lýsingu í ITRA leiðbeiningum.",
+            "link": "Opna ITRA leiðbeiningar →"
+        },
+        "gpsDistance": {
+            "q": "Hversu nákvæm er lengd leiðarinnar?",
+            "a": "Fjarlægðir eru reiknaðar beint út frá GPS-skrá leiðarinnar (GPX-skrá) með hnitum meðlangrar leiðar. Nákvæmni fer eftir gæðum upprunagagnanna — vel skráð GPS-ferill er yfirleitt nákvæmur að innan 1–2%. Fjarlægðir eru sýndar með einum aukastaf."
+        },
+        "trailSuggestion": {
+            "q": "Get ég lagt til leið eða sent inn leiðréttingu?",
+            "a": "Já — notaðu ábendingarhnappin á hverri leiðarsíðu til að senda tillögu, leiðréttingu eða viðbótarupplýsingar. Til að leggja til alveg nýja leið getur þú líka haft samband við okkur í gegnum sambandssíðuna."
+        }
+    },
     "footer": {
         "checkingApi": "Athuga API…",
         "healthy": "virkt",
@@ -386,6 +434,7 @@
         "linkText": "Nánar"
     },
     "sort": {
+        "date": "Dagsetning",
         "distance": "Nálægast",
         "name": "Nafn (A–Ö)",
         "shortest": "Styst",
@@ -1059,8 +1108,8 @@
         "noResults": "Enginn viðburður fannst",
         "empty": "Enginn viðburður er skráður",
         "noDate": "Dagsetning óákveðin",
-        "nextRace": "Næsta keppni:",
-        "lastRace": "Síðasta keppni:",
+        "nextRace": "Næst:",
+        "lastRace": "Síðast:",
         "today": "🔥 Í dag!",
         "raceDayBadge": "🏁 Það er keppnisdagur!",
         "tomorrow": "Á morgun!",
@@ -1069,15 +1118,16 @@
         "daysAgo_one": "Fyrir {{count}} degi síðan",
         "daysAgo_other": "Fyrir {{count}} dögum síðan",
         "daysUntil": "Eftir {{count}} daga",
-        "raceCount_one": "{{count}} hlaupaleið",
-        "raceCount_other": "{{count}} hlaupaleiðir",
-        "raceCount": "{{count}} hlaupaleiðir",
+        "raceCount_one": "{{count}} leið",
+        "raceCount_other": "{{count}} leiðir",
+        "raceCount": "{{count}} leiðir",
         "editionCount_one": "{{count}} viðburður",
         "editionCount_other": "{{count}} viðburðir",
         "editionCount": "{{count}} viðburðir",
         "register": "Skráning",
         "results": "Úrslit",
         "organizerSite": "Vefur skipuleggjanda",
+        "directionsToEvent": "Leiðsögn að upphafsstað",
         "addToCalendar": "Setja í dagatal",
         "downloadIcs": "Hlaða niður .ics (Apple/Annað)",
         "racesHeading": "Keppnishlaup",
@@ -1087,6 +1137,7 @@
         "backToRaces": "Til baka",
         "wereYouLookingFor": "Varstu að leita að einhverju af þessum?",
         "viewTrail": "Skoða leið",
+        "mountainRace": "Fjallahlaup",
         "cutoffHours_one": "{{count}} klukkustund hámark",
         "cutoffHours_other": "{{count}} klukkustundir hámark",
         "cutoffHours": "{{count}}klst hámark",
@@ -1128,7 +1179,17 @@
         "scheduleApproximate": "Venjulega haldið í {{month}}",
         "scheduleApproximateRange": "Venjulega haldið í {{monthStart}}–{{monthEnd}}",
         "statusCancelled": "Aflýst",
-        "statusUpcoming": "Væntanlegt",
+        "certifiedBy": "Vottað af",
+        "championshipCategory": "Keppnisflokkur",
+        "raceDistance": "Vegalengdarmerki",
+        "raceDateTime": "Dagsetning",
+        "trailDistance": "Vegalengd hlaups",
+        "elevationGain": "Hækkun",
+        "terrainType": "Landslagsgerð",
+        "cutoffTime": "Tímamörk",
+        "ticketStatusLabel": "Skráningarstaða",
+        "maxParticipants": "Hámarksfjöldi þátttakenda",
+        "statusUpcoming": "Óstaðfest",
         "raceDayWeather": "Veður á keppnisleiðinni",
         "raceDayWeatherDesc": "Núverandi veður og 7 daga spá. Keppnisdagurinn er auðkenndur.",
         "checklistTitle": "Tékklisti fyrir keppnisdag",
@@ -1138,17 +1199,17 @@
         "checklistShoes": "Skór og sokkar og keppnisfötin klár",
         "checklistFuel": "Næring & drykkir tilbúnir",
         "checklistGoodMoodReady": "Góða skapið klárt 😄",
-        "raceDayShareCta": "Ég er að keppa í dag 💥",
-        "raceDayShareText": "{{raceName}} er í dag og ég er að keppa 💥",
-        "raceDayShareRaceCta": "Ég er að keppa 💥",
-        "raceDayShareRaceText": "Í dag er ég að keppa í {{competitionName}} - {{raceName}} 💥",
+        "raceDayShareCta": "Ég tek þátt í dag 💥",
+        "raceDayShareText": "{{raceName}} er í dag og ég er með 💥",
+        "raceDayShareRaceCta": "Ég tek þátt 💥",
+        "raceDayShareRaceText": "Í dag tek ég þátt í {{competitionName}} - {{raceName}} 💥",
         "shareCard": {
-            "button": "Ég er að keppa! 💥",
+            "button": "Ég tek þátt! 💥",
             "racingToday": "Í dag er keppnisdagur!",
             "racingSoon": "Ég ætla að taka þátt! 💥",
             "countdown_one": "{{count}} dagur eftir!",
             "countdown_other": "{{count}} dagar í hlaup!",
-            "shareText": "Ég er að keppa í {{eventName}}! 💥",
+            "shareText": "Ég tek þátt í {{eventName}}! 💥",
             "share": "Deila",
             "download": "Vista mynd",
             "copiedToClipboard": "Mynd afrituð!",
@@ -1196,7 +1257,7 @@
         },
         "activityTypes": {
             "TrailRunning": "Utanvegahlaup",
-            "Running": "Hlaup",
+            "Running": "Götuhlaup",
             "Hiking": "Ganga",
             "Cycling": "Hjólreiðar",
             "FunRun": "Skemmtiskokk",
@@ -1210,7 +1271,7 @@
             "Championship": "Meistaramót",
             "Fun": "Skemmtun",
             "Festival": "Hátíð",
-            "Advertisement": "Auglýsing"
+            "Advertisement": "Styrkt"
         },
         "history": {
             "title": "Saga viðburðar",
@@ -1229,17 +1290,26 @@
             "distances": "Vegalengdir",
             "register": "Skráning",
             "links": "Tenglar",
-            "races": "Hlaupagreinar",
+            "races": "Vegalengdir",
             "noRaces": "Engar greinar skráðar",
             "soldOut": "Uppselt",
             "almostSoldOut": "Næstum fullt",
             "cutoff": "Tímamörk",
             "certifications": "Vottun"
         },
+        "nearMe": {
+            "label": "Nærri mér",
+            "enable": "Raða eftir fjarlægð",
+            "disable": "Slökkva á röðun eftir fjarlægð",
+            "denied": "Aðgangur að staðsetningu synjað — virkjaðu hann í stillingum vafrans",
+            "noGps": "Engar GPS-upplýsingar skráðar fyrir þetta viðburð",
+            "enableLocation": "Leyfðu aðgang að staðsetningu til að sjá fjarlægð",
+            "distanceToStart": "Fjarlægð að upphafsstað"
+        },
         "registrationStatus": {
             "Open": "Opin",
             "Closed": "Lokuð",
-            "NotStarted": ""
+            "NotStarted": "Væntanlegt"
         },
         "ticketStatus": {
             "Free": "Frítt",
@@ -1426,7 +1496,7 @@
                 { "distance": "8 km með lítilli hækkun", "elevation": "+100 m", "effortKm": "9,0 km", "targetTime": "0:54:00", "pace": "6:45 / km" },
                 { "distance": "16 km með miðlungs hækkun", "elevation": "+250 m", "effortKm": "18,5 km", "targetTime": "1:54:00", "pace": "7:07 / km" },
                 { "distance": "Hálfmaraþon keppni með þónokkurri hækkun", "elevation": "+400 m", "effortKm": "25,1 km", "targetTime": "2:37:00", "pace": "7:26 / km" },
-                { "distance": "Laugavegur Ultra, 53km", "elevation": "+1900 m", "effortKm": "72,0 km", "targetTime": "9:30:00", "pace": "7:55 / km" }
+                { "distance": "Laugavegur Ultra, 53km", "elevation": "+1900 m", "effortKm": "72,0 km", "targetTime": "9:15:00", "pace": "7:55 / km" }
             ]
         },
         "links": {

@@ -25,6 +25,7 @@ public class EventValidatorTests
         Status: "Confirmed",
         OrganizerName: "ÍSÍ",
         OrganizerWebsite: "https://marathon.is",
+        OrganizerId: null,
         AlertMessage: null,
         AlertSeverity: null,
         LocationId: null,
@@ -149,11 +150,14 @@ public class EventValidatorTests
         Status: "Confirmed",
         OrganizerName: null,
         OrganizerWebsite: null,
+        OrganizerId: null,
         AlertMessage: null,
         AlertSeverity: null,
         LocationId: null,
         ScheduleRule: null,
-        SocialLinks: null
+        SocialLinks: null,
+        GpxPointLat: null,
+        GpxPointLng: null
     );
 
     [Fact]

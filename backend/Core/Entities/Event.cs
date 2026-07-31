@@ -38,11 +38,17 @@ public class Event
     public string? OrganizerName { get; set; }
     public string? OrganizerWebsite { get; set; }
 
+    public Guid? OrganizerId { get; set; }
+    public Organizer? Organizer { get; set; }
+
     public string? AlertMessage { get; set; }
     public string? AlertSeverity { get; set; }
 
     public Guid? LocationId { get; set; }
     public Location? Location { get; set; }
+
+    public double? GpxPointLat { get; set; }
+    public double? GpxPointLng { get; set; }
 
     public ScheduleRule? ScheduleRule { get; set; }
 

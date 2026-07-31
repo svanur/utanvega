@@ -13,52 +13,29 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import StraightenIcon from '@mui/icons-material/Straighten';
 import TimerIcon from '@mui/icons-material/Timer';
-import LandscapeIcon from '@mui/icons-material/Landscape';
-import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
-import HikingIcon from '@mui/icons-material/Hiking';
-import DirectionsBikeIcon from '@mui/icons-material/DirectionsBike';
-import CelebrationIcon from '@mui/icons-material/Celebration';
-import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
-import GrassIcon from '@mui/icons-material/Grass';
-import CampaignIcon from '@mui/icons-material/Campaign';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import VideocamIcon from '@mui/icons-material/Videocam';
-import type { EventSummary, EventDetail, RaceDto } from '../hooks/useEvents';
+import type { EventSummary, EventDetail, RaceDto, SeriesRaceDto } from '../hooks/useEvents';
 import { API_URL } from '../hooks/useTrails';
+import { haversineKm, formatDistanceKm } from '../utils/geo';
+import NearMeIcon from '@mui/icons-material/NearMe';
 import EventDateBadge from './EventDateBadge';
-import { getCountdownColor } from '../utils/eventUtils';
+import { getCountdownColor, getEventTypeColor, formatNextDate } from '../utils/eventUtils';
+import { getActivityIcon } from '../utils/activityIcon';
 
-function getActivityIcon(type: string) {
-    switch (type) {
-        case 'TrailRunning': return <LandscapeIcon fontSize="small" />;
-        case 'Running': return <DirectionsRunIcon fontSize="small" />;
-        case 'Hiking': return <HikingIcon fontSize="small" />;
-        case 'Cycling': return <DirectionsBikeIcon fontSize="small" />;
-        case 'FunRun': return <CelebrationIcon fontSize="small" />;
-        case 'ObstacleCourse': return <FitnessCenterIcon fontSize="small" />;
-        case 'CrossCountryRun': return <GrassIcon fontSize="small" />;
-        case 'Advertisement': return <CampaignIcon fontSize="small" />;
-        default: return <DirectionsRunIcon fontSize="small" />;
-    }
-}
 
-function getEventTypeColor(type: string): 'primary' | 'secondary' | 'success' | 'warning' | 'info' | 'error' | 'default' {
-    switch (type) {
-        case 'Race': return 'primary';
-        case 'Series': return 'secondary';
-        case 'FunRun': return 'success';
-        case 'Training': return 'info';
-        case 'Advertisement': return 'warning';
-        default: return 'default';
-    }
-}
 
 interface EventTableViewProps {
     events: EventSummary[];
+    userLocation: { lat: number; lng: number } | null;
 }
 
-type SortField = 'name' | 'daysUntil' | 'nextEditionDate' | 'locationName' | 'activityType' | 'type';
+type SortField = 'name' | 'daysUntil' | 'nextEditionDate' | 'locationName' | 'activityType' | 'type' | 'distance';
 type SortDir = 'asc' | 'desc';
+
+type TableRow =
+    | { kind: 'event'; event: EventSummary }
+    | { kind: 'series-race'; event: EventSummary; race: SeriesRaceDto };
 
 
 
@@ -70,7 +47,7 @@ function getRegistrationStatusColor(status: string): 'success' | 'error' | 'defa
     }
 }
 
-const EventTableView: React.FC<EventTableViewProps> = ({ events }) => {
+const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation }) => {
     const { t, i18n } = useTranslation();
     const navigate = useNavigate();
     const [sortField, setSortField] = useState<SortField>('daysUntil');
@@ -108,9 +85,14 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events }) => {
         }
     };
 
-    const sortedEvents = useMemo(() => {
+    const getDistanceKm = (e: EventSummary): number | null =>
+        userLocation && e.gpxPointLat != null && e.gpxPointLng != null
+            ? haversineKm(userLocation.lat, userLocation.lng, e.gpxPointLat, e.gpxPointLng)
+            : null;
+
+    const sortedRows = useMemo((): TableRow[] => {
         const dir = sortDir === 'asc' ? 1 : -1;
-        return [...events].sort((a, b) => {
+        const sorted = [...events].sort((a, b) => {
             switch (sortField) {
                 case 'name':
                     return dir * a.name.localeCompare(b.name, 'is');
@@ -133,21 +115,50 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events }) => {
                     return dir * (a.locationName ?? '').localeCompare(b.locationName ?? '', 'is');
                 case 'activityType':
                     return dir * a.activityType.localeCompare(b.activityType);
+                case 'distance': {
+                    const da = getDistanceKm(a);
+                    const db = getDistanceKm(b);
+                    if (da == null && db == null) return 0;
+                    if (da == null) return 1;
+                    if (db == null) return -1;
+                    return dir * (da - db);
+                }
                 default:
                     return 0;
             }
         });
-    }, [events, sortField, sortDir]);
+
+        const rows: TableRow[] = [];
+        for (const event of sorted) {
+            if (event.type === 'Series' && event.seriesRaces && event.seriesRaces.length > 0) {
+                for (const race of event.seriesRaces) {
+                    rows.push({ kind: 'series-race', event, race });
+                }
+            } else {
+                rows.push({ kind: 'event', event });
+            }
+        }
+        // Re-sort by individual race date when sorting by date fields
+        if (sortField === 'daysUntil' || sortField === 'nextEditionDate') {
+            rows.sort((a, b) => {
+                const aDate = a.kind === 'series-race' ? a.race.dateOfRace : (a.event.displayDate ?? a.event.nextEditionDate);
+                const bDate = b.kind === 'series-race' ? b.race.dateOfRace : (b.event.displayDate ?? b.event.nextEditionDate);
+                if (!aDate && !bDate) return 0;
+                if (!aDate) return dir;
+                if (!bDate) return -dir;
+                return dir * aDate.localeCompare(bDate);
+            });
+        }
+        return rows;
+    }, [events, sortField, sortDir, userLocation]);
 
     const columns: { field: SortField; label: string; align?: 'left' | 'right' | 'center' }[] = [
         { field: 'daysUntil', label: t('races.table.date', 'Date'), align: 'center' },
         { field: 'name', label: t('races.table.name', 'Name') },
-        { field: 'type', label: t('races.table.type', 'Type'), align: 'center' },
-        { field: 'locationName', label: t('trail.location', 'Location') },
     ];
 
-    // +1 expand, +3 non-sortable (Distances, Certifications, Links)
-    const totalColumns = columns.length + 4;
+    // +1 expand, +4 manual headers (Distances, km away, Location, Links)
+    const totalColumns = columns.length + 5;
 
     return (
         <TableContainer component={Paper} elevation={1} sx={{ borderRadius: 2, width: '100%', overflowX: 'auto' }}>
@@ -167,12 +178,129 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events }) => {
                             </TableCell>
                         ))}
                         <TableCell>{t('races.table.distances', 'Distances')}</TableCell>
-                        <TableCell>{t('races.table.certifications', 'Vottun')}</TableCell>
+                        <TableCell>
+                            <TableSortLabel active={sortField === 'distance'} direction={sortField === 'distance' ? sortDir : 'asc'} onClick={() => handleSort('distance')}>
+                                {t('trail.kmAway', 'km away')}
+                            </TableSortLabel>
+                        </TableCell>
+                        <TableCell>
+                            <TableSortLabel active={sortField === 'locationName'} direction={sortField === 'locationName' ? sortDir : 'asc'} onClick={() => handleSort('locationName')}>
+                                {t('trail.location', 'Location')}
+                            </TableSortLabel>
+                        </TableCell>
                         <TableCell align="center">{t('races.table.links', 'Links')}</TableCell>
                     </TableRow>
                 </TableHead>
                 <TableBody>
-                    {sortedEvents.map((event, idx) => {
+                    {sortedRows.map((row, idx) => {
+                        if (row.kind === 'series-race') {
+                            const { event, race } = row;
+                            const raceDaysUntil = race.dateOfRace
+                                ? Math.round((new Date(race.dateOfRace + 'T00:00:00').getTime() - Date.now()) / 86400000)
+                                : null;
+                            return (
+                                <TableRow
+                                    key={`${event.id}-${race.raceId}`}
+                                    hover
+                                    tabIndex={0}
+                                    role="link"
+                                    sx={{ cursor: 'pointer', bgcolor: idx % 2 === 1 ? 'action.hover' : 'transparent' }}
+                                    onClick={() => navigate(`/events/${event.slug}`)}
+                                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/events/${event.slug}`); } }}
+                                >
+                                    <TableCell sx={{ p: 0.5 }} />
+                                    <TableCell align="center">
+                                        {race.dateOfRace ? (
+                                            <Stack alignItems="center" spacing={0.5}>
+                                                <Typography variant="body2" noWrap>
+                                                    {formatNextDate(race.dateOfRace, t)}
+                                                </Typography>
+                                                <Stack direction="row" alignItems="center" gap={0.5} flexWrap="wrap" justifyContent="center">
+                                                    <EventDateBadge dateStr={race.dateOfRace} />
+                                                    {raceDaysUntil !== null && (
+                                                        <Chip
+                                                            label={
+                                                                raceDaysUntil === 0 ? t('races.today')
+                                                                : raceDaysUntil === 1 ? t('races.tomorrow')
+                                                                : raceDaysUntil < 0 ? t('races.daysAgo', { count: Math.abs(raceDaysUntil) })
+                                                                : t('races.daysUntil', { count: raceDaysUntil })
+                                                            }
+                                                            size="small"
+                                                            color={getCountdownColor(raceDaysUntil)}
+                                                            variant="outlined"
+                                                            sx={{ height: 20, fontSize: '0.68rem' }}
+                                                        />
+                                                    )}
+                                                </Stack>
+                                            </Stack>
+                                        ) : (
+                                            <Typography variant="body2" color="text.secondary">—</Typography>
+                                        )}
+                                    </TableCell>
+                                    <TableCell>
+                                        <Stack direction="row" alignItems="flex-start" spacing={0.5}>
+                                            <Tooltip title={t(`races.activityTypes.${event.activityType}`, event.activityType)}>
+                                                <span style={{ paddingTop: 2 }}>{getActivityIcon(event.activityType)}</span>
+                                            </Tooltip>
+                                            <Stack spacing={0.25}>
+                                                <Typography variant="body2" fontWeight={700} noWrap sx={{ maxWidth: 220 }}>
+                                                    {race.raceName}
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 220 }}>
+                                                    {event.name}
+                                                </Typography>
+                                                <Chip label={t(`races.eventTypes.Series`, 'Series')} size="small" color={getEventTypeColor('Series')} variant="outlined" sx={{ fontSize: '0.65rem', height: 18, alignSelf: 'flex-start' }} />
+                                            </Stack>
+                                        </Stack>
+                                    </TableCell>
+                                    <TableCell>
+                                        {race.distanceLabel ? (
+                                            <Chip label={race.distanceLabel} size="small" variant="outlined" color={getTicketStatusColor(race.ticketStatus)} />
+                                        ) : (
+                                            <Typography variant="body2" color="text.secondary">—</Typography>
+                                        )}
+                                    </TableCell>
+                                    {(() => {
+                                        const km = getDistanceKm(event);
+                                        return (
+                                            <TableCell>
+                                                {km != null ? (
+                                                    <Stack direction="row" alignItems="center" spacing={0.5}>
+                                                        <NearMeIcon sx={{ fontSize: 13, color: 'primary.main' }} />
+                                                        <Typography variant="body2" noWrap>{formatDistanceKm(km)}</Typography>
+                                                    </Stack>
+                                                ) : (
+                                                    <Tooltip title={userLocation ? t('races.nearMe.noGps') : t('races.nearMe.enableLocation')}>
+                                                        <Typography variant="body2" color="text.secondary" sx={{ cursor: 'help' }}>—</Typography>
+                                                    </Tooltip>
+                                                )}
+                                            </TableCell>
+                                        );
+                                    })()}
+                                    <TableCell>
+                                        {event.locationName ? (
+                                            <Stack direction="row" alignItems="center" spacing={0.5}>
+                                                <LocationOnIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
+                                                <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 130 }}>{event.locationName}</Typography>
+                                            </Stack>
+                                        ) : (
+                                            <Typography variant="body2" color="text.secondary">—</Typography>
+                                        )}
+                                    </TableCell>
+                                    <TableCell align="center">
+                                        {race.registrationUrl && raceDaysUntil !== null && raceDaysUntil >= 0 ? (
+                                            <Button size="small" variant="outlined" href={race.registrationUrl} target="_blank" rel="noopener noreferrer" endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                                                {t('races.register', 'Register')}
+                                            </Button>
+                                        ) : (
+                                            <Typography variant="body2" color="text.secondary">—</Typography>
+                                        )}
+                                    </TableCell>
+                                </TableRow>
+                            );
+                        }
+
+                        const { event } = row;
                         const isExpanded = expandedIds.has(event.id);
                         const detail = detailCache[event.id];
                         const isLoading = loadingIds.has(event.id);
@@ -189,7 +317,9 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events }) => {
                                     sx={{
                                         cursor: 'pointer',
                                         '& td': { borderBottom: isExpanded ? 0 : undefined },
-                                        bgcolor: idx % 2 === 1 ? 'action.hover' : 'transparent',
+                                        bgcolor: event.type === 'Advertisement'
+                                            ? 'rgba(255, 193, 7, 0.08)'
+                                            : idx % 2 === 1 ? 'action.hover' : 'transparent',
                                         ...(event.status === 'Cancelled' && { opacity: 0.6 }),
                                     }}
                                     onClick={() => navigate(`/events/${event.slug}`)}
@@ -209,10 +339,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events }) => {
                                         {(event.displayDate ?? event.nextEditionDate) ? (
                                             <Stack alignItems="center" spacing={0.5}>
                                                 <Typography variant="body2" noWrap>
-                                                    {new Date((event.displayDate ?? event.nextEditionDate)! + 'T00:00:00').toLocaleDateString(
-                                                        i18n.language === 'is' ? 'is-IS' : 'en-US',
-                                                        { day: 'numeric', month: 'short', year: 'numeric' }
-                                                    )}
+                                                    {formatNextDate((event.displayDate ?? event.nextEditionDate)!, t)}
                                                 </Typography>
                                                 <Stack direction="row" alignItems="center" gap={0.5} flexWrap="wrap" justifyContent="center">
                                                     <EventDateBadge dateStr={(event.displayDate ?? event.nextEditionDate)!} />
@@ -238,46 +365,37 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events }) => {
                                         )}
                                     </TableCell>
 
-                                    {/* Name — activity icon inline */}
+                                    {/* Name — activity icon + type pill below */}
                                     <TableCell>
-                                        <Stack direction="row" alignItems="center" spacing={0.5}>
+                                        <Stack direction="row" alignItems="flex-start" spacing={0.5}>
                                             <Tooltip title={t(`races.activityTypes.${event.activityType}`, event.activityType)}>
-                                                <span>{getActivityIcon(event.activityType)}</span>
+                                                <span style={{ paddingTop: 2 }}>{getActivityIcon(event.activityType)}</span>
                                             </Tooltip>
-                                            <Typography
-                                                variant="body2"
-                                                fontWeight={500}
-                                                noWrap
-                                                sx={{
-                                                    maxWidth: 220,
-                                                    ...(event.status === 'Cancelled' && { textDecoration: 'line-through' }),
-                                                }}
-                                            >
-                                                {event.name}
-                                            </Typography>
-                                            {event.status === 'Cancelled' && (
-                                                <Chip label={t('races.statusCancelled')} size="small" color="error" sx={{ height: 18, fontSize: '0.65rem' }} />
-                                            )}
-                                        </Stack>
-                                    </TableCell>
-
-                                    {/* Type */}
-                                    <TableCell align="center">
-                                        <Chip label={t(`races.eventTypes.${event.type}`, event.type)} size="small" color={getEventTypeColor(event.type)} variant="outlined" sx={{ fontSize: '0.7rem', height: 22 }} />
-                                    </TableCell>
-
-                                    {/* Location */}
-                                    <TableCell>
-                                        {event.locationName ? (
-                                            <Stack direction="row" alignItems="center" spacing={0.5}>
-                                                <LocationOnIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
-                                                <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 130 }}>
-                                                    {event.locationName}
-                                                </Typography>
+                                            <Stack spacing={0.25}>
+                                                <Stack direction="row" alignItems="center" spacing={0.5}>
+                                                    <Typography
+                                                        variant="body2"
+                                                        fontWeight={700}
+                                                        noWrap
+                                                        sx={{
+                                                            maxWidth: 220,
+                                                            ...(event.status === 'Cancelled' && { textDecoration: 'line-through' }),
+                                                        }}
+                                                    >
+                                                        {event.name}
+                                                    </Typography>
+                                                    {event.type === 'Advertisement' && (
+                                                        <Chip label={t('races.eventTypes.Advertisement', 'Sponsored')} size="small" color="warning" sx={{ height: 18, fontSize: '0.65rem' }} />
+                                                    )}
+                                                    {event.status === 'Cancelled' && (
+                                                        <Chip label={t('races.statusCancelled')} size="small" color="error" sx={{ height: 18, fontSize: '0.65rem' }} />
+                                                    )}
+                                                </Stack>
+                                                {event.type !== 'Advertisement' && (
+                                                    <Chip label={t(`races.eventTypes.${event.type}`, event.type)} size="small" color={getEventTypeColor(event.type)} variant="outlined" sx={{ fontSize: '0.65rem', height: 18, alignSelf: 'flex-start' }} />
+                                                )}
                                             </Stack>
-                                        ) : (
-                                            <Typography variant="body2" color="text.secondary">—</Typography>
-                                        )}
+                                        </Stack>
                                     </TableCell>
 
                                     {/* Distances */}
@@ -302,25 +420,34 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events }) => {
                                         )}
                                     </TableCell>
 
-                                    {/* Credentials */}
-                                    <TableCell>
-                                        {(event.certifications?.length || event.championshipCategories?.length || event.itraPoints?.length) ? (
-                                            <Stack direction="row" flexWrap="wrap" gap={0.5} alignItems="center">
-                                                {event.itraPoints?.map((pts, i) => (
-                                                    <Tooltip key={i} title={`ITRA ${pts} points`}>
-                                                        <img
-                                                            src={`/images/itra-${pts}.png`}
-                                                            alt={`ITRA ${pts}`}
-                                                            style={{ height: 20, verticalAlign: 'middle' }}
-                                                        />
+
+                                    {/* Distance to user */}
+                                    {(() => {
+                                        const km = getDistanceKm(event);
+                                        return (
+                                            <TableCell>
+                                                {km != null ? (
+                                                    <Stack direction="row" alignItems="center" spacing={0.5}>
+                                                        <NearMeIcon sx={{ fontSize: 13, color: 'primary.main' }} />
+                                                        <Typography variant="body2" noWrap>{formatDistanceKm(km)}</Typography>
+                                                    </Stack>
+                                                ) : (
+                                                    <Tooltip title={userLocation ? t('races.nearMe.noGps') : t('races.nearMe.enableLocation')}>
+                                                        <Typography variant="body2" color="text.secondary" sx={{ cursor: 'help' }}>—</Typography>
                                                     </Tooltip>
-                                                ))}
-                                                {event.certifications?.map((c, i) => (
-                                                    <Chip key={i} label={c} size="small" variant="outlined" color="secondary" sx={{ fontSize: '0.68rem', height: 20 }} />
-                                                ))}
-                                                {event.championshipCategories?.map((c, i) => (
-                                                    <Chip key={i} label={c} size="small" variant="outlined" color="primary" sx={{ fontSize: '0.68rem', height: 20 }} />
-                                                ))}
+                                                )}
+                                            </TableCell>
+                                        );
+                                    })()}
+
+                                    {/* Location */}
+                                    <TableCell>
+                                        {event.locationName ? (
+                                            <Stack direction="row" alignItems="center" spacing={0.5}>
+                                                <LocationOnIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
+                                                <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 130 }}>
+                                                    {event.locationName}
+                                                </Typography>
                                             </Stack>
                                         ) : (
                                             <Typography variant="body2" color="text.secondary">—</Typography>
@@ -344,7 +471,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events }) => {
                                                     >
                                                         {t('races.register', 'Register')}
                                                     </Button>
-                                                    {event.registrationStatus && event.registrationStatus !== 'NotStarted' && (
+                                                    {event.registrationStatus && (
                                                         <Chip
                                                             label={t(`races.registrationStatus.${event.registrationStatus}`, event.registrationStatus)}
                                                             size="small"
@@ -421,7 +548,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events }) => {
                             </React.Fragment>
                         );
                     })}
-                    {sortedEvents.length === 0 && (
+                    {sortedRows.length === 0 && (
                         <TableRow>
                             <TableCell colSpan={totalColumns} align="center" sx={{ py: 4 }}>
                                 <Typography color="text.secondary">{t('races.noResults', 'No events found')}</Typography>
@@ -465,6 +592,36 @@ function RaceChipCard({ race, editionDate }: { race: RaceDto; editionDate?: stri
                     <Typography variant="caption" color="text.secondary">
                         {formattedDate}
                     </Typography>
+                )}
+                {(race.trailDifficulty || race.trailTerrainType || race.trailActivityType) && (
+                    <Stack direction="row" flexWrap="wrap" gap={0.5} alignItems="center">
+                        {race.trailDifficulty && (
+                            <Chip
+                                label={t(`difficulty.${race.trailDifficulty.toLowerCase()}`, race.trailDifficulty)}
+                                size="small"
+                                variant="outlined"
+                                sx={{ height: 20, fontSize: '0.65rem' }}
+                            />
+                        )}
+                        {race.trailTerrainType && (
+                            <Chip
+                                label={t(`trail.terrainType.${race.trailTerrainType}`, { defaultValue: race.trailTerrainType })}
+                                size="small"
+                                variant="outlined"
+                                sx={{ height: 20, fontSize: '0.65rem' }}
+                            />
+                        )}
+                        {race.trailActivityType && (
+                            <Chip
+                                icon={getActivityIcon(race.trailActivityType)}
+                                label={t(`difficulty.${race.trailActivityType.charAt(0).toLowerCase() + race.trailActivityType.slice(1)}`, race.trailActivityType)}
+                                size="small"
+                                variant="outlined"
+                                color="primary"
+                                sx={{ height: 20, fontSize: '0.65rem' }}
+                            />
+                        )}
+                    </Stack>
                 )}
                 <Stack direction="row" flexWrap="wrap" gap={0.5} alignItems="center">
                     {race.distanceLabel && (

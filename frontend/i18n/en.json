@@ -74,6 +74,7 @@
         "activities": "Activities",
         "disclaimer": "Disclaimer",
         "privacy": "Privacy",
+        "faq": "FAQ",
         "darkMode": "Switch to dark mode",
         "lightMode": "Switch to light mode",
         "switchToEnglish": "Switch to English",
@@ -89,7 +90,9 @@
         "aboutUs": "About us",
         "services": "Services",
         "challenge": "Challenge",
-        "allTrails": "All Trails"
+        "allTrails": "All Trails",
+        "allEvents": "All Events",
+        "eventsCalendar": "Calendar"
     },
     "spotlight": {
         "placeholder": "Search trails, locations and races...",
@@ -203,7 +206,13 @@
         "checkInToastJoined_one": "{{count}} runner just checked in.",
         "checkInToastJoined_other": "{{count}} runners just checked in.",
         "checkInToastLeft_one": "{{count}} runner checked out.",
-        "checkInToastLeft_other": "{{count}} runners checked out."
+        "checkInToastLeft_other": "{{count}} runners checked out.",
+        "terrainType": {
+            "Mountainous": "Mountainous",
+            "Hilly": "Hilly",
+            "Flat": "Flat",
+            "label": "Terrain Type"
+        }
     },
     "trailCard": {
         "removeFavorite": "Remove Favorite",
@@ -247,7 +256,13 @@
         "showOfflineOnly": "Show Offline Only",
         "tags": "Tags",
         "resetFilters": "Reset Filters",
-        "closeFilters": "Close"
+        "closeFilters": "Close",
+        "terrainType": {
+            "Mountainous": "Mountainous / Mountain Race",
+            "Hilly": "Hilly / Fell",
+            "Flat": "Flat / Rolling hills",
+            "label": "Terrain Type"
+        }
     },
     "difficulty": {
         "easy": "Easy",
@@ -258,9 +273,9 @@
         "dialogTitle": "Difficulty Rating Criteria",
         "explanation": "Difficulty is calculated using **effort distance**: the trail distance plus elevation gain divided by 100. For road running, only distance is used. Thresholds vary by activity type.",
         "level": "Level",
-        "trailRunning": "Trail Running",
-        "running": "Running",
-        "hiking": "Hiking",
+        "trailRunning": "Trail Run",
+        "running": "Road Run",
+        "hiking": "Hike",
         "cycling": "Cycling",
         "funRun": "Fun Run",
         "obstacleCourse": "Obstacle Course",
@@ -351,6 +366,39 @@
         "linkCopied": "Link copied to clipboard!",
         "messengerNotConfigured": "Messenger share needs app configuration here. Link copied instead."
     },
+    "faq": {
+        "title": "Frequently Asked Questions",
+        "subtitle": "Answers to common questions about trails, times, and events on Hlaupadagskra.is",
+        "estimatedTime": {
+            "q": "How is Estimated Time for trails calculated?",
+            "a": "See the model below. Times are estimates only — actual time depends on fitness, terrain conditions, and weather."
+        },
+        "terrainType": {
+            "q": "How is the terrain type (Flat / Hilly / Mountainous) decided?",
+            "a": "Terrain type is calculated automatically from the trail's GPS data using two factors: elevation gain per km (climb ratio) and maximum altitude above sea level. Flat: less than 20 m of gain per km. Mountainous: reaches above 600 m altitude with at least 30 m/km gain, or any trail climbing more than 50 m per km. Hilly: everything in between. Thresholds are calibrated for Icelandic conditions."
+        },
+        "relatedTrails": {
+            "q": "How are Related Trails found?",
+            "a": "Related trails are ranked by a scoring system. Trails that are part of the same series score highest. Points are then added for shared locations (area), shared tags, and the same activity type. Only trails with at least one matching factor are shown."
+        },
+        "difficulty": {
+            "q": "How is difficulty (Easy / Moderate / Hard / Expert / Extreme) calculated?",
+            "a": "Difficulty is based on an effort distance formula: effort = distance (km) + elevation gain (m) ÷ 100. This combines length and climbing into a single number that is then compared against thresholds tuned per activity type. Trail running and hiking thresholds are lower than cycling, for example, since the effort per km is greater. Road running, fun runs, and obstacle courses use distance only, since they typically have little elevation."
+        },
+        "itraIndex": {
+            "q": "What is the ITRA Performance Index?",
+            "a": "The ITRA Performance Index is a personal score (0–1000) that reflects your racing potential. Every time you finish an ITRA-certified race, you receive a Race Score based on your speed relative to a theoretical world-record pace on that course. Your Performance Index is the weighted average of your best 5 Race Scores over the last 36 months. Some races, like Laugavegur Ultra Trail, require a minimum index of 370 to enter. See the full guide for details.",
+            "link": "Open ITRA guide →"
+        },
+        "gpsDistance": {
+            "q": "How accurate is the trail length?",
+            "a": "Distances are calculated directly from the trail's GPX file using the coordinates of the recorded route. The accuracy depends on the quality of the source GPX — a well-recorded GPS track is typically accurate to within 1–2%. Distances are shown rounded to one decimal place."
+        },
+        "trailSuggestion": {
+            "q": "Can I suggest a trail or send a correction?",
+            "a": "Yes — use the tip button on any trail page to send a suggestion, correction, or additional information. For a brand new trail, you can also reach us via the contact page."
+        }
+    },
     "footer": {
         "checkingApi": "Checking API…",
         "healthy": "healthy",
@@ -386,6 +434,7 @@
         "linkText": "Learn more"
     },
     "sort": {
+        "date": "Date",
         "distance": "Nearest",
         "name": "Name (A–Ö)",
         "shortest": "Shortest",
@@ -565,7 +614,7 @@
     },
     "aboutUs": {
         "title": "About Hlaupadagskra.is",
-        "tagline": "All races in one place, all year round",
+        "tagline": "All events in one place, all year round",
         "p1": "Hlaupadagskra.is is Iceland's comprehensive running event calendar — a neutral platform consolidating confirmed and upcoming running events from across the country, including official road races, ITRA trail runs, and organised charity runs.",
         "p2": "Events are categorised, linked to registration pages, and connected to relevant social media. Status labels indicate whether events are confirmed, have registration open, or remain unconfirmed.",
         "teamTitle": "The team",
@@ -1053,14 +1102,14 @@
         "fourwd": "4WD"
     },
     "races": {
-        "title": "All Races in one place",
+        "title": "All events in one place",
         "subtitle": "Upcoming events and races in Iceland. Be sure to confirm final dates on the race organizer's website.",
         "searchPlaceholder": "Search events...",
         "noResults": "No events match your search",
         "empty": "No events yet",
         "noDate": "Date TBD",
-        "nextRace": "Next race:",
-        "lastRace": "Last race:",
+        "nextRace": "Next:",
+        "lastRace": "Last:",
         "today": "🔥 Today!",
         "raceDayBadge": "🏁 It's race day!",
         "tomorrow": "Tomorrow!",
@@ -1069,27 +1118,29 @@
         "daysAgo_one": "{{count}} day ago",
         "daysAgo_other": "{{count}} days ago",
         "daysUntil": "In {{count}} days",
-        "raceCount_one": "{{count}} course",
-        "raceCount_other": "{{count}} courses",
-        "raceCount": "{{count}} courses",
+        "raceCount_one": "{{count}} race",
+        "raceCount_other": "{{count}} races",
+        "raceCount": "{{count}} races",
         "editionCount_one": "{{count}} edition",
         "editionCount_other": "{{count}} editions",
         "editionCount": "{{count}} editions",
         "register": "Register",
         "results": "Results",
-        "organizerSite": "Organizer website",
+        "organizerSite": "Event website",
+        "directionsToEvent": "Directions to event",
         "addToCalendar": "Add to Calendar",
         "downloadIcs": "Download .ics (Apple/Other)",
         "racesHeading": "Races",
         "scheduleHeading": "Upcoming dates",
         "noRaces": "No races listed yet for this event.",
         "notFound": "Event not found",
-        "backToRaces": "Back to races",
+        "backToRaces": "Back to events",
         "wereYouLookingFor": "Were you looking for one of these?",
         "viewTrail": "View trail",
-        "cutoffHours_one": "{{count}} hour cutoff",
-        "cutoffHours_other": "{{count}} hours cutoff",
-        "cutoffHours": "{{count}}h cutoff",
+        "mountainRace": "Mountain race",
+        "cutoffHours_one": "{{count}} hour time limit",
+        "cutoffHours_other": "{{count}} hours time limit",
+        "cutoffHours": "{{count}}h time limit",
         "dateLocale": "en",
         "months": [
             "January",
@@ -1128,7 +1179,17 @@
         "scheduleApproximate": "Usually held in {{month}}",
         "scheduleApproximateRange": "Usually held in {{monthStart}}–{{monthEnd}}",
         "statusCancelled": "Cancelled",
-        "statusUpcoming": "Coming soon",
+        "certifiedBy": "Certified by",
+        "championshipCategory": "Championship category",
+        "raceDistance": "Race distance",
+        "raceDateTime": "Date & start time",
+        "trailDistance": "Trail distance",
+        "elevationGain": "Elevation gain",
+        "terrainType": "Terrain type",
+        "cutoffTime": "Time limit",
+        "ticketStatusLabel": "Registration status",
+        "maxParticipants": "Max participants",
+        "statusUpcoming": "Unconfirmed",
         "raceDayWeather": "Trail Weather – Race Forecast",
         "raceDayWeatherDesc": "Current conditions and 7-day forecast at the race route. Race day is highlighted.",
         "checklistTitle": "Race day checklist",
@@ -1172,7 +1233,7 @@
         "raceFinished": "🏁 Finished",
         "progressBar": {
             "waiting": "Waiting for start...",
-            "cutoffReached": "Cutoff time reached",
+            "cutoffReached": "Time limit reached",
             "remaining": "{{time}} remaining"
         },
         "checklistSavedLocally": "Saved on this device only.",
@@ -1195,9 +1256,9 @@
             "activeCount_other": "{{count}} filters active"
         },
         "activityTypes": {
-            "TrailRunning": "Trail Running",
-            "Running": "Running",
-            "Hiking": "Hiking",
+            "TrailRunning": "Trail Run",
+            "Running": "Road Run",
+            "Hiking": "Hike",
             "Cycling": "Cycling",
             "FunRun": "Fun Run",
             "ObstacleCourse": "Obstacle Course",
@@ -1210,7 +1271,7 @@
             "Championship": "Championship",
             "Fun": "Fun",
             "Festival": "Festival",
-            "Advertisement": "Ad"
+            "Advertisement": "Sponsored"
         },
         "history": {
             "title": "Event History",
@@ -1233,13 +1294,22 @@
             "noRaces": "No races for this edition",
             "soldOut": "Sold Out",
             "almostSoldOut": "Almost Full",
-            "cutoff": "Cutoff time",
+            "cutoff": "Time Limit",
             "certifications": "Credentials"
+        },
+        "nearMe": {
+            "label": "Near me",
+            "enable": "Sort by distance",
+            "disable": "Disable distance sort",
+            "denied": "Location access denied — enable it in your browser settings",
+            "noGps": "No GPS location set for this event",
+            "enableLocation": "Allow location access to see distance",
+            "distanceToStart": "Distance to the start location"
         },
         "registrationStatus": {
             "Open": "Open",
             "Closed": "Closed",
-            "NotStarted": ""
+            "NotStarted": "Coming Soon"
         },
         "ticketStatus": {
             "Free": "Free",
@@ -1384,7 +1454,7 @@
                 "items": [
                     "📌 What it is: Your personal global ranking score, ranging from 0 to 1000. It represents your theoretical maximum racing potential.",
                     "⚙️ How it works: Every time you finish an ITRA-certified race, you receive a personal Race Score based purely on your speed compared to a theoretical world-record pace on that specific course. Your overall Performance Index is the weighted average of your up to 5 best Race Scores over the last 36 months.",
-                    "🏔️ The Laugavegur Rule: To enter the Laugavegur Ultra Trail, organizers don't care how many ITRA Points you have. They strictly require an ITRA Performance Index of 370 or higher. This proves you have the physical engine and speed to clear the mountain safety cut-offs. (For context, finishing the 55km Laugavegur course in 9.5 hours equals roughly a 370 score)."
+                    "🏔️ The Laugavegur Rule: To enter the Laugavegur Ultra Trail, organizers don't care how many ITRA Points you have. They strictly require an ITRA Performance Index of 370 or higher. This proves you have the physical engine and speed to clear the mountain safety time limits. (For context, finishing the 55km Laugavegur course in 9 hours and 15 minutes equals roughly a 370 score)."
                 ]
             },
             {

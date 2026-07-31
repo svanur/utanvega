@@ -1,4 +1,4 @@
-import { Box, CssBaseline, ThemeProvider, createTheme, AppBar, Toolbar, Typography, Container, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Fab, Snackbar, Alert, Button, CircularProgress, Link, IconButton, Tooltip } from '@mui/material';
+import { Box, CssBaseline, ThemeProvider, createTheme, AppBar, Toolbar, Typography, Container, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Snackbar, Alert, Button, CircularProgress, Link, IconButton, Tooltip } from '@mui/material';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
@@ -10,7 +10,7 @@ import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import ViewDayOutlinedIcon from '@mui/icons-material/ViewDayOutlined';
 import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
 import PoolIcon from '@mui/icons-material/Pool';
-import AddCircleIcon from '@mui/icons-material/AddCircle';
+import GroupIcon from '@mui/icons-material/Group';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
@@ -20,6 +20,8 @@ import { BrowserRouter, useNavigate, useLocation } from 'react-router-dom';
 import TrailList from './pages/TrailList';
 import { LocationList } from './pages/LocationList';
 import TrailHealth from './pages/TrailHealth';
+import EventHealth from './pages/EventHealth';
+import EditionHealth from './pages/EditionHealth';
 import TrailMapView from './pages/TrailMapView';
 import TagManagement from './pages/TagManagement';
 import AnalyticsPage from './pages/AnalyticsPage';
@@ -27,6 +29,7 @@ import FeatureFlagsPage from './pages/FeatureFlagsPage';
 import EventList from './pages/EventList';
 import HeroThemesPage from './pages/HeroThemesPage';
 import SponsorsPage from './pages/SponsorsPage';
+import OrganizersPage from './pages/OrganizersPage';
 import PoolsPage from './pages/PoolsPage';
 import GpxUploadDialog from './components/GpxUploadDialog';
 import LoginPage from './pages/LoginPage';
@@ -35,7 +38,7 @@ import AdminSpotlightSearch from './components/AdminSpotlightSearch';
 import type { PageKey } from './types/PageKey';
 import KeyboardShortcutsDialog from './components/KeyboardShortcutsDialog';
 import { AuthProvider, useAuth } from './hooks/useAuth';
-import { useAdminShortcuts } from './hooks/useAdminShortcuts';
+import { useAdminShortcuts, GO_TO_PAGES } from './hooks/useAdminShortcuts';
 import KeyboardIcon from '@mui/icons-material/Keyboard';
 
 const theme = createTheme({
@@ -58,6 +61,8 @@ const PAGE_PATHS: Record<PageKey, string> = {
   trails: '/trails',
   locations: '/locations',
   health: '/health',
+  'event-health': '/event-health',
+  'edition-health': '/edition-health',
   map: '/map',
   tags: '/tags',
   analytics: '/analytics',
@@ -66,11 +71,25 @@ const PAGE_PATHS: Record<PageKey, string> = {
   'hero-themes': '/hero-themes',
   'sponsors': '/sponsors',
   'pools': '/pools',
+  'organizers': '/organizers',
 };
 
 function pathToPage(pathname: string): PageKey {
   const entry = Object.entries(PAGE_PATHS).find(([, path]) => path === pathname);
   return (entry?.[0] as PageKey) ?? 'events';
+}
+
+function MnemonicLabel({ label, mnemonic }: { label: string; mnemonic?: string }) {
+  if (!mnemonic) return <>{label}</>;
+  const idx = label.toLowerCase().indexOf(mnemonic.toLowerCase());
+  if (idx === -1) return <>{label}</>;
+  return (
+    <>
+      {label.slice(0, idx)}
+      <span style={{ textDecoration: 'underline', textUnderlineOffset: '3px' }}>{label[idx]}</span>
+      {label.slice(idx + 1)}
+    </>
+  );
 }
 
 function AdminContent() {
@@ -83,8 +102,10 @@ function AdminContent() {
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [selectedTrailId, setSelectedTrailId] = useState<string | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string | null>(null);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [pendingNav, setPendingNav] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean, message: React.ReactNode, severity: 'success' | 'error' }>({
     open: false,
     message: '',
@@ -108,6 +129,7 @@ function AdminContent() {
     onToggleTools: handleToggleTools,
     onShowHelp: () => setShowShortcuts(true),
     onFocusSearch: handleFocusSearch,
+    onPendingNavigation: setPendingNav,
     currentPage,
   });
 
@@ -227,7 +249,10 @@ function AdminContent() {
               { key: 'events' as const, icon: <EmojiEventsIcon />, label: 'Events' },
               { key: 'trails' as const, icon: <DashboardIcon />, label: 'Trails' },
               { key: 'locations' as const, icon: <LocationOnIcon />, label: 'Locations' },
+              { key: 'organizers' as const, icon: <GroupIcon />, label: 'Organizers' },
               { key: 'health' as const, icon: <HealthAndSafetyIcon />, label: 'Trail Health' },
+              { key: 'event-health' as const, icon: <HealthAndSafetyIcon sx={{ color: '#ed6c02' }} />, label: 'Event Health' },
+              { key: 'edition-health' as const, icon: <HealthAndSafetyIcon sx={{ color: '#9c27b0' }} />, label: 'Edition Health' },
               { key: 'map' as const, icon: <MapIcon />, label: 'Trail Map' },
               { key: 'tags' as const, icon: <LocalOfferIcon />, label: 'Tags' },
               { key: 'analytics' as const, icon: <BarChartIcon />, label: 'Analytics' },
@@ -235,22 +260,29 @@ function AdminContent() {
               { key: 'hero-themes' as const, icon: <ViewDayOutlinedIcon />, label: 'Hero Themes' },
               { key: 'sponsors' as const, icon: <ImageOutlinedIcon />, label: 'Sponsors' },
               { key: 'pools' as const, icon: <PoolIcon />, label: 'Pools' },
-            ].map(item => (
-              <ListItem key={item.key} disablePadding>
-                <Tooltip title={drawerOpen ? '' : item.label} placement="right">
-                  <ListItemButton
-                    selected={currentPage === item.key}
-                    onClick={() => setCurrentPage(item.key)}
-                    sx={{ justifyContent: drawerOpen ? 'initial' : 'center', px: 2 }}
+            ].map(item => {
+              const mnemonic = Object.entries(GO_TO_PAGES).find(([, v]) => v === item.key)?.[0];
+              const label = drawerOpen ? <MnemonicLabel label={item.label} mnemonic={mnemonic} /> : null;
+              return (
+                <ListItem key={item.key} disablePadding>
+                  <Tooltip
+                    title={drawerOpen ? '' : mnemonic ? `${item.label}  (g ${mnemonic})` : item.label}
+                    placement="right"
                   >
-                    <ListItemIcon sx={{ minWidth: drawerOpen ? 40 : 'auto', justifyContent: 'center' }}>
-                      {item.icon}
-                    </ListItemIcon>
-                    {drawerOpen && <ListItemText primary={item.label} />}
-                  </ListItemButton>
-                </Tooltip>
-              </ListItem>
-            ))}
+                    <ListItemButton
+                      selected={currentPage === item.key}
+                      onClick={() => setCurrentPage(item.key)}
+                      sx={{ justifyContent: drawerOpen ? 'initial' : 'center', px: 2 }}
+                    >
+                      <ListItemIcon sx={{ minWidth: drawerOpen ? 40 : 'auto', justifyContent: 'center' }}>
+                        {item.icon}
+                      </ListItemIcon>
+                      {drawerOpen && <ListItemText primary={label} />}
+                    </ListItemButton>
+                  </Tooltip>
+                </ListItem>
+              );
+            })}
           </List>
         </Box>
       </Drawer>
@@ -261,6 +293,10 @@ function AdminContent() {
             <TrailList key={`${refreshTrigger}-${selectedTrailId}-${searchTerm}`} onNotify={notify} initialTrailId={selectedTrailId} initialSearch={searchTerm} />
           ) : currentPage === 'health' ? (
             <TrailHealth onEditTrail={(id) => { setSelectedTrailId(id); setCurrentPage('trails'); }} onNotify={notify} />
+          ) : currentPage === 'event-health' ? (
+            <EventHealth onEditEvent={(id) => { setSelectedEventId(id); setCurrentPage('events'); }} onNotify={notify} />
+          ) : currentPage === 'edition-health' ? (
+            <EditionHealth onEditEvent={(id) => { setSelectedEventId(id); setCurrentPage('events'); }} onNotify={notify} />
           ) : currentPage === 'map' ? (
             <TrailMapView onEditTrail={(id) => { setSelectedTrailId(id); setCurrentPage('trails'); }} />
           ) : currentPage === 'tags' ? (
@@ -270,42 +306,43 @@ function AdminContent() {
           ) : currentPage === 'features' ? (
             <FeatureFlagsPage onNotify={notify} />
           ) : currentPage === 'events' ? (
-            <EventList onNotify={notify} />
+            <EventList initialEventId={selectedEventId} onEventIdConsumed={() => setSelectedEventId(null)} onNotify={notify} />
           ) : currentPage === 'hero-themes' ? (
             <HeroThemesPage />
           ) : currentPage === 'sponsors' ? (
             <SponsorsPage />
           ) : currentPage === 'pools' ? (
             <PoolsPage />
+          ) : currentPage === 'organizers' ? (
+            <OrganizersPage onNotify={notify} />
           ) : (
             <LocationList onNotify={notify} />
           )}
           
-          {currentPage === 'trails' && (
-            <Fab 
-                color="primary" 
-                aria-label="add" 
-                sx={{ position: 'fixed', bottom: 32, right: 32 }}
-                onClick={() => setIsUploadOpen(true)}
-            >
-                <AddCircleIcon />
-            </Fab>
-          )}
-
           <GpxUploadDialog 
               open={isUploadOpen} 
               onClose={() => setIsUploadOpen(false)} 
               onUploadSuccess={handleUploadSuccess}
           />
 
-          <Snackbar 
-              open={snackbar.open} 
-              autoHideDuration={6000} 
+          <Snackbar
+              open={snackbar.open}
+              autoHideDuration={6000}
               onClose={handleCloseSnackbar}
               anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
           >
               <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
                   {snackbar.message}
+              </Alert>
+          </Snackbar>
+
+          <Snackbar
+              open={pendingNav}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+              sx={{ mb: 1, ml: 1 }}
+          >
+              <Alert severity="info" icon={false} sx={{ py: 0.5, px: 1.5, fontFamily: 'monospace', fontSize: '0.85rem' }}>
+                  <strong>g</strong> · waiting for key…
               </Alert>
           </Snackbar>
         </Container>

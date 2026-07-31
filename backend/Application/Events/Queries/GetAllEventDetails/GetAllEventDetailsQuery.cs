@@ -23,6 +23,7 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
         var events = await _context.Events
             .AsNoTracking()
             .Include(e => e.Location)
+            .Include(e => e.Organizer)
             .Include(e => e.Editions)
                 .ThenInclude(ed => ed.Trail)
             .Include(e => e.Editions)
@@ -39,8 +40,9 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
             ev.Type.ToString(),
             ev.ActivityType.ToString(),
             ev.Status.ToString(),
-            ev.OrganizerName,
-            ev.OrganizerWebsite,
+            ev.Organizer?.Name ?? ev.OrganizerName,
+            ev.OrganizerWebsite ?? ev.Organizer?.Website,
+            ev.OrganizerId,
             ev.AlertMessage,
             ev.AlertSeverity,
             ev.LocationId,
@@ -88,7 +90,10 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
                             r.DateOfRace,
                             r.StartTime,
                             r.Trail?.Length,
-                            r.Trail?.ElevationGain
+                            r.Trail?.ElevationGain,
+                            r.Trail?.TerrainType?.ToString(),
+                            r.Trail?.Difficulty.ToString(),
+                            r.Trail?.ActivityTypeId.ToString()
                         ))
                         .ToList(),
                     ed.CreatedAt,

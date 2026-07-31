@@ -22,10 +22,10 @@ interface DetectedLocation {
 }
 
 const ACTIVITY_TYPES = [
-  { value: 'TrailRunning', label: 'Trail Running' },
-  { value: 'Running', label: 'Running' },
+  { value: 'TrailRunning', label: 'Trail Run' },
+  { value: 'Running', label: 'Road Run' },
   { value: 'Cycling', label: 'Cycling' },
-  { value: 'Hiking', label: 'Hiking' },
+  { value: 'Hiking', label: 'Hike' },
   { value: 'FunRun', label: 'Fun Run' },
   { value: 'ObstacleCourse', label: 'Obstacle Course' },
   { value: 'CrossCountryRun', label: 'Cross Country Run' },
