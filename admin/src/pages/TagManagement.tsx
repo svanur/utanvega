@@ -7,6 +7,7 @@ import {
 import { Delete as DeleteIcon, Edit as EditIcon, Add as AddIcon, Search as SearchIcon, Clear as ClearIcon } from '@mui/icons-material';
 import { useTags, TagDto } from '../hooks/useTags';
 import { apiFetch } from '../hooks/api';
+import BilingualTextField from '../components/BilingualTextField';
 
 const PRESET_COLORS = [
   '#2196f3', '#4caf50', '#ff9800', '#f44336', '#9c27b0',
@@ -19,7 +20,7 @@ interface TagManagementProps {
 
 export default function TagManagement({ onNotify }: TagManagementProps) {
   const { tags, loading, refresh } = useTags();
-  const [editTag, setEditTag] = useState<{ id?: string; name: string; color: string | null } | null>(null);
+  const [editTag, setEditTag] = useState<{ id?: string; name: string; nameEn?: string; color: string | null } | null>(null);
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -36,13 +37,13 @@ export default function TagManagement({ onNotify }: TagManagementProps) {
       if (editTag.id) {
         await apiFetch(`/api/v1/admin/tags/${editTag.id}`, {
           method: 'PUT',
-          body: JSON.stringify({ name: editTag.name, color: editTag.color }),
+          body: JSON.stringify({ name: editTag.name, nameEn: editTag.nameEn || undefined, color: editTag.color }),
         });
         onNotify(`Tag "${editTag.name}" updated`, 'success');
       } else {
         await apiFetch('/api/v1/admin/tags', {
           method: 'POST',
-          body: JSON.stringify({ name: editTag.name, color: editTag.color }),
+          body: JSON.stringify({ name: editTag.name, nameEn: editTag.nameEn || undefined, color: editTag.color }),
         });
         onNotify(`Tag "${editTag.name}" created`, 'success');
       }
@@ -126,7 +127,7 @@ export default function TagManagement({ onNotify }: TagManagementProps) {
                 <TableCell>{tag.slug}</TableCell>
                 <TableCell align="center">{tag.trailCount}</TableCell>
                 <TableCell align="right">
-                  <IconButton size="small" onClick={() => setEditTag({ id: tag.id, name: tag.name, color: tag.color })}>
+                  <IconButton size="small" onClick={() => setEditTag({ id: tag.id, name: tag.name, nameEn: tag.nameEn ?? undefined, color: tag.color })}>
                     <EditIcon fontSize="small" />
                   </IconButton>
                   <IconButton size="small" color="error" onClick={() => handleDelete(tag)}>
@@ -152,11 +153,13 @@ export default function TagManagement({ onNotify }: TagManagementProps) {
       <Dialog open={!!editTag} onClose={() => setEditTag(null)} maxWidth="xs" fullWidth>
         <DialogTitle>{editTag?.id ? 'Edit Tag' : 'New Tag'}</DialogTitle>
         <DialogContent>
-          <TextField
+          <BilingualTextField
             label="Tag Name"
             fullWidth
-            value={editTag?.name || ''}
-            onChange={e => setEditTag(prev => prev ? { ...prev, name: e.target.value } : null)}
+            valueIs={editTag?.name || ''}
+            valueEn={editTag?.nameEn || ''}
+            onChangeIs={v => setEditTag(prev => prev ? { ...prev, name: v } : null)}
+            onChangeEn={v => setEditTag(prev => prev ? { ...prev, nameEn: v } : null)}
             sx={{ mt: 1, mb: 2 }}
             autoFocus
           />

@@ -27,6 +27,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import GroupIcon from '@mui/icons-material/Group';
 import { useOrganizers, type OrganizerDto } from '../hooks/useOrganizers';
 import { trimToUndefined } from '../utils/strings';
+import BilingualTextField from '../components/BilingualTextField';
 
 interface Props {
     onNotify: (message: ReactNode, severity?: 'success' | 'error') => void;
@@ -39,6 +40,7 @@ const EMPTY_FORM = {
     email: '',
     website: '',
     description: '',
+    descriptionEn: '',
     contactName: '',
 };
 
@@ -71,6 +73,7 @@ export default function OrganizersPage({ onNotify }: Props) {
             email: org.email ?? '',
             website: org.website ?? '',
             description: org.description ?? '',
+            descriptionEn: org.descriptionEn ?? '',
             contactName: org.contactName ?? '',
         });
         setDialogOpen(true);
@@ -87,6 +90,7 @@ export default function OrganizersPage({ onNotify }: Props) {
                 email: trimToUndefined(form.email),
                 website: trimToUndefined(form.website),
                 description: trimToUndefined(form.description),
+                descriptionEn: trimToUndefined(form.descriptionEn),
                 contactName: trimToUndefined(form.contactName),
             };
             if (editTarget) {
@@ -258,10 +262,12 @@ export default function OrganizersPage({ onNotify }: Props) {
                                 fullWidth
                             />
                         </Box>
-                        <TextField
+                        <BilingualTextField
                             label="Description"
-                            value={form.description}
-                            onChange={e => setField('description', e.target.value)}
+                            valueIs={form.description}
+                            valueEn={form.descriptionEn}
+                            onChangeIs={v => setField('description', v)}
+                            onChangeEn={v => setField('descriptionEn', v)}
                             multiline
                             rows={3}
                             fullWidth

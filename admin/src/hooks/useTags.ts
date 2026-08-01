@@ -4,6 +4,7 @@ import { apiFetch } from './api';
 export interface TagDto {
     id: string;
     name: string;
+    nameEn: string | null;
     slug: string;
     color: string | null;
     trailCount: number;

@@ -6,8 +6,10 @@ export type LocationType = 'Country' | 'Area' | 'Region' | 'Municipality' | 'Pla
 export interface LocationDto {
     id: string;
     name: string;
+    nameEn: string | null;
     slug: string;
     description: string | null;
+    descriptionEn: string | null;
     type: LocationType;
     parentId: string | null;
     parentName: string | null;

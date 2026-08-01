@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
     Dialog, DialogTitle, DialogContent, DialogActions,
     Button, TextField, Box, Alert, Typography, Slider,
-    Tabs, Tab, Autocomplete, CircularProgress
+    Tabs, Tab, Autocomplete, CircularProgress, Stack
 } from '@mui/material';
 import { History as HistoryIcon, AutoFixHigh as WikiIcon } from '@mui/icons-material';
 import { MapContainer, TileLayer, Marker, Circle, useMapEvents, useMap } from 'react-leaflet';
@@ -10,6 +10,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { LocationDto, LocationType } from '../hooks/useLocations';
 import { apiFetch } from '../hooks/api';
+import BilingualTextField from './BilingualTextField';
 import ChangeLogList from './ChangeLogList';
 
 // Fix for default Leaflet marker icon
@@ -189,8 +190,10 @@ function MapPicker({ lat, lon, radius, onUpdate, onRadiusUpdate: _onRadiusUpdate
 
 export function LocationDialog({ open, onClose, onSaveSuccess, onNotify, location, allLocations }: LocationDialogProps) {
     const [name, setName] = useState('');
+    const [nameEn, setNameEn] = useState('');
     const [slug, setSlug] = useState('');
     const [description, setDescription] = useState('');
+    const [descriptionEn, setDescriptionEn] = useState('');
     const [type, setType] = useState<LocationType>('Place');
     const [parentId, setParentId] = useState<string>('');
     const [latitude, setLatitude] = useState<string>('');
@@ -230,8 +233,10 @@ export function LocationDialog({ open, onClose, onSaveSuccess, onNotify, locatio
     useEffect(() => {
         if (location) {
             setName(location.name);
+            setNameEn(location.nameEn || '');
             setSlug(location.slug);
             setDescription(location.description || '');
+            setDescriptionEn(location.descriptionEn || '');
             setType(location.type);
             setParentId(location.parentId || '');
             setLatitude(location.latitude?.toString() || '');
@@ -239,8 +244,10 @@ export function LocationDialog({ open, onClose, onSaveSuccess, onNotify, locatio
             setRadius(location.radius?.toString() || '');
         } else {
             setName('');
+            setNameEn('');
             setSlug('');
             setDescription('');
+            setDescriptionEn('');
             setType('Place');
             setParentId('');
             setLatitude('');
@@ -257,8 +264,10 @@ export function LocationDialog({ open, onClose, onSaveSuccess, onNotify, locatio
             const body = {
                 id: location?.id,
                 name,
+                nameEn: nameEn || null,
                 slug: slug || null,
                 description: description || null,
+                descriptionEn: descriptionEn || null,
                 type,
                 parentId: parentId || null,
                 latitude: latitude ? parseFloat(latitude) : null,
@@ -353,11 +362,20 @@ export function LocationDialog({ open, onClose, onSaveSuccess, onNotify, locatio
                                     fullWidth
                                     placeholder="auto-generated if empty"
                                 />
+                                <TextField
+                                    label="Name (EN)"
+                                    value={nameEn}
+                                    onChange={(e) => setNameEn(e.target.value)}
+                                    fullWidth
+                                    placeholder="English name"
+                                />
                                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
-                                    <TextField
+                                    <BilingualTextField
                                         label="Description"
-                                        value={description}
-                                        onChange={(e) => setDescription(e.target.value)}
+                                        valueIs={description}
+                                        valueEn={descriptionEn}
+                                        onChangeIs={(v) => setDescription(v)}
+                                        onChangeEn={(v) => setDescriptionEn(v)}
                                         fullWidth
                                         multiline
                                         rows={2}

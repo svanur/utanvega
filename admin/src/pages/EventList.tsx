@@ -85,6 +85,7 @@ import { useOrganizers } from '../hooks/useOrganizers';
 import { useTrails, type Trail } from '../hooks/useTrails';
 import { formatMinutesToHHmm, parseHHmmToMinutes } from '../utils/cutoffTime';
 import { trimToUndefined } from '../utils/strings';
+import BilingualTextField from '../components/BilingualTextField';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -105,15 +106,19 @@ interface EventListProps {
 
 interface EventFormState {
   name: string;
+  nameEn: string;
   slug: string;
   description: string;
+  descriptionEn: string;
   type: EventType;
   activityType: ActivityType;
   status: EventStatus;
   organizerName: string;
+  organizerNameEn: string;
   organizerWebsite: string;
   organizerId: string;
   alertMessage: string;
+  alertMessageEn: string;
   alertSeverity: AlertSeverity;
   locationId: string;
   hasSchedule: boolean;
@@ -139,9 +144,11 @@ interface EditionFormState {
   year: string;
   date: string;
   title: string;
+  titleEn: string;
   registrationUrl: string;
   resultsUrl: string;
   notes: string;
+  notesEn: string;
   registrationStatus: RegistrationStatus;
   trailId: string;
 }
@@ -150,17 +157,21 @@ interface RaceFormState {
   eventEditionId: string;
   trailId: string;
   name: string;
+  nameEn: string;
   distanceLabel: string;
   cutoffTime: string;
   description: string;
+  descriptionEn: string;
   status: RaceStatus;
   sortOrder: string;
   ticketStatus: TicketStatus;
   maxParticipants: string;
   itraPoints: string;
   certifiedBy: string;
+  certifiedByEn: string;
   prizeMoney: string;
   championshipCategory: string;
+  championshipCategoryEn: string;
   dateOfRace: string;
   startTime: string;
 }
@@ -443,15 +454,19 @@ function sortRaces(a: RaceDto, b: RaceDto): number {
 function createEmptyEventForm(): EventFormState {
   return {
     name: '',
+    nameEn: '',
     slug: '',
     description: '',
+    descriptionEn: '',
     type: 'Race',
     activityType: 'TrailRunning',
     status: 'Unconfirmed',
     organizerName: '',
+    organizerNameEn: '',
     organizerWebsite: '',
     organizerId: '',
     alertMessage: '',
+    alertMessageEn: '',
     alertSeverity: 'info',
     locationId: '',
     hasSchedule: false,
@@ -479,9 +494,11 @@ function createEmptyEditionForm(eventId = '', eventType: EventType = 'Race', eve
     year: new Date().getFullYear().toString(),
     date: '',
     title: '',
+    titleEn: '',
     registrationUrl: '',
     resultsUrl: '',
     notes: '',
+    notesEn: '',
     registrationStatus: 'NotStarted',
     trailId: '',
   };
@@ -492,17 +509,21 @@ function createEmptyRaceForm(eventEditionId = '', sortOrder = 0): RaceFormState 
     eventEditionId,
     trailId: '',
     name: '',
+    nameEn: '',
     distanceLabel: '',
     cutoffTime: '',
     description: '',
+    descriptionEn: '',
     status: 'Active',
     sortOrder: String(sortOrder),
     ticketStatus: 'Available',
     maxParticipants: '',
     itraPoints: '',
     certifiedBy: '',
+    certifiedByEn: '',
     prizeMoney: '0',
     championshipCategory: '',
+    championshipCategoryEn: '',
     dateOfRace: '',
     startTime: '',
   };
@@ -530,15 +551,19 @@ function buildEventForm(event: EventSummaryDto): EventFormState {
   const rule = event.scheduleRule;
   return {
     name: event.name,
+    nameEn: event.nameEn ?? '',
     slug: event.slug,
     description: event.description ?? '',
+    descriptionEn: event.descriptionEn ?? '',
     type: event.type,
     activityType: event.activityType,
     status: event.status,
     organizerName: event.organizerName ?? '',
+    organizerNameEn: event.organizerNameEn ?? '',
     organizerWebsite: event.organizerWebsite ?? '',
     organizerId: event.organizerId ?? '',
     alertMessage: event.alertMessage ?? '',
+    alertMessageEn: event.alertMessageEn ?? '',
     alertSeverity: event.alertSeverity ?? 'info',
     locationId: event.locationId ?? '',
     hasSchedule: rule != null,
@@ -566,9 +591,11 @@ function buildEditionForm(edition: EventEditionDto, eventType: EventType = 'Race
     year: edition.year?.toString() ?? '',
     date: edition.date ?? '',
     title: edition.title ?? '',
+    titleEn: edition.titleEn ?? '',
     registrationUrl: edition.registrationUrl ?? '',
     resultsUrl: edition.resultsUrl ?? '',
     notes: edition.notes ?? '',
+    notesEn: edition.notesEn ?? '',
     registrationStatus: edition.registrationStatus,
     trailId: edition.trailId ?? '',
   };
@@ -579,17 +606,21 @@ function buildRaceForm(race: RaceDto): RaceFormState {
     eventEditionId: race.eventEditionId,
     trailId: race.trailId ?? '',
     name: race.name,
+    nameEn: race.nameEn ?? '',
     distanceLabel: race.distanceLabel ?? '',
     cutoffTime: formatMinutesToHHmm(race.cutoffMinutes) ?? '',
     description: race.description ?? '',
+    descriptionEn: race.descriptionEn ?? '',
     status: race.status,
     sortOrder: race.sortOrder.toString(),
     ticketStatus: race.ticketStatus,
     maxParticipants: race.maxParticipants?.toString() ?? '',
     itraPoints: race.itraPoints?.toString() ?? '',
     certifiedBy: race.certifiedBy ?? '',
+    certifiedByEn: race.certifiedByEn ?? '',
     prizeMoney: race.prizeMoney.toString(),
     championshipCategory: race.championshipCategory ?? '',
+    championshipCategoryEn: race.championshipCategoryEn ?? '',
     dateOfRace: race.dateOfRace ?? '',
     startTime: race.startTime ? race.startTime.slice(0, 5) : '',
   };
@@ -1203,14 +1234,18 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
 
       const baseInput = {
         name: eventForm.name.trim(),
+        nameEn: trimToUndefined(eventForm.nameEn),
         description: trimToUndefined(eventForm.description),
+        descriptionEn: trimToUndefined(eventForm.descriptionEn),
         type: eventForm.type,
         activityType: eventForm.activityType,
         status: eventForm.status,
         organizerName: trimToUndefined(eventForm.organizerName),
+        organizerNameEn: trimToUndefined(eventForm.organizerNameEn),
         organizerWebsite: trimToUndefined(eventForm.organizerWebsite),
         organizerId: eventForm.organizerId || null,
         alertMessage: trimToUndefined(eventForm.alertMessage),
+        alertMessageEn: trimToUndefined(eventForm.alertMessageEn),
         alertSeverity: eventForm.alertMessage.trim() ? eventForm.alertSeverity : undefined,
         locationId: eventForm.locationId || null,
         scheduleRule: buildScheduleRule(eventForm),
@@ -1269,9 +1304,11 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
         year: editionForm.year.trim() ? Number(editionForm.year) : null,
         date: editionForm.date || null,
         title: trimToUndefined(editionForm.title),
+        titleEn: trimToUndefined(editionForm.titleEn),
         registrationUrl: trimToUndefined(editionForm.registrationUrl),
         resultsUrl: trimToUndefined(editionForm.resultsUrl),
         notes: trimToUndefined(editionForm.notes),
+        notesEn: trimToUndefined(editionForm.notesEn),
         registrationStatus: editionForm.registrationStatus,
         trailId: isRaceOrSeries ? null : (editionForm.trailId || null),
       };
@@ -1466,17 +1503,21 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
         eventEditionId: raceForm.eventEditionId,
         trailId: raceForm.trailId || null,
         name: raceForm.name.trim(),
+        nameEn: trimToUndefined(raceForm.nameEn),
         distanceLabel: trimToUndefined(raceForm.distanceLabel),
         cutoffMinutes: parsedCutoffMinutes,
         description: trimToUndefined(raceForm.description),
+        descriptionEn: trimToUndefined(raceForm.descriptionEn),
         status: raceForm.status,
         sortOrder: raceForm.sortOrder.trim() ? Number(raceForm.sortOrder) : 0,
         ticketStatus: raceForm.ticketStatus,
         maxParticipants: raceForm.maxParticipants.trim() ? Number(raceForm.maxParticipants) : null,
         itraPoints: raceForm.itraPoints.trim() !== '' ? Number(raceForm.itraPoints) : null,
         certifiedBy: trimToUndefined(raceForm.certifiedBy),
+        certifiedByEn: trimToUndefined(raceForm.certifiedByEn),
         prizeMoney: raceForm.prizeMoney.trim() ? Number(raceForm.prizeMoney) : 0,
         championshipCategory: trimToUndefined(raceForm.championshipCategory),
+        championshipCategoryEn: trimToUndefined(raceForm.championshipCategoryEn),
         dateOfRace: raceForm.dateOfRace || null,
         startTime: raceForm.startTime || null,
       };
@@ -1485,17 +1526,21 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
         await updateRace(editRaceId, {
           trailId: input.trailId,
           name: input.name,
+          nameEn: input.nameEn,
           distanceLabel: input.distanceLabel,
           cutoffMinutes: input.cutoffMinutes,
           description: input.description,
+          descriptionEn: input.descriptionEn,
           status: input.status,
           sortOrder: input.sortOrder,
           ticketStatus: input.ticketStatus,
           maxParticipants: input.maxParticipants,
           itraPoints: input.itraPoints,
           certifiedBy: input.certifiedBy,
+          certifiedByEn: input.certifiedByEn,
           prizeMoney: input.prizeMoney,
           championshipCategory: input.championshipCategory,
+          championshipCategoryEn: input.championshipCategoryEn,
           dateOfRace: input.dateOfRace,
           startTime: input.startTime,
         });
@@ -2357,10 +2402,12 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
         <DialogTitle>{editEventId ? 'Edit Event' : 'New Event'}</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
-            <TextField
+            <BilingualTextField
               label="Name"
-              value={eventForm.name}
-              onChange={(event) => setEventField('name', event.target.value)}
+              valueIs={eventForm.name}
+              valueEn={eventForm.nameEn}
+              onChangeIs={(v) => setEventField('name', v)}
+              onChangeEn={(v) => setEventField('nameEn', v)}
               autoFocus
               required
               fullWidth
@@ -2394,10 +2441,12 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                 </Select>
               </FormControl>
             </Box>
-            <TextField
+            <BilingualTextField
               label="Description"
-              value={eventForm.description}
-              onChange={(event) => setEventField('description', event.target.value)}
+              valueIs={eventForm.description}
+              valueEn={eventForm.descriptionEn}
+              onChangeIs={(v) => setEventField('description', v)}
+              onChangeEn={(v) => setEventField('descriptionEn', v)}
               multiline
               rows={3}
               fullWidth
@@ -2481,10 +2530,12 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
             <Box>
               <Typography variant="subtitle2" sx={{ mb: 1 }}>Alert Banner</Typography>
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '2fr 1fr' }, gap: 2, alignItems: 'flex-start' }}>
-                <TextField
+                <BilingualTextField
                   label="Alert Message"
-                  value={eventForm.alertMessage}
-                  onChange={(event) => setEventField('alertMessage', event.target.value)}
+                  valueIs={eventForm.alertMessage}
+                  valueEn={eventForm.alertMessageEn}
+                  onChangeIs={(v) => setEventField('alertMessage', v)}
+                  onChangeEn={(v) => setEventField('alertMessageEn', v)}
                   placeholder="e.g. Registration closes May 1st"
                   helperText="Leave empty for no alert"
                   fullWidth
@@ -2768,11 +2819,14 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                 inputProps={{ lang: 'is' }}
               />
             </Box>
-            <TextField
+            <BilingualTextField
               label="Title"
-              value={editionForm.title}
-              onChange={(event) => setEditionField('title', event.target.value)}
+              valueIs={editionForm.title}
+              valueEn={editionForm.titleEn}
+              onChangeIs={(v) => setEditionField('title', v)}
+              onChangeEn={(v) => setEditionField('titleEn', v)}
               placeholder="e.g. 2026 Summer Edition"
+              fullWidth
             />
             <FormControl fullWidth>
               <InputLabel>Registration Status</InputLabel>
@@ -2814,12 +2868,15 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                 <IconButton size="small" onClick={() => setEditionField('resultsUrl', '')}><ClearIcon fontSize="small" /></IconButton>
               ) : null }}
             />
-            <TextField
+            <BilingualTextField
               label="Notes"
-              value={editionForm.notes}
-              onChange={(event) => setEditionField('notes', event.target.value)}
+              valueIs={editionForm.notes}
+              valueEn={editionForm.notesEn}
+              onChangeIs={(v) => setEditionField('notes', v)}
+              onChangeEn={(v) => setEditionField('notesEn', v)}
               multiline
               rows={3}
+              fullWidth
             />
           </Box>
         </DialogContent>
@@ -2880,12 +2937,15 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
               isOptionEqualToValue={(option, value) => option.id === value.id}
               renderInput={(params) => <TextField {...params} label="Linked Trail" />}
             />
-            <TextField
+            <BilingualTextField
               label="Race Name"
               placeholder="e.g. 55 km"
-              value={raceForm.name}
-              onChange={(event) => setRaceField('name', event.target.value)}
+              valueIs={raceForm.name}
+              valueEn={raceForm.nameEn}
+              onChangeIs={(v) => setRaceField('name', v)}
+              onChangeEn={(v) => setRaceField('nameEn', v)}
               required
+              fullWidth
             />
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 140px' }, gap: 2 }}>
               <TextField
@@ -2953,15 +3013,21 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
               />
             </Box>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
-              <TextField
+              <BilingualTextField
                 label="Certified By"
-                value={raceForm.certifiedBy}
-                onChange={(event) => setRaceField('certifiedBy', event.target.value)}
+                valueIs={raceForm.certifiedBy}
+                valueEn={raceForm.certifiedByEn}
+                onChangeIs={(v) => setRaceField('certifiedBy', v)}
+                onChangeEn={(v) => setRaceField('certifiedByEn', v)}
+                fullWidth
               />
-              <TextField
+              <BilingualTextField
                 label="Championship Category"
-                value={raceForm.championshipCategory}
-                onChange={(event) => setRaceField('championshipCategory', event.target.value)}
+                valueIs={raceForm.championshipCategory}
+                valueEn={raceForm.championshipCategoryEn}
+                onChangeIs={(v) => setRaceField('championshipCategory', v)}
+                onChangeEn={(v) => setRaceField('championshipCategoryEn', v)}
+                fullWidth
               />
             </Box>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
@@ -2988,12 +3054,15 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                 InputLabelProps={{ shrink: true }}
               />
             </Box>
-            <TextField
+            <BilingualTextField
               label="Description"
-              value={raceForm.description}
-              onChange={(event) => setRaceField('description', event.target.value)}
+              valueIs={raceForm.description}
+              valueEn={raceForm.descriptionEn}
+              onChangeIs={(v) => setRaceField('description', v)}
+              onChangeEn={(v) => setRaceField('descriptionEn', v)}
               multiline
               rows={3}
+              fullWidth
             />
           </Box>
         </DialogContent>
