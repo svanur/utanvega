@@ -9,6 +9,7 @@ public class Organizer
     public string? Email { get; set; }
     public string? Website { get; set; }
     public string? Description { get; set; }
+    public string? DescriptionEn { get; set; }
     public string? ContactName { get; set; }
 
     // Auditing

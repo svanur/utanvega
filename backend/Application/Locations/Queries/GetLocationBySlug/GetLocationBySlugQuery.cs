@@ -43,8 +43,10 @@ public class GetLocationBySlugQueryHandler : IRequestHandler<GetLocationBySlugQu
         var locationDto = new LocationDto(
             location.Id,
             location.Name,
+            location.NameEn,
             location.Slug,
             location.Description,
+            location.DescriptionEn,
             location.Type.ToString(),
             location.ParentId,
             location.Parent?.Name,
@@ -60,7 +62,7 @@ public class GetLocationBySlugQueryHandler : IRequestHandler<GetLocationBySlugQu
             .Where(l => l.ParentId == location.Id)
             .OrderBy(l => l.Name)
             .Select(l => new LocationDto(
-                l.Id, l.Name, l.Slug, l.Description, l.Type.ToString(),
+                l.Id, l.Name, l.NameEn, l.Slug, l.Description, l.DescriptionEn, l.Type.ToString(),
                 l.ParentId, location.Name, l.Center != null ? l.Center.Y : null,
                 l.Center != null ? l.Center.X : null, l.Radius,
                 l.Children.Count, l.TrailLocations.Count))

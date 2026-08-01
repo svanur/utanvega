@@ -16,7 +16,9 @@ public record CreateLocationCommand(
     double? Latitude,
     double? Longitude,
     double? Radius,
-    string? CreatedBy
+    string? CreatedBy,
+    string? NameEn = null,
+    string? DescriptionEn = null
 ) : IRequest<Guid>;
 
 public class CreateLocationCommandHandler : IRequestHandler<CreateLocationCommand, Guid>
@@ -45,8 +47,10 @@ public class CreateLocationCommandHandler : IRequestHandler<CreateLocationComman
         var location = new Utanvega.Backend.Core.Entities.Location
         {
             Name = request.Name,
+            NameEn = request.NameEn,
             Slug = slug,
             Description = request.Description,
+            DescriptionEn = request.DescriptionEn,
             Type = type,
             ParentId = request.ParentId,
             Center = center,

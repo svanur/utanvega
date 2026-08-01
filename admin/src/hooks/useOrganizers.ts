@@ -22,6 +22,7 @@ export interface CreateOrganizerInput {
     email?: string;
     website?: string;
     description?: string;
+    descriptionEn?: string;
     contactName?: string;
 }
 

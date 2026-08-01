@@ -22,7 +22,11 @@ public record UpdateRaceCommand(
     decimal PrizeMoney,
     string? ChampionshipCategory,
     DateOnly? DateOfRace,
-    TimeOnly? StartTime
+    TimeOnly? StartTime,
+    string? NameEn = null,
+    string? DescriptionEn = null,
+    string? CertifiedByEn = null,
+    string? ChampionshipCategoryEn = null
 ) : IRequest<bool>;
 
 public class UpdateRaceCommandHandler : IRequestHandler<UpdateRaceCommand, bool>
@@ -50,17 +54,21 @@ public class UpdateRaceCommandHandler : IRequestHandler<UpdateRaceCommand, bool>
 
         race.TrailId = request.TrailId;
         race.Name = request.Name;
+        race.NameEn = request.NameEn;
         race.DistanceLabel = request.DistanceLabel;
         race.CutoffMinutes = request.CutoffMinutes;
         race.Description = request.Description;
+        race.DescriptionEn = request.DescriptionEn;
         race.Status = status;
         race.SortOrder = request.SortOrder;
         race.TicketStatus = ticketStatus;
         race.MaxParticipants = request.MaxParticipants;
         race.ItraPoints = request.ItraPoints;
         race.CertifiedBy = request.CertifiedBy;
+        race.CertifiedByEn = request.CertifiedByEn;
         race.PrizeMoney = request.PrizeMoney;
         race.ChampionshipCategory = request.ChampionshipCategory;
+        race.ChampionshipCategoryEn = request.ChampionshipCategoryEn;
         race.DateOfRace = request.DateOfRace;
         race.StartTime = request.StartTime;
 

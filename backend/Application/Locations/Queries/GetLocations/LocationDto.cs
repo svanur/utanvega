@@ -5,8 +5,10 @@ using Utanvega.Backend.Core.Entities;
 public record LocationDto(
     Guid Id,
     string Name,
+    string? NameEn,
     string Slug,
     string? Description,
+    string? DescriptionEn,
     string Type,
     Guid? ParentId,
     string? ParentName,

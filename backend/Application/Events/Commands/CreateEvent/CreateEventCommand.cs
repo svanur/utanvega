@@ -22,7 +22,11 @@ public record CreateEventCommand(
     ScheduleRule? ScheduleRule,
     List<SocialLink>? SocialLinks,
     double? GpxPointLat = null,
-    double? GpxPointLng = null
+    double? GpxPointLng = null,
+    string? NameEn = null,
+    string? DescriptionEn = null,
+    string? OrganizerNameEn = null,
+    string? AlertMessageEn = null
 ) : IRequest<Guid>;
 
 public class CreateEventCommandHandler : IRequestHandler<CreateEventCommand, Guid>
@@ -47,15 +51,19 @@ public class CreateEventCommandHandler : IRequestHandler<CreateEventCommand, Gui
         var ev = new Core.Entities.Event
         {
             Name = request.Name,
+            NameEn = request.NameEn,
             Slug = slug,
             Description = request.Description,
+            DescriptionEn = request.DescriptionEn,
             Type = type,
             ActivityType = activityType,
             Status = status,
             OrganizerName = request.OrganizerName,
+            OrganizerNameEn = request.OrganizerNameEn,
             OrganizerWebsite = request.OrganizerWebsite,
             OrganizerId = request.OrganizerId,
             AlertMessage = request.AlertMessage,
+            AlertMessageEn = request.AlertMessageEn,
             AlertSeverity = request.AlertSeverity,
             LocationId = request.LocationId,
             ScheduleRule = request.ScheduleRule,

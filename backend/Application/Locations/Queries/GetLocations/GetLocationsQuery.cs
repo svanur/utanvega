@@ -51,8 +51,10 @@ public class GetLocationsQueryHandler : IRequestHandler<GetLocationsQuery, List<
             .Select(l => new LocationDto(
                 l.Id,
                 l.Name,
+                l.NameEn,
                 l.Slug,
                 l.Description,
+                l.DescriptionEn,
                 l.Type.ToString(),
                 l.ParentId,
                 l.Parent != null ? l.Parent.Name : null,

@@ -22,7 +22,11 @@ public record CreateRaceCommand(
     decimal PrizeMoney,
     string? ChampionshipCategory,
     DateOnly? DateOfRace,
-    TimeOnly? StartTime
+    TimeOnly? StartTime,
+    string? NameEn = null,
+    string? DescriptionEn = null,
+    string? CertifiedByEn = null,
+    string? ChampionshipCategoryEn = null
 ) : IRequest<Guid>;
 
 public class CreateRaceCommandHandler : IRequestHandler<CreateRaceCommand, Guid>
@@ -46,17 +50,21 @@ public class CreateRaceCommandHandler : IRequestHandler<CreateRaceCommand, Guid>
             EventEditionId = request.EventEditionId,
             TrailId = request.TrailId,
             Name = request.Name,
+            NameEn = request.NameEn,
             DistanceLabel = request.DistanceLabel,
             CutoffMinutes = request.CutoffMinutes,
             Description = request.Description,
+            DescriptionEn = request.DescriptionEn,
             Status = status,
             SortOrder = request.SortOrder,
             TicketStatus = ticketStatus,
             MaxParticipants = request.MaxParticipants,
             ItraPoints = request.ItraPoints,
             CertifiedBy = request.CertifiedBy,
+            CertifiedByEn = request.CertifiedByEn,
             PrizeMoney = request.PrizeMoney,
             ChampionshipCategory = request.ChampionshipCategory,
+            ChampionshipCategoryEn = request.ChampionshipCategoryEn,
             DateOfRace = request.DateOfRace,
             StartTime = request.StartTime,
         };

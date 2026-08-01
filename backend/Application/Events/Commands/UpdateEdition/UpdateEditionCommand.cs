@@ -15,7 +15,9 @@ public record UpdateEditionCommand(
     string? ResultsUrl,
     string? Notes,
     string RegistrationStatus,
-    Guid? TrailId
+    Guid? TrailId,
+    string? TitleEn = null,
+    string? NotesEn = null
 ) : IRequest<bool>;
 
 public class UpdateEditionCommandHandler : IRequestHandler<UpdateEditionCommand, bool>
@@ -42,9 +44,11 @@ public class UpdateEditionCommandHandler : IRequestHandler<UpdateEditionCommand,
         edition.Year = request.Year;
         edition.Date = request.Date;
         edition.Title = request.Title;
+        edition.TitleEn = request.TitleEn;
         edition.RegistrationUrl = request.RegistrationUrl;
         edition.ResultsUrl = request.ResultsUrl;
         edition.Notes = request.Notes;
+        edition.NotesEn = request.NotesEn;
         edition.RegistrationStatus = regStatus;
         edition.TrailId = request.TrailId;
         edition.UpdatedAt = DateTime.UtcNow;

@@ -16,8 +16,10 @@ public class Location
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get; set; } = string.Empty;
+    public string? NameEn { get; set; }
     public string Slug { get; set; } = string.Empty;
     public string? Description { get; set; }
+    public string? DescriptionEn { get; set; }
     
     public LocationType Type { get; set; } = LocationType.Place;
     

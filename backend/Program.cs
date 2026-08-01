@@ -1169,7 +1169,7 @@ app.MapGet("/api/v1/admin/tags", [Authorize] async (UtanvegaDbContext context) =
     var tags = await context.Tags
         .AsNoTracking()
         .OrderBy(t => t.Name)
-        .Select(t => new { t.Id, t.Name, t.Slug, t.Color, TrailCount = t.TrailTags.Count })
+        .Select(t => new { t.Id, t.Name, t.NameEn, t.Slug, t.Color, TrailCount = t.TrailTags.Count })
         .ToListAsync();
     return Results.Ok(tags);
 })
@@ -1180,6 +1180,7 @@ app.MapPost("/api/v1/admin/tags", [Authorize] async (TagCreateDto dto, UtanvegaD
     var tag = new Utanvega.Backend.Core.Entities.Tag
     {
         Name = dto.Name,
+        NameEn = dto.NameEn,
         Slug = Utanvega.Backend.Core.Services.SlugGenerator.Generate(dto.Name),
         Color = dto.Color
     };
@@ -1194,6 +1195,7 @@ app.MapPut("/api/v1/admin/tags/{id:guid}", [Authorize] async (Guid id, TagCreate
     var tag = await context.Tags.FindAsync(id);
     if (tag == null) return Results.NotFound();
     tag.Name = dto.Name;
+    tag.NameEn = dto.NameEn;
     tag.Slug = Utanvega.Backend.Core.Services.SlugGenerator.Generate(dto.Name);
     tag.Color = dto.Color;
     await context.SaveChangesWithAuditAsync("admin");
@@ -1942,7 +1944,7 @@ finally
 }
 
 public record SendTipRequest(string PageUrl, string Message);
-public record TagCreateDto(string Name, string? Color);
+public record TagCreateDto(string Name, string? Color, string? NameEn = null);
 public record BulkAddTagRequest(List<Guid> TrailIds, Guid TagId);
 public record TrailLocationAddRequest(Guid LocationId, string? Role);
 public record FeatureFlagCreateDto(string Name, bool Enabled = true, string? Description = null);
