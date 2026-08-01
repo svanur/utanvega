@@ -61,6 +61,7 @@ import {
   Map as MapIcon,
   MyLocation as MyLocationIcon,
   Search as SearchIcon,
+  Translate as TranslateIcon,
 } from '@mui/icons-material';
 import {
   useEvents,
@@ -86,6 +87,7 @@ import { useTrails, type Trail } from '../hooks/useTrails';
 import { formatMinutesToHHmm, parseHHmmToMinutes } from '../utils/cutoffTime';
 import { trimToUndefined } from '../utils/strings';
 import BilingualTextField from '../components/BilingualTextField';
+import { useTranslate } from '../hooks/useTranslate';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -925,6 +927,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
   const [expandedEditionIds, setExpandedEditionIds] = useState<string[]>([]);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [saving, setSaving] = useState(false);
+  const { translate, translating } = useTranslate();
   const [sortBy, setSortBy] = useState<'name' | 'activityType' | 'type' | 'nextEditionDate' | 'status' | 'editionCount' | 'locationName' | 'updatedAt'>('updatedAt');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [searchQuery, setSearchQuery] = useState('');
@@ -2750,6 +2753,21 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowEventDialog(false)}>Cancel</Button>
+          <Button
+            startIcon={translating ? <CircularProgress size={16} /> : <TranslateIcon />}
+            disabled={translating || (!eventForm.name.trim() && !eventForm.description.trim() && !eventForm.organizerName.trim() && !eventForm.alertMessage.trim())}
+            onClick={async () => {
+              const [nameEn, descEn, orgEn, alertEn] = await translate([
+                eventForm.name, eventForm.description, eventForm.organizerName, eventForm.alertMessage,
+              ]);
+              if (nameEn) setEventField('nameEn', nameEn);
+              if (descEn) setEventField('descriptionEn', descEn);
+              if (orgEn) setEventField('organizerNameEn', orgEn);
+              if (alertEn) setEventField('alertMessageEn', alertEn);
+            }}
+          >
+            Translate to EN
+          </Button>
           <Button variant="contained" onClick={handleSaveEvent} disabled={!eventForm.name.trim() || saving}>
             {saving ? <CircularProgress size={20} /> : editEventId ? 'Update Event' : 'Create Event'}
           </Button>
@@ -2882,6 +2900,17 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowEditionDialog(false)}>Cancel</Button>
+          <Button
+            startIcon={translating ? <CircularProgress size={16} /> : <TranslateIcon />}
+            disabled={translating || (!editionForm.title.trim() && !editionForm.notes.trim())}
+            onClick={async () => {
+              const [titleEn, notesEn] = await translate([editionForm.title, editionForm.notes]);
+              if (titleEn) setEditionField('titleEn', titleEn);
+              if (notesEn) setEditionField('notesEn', notesEn);
+            }}
+          >
+            Translate to EN
+          </Button>
           <Button variant="contained" onClick={handleSaveEdition} disabled={saving}>
             {saving ? <CircularProgress size={20} /> : editEditionId ? 'Update Edition' : 'Create Edition'}
           </Button>
@@ -3079,6 +3108,21 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
           ) : <Box />}
           <Box>
             <Button onClick={() => { setShowRaceDialog(false); setApplyToAllEditions(false); }}>Cancel</Button>
+            <Button
+              startIcon={translating ? <CircularProgress size={16} /> : <TranslateIcon />}
+              disabled={translating || (!raceForm.name.trim() && !raceForm.description.trim() && !raceForm.certifiedBy.trim() && !raceForm.championshipCategory.trim())}
+              onClick={async () => {
+                const [nameEn, descEn, certEn, champEn] = await translate([
+                  raceForm.name, raceForm.description, raceForm.certifiedBy, raceForm.championshipCategory,
+                ]);
+                if (nameEn) setRaceField('nameEn', nameEn);
+                if (descEn) setRaceField('descriptionEn', descEn);
+                if (certEn) setRaceField('certifiedByEn', certEn);
+                if (champEn) setRaceField('championshipCategoryEn', champEn);
+              }}
+            >
+              Translate to EN
+            </Button>
             <Button variant="contained" onClick={handleSaveRace} disabled={!raceForm.name.trim() || saving}>
               {saving ? <CircularProgress size={20} /> : editRaceId ? 'Update Race' : 'Create Race'}
             </Button>
