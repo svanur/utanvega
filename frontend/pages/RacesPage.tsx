@@ -64,6 +64,7 @@ import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
 import { getTicketStatusColor, groupDistances } from '../utils/ticketStatus';
 import { formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor } from '../utils/eventUtils';
+import { useLocalize } from '../utils/localize';
 import { getActivityIcon } from '../utils/activityIcon';
 import LandscapeIcon from '@mui/icons-material/Landscape';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
@@ -125,6 +126,7 @@ const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
 
 export default function RacesPage({ mode, onToggleMode, showQuote = false }: RacesPageProps) {
     const { t } = useTranslation();
+    const loc = useLocalize();
     const { events, loading, error, refresh } = useEvents();
     const { isEnabled } = useFeatureFlags();
     const navigate = useNavigate();
@@ -796,7 +798,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1 }}>
                                                             <Box>
                                                                 <Typography variant="subtitle1" fontWeight={700}>
-                                                                    {comp.name}
+                                                                    {loc(comp.name, comp.nameEn)}
                                                                 </Typography>
                                                                 {(comp.displayDate ?? comp.nextEditionDate) && (
                                                                     <Typography variant="body2" color="text.secondary">
@@ -945,7 +947,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                         )}
                                                         <Stack direction="row" alignItems="center" gap={0.5} sx={{ mt: 0.25 }}>
                                                             <Chip label={t('races.eventTypes.Series', 'Series')} size="small" color={getEventTypeColor('Series')} variant="outlined" sx={{ height: 18, fontSize: '0.65rem' }} />
-                                                            <Typography variant="caption" color="text.secondary" noWrap>{comp.name}</Typography>
+                                                            <Typography variant="caption" color="text.secondary" noWrap>{loc(comp.name, comp.nameEn)}</Typography>
                                                         </Stack>
                                                         {/* Distance chip + register */}
                                                         {race.distanceLabel && (
@@ -1008,7 +1010,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                     onClick={(e: React.MouseEvent) => {
                                                         e.stopPropagation();
                                                         downloadIcs({
-                                                            title: comp.name,
+                                                            title: loc(comp.name, comp.nameEn) ?? comp.name,
                                                             date: (comp.displayDate ?? comp.nextEditionDate)!,
                                                             location: comp.locationName ?? undefined,
                                                             url: `https://hlaupadagskra.is/events/${comp.slug}`,
@@ -1056,7 +1058,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                     <Box sx={{ minWidth: 0 }}>
                                                         <Stack direction="row" alignItems="center" gap={0.5} flexWrap="wrap">
                                                             <Typography variant="subtitle1" fontWeight={700} sx={comp.status === 'Cancelled' ? { textDecoration: 'line-through' } : undefined}>
-                                                                {comp.name}
+                                                                {loc(comp.name, comp.nameEn)}
                                                             </Typography>
                                                             {comp.type === 'Advertisement' && (
                                                                 <Chip label={t('races.eventTypes.Advertisement', 'Sponsored')} size="small" color="warning" sx={{ height: 18, fontSize: '0.65rem' }} />
@@ -1169,7 +1171,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
 
                                             {comp.description && (
                                                 <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                                                    {comp.description}
+                                                    {loc(comp.description, comp.descriptionEn)}
                                                 </Typography>
                                             )}
                                         </CardContent>
@@ -1202,8 +1204,8 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                             <RaceFinishCard
                                 open
                                 onClose={() => setShareEventId(null)}
-                                eventName={ev.name}
-                                raceName={ev.name}
+                                eventName={loc(ev.name, ev.nameEn) ?? ev.name}
+                                raceName={loc(ev.name, ev.nameEn) ?? ev.name}
                                 distanceLabel={firstDistance}
                                 date={ev.displayDate ?? ev.nextEditionDate}
                                 activityType={ev.activityType}

@@ -57,6 +57,7 @@ import LostRunner from '../components/LostRunner';
 import WeatherCard from '../components/WeatherCard';
 import { useEvents, useEventBySlug } from '../hooks/useEvents';
 import type { EventEditionDto, RaceDto, ScheduleRule } from '../hooks/useEvents';
+import { useLocalize } from '../utils/localize';
 import { useTrailWeather } from '../hooks/useTrails';
 import { useLocations } from '../hooks/useLocations';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
@@ -190,7 +191,8 @@ function EditionMeta({
     showHeader?: boolean;
     hideMeta?: boolean;
 }) {
-    const heading = edition.title?.trim() || String(edition.year);
+    const loc = useLocalize();
+    const heading = loc(edition.title?.trim() || null, edition.titleEn) ?? String(edition.year);
 
     return (
         <Box>
@@ -201,7 +203,7 @@ function EditionMeta({
             )}
             <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
                 {!showHeader && edition.title && (
-                    <Chip label={edition.title} size="small" variant="outlined" />
+                    <Chip label={loc(edition.title, edition.titleEn) ?? edition.title} size="small" variant="outlined" />
                 )}
                 {!hideMeta && (
                     <Chip label={String(edition.year)} size="small" variant="outlined" color="primary" />
@@ -217,7 +219,7 @@ function EditionMeta({
             </Stack>
             {edition.notes && (
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5, whiteSpace: 'pre-line' }}>
-                    {edition.notes}
+                    {loc(edition.notes, edition.notesEn)}
                 </Typography>
             )}
             {!hideMeta && (
@@ -260,6 +262,7 @@ function EditionMeta({
 export default function CompetitionDetailPage({ mode, onToggleMode }: CompetitionDetailPageProps) {
     const { slug } = useParams<{ slug: string }>();
     const { t } = useTranslation();
+    const loc = useLocalize();
     const { event, loading, error } = useEventBySlug(slug);
     const { events, loading: eventsLoading } = useEvents();
     const navigate = useNavigate();
@@ -566,7 +569,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             ...(event.status === 'Cancelled' && { textDecoration: 'line-through', opacity: 0.7 }),
                         }}>
                             <EmojiEventsIcon sx={{ color: theme.palette.warning.main, flexShrink: 0 }} />
-                            {event.name}
+                            {loc(event.name, event.nameEn)}
                         </Typography>
                         <Stack direction="row" spacing={1} alignItems="center">
                             {isPostRace ? (
@@ -621,7 +624,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                     }}
                                 />
                             )}
-                            {isEnabled('share_trail') && <ShareButtons title={event.name} />}
+                            {isEnabled('share_trail') && <ShareButtons title={loc(event.name, event.nameEn) ?? event.name} />}
                         </Stack>
                     </Box>
 
@@ -636,7 +639,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             <Chip icon={<LocationOnIcon />} label={event.locationName} size="small" variant="outlined" />
                         )}
                         {event.organizerName && (
-                            <Chip label={event.organizerName} size="small" variant="outlined" />
+                            <Chip label={loc(event.organizerName, event.organizerNameEn) ?? event.organizerName} size="small" variant="outlined" />
                         )}
                         {event.type !== 'Advertisement' && (
                             <Chip
@@ -652,7 +655,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             severity={(event.alertSeverity as 'info' | 'success' | 'warning' | 'error') ?? 'info'}
                             sx={{ mt: 2, borderRadius: 2, alignItems: 'center' }}
                         >
-                            {event.alertMessage}
+                            {loc(event.alertMessage, event.alertMessageEn)}
                         </Alert>
                     )}
 
@@ -684,7 +687,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
 
                     {event.description && (
                         <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5, whiteSpace: 'pre-line' }}>
-                            {event.description}
+                            {loc(event.description, event.descriptionEn)}
                         </Typography>
                     )}
 
@@ -916,7 +919,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                                 key={race.id}
                                                 race={race}
                                                 anchor={raceAnchorMap.get(race.id) ?? `race-${race.id}`}
-                                                competitionName={event.name}
+                                                competitionName={loc(event.name, event.nameEn) ?? event.name}
                                                 t={t}
                                                 showPredict={isEnabled('tool_trail_predictor')}
                                                 showShareCard={isRaceWeek && isEnabled('share_trail')}
@@ -941,7 +944,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 key={race.id}
                                 race={race}
                                 anchor={anchor}
-                                competitionName={event.name}
+                                competitionName={loc(event.name, event.nameEn) ?? event.name}
                                 t={t}
                                 showPredict={isEnabled('tool_trail_predictor')}
                                 showShareCard={isRaceWeek && isEnabled('share_trail')}
@@ -1171,6 +1174,7 @@ function RaceCard({
     now: Date;
 }) {
     const theme = useTheme();
+    const loc = useLocalize();
     const raceDateTime = formatRaceDateTime(race.dateOfRace, race.startTime, t);
 
     // Race phase: determine if race is in progress (started but not finished)
@@ -1202,7 +1206,7 @@ function RaceCard({
                         ...(race.status === 'Cancelled' && { textDecoration: 'line-through' }),
                     }}>
                         <DirectionsRunIcon sx={{ fontSize: 20, color: theme.palette.primary.main }} />
-                        {race.name}
+                        {loc(race.name, race.nameEn)}
                         {race.status === 'Cancelled' && (
                             <Chip label={t('races.statusCancelled')} size="small" color="error" sx={{ ml: 0.5, fontWeight: 600 }} />
                         )}
@@ -1243,7 +1247,7 @@ function RaceCard({
                             {showShareCard && racePhase !== 'finished' && race.status !== 'Cancelled' && (
                                 <RaceShareCard
                                     eventName={competitionName}
-                                    raceName={race.name}
+                                    raceName={loc(race.name, race.nameEn) ?? race.name}
                                     distanceLabel={race.distanceLabel}
                                     date={race.dateOfRace ?? editionDate ?? null}
                                     daysUntil={daysUntil ?? null}
@@ -1253,7 +1257,7 @@ function RaceCard({
                             {(showFinishCard || (showShareCard && racePhase === 'finished')) && race.status !== 'Cancelled' && (
                                 <RaceFinishCard
                                     eventName={competitionName}
-                                    raceName={race.name}
+                                    raceName={loc(race.name, race.nameEn) ?? race.name}
                                     distanceLabel={race.distanceLabel}
                                     date={race.dateOfRace ?? editionDate ?? null}
                                     activityType={activityType}
@@ -1341,7 +1345,7 @@ function RaceCard({
 
                 {race.description && (
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1, whiteSpace: 'pre-line' }}>
-                        {race.description}
+                        {loc(race.description, race.descriptionEn)}
                     </Typography>
                 )}
             </CardContent>

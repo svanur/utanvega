@@ -33,6 +33,7 @@ import { TrailMapView } from '../components/TrailMapView';
 import RunningLoader from '../components/RunningLoader';
 import ShareButtons from '../components/ShareButtons';
 import LostLocation from '../components/LostLocation';
+import { useLocalize } from '../utils/localize';
 
 type LocationDetailsPageProps = {
     mode: PaletteMode;
@@ -41,6 +42,7 @@ type LocationDetailsPageProps = {
 
 export default function LocationDetailsPage({ mode, onToggleMode }: LocationDetailsPageProps) {
     const { t } = useTranslation();
+    const loc = useLocalize();
     const { isEnabled } = useFeatureFlags();
     const { slug } = useParams<{ slug: string }>();
     const navigate = useNavigate();
@@ -250,9 +252,9 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
                     <Stack direction="row" alignItems="center" spacing={1} mb={1}>
                         <LocationOnIcon color="primary" sx={{ fontSize: { xs: 28, sm: 35 } }} />
                         <Typography variant="h4" component="h1" fontWeight="bold" sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' }, flex: 1 }}>
-                            {location.name}
+                            {loc(location.name, location.nameEn)}
                         </Typography>
-                        {isEnabled('share_trail') && <ShareButtons title={location.name} />}
+                        {isEnabled('share_trail') && <ShareButtons title={loc(location.name, location.nameEn) ?? location.name} />}
                     </Stack>
                     
                     <Stack direction="row" spacing={1} mb={2}>
@@ -261,7 +263,7 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
 
                     {location.description && (
                         <Typography variant="body1" color="text.secondary" paragraph>
-                            {location.description}
+                            {loc(location.description, location.descriptionEn)}
                         </Typography>
                     )}
 
