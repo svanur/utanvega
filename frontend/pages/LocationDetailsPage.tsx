@@ -379,7 +379,7 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
                                                 <Stack direction="row" alignItems="center" spacing={1}>
                                                     <FolderIcon color="primary" fontSize="small" />
                                                     <Typography variant="subtitle1" fontWeight="bold">
-                                                        {child.name}
+                                                        {loc(child.name, child.nameEn) ?? child.name}
                                                     </Typography>
                                                 </Stack>
                                                 <Stack direction="row" spacing={1} mt={1}>

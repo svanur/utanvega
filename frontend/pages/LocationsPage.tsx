@@ -143,8 +143,10 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
             const q = search.toLowerCase();
             result = result.filter(l =>
                 l.name.toLowerCase().includes(q) ||
+                (l.nameEn?.toLowerCase().includes(q) ?? false) ||
                 l.type.toLowerCase().includes(q) ||
-                l.description?.toLowerCase().includes(q)
+                l.description?.toLowerCase().includes(q) ||
+                (l.descriptionEn?.toLowerCase().includes(q) ?? false)
             );
         }
         result.sort((a, b) => {
@@ -394,7 +396,7 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                                                 </Stack>
 
                                                 {/* Description */}
-                                                {loc.description && (
+                                                {(loc.description || loc.descriptionEn) && (
                                                     <Typography variant="body2" color="text.secondary" sx={{
                                                         mb: 1.5,
                                                         overflow: 'hidden',
@@ -403,7 +405,7 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                                                         WebkitLineClamp: 2,
                                                         WebkitBoxOrient: 'vertical',
                                                     }}>
-                                                        {loc.description}
+                                                        {localize(loc.description, loc.descriptionEn)}
                                                     </Typography>
                                                 )}
 

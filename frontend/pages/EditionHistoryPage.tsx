@@ -376,9 +376,9 @@ function HistoryRaceCard({
                     )}
                 </Stack>
 
-                {race.description && (
+                {(race.description || race.descriptionEn) && (
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1, whiteSpace: 'pre-line' }}>
-                        {race.description}
+                        {loc(race.description, race.descriptionEn)}
                     </Typography>
                 )}
             </CardContent>
