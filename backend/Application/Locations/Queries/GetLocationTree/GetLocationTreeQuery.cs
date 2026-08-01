@@ -8,6 +8,7 @@ namespace Utanvega.Backend.Application.Locations.Queries.GetLocationTree;
 public record LocationTreeNodeDto(
     Guid Id,
     string Name,
+    string? NameEn,
     string Slug,
     string Type,
     int TrailsCount,
@@ -38,6 +39,7 @@ public class GetLocationTreeQueryHandler : IRequestHandler<GetLocationTreeQuery,
             {
                 l.Id,
                 l.Name,
+                l.NameEn,
                 l.Slug,
                 Type = l.Type.ToString(),
                 l.ParentId,
@@ -66,7 +68,7 @@ public class GetLocationTreeQueryHandler : IRequestHandler<GetLocationTreeQuery,
                     var childNodes = BuildChildren(c.Id);
                     var totalTrails = c.TrailsCount + childNodes.Sum(n => n.TotalTrailsCount);
                     return new LocationTreeNodeDto(
-                        c.Id, c.Name, c.Slug, c.Type,
+                        c.Id, c.Name, c.NameEn, c.Slug, c.Type,
                         c.TrailsCount, totalTrails, childNodes);
                 })
                 .ToList();

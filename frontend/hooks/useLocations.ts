@@ -21,6 +21,7 @@ export interface Location {
 export interface LocationTreeNode {
     id: string;
     name: string;
+    nameEn: string | null;
     slug: string;
     type: string;
     trailsCount: number;

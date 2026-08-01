@@ -23,6 +23,7 @@ import { estimateDuration } from '../utils/estimateDuration';
 import DifficultyInfo from './DifficultyInfo';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { getActivityIcon } from '../utils/activityIcon';
+import { useLocalize } from '../utils/localize';
 
 // Mini SVG elevation silhouette for background
 function ElevationSilhouette({ coordinates, color }: { coordinates: number[][]; color: string }) {
@@ -116,6 +117,7 @@ export const TrailQuickView: React.FC<TrailQuickViewProps> = ({ trail, open, onC
     const theme = useTheme();
     const navigate = useNavigate();
     const { t, i18n } = useTranslation();
+    const loc = useLocalize();
     const { isEnabled } = useFeatureFlags();
     const tagsEnabled = isEnabled('tags_page');
     const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
@@ -236,13 +238,13 @@ export const TrailQuickView: React.FC<TrailQuickViewProps> = ({ trail, open, onC
                         variant="outlined"
                         color="primary"
                     />
-                    {trail.locations.map(loc => (
-                        <Chip key={loc.slug} label={loc.name} size="small" variant="outlined" />
+                    {trail.locations.map(location => (
+                        <Chip key={location.slug} label={loc(location.name, location.nameEn) ?? location.name} size="small" variant="outlined" />
                     ))}
                     {tagsEnabled && trail.tags?.map(tag => (
                         <Chip
                             key={tag.slug}
-                            label={tag.name}
+                            label={loc(tag.name, tag.nameEn) ?? tag.name}
                             size="small"
                             sx={{
                                 backgroundColor: tag.color || undefined,

@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocalize } from '../utils/localize';
 import {
     Container,
     Typography,
@@ -90,6 +91,7 @@ interface TrailListProps {
 
 export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange }) => {
     const { t } = useTranslation();
+    const loc = useLocalize();
     const [searchParams, setSearchParams] = useSearchParams();
     const location = useLocation();
     const { 
@@ -310,13 +312,13 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
 
     // Build flat list of locations with depth + descendant slug sets for the dropdown
     const { locationMenuItems, descendantSlugs } = React.useMemo(() => {
-        const items: { slug: string; name: string; depth: number; totalTrails: number }[] = [];
+        const items: { slug: string; name: string; nameEn: string | null; depth: number; totalTrails: number }[] = [];
         const descendants = new Map<string, Set<string>>();
 
         function flatten(nodes: LocationTreeNode[], depth: number): string[] {
             const allSlugs: string[] = [];
             for (const node of nodes) {
-                items.push({ slug: node.slug, name: node.name, depth, totalTrails: node.totalTrailsCount });
+                items.push({ slug: node.slug, name: node.name, nameEn: node.nameEn, depth, totalTrails: node.totalTrailsCount });
                 const childSlugs = flatten(node.children, depth + 1);
                 const descSet = new Set(childSlugs);
                 descendants.set(node.slug, descSet);
@@ -421,12 +423,12 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
     }, [recentSlugs, trails]);
 
     const availableTags = React.useMemo(() => {
-        const tagMap = new Map<string, { name: string; slug: string; color: string | null }>();
+        const tagMap = new Map<string, { name: string; nameEn: string | null; slug: string; color: string | null }>();
         trails.forEach(t => t.tags?.forEach(tag => {
             if (!tagMap.has(tag.slug)) tagMap.set(tag.slug, tag);
         }));
-        return Array.from(tagMap.values()).sort((a, b) => a.name.localeCompare(b.name));
-    }, [trails]);
+        return Array.from(tagMap.values()).sort((a, b) => (loc(a.name, a.nameEn) ?? a.name).localeCompare(loc(b.name, b.nameEn) ?? b.name));
+    }, [trails, loc]);
 
     if (loading) {
         return (
@@ -678,7 +680,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                 renderOption={(props, opt) => (
                                     <li {...props} key={opt.slug} style={{ paddingLeft: opt.depth > 0 ? (opt.depth * 16 + 8) : undefined }}>
                                         {opt.depth > 0 && <span style={{ color: '#888', marginRight: 4 }}>↳</span>}
-                                        {opt.name} <span style={{ color: '#999', fontSize: '0.8em', marginLeft: 4 }}>({opt.totalTrails})</span>
+                                        {loc(opt.name, opt.nameEn) ?? opt.name} <span style={{ color: '#999', fontSize: '0.8em', marginLeft: 4 }}>({opt.totalTrails})</span>
                                     </li>
                                 )}
                                 renderInput={(params) => (
@@ -686,7 +688,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                 )}
                                 renderTags={(value, getTagProps) =>
                                     value.map((opt, index) => (
-                                        <Chip {...getTagProps({ index })} key={opt.slug} label={opt.name} size="small" />
+                                        <Chip {...getTagProps({ index })} key={opt.slug} label={loc(opt.name, opt.nameEn) ?? opt.name} size="small" />
                                     ))
                                 }
                             />
@@ -925,7 +927,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                         return (
                                             <Chip
                                                 key={tag.slug}
-                                                label={tag.name}
+                                                label={loc(tag.name, tag.nameEn) ?? tag.name}
                                                 size="small"
                                                 onClick={() => {
                                                     const next = selected
@@ -1108,7 +1110,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                             >
                                 <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
                                     <Typography variant="subtitle2" noWrap fontWeight="bold">
-                                        {comp.name}
+                                        {loc(comp.name, comp.nameEn) ?? comp.name}
                                     </Typography>
                                     {locationsPageEnabled && comp.locationName && (
                                         <Typography variant="caption" color="text.secondary" noWrap>

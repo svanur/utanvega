@@ -1129,9 +1129,9 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                             )}
 
                                             {/* Alert */}
-                                            {comp.alertMessage && (
+                                            {(comp.alertMessage || comp.alertMessageEn) && (
                                                 <Alert severity={(comp.alertSeverity as 'info' | 'success' | 'warning' | 'error') ?? 'info'} sx={{ mt: 0.75, borderRadius: 1.5, py: 0, alignItems: 'center', '& .MuiAlert-message': { py: 0.5 } }}>
-                                                    <Typography variant="body2">{comp.alertMessage}</Typography>
+                                                    <Typography variant="body2">{loc(comp.alertMessage, comp.alertMessageEn)}</Typography>
                                                 </Alert>
                                             )}
 
