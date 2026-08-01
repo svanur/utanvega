@@ -154,10 +154,10 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
             const sb = statsMap[b.slug];
             if (sortBy === 'trails') return (sb?.trailCount || 0) - (sa?.trailCount || 0);
             if (sortBy === 'distance') return (sb?.totalKm || 0) - (sa?.totalKm || 0);
-            return a.name.localeCompare(b.name, 'is');
+            return (localize(a.name, a.nameEn) ?? a.name).localeCompare(localize(b.name, b.nameEn) ?? b.name, 'is');
         });
         return result;
-    }, [locations, search, sortBy, statsMap]);
+    }, [locations, search, sortBy, statsMap, localize]);
 
     const locationsWithCoords = useMemo(() =>
         filtered.filter(l => l.latitude && l.longitude),

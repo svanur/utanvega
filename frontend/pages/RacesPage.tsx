@@ -306,11 +306,11 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
             }
             if (a.daysUntil !== null) return -1;
             if (b.daysUntil !== null) return 1;
-            return a.name.localeCompare(b.name, 'is');
+            return (loc(a.name, a.nameEn) ?? a.name).localeCompare(loc(b.name, b.nameEn) ?? b.name, 'is');
         });
 
         return result;
-    }, [events, search, filters]);
+    }, [events, search, filters, loc]);
 
     const sortedFiltered = useMemo(() => {
         if (sortBy === 'distance' && userLocation) {
@@ -328,10 +328,10 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
             });
         }
         if (sortBy === 'name') {
-            return [...filtered].sort((a, b) => a.name.localeCompare(b.name, 'is'));
+            return [...filtered].sort((a, b) => (loc(a.name, a.nameEn) ?? a.name).localeCompare(loc(b.name, b.nameEn) ?? b.name, 'is'));
         }
         return filtered;
-    }, [filtered, sortBy, userLocation]);
+    }, [filtered, sortBy, userLocation, loc]);
 
     const { justRaced, upcoming } = useMemo(() => {
         const isRecentlyCompleted = (c: EventSummary) =>

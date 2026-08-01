@@ -22,6 +22,7 @@ import NearMeIcon from '@mui/icons-material/NearMe';
 import EventDateBadge from './EventDateBadge';
 import { getCountdownColor, getEventTypeColor, formatNextDate } from '../utils/eventUtils';
 import { getActivityIcon } from '../utils/activityIcon';
+import { useLocalize } from '../utils/localize';
 
 
 
@@ -49,6 +50,7 @@ function getRegistrationStatusColor(status: string): 'success' | 'error' | 'defa
 
 const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation }) => {
     const { t, i18n } = useTranslation();
+    const loc = useLocalize();
     const navigate = useNavigate();
     const [sortField, setSortField] = useState<SortField>('daysUntil');
     const [sortDir, setSortDir] = useState<SortDir>('asc');
@@ -95,7 +97,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
         const sorted = [...events].sort((a, b) => {
             switch (sortField) {
                 case 'name':
-                    return dir * a.name.localeCompare(b.name, 'is');
+                    return dir * (loc(a.name, a.nameEn) ?? a.name).localeCompare(loc(b.name, b.nameEn) ?? b.name, 'is');
                 case 'daysUntil': {
                     const da = a.daysUntil ?? (dir > 0 ? Infinity : -Infinity);
                     const db = b.daysUntil ?? (dir > 0 ? Infinity : -Infinity);
@@ -150,7 +152,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
             });
         }
         return rows;
-    }, [events, sortField, sortDir, userLocation]);
+    }, [events, sortField, sortDir, userLocation, loc]);
 
     const columns: { field: SortField; label: string; align?: 'left' | 'right' | 'center' }[] = [
         { field: 'daysUntil', label: t('races.table.date', 'Date'), align: 'center' },
@@ -247,7 +249,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                                     {race.raceName}
                                                 </Typography>
                                                 <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 220 }}>
-                                                    {event.name}
+                                                    {loc(event.name, event.nameEn) ?? event.name}
                                                 </Typography>
                                                 <Chip label={t(`races.eventTypes.Series`, 'Series')} size="small" color={getEventTypeColor('Series')} variant="outlined" sx={{ fontSize: '0.65rem', height: 18, alignSelf: 'flex-start' }} />
                                             </Stack>
@@ -382,7 +384,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                                             ...(event.status === 'Cancelled' && { textDecoration: 'line-through' }),
                                                         }}
                                                     >
-                                                        {event.name}
+                                                        {loc(event.name, event.nameEn) ?? event.name}
                                                     </Typography>
                                                     {event.type === 'Advertisement' && (
                                                         <Chip label={t('races.eventTypes.Advertisement', 'Sponsored')} size="small" color="warning" sx={{ height: 18, fontSize: '0.65rem' }} />
@@ -564,6 +566,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
 // Compact race card shown inside the expanded row
 function RaceChipCard({ race, editionDate }: { race: RaceDto; editionDate?: string | null }) {
     const { t, i18n } = useTranslation();
+    const loc = useLocalize();
     const navigate = useNavigate();
     const cutoffHours = race.cutoffMinutes ? Math.floor(race.cutoffMinutes / 60) : null;
     const cutoffMins = race.cutoffMinutes ? race.cutoffMinutes % 60 : null;
@@ -586,7 +589,7 @@ function RaceChipCard({ race, editionDate }: { race: RaceDto; editionDate?: stri
         >
             <Stack spacing={0.5}>
                 <Typography variant="body2" fontWeight={600} noWrap>
-                    {race.name}
+                    {loc(race.name, race.nameEn) ?? race.name}
                 </Typography>
                 {formattedDate && (
                     <Typography variant="caption" color="text.secondary">
