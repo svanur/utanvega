@@ -256,6 +256,7 @@ function AdminContent() {
               { key: 'health' as const, icon: <HealthAndSafetyIcon />, label: 'Trail Health' },
               { key: 'event-health' as const, icon: <HealthAndSafetyIcon sx={{ color: '#ed6c02' }} />, label: 'Event Health' },
               { key: 'edition-health' as const, icon: <HealthAndSafetyIcon sx={{ color: '#9c27b0' }} />, label: 'Edition Health' },
+              { key: 'translation-health' as const, icon: <TranslateIcon />, label: 'Translations' },
               { key: 'map' as const, icon: <MapIcon />, label: 'Trail Map' },
               { key: 'tags' as const, icon: <LocalOfferIcon />, label: 'Tags' },
               { key: 'analytics' as const, icon: <BarChartIcon />, label: 'Analytics' },
@@ -263,7 +264,6 @@ function AdminContent() {
               { key: 'hero-themes' as const, icon: <ViewDayOutlinedIcon />, label: 'Hero Themes' },
               { key: 'sponsors' as const, icon: <ImageOutlinedIcon />, label: 'Sponsors' },
               { key: 'pools' as const, icon: <PoolIcon />, label: 'Pools' },
-              { key: 'translation-health' as const, icon: <TranslateIcon />, label: 'Translations' },
             ].map(item => {
               const mnemonic = Object.entries(GO_TO_PAGES).find(([, v]) => v === item.key)?.[0];
               const label = drawerOpen ? <MnemonicLabel label={item.label} mnemonic={mnemonic} /> : null;

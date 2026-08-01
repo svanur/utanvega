@@ -31,6 +31,7 @@ const shortcutGroups: ShortcutGroup[] = [
             { keys: ['g', 'h'], description: 'Trail Health' },
             { keys: ['g', 'v'], description: 'Event Health' },
             { keys: ['g', 'd'], description: 'Edition Health' },
+            { keys: ['g', 'i'], description: 'Translation Health' },
             { keys: ['g', 'm'], description: 'Trail Map' },
             { keys: ['g', 's'], description: 'Tags' },
             { keys: ['g', 'a'], description: 'Analytics' },
@@ -38,7 +39,6 @@ const shortcutGroups: ShortcutGroup[] = [
             { keys: ['g', 'r'], description: 'Hero Themes' },
             { keys: ['g', 'n'], description: 'Sponsors' },
             { keys: ['g', 'p'], description: 'Pools' },
-            { keys: ['g', 'i'], description: 'Translation Health' },
         ],
     },
     {
