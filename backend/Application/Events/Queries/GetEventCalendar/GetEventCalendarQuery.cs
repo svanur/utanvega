@@ -9,6 +9,7 @@ namespace Utanvega.Backend.Application.Events.Queries.GetEventCalendar;
 
 public record CalendarEventDto(
     string Name,
+    string? NameEn,
     string Slug,
     string? LocationName,
     string? EditionTitle,
@@ -72,6 +73,7 @@ public class GetEventCalendarQueryHandler : IRequestHandler<GetEventCalendarQuer
             }
             events.Add(new CalendarEventDto(
                 ed.Event.Name,
+                ed.Event.NameEn,
                 ed.Event.Slug,
                 ed.Event.Location?.Name,
                 ed.Title,

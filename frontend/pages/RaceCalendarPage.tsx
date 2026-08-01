@@ -29,6 +29,7 @@ import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import Layout from '../components/Layout';
 import RunningLoader from '../components/RunningLoader';
 import { useEventCalendar, CalendarDay } from '../hooks/useEvents';
+import { useLocalize } from '../utils/localize';
 import { useNavigate } from 'react-router-dom';
 import { API_URL } from '../hooks/useTrails';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
@@ -48,6 +49,7 @@ function getMonthRange(year: number, month: number): { from: string; to: string 
 
 export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPageProps) {
     const { t } = useTranslation();
+    const loc = useLocalize();
     const theme = useTheme();
     const navigate = useNavigate();
     const { isEnabled } = useFeatureFlags();
@@ -228,7 +230,7 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
                                 return (
                                     <Tooltip
                                         key={i}
-                                        title={isHoliday ? holidays.map(h => h.name).join(' · ') : ''}
+                                        title={isHoliday ? holidays.map(h => loc(h.name, h.nameEn) ?? h.name).join(' · ') : ''}
                                         arrow
                                         disableHoverListener={!isHoliday}
                                     >
@@ -340,7 +342,7 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
                             {popoverHolidays.length > 0 && (
                                 <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ px: 1, pb: 0.5 }}>
                                     {popoverHolidays.map((h, i) => (
-                                        <Chip key={i} label={h.name} size="small" color="warning" variant="outlined" sx={{ height: 20, fontSize: '0.68rem' }} />
+                                        <Chip key={i} label={loc(h.name, h.nameEn) ?? h.name} size="small" color="warning" variant="outlined" sx={{ height: 20, fontSize: '0.68rem' }} />
                                     ))}
                                 </Stack>
                             )}
@@ -355,7 +357,7 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
                                             primary={
                                                 <Stack direction="row" alignItems="center" spacing={0.5}>
                                                     <EmojiEventsIcon sx={{ fontSize: 16, color: 'warning.main' }} />
-                                                    <Typography variant="body2" fontWeight={600}>{ev.name}</Typography>
+                                                    <Typography variant="body2" fontWeight={600}>{loc(ev.name, ev.nameEn) ?? ev.name}</Typography>
                                                 </Stack>
                                             }
                                             secondary={

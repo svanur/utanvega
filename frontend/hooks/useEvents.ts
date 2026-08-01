@@ -152,6 +152,7 @@ export function useEventBySlug(slug: string | undefined) {
 
 export interface CalendarEvent {
     name: string;
+    nameEn: string | null;
     slug: string;
     locationName: string | null;
     editionTitle: string | null;
