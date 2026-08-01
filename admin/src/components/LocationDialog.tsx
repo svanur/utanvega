@@ -5,11 +5,13 @@ import {
     Tabs, Tab, Autocomplete, CircularProgress, Stack
 } from '@mui/material';
 import { History as HistoryIcon, AutoFixHigh as WikiIcon } from '@mui/icons-material';
+import TranslateIcon from '@mui/icons-material/Translate';
 import { MapContainer, TileLayer, Marker, Circle, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { LocationDto, LocationType } from '../hooks/useLocations';
 import { apiFetch } from '../hooks/api';
+import { useTranslate } from '../hooks/useTranslate';
 import BilingualTextField from './BilingualTextField';
 import ChangeLogList from './ChangeLogList';
 
@@ -204,6 +206,7 @@ export function LocationDialog({ open, onClose, onSaveSuccess, onNotify, locatio
     const [activeTab, setActiveTab] = useState(0);
     const geo = useGeocode();
     const [wikiLoading, setWikiLoading] = useState(false);
+    const { translate, translating } = useTranslate();
 
     const lookupWikipedia = async () => {
         if (!name.trim()) return;
@@ -517,14 +520,27 @@ export function LocationDialog({ open, onClose, onSaveSuccess, onNotify, locatio
             <DialogActions>
                 <Button onClick={onClose}>Cancel</Button>
                 {activeTab === 0 && (
-                    <Button 
-                        onClick={handleSave} 
-                        variant="contained" 
-                        color="primary"
-                        disabled={saving || !name}
-                    >
-                        {saving ? 'Saving...' : 'Save'}
-                    </Button>
+                    <>
+                        <Button
+                            startIcon={translating ? <CircularProgress size={16} /> : <TranslateIcon />}
+                            disabled={translating || (!name.trim() && !description.trim())}
+                            onClick={async () => {
+                                const [nameEnResult, descEnResult] = await translate([name, description]);
+                                if (nameEnResult) setNameEn(nameEnResult);
+                                if (descEnResult) setDescriptionEn(descEnResult);
+                            }}
+                        >
+                            Translate to EN
+                        </Button>
+                        <Button
+                            onClick={handleSave}
+                            variant="contained"
+                            color="primary"
+                            disabled={saving || !name}
+                        >
+                            {saving ? 'Saving...' : 'Save'}
+                        </Button>
+                    </>
                 )}
             </DialogActions>
         </Dialog>

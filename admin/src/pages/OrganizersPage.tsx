@@ -28,6 +28,8 @@ import GroupIcon from '@mui/icons-material/Group';
 import { useOrganizers, type OrganizerDto } from '../hooks/useOrganizers';
 import { trimToUndefined } from '../utils/strings';
 import BilingualTextField from '../components/BilingualTextField';
+import { useTranslate } from '../hooks/useTranslate';
+import TranslateIcon from '@mui/icons-material/Translate';
 
 interface Props {
     onNotify: (message: ReactNode, severity?: 'success' | 'error') => void;
@@ -54,6 +56,7 @@ export default function OrganizersPage({ onNotify }: Props) {
     const [saving, setSaving] = useState(false);
     const [deleteConfirm, setDeleteConfirm] = useState<OrganizerDto | null>(null);
     const [deleting, setDeleting] = useState(false);
+    const { translate, translating } = useTranslate();
 
     const setField = (field: keyof FormState, value: string) =>
         setForm(prev => ({ ...prev, [field]: value }));
@@ -276,6 +279,16 @@ export default function OrganizersPage({ onNotify }: Props) {
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
+                    <Button
+                        startIcon={translating ? <CircularProgress size={16} /> : <TranslateIcon />}
+                        disabled={translating || !form.description.trim()}
+                        onClick={async () => {
+                            const [descEn] = await translate([form.description]);
+                            setField('descriptionEn', descEn);
+                        }}
+                    >
+                        Translate to EN
+                    </Button>
                     <Button
                         variant="contained"
                         onClick={handleSave}

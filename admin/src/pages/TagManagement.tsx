@@ -2,12 +2,14 @@ import React, { useState, useMemo } from 'react';
 import {
   Box, Typography, Paper, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, IconButton, Button, TextField, Chip, Dialog,
-  DialogTitle, DialogContent, DialogActions, CircularProgress, InputAdornment
+  DialogTitle, DialogContent, DialogActions, CircularProgress, InputAdornment,
 } from '@mui/material';
 import { Delete as DeleteIcon, Edit as EditIcon, Add as AddIcon, Search as SearchIcon, Clear as ClearIcon } from '@mui/icons-material';
 import { useTags, TagDto } from '../hooks/useTags';
 import { apiFetch } from '../hooks/api';
 import BilingualTextField from '../components/BilingualTextField';
+import { useTranslate } from '../hooks/useTranslate';
+import TranslateIcon from '@mui/icons-material/Translate';
 
 const PRESET_COLORS = [
   '#2196f3', '#4caf50', '#ff9800', '#f44336', '#9c27b0',
@@ -22,6 +24,7 @@ export default function TagManagement({ onNotify }: TagManagementProps) {
   const { tags, loading, refresh } = useTags();
   const [editTag, setEditTag] = useState<{ id?: string; name: string; nameEn?: string; color: string | null } | null>(null);
   const [saving, setSaving] = useState(false);
+  const { translate, translating } = useTranslate();
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredTags = useMemo(() => {
@@ -202,6 +205,17 @@ export default function TagManagement({ onNotify }: TagManagementProps) {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setEditTag(null)}>Cancel</Button>
+          <Button
+            startIcon={translating ? <CircularProgress size={16} /> : <TranslateIcon />}
+            disabled={translating || !editTag?.name.trim()}
+            onClick={async () => {
+              if (!editTag) return;
+              const [nameEn] = await translate([editTag.name]);
+              setEditTag(prev => prev ? { ...prev, nameEn } : null);
+            }}
+          >
+            Translate to EN
+          </Button>
           <Button onClick={handleSave} variant="contained" disabled={saving || !editTag?.name.trim()}>
             {saving ? 'Saving...' : editTag?.id ? 'Update' : 'Create'}
           </Button>

@@ -1214,6 +1214,41 @@ app.MapDelete("/api/v1/admin/tags/{id:guid}", [Authorize] async (Guid id, Utanve
 })
 .WithName("DeleteTag");
 
+// Translation API
+app.MapPost("/api/v1/admin/translate", [Authorize] async (TranslateRequest req, IConfiguration config) =>
+{
+    var apiKey = config["DeepL:ApiKey"];
+    if (string.IsNullOrWhiteSpace(apiKey))
+        return Results.Problem("DeepL API key not configured.");
+
+    if (req.Texts == null || req.Texts.Count == 0)
+        return Results.BadRequest("No texts provided.");
+
+    try
+    {
+        var translator = new DeepL.Translator(apiKey);
+        var results = await translator.TranslateTextAsync(
+            req.Texts,
+            DeepL.LanguageCode.Icelandic,
+            DeepL.LanguageCode.EnglishAmerican
+        );
+        return Results.Ok(new { translations = results.Select(r => r.Text).ToList() });
+    }
+    catch (DeepL.AuthorizationException)
+    {
+        return Results.Problem("Invalid DeepL API key.", statusCode: 502);
+    }
+    catch (DeepL.QuotaExceededException)
+    {
+        return Results.Problem("DeepL translation quota exceeded.", statusCode: 429);
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Translation failed: {ex.Message}", statusCode: 502);
+    }
+})
+.WithName("Translate");
+
 // History / Audit API
 app.MapGet("/api/v1/admin/history", [Authorize] async (string? entityName, string? entityId, int? limit, IMediator mediator) =>
 {
@@ -1945,6 +1980,7 @@ finally
 
 public record SendTipRequest(string PageUrl, string Message);
 public record TagCreateDto(string Name, string? Color, string? NameEn = null);
+public record TranslateRequest(List<string> Texts);
 public record BulkAddTagRequest(List<Guid> TrailIds, Guid TagId);
 public record TrailLocationAddRequest(Guid LocationId, string? Role);
 public record FeatureFlagCreateDto(string Name, bool Enabled = true, string? Description = null);
