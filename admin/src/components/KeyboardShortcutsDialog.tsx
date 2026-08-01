@@ -38,6 +38,7 @@ const shortcutGroups: ShortcutGroup[] = [
             { keys: ['g', 'r'], description: 'Hero Themes' },
             { keys: ['g', 'n'], description: 'Sponsors' },
             { keys: ['g', 'p'], description: 'Pools' },
+            { keys: ['g', 'i'], description: 'Translation Health' },
         ],
     },
     {

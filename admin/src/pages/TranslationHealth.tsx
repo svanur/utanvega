@@ -10,7 +10,7 @@ import TranslateIcon from '@mui/icons-material/Translate';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { apiFetch } from '../hooks/api';
 import { useTranslate } from '../hooks/useTranslate';
-import type { EventSummaryDto } from '../hooks/useEvents';
+import type { EventDetailDto, EventEditionDto, RaceDto } from '../hooks/useEvents';
 import type { LocationDto } from '../hooks/useLocations';
 import type { OrganizerDto } from '../hooks/useOrganizers';
 import type { TagDto } from '../hooks/useTags';
@@ -23,61 +23,79 @@ interface FieldDef {
   getEn: (item: EntityItem) => string | null | undefined;
 }
 
-type EntityKind = 'Event' | 'Location' | 'Organizer' | 'Tag';
+type EntityKind = 'Event' | 'Edition' | 'Race' | 'Location' | 'Organizer' | 'Tag';
+
+type RawItem = EventDetailDto | EventEditionDto | RaceDto | LocationDto | OrganizerDto | TagDto;
 
 interface EntityItem {
   id: string;
   kind: EntityKind;
   displayName: string;
+  parentName?: string;
   fields: FieldDef[];
-  raw: EventSummaryDto | LocationDto | OrganizerDto | TagDto;
+  raw: RawItem;
 }
 
-// ─── field definitions per entity kind ───────────────────────────────────────
+// ─── field definitions ────────────────────────────────────────────────────────
 
-function eventFields(): FieldDef[] {
-  return [
-    { label: 'Name', getIs: r => (r.raw as EventSummaryDto).name, getEn: r => (r.raw as EventSummaryDto).nameEn },
-    { label: 'Description', getIs: r => (r.raw as EventSummaryDto).description, getEn: r => (r.raw as EventSummaryDto).descriptionEn },
-    { label: 'Organizer', getIs: r => (r.raw as EventSummaryDto).organizerName, getEn: r => (r.raw as EventSummaryDto).organizerNameEn },
-    { label: 'Alert', getIs: r => (r.raw as EventSummaryDto).alertMessage, getEn: r => (r.raw as EventSummaryDto).alertMessageEn },
-  ];
-}
+const EVENT_FIELDS: FieldDef[] = [
+  { label: 'Name',        getIs: r => (r.raw as EventDetailDto).name,         getEn: r => (r.raw as EventDetailDto).nameEn },
+  { label: 'Description', getIs: r => (r.raw as EventDetailDto).description,  getEn: r => (r.raw as EventDetailDto).descriptionEn },
+  { label: 'Organizer',   getIs: r => (r.raw as EventDetailDto).organizerName,getEn: r => (r.raw as EventDetailDto).organizerNameEn },
+  { label: 'Alert',       getIs: r => (r.raw as EventDetailDto).alertMessage, getEn: r => (r.raw as EventDetailDto).alertMessageEn },
+];
 
-function locationFields(): FieldDef[] {
-  return [
-    { label: 'Name', getIs: r => (r.raw as LocationDto).name, getEn: r => (r.raw as LocationDto).nameEn },
-    { label: 'Description', getIs: r => (r.raw as LocationDto).description, getEn: r => (r.raw as LocationDto).descriptionEn },
-  ];
-}
+const EDITION_FIELDS: FieldDef[] = [
+  { label: 'Title', getIs: r => (r.raw as EventEditionDto).title, getEn: r => (r.raw as EventEditionDto).titleEn },
+  { label: 'Notes', getIs: r => (r.raw as EventEditionDto).notes, getEn: r => (r.raw as EventEditionDto).notesEn },
+];
 
-function organizerFields(): FieldDef[] {
-  return [
-    { label: 'Description', getIs: r => (r.raw as OrganizerDto).description, getEn: r => (r.raw as OrganizerDto).descriptionEn },
-  ];
-}
+const RACE_FIELDS: FieldDef[] = [
+  { label: 'Name',         getIs: r => (r.raw as RaceDto).name,                getEn: r => (r.raw as RaceDto).nameEn },
+  { label: 'Description',  getIs: r => (r.raw as RaceDto).description,         getEn: r => (r.raw as RaceDto).descriptionEn },
+  { label: 'CertifiedBy',  getIs: r => (r.raw as RaceDto).certifiedBy,         getEn: r => (r.raw as RaceDto).certifiedByEn },
+  { label: 'Championship', getIs: r => (r.raw as RaceDto).championshipCategory,getEn: r => (r.raw as RaceDto).championshipCategoryEn },
+];
 
-function tagFields(): FieldDef[] {
-  return [
-    { label: 'Name', getIs: r => (r.raw as TagDto).name, getEn: r => (r.raw as TagDto).nameEn },
-  ];
-}
+const LOCATION_FIELDS: FieldDef[] = [
+  { label: 'Name',        getIs: r => (r.raw as LocationDto).name,        getEn: r => (r.raw as LocationDto).nameEn },
+  { label: 'Description', getIs: r => (r.raw as LocationDto).description, getEn: r => (r.raw as LocationDto).descriptionEn },
+];
+
+const ORGANIZER_FIELDS: FieldDef[] = [
+  { label: 'Description', getIs: r => (r.raw as OrganizerDto).description, getEn: r => (r.raw as OrganizerDto).descriptionEn },
+];
+
+const TAG_FIELDS: FieldDef[] = [
+  { label: 'Name', getIs: r => (r.raw as TagDto).name, getEn: r => (r.raw as TagDto).nameEn },
+];
+
+const FIELDS_BY_KIND: Record<EntityKind, FieldDef[]> = {
+  Event: EVENT_FIELDS, Edition: EDITION_FIELDS, Race: RACE_FIELDS,
+  Location: LOCATION_FIELDS, Organizer: ORGANIZER_FIELDS, Tag: TAG_FIELDS,
+};
+
+// EN field key map for building PATCH payloads
+const EN_FIELD_MAP: Record<EntityKind, Record<string, string>> = {
+  Event:     { Name: 'nameEn', Description: 'descriptionEn', Organizer: 'organizerNameEn', Alert: 'alertMessageEn' },
+  Edition:   { Title: 'titleEn', Notes: 'notesEn' },
+  Race:      { Name: 'nameEn', Description: 'descriptionEn', CertifiedBy: 'certifiedByEn', Championship: 'championshipCategoryEn' },
+  Location:  { Name: 'nameEn', Description: 'descriptionEn' },
+  Organizer: { Description: 'descriptionEn' },
+  Tag:       { Name: 'nameEn' },
+};
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
 function isMissing(f: FieldDef, item: EntityItem): boolean {
-  const isVal = f.getIs(item);
-  const enVal = f.getEn(item);
-  return !!(isVal?.trim()) && !enVal?.trim();
+  return !!(f.getIs(item)?.trim()) && !f.getEn(item)?.trim();
 }
 
 function coveragePct(items: EntityItem[]): number {
-  if (items.length === 0) return 100;
   let filled = 0, total = 0;
   for (const item of items) {
     for (const f of item.fields) {
-      const isVal = f.getIs(item);
-      if (!isVal?.trim()) continue; // nothing to translate
+      if (!f.getIs(item)?.trim()) continue;
       total++;
       if (f.getEn(item)?.trim()) filled++;
     }
@@ -85,18 +103,11 @@ function coveragePct(items: EntityItem[]): number {
   return total === 0 ? 100 : Math.round((filled / total) * 100);
 }
 
-// ─── save helpers (PUT — must send full body) ─────────────────────────────────
-
-const EN_FIELD_MAP: Record<EntityKind, Record<string, string>> = {
-  Event: { Name: 'nameEn', Description: 'descriptionEn', Organizer: 'organizerNameEn', Alert: 'alertMessageEn' },
-  Location: { Name: 'nameEn', Description: 'descriptionEn' },
-  Organizer: { Description: 'descriptionEn' },
-  Tag: { Name: 'nameEn' },
-};
+// ─── save helpers (full PUT — no PATCH endpoints) ─────────────────────────────
 
 async function savePatch(item: EntityItem, patch: Record<string, string>) {
   if (item.kind === 'Event') {
-    const e = item.raw as EventSummaryDto;
+    const e = item.raw as EventDetailDto;
     await apiFetch(`/api/v1/admin/events/${item.id}`, {
       method: 'PUT',
       body: JSON.stringify({
@@ -108,6 +119,37 @@ async function savePatch(item: EntityItem, patch: Record<string, string>) {
         alertMessage: e.alertMessage, alertMessageEn: e.alertMessageEn,
         alertSeverity: e.alertSeverity, locationId: e.locationId,
         scheduleRule: e.scheduleRule, socialLinks: e.socialLinks,
+        ...patch,
+      }),
+    });
+  } else if (item.kind === 'Edition') {
+    const ed = item.raw as EventEditionDto;
+    await apiFetch(`/api/v1/admin/editions/${item.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        id: ed.id, year: ed.year, date: ed.date,
+        title: ed.title, titleEn: ed.titleEn,
+        registrationUrl: ed.registrationUrl, resultsUrl: ed.resultsUrl,
+        notes: ed.notes, notesEn: ed.notesEn,
+        registrationStatus: ed.registrationStatus, trailId: ed.trailId,
+        ...patch,
+      }),
+    });
+  } else if (item.kind === 'Race') {
+    const rc = item.raw as RaceDto;
+    await apiFetch(`/api/v1/admin/races/${item.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        id: rc.id, trailId: rc.trailId,
+        name: rc.name, nameEn: rc.nameEn,
+        distanceLabel: rc.distanceLabel, cutoffMinutes: rc.cutoffMinutes,
+        description: rc.description, descriptionEn: rc.descriptionEn,
+        status: rc.status, sortOrder: rc.sortOrder,
+        ticketStatus: rc.ticketStatus, maxParticipants: rc.maxParticipants,
+        itraPoints: rc.itraPoints, certifiedBy: rc.certifiedBy, certifiedByEn: rc.certifiedByEn,
+        prizeMoney: rc.prizeMoney,
+        championshipCategory: rc.championshipCategory, championshipCategoryEn: rc.championshipCategoryEn,
+        dateOfRace: rc.dateOfRace, startTime: rc.startTime,
         ...patch,
       }),
     });
@@ -144,12 +186,58 @@ async function savePatch(item: EntityItem, patch: Record<string, string>) {
   }
 }
 
+// ─── build item list from API data ────────────────────────────────────────────
+
+function buildItems(
+  events: EventDetailDto[],
+  locations: LocationDto[],
+  organizers: OrganizerDto[],
+  tags: TagDto[],
+): EntityItem[] {
+  const items: EntityItem[] = [];
+
+  for (const e of events) {
+    items.push({ id: e.id, kind: 'Event', displayName: e.name, fields: EVENT_FIELDS, raw: e });
+    for (const ed of e.editions ?? []) {
+      const edLabel = ed.title ?? (ed.year ? String(ed.year) : ed.date ?? ed.id);
+      items.push({
+        id: ed.id, kind: 'Edition',
+        displayName: edLabel,
+        parentName: e.name,
+        fields: EDITION_FIELDS,
+        raw: ed,
+      });
+      for (const rc of ed.races ?? []) {
+        items.push({
+          id: rc.id, kind: 'Race',
+          displayName: rc.name,
+          parentName: `${e.name} › ${edLabel}`,
+          fields: RACE_FIELDS,
+          raw: rc,
+        });
+      }
+    }
+  }
+
+  for (const l of locations) {
+    items.push({ id: l.id, kind: 'Location', displayName: l.name, fields: LOCATION_FIELDS, raw: l });
+  }
+  for (const o of organizers) {
+    items.push({ id: o.id, kind: 'Organizer', displayName: o.name, fields: ORGANIZER_FIELDS, raw: o });
+  }
+  for (const t of tags) {
+    items.push({ id: t.id, kind: 'Tag', displayName: t.name, fields: TAG_FIELDS, raw: t });
+  }
+
+  return items;
+}
+
 // ─── subcomponents ────────────────────────────────────────────────────────────
 
 function CoverageCard({ label, pct, count }: { label: string; pct: number; count: number }) {
   const color = pct >= 90 ? 'success' : pct >= 50 ? 'warning' : 'error';
   return (
-    <Card variant="outlined" sx={{ flex: 1, minWidth: 140 }}>
+    <Card variant="outlined" sx={{ flex: 1, minWidth: 130 }}>
       <CardContent sx={{ pb: '12px !important' }}>
         <Typography variant="caption" color="text.secondary">{label}</Typography>
         <Typography variant="h4" fontWeight={700} color={`${color}.main`}>{pct}%</Typography>
@@ -188,39 +276,12 @@ export default function TranslationHealth({ onNotify }: Props) {
     setError(null);
     try {
       const [events, locations, organizers, tags] = await Promise.all([
-        apiFetch<EventSummaryDto[]>('/api/v1/admin/events'),
+        apiFetch<EventDetailDto[]>('/api/v1/admin/events/details'),
         apiFetch<LocationDto[]>('/api/v1/admin/locations'),
         apiFetch<OrganizerDto[]>('/api/v1/admin/organizers'),
         apiFetch<TagDto[]>('/api/v1/admin/tags'),
       ]);
-
-      const built: EntityItem[] = [
-        ...events.map(e => ({
-          id: e.id, kind: 'Event' as EntityKind,
-          displayName: e.name,
-          fields: eventFields(),
-          raw: e,
-        })),
-        ...locations.map(l => ({
-          id: l.id, kind: 'Location' as EntityKind,
-          displayName: l.name,
-          fields: locationFields(),
-          raw: l,
-        })),
-        ...organizers.map(o => ({
-          id: o.id, kind: 'Organizer' as EntityKind,
-          displayName: o.name,
-          fields: organizerFields(),
-          raw: o,
-        })),
-        ...tags.map(t => ({
-          id: t.id, kind: 'Tag' as EntityKind,
-          displayName: t.name,
-          fields: tagFields(),
-          raw: t,
-        })),
-      ];
-      setItems(built);
+      setItems(buildItems(events, locations, organizers, tags));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load data');
     } finally {
@@ -230,17 +291,17 @@ export default function TranslationHealth({ onNotify }: Props) {
 
   useEffect(() => { load(); }, [load]);
 
-  const byKind = useMemo(() => ({
-    Event: items.filter(i => i.kind === 'Event'),
-    Location: items.filter(i => i.kind === 'Location'),
-    Organizer: items.filter(i => i.kind === 'Organizer'),
-    Tag: items.filter(i => i.kind === 'Tag'),
-  }), [items]);
+  const byKind = useMemo(() => {
+    const map: Record<EntityKind, EntityItem[]> = {
+      Event: [], Edition: [], Race: [], Location: [], Organizer: [], Tag: [],
+    };
+    for (const item of items) map[item.kind].push(item);
+    return map;
+  }, [items]);
 
   const filtered = useMemo(() => {
-    let result = filterKind === 'All' ? items : byKind[filterKind];
-    if (filterMissing) result = result.filter(item => item.fields.some(f => isMissing(f, item)));
-    return result;
+    const base = filterKind === 'All' ? items : byKind[filterKind];
+    return filterMissing ? base.filter(item => item.fields.some(f => isMissing(f, item))) : base;
   }, [items, byKind, filterKind, filterMissing]);
 
   const missingCount = useMemo(
@@ -248,15 +309,12 @@ export default function TranslationHealth({ onNotify }: Props) {
     [items]
   );
 
-  // translate a single item's missing fields and save
   const translateItem = useCallback(async (item: EntityItem) => {
     const missingFields = item.fields.filter(f => isMissing(f, item));
     if (missingFields.length === 0) return;
-
     setTranslatingId(item.id);
     try {
-      const texts = missingFields.map(f => f.getIs(item) ?? '');
-      const translated = await translate(texts);
+      const translated = await translate(missingFields.map(f => f.getIs(item) ?? ''));
       const patch: Record<string, string> = {};
       missingFields.forEach((f, i) => {
         const key = EN_FIELD_MAP[item.kind][f.label];
@@ -264,7 +322,7 @@ export default function TranslationHealth({ onNotify }: Props) {
       });
       if (Object.keys(patch).length > 0) await savePatch(item, patch);
       await load();
-      onNotify(`Translated ${item.displayName}`, 'success');
+      onNotify(`Translated "${item.displayName}"`, 'success');
     } catch (e) {
       onNotify(e instanceof Error ? e.message : 'Translation failed', 'error');
     } finally {
@@ -272,7 +330,6 @@ export default function TranslationHealth({ onNotify }: Props) {
     }
   }, [translate, load, onNotify]);
 
-  // bulk translate all items with any missing EN field
   const translateAll = useCallback(async () => {
     const missing = items.filter(item => item.fields.some(f => isMissing(f, item)));
     if (missing.length === 0) return;
@@ -281,14 +338,13 @@ export default function TranslationHealth({ onNotify }: Props) {
     for (const item of missing) {
       try {
         const missingFields = item.fields.filter(f => isMissing(f, item));
-        const texts = missingFields.map(f => f.getIs(item) ?? '');
-        const translated = await translate(texts);
+        const translated = await translate(missingFields.map(f => f.getIs(item) ?? ''));
         const patch: Record<string, string> = {};
         missingFields.forEach((f, i) => {
           const key = EN_FIELD_MAP[item.kind][f.label];
           if (key && translated[i]) patch[key] = translated[i];
         });
-        await savePatch(item, patch);
+        if (Object.keys(patch).length > 0) await savePatch(item, patch);
         done++;
       } catch {
         failed++;
@@ -302,12 +358,12 @@ export default function TranslationHealth({ onNotify }: Props) {
     );
   }, [items, translate, load, onNotify]);
 
-  const kinds: EntityKind[] = ['Event', 'Location', 'Organizer', 'Tag'];
+  const kinds: EntityKind[] = ['Event', 'Edition', 'Race', 'Location', 'Organizer', 'Tag'];
 
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>;
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
+    <Box sx={{ maxWidth: 1300, mx: 'auto' }}>
       <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 1 }}>
         <TranslateIcon color="primary" />
         <Typography variant="h5" fontWeight={700}>Translation Health</Typography>
@@ -325,13 +381,13 @@ export default function TranslationHealth({ onNotify }: Props) {
         </Button>
       </Stack>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Track EN translation coverage across all content. Use "Translate" on a row or bulk-translate everything at once via DeepL.
+        EN translation coverage across all content — events, editions, races, locations, organizers, and tags.
       </Typography>
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
       {/* Coverage cards */}
-      <Stack direction="row" spacing={2} sx={{ mb: 3, flexWrap: 'wrap' }}>
+      <Stack direction="row" spacing={1.5} sx={{ mb: 3, flexWrap: 'wrap', gap: 1.5 }}>
         <CoverageCard label="Overall" pct={coveragePct(items)} count={items.length} />
         {kinds.map(k => (
           <CoverageCard key={k} label={k + 's'} pct={coveragePct(byKind[k])} count={byKind[k].length} />
@@ -339,7 +395,7 @@ export default function TranslationHealth({ onNotify }: Props) {
       </Stack>
 
       {/* Filters */}
-      <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+      <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap' }}>
         {(['All', ...kinds] as const).map(k => (
           <Chip
             key={k}
@@ -364,10 +420,10 @@ export default function TranslationHealth({ onNotify }: Props) {
         <Table size="small">
           <TableHead>
             <TableRow sx={{ '& th': { fontWeight: 700 } }}>
-              <TableCell>Type</TableCell>
+              <TableCell width={90}>Type</TableCell>
               <TableCell>Name</TableCell>
               <TableCell>Fields</TableCell>
-              <TableCell align="right">Action</TableCell>
+              <TableCell align="right" width={120}>Action</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -375,7 +431,7 @@ export default function TranslationHealth({ onNotify }: Props) {
               <TableRow>
                 <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
                   <Typography color="text.secondary">
-                    {filterMissing ? 'All translations are complete!' : 'No items.'}
+                    {filterMissing ? 'All translations are complete! 🎉' : 'No items.'}
                   </Typography>
                 </TableCell>
               </TableRow>
@@ -384,7 +440,11 @@ export default function TranslationHealth({ onNotify }: Props) {
               const hasMissing = item.fields.some(f => isMissing(f, item));
               const isTranslating = translatingId === item.id;
               return (
-                <TableRow key={`${item.kind}-${item.id}`} hover sx={hasMissing ? { bgcolor: 'warning.50' } : undefined}>
+                <TableRow
+                  key={`${item.kind}-${item.id}`}
+                  hover
+                  sx={hasMissing ? { bgcolor: 'warning.50' } : undefined}
+                >
                   <TableCell>
                     <Chip label={item.kind} size="small" variant="outlined" />
                   </TableCell>
@@ -392,9 +452,14 @@ export default function TranslationHealth({ onNotify }: Props) {
                     <Typography variant="body2" fontWeight={hasMissing ? 600 : 400}>
                       {item.displayName}
                     </Typography>
+                    {item.parentName && (
+                      <Typography variant="caption" color="text.secondary" display="block">
+                        {item.parentName}
+                      </Typography>
+                    )}
                   </TableCell>
                   <TableCell>
-                    <Stack direction="row" spacing={1.5} alignItems="center">
+                    <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
                       {item.fields.map(f => {
                         const hasSource = !!(f.getIs(item)?.trim());
                         const filled = !!(f.getEn(item)?.trim());

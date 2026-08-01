@@ -339,7 +339,7 @@ export const HERO_THEMES: HeroTheme[] = [
         gradient: 'linear-gradient(90deg, #f57f17 0%, #ffca28 50%, #fff9c4 100%)',
         gradientDark: 'linear-gradient(90deg, #a35000 0%, #c8960a 50%, #c8b870 100%)',
         headerLine: 'Frídagur verslunarmanna! 🎪',
-        tagline: 'Stærsta frítímahelgi ársins — enjoy!',
+        tagline: 'Stærsta ferðahelgi ársins — Njótið!',
         fontColor: 'rgba(30,30,30,0.95)',
         showCountdown: false,
         holidayKey: 'Frídagur verslunarmanna',
