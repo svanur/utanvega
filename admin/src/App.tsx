@@ -31,6 +31,8 @@ import HeroThemesPage from './pages/HeroThemesPage';
 import SponsorsPage from './pages/SponsorsPage';
 import OrganizersPage from './pages/OrganizersPage';
 import PoolsPage from './pages/PoolsPage';
+import TranslationHealth from './pages/TranslationHealth';
+import TranslateIcon from '@mui/icons-material/Translate';
 import GpxUploadDialog from './components/GpxUploadDialog';
 import LoginPage from './pages/LoginPage';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -72,6 +74,7 @@ const PAGE_PATHS: Record<PageKey, string> = {
   'sponsors': '/sponsors',
   'pools': '/pools',
   'organizers': '/organizers',
+  'translation-health': '/translation-health',
 };
 
 function pathToPage(pathname: string): PageKey {
@@ -260,6 +263,7 @@ function AdminContent() {
               { key: 'hero-themes' as const, icon: <ViewDayOutlinedIcon />, label: 'Hero Themes' },
               { key: 'sponsors' as const, icon: <ImageOutlinedIcon />, label: 'Sponsors' },
               { key: 'pools' as const, icon: <PoolIcon />, label: 'Pools' },
+              { key: 'translation-health' as const, icon: <TranslateIcon />, label: 'Translations' },
             ].map(item => {
               const mnemonic = Object.entries(GO_TO_PAGES).find(([, v]) => v === item.key)?.[0];
               const label = drawerOpen ? <MnemonicLabel label={item.label} mnemonic={mnemonic} /> : null;
@@ -315,6 +319,8 @@ function AdminContent() {
             <PoolsPage />
           ) : currentPage === 'organizers' ? (
             <OrganizersPage onNotify={notify} />
+          ) : currentPage === 'translation-health' ? (
+            <TranslationHealth onNotify={notify} />
           ) : (
             <LocationList onNotify={notify} />
           )}

@@ -29,6 +29,7 @@ export const GO_TO_PAGES: Record<string, PageKey> = {
     n: 'sponsors',      // spo[n]sors
     p: 'pools',
     o: 'organizers',    // [o]rganizers
+    i: 'translation-health', // translat[i]ons
 };
 
 function isInputFocused(): boolean {
