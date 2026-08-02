@@ -512,6 +512,22 @@ function eventHasStaleTx(event: EventSummaryDto): boolean {
     || isTxStale(event.alertMessage, event.alertMessageEn, h['Alert']);
 }
 
+function editionHasStaleTx(edition: EventEditionDto): boolean {
+  const h = edition.translationHashes ?? {};
+  return isTxStale(edition.title, edition.titleEn, h['Title'])
+    || isTxStale(edition.notes, edition.notesEn, h['Notes']);
+}
+
+function raceHasStaleTx(race: RaceDto): boolean {
+  const h = race.translationHashes ?? {};
+  return isTxStale(race.name, race.nameEn, h['Name'])
+    || isTxStale(race.description, race.descriptionEn, h['Description'])
+    || isTxStale(race.certifiedBy, race.certifiedByEn, h['CertifiedBy'])
+    || isTxStale(race.championshipCategory, race.championshipCategoryEn, h['Championship']);
+}
+
+const STALE_TX_CHIP_SX = { height: 16, fontSize: '0.6rem', '& .MuiChip-label': { px: 0.75 } } as const;
+
 function createEmptyEventForm(): EventFormState {
   return {
     name: '',
@@ -757,12 +773,13 @@ interface SortableRaceItemProps {
   onDelete: () => void;
   onCycleTicketStatus: () => void;
   ticketLoading: boolean;
+  staleTx: boolean;
   getIcon: (trailId: string | null) => string;
   formatDateLabel: (d: string | null | undefined, fallback: string) => string;
   formatTimeLabel: (t: string | null | undefined) => string;
 }
 
-function SortableRaceItem({ race, onEdit, onDuplicate, onDelete, onCycleTicketStatus, ticketLoading, getIcon, formatDateLabel, formatTimeLabel }: SortableRaceItemProps) {
+function SortableRaceItem({ race, onEdit, onDuplicate, onDelete, onCycleTicketStatus, ticketLoading, staleTx, getIcon, formatDateLabel, formatTimeLabel }: SortableRaceItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: race.id });
 
   return (
@@ -795,6 +812,11 @@ function SortableRaceItem({ race, onEdit, onDuplicate, onDelete, onCycleTicketSt
         primary={(
           <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ alignItems: 'center' }}>
             <Typography variant="body2" fontWeight={700}>{race.name}</Typography>
+            {staleTx && (
+              <Tooltip title="Race translation (name/description) may be outdated">
+                <Chip label="EN" size="small" color="warning" variant="filled" sx={STALE_TX_CHIP_SX} />
+              </Tooltip>
+            )}
             {race.distanceLabel && <Chip label={race.distanceLabel} size="small" variant="outlined" />}
             <Chip label={race.status} size="small" color={getRaceStatusColor(race.status)} />
             <Tooltip title={ticketLoading ? 'Updating…' : 'Click to cycle ticket status'}>
@@ -1051,6 +1073,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
   } | null>(null);
   const [cyclingTicketIds, setCyclingTicketIds] = useState<Set<string>>(new Set());
   const [cyclingRegIds, setCyclingRegIds] = useState<Set<string>>(new Set());
+  const [cyclingStatusIds, setCyclingStatusIds] = useState<Set<string>>(new Set());
   const [copyRacesConfirm, setCopyRacesConfirm] = useState<{ edition: EventEditionDto; source: EventEditionDto } | null>(null);
   const [showBulkMissingDialog, setShowBulkMissingDialog] = useState(false);
   const [bulkMissingLoading, setBulkMissingLoading] = useState(false);
@@ -1444,6 +1467,42 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
       onNotify(`Marked ${pastActive.length} race${pastActive.length !== 1 ? 's' : ''} as completed`);
     } catch {
       onNotify('Failed to mark races as completed', 'error');
+    }
+  };
+
+  const handleCycleEventStatus = async (event: EventSummaryDto) => {
+    if (cyclingStatusIds.has(event.id)) return;
+    if (event.status !== 'Unconfirmed' && event.status !== 'Confirmed') return;
+    const next: EventStatus = event.status === 'Unconfirmed' ? 'Confirmed' : 'Unconfirmed';
+    setCyclingStatusIds(prev => new Set(prev).add(event.id));
+    try {
+      await updateEvent(event.id, {
+        name: event.name,
+        nameEn: event.nameEn ?? undefined,
+        description: event.description ?? undefined,
+        descriptionEn: event.descriptionEn ?? undefined,
+        type: event.type,
+        activityType: event.activityType,
+        status: next,
+        organizerName: event.organizerName ?? undefined,
+        organizerNameEn: event.organizerNameEn ?? undefined,
+        organizerWebsite: event.organizerWebsite ?? undefined,
+        organizerId: event.organizerId ?? null,
+        alertMessage: event.alertMessage ?? undefined,
+        alertMessageEn: event.alertMessageEn ?? undefined,
+        alertSeverity: event.alertSeverity ?? undefined,
+        locationId: event.locationId ?? null,
+        scheduleRule: event.scheduleRule ?? null,
+        socialLinks: event.socialLinks ?? null,
+        gpxPointLat: event.gpxPointLat ?? null,
+        gpxPointLng: event.gpxPointLng ?? null,
+        translationHashes: event.translationHashes,
+      });
+      if (expandedEventId === event.id) await refreshExpandedEvent();
+    } catch {
+      onNotify('Failed to update event status', 'error');
+    } finally {
+      setCyclingStatusIds(prev => { const s = new Set(prev); s.delete(event.id); return s; });
     }
   };
 
@@ -2535,8 +2594,22 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                       <Typography variant="body2" color="text.secondary">—</Typography>
                     )}
                   </TableCell>
-                  <TableCell align="center">
-                    <Chip label={event.status} size="small" color={getEventStatusColor(event.status)} />
+                  <TableCell align="center" onClick={e => e.stopPropagation()}>
+                    <Tooltip title={
+                      cyclingStatusIds.has(event.id) ? 'Updating…'
+                      : event.status === 'Unconfirmed' ? 'Click to confirm'
+                      : event.status === 'Confirmed' ? 'Click to unconfirm'
+                      : event.status
+                    }>
+                      <Chip
+                        label={event.status}
+                        size="small"
+                        color={getEventStatusColor(event.status)}
+                        onClick={(event.status === 'Unconfirmed' || event.status === 'Confirmed') && !cyclingStatusIds.has(event.id) ? () => handleCycleEventStatus(event) : undefined}
+                        disabled={cyclingStatusIds.has(event.id)}
+                        sx={(event.status === 'Unconfirmed' || event.status === 'Confirmed') ? { cursor: 'pointer' } : undefined}
+                      />
+                    </Tooltip>
                   </TableCell>
                   <TableCell align="center">
                     <Chip label={event.editionCount} size="small" variant="outlined" />
@@ -2749,6 +2822,23 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                                                 </Tooltip>
                                               ) : null;
                                             })()}
+                                            {edition.date && isPastDate(edition.date) && !edition.resultsUrl && (
+                                              <Tooltip title="Results URL missing — click to add">
+                                                <Chip
+                                                  label="Results missing"
+                                                  size="small"
+                                                  color="warning"
+                                                  variant="outlined"
+                                                  onClick={(e) => setUrlPopover({ anchorEl: e.currentTarget, edition, regUrl: edition.registrationUrl ?? '', resultsUrl: '' })}
+                                                  sx={{ cursor: 'pointer' }}
+                                                />
+                                              </Tooltip>
+                                            )}
+                                            {editionHasStaleTx(edition) && (
+                                              <Tooltip title="Edition translation (title/notes) may be outdated">
+                                                <Chip label="EN" size="small" color="warning" variant="filled" sx={STALE_TX_CHIP_SX} />
+                                              </Tooltip>
+                                            )}
                                           </Stack>
                                         </Box>
                                       </Box>
@@ -2852,6 +2942,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                                                     onDelete={() => handleDeleteRace(race)}
                                                     onCycleTicketStatus={() => handleCycleTicketStatus(race)}
                                                     ticketLoading={cyclingTicketIds.has(race.id)}
+                                                    staleTx={raceHasStaleTx(race)}
                                                     getIcon={getTrailActivityIcon}
                                                     formatDateLabel={formatDateLabel}
                                                     formatTimeLabel={formatTimeLabel}
