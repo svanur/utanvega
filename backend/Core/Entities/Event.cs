@@ -48,6 +48,8 @@ public class Event
     public string? AlertMessageEn { get; set; }
     public string? AlertSeverity { get; set; }
 
+    public string? TranslationHashes { get; set; }
+
     public Guid? LocationId { get; set; }
     public Location? Location { get; set; }
 

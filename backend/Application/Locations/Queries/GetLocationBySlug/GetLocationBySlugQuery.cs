@@ -58,15 +58,24 @@ public class GetLocationBySlugQueryHandler : IRequestHandler<GetLocationBySlugQu
         );
 
         // Build child location DTOs
-        var childDtos = await _context.Locations
+        var childRaw = await _context.Locations
             .Where(l => l.ParentId == location.Id)
             .OrderBy(l => l.Name)
-            .Select(l => new LocationDto(
-                l.Id, l.Name, l.NameEn, l.Slug, l.Description, l.DescriptionEn, l.Type.ToString(),
-                l.ParentId, location.Name, l.Center != null ? l.Center.Y : null,
-                l.Center != null ? l.Center.X : null, l.Radius,
-                l.Children.Count, l.TrailLocations.Count))
+            .Select(l => new {
+                l.Id, l.Name, l.NameEn, l.Slug, l.Description, l.DescriptionEn,
+                Type = l.Type.ToString(), l.ParentId,
+                Latitude = l.Center != null ? l.Center.Y : (double?)null,
+                Longitude = l.Center != null ? l.Center.X : (double?)null,
+                l.Radius,
+                ChildrenCount = l.Children.Count,
+                TrailsCount = l.TrailLocations.Count,
+            })
             .ToListAsync(cancellationToken);
+        var childDtos = childRaw.Select(l => new LocationDto(
+            l.Id, l.Name, l.NameEn, l.Slug, l.Description, l.DescriptionEn,
+            l.Type, l.ParentId, location.Name, l.Latitude, l.Longitude, l.Radius,
+            l.ChildrenCount, l.TrailsCount
+        )).ToList();
 
         // Collect all descendant location IDs for ancestor-aware trail query
         var allLocationIds = await CollectDescendantIds(location.Id, cancellationToken);

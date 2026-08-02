@@ -13,6 +13,7 @@ export interface OrganizerDto {
     contactName: string | null;
     createdAt: string;
     updatedAt: string | null;
+    translationHashes?: Record<string, string>;
 }
 
 export interface CreateOrganizerInput {

@@ -53,6 +53,7 @@ export interface RaceDto {
     startTime: string | null;
     trailDistanceMeters: number | null;
     trailElevationGain: number | null;
+    translationHashes?: Record<string, string>;
 }
 
 export interface EventEditionDto {
@@ -73,6 +74,7 @@ export interface EventEditionDto {
     races: RaceDto[];
     createdAt: string;
     updatedAt: string | null;
+    translationHashes?: Record<string, string>;
 }
 
 export interface SeriesRaceDto {
@@ -122,6 +124,7 @@ export interface EventSummaryDto {
 export interface EventDetailDto extends EventSummaryDto {
     upcomingDates: string[];
     editions: EventEditionDto[];
+    translationHashes?: Record<string, string>;
 }
 
 export interface CreateEventInput {

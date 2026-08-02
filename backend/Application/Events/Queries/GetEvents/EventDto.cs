@@ -88,7 +88,8 @@ public record RaceDto(
     double? TrailElevationGain,
     string? TrailTerrainType = null,
     string? TrailDifficulty = null,
-    string? TrailActivityType = null
+    string? TrailActivityType = null,
+    Dictionary<string, string>? TranslationHashes = null
 );
 
 public record EventEditionDto(
@@ -108,5 +109,6 @@ public record EventEditionDto(
     string? TrailSlug,
     List<RaceDto> Races,
     DateTime CreatedAt,
-    DateTime? UpdatedAt
+    DateTime? UpdatedAt,
+    Dictionary<string, string>? TranslationHashes = null
 );

@@ -8,6 +8,7 @@ export interface TagDto {
     slug: string;
     color: string | null;
     trailCount: number;
+    translationHashes?: Record<string, string>;
 }
 
 export function useTags() {

@@ -12,6 +12,8 @@ public class Organizer
     public string? DescriptionEn { get; set; }
     public string? ContactName { get; set; }
 
+    public string? TranslationHashes { get; set; }
+
     // Auditing
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }

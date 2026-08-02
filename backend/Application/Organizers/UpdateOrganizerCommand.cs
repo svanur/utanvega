@@ -1,3 +1,4 @@
+using System.Text.Json;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Utanvega.Backend.Infrastructure.Persistence;
@@ -13,7 +14,8 @@ public record UpdateOrganizerCommand(
     string? Website,
     string? Description,
     string? ContactName,
-    string? DescriptionEn = null
+    string? DescriptionEn = null,
+    Dictionary<string, string>? TranslationHashes = null
 ) : IRequest<bool>;
 
 public class UpdateOrganizerCommandHandler : IRequestHandler<UpdateOrganizerCommand, bool>
@@ -38,6 +40,8 @@ public class UpdateOrganizerCommandHandler : IRequestHandler<UpdateOrganizerComm
         organizer.Description = request.Description;
         organizer.DescriptionEn = request.DescriptionEn;
         organizer.ContactName = request.ContactName;
+        if (request.TranslationHashes != null)
+            organizer.TranslationHashes = JsonSerializer.Serialize(request.TranslationHashes);
         organizer.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync(cancellationToken);

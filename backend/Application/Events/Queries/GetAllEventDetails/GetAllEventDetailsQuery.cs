@@ -1,3 +1,4 @@
+using System.Text.Json;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Utanvega.Backend.Application.Events.Queries.GetEvent;
@@ -31,6 +32,9 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
                     .ThenInclude(r => r.Trail)
             .OrderBy(e => e.Name)
             .ToListAsync(cancellationToken);
+
+        static Dictionary<string, string>? DeserHashes(string? json) =>
+            json == null ? null : JsonSerializer.Deserialize<Dictionary<string, string>>(json);
 
         return events.Select(ev => new EventDetailDto(
             ev.Id,
@@ -103,15 +107,18 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
                             r.Trail?.ElevationGain,
                             r.Trail?.TerrainType?.ToString(),
                             r.Trail?.Difficulty.ToString(),
-                            r.Trail?.ActivityTypeId.ToString()
+                            r.Trail?.ActivityTypeId.ToString(),
+                            DeserHashes(r.TranslationHashes)
                         ))
                         .ToList(),
                     ed.CreatedAt,
-                    ed.UpdatedAt
+                    ed.UpdatedAt,
+                    DeserHashes(ed.TranslationHashes)
                 ))
                 .ToList(),
             ev.CreatedAt,
-            ev.UpdatedAt
+            ev.UpdatedAt,
+            TranslationHashes: DeserHashes(ev.TranslationHashes)
         )).ToList();
     }
 }

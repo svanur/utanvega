@@ -6,10 +6,12 @@ import {
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import TranslateIcon from '@mui/icons-material/Translate';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { apiFetch } from '../hooks/api';
 import { useTranslate } from '../hooks/useTranslate';
+import { hashText } from '../utils/translationHash';
 import type { EventDetailDto, EventEditionDto, RaceDto } from '../hooks/useEvents';
 import type { LocationDto } from '../hooks/useLocations';
 import type { OrganizerDto } from '../hooks/useOrganizers';
@@ -87,8 +89,21 @@ const EN_FIELD_MAP: Record<EntityKind, Record<string, string>> = {
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
+function getHashes(item: EntityItem): Record<string, string> | undefined {
+  return (item.raw as { translationHashes?: Record<string, string> }).translationHashes;
+}
+
 function isMissing(f: FieldDef, item: EntityItem): boolean {
   return !!(f.getIs(item)?.trim()) && !f.getEn(item)?.trim();
+}
+
+function isStale(f: FieldDef, item: EntityItem): boolean {
+  const isText = f.getIs(item)?.trim();
+  const enText = f.getEn(item)?.trim();
+  if (!isText || !enText) return false; // missing EN is handled by isMissing
+  const stored = getHashes(item)?.[f.label];
+  if (!stored) return false; // no hash stored yet — not considered stale
+  return stored !== hashText(isText);
 }
 
 function coveragePct(items: EntityItem[]): number {
@@ -105,7 +120,7 @@ function coveragePct(items: EntityItem[]): number {
 
 // ─── save helpers (full PUT — no PATCH endpoints) ─────────────────────────────
 
-async function savePatch(item: EntityItem, patch: Record<string, string>) {
+async function savePatch(item: EntityItem, patch: Record<string, string>, translationHashes?: Record<string, string>) {
   if (item.kind === 'Event') {
     const e = item.raw as EventDetailDto;
     await apiFetch(`/api/v1/admin/events/${item.id}`, {
@@ -120,6 +135,7 @@ async function savePatch(item: EntityItem, patch: Record<string, string>) {
         alertSeverity: e.alertSeverity, locationId: e.locationId,
         scheduleRule: e.scheduleRule, socialLinks: e.socialLinks,
         ...patch,
+        ...(translationHashes ? { translationHashes } : {}),
       }),
     });
   } else if (item.kind === 'Edition') {
@@ -133,6 +149,7 @@ async function savePatch(item: EntityItem, patch: Record<string, string>) {
         notes: ed.notes, notesEn: ed.notesEn,
         registrationStatus: ed.registrationStatus, trailId: ed.trailId,
         ...patch,
+        ...(translationHashes ? { translationHashes } : {}),
       }),
     });
   } else if (item.kind === 'Race') {
@@ -151,6 +168,7 @@ async function savePatch(item: EntityItem, patch: Record<string, string>) {
         championshipCategory: rc.championshipCategory, championshipCategoryEn: rc.championshipCategoryEn,
         dateOfRace: rc.dateOfRace, startTime: rc.startTime,
         ...patch,
+        ...(translationHashes ? { translationHashes } : {}),
       }),
     });
   } else if (item.kind === 'Location') {
@@ -163,6 +181,7 @@ async function savePatch(item: EntityItem, patch: Record<string, string>) {
         type: l.type, parentId: l.parentId,
         latitude: l.latitude, longitude: l.longitude, radius: l.radius,
         ...patch,
+        ...(translationHashes ? { translationHashes } : {}),
       }),
     });
   } else if (item.kind === 'Organizer') {
@@ -175,13 +194,18 @@ async function savePatch(item: EntityItem, patch: Record<string, string>) {
         description: o.description, descriptionEn: o.descriptionEn,
         contactName: o.contactName,
         ...patch,
+        ...(translationHashes ? { translationHashes } : {}),
       }),
     });
   } else {
     const t = item.raw as TagDto;
     await apiFetch(`/api/v1/admin/tags/${item.id}`, {
       method: 'PUT',
-      body: JSON.stringify({ name: t.name, nameEn: t.nameEn, color: t.color, ...patch }),
+      body: JSON.stringify({
+        name: t.name, nameEn: t.nameEn, color: t.color,
+        ...patch,
+        ...(translationHashes ? { translationHashes } : {}),
+      }),
     });
   }
 }
@@ -248,11 +272,13 @@ function CoverageCard({ label, pct, count }: { label: string; pct: number; count
   );
 }
 
-function StatusDot({ filled, source }: { filled: boolean; source: boolean }) {
-  if (!source) return <Typography variant="caption" color="text.disabled">—</Typography>;
-  return filled
-    ? <CheckCircleIcon fontSize="small" color="success" />
-    : <RadioButtonUncheckedIcon fontSize="small" color="error" />;
+type FieldStatus = 'ok' | 'missing' | 'stale' | 'empty';
+
+function StatusDot({ status }: { status: FieldStatus }) {
+  if (status === 'empty') return <Typography variant="caption" color="text.disabled">—</Typography>;
+  if (status === 'ok')    return <CheckCircleIcon fontSize="small" color="success" />;
+  if (status === 'stale') return <WarningAmberIcon fontSize="small" sx={{ color: 'warning.main' }} />;
+  return <RadioButtonUncheckedIcon fontSize="small" color="error" />;
 }
 
 // ─── main component ───────────────────────────────────────────────────────────
@@ -269,6 +295,7 @@ export default function TranslationHealth({ onNotify }: Props) {
   const [bulkTranslating, setBulkTranslating] = useState(false);
   const [filterKind, setFilterKind] = useState<EntityKind | 'All'>('All');
   const [filterMissing, setFilterMissing] = useState(false);
+  const [filterStale, setFilterStale] = useState(false);
   const { translate } = useTranslate();
 
   const load = useCallback(async () => {
@@ -301,26 +328,48 @@ export default function TranslationHealth({ onNotify }: Props) {
 
   const filtered = useMemo(() => {
     const base = filterKind === 'All' ? items : byKind[filterKind];
-    return filterMissing ? base.filter(item => item.fields.some(f => isMissing(f, item))) : base;
-  }, [items, byKind, filterKind, filterMissing]);
+    let result = base;
+    if (filterMissing) result = result.filter(item => item.fields.some(f => isMissing(f, item)));
+    if (filterStale)   result = result.filter(item => item.fields.some(f => isStale(f, item)));
+    return result;
+  }, [items, byKind, filterKind, filterMissing, filterStale]);
 
   const missingCount = useMemo(
     () => items.filter(item => item.fields.some(f => isMissing(f, item))).length,
     [items]
   );
 
+  const staleCount = useMemo(
+    () => items.filter(item => item.fields.some(f => isStale(f, item))).length,
+    [items]
+  );
+
+  // Build updated hashes dict: merge existing + new hashes for translated fields
+  function buildHashes(item: EntityItem, translatedFields: FieldDef[]): Record<string, string> {
+    const existing = getHashes(item) ?? {};
+    const updated: Record<string, string> = { ...existing };
+    for (const f of translatedFields) {
+      const isText = f.getIs(item)?.trim();
+      if (isText) updated[f.label] = hashText(isText);
+    }
+    return updated;
+  }
+
   const translateItem = useCallback(async (item: EntityItem) => {
-    const missingFields = item.fields.filter(f => isMissing(f, item));
-    if (missingFields.length === 0) return;
+    const targetFields = item.fields.filter(f => isMissing(f, item) || isStale(f, item));
+    if (targetFields.length === 0) return;
     setTranslatingId(item.id);
     try {
-      const translated = await translate(missingFields.map(f => f.getIs(item) ?? ''));
+      const translated = await translate(targetFields.map(f => f.getIs(item) ?? ''));
       const patch: Record<string, string> = {};
-      missingFields.forEach((f, i) => {
+      targetFields.forEach((f, i) => {
         const key = EN_FIELD_MAP[item.kind][f.label];
         if (key && translated[i]) patch[key] = translated[i];
       });
-      if (Object.keys(patch).length > 0) await savePatch(item, patch);
+      if (Object.keys(patch).length > 0) {
+        const hashes = buildHashes(item, targetFields);
+        await savePatch(item, patch, hashes);
+      }
       await load();
       onNotify(`Translated "${item.displayName}"`, 'success');
     } catch (e) {
@@ -330,21 +379,28 @@ export default function TranslationHealth({ onNotify }: Props) {
     }
   }, [translate, load, onNotify]);
 
-  const translateAll = useCallback(async () => {
-    const missing = items.filter(item => item.fields.some(f => isMissing(f, item)));
-    if (missing.length === 0) return;
+  const translateAll = useCallback(async (staleOnly = false) => {
+    const targets = items.filter(item =>
+      item.fields.some(f => staleOnly ? isStale(f, item) : (isMissing(f, item) || isStale(f, item)))
+    );
+    if (targets.length === 0) return;
     setBulkTranslating(true);
     let done = 0, failed = 0;
-    for (const item of missing) {
+    for (const item of targets) {
       try {
-        const missingFields = item.fields.filter(f => isMissing(f, item));
-        const translated = await translate(missingFields.map(f => f.getIs(item) ?? ''));
+        const targetFields = item.fields.filter(f =>
+          staleOnly ? isStale(f, item) : (isMissing(f, item) || isStale(f, item))
+        );
+        const translated = await translate(targetFields.map(f => f.getIs(item) ?? ''));
         const patch: Record<string, string> = {};
-        missingFields.forEach((f, i) => {
+        targetFields.forEach((f, i) => {
           const key = EN_FIELD_MAP[item.kind][f.label];
           if (key && translated[i]) patch[key] = translated[i];
         });
-        if (Object.keys(patch).length > 0) await savePatch(item, patch);
+        if (Object.keys(patch).length > 0) {
+          const hashes = buildHashes(item, targetFields);
+          await savePatch(item, patch, hashes);
+        }
         done++;
       } catch {
         failed++;
@@ -371,11 +427,22 @@ export default function TranslationHealth({ onNotify }: Props) {
         <Tooltip title="Refresh">
           <IconButton onClick={load} size="small"><RefreshIcon /></IconButton>
         </Tooltip>
+        {staleCount > 0 && (
+          <Button
+            variant="outlined"
+            color="warning"
+            startIcon={bulkTranslating ? <CircularProgress size={16} color="inherit" /> : <WarningAmberIcon />}
+            disabled={bulkTranslating}
+            onClick={() => translateAll(true)}
+          >
+            {bulkTranslating ? 'Translating…' : `Re-translate stale (${staleCount})`}
+          </Button>
+        )}
         <Button
           variant="contained"
           startIcon={bulkTranslating ? <CircularProgress size={16} color="inherit" /> : <TranslateIcon />}
           disabled={bulkTranslating || missingCount === 0}
-          onClick={translateAll}
+          onClick={() => translateAll(false)}
         >
           {bulkTranslating ? 'Translating…' : `Translate all missing (${missingCount})`}
         </Button>
@@ -408,9 +475,16 @@ export default function TranslationHealth({ onNotify }: Props) {
         ))}
         <Chip
           label={`Missing only (${missingCount})`}
-          onClick={() => setFilterMissing(v => !v)}
+          onClick={() => { setFilterMissing(v => !v); setFilterStale(false); }}
           color={filterMissing ? 'warning' : 'default'}
           variant={filterMissing ? 'filled' : 'outlined'}
+          size="small"
+        />
+        <Chip
+          label={`🟡 Stale (${staleCount})`}
+          onClick={() => { setFilterStale(v => !v); setFilterMissing(false); }}
+          color={filterStale ? 'warning' : 'default'}
+          variant={filterStale ? 'filled' : 'outlined'}
           size="small"
         />
       </Stack>
@@ -431,25 +505,29 @@ export default function TranslationHealth({ onNotify }: Props) {
               <TableRow>
                 <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
                   <Typography color="text.secondary">
-                    {filterMissing ? 'All translations are complete! 🎉' : 'No items.'}
+                    {filterMissing ? 'All translations are complete! 🎉' :
+                     filterStale   ? 'No stale translations found.' :
+                     'No items.'}
                   </Typography>
                 </TableCell>
               </TableRow>
             )}
             {filtered.map(item => {
               const hasMissing = item.fields.some(f => isMissing(f, item));
+              const hasStale   = item.fields.some(f => isStale(f, item));
               const isTranslating = translatingId === item.id;
+              const needsAction = hasMissing || hasStale;
               return (
                 <TableRow
                   key={`${item.kind}-${item.id}`}
                   hover
-                  sx={hasMissing ? { bgcolor: 'warning.50' } : undefined}
+                  sx={hasMissing ? { bgcolor: 'warning.50' } : hasStale ? { bgcolor: 'warning.50', opacity: 0.85 } : undefined}
                 >
                   <TableCell>
                     <Chip label={item.kind} size="small" variant="outlined" />
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2" fontWeight={hasMissing ? 600 : 400}>
+                    <Typography variant="body2" fontWeight={needsAction ? 600 : 400}>
                       {item.displayName}
                     </Typography>
                     {item.parentName && (
@@ -462,19 +540,25 @@ export default function TranslationHealth({ onNotify }: Props) {
                     <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
                       {item.fields.map(f => {
                         const hasSource = !!(f.getIs(item)?.trim());
-                        const filled = !!(f.getEn(item)?.trim());
+                        const filled    = !!(f.getEn(item)?.trim());
+                        const stale     = isStale(f, item);
+                        const status: FieldStatus =
+                          !hasSource ? 'empty' :
+                          !filled    ? 'missing' :
+                          stale      ? 'stale' : 'ok';
                         return (
                           <Tooltip
                             key={f.label}
                             title={
-                              !hasSource ? `${f.label}: no IS content` :
-                              filled ? `${f.label}: translated ✓` :
+                              status === 'empty'   ? `${f.label}: no IS content` :
+                              status === 'ok'      ? `${f.label}: translated ✓` :
+                              status === 'stale'   ? `${f.label}: IS text changed since last translation` :
                               `${f.label}: missing EN`
                             }
                           >
                             <Stack direction="row" alignItems="center" spacing={0.5}>
                               <Typography variant="caption" color="text.secondary">{f.label}</Typography>
-                              <StatusDot filled={filled} source={hasSource} />
+                              <StatusDot status={status} />
                             </Stack>
                           </Tooltip>
                         );
@@ -484,11 +568,12 @@ export default function TranslationHealth({ onNotify }: Props) {
                   <TableCell align="right">
                     <Button
                       size="small"
+                      color={hasStale && !hasMissing ? 'warning' : 'primary'}
                       startIcon={isTranslating ? <CircularProgress size={14} /> : <TranslateIcon />}
-                      disabled={!hasMissing || isTranslating || bulkTranslating}
+                      disabled={!needsAction || isTranslating || bulkTranslating}
                       onClick={() => translateItem(item)}
                     >
-                      Translate
+                      {hasStale && !hasMissing ? 'Re-translate' : 'Translate'}
                     </Button>
                   </TableCell>
                 </TableRow>

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Utanvega.Backend.Application.Caching;
@@ -26,7 +27,8 @@ public record UpdateEventCommand(
     string? NameEn = null,
     string? DescriptionEn = null,
     string? OrganizerNameEn = null,
-    string? AlertMessageEn = null
+    string? AlertMessageEn = null,
+    Dictionary<string, string>? TranslationHashes = null
 ) : IRequest<bool>;
 
 public class UpdateEventCommandHandler : IRequestHandler<UpdateEventCommand, bool>
@@ -70,6 +72,8 @@ public class UpdateEventCommandHandler : IRequestHandler<UpdateEventCommand, boo
         ev.SocialLinks = request.SocialLinks;
         ev.GpxPointLat = request.GpxPointLat;
         ev.GpxPointLng = request.GpxPointLng;
+        if (request.TranslationHashes != null)
+            ev.TranslationHashes = JsonSerializer.Serialize(request.TranslationHashes);
         ev.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync(cancellationToken);

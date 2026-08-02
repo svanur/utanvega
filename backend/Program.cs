@@ -1169,7 +1169,7 @@ app.MapGet("/api/v1/admin/tags", [Authorize] async (UtanvegaDbContext context) =
     var tags = await context.Tags
         .AsNoTracking()
         .OrderBy(t => t.Name)
-        .Select(t => new { t.Id, t.Name, t.NameEn, t.Slug, t.Color, TrailCount = t.TrailTags.Count })
+        .Select(t => new { t.Id, t.Name, t.NameEn, t.Slug, t.Color, TrailCount = t.TrailTags.Count, t.TranslationHashes })
         .ToListAsync();
     return Results.Ok(tags);
 })
@@ -1198,6 +1198,8 @@ app.MapPut("/api/v1/admin/tags/{id:guid}", [Authorize] async (Guid id, TagCreate
     tag.NameEn = dto.NameEn;
     tag.Slug = Utanvega.Backend.Core.Services.SlugGenerator.Generate(dto.Name);
     tag.Color = dto.Color;
+    if (dto.TranslationHashes != null)
+        tag.TranslationHashes = System.Text.Json.JsonSerializer.Serialize(dto.TranslationHashes);
     await context.SaveChangesWithAuditAsync("admin");
     return Results.NoContent();
 })
@@ -1979,7 +1981,7 @@ finally
 }
 
 public record SendTipRequest(string PageUrl, string Message);
-public record TagCreateDto(string Name, string? Color, string? NameEn = null);
+public record TagCreateDto(string Name, string? Color, string? NameEn = null, Dictionary<string, string>? TranslationHashes = null);
 public record TranslateRequest(List<string> Texts);
 public record BulkAddTagRequest(List<Guid> TrailIds, Guid TagId);
 public record TrailLocationAddRequest(Guid LocationId, string? Role);

@@ -17,6 +17,7 @@ export interface LocationDto {
     longitude: number | null;
     radius: number | null;
     childrenCount: number;
+    translationHashes?: Record<string, string>;
 }
 
 export function useLocations(parentId: string | null = null, search: string | null = null) {

@@ -49,4 +49,6 @@ public class Race
 
     public DateOnly? DateOfRace { get; set; }
     public TimeOnly? StartTime { get; set; }
+
+    public string? TranslationHashes { get; set; }
 }

@@ -27,6 +27,8 @@ public class EventEdition
     public string? Notes { get; set; }
     public string? NotesEn { get; set; }
 
+    public string? TranslationHashes { get; set; }
+
     public RegistrationStatus RegistrationStatus { get; set; } = RegistrationStatus.NotStarted;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

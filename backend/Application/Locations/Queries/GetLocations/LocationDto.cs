@@ -16,5 +16,6 @@ public record LocationDto(
     double? Longitude,
     double? Radius,
     int ChildrenCount,
-    int TrailsCount
+    int TrailsCount,
+    Dictionary<string, string>? TranslationHashes = null
 );

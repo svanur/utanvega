@@ -8,6 +8,8 @@ public class Tag
     public string Slug { get; set; } = string.Empty;
     public string? Color { get; set; }
 
+    public string? TranslationHashes { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public ICollection<TrailTag> TrailTags { get; set; } = new List<TrailTag>();

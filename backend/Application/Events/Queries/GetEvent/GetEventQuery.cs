@@ -41,7 +41,8 @@ public record EventDetailDto(
     List<string>? ChampionshipCategories = null,
     List<int>? ItraPoints = null,
     double? GpxPointLat = null,
-    double? GpxPointLng = null
+    double? GpxPointLng = null,
+    Dictionary<string, string>? TranslationHashes = null
 );
 
 public record GetEventQuery(string Slug) : IRequest<EventDetailDto?>, ICacheable

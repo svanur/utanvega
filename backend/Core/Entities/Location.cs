@@ -20,7 +20,9 @@ public class Location
     public string Slug { get; set; } = string.Empty;
     public string? Description { get; set; }
     public string? DescriptionEn { get; set; }
-    
+
+    public string? TranslationHashes { get; set; }
+
     public LocationType Type { get; set; } = LocationType.Place;
     
     // Hierarchy

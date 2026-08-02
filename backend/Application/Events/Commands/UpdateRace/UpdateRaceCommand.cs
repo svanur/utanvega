@@ -1,3 +1,4 @@
+using System.Text.Json;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Utanvega.Backend.Application.Caching;
@@ -26,7 +27,8 @@ public record UpdateRaceCommand(
     string? NameEn = null,
     string? DescriptionEn = null,
     string? CertifiedByEn = null,
-    string? ChampionshipCategoryEn = null
+    string? ChampionshipCategoryEn = null,
+    Dictionary<string, string>? TranslationHashes = null
 ) : IRequest<bool>;
 
 public class UpdateRaceCommandHandler : IRequestHandler<UpdateRaceCommand, bool>
@@ -71,6 +73,8 @@ public class UpdateRaceCommandHandler : IRequestHandler<UpdateRaceCommand, bool>
         race.ChampionshipCategoryEn = request.ChampionshipCategoryEn;
         race.DateOfRace = request.DateOfRace;
         race.StartTime = request.StartTime;
+        if (request.TranslationHashes != null)
+            race.TranslationHashes = JsonSerializer.Serialize(request.TranslationHashes);
 
         await _context.SaveChangesAsync(cancellationToken);
         _cacheInvalidator.InvalidateEvent(race.EventEdition.Event.Slug);
