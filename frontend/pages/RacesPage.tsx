@@ -793,9 +793,9 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                             >
                                                 <CardActionArea onClick={() => navigate(`/events/${comp.slug}`)}>
                                                     <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
-                                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1 }}>
-                                                            <Box>
-                                                                <Typography variant="subtitle1" fontWeight={700}>
+                                                        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: { xs: 0.5, sm: 1 } }}>
+                                                            <Box sx={{ minWidth: 0, width: '100%' }}>
+                                                                <Typography variant="subtitle1" fontWeight={700} sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', sm: 'nowrap' } }}>
                                                                     {comp.name}
                                                                 </Typography>
                                                                 {(comp.displayDate ?? comp.nextEditionDate) && (
@@ -901,13 +901,13 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                 <CardActionArea onClick={() => navigate(`/events/${comp.slug}`)}>
                                                     <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
                                                         {/* Name + countdown */}
-                                                        <Stack direction="row" alignItems="flex-start" justifyContent="space-between" gap={1}>
-                                                            <Stack direction="row" alignItems="flex-start" gap={1} sx={{ flex: 1, minWidth: 0 }}>
+                                                        <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'flex-start' }} justifyContent="space-between" gap={0.5}>
+                                                            <Stack direction="row" alignItems="flex-start" gap={1} sx={{ minWidth: 0, width: '100%' }}>
                                                                 <Tooltip title={t(`races.activityTypes.${comp.activityType}`, comp.activityType)}>
                                                                     <Box sx={{ color: 'text.secondary', pt: 0.3, flexShrink: 0 }}>{getActivityIcon(comp.activityType)}</Box>
                                                                 </Tooltip>
                                                                 <Box sx={{ minWidth: 0 }}>
-                                                                    <Typography variant="subtitle1" fontWeight={700} noWrap>{race.raceName}</Typography>
+                                                                    <Typography variant="subtitle1" fontWeight={700} sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', sm: 'nowrap' } }}>{race.raceName}</Typography>
                                                                 </Box>
                                                             </Stack>
                                                             <Stack direction="row" alignItems="center" gap={0.5} sx={{ flexShrink: 0 }}>
@@ -1048,14 +1048,14 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                     <CardActionArea onClick={() => navigate(`/events/${comp.slug}`)}>
                                         <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
                                             {/* Row 1: activity icon + name + status chips + countdown */}
-                                            <Stack direction="row" alignItems="flex-start" justifyContent="space-between" gap={1}>
-                                                <Stack direction="row" alignItems="flex-start" gap={1} sx={{ flex: 1, minWidth: 0 }}>
+                                            <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'flex-start' }} justifyContent="space-between" gap={0.5}>
+                                                <Stack direction="row" alignItems="flex-start" gap={1} sx={{ minWidth: 0, width: '100%' }}>
                                                     <Tooltip title={t(`races.activityTypes.${comp.activityType}`, comp.activityType)}>
                                                         <Box sx={{ color: 'text.secondary', pt: 0.3, flexShrink: 0 }}>{getActivityIcon(comp.activityType)}</Box>
                                                     </Tooltip>
                                                     <Box sx={{ minWidth: 0 }}>
                                                         <Stack direction="row" alignItems="center" gap={0.5} flexWrap="wrap">
-                                                            <Typography variant="subtitle1" fontWeight={700} sx={comp.status === 'Cancelled' ? { textDecoration: 'line-through' } : undefined}>
+                                                            <Typography variant="subtitle1" fontWeight={700} sx={{ ...(comp.status === 'Cancelled' ? { textDecoration: 'line-through' } : {}), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', sm: 'nowrap' } }}>
                                                                 {comp.name}
                                                             </Typography>
                                                             {comp.type === 'Advertisement' && (
