@@ -50,6 +50,7 @@ public class GetLocationBySlugQueryHandler : IRequestHandler<GetLocationBySlugQu
             location.Type.ToString(),
             location.ParentId,
             location.Parent?.Name,
+            location.Parent?.NameEn,
             location.Center?.Y,
             location.Center?.X,
             location.Radius,
@@ -73,7 +74,7 @@ public class GetLocationBySlugQueryHandler : IRequestHandler<GetLocationBySlugQu
             .ToListAsync(cancellationToken);
         var childDtos = childRaw.Select(l => new LocationDto(
             l.Id, l.Name, l.NameEn, l.Slug, l.Description, l.DescriptionEn,
-            l.Type, l.ParentId, location.Name, l.Latitude, l.Longitude, l.Radius,
+            l.Type, l.ParentId, location.Name, location.NameEn, l.Latitude, l.Longitude, l.Radius,
             l.ChildrenCount, l.TrailsCount
         )).ToList();
 
