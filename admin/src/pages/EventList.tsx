@@ -712,13 +712,15 @@ function buildScheduleRule(form: EventFormState): ScheduleRule | null {
 interface SortableRaceItemProps {
   race: import('../hooks/useEvents').RaceDto;
   onEdit: () => void;
+  onDuplicate: () => void;
   onDelete: () => void;
+  onCycleTicketStatus: () => void;
   getIcon: (trailId: string | null) => string;
   formatDateLabel: (d: string | null | undefined, fallback: string) => string;
   formatTimeLabel: (t: string | null | undefined) => string;
 }
 
-function SortableRaceItem({ race, onEdit, onDelete, getIcon, formatDateLabel, formatTimeLabel }: SortableRaceItemProps) {
+function SortableRaceItem({ race, onEdit, onDuplicate, onDelete, onCycleTicketStatus, getIcon, formatDateLabel, formatTimeLabel }: SortableRaceItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: race.id });
 
   return (
@@ -735,6 +737,9 @@ function SortableRaceItem({ race, onEdit, onDelete, getIcon, formatDateLabel, fo
       }}
       secondaryAction={(
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Tooltip title="Duplicate race">
+            <IconButton size="small" onClick={onDuplicate}><CopyIcon fontSize="small" /></IconButton>
+          </Tooltip>
           <IconButton size="small" onClick={onEdit}><EditIcon fontSize="small" /></IconButton>
           <IconButton size="small" color="error" onClick={onDelete}><DeleteIcon fontSize="small" /></IconButton>
         </Box>
@@ -750,7 +755,9 @@ function SortableRaceItem({ race, onEdit, onDelete, getIcon, formatDateLabel, fo
             <Typography variant="body2" fontWeight={700}>{race.name}</Typography>
             {race.distanceLabel && <Chip label={race.distanceLabel} size="small" variant="outlined" />}
             <Chip label={race.status} size="small" color={getRaceStatusColor(race.status)} />
-            <Chip label={race.ticketStatus} size="small" color={getTicketStatusColor(race.ticketStatus)} variant="outlined" />
+            <Tooltip title="Click to cycle ticket status">
+              <Chip label={race.ticketStatus} size="small" color={getTicketStatusColor(race.ticketStatus)} variant="outlined" onClick={onCycleTicketStatus} sx={{ cursor: 'pointer' }} />
+            </Tooltip>
             {race.cutoffMinutes != null && (
               <Chip label={`Time limit: ${formatMinutesToHHmm(race.cutoffMinutes) ?? `${race.cutoffMinutes} min`}`} size="small" variant="outlined" color="warning" />
             )}
@@ -1245,6 +1252,74 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
     setPrefillRaces([]);
     setRaceForm(buildRaceForm(race));
     setShowRaceDialog(true);
+  };
+
+  const openDuplicateRace = (race: RaceDto) => {
+    const edition = expandedDetail?.editions.find(ed => ed.races.some(r => r.id === race.id)) ?? null;
+    setEditRaceId(null);
+    setRaceDialogEdition(edition);
+    setPrefillRaces([]);
+    setRaceForm({ ...buildRaceForm(race), sortOrder: String((edition?.races.length ?? 0)) });
+    setShowRaceDialog(true);
+  };
+
+  const handleCycleTicketStatus = async (race: RaceDto) => {
+    const cycle: TicketStatus[] = ['NotStarted', 'Available', 'AlmostSoldOut', 'SoldOut', 'Closed'];
+    const next = cycle[(cycle.indexOf(race.ticketStatus as TicketStatus) + 1) % cycle.length] ?? 'Available';
+    try {
+      await updateRace(race.id, {
+        trailId: race.trailId ?? null,
+        name: race.name,
+        distanceLabel: race.distanceLabel ?? undefined,
+        cutoffMinutes: race.cutoffMinutes ?? null,
+        description: race.description ?? undefined,
+        status: race.status,
+        sortOrder: race.sortOrder,
+        ticketStatus: next,
+        maxParticipants: race.maxParticipants ?? null,
+        itraPoints: race.itraPoints ?? null,
+        certifiedBy: race.certifiedBy ?? undefined,
+        prizeMoney: race.prizeMoney,
+        championshipCategory: race.championshipCategory ?? undefined,
+        dateOfRace: race.dateOfRace ?? null,
+        startTime: race.startTime ?? null,
+      });
+      await refreshExpandedEvent();
+    } catch {
+      onNotify('Failed to update ticket status', 'error');
+    }
+  };
+
+  const handleMarkPastRacesCompleted = async () => {
+    const pastActive = expandedDetail?.editions
+      .flatMap(ed => ed.races)
+      .filter(r => r.status === 'Active' && r.dateOfRace && isPastDate(r.dateOfRace)) ?? [];
+    if (pastActive.length === 0) return;
+    try {
+      await Promise.all(pastActive.map(race =>
+        updateRace(race.id, {
+          trailId: race.trailId ?? null,
+          name: race.name,
+          distanceLabel: race.distanceLabel ?? undefined,
+          cutoffMinutes: race.cutoffMinutes ?? null,
+          description: race.description ?? undefined,
+          status: 'Completed',
+          sortOrder: race.sortOrder,
+          ticketStatus: race.ticketStatus,
+          maxParticipants: race.maxParticipants ?? null,
+          itraPoints: race.itraPoints ?? null,
+          certifiedBy: race.certifiedBy ?? undefined,
+          prizeMoney: race.prizeMoney,
+          championshipCategory: race.championshipCategory ?? undefined,
+          dateOfRace: race.dateOfRace ?? null,
+          startTime: race.startTime ?? null,
+        })
+      ));
+      await refreshExpandedEvent();
+      onNotify(`Marked ${pastActive.length} race${pastActive.length !== 1 ? 's' : ''} as completed`);
+    } catch {
+      onNotify('Failed to mark races as completed', 'error');
+    }
   };
 
   const openGenerateEditionDialog = (event: EventSummaryDto) => {
@@ -2277,6 +2352,14 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                                 {expandedDetail.name}
                               </Typography>
                               <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                                {(() => {
+                                  const pastCount = expandedDetail.editions.flatMap(ed => ed.races).filter(r => r.status === 'Active' && r.dateOfRace && isPastDate(r.dateOfRace)).length;
+                                  return pastCount > 0 ? (
+                                    <Button size="small" variant="outlined" color="warning" onClick={handleMarkPastRacesCompleted}>
+                                      Mark {pastCount} past race{pastCount !== 1 ? 's' : ''} completed
+                                    </Button>
+                                  ) : null;
+                                })()}
                                 {expandedDetail.scheduleRule && (
                                   <Button size="small" variant="outlined" startIcon={<GenerateIcon />} onClick={() => openGenerateEditionDialog(event)}>
                                     Generate Editions
@@ -2476,7 +2559,9 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                                                     key={race.id}
                                                     race={race}
                                                     onEdit={() => openEditRace(race)}
+                                                    onDuplicate={() => openDuplicateRace(race)}
                                                     onDelete={() => handleDeleteRace(race)}
+                                                    onCycleTicketStatus={() => handleCycleTicketStatus(race)}
                                                     getIcon={getTrailActivityIcon}
                                                     formatDateLabel={formatDateLabel}
                                                     formatTimeLabel={formatTimeLabel}
