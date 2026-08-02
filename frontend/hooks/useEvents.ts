@@ -104,6 +104,7 @@ export interface EventEditionDto {
     eventId: string;
     year: number | null;
     date: string | null;
+    endDate: string | null;
     title: string | null;
     titleEn: string | null;
     registrationUrl: string | null;

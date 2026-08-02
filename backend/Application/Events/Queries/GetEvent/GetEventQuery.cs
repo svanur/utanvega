@@ -129,6 +129,7 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
                 ed.EventId,
                 ed.Year,
                 ed.Date,
+                ed.EndDate,
                 ed.Title,
                 ed.TitleEn,
                 ed.RegistrationUrl,

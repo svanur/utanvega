@@ -368,7 +368,8 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
         for (const edition of preparedEditions) {
             const edDate = edition.date;
             const isNextEdition = nextDate && edDate === nextDate;
-            const isFuture = edDate && edDate >= today;
+            const effectiveEnd = edition.endDate ?? edDate;
+            const isFuture = effectiveEnd && effectiveEnd >= today;
             const hasNoDate = !edDate;
             const isDisplayDate = isPostRace && displayDate && edDate === displayDate;
             if (isNextEdition || isFuture || hasNoDate || isDisplayDate) {

@@ -157,6 +157,7 @@ interface EditionFormState {
   eventName: string;
   year: string;
   date: string;
+  endDate: string;
   title: string;
   titleEn: string;
   registrationUrl: string;
@@ -572,6 +573,7 @@ function createEmptyEditionForm(eventId = '', eventType: EventType = 'Race', eve
     eventName,
     year: new Date().getFullYear().toString(),
     date: '',
+    endDate: '',
     title: '',
     titleEn: '',
     registrationUrl: '',
@@ -674,6 +676,7 @@ function buildEditionForm(edition: EventEditionDto, eventType: EventType = 'Race
     eventName,
     year: edition.year?.toString() ?? '',
     date: edition.date ?? '',
+    endDate: edition.endDate ?? '',
     title: edition.title ?? '',
     titleEn: edition.titleEn ?? '',
     registrationUrl: edition.registrationUrl ?? '',
@@ -1340,7 +1343,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
   const openCreateRace = (edition: EventEditionDto) => {
     setEditRaceId(null);
     setRaceDialogEdition(edition);
-    const past = isPastDate(edition.date ?? '');
+    const past = isPastDate(edition.endDate ?? edition.date ?? '');
     setRaceForm({
       ...createEmptyRaceForm(edition.id, edition.races.length),
       status: past ? 'Completed' : 'Active',
@@ -1401,7 +1404,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
 
   const handleCloseRegistrationOnPastEditions = async () => {
     const stale = expandedDetail?.editions.filter(
-      ed => ed.date && isPastDate(ed.date) && (ed.registrationStatus === 'Open' || ed.registrationStatus === 'NotStarted')
+      ed => (ed.endDate ?? ed.date) && isPastDate(ed.endDate ?? ed.date ?? '') && (ed.registrationStatus === 'Open' || ed.registrationStatus === 'NotStarted')
     ) ?? [];
     if (stale.length === 0) return;
     try {
@@ -1617,6 +1620,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
         eventId: editionForm.eventId,
         year: editionForm.year.trim() ? Number(editionForm.year) : null,
         date: editionForm.date || null,
+        endDate: editionForm.endDate || null,
         title: trimToUndefined(editionForm.title),
         titleEn: trimToUndefined(editionForm.titleEn),
         registrationUrl: trimToUndefined(editionForm.registrationUrl),
@@ -3419,13 +3423,24 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                 onChange={(event) => handleEditionYearChange(event.target.value)}
               />
               <DatePicker
-                label="Date"
+                label="Start Date"
                 value={editionForm.date ? dayjs(editionForm.date) : null}
                 onChange={(val: Dayjs | null) => {
                   const d = val ? val.format('YYYY-MM-DD') : '';
                   setEditionField('date', d);
-                  if (!editEditionId && isPastDate(d)) setEditionField('registrationStatus', 'Closed');
+                  if (!editEditionId && isPastDate(editionForm.endDate || d)) setEditionField('registrationStatus', 'Closed');
                 }}
+                slotProps={{ textField: { fullWidth: true } }}
+              />
+              <DatePicker
+                label="End Date (multi-day)"
+                value={editionForm.endDate ? dayjs(editionForm.endDate) : null}
+                onChange={(val: Dayjs | null) => {
+                  const d = val ? val.format('YYYY-MM-DD') : '';
+                  setEditionField('endDate', d);
+                  if (!editEditionId && isPastDate(d || editionForm.date)) setEditionField('registrationStatus', 'Closed');
+                }}
+                minDate={editionForm.date ? dayjs(editionForm.date).add(1, 'day') : undefined}
                 slotProps={{ textField: { fullWidth: true } }}
               />
             </Box>

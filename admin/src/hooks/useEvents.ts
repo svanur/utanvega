@@ -61,6 +61,7 @@ export interface EventEditionDto {
     eventId: string;
     year: number | null;
     date: string | null;
+    endDate: string | null;
     title: string | null;
     titleEn: string | null;
     registrationUrl: string | null;
@@ -193,6 +194,7 @@ export interface UpdateEditionInput {
     id: string;
     year?: number | null;
     date?: string | null;
+    endDate?: string | null;
     title?: string;
     titleEn?: string;
     registrationUrl?: string;

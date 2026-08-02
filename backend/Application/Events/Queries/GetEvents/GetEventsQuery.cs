@@ -49,14 +49,14 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
         {
             var nextDate = ResolveNextDate(e, today);
             // True only when an actual edition record with a future date exists — does not count schedule-rule projections
-            var hasFutureEdition = e.Editions.Any(ed => ed.Date.HasValue && ed.Date.Value >= today);
+            var hasFutureEdition = e.Editions.Any(ed => (ed.EndDate ?? ed.Date).HasValue && (ed.EndDate ?? ed.Date)!.Value >= today);
 
             // Check for recently-past editions (up to 3 days ago)
             // so events with schedule rules still show as "recently completed"
             var mostRecentPast = e.Editions
-                .Where(ed => ed.Date.HasValue && ed.Date.Value < today)
-                .OrderByDescending(ed => ed.Date)
-                .Select(ed => ed.Date)
+                .Where(ed => (ed.EndDate ?? ed.Date).HasValue && (ed.EndDate ?? ed.Date)!.Value < today)
+                .OrderByDescending(ed => ed.EndDate ?? ed.Date)
+                .Select(ed => ed.EndDate ?? ed.Date)
                 .FirstOrDefault();
 
             var recentlyCompleted = e.Status != EventStatus.Cancelled

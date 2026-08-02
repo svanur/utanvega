@@ -98,6 +98,7 @@ public record EventEditionDto(
     Guid EventId,
     int? Year,
     DateOnly? Date,
+    DateOnly? EndDate,
     string? Title,
     string? TitleEn,
     string? RegistrationUrl,

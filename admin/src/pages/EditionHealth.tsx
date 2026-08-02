@@ -30,7 +30,7 @@ function isPast(dateStr: string | null): boolean {
 }
 
 function getEditionChecks(edition: EventEditionDto, eventName: string): HealthCheck[] {
-  const hasPastDate = isPast(edition.date);
+  const hasPastDate = isPast(edition.endDate ?? edition.date);
   const allRacesHaveTrail = edition.races.length > 0 && edition.races.every(r => r.trailId != null);
 
   return [
