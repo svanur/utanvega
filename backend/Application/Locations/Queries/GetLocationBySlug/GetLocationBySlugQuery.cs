@@ -50,6 +50,7 @@ public class GetLocationBySlugQueryHandler : IRequestHandler<GetLocationBySlugQu
             location.Type.ToString(),
             location.ParentId,
             location.Parent?.Name,
+            location.Parent?.NameEn,
             location.Center?.Y,
             location.Center?.X,
             location.Radius,
@@ -73,7 +74,7 @@ public class GetLocationBySlugQueryHandler : IRequestHandler<GetLocationBySlugQu
             .ToListAsync(cancellationToken);
         var childDtos = childRaw.Select(l => new LocationDto(
             l.Id, l.Name, l.NameEn, l.Slug, l.Description, l.DescriptionEn,
-            l.Type, l.ParentId, location.Name, l.Latitude, l.Longitude, l.Radius,
+            l.Type, l.ParentId, location.Name, location.NameEn, l.Latitude, l.Longitude, l.Radius,
             l.ChildrenCount, l.TrailsCount
         )).ToList();
 
@@ -118,16 +119,12 @@ public class GetLocationBySlugQueryHandler : IRequestHandler<GetLocationBySlugQu
         return new LocationWithTrailsDto(locationDto, childDtos, trailDtos);
     }
 
-    /// <summary>
-    /// Recursively collect all descendant location IDs using BFS.
-    /// </summary>
     private async Task<HashSet<Guid>> CollectDescendantIds(Guid parentId, CancellationToken ct)
     {
         var all = new HashSet<Guid>();
         var queue = new Queue<Guid>();
         queue.Enqueue(parentId);
 
-        // Load the full parent→children map once
         var childrenMap = (await _context.Locations
             .AsNoTracking()
             .Where(l => l.ParentId != null)
