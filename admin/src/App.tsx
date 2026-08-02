@@ -16,6 +16,9 @@ import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import SearchIcon from '@mui/icons-material/Search';
 import { useState, useCallback } from 'react';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import 'dayjs/locale/is';
 import { BrowserRouter, useNavigate, useLocation } from 'react-router-dom';
 import TrailList from './pages/TrailList';
 import { LocationList } from './pages/LocationList';
@@ -366,6 +369,7 @@ function AdminContent() {
 export default function App() {
   return (
     <ThemeProvider theme={theme}>
+      <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="is">
       <CssBaseline />
       <ErrorBoundary>
         <BrowserRouter>
@@ -374,6 +378,7 @@ export default function App() {
           </AuthProvider>
         </BrowserRouter>
       </ErrorBoundary>
+      </LocalizationProvider>
     </ThemeProvider>
   );
 }

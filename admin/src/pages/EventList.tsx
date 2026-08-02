@@ -1,4 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { TimePicker } from '@mui/x-date-pickers/TimePicker';
+import dayjs, { type Dayjs } from 'dayjs';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -30,6 +33,7 @@ import {
   Menu,
   MenuItem,
   Paper,
+  Popover,
   Select,
   Stack,
   Switch,
@@ -60,6 +64,8 @@ import {
   Link as LinkIcon,
   Map as MapIcon,
   MyLocation as MyLocationIcon,
+  Notes as NotesIcon,
+  OpenInNew as OpenInNewIcon,
   Search as SearchIcon,
   Translate as TranslateIcon,
 } from '@mui/icons-material';
@@ -162,6 +168,7 @@ interface EditionFormState {
   translationHashes?: Record<string, string>;
   _initialTitleEn?: string;
   _initialNotesEn?: string;
+  _originalDate?: string;
 }
 
 interface RaceFormState {
@@ -396,6 +403,33 @@ function getTicketStatusColor(status: TicketStatus): 'success' | 'error' | 'warn
   return 'default';
 }
 
+const DAY_OF_WEEK_INDEX: Record<string, number> = {
+  Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6,
+};
+
+function nthWeekdayOfMonth(year: number, month: number, weekOfMonth: number, dayOfWeek: string): string {
+  const dayIdx = DAY_OF_WEEK_INDEX[dayOfWeek] ?? 0;
+  const firstOfMonth = dayjs(new Date(year, month - 1, 1));
+  // dayjs.day(n) where n >= 7 advances to the same weekday in the following week,
+  // so +7 is used when the first of the month is already past the target weekday.
+  const firstOccurrence = firstOfMonth.day() <= dayIdx
+    ? firstOfMonth.day(dayIdx)
+    : firstOfMonth.day(dayIdx + 7);
+  return firstOccurrence.add((weekOfMonth - 1) * 7, 'day').format('YYYY-MM-DD');
+}
+
+function suggestSeriesLegDates(rule: ScheduleRule, year: number, legCount: number): string[] {
+  if (!rule.weekOfMonth || !rule.dayOfWeek || !rule.monthStart) return [];
+  const dates: string[] = [];
+  for (let i = 0; i < legCount; i++) {
+    const month = rule.monthStart + i;
+    const actualYear = month > 12 ? year + 1 : year;
+    const actualMonth = month > 12 ? month - 12 : month;
+    dates.push(nthWeekdayOfMonth(actualYear, actualMonth, rule.weekOfMonth, rule.dayOfWeek));
+  }
+  return dates;
+}
+
 function bumpYearInUrl(url: string, fromYear: number | null | undefined, toYear: number): string {
   if (!url || !fromYear) return '';
   return url.split(String(fromYear)).join(String(toYear));
@@ -466,6 +500,35 @@ function sortRaces(a: RaceDto, b: RaceDto): number {
   if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
   return a.name.localeCompare(b.name);
 }
+
+function isTxStale(isText: string | null | undefined, enText: string | null | undefined, hash: string | undefined): boolean {
+  if (!isText?.trim() || !enText?.trim() || !hash) return false;
+  return hashText(isText.trim()) !== hash;
+}
+
+function eventHasStaleTx(event: EventSummaryDto): boolean {
+  const h = event.translationHashes ?? {};
+  return isTxStale(event.name, event.nameEn, h['Name'])
+    || isTxStale(event.description, event.descriptionEn, h['Description'])
+    || isTxStale(event.organizerName, event.organizerNameEn, h['Organizer'])
+    || isTxStale(event.alertMessage, event.alertMessageEn, h['Alert']);
+}
+
+function editionHasStaleTx(edition: EventEditionDto): boolean {
+  const h = edition.translationHashes ?? {};
+  return isTxStale(edition.title, edition.titleEn, h['Title'])
+    || isTxStale(edition.notes, edition.notesEn, h['Notes']);
+}
+
+function raceHasStaleTx(race: RaceDto): boolean {
+  const h = race.translationHashes ?? {};
+  return isTxStale(race.name, race.nameEn, h['Name'])
+    || isTxStale(race.description, race.descriptionEn, h['Description'])
+    || isTxStale(race.certifiedBy, race.certifiedByEn, h['CertifiedBy'])
+    || isTxStale(race.championshipCategory, race.championshipCategoryEn, h['Championship']);
+}
+
+const STALE_TX_CHIP_SX = { height: 16, fontSize: '0.6rem', '& .MuiChip-label': { px: 0.75 } } as const;
 
 function createEmptyEventForm(): EventFormState {
   return {
@@ -622,6 +685,7 @@ function buildEditionForm(edition: EventEditionDto, eventType: EventType = 'Race
     translationHashes: edition.translationHashes,
     _initialTitleEn: edition.titleEn ?? '',
     _initialNotesEn: edition.notesEn ?? '',
+    _originalDate: edition.date ?? '',
   };
 }
 
@@ -707,13 +771,17 @@ function buildScheduleRule(form: EventFormState): ScheduleRule | null {
 interface SortableRaceItemProps {
   race: import('../hooks/useEvents').RaceDto;
   onEdit: () => void;
+  onDuplicate: () => void;
   onDelete: () => void;
+  onCycleTicketStatus: () => void;
+  ticketLoading: boolean;
+  staleTx: boolean;
   getIcon: (trailId: string | null) => string;
   formatDateLabel: (d: string | null | undefined, fallback: string) => string;
   formatTimeLabel: (t: string | null | undefined) => string;
 }
 
-function SortableRaceItem({ race, onEdit, onDelete, getIcon, formatDateLabel, formatTimeLabel }: SortableRaceItemProps) {
+function SortableRaceItem({ race, onEdit, onDuplicate, onDelete, onCycleTicketStatus, ticketLoading, staleTx, getIcon, formatDateLabel, formatTimeLabel }: SortableRaceItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: race.id });
 
   return (
@@ -730,6 +798,9 @@ function SortableRaceItem({ race, onEdit, onDelete, getIcon, formatDateLabel, fo
       }}
       secondaryAction={(
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Tooltip title="Duplicate race">
+            <IconButton size="small" onClick={onDuplicate}><CopyIcon fontSize="small" /></IconButton>
+          </Tooltip>
           <IconButton size="small" onClick={onEdit}><EditIcon fontSize="small" /></IconButton>
           <IconButton size="small" color="error" onClick={onDelete}><DeleteIcon fontSize="small" /></IconButton>
         </Box>
@@ -743,9 +814,16 @@ function SortableRaceItem({ race, onEdit, onDelete, getIcon, formatDateLabel, fo
         primary={(
           <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ alignItems: 'center' }}>
             <Typography variant="body2" fontWeight={700}>{race.name}</Typography>
+            {staleTx && (
+              <Tooltip title="Race translation (name/description) may be outdated">
+                <Chip label="EN" size="small" color="warning" variant="filled" sx={STALE_TX_CHIP_SX} />
+              </Tooltip>
+            )}
             {race.distanceLabel && <Chip label={race.distanceLabel} size="small" variant="outlined" />}
             <Chip label={race.status} size="small" color={getRaceStatusColor(race.status)} />
-            <Chip label={race.ticketStatus} size="small" color={getTicketStatusColor(race.ticketStatus)} variant="outlined" />
+            <Tooltip title={ticketLoading ? 'Updating…' : 'Click to cycle ticket status'}>
+              <Chip label={race.ticketStatus} size="small" color={getTicketStatusColor(race.ticketStatus)} variant="outlined" onClick={ticketLoading ? undefined : onCycleTicketStatus} disabled={ticketLoading} sx={{ cursor: ticketLoading ? 'default' : 'pointer' }} />
+            </Tooltip>
             {race.cutoffMinutes != null && (
               <Chip label={`Time limit: ${formatMinutesToHHmm(race.cutoffMinutes) ?? `${race.cutoffMinutes} min`}`} size="small" variant="outlined" color="warning" />
             )}
@@ -918,6 +996,8 @@ function TrailStartPicker({ trailsWithCoords, onPick }: TrailPickerProps) {
 
 // ── Main component ───────────────────────────────────────────────────────────
 
+const PUBLIC_SITE_URL = ((import.meta.env.VITE_PUBLIC_SITE_URL ?? '') as string).replace(/\/$/, '');
+
 export default function EventList({ onNotify, initialEventId, onEventIdConsumed }: EventListProps) {
   const {
     events,
@@ -948,6 +1028,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
   const [editEventId, setEditEventId] = useState<string | null>(null);
   const [editEditionId, setEditEditionId] = useState<string | null>(null);
   const [editRaceId, setEditRaceId] = useState<string | null>(null);
+  const [raceDialogEdition, setRaceDialogEdition] = useState<EventEditionDto | null>(null);
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
   const deepLinkScrollTarget = useRef<string | null>(null);
   const [expandedDetail, setExpandedDetail] = useState<EventDetailDto | null>(null);
@@ -972,6 +1053,29 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
   const [localRaceOrder, setLocalRaceOrder] = useState<Map<string, string[]>>(new Map());
   const [prefillRaces, setPrefillRaces] = useState<RaceDto[]>([]);
   const [showBulkDatesDialog, setShowBulkDatesDialog] = useState(false);
+  const [bulkDatesEditionDate, setBulkDatesEditionDate] = useState<string>('');
+  const [bulkDatesIsSeries, setBulkDatesIsSeries] = useState(false);
+  const [bulkDatesScheduleRule, setBulkDatesScheduleRule] = useState<ScheduleRule | null>(null);
+  const [bulkDatesEditionYear, setBulkDatesEditionYear] = useState<number | null>(null);
+  const [pendingDateShift, setPendingDateShift] = useState<{ offsetDays: number; races: RaceDto[] } | null>(null);
+  const [showOlderEditions, setShowOlderEditions] = useState(false);
+  const [showAttentionPanel, setShowAttentionPanel] = useState(true);
+  const [attentionFilter, setAttentionFilter] = useState<'noEdition' | 'seriesMissingReg' | 'pastActive' | null>(null);
+  const [urlPopover, setUrlPopover] = useState<{
+    anchorEl: HTMLElement;
+    edition: EventEditionDto;
+    regUrl: string;
+    resultsUrl: string;
+  } | null>(null);
+  const [notesPopover, setNotesPopover] = useState<{
+    anchorEl: HTMLElement;
+    edition: EventEditionDto;
+    notes: string;
+    notesEn: string;
+  } | null>(null);
+  const [cyclingTicketIds, setCyclingTicketIds] = useState<Set<string>>(new Set());
+  const [cyclingRegIds, setCyclingRegIds] = useState<Set<string>>(new Set());
+  const [cyclingStatusIds, setCyclingStatusIds] = useState<Set<string>>(new Set());
   const [copyRacesConfirm, setCopyRacesConfirm] = useState<{ edition: EventEditionDto; source: EventEditionDto } | null>(null);
   const [showBulkMissingDialog, setShowBulkMissingDialog] = useState(false);
   const [bulkMissingLoading, setBulkMissingLoading] = useState(false);
@@ -1010,10 +1114,10 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
     return [...new Set(years)].sort((a, b) => b.localeCompare(a));
   }, [events]);
 
-  const hasActiveFilters = activityFilter !== 'all' || typeFilter !== 'all' || statusFilter !== 'all' || locationFilter !== 'all' || yearFilter !== 'all' || monthFilter !== 'all';
+  const hasActiveFilters = attentionFilter !== null || activityFilter !== 'all' || typeFilter !== 'all' || statusFilter !== 'all' || locationFilter !== 'all' || yearFilter !== 'all' || monthFilter !== 'all';
   const resetFilters = () => {
     setActivityFilter('all'); setTypeFilter('all'); setStatusFilter('all'); setLocationFilter('all');
-    setYearFilter('all'); setMonthFilter('all');
+    setYearFilter('all'); setMonthFilter('all'); setAttentionFilter(null);
   };
 
   // Deep-link: expand and scroll to the target event once events are loaded
@@ -1035,6 +1139,9 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
       document.getElementById(`event-row-${expandedEventId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   }, [expandedEventId]);
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const in30daysStr = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
   const filteredEvents = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -1067,6 +1174,16 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
         if (monthFilter !== 'all') {
           if (!event.hasFutureEdition) return true;
           if (!event.nextEditionDate || event.nextEditionDate.slice(5, 7) !== monthFilter) return false;
+        }
+
+        if (attentionFilter === 'noEdition') {
+          if (!(!event.hasFutureEdition && (event.type === 'Race' || event.type === 'Series') && event.status !== 'Cancelled')) return false;
+        }
+        if (attentionFilter === 'seriesMissingReg') {
+          if (!(event.type === 'Series' && event.nextEditionDate && event.nextEditionDate <= in30daysStr && event.seriesRaces?.some(r => !r.registrationUrl))) return false;
+        }
+        if (attentionFilter === 'pastActive') {
+          if (!(event.status === 'Confirmed' && event.nextEditionDate && event.nextEditionDate < todayStr)) return false;
         }
 
         return true;
@@ -1118,12 +1235,13 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
     setRaceForm(prev => ({ ...prev, [field]: value }));
   };
 
-  const loadExpandedEvent = async (eventId: string, slug: string) => {
+  const loadExpandedEvent = async (eventId: string, slug: string, resetOlderEditions = true) => {
     setLoadingDetail(true);
     try {
       const detail = await getEvent(slug);
       setExpandedEventId(eventId);
       setExpandedDetail(detail);
+      if (resetOlderEditions) setShowOlderEditions(false);
     } catch {
       onNotify('Failed to load event editions', 'error');
     } finally {
@@ -1135,7 +1253,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
     if (!expandedEventId) return;
     const slug = expandedDetail?.slug ?? events.find(event => event.id === expandedEventId)?.slug;
     if (!slug) return;
-    await loadExpandedEvent(expandedEventId, slug);
+    await loadExpandedEvent(expandedEventId, slug, false);
   };
 
   const toggleExpand = async (event: EventSummaryDto) => {
@@ -1203,6 +1321,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
       ...createEmptyEditionForm(event.id, event.type, event.name),
       year: nextYear,
       date: suggestedDate,
+      title: nextYear,
       registrationUrl: clonedRegUrl,
       resultsUrl: clonedResultsUrl,
       registrationStatus: isPastYear ? 'Closed' : 'NotStarted',
@@ -1220,6 +1339,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
 
   const openCreateRace = (edition: EventEditionDto) => {
     setEditRaceId(null);
+    setRaceDialogEdition(edition);
     const past = isPastDate(edition.date ?? '');
     setRaceForm({
       ...createEmptyRaceForm(edition.id, edition.races.length),
@@ -1232,9 +1352,161 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
 
   const openEditRace = (race: RaceDto) => {
     setEditRaceId(race.id);
+    setRaceDialogEdition(expandedDetail?.editions.find(ed => ed.races.some(r => r.id === race.id)) ?? null);
     setPrefillRaces([]);
     setRaceForm(buildRaceForm(race));
     setShowRaceDialog(true);
+  };
+
+  const openDuplicateRace = (race: RaceDto) => {
+    const edition = expandedDetail?.editions.find(ed => ed.races.some(r => r.id === race.id)) ?? null;
+    const maxSort = edition ? Math.max(...edition.races.map(r => r.sortOrder), -1) : -1;
+    setEditRaceId(null);
+    setRaceDialogEdition(edition);
+    setPrefillRaces([]);
+    setRaceForm({ ...buildRaceForm(race), sortOrder: String(maxSort + 1) });
+    setShowRaceDialog(true);
+  };
+
+  const handleCycleTicketStatus = async (race: RaceDto) => {
+    if (cyclingTicketIds.has(race.id)) return;
+    const cycle: TicketStatus[] = ['NotStarted', 'Available', 'AlmostSoldOut', 'SoldOut', 'Closed'];
+    const next = cycle[(cycle.indexOf(race.ticketStatus as TicketStatus) + 1) % cycle.length] ?? 'Available';
+    setCyclingTicketIds(prev => new Set(prev).add(race.id));
+    try {
+      await updateRace(race.id, {
+        trailId: race.trailId ?? null,
+        name: race.name,
+        distanceLabel: race.distanceLabel ?? undefined,
+        cutoffMinutes: race.cutoffMinutes ?? null,
+        description: race.description ?? undefined,
+        status: race.status,
+        sortOrder: race.sortOrder,
+        ticketStatus: next,
+        maxParticipants: race.maxParticipants ?? null,
+        itraPoints: race.itraPoints ?? null,
+        certifiedBy: race.certifiedBy ?? undefined,
+        prizeMoney: race.prizeMoney,
+        championshipCategory: race.championshipCategory ?? undefined,
+        dateOfRace: race.dateOfRace ?? null,
+        startTime: race.startTime ?? null,
+      });
+      await refreshExpandedEvent();
+    } catch {
+      onNotify('Failed to update ticket status', 'error');
+    } finally {
+      setCyclingTicketIds(prev => { const s = new Set(prev); s.delete(race.id); return s; });
+    }
+  };
+
+  const handleCloseRegistrationOnPastEditions = async () => {
+    const stale = expandedDetail?.editions.filter(
+      ed => ed.date && isPastDate(ed.date) && (ed.registrationStatus === 'Open' || ed.registrationStatus === 'NotStarted')
+    ) ?? [];
+    if (stale.length === 0) return;
+    try {
+      await Promise.all(stale.map(ed => updateEdition(ed.id, { registrationStatus: 'Closed' })));
+      await refreshExpandedEvent();
+      onNotify(`Closed registration on ${stale.length} past edition${stale.length !== 1 ? 's' : ''}`);
+    } catch {
+      onNotify('Failed to close registration', 'error');
+    }
+  };
+
+  const handleSetTrailForAllRaces = async (edition: EventEditionDto, trailId: string) => {
+    const races = edition.races.filter(r => !r.trailId);
+    if (races.length === 0) return;
+    try {
+      await Promise.all(races.map(race => updateRace(race.id, {
+        trailId,
+        name: race.name,
+        distanceLabel: race.distanceLabel ?? undefined,
+        cutoffMinutes: race.cutoffMinutes ?? null,
+        description: race.description ?? undefined,
+        status: race.status,
+        sortOrder: race.sortOrder,
+        ticketStatus: race.ticketStatus,
+        maxParticipants: race.maxParticipants ?? null,
+        itraPoints: race.itraPoints ?? null,
+        certifiedBy: race.certifiedBy ?? undefined,
+        prizeMoney: race.prizeMoney,
+        championshipCategory: race.championshipCategory ?? undefined,
+        dateOfRace: race.dateOfRace ?? null,
+        startTime: race.startTime ?? null,
+      })));
+      await refreshExpandedEvent();
+      onNotify(`Trail set on ${races.length} race${races.length !== 1 ? 's' : ''}`);
+    } catch {
+      onNotify('Failed to set trail', 'error');
+    }
+  };
+
+  const handleMarkPastRacesCompleted = async () => {
+    const pastActive = expandedDetail?.editions
+      .flatMap(ed => ed.races)
+      .filter(r => r.status === 'Active' && r.dateOfRace && isPastDate(r.dateOfRace)) ?? [];
+    if (pastActive.length === 0) return;
+    try {
+      await Promise.all(pastActive.map(race =>
+        updateRace(race.id, {
+          trailId: race.trailId ?? null,
+          name: race.name,
+          distanceLabel: race.distanceLabel ?? undefined,
+          cutoffMinutes: race.cutoffMinutes ?? null,
+          description: race.description ?? undefined,
+          status: 'Completed',
+          sortOrder: race.sortOrder,
+          ticketStatus: race.ticketStatus,
+          maxParticipants: race.maxParticipants ?? null,
+          itraPoints: race.itraPoints ?? null,
+          certifiedBy: race.certifiedBy ?? undefined,
+          prizeMoney: race.prizeMoney,
+          championshipCategory: race.championshipCategory ?? undefined,
+          dateOfRace: race.dateOfRace ?? null,
+          startTime: race.startTime ?? null,
+        })
+      ));
+      await refreshExpandedEvent();
+      onNotify(`Marked ${pastActive.length} race${pastActive.length !== 1 ? 's' : ''} as completed`);
+    } catch {
+      onNotify('Failed to mark races as completed', 'error');
+    }
+  };
+
+  const handleCycleEventStatus = async (event: EventSummaryDto) => {
+    if (cyclingStatusIds.has(event.id)) return;
+    if (event.status !== 'Unconfirmed' && event.status !== 'Confirmed') return;
+    const next: EventStatus = event.status === 'Unconfirmed' ? 'Confirmed' : 'Unconfirmed';
+    setCyclingStatusIds(prev => new Set(prev).add(event.id));
+    try {
+      await updateEvent(event.id, {
+        name: event.name,
+        nameEn: event.nameEn ?? undefined,
+        description: event.description ?? undefined,
+        descriptionEn: event.descriptionEn ?? undefined,
+        type: event.type,
+        activityType: event.activityType,
+        status: next,
+        organizerName: event.organizerName ?? undefined,
+        organizerNameEn: event.organizerNameEn ?? undefined,
+        organizerWebsite: event.organizerWebsite ?? undefined,
+        organizerId: event.organizerId ?? null,
+        alertMessage: event.alertMessage ?? undefined,
+        alertMessageEn: event.alertMessageEn ?? undefined,
+        alertSeverity: event.alertSeverity ?? undefined,
+        locationId: event.locationId ?? null,
+        scheduleRule: event.scheduleRule ?? null,
+        socialLinks: event.socialLinks ?? null,
+        gpxPointLat: event.gpxPointLat ?? null,
+        gpxPointLng: event.gpxPointLng ?? null,
+        translationHashes: event.translationHashes,
+      });
+      if (expandedEventId === event.id) await refreshExpandedEvent();
+    } catch {
+      onNotify('Failed to update event status', 'error');
+    } finally {
+      setCyclingStatusIds(prev => { const s = new Set(prev); s.delete(event.id); return s; });
+    }
   };
 
   const openGenerateEditionDialog = (event: EventSummaryDto) => {
@@ -1376,6 +1648,16 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
           trailId: input.trailId,
         });
         onNotify(`Edition "${editionLabel}" updated`);
+        const origDate = editionForm._originalDate;
+        if (origDate && input.date && origDate !== input.date) {
+          const offsetDays = dayjs(input.date).diff(dayjs(origDate), 'day');
+          const racesWithDates = expandedDetail?.editions
+            .find(ed => ed.id === editEditionId)?.races
+            .filter(r => r.dateOfRace) ?? [];
+          if (offsetDays !== 0 && racesWithDates.length > 0) {
+            setPendingDateShift({ offsetDays, races: racesWithDates });
+          }
+        }
       } else {
         const newEditionId = await createEdition(input);
         const sourceEdition = cloneFromEditionId
@@ -1829,8 +2111,10 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
   };
 
   const handleCycleRegistrationStatus = async (edition: EventEditionDto) => {
+    if (cyclingRegIds.has(edition.id)) return;
     const cycle: RegistrationStatus[] = ['NotStarted', 'Open', 'Closed'];
     const next = cycle[(cycle.indexOf(edition.registrationStatus) + 1) % cycle.length];
+    setCyclingRegIds(prev => new Set(prev).add(edition.id));
     try {
       await updateEdition(edition.id, {
         year: edition.year ?? null,
@@ -1845,10 +2129,32 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
       await refreshExpandedEvent();
     } catch (err) {
       onNotify(err instanceof Error ? err.message : 'Failed to update status', 'error');
+    } finally {
+      setCyclingRegIds(prev => { const s = new Set(prev); s.delete(edition.id); return s; });
+    }
+  };
+
+  const handleSaveNotesPopover = async () => {
+    if (!notesPopover) return;
+    const { edition, notes, notesEn } = notesPopover;
+    try {
+      await updateEdition(edition.id, {
+        registrationStatus: edition.registrationStatus,
+        notes: notes || undefined,
+        notesEn: notesEn || undefined,
+      });
+      setNotesPopover(null);
+      await refreshExpandedEvent();
+    } catch {
+      onNotify('Failed to save notes', 'error');
     }
   };
 
   const handleEditionYearChange = (yearStr: string) => {
+    // Keep title in sync with year if it still matches the old year value
+    if (!editEditionId && (editionForm.title === editionForm.year || editionForm.title === '')) {
+      setEditionField('title', yearStr);
+    }
     setEditionField('year', yearStr);
     if (editEditionId || yearStr.length !== 4 || !expandedDetail) return;
     const toYear = Number(yearStr);
@@ -1876,6 +2182,10 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
     for (let i = idx + 1; i < allSorted.length; i++) {
       if (allSorted[i].races.length > 0) { prevEdition = allSorted[i]; break; }
     }
+    setBulkDatesEditionDate(edition.date ?? '');
+    setBulkDatesIsSeries(expandedDetail?.type === 'Series');
+    setBulkDatesScheduleRule(expandedDetail?.scheduleRule ?? null);
+    setBulkDatesEditionYear(edition.year ?? null);
     setBulkDates(
       [...edition.races].sort(sortRaces).map(race => {
         const prevRace = prevEdition?.races.find(r => r.name === race.name);
@@ -1888,6 +2198,54 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
       }),
     );
     setShowBulkDatesDialog(true);
+  };
+
+  const handleSaveUrlPopover = async () => {
+    if (!urlPopover) return;
+    const { edition, regUrl, resultsUrl } = urlPopover;
+    try {
+      await updateEdition(edition.id, {
+        registrationStatus: edition.registrationStatus,
+        registrationUrl: regUrl || undefined,
+        resultsUrl: resultsUrl || undefined,
+      });
+      setUrlPopover(null);
+      await refreshExpandedEvent();
+    } catch {
+      onNotify('Failed to save URLs', 'error');
+    }
+  };
+
+  const handleShiftRaceDates = async () => {
+    if (!pendingDateShift) return;
+    const { offsetDays, races } = pendingDateShift;
+    setPendingDateShift(null);
+    try {
+      await Promise.all(races.map(race =>
+        updateRace(race.id, {
+          trailId: race.trailId ?? null,
+          name: race.name,
+          distanceLabel: race.distanceLabel ?? undefined,
+          cutoffMinutes: race.cutoffMinutes ?? null,
+          description: race.description ?? undefined,
+          status: race.status,
+          sortOrder: race.sortOrder,
+          ticketStatus: race.ticketStatus,
+          maxParticipants: race.maxParticipants ?? null,
+          itraPoints: race.itraPoints ?? null,
+          certifiedBy: race.certifiedBy ?? undefined,
+          prizeMoney: race.prizeMoney,
+          championshipCategory: race.championshipCategory ?? undefined,
+          dateOfRace: dayjs(race.dateOfRace!).add(offsetDays, 'day').format('YYYY-MM-DD'),
+          startTime: race.startTime ?? null,
+        })
+      ));
+      await refreshExpandedEvent();
+      const sign = offsetDays > 0 ? '+' : '';
+      onNotify(`Shifted ${races.length} race date${races.length !== 1 ? 's' : ''} by ${sign}${offsetDays} day${Math.abs(offsetDays) !== 1 ? 's' : ''}`);
+    } catch {
+      onNotify('Failed to shift race dates', 'error');
+    }
   };
 
   const handleSaveBulkDates = async () => {
@@ -1979,8 +2337,52 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
 
   const selectedBulkCount = bulkMissingItems.filter(i => i.selected).length;
 
+  const attentionItems: { key: string; label: string }[] = [];
+  {
+    const noEdition = events.filter(e =>
+      !e.hasFutureEdition && (e.type === 'Race' || e.type === 'Series') && e.status !== 'Cancelled'
+    ).length;
+    if (noEdition > 0) attentionItems.push({ key: 'noEdition', label: `${noEdition} active event${noEdition !== 1 ? 's' : ''} missing a future edition` });
+  }
+  {
+    const seriesMissingReg = events.filter(e =>
+      e.type === 'Series' && e.nextEditionDate && e.nextEditionDate <= in30daysStr &&
+      e.seriesRaces?.some(r => !r.registrationUrl)
+    ).length;
+    if (seriesMissingReg > 0) attentionItems.push({ key: 'seriesMissingReg', label: `${seriesMissingReg} series event${seriesMissingReg !== 1 ? 's' : ''} with races in ≤30 days missing registration URL` });
+  }
+  {
+    const pastActive = events.filter(e =>
+      e.status === 'Confirmed' && e.nextEditionDate && e.nextEditionDate < todayStr
+    ).length;
+    if (pastActive > 0) attentionItems.push({ key: 'pastActive', label: `${pastActive} event${pastActive !== 1 ? 's' : ''} whose latest edition has passed — check results URL and registration status` });
+  }
+
   return (
     <Box>
+      {attentionItems.length > 0 && showAttentionPanel && (
+        <Alert
+          severity="warning"
+          sx={{ mb: 2 }}
+          onClose={() => setShowAttentionPanel(false)}
+        >
+          <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>Needs attention</Typography>
+          <Stack component="ul" sx={{ m: 0, pl: 2, gap: 0.25 }}>
+            {attentionItems.map(item => (
+              <li key={item.key}>
+                <Typography
+                  variant="body2"
+                  component="button"
+                  onClick={() => setAttentionFilter(attentionFilter === item.key as typeof attentionFilter ? null : item.key as typeof attentionFilter)}
+                  sx={{ background: 'none', border: 'none', p: 0, cursor: 'pointer', textAlign: 'left', textDecoration: attentionFilter === item.key ? 'underline' : 'underline dotted', textUnderlineOffset: 3, color: 'inherit' }}
+                >
+                  {item.label} {attentionFilter === item.key ? '(showing — click to clear)' : '→ click to filter'}
+                </Typography>
+              </li>
+            ))}
+          </Stack>
+        </Alert>
+      )}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
           <TrophyIcon color="primary" />
@@ -2130,8 +2532,25 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                     </IconButton>
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2" fontWeight={700}>{event.name}</Typography>
-                    <Typography variant="caption" color="text.secondary" fontFamily="monospace">{event.slug}</Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                      <Typography variant="body2" fontWeight={700}>{event.name}</Typography>
+                      {eventHasStaleTx(event) && (
+                        <Tooltip title="English translation may be outdated — IS text changed since last translate">
+                          <Chip label="EN" size="small" color="warning" variant="filled" sx={{ height: 16, fontSize: '0.6rem', '& .MuiChip-label': { px: 0.75 } }} />
+                        </Tooltip>
+                      )}
+                    </Box>
+                    <Tooltip title="Click to copy slug">
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        fontFamily="monospace"
+                        sx={{ cursor: 'pointer', '&:hover': { color: 'primary.main' } }}
+                        onClick={(e) => { e.stopPropagation(); void navigator.clipboard.writeText(event.slug); onNotify(`Copied: ${event.slug}`); }}
+                      >
+                        {event.slug}
+                      </Typography>
+                    </Tooltip>
                   </TableCell>
                   <TableCell>
                     <Chip label={`${ACTIVITY_ICONS[event.activityType] ?? '🏅'} ${event.activityType}`} size="small" color={ACTIVITY_TYPE_COLORS[event.activityType as ActivityType] ?? 'default'} variant="outlined" />
@@ -2176,8 +2595,22 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                       <Typography variant="body2" color="text.secondary">—</Typography>
                     )}
                   </TableCell>
-                  <TableCell align="center">
-                    <Chip label={event.status} size="small" color={getEventStatusColor(event.status)} />
+                  <TableCell align="center" onClick={e => e.stopPropagation()}>
+                    <Tooltip title={
+                      cyclingStatusIds.has(event.id) ? 'Updating…'
+                      : event.status === 'Unconfirmed' ? 'Click to confirm'
+                      : event.status === 'Confirmed' ? 'Click to unconfirm'
+                      : event.status
+                    }>
+                      <Chip
+                        label={event.status}
+                        size="small"
+                        color={getEventStatusColor(event.status)}
+                        onClick={(event.status === 'Unconfirmed' || event.status === 'Confirmed') && !cyclingStatusIds.has(event.id) ? () => handleCycleEventStatus(event) : undefined}
+                        disabled={cyclingStatusIds.has(event.id)}
+                        sx={(event.status === 'Unconfirmed' || event.status === 'Confirmed') ? { cursor: 'pointer' } : undefined}
+                      />
+                    </Tooltip>
                   </TableCell>
                   <TableCell align="center">
                     <Chip label={event.editionCount} size="small" variant="outlined" />
@@ -2191,6 +2624,13 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                     </Typography>
                   </TableCell>
                   <TableCell align="right" onClick={clickEvent => clickEvent.stopPropagation()} sx={expandedEventId === event.id ? { borderTop: '2px solid', borderRight: '2px solid', borderColor: 'primary.main' } : {}}>
+                    {PUBLIC_SITE_URL && (
+                      <Tooltip title="View on public site">
+                        <IconButton size="small" component="a" href={`${PUBLIC_SITE_URL}/events/${event.slug}`} target="_blank" rel="noopener noreferrer">
+                          <OpenInNewIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
                     <Tooltip title="Edit event">
                       <IconButton size="small" onClick={() => openEditEvent(event)}>
                         <EditIcon fontSize="small" />
@@ -2219,8 +2659,27 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                               mx: -2, px: 2, py: 1,
                               display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1,
                             }}>
-                              <Typography variant="subtitle1" fontWeight={700}>{expandedDetail.name}</Typography>
+                              <Typography variant="subtitle1" fontWeight={700}>
+                                <Typography component="span" variant="subtitle1" color="text.secondary" fontWeight={400}>Edition list for: </Typography>
+                                {expandedDetail.name}
+                              </Typography>
                               <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                                {(() => {
+                                  const staleCount = expandedDetail.editions.filter(ed => ed.date && isPastDate(ed.date) && (ed.registrationStatus === 'Open' || ed.registrationStatus === 'NotStarted')).length;
+                                  return staleCount > 0 ? (
+                                    <Button size="small" variant="outlined" color="warning" onClick={handleCloseRegistrationOnPastEditions}>
+                                      Close registration on {staleCount} past edition{staleCount !== 1 ? 's' : ''}
+                                    </Button>
+                                  ) : null;
+                                })()}
+                                {(() => {
+                                  const pastCount = expandedDetail.editions.flatMap(ed => ed.races).filter(r => r.status === 'Active' && r.dateOfRace && isPastDate(r.dateOfRace)).length;
+                                  return pastCount > 0 ? (
+                                    <Button size="small" variant="outlined" color="warning" onClick={handleMarkPastRacesCompleted}>
+                                      Mark {pastCount} past race{pastCount !== 1 ? 's' : ''} completed
+                                    </Button>
+                                  ) : null;
+                                })()}
                                 {expandedDetail.scheduleRule && (
                                   <Button size="small" variant="outlined" startIcon={<GenerateIcon />} onClick={() => openGenerateEditionDialog(event)}>
                                     Generate Editions
@@ -2295,8 +2754,15 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                                 <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
                                   No editions yet. Click "Add Edition" to create the first one.
                                 </Typography>
-                              ) : (
-                                [...expandedDetail.editions].sort(sortEditions).map((edition, idx) => (
+                              ) : (() => {
+                                const currentYear = new Date().getFullYear();
+                                const sorted = [...expandedDetail.editions].sort(sortEditions);
+                                const older = sorted.filter(ed => (ed.year ?? 0) < currentYear && (!ed.date || isPastDate(ed.date)));
+                                const visible = showOlderEditions ? sorted : sorted.filter(ed => !older.includes(ed));
+                                const hiddenCount = older.length;
+                                return (
+                                <>
+                                {visible.map((edition, idx) => (
                                   <Paper key={edition.id} variant="outlined" sx={{
                                     mb: 1.5,
                                     borderLeft: '4px solid',
@@ -2316,17 +2782,33 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                                           )}
                                           <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ mt: 0.75 }}>
                                             <Chip label={edition.date ?? (edition.year != null ? String(edition.year) : 'Date TBD')} size="small" variant="outlined" />
-                                            <Tooltip title="Click to cycle: NotStarted → Open → Closed">
+                                            <Tooltip title={cyclingRegIds.has(edition.id) ? 'Updating…' : 'Click to cycle: NotStarted → Open → Closed'}>
                                               <Chip
                                                 label={edition.registrationStatus}
                                                 size="small"
                                                 color={getRegistrationStatusColor(edition.registrationStatus)}
-                                                onClick={() => handleCycleRegistrationStatus(edition)}
-                                                sx={{ cursor: 'pointer' }}
+                                                onClick={cyclingRegIds.has(edition.id) ? undefined : () => handleCycleRegistrationStatus(edition)}
+                                                disabled={cyclingRegIds.has(edition.id)}
+                                                sx={{ cursor: cyclingRegIds.has(edition.id) ? 'default' : 'pointer' }}
                                               />
                                             </Tooltip>
                                             <Chip label={`${edition.races.length} race${edition.races.length === 1 ? '' : 's'}`} size="small" variant="outlined" />
                                             {edition.trailName && <Chip label={`Trail: ${edition.trailName}`} size="small" variant="outlined" />}
+                                            {expandedDetail.type === 'Series' && edition.races.length > 0 && (() => {
+                                              const ready = edition.races.filter(r => r.dateOfRace && r.trailId && r.distanceLabel).length;
+                                              const total = edition.races.length;
+                                              const allReady = ready === total;
+                                              return (
+                                                <Tooltip title={allReady ? 'All legs ready' : `${total - ready} leg${total - ready !== 1 ? 's' : ''} missing date, trail or distance`}>
+                                                  <Chip
+                                                    label={`${ready}/${total} legs ready`}
+                                                    size="small"
+                                                    color={allReady ? 'success' : 'warning'}
+                                                    variant={allReady ? 'outlined' : 'filled'}
+                                                  />
+                                                </Tooltip>
+                                              );
+                                            })()}
                                             {(() => {
                                               const missing = edition.races.filter(r => !r.dateOfRace).length;
                                               return missing > 0 ? (
@@ -2341,10 +2823,37 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                                                 </Tooltip>
                                               ) : null;
                                             })()}
+                                            {edition.date && isPastDate(edition.date) && !edition.resultsUrl && (
+                                              <Tooltip title="Results URL missing — click to add">
+                                                <Chip
+                                                  label="Results missing"
+                                                  size="small"
+                                                  color="warning"
+                                                  variant="outlined"
+                                                  onClick={(e) => setUrlPopover({ anchorEl: e.currentTarget, edition, regUrl: edition.registrationUrl ?? '', resultsUrl: '' })}
+                                                  sx={{ cursor: 'pointer' }}
+                                                />
+                                              </Tooltip>
+                                            )}
+                                            {editionHasStaleTx(edition) && (
+                                              <Tooltip title="Edition translation (title/notes) may be outdated">
+                                                <Chip label="EN" size="small" color="warning" variant="filled" sx={STALE_TX_CHIP_SX} />
+                                              </Tooltip>
+                                            )}
                                           </Stack>
                                         </Box>
                                       </Box>
-                                      <Box>
+                                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                        <Tooltip title={edition.notes ? `Notes: ${edition.notes.slice(0, 60)}${edition.notes.length > 60 ? '…' : ''}` : 'Add notes'}>
+                                          <IconButton size="small" color={edition.notes ? 'primary' : 'default'} onClick={(e) => setNotesPopover({ anchorEl: e.currentTarget, edition, notes: edition.notes ?? '', notesEn: edition.notesEn ?? '' })}>
+                                            <NotesIcon fontSize="small" />
+                                          </IconButton>
+                                        </Tooltip>
+                                        <Tooltip title="Edit registration & results URLs">
+                                          <IconButton size="small" onClick={(e) => setUrlPopover({ anchorEl: e.currentTarget, edition, regUrl: edition.registrationUrl ?? '', resultsUrl: edition.resultsUrl ?? '' })}>
+                                            <LinkIcon fontSize="small" />
+                                          </IconButton>
+                                        </Tooltip>
                                         <Tooltip title="Edit edition">
                                           <IconButton size="small" onClick={() => openEditEdition(edition)}>
                                             <EditIcon fontSize="small" />
@@ -2384,7 +2893,17 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                                           <Typography variant="subtitle2" color="text.secondary">
                                             Races · {buildEditionLabel(edition)} ({edition.races.length})
                                           </Typography>
-                                          <Stack direction="row" spacing={1}>
+                                          <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                                            {expandedDetail?.type === 'Series' && edition.races.length > 0 && edition.races.some(r => !r.trailId) && (
+                                              <Autocomplete
+                                                size="small"
+                                                options={sortedTrails}
+                                                getOptionLabel={(t) => t.name}
+                                                sx={{ width: 200 }}
+                                                onChange={(_, trail) => { if (trail) handleSetTrailForAllRaces(edition, trail.id); }}
+                                                renderInput={(params) => <TextField {...params} label="Set trail for all legs" />}
+                                              />
+                                            )}
                                             {expandedDetail && edition.races.length === 0 && expandedDetail.editions.some(ed => ed.id !== edition.id && ed.races.length > 0) && (
                                               <Button size="small" startIcon={<CopyIcon />} onClick={() => handleCopyRacesFromPrevious(edition)} disabled={saving}>
                                                 Copy races
@@ -2420,7 +2939,11 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                                                     key={race.id}
                                                     race={race}
                                                     onEdit={() => openEditRace(race)}
+                                                    onDuplicate={() => openDuplicateRace(race)}
                                                     onDelete={() => handleDeleteRace(race)}
+                                                    onCycleTicketStatus={() => handleCycleTicketStatus(race)}
+                                                    ticketLoading={cyclingTicketIds.has(race.id)}
+                                                    staleTx={raceHasStaleTx(race)}
                                                     getIcon={getTrailActivityIcon}
                                                     formatDateLabel={formatDateLabel}
                                                     formatTimeLabel={formatTimeLabel}
@@ -2435,8 +2958,20 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                                       </Box>
                                     </Collapse>
                                   </Paper>
-                                ))
-                              )}
+                                ))}
+                                {!showOlderEditions && hiddenCount > 0 && (
+                                  <Button size="small" variant="text" sx={{ mt: 0.5 }} onClick={() => setShowOlderEditions(true)}>
+                                    Show {hiddenCount} older edition{hiddenCount !== 1 ? 's' : ''}
+                                  </Button>
+                                )}
+                                {showOlderEditions && hiddenCount > 0 && (
+                                  <Button size="small" variant="text" sx={{ mt: 0.5 }} onClick={() => setShowOlderEditions(false)}>
+                                    Hide older editions
+                                  </Button>
+                                )}
+                                </>
+                                );
+                              })()}
                             </Box>
                           </Box>
                         ) : null}
@@ -2736,13 +3271,11 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                   )}
 
                   {eventForm.scheduleType === 'Fixed' && (
-                    <TextField
+                    <DatePicker
                       label="Date"
-                      type="date"
-                      value={eventForm.scheduleDate}
-                      onChange={(event) => setEventField('scheduleDate', event.target.value)}
-                      InputLabelProps={{ shrink: true }}
-                      inputProps={{ lang: 'is' }}
+                      value={eventForm.scheduleDate ? dayjs(eventForm.scheduleDate) : null}
+                      onChange={(val: Dayjs | null) => setEventField('scheduleDate', val ? val.format('YYYY-MM-DD') : '')}
+                      slotProps={{ textField: { fullWidth: true } }}
                     />
                   )}
 
@@ -2885,17 +3418,15 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                 value={editionForm.year}
                 onChange={(event) => handleEditionYearChange(event.target.value)}
               />
-              <TextField
+              <DatePicker
                 label="Date"
-                type="date"
-                value={editionForm.date}
-                onChange={(event) => {
-                  const d = event.target.value;
+                value={editionForm.date ? dayjs(editionForm.date) : null}
+                onChange={(val: Dayjs | null) => {
+                  const d = val ? val.format('YYYY-MM-DD') : '';
                   setEditionField('date', d);
                   if (!editEditionId && isPastDate(d)) setEditionField('registrationStatus', 'Closed');
                 }}
-                InputLabelProps={{ shrink: true }}
-                inputProps={{ lang: 'is' }}
+                slotProps={{ textField: { fullWidth: true } }}
               />
             </Box>
             <BilingualTextField
@@ -3040,11 +3571,14 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
               fullWidth
             />
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 140px' }, gap: 2 }}>
-              <TextField
-                label="Distance Label"
+              <Autocomplete
+                freeSolo
+                options={[...new Set(
+                  (expandedDetail?.editions ?? []).flatMap(ed => ed.races).map(r => r.distanceLabel).filter((d): d is string => !!d)
+                )].sort()}
                 value={raceForm.distanceLabel}
-                onChange={(event) => setRaceField('distanceLabel', event.target.value)}
-                placeholder="e.g. 55"
+                onInputChange={(_, val) => setRaceField('distanceLabel', val)}
+                renderInput={(params) => <TextField {...params} label="Distance Label" placeholder="e.g. 50K" />}
               />
               <TextField
                 label="Cutoff Time (hrs)"
@@ -3123,27 +3657,40 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
               />
             </Box>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
-              <TextField
+              <DatePicker
                 label="Date of Race"
-                type="date"
-                value={raceForm.dateOfRace}
-                onChange={(event) => {
-                  const d = event.target.value;
+                value={raceForm.dateOfRace ? dayjs(raceForm.dateOfRace) : null}
+                onChange={(val: Dayjs | null) => {
+                  const d = val ? val.format('YYYY-MM-DD') : '';
                   setRaceField('dateOfRace', d);
                   if (!editRaceId && isPastDate(d)) {
                     setRaceField('status', 'Completed');
                     setRaceField('ticketStatus', 'Closed');
                   }
                 }}
-                InputLabelProps={{ shrink: true }}
-                inputProps={{ lang: 'is' }}
+                slotProps={{
+                  textField: {
+                    fullWidth: true,
+                    InputProps: raceDialogEdition?.date ? {
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Tooltip title={`Copy date from edition (${raceDialogEdition.date})`}>
+                            <IconButton size="small" onClick={() => setRaceField('dateOfRace', raceDialogEdition!.date!)}>
+                              <CopyIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </InputAdornment>
+                      ),
+                    } : undefined,
+                  },
+                }}
               />
-              <TextField
+              <TimePicker
                 label="Start Time"
-                type="time"
-                value={raceForm.startTime}
-                onChange={(event) => setRaceField('startTime', event.target.value)}
-                InputLabelProps={{ shrink: true }}
+                ampm={false}
+                value={raceForm.startTime ? dayjs(`2000-01-01T${raceForm.startTime}`) : null}
+                onChange={(val: Dayjs | null) => setRaceField('startTime', val ? val.format('HH:mm') : '')}
+                slotProps={{ textField: { fullWidth: true } }}
               />
             </Box>
             <BilingualTextField
@@ -3381,11 +3928,172 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
         </DialogActions>
       </Dialog>
 
+      {/* Quick URL edit popover */}
+      {urlPopover && (() => {
+        const targetYear = urlPopover.edition.year;
+        const source = [...(expandedDetail?.editions ?? [])]
+          .sort(sortEditions)
+          .find(ed => ed.id !== urlPopover.edition.id && (ed.registrationUrl || ed.resultsUrl));
+        const suggestedReg = source?.registrationUrl ?? '';
+        const suggestedResults = source && targetYear
+          ? bumpYearInUrl(source.resultsUrl ?? '', source.year, targetYear) || (source.resultsUrl ?? '')
+          : (source?.resultsUrl ?? '');
+        const hasSuggestion = !!source && (suggestedReg || suggestedResults);
+        return (
+          <Popover
+            open
+            anchorEl={urlPopover.anchorEl}
+            onClose={() => setUrlPopover(null)}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+          >
+            <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1.5, width: 380 }}>
+              <Typography variant="subtitle2">URLs — {buildEditionLabel(urlPopover.edition)}</Typography>
+              {hasSuggestion && (
+                <Box sx={{ bgcolor: 'action.hover', borderRadius: 1, p: 1.5, display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                      Suggest from {source!.year ?? 'previous'} edition
+                    </Typography>
+                    <Button
+                      size="small"
+                      sx={{ minWidth: 0, py: 0 }}
+                      onClick={() => setUrlPopover(prev => prev ? { ...prev, regUrl: suggestedReg, resultsUrl: suggestedResults } : null)}
+                    >
+                      Apply all
+                    </Button>
+                  </Box>
+                  {suggestedReg && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <Typography variant="caption" color="text.secondary" noWrap sx={{ flexGrow: 1, fontFamily: 'monospace', fontSize: '0.7rem' }}>{suggestedReg}</Typography>
+                      <Tooltip title="Use for registration URL">
+                        <IconButton size="small" onClick={() => setUrlPopover(prev => prev ? { ...prev, regUrl: suggestedReg } : null)}>
+                          <CopyIcon sx={{ fontSize: 14 }} />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  )}
+                  {suggestedResults && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <Typography variant="caption" color="text.secondary" noWrap sx={{ flexGrow: 1, fontFamily: 'monospace', fontSize: '0.7rem' }}>{suggestedResults}</Typography>
+                      <Tooltip title="Use for results URL">
+                        <IconButton size="small" onClick={() => setUrlPopover(prev => prev ? { ...prev, resultsUrl: suggestedResults } : null)}>
+                          <CopyIcon sx={{ fontSize: 14 }} />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  )}
+                </Box>
+              )}
+              <TextField
+                label="Registration URL"
+                size="small"
+                fullWidth
+                value={urlPopover.regUrl}
+                onChange={(e) => setUrlPopover(prev => prev ? { ...prev, regUrl: e.target.value } : null)}
+                placeholder="https://..."
+              />
+              <TextField
+                label="Results URL"
+                size="small"
+                fullWidth
+                value={urlPopover.resultsUrl}
+                onChange={(e) => setUrlPopover(prev => prev ? { ...prev, resultsUrl: e.target.value } : null)}
+                placeholder="https://..."
+              />
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                <Button size="small" onClick={() => setUrlPopover(null)}>Cancel</Button>
+                <Button size="small" variant="contained" onClick={handleSaveUrlPopover}>Save</Button>
+              </Box>
+            </Box>
+          </Popover>
+        );
+      })()}
+
+      {/* Quick notes edit popover */}
+      {notesPopover && (
+        <Popover
+          open
+          anchorEl={notesPopover.anchorEl}
+          onClose={() => setNotesPopover(null)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        >
+          <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1.5, width: 360 }}>
+            <Typography variant="subtitle2">Notes — {buildEditionLabel(notesPopover.edition)}</Typography>
+            <TextField
+              label="Notes (IS)"
+              size="small"
+              fullWidth
+              multiline
+              rows={3}
+              autoFocus
+              value={notesPopover.notes}
+              onChange={(e) => setNotesPopover(prev => prev ? { ...prev, notes: e.target.value } : null)}
+              placeholder="Internal notes about this edition…"
+            />
+            <TextField
+              label="Notes (EN)"
+              size="small"
+              fullWidth
+              multiline
+              rows={2}
+              value={notesPopover.notesEn}
+              onChange={(e) => setNotesPopover(prev => prev ? { ...prev, notesEn: e.target.value } : null)}
+            />
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+              <Button size="small" onClick={() => setNotesPopover(null)}>Cancel</Button>
+              <Button size="small" variant="contained" onClick={handleSaveNotesPopover}>Save</Button>
+            </Box>
+          </Box>
+        </Popover>
+      )}
+
+      {/* Shift race dates confirm dialog */}
+      <Dialog open={!!pendingDateShift} onClose={() => setPendingDateShift(null)} maxWidth="xs" fullWidth>
+        <DialogTitle>Shift race dates?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            The edition date moved by {pendingDateShift && (pendingDateShift.offsetDays > 0 ? '+' : '')}{pendingDateShift?.offsetDays} day{Math.abs(pendingDateShift?.offsetDays ?? 0) !== 1 ? 's' : ''}.
+            Shift {pendingDateShift?.races.length} race date{(pendingDateShift?.races.length ?? 0) !== 1 ? 's' : ''} by the same amount?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPendingDateShift(null)}>Skip</Button>
+          <Button variant="contained" onClick={handleShiftRaceDates}>Shift Dates</Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Bulk date entry dialog */}
       <Dialog open={showBulkDatesDialog} onClose={() => setShowBulkDatesDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Set Race Dates</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            {bulkDatesEditionDate && !bulkDatesIsSeries && bulkDates.some(d => !d.dateOfRace) && (
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<CalendarIcon />}
+                onClick={() => setBulkDates(prev => prev.map(d => d.dateOfRace ? d : { ...d, dateOfRace: bulkDatesEditionDate }))}
+                sx={{ alignSelf: 'flex-start' }}
+              >
+                Fill empty dates from edition ({bulkDatesEditionDate})
+              </Button>
+            )}
+            {bulkDatesIsSeries && bulkDatesScheduleRule && bulkDatesEditionYear && bulkDatesScheduleRule.weekOfMonth && bulkDatesScheduleRule.dayOfWeek && bulkDatesScheduleRule.monthStart && (
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<CalendarIcon />}
+                onClick={() => {
+                  const suggested = suggestSeriesLegDates(bulkDatesScheduleRule!, bulkDatesEditionYear!, bulkDates.length);
+                  setBulkDates(prev => prev.map((d, i) => d.dateOfRace ? d : { ...d, dateOfRace: suggested[i] ?? d.dateOfRace }));
+                }}
+                sx={{ alignSelf: 'flex-start' }}
+              >
+                Suggest dates from schedule ({bulkDatesScheduleRule.weekOfMonth === 1 ? '1st' : bulkDatesScheduleRule.weekOfMonth === 2 ? '2nd' : bulkDatesScheduleRule.weekOfMonth === 3 ? '3rd' : `${bulkDatesScheduleRule.weekOfMonth}th`} {bulkDatesScheduleRule.dayOfWeek} monthly)
+              </Button>
+            )}
             {bulkDates.length === 0 ? (
               <Typography variant="body2" color="text.secondary">No races in this edition.</Typography>
             ) : bulkDates.map((entry, i) => (
@@ -3400,23 +4108,35 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                     </Typography>
                   )}
                 </Box>
-                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 140px', gap: 1.5 }}>
-                  <TextField
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
+                  <DatePicker
                     label="Date"
-                    type="date"
-                    size="small"
-                    value={entry.dateOfRace}
-                    onChange={(e) => setBulkDates(prev => prev.map((d, j) => j === i ? { ...d, dateOfRace: e.target.value } : d))}
-                    InputLabelProps={{ shrink: true }}
-                    inputProps={{ lang: 'is' }}
+                    value={entry.dateOfRace ? dayjs(entry.dateOfRace) : null}
+                    onChange={(val: Dayjs | null) => setBulkDates(prev => prev.map((d, j) => j === i ? { ...d, dateOfRace: val ? val.format('YYYY-MM-DD') : '' } : d))}
+                    slotProps={{ textField: { size: 'small', fullWidth: true } }}
                   />
-                  <TextField
+                  <TimePicker
                     label="Start time"
-                    type="time"
-                    size="small"
-                    value={entry.startTime}
-                    onChange={(e) => setBulkDates(prev => prev.map((d, j) => j === i ? { ...d, startTime: e.target.value } : d))}
-                    InputLabelProps={{ shrink: true }}
+                    ampm={false}
+                    value={entry.startTime ? dayjs(`2000-01-01T${entry.startTime}`) : null}
+                    onChange={(val: Dayjs | null) => setBulkDates(prev => prev.map((d, j) => j === i ? { ...d, startTime: val ? val.format('HH:mm') : '' } : d))}
+                    slotProps={{
+                      textField: {
+                        size: 'small',
+                        fullWidth: true,
+                        InputProps: entry.startTime && bulkDates.length > 1 ? {
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              <Tooltip title="Apply to all races">
+                                <IconButton size="small" onClick={() => setBulkDates(prev => prev.map(d => ({ ...d, startTime: entry.startTime })))}>
+                                  <CopyIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            </InputAdornment>
+                          ),
+                        } : undefined,
+                      },
+                    }}
                   />
                 </Box>
               </Box>
