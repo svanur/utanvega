@@ -33,6 +33,7 @@ import {
   Menu,
   MenuItem,
   Paper,
+  Popover,
   Select,
   Stack,
   Switch,
@@ -987,6 +988,13 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
   const [showBulkDatesDialog, setShowBulkDatesDialog] = useState(false);
   const [bulkDatesEditionDate, setBulkDatesEditionDate] = useState<string>('');
   const [pendingDateShift, setPendingDateShift] = useState<{ offsetDays: number; races: RaceDto[] } | null>(null);
+  const [showOlderEditions, setShowOlderEditions] = useState(false);
+  const [urlPopover, setUrlPopover] = useState<{
+    anchorEl: HTMLElement;
+    edition: EventEditionDto;
+    regUrl: string;
+    resultsUrl: string;
+  } | null>(null);
   const [copyRacesConfirm, setCopyRacesConfirm] = useState<{ edition: EventEditionDto; source: EventEditionDto } | null>(null);
   const [showBulkMissingDialog, setShowBulkMissingDialog] = useState(false);
   const [bulkMissingLoading, setBulkMissingLoading] = useState(false);
@@ -1139,6 +1147,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
       const detail = await getEvent(slug);
       setExpandedEventId(eventId);
       setExpandedDetail(detail);
+      setShowOlderEditions(false);
     } catch {
       onNotify('Failed to load event editions', 'error');
     } finally {
@@ -1986,6 +1995,22 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
     setShowBulkDatesDialog(true);
   };
 
+  const handleSaveUrlPopover = async () => {
+    if (!urlPopover) return;
+    const { edition, regUrl, resultsUrl } = urlPopover;
+    try {
+      await updateEdition(edition.id, {
+        registrationStatus: edition.registrationStatus,
+        registrationUrl: regUrl || undefined,
+        resultsUrl: resultsUrl || undefined,
+      });
+      setUrlPopover(null);
+      await refreshExpandedEvent();
+    } catch {
+      onNotify('Failed to save URLs', 'error');
+    }
+  };
+
   const handleShiftRaceDates = async () => {
     if (!pendingDateShift) return;
     const { offsetDays, races } = pendingDateShift;
@@ -2434,8 +2459,15 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                                 <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
                                   No editions yet. Click "Add Edition" to create the first one.
                                 </Typography>
-                              ) : (
-                                [...expandedDetail.editions].sort(sortEditions).map((edition, idx) => (
+                              ) : (() => {
+                                const currentYear = new Date().getFullYear();
+                                const sorted = [...expandedDetail.editions].sort(sortEditions);
+                                const older = sorted.filter(ed => (ed.year ?? 0) < currentYear && (!ed.date || isPastDate(ed.date)));
+                                const visible = showOlderEditions ? sorted : sorted.filter(ed => !older.includes(ed));
+                                const hiddenCount = older.length;
+                                return (
+                                <>
+                                {visible.map((edition, idx) => (
                                   <Paper key={edition.id} variant="outlined" sx={{
                                     mb: 1.5,
                                     borderLeft: '4px solid',
@@ -2466,6 +2498,21 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                                             </Tooltip>
                                             <Chip label={`${edition.races.length} race${edition.races.length === 1 ? '' : 's'}`} size="small" variant="outlined" />
                                             {edition.trailName && <Chip label={`Trail: ${edition.trailName}`} size="small" variant="outlined" />}
+                                            {expandedDetail.type === 'Series' && edition.races.length > 0 && (() => {
+                                              const ready = edition.races.filter(r => r.dateOfRace && r.trailId && r.distanceLabel).length;
+                                              const total = edition.races.length;
+                                              const allReady = ready === total;
+                                              return (
+                                                <Tooltip title={allReady ? 'All legs ready' : `${total - ready} leg${total - ready !== 1 ? 's' : ''} missing date, trail or distance`}>
+                                                  <Chip
+                                                    label={`${ready}/${total} legs ready`}
+                                                    size="small"
+                                                    color={allReady ? 'success' : 'warning'}
+                                                    variant={allReady ? 'outlined' : 'filled'}
+                                                  />
+                                                </Tooltip>
+                                              );
+                                            })()}
                                             {(() => {
                                               const missing = edition.races.filter(r => !r.dateOfRace).length;
                                               return missing > 0 ? (
@@ -2483,7 +2530,12 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                                           </Stack>
                                         </Box>
                                       </Box>
-                                      <Box>
+                                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                        <Tooltip title="Edit registration & results URLs">
+                                          <IconButton size="small" onClick={(e) => setUrlPopover({ anchorEl: e.currentTarget, edition, regUrl: edition.registrationUrl ?? '', resultsUrl: edition.resultsUrl ?? '' })}>
+                                            <LinkIcon fontSize="small" />
+                                          </IconButton>
+                                        </Tooltip>
                                         <Tooltip title="Edit edition">
                                           <IconButton size="small" onClick={() => openEditEdition(edition)}>
                                             <EditIcon fontSize="small" />
@@ -2576,8 +2628,20 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                                       </Box>
                                     </Collapse>
                                   </Paper>
-                                ))
-                              )}
+                                ))}
+                                {!showOlderEditions && hiddenCount > 0 && (
+                                  <Button size="small" variant="text" sx={{ mt: 0.5 }} onClick={() => setShowOlderEditions(true)}>
+                                    Show {hiddenCount} older edition{hiddenCount !== 1 ? 's' : ''}
+                                  </Button>
+                                )}
+                                {showOlderEditions && hiddenCount > 0 && (
+                                  <Button size="small" variant="text" sx={{ mt: 0.5 }} onClick={() => setShowOlderEditions(false)}>
+                                    Hide older editions
+                                  </Button>
+                                )}
+                                </>
+                                );
+                              })()}
                             </Box>
                           </Box>
                         ) : null}
@@ -3530,6 +3594,39 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Quick URL edit popover */}
+      <Popover
+        open={!!urlPopover}
+        anchorEl={urlPopover?.anchorEl}
+        onClose={() => setUrlPopover(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1.5, width: 360 }}>
+          <Typography variant="subtitle2">URLs</Typography>
+          <TextField
+            label="Registration URL"
+            size="small"
+            fullWidth
+            value={urlPopover?.regUrl ?? ''}
+            onChange={(e) => setUrlPopover(prev => prev ? { ...prev, regUrl: e.target.value } : null)}
+            placeholder="https://..."
+          />
+          <TextField
+            label="Results URL"
+            size="small"
+            fullWidth
+            value={urlPopover?.resultsUrl ?? ''}
+            onChange={(e) => setUrlPopover(prev => prev ? { ...prev, resultsUrl: e.target.value } : null)}
+            placeholder="https://..."
+          />
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+            <Button size="small" onClick={() => setUrlPopover(null)}>Cancel</Button>
+            <Button size="small" variant="contained" onClick={handleSaveUrlPopover}>Save</Button>
+          </Box>
+        </Box>
+      </Popover>
 
       {/* Shift race dates confirm dialog */}
       <Dialog open={!!pendingDateShift} onClose={() => setPendingDateShift(null)} maxWidth="xs" fullWidth>
