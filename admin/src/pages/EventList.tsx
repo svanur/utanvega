@@ -989,6 +989,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
   const [bulkDatesEditionDate, setBulkDatesEditionDate] = useState<string>('');
   const [pendingDateShift, setPendingDateShift] = useState<{ offsetDays: number; races: RaceDto[] } | null>(null);
   const [showOlderEditions, setShowOlderEditions] = useState(false);
+  const [showAttentionPanel, setShowAttentionPanel] = useState(true);
   const [urlPopover, setUrlPopover] = useState<{
     anchorEl: HTMLElement;
     edition: EventEditionDto;
@@ -1296,6 +1297,48 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
       await refreshExpandedEvent();
     } catch {
       onNotify('Failed to update ticket status', 'error');
+    }
+  };
+
+  const handleCloseRegistrationOnPastEditions = async () => {
+    const stale = expandedDetail?.editions.filter(
+      ed => ed.date && isPastDate(ed.date) && (ed.registrationStatus === 'Open' || ed.registrationStatus === 'NotStarted')
+    ) ?? [];
+    if (stale.length === 0) return;
+    try {
+      await Promise.all(stale.map(ed => updateEdition(ed.id, { registrationStatus: 'Closed' })));
+      await refreshExpandedEvent();
+      onNotify(`Closed registration on ${stale.length} past edition${stale.length !== 1 ? 's' : ''}`);
+    } catch {
+      onNotify('Failed to close registration', 'error');
+    }
+  };
+
+  const handleSetTrailForAllRaces = async (edition: EventEditionDto, trailId: string) => {
+    const races = edition.races.filter(r => !r.trailId);
+    if (races.length === 0) return;
+    try {
+      await Promise.all(races.map(race => updateRace(race.id, {
+        trailId,
+        name: race.name,
+        distanceLabel: race.distanceLabel ?? undefined,
+        cutoffMinutes: race.cutoffMinutes ?? null,
+        description: race.description ?? undefined,
+        status: race.status,
+        sortOrder: race.sortOrder,
+        ticketStatus: race.ticketStatus,
+        maxParticipants: race.maxParticipants ?? null,
+        itraPoints: race.itraPoints ?? null,
+        certifiedBy: race.certifiedBy ?? undefined,
+        prizeMoney: race.prizeMoney,
+        championshipCategory: race.championshipCategory ?? undefined,
+        dateOfRace: race.dateOfRace ?? null,
+        startTime: race.startTime ?? null,
+      })));
+      await refreshExpandedEvent();
+      onNotify(`Trail set on ${races.length} race${races.length !== 1 ? 's' : ''}`);
+    } catch {
+      onNotify('Failed to set trail', 'error');
     }
   };
 
@@ -2132,8 +2175,48 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
 
   const selectedBulkCount = bulkMissingItems.filter(i => i.selected).length;
 
+  const today = new Date().toISOString().slice(0, 10);
+  const in30days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const attentionItems: { key: string; label: string }[] = [];
+  {
+    // Events coming up within 30 days with no future edition registered
+    const noEdition = events.filter(e =>
+      !e.hasFutureEdition && (e.type === 'Race' || e.type === 'Series') && e.status !== 'Cancelled'
+    ).length;
+    if (noEdition > 0) attentionItems.push({ key: 'noEdition', label: `${noEdition} active event${noEdition !== 1 ? 's' : ''} missing a future edition` });
+  }
+  {
+    // Series events with next edition coming up in 30 days but some races missing registration URL
+    const seriesMissingReg = events.filter(e =>
+      e.type === 'Series' && e.nextEditionDate && e.nextEditionDate <= in30days &&
+      e.seriesRaces?.some(r => !r.registrationUrl)
+    ).length;
+    if (seriesMissingReg > 0) attentionItems.push({ key: 'seriesMissingReg', label: `${seriesMissingReg} series event${seriesMissingReg !== 1 ? 's' : ''} with races in ≤30 days missing registration URL` });
+  }
+  {
+    // Events whose next edition date has passed but are still active
+    const pastActive = events.filter(e =>
+      e.status === 'Confirmed' && e.nextEditionDate && e.nextEditionDate < today
+    ).length;
+    if (pastActive > 0) attentionItems.push({ key: 'pastActive', label: `${pastActive} event${pastActive !== 1 ? 's' : ''} whose latest edition has passed — check results URL and registration status` });
+  }
+
   return (
     <Box>
+      {attentionItems.length > 0 && showAttentionPanel && (
+        <Alert
+          severity="warning"
+          sx={{ mb: 2 }}
+          onClose={() => setShowAttentionPanel(false)}
+        >
+          <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>Needs attention</Typography>
+          <Stack component="ul" sx={{ m: 0, pl: 2, gap: 0.25 }}>
+            {attentionItems.map(item => (
+              <li key={item.key}><Typography variant="body2">{item.label}</Typography></li>
+            ))}
+          </Stack>
+        </Alert>
+      )}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
           <TrophyIcon color="primary" />
@@ -2378,6 +2461,14 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                               </Typography>
                               <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
                                 {(() => {
+                                  const staleCount = expandedDetail.editions.filter(ed => ed.date && isPastDate(ed.date) && (ed.registrationStatus === 'Open' || ed.registrationStatus === 'NotStarted')).length;
+                                  return staleCount > 0 ? (
+                                    <Button size="small" variant="outlined" color="warning" onClick={handleCloseRegistrationOnPastEditions}>
+                                      Close registration on {staleCount} past edition{staleCount !== 1 ? 's' : ''}
+                                    </Button>
+                                  ) : null;
+                                })()}
+                                {(() => {
                                   const pastCount = expandedDetail.editions.flatMap(ed => ed.races).filter(r => r.status === 'Active' && r.dateOfRace && isPastDate(r.dateOfRace)).length;
                                   return pastCount > 0 ? (
                                     <Button size="small" variant="outlined" color="warning" onClick={handleMarkPastRacesCompleted}>
@@ -2575,7 +2666,17 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                                           <Typography variant="subtitle2" color="text.secondary">
                                             Races · {buildEditionLabel(edition)} ({edition.races.length})
                                           </Typography>
-                                          <Stack direction="row" spacing={1}>
+                                          <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                                            {expandedDetail?.type === 'Series' && edition.races.length > 0 && edition.races.some(r => !r.trailId) && (
+                                              <Autocomplete
+                                                size="small"
+                                                options={sortedTrails}
+                                                getOptionLabel={(t) => t.name}
+                                                sx={{ width: 200 }}
+                                                onChange={(_, trail) => { if (trail) handleSetTrailForAllRaces(edition, trail.id); }}
+                                                renderInput={(params) => <TextField {...params} label="Set trail for all legs" />}
+                                              />
+                                            )}
                                             {expandedDetail && edition.races.length === 0 && expandedDetail.editions.some(ed => ed.id !== edition.id && ed.races.length > 0) && (
                                               <Button size="small" startIcon={<CopyIcon />} onClick={() => handleCopyRacesFromPrevious(edition)} disabled={saving}>
                                                 Copy races
