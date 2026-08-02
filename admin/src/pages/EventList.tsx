@@ -401,6 +401,31 @@ function getTicketStatusColor(status: TicketStatus): 'success' | 'error' | 'warn
   return 'default';
 }
 
+const DAY_OF_WEEK_INDEX: Record<string, number> = {
+  Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6,
+};
+
+function nthWeekdayOfMonth(year: number, month: number, weekOfMonth: number, dayOfWeek: string): string {
+  const dayIdx = DAY_OF_WEEK_INDEX[dayOfWeek] ?? 0;
+  const firstOfMonth = dayjs(new Date(year, month - 1, 1));
+  const firstOccurrence = firstOfMonth.day() <= dayIdx
+    ? firstOfMonth.day(dayIdx)
+    : firstOfMonth.day(dayIdx + 7);
+  return firstOccurrence.add((weekOfMonth - 1) * 7, 'day').format('YYYY-MM-DD');
+}
+
+function suggestSeriesLegDates(rule: ScheduleRule, year: number, legCount: number): string[] {
+  if (!rule.weekOfMonth || !rule.dayOfWeek || !rule.monthStart) return [];
+  const dates: string[] = [];
+  for (let i = 0; i < legCount; i++) {
+    const month = rule.monthStart + i;
+    const actualYear = month > 12 ? year + 1 : year;
+    const actualMonth = month > 12 ? month - 12 : month;
+    dates.push(nthWeekdayOfMonth(actualYear, actualMonth, rule.weekOfMonth, rule.dayOfWeek));
+  }
+  return dates;
+}
+
 function bumpYearInUrl(url: string, fromYear: number | null | undefined, toYear: number): string {
   if (!url || !fromYear) return '';
   return url.split(String(fromYear)).join(String(toYear));
@@ -988,6 +1013,8 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
   const [showBulkDatesDialog, setShowBulkDatesDialog] = useState(false);
   const [bulkDatesEditionDate, setBulkDatesEditionDate] = useState<string>('');
   const [bulkDatesIsSeries, setBulkDatesIsSeries] = useState(false);
+  const [bulkDatesScheduleRule, setBulkDatesScheduleRule] = useState<ScheduleRule | null>(null);
+  const [bulkDatesEditionYear, setBulkDatesEditionYear] = useState<number | null>(null);
   const [pendingDateShift, setPendingDateShift] = useState<{ offsetDays: number; races: RaceDto[] } | null>(null);
   const [showOlderEditions, setShowOlderEditions] = useState(false);
   const [showAttentionPanel, setShowAttentionPanel] = useState(true);
@@ -2026,6 +2053,8 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
     }
     setBulkDatesEditionDate(edition.date ?? '');
     setBulkDatesIsSeries(expandedDetail?.type === 'Series');
+    setBulkDatesScheduleRule(expandedDetail?.scheduleRule ?? null);
+    setBulkDatesEditionYear(edition.year ?? null);
     setBulkDates(
       [...edition.races].sort(sortRaces).map(race => {
         const prevRace = prevEdition?.races.find(r => r.name === race.name);
@@ -3809,6 +3838,20 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                 sx={{ alignSelf: 'flex-start' }}
               >
                 Fill empty dates from edition ({bulkDatesEditionDate})
+              </Button>
+            )}
+            {bulkDatesIsSeries && bulkDatesScheduleRule && bulkDatesEditionYear && bulkDatesScheduleRule.weekOfMonth && bulkDatesScheduleRule.dayOfWeek && bulkDatesScheduleRule.monthStart && (
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<CalendarIcon />}
+                onClick={() => {
+                  const suggested = suggestSeriesLegDates(bulkDatesScheduleRule!, bulkDatesEditionYear!, bulkDates.length);
+                  setBulkDates(prev => prev.map((d, i) => d.dateOfRace ? d : { ...d, dateOfRace: suggested[i] ?? d.dateOfRace }));
+                }}
+                sx={{ alignSelf: 'flex-start' }}
+              >
+                Suggest dates from schedule ({bulkDatesScheduleRule.weekOfMonth === 1 ? '1st' : bulkDatesScheduleRule.weekOfMonth === 2 ? '2nd' : bulkDatesScheduleRule.weekOfMonth === 3 ? '3rd' : `${bulkDatesScheduleRule.weekOfMonth}th`} {bulkDatesScheduleRule.dayOfWeek} monthly)
               </Button>
             )}
             {bulkDates.length === 0 ? (
