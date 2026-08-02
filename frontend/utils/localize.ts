@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 /**
@@ -13,10 +14,15 @@ export function localize(
     return is ?? en ?? null;
 }
 
-/** Hook variant — binds current language so callers don't need to thread `lang`. */
+/** Hook variant — binds current language so callers don't need to thread `lang`.
+ *  Returns a stable function reference that only changes when the language changes,
+ *  so it is safe to include in useMemo/useCallback dependency arrays. */
 export function useLocalize() {
     const { i18n } = useTranslation();
     const lang = i18n.language;
-    return (is: string | null | undefined, en: string | null | undefined): string | null =>
-        localize(is, en, lang);
+    return useCallback(
+        (is: string | null | undefined, en: string | null | undefined): string | null =>
+            localize(is, en, lang),
+        [lang]
+    );
 }

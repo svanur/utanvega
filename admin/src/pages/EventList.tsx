@@ -954,7 +954,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
   const [expandedEditionIds, setExpandedEditionIds] = useState<string[]>([]);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [saving, setSaving] = useState(false);
-  const { translate, translating } = useTranslate();
+  const { translate, translating } = useTranslate(msg => onNotify(msg, 'error'));
   const [sortBy, setSortBy] = useState<'name' | 'activityType' | 'type' | 'nextEditionDate' | 'status' | 'editionCount' | 'locationName' | 'updatedAt'>('updatedAt');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [searchQuery, setSearchQuery] = useState('');

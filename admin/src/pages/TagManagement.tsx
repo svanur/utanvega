@@ -24,7 +24,7 @@ export default function TagManagement({ onNotify }: TagManagementProps) {
   const { tags, loading, refresh } = useTags();
   const [editTag, setEditTag] = useState<{ id?: string; name: string; nameEn?: string; color: string | null } | null>(null);
   const [saving, setSaving] = useState(false);
-  const { translate, translating } = useTranslate();
+  const { translate, translating } = useTranslate(msg => onNotify(msg, 'error'));
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredTags = useMemo(() => {

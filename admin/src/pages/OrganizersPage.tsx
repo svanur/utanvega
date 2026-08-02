@@ -56,7 +56,7 @@ export default function OrganizersPage({ onNotify }: Props) {
     const [saving, setSaving] = useState(false);
     const [deleteConfirm, setDeleteConfirm] = useState<OrganizerDto | null>(null);
     const [deleting, setDeleting] = useState(false);
-    const { translate, translating } = useTranslate();
+    const { translate, translating } = useTranslate(msg => onNotify(msg, 'error'));
 
     const setField = (field: keyof FormState, value: string) =>
         setForm(prev => ({ ...prev, [field]: value }));
