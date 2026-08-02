@@ -119,16 +119,12 @@ public class GetLocationBySlugQueryHandler : IRequestHandler<GetLocationBySlugQu
         return new LocationWithTrailsDto(locationDto, childDtos, trailDtos);
     }
 
-    /// <summary>
-    /// Recursively collect all descendant location IDs using BFS.
-    /// </summary>
     private async Task<HashSet<Guid>> CollectDescendantIds(Guid parentId, CancellationToken ct)
     {
         var all = new HashSet<Guid>();
         var queue = new Queue<Guid>();
         queue.Enqueue(parentId);
 
-        // Load the full parent→children map once
         var childrenMap = (await _context.Locations
             .AsNoTracking()
             .Where(l => l.ParentId != null)
