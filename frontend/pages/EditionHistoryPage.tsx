@@ -33,6 +33,7 @@ import RunningLoader from '../components/RunningLoader';
 import LostRunner from '../components/LostRunner';
 import { useEventBySlug } from '../hooks/useEvents';
 import type { EventEditionDto, RaceDto } from '../hooks/useEvents';
+import { useLocalize } from '../utils/localize';
 import { splitMinutes } from '../utils/cutoffTime';
 import { formatNextDate, formatRaceDateTime } from '../utils/eventUtils';
 import { getTicketStatusColor } from '../utils/ticketStatus';
@@ -58,6 +59,7 @@ function getRegistrationStatusColor(status: string | null | undefined): 'success
 export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistoryPageProps) {
     const { slug, editionKey } = useParams<{ slug: string; editionKey: string }>();
     const { t } = useTranslation();
+    const loc = useLocalize();
     const { event, loading, error } = useEventBySlug(slug);
     const navigate = useNavigate();
     const theme = useTheme();
@@ -158,7 +160,7 @@ export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistor
         );
     }
 
-    const heading = edition.title?.trim() || String(edition.year);
+    const heading = loc(edition.title, edition.titleEn)?.trim() || String(edition.year);
 
     return (
         <Layout mode={mode} onToggleMode={onToggleMode}>
@@ -209,7 +211,7 @@ export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistor
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2, flexWrap: 'wrap' }}>
                         <Box>
                             <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                {event.name}
+                                {loc(event.name, event.nameEn) ?? event.name}
                             </Typography>
                             <Typography variant="h4" fontWeight={800} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                 <EmojiEventsIcon sx={{ color: theme.palette.grey[500], flexShrink: 0 }} />
@@ -305,6 +307,7 @@ function HistoryRaceCard({
     t: (key: string, opts?: Record<string, unknown>) => string;
 }) {
     const theme = useTheme();
+    const loc = useLocalize();
     const raceDateTime = formatRaceDateTime(race.dateOfRace, race.startTime, t);
 
     return (
@@ -319,7 +322,7 @@ function HistoryRaceCard({
                         ...(race.status === 'Cancelled' && { textDecoration: 'line-through' }),
                     }}>
                         <DirectionsRunIcon sx={{ fontSize: 20, color: theme.palette.primary.main }} />
-                        {race.name}
+                        {loc(race.name, race.nameEn) ?? race.name}
                         {race.status === 'Cancelled' && (
                             <Chip label={t('races.statusCancelled')} size="small" color="error" sx={{ ml: 0.5, fontWeight: 600 }} />
                         )}
@@ -373,9 +376,9 @@ function HistoryRaceCard({
                     )}
                 </Stack>
 
-                {race.description && (
+                {(race.description || race.descriptionEn) && (
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1, whiteSpace: 'pre-line' }}>
-                        {race.description}
+                        {loc(race.description, race.descriptionEn)}
                     </Typography>
                 )}
             </CardContent>

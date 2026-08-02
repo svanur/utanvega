@@ -28,6 +28,7 @@ import { API_URL, Trail } from '../hooks/useTrails';
 import { Location } from '../hooks/useLocations';
 import { EventSummary } from '../hooks/useEvents';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
+import { useLocalize } from '../utils/localize';
 
 interface SearchResult {
     type: 'trail' | 'location' | 'competition';
@@ -82,6 +83,7 @@ export default function SpotlightSearch() {
     const listRef = useRef<HTMLUListElement>(null);
     const navigate = useNavigate();
     const { t, i18n } = useTranslation();
+    const loc = useLocalize();
     const { isEnabled } = useFeatureFlags();
     const racesEnabled = isEnabled('races_page');
     const locationsEnabled = isEnabled('locations_page');
@@ -141,12 +143,12 @@ export default function SpotlightSearch() {
             .sort((a, b) => b.score - a.score);
 
         const locationResults: (SearchResult & { score: number })[] = locations
-            .map(loc => ({
+            .map(location => ({
                 type: 'location' as const,
-                name: loc.name,
-                slug: loc.slug,
-                subtitle: loc.parentName ? `${loc.parentName} · ${loc.trailsCount} ${t('spotlight.trails')}` : `${loc.trailsCount} ${t('spotlight.trails')}`,
-                score: scoreMatch(q, loc.name),
+                name: loc(location.name, location.nameEn) ?? location.name,
+                slug: location.slug,
+                subtitle: location.parentName ? `${loc(location.parentName, location.parentNameEn) ?? location.parentName} · ${location.trailsCount} ${t('spotlight.trails')}` : `${location.trailsCount} ${t('spotlight.trails')}`,
+                score: Math.max(scoreMatch(q, location.name), scoreMatch(q, location.nameEn ?? '')),
             }))
             .filter(r => r.score > 0)
             .sort((a, b) => b.score - a.score);
@@ -155,19 +157,19 @@ export default function SpotlightSearch() {
             ? competitions
                 .map(comp => ({
                     type: 'competition' as const,
-                    name: comp.name,
+                    name: loc(comp.name, comp.nameEn) ?? comp.name,
                     slug: comp.slug,
                     subtitle: (comp.displayDate ?? comp.nextEditionDate)
                         ? new Date((comp.displayDate ?? comp.nextEditionDate)! + 'T00:00:00').toLocaleDateString(i18n.language === 'is' ? 'is-IS' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })
                         : (comp.organizerName ?? comp.locationName ?? undefined),
-                    score: scoreMatch(q, comp.name),
+                    score: Math.max(scoreMatch(q, comp.name), scoreMatch(q, comp.nameEn ?? '')),
                 }))
                 .filter(r => r.score > 0)
                 .sort((a, b) => b.score - a.score)
             : [];
 
         return [...trailResults.slice(0, 5), ...locationResults.slice(0, 3), ...competitionResults.slice(0, 3)];
-    }, [query, trails, locations, competitions, racesEnabled, i18n.language, t]);
+    }, [query, trails, locations, competitions, racesEnabled, i18n.language, t, loc]);
 
     useEffect(() => {
         setActiveIndex(0);

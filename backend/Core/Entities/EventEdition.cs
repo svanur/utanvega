@@ -21,9 +21,13 @@ public class EventEdition
     public DateOnly? Date { get; set; }
 
     public string? Title { get; set; }
+    public string? TitleEn { get; set; }
     public string? RegistrationUrl { get; set; }
     public string? ResultsUrl { get; set; }
     public string? Notes { get; set; }
+    public string? NotesEn { get; set; }
+
+    public string? TranslationHashes { get; set; }
 
     public RegistrationStatus RegistrationStatus { get; set; } = RegistrationStatus.NotStarted;
 

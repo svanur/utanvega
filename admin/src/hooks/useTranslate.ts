@@ -1,0 +1,45 @@
+import { useState } from 'react';
+import { apiFetch } from './api';
+
+interface TranslateResult {
+    translations: string[];
+}
+
+/**
+ * Translates an array of Icelandic strings to English via the backend DeepL endpoint.
+ * Returns translated strings in the same order. Empty/null inputs pass through as empty strings.
+ *
+ * Pass `onError` to receive a user-facing message when the DeepL call fails (quota, bad key, etc.).
+ * On error the original strings are returned unchanged so the form is not corrupted.
+ */
+export function useTranslate(onError?: (message: string) => void) {
+    const [translating, setTranslating] = useState(false);
+
+    const translate = async (texts: (string | null | undefined)[]): Promise<string[]> => {
+        const nonEmpty = texts.map(t => t?.trim() || '');
+        const indices = nonEmpty.map((t, i) => t ? i : -1).filter(i => i >= 0);
+        const toTranslate = indices.map(i => nonEmpty[i]);
+
+        if (toTranslate.length === 0) return nonEmpty;
+
+        setTranslating(true);
+        try {
+            const result = await apiFetch<TranslateResult>('/api/v1/admin/translate', {
+                method: 'POST',
+                body: JSON.stringify({ texts: toTranslate }),
+            });
+            const out = [...nonEmpty];
+            indices.forEach((origIdx, translatedIdx) => {
+                out[origIdx] = result.translations[translatedIdx] ?? '';
+            });
+            return out;
+        } catch (err) {
+            onError?.(err instanceof Error ? err.message : 'Translation failed — check DeepL configuration.');
+            return nonEmpty;
+        } finally {
+            setTranslating(false);
+        }
+    };
+
+    return { translate, translating };
+}

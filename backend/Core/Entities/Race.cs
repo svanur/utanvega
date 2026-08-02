@@ -29,9 +29,11 @@ public class Race
     public Trail? Trail { get; set; }
 
     public string Name { get; set; } = string.Empty;
+    public string? NameEn { get; set; }
     public string? DistanceLabel { get; set; }
     public int? CutoffMinutes { get; set; }
     public string? Description { get; set; }
+    public string? DescriptionEn { get; set; }
     public RaceStatus Status { get; set; } = RaceStatus.Active;
     public int SortOrder { get; set; }
 
@@ -40,9 +42,13 @@ public class Race
 
     public int? ItraPoints { get; set; }
     public string? CertifiedBy { get; set; }
+    public string? CertifiedByEn { get; set; }
     public decimal PrizeMoney { get; set; } = 0;
     public string? ChampionshipCategory { get; set; }
+    public string? ChampionshipCategoryEn { get; set; }
 
     public DateOnly? DateOfRace { get; set; }
     public TimeOnly? StartTime { get; set; }
+
+    public string? TranslationHashes { get; set; }
 }

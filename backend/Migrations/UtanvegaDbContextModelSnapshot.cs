@@ -63,7 +63,7 @@ namespace Utanvega.Backend.Migrations
 
                     b.HasIndex("EntityName");
 
-                    b.ToTable("ChangeLogs");
+                    b.ToTable("ChangeLogs", (string)null);
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.Event", b =>
@@ -79,6 +79,9 @@ namespace Utanvega.Backend.Migrations
                     b.Property<string>("AlertMessage")
                         .HasColumnType("text");
 
+                    b.Property<string>("AlertMessageEn")
+                        .HasColumnType("text");
+
                     b.Property<string>("AlertSeverity")
                         .HasColumnType("text");
 
@@ -89,6 +92,9 @@ namespace Utanvega.Backend.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<string>("DescriptionEn")
                         .HasColumnType("text");
 
                     b.Property<double?>("GpxPointLat")
@@ -105,12 +111,18 @@ namespace Utanvega.Backend.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<string>("NameEn")
+                        .HasColumnType("text");
+
                     b.Property<Guid?>("OrganizerId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("OrganizerName")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<string>("OrganizerNameEn")
+                        .HasColumnType("text");
 
                     b.Property<string>("OrganizerWebsite")
                         .HasMaxLength(500)
@@ -126,6 +138,9 @@ namespace Utanvega.Backend.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TranslationHashes")
                         .HasColumnType("text");
 
                     b.Property<string>("Type")
@@ -147,7 +162,7 @@ namespace Utanvega.Backend.Migrations
                     b.HasIndex("Slug")
                         .IsUnique();
 
-                    b.ToTable("Events");
+                    b.ToTable("Events", (string)null);
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.EventEdition", b =>
@@ -168,6 +183,9 @@ namespace Utanvega.Backend.Migrations
                     b.Property<string>("Notes")
                         .HasColumnType("text");
 
+                    b.Property<string>("NotesEn")
+                        .HasColumnType("text");
+
                     b.Property<string>("RegistrationStatus")
                         .IsRequired()
                         .HasColumnType("text");
@@ -184,8 +202,14 @@ namespace Utanvega.Backend.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<string>("TitleEn")
+                        .HasColumnType("text");
+
                     b.Property<Guid?>("TrailId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("TranslationHashes")
+                        .HasColumnType("text");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -201,7 +225,7 @@ namespace Utanvega.Backend.Migrations
 
                     b.HasIndex("TrailId");
 
-                    b.ToTable("EventEditions");
+                    b.ToTable("EventEditions", (string)null);
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.FeatureFlag", b =>
@@ -230,7 +254,7 @@ namespace Utanvega.Backend.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("FeatureFlags");
+                    b.ToTable("FeatureFlags", (string)null);
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.Location", b =>
@@ -251,10 +275,16 @@ namespace Utanvega.Backend.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
+                    b.Property<string>("DescriptionEn")
+                        .HasColumnType("text");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<string>("NameEn")
+                        .HasColumnType("text");
 
                     b.Property<Guid?>("ParentId")
                         .HasColumnType("uuid");
@@ -266,6 +296,9 @@ namespace Utanvega.Backend.Migrations
                         .IsRequired()
                         .HasMaxLength(250)
                         .HasColumnType("character varying(250)");
+
+                    b.Property<string>("TranslationHashes")
+                        .HasColumnType("text");
 
                     b.Property<string>("Type")
                         .IsRequired()
@@ -284,7 +317,7 @@ namespace Utanvega.Backend.Migrations
                     b.HasIndex("Slug")
                         .IsUnique();
 
-                    b.ToTable("Locations");
+                    b.ToTable("Locations", (string)null);
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.Organizer", b =>
@@ -301,6 +334,9 @@ namespace Utanvega.Backend.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<string>("DescriptionEn")
                         .HasColumnType("text");
 
                     b.Property<string>("Email")
@@ -320,6 +356,9 @@ namespace Utanvega.Backend.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<string>("TranslationHashes")
+                        .HasColumnType("text");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -331,7 +370,7 @@ namespace Utanvega.Backend.Migrations
 
                     b.HasIndex("Name");
 
-                    b.ToTable("Organizers");
+                    b.ToTable("Organizers", (string)null);
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.Profile", b =>
@@ -373,9 +412,15 @@ namespace Utanvega.Backend.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<string>("CertifiedByEn")
+                        .HasColumnType("text");
+
                     b.Property<string>("ChampionshipCategory")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<string>("ChampionshipCategoryEn")
+                        .HasColumnType("text");
 
                     b.Property<int?>("CutoffMinutes")
                         .HasColumnType("integer");
@@ -384,6 +429,9 @@ namespace Utanvega.Backend.Migrations
                         .HasColumnType("date");
 
                     b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<string>("DescriptionEn")
                         .HasColumnType("text");
 
                     b.Property<string>("DistanceLabel")
@@ -403,6 +451,9 @@ namespace Utanvega.Backend.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<string>("NameEn")
+                        .HasColumnType("text");
 
                     b.Property<decimal>("PrizeMoney")
                         .HasPrecision(10, 2)
@@ -425,13 +476,16 @@ namespace Utanvega.Backend.Migrations
                     b.Property<Guid?>("TrailId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("TranslationHashes")
+                        .HasColumnType("text");
+
                     b.HasKey("Id");
 
                     b.HasIndex("EventEditionId");
 
                     b.HasIndex("TrailId");
 
-                    b.ToTable("Races");
+                    b.ToTable("Races", (string)null);
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.Tag", b =>
@@ -452,17 +506,23 @@ namespace Utanvega.Backend.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<string>("NameEn")
+                        .HasColumnType("text");
+
                     b.Property<string>("Slug")
                         .IsRequired()
                         .HasMaxLength(120)
                         .HasColumnType("character varying(120)");
+
+                    b.Property<string>("TranslationHashes")
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
                     b.HasIndex("Slug")
                         .IsUnique();
 
-                    b.ToTable("Tags");
+                    b.ToTable("Tags", (string)null);
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.Trail", b =>
@@ -482,6 +542,9 @@ namespace Utanvega.Backend.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<string>("DescriptionEn")
                         .HasColumnType("text");
 
                     b.Property<string>("Difficulty")
@@ -508,6 +571,9 @@ namespace Utanvega.Backend.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<string>("NameEn")
+                        .HasColumnType("text");
+
                     b.Property<string>("Slug")
                         .IsRequired()
                         .HasMaxLength(250)
@@ -518,6 +584,9 @@ namespace Utanvega.Backend.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("TerrainType")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TranslationHashes")
                         .HasColumnType("text");
 
                     b.Property<string>("Type")
@@ -542,7 +611,7 @@ namespace Utanvega.Backend.Migrations
                     b.HasIndex("Slug")
                         .IsUnique();
 
-                    b.ToTable("Trails");
+                    b.ToTable("Trails", (string)null);
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.TrailCheckIn", b =>
@@ -608,7 +677,7 @@ namespace Utanvega.Backend.Migrations
 
                     b.HasIndex("TrailId");
 
-                    b.ToTable("TrailLocations");
+                    b.ToTable("TrailLocations", (string)null);
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.TrailTag", b =>
@@ -630,7 +699,7 @@ namespace Utanvega.Backend.Migrations
                     b.HasIndex("TrailId", "TagId")
                         .IsUnique();
 
-                    b.ToTable("TrailTags");
+                    b.ToTable("TrailTags", (string)null);
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.TrailView", b =>
@@ -657,7 +726,7 @@ namespace Utanvega.Backend.Migrations
 
                     b.HasIndex("TrailId", "IpHash", "ViewedAtUtc");
 
-                    b.ToTable("TrailViews");
+                    b.ToTable("TrailViews", (string)null);
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.UserTrailActivity", b =>
@@ -781,7 +850,7 @@ namespace Utanvega.Backend.Migrations
 
                             b1.HasKey("EventId");
 
-                            b1.ToTable("Events");
+                            b1.ToTable("Events", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("EventId");

@@ -1,15 +1,18 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Box, Typography, Alert, CircularProgress, MenuItem, Paper, Chip, Tabs, Tab, Autocomplete, Checkbox } from '@mui/material';
-import { Add as AddIcon, History as HistoryIcon, Map as MapIcon, LocalOffer as TagIcon, CheckBoxOutlineBlank, CheckBox as CheckBoxIcon, UploadFile as UploadFileIcon, EmojiEvents as RaceIcon } from '@mui/icons-material';
+import { Add as AddIcon, History as HistoryIcon, Map as MapIcon, LocalOffer as TagIcon, CheckBoxOutlineBlank, CheckBox as CheckBoxIcon, UploadFile as UploadFileIcon, EmojiEvents as RaceIcon, Translate as TranslateIcon } from '@mui/icons-material';
 import { MapContainer, TileLayer, Polyline, CircleMarker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { apiFetch } from '../hooks/api';
 import { useLocations } from '../hooks/useLocations';
 import { useTags } from '../hooks/useTags';
+import { useTranslate } from '../hooks/useTranslate';
+import BilingualTextField from './BilingualTextField';
 import type { EventDetailDto, EventEditionDto, EventSummaryDto, RaceDto } from '../hooks/useEvents';
 import ChangeLogList from './ChangeLogList';
 import { generateSlug } from '../utils/slugify';
+import { hashText } from '../utils/translationHash';
 
 type TrailLocationInfo = {
     locationId: string;
@@ -27,8 +30,10 @@ type TrailTagInfo = {
 type TrailDetail = {
     id: string;
     name: string;
+    nameEn: string | null;
     slug: string;
     description: string;
+    descriptionEn: string | null;
     activityType: string;
     status: string;
     type: string;
@@ -40,6 +45,7 @@ type TrailDetail = {
     youtubeUrl?: string | null;
     terrainType?: string | null;
     maxAltitude?: number | null;
+    translationHashes?: Record<string, string> | null;
     locations: TrailLocationInfo[];
     tags: TrailTagInfo[];
 };
@@ -113,12 +119,14 @@ const terrainTypes = [
 
 export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess }: { open: boolean, trailId: string | null, onClose: () => void, onSaveSuccess: (trail?: { id: string, slug: string, name: string }) => void }) {
     const [trail, setTrail] = useState<TrailDetail | null>(null);
+    const initialEnRef = useRef<{ nameEn: string | null; descriptionEn: string | null }>({ nameEn: null, descriptionEn: null });
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const { locations: allLocations } = useLocations();
     const { tags: allTags } = useTags();
 
+    const { translate, translating } = useTranslate();
     const [newLocId, setNewLocId] = useState('');
     const [newLocRole, setNewLocRole] = useState<'Start' | 'End' | 'BelongsTo' | 'PassingThrough'>('BelongsTo');
     const [activeTab, setActiveTab] = useState(0);
@@ -143,6 +151,7 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
                     ]);
 
                     setTrail(data);
+                    initialEnRef.current = { nameEn: data.nameEn ?? null, descriptionEn: data.descriptionEn ?? null };
                     setAllEvents(eventDetails.map(d => ({
                         id: d.id,
                         name: d.name,
@@ -201,8 +210,10 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
                 body: JSON.stringify({
                     id: trail.id,
                     name: trail.name,
+                    nameEn: trail.nameEn || null,
                     slug: trail.slug,
                     description: trail.description,
+                    descriptionEn: trail.descriptionEn || null,
                     activityType: trail.activityType,
                     status: trail.status,
                     type: trail.type,
@@ -210,7 +221,16 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
                     visibility: trail.visibility,
                     youtubeUrl: trail.youtubeUrl || null,
                     terrainType: trail.terrainType || null,
-                    updatedBy: 'admin', // Simple for now
+                    updatedBy: 'admin',
+                    translationHashes: (() => {
+                        const h: Record<string, string> = { ...(trail.translationHashes ?? {}) };
+                        const init = initialEnRef.current;
+                        if (trail.name?.trim() && trail.nameEn?.trim() && trail.nameEn !== init.nameEn)
+                            h['Name'] = hashText(trail.name.trim());
+                        if (trail.description?.trim() && trail.descriptionEn?.trim() && trail.descriptionEn !== init.descriptionEn)
+                            h['Description'] = hashText(trail.description.trim());
+                        return Object.keys(h).length > 0 ? h : undefined;
+                    })(),
                     locations: trail.locations.map(l => ({
                         locationId: l.locationId,
                         role: l.role,
@@ -294,17 +314,21 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
                 trailName: trail.name,
                 trailSlug: trail.slug,
                 name: raceName,
+                nameEn: null,
                 distanceLabel: `${distanceKm} km`,
                 cutoffMinutes: null,
                 description: null,
+                descriptionEn: null,
                 status: 'Active',
                 sortOrder: existingSortOrder,
                 ticketStatus: 'Available',
                 maxParticipants: null,
                 itraPoints: 0,
                 certifiedBy: null,
+                certifiedByEn: null,
                 prizeMoney: 0,
                 championshipCategory: null,
+                championshipCategoryEn: null,
                 dateOfRace: selectedEditionToLink.date,
                 startTime: null,
                 trailDistanceMeters: trail.length,
@@ -359,9 +383,25 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
                     loading ? <CircularProgress /> : trail ? (
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
                             {error && <Alert severity="error">{error}</Alert>}
-                            <TextField label="Name" fullWidth value={trail.name} onChange={(e) => handleChange('name', e.target.value)} />
+                            <BilingualTextField
+                                label="Name"
+                                fullWidth
+                                valueIs={trail.name}
+                                valueEn={trail.nameEn ?? ''}
+                                onChangeIs={(v) => handleChange('name', v)}
+                                onChangeEn={(v) => setTrail(prev => prev ? { ...prev, nameEn: v } : null)}
+                            />
                             <TextField label="Slug" fullWidth value={trail.slug} onChange={(e) => handleChange('slug', e.target.value)} />
-                            <TextField label="Description" multiline rows={4} fullWidth value={trail.description || ''} onChange={(e) => handleChange('description', e.target.value)} />
+                            <BilingualTextField
+                                label="Description"
+                                multiline
+                                rows={4}
+                                fullWidth
+                                valueIs={trail.description}
+                                valueEn={trail.descriptionEn ?? ''}
+                                onChangeIs={(v) => handleChange('description', v)}
+                                onChangeEn={(v) => setTrail(prev => prev ? { ...prev, descriptionEn: v } : null)}
+                            />
                             <TextField
                                 label="YouTube URL"
                                 fullWidth
@@ -599,11 +639,27 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
                     <ChangeLogList entityName="Trail" entityId={trailId || undefined} title="Trail History" />
                 )}
             </DialogContent>
-            <DialogActions>
-                <Button onClick={onClose} disabled={saving}>Cancel</Button>
-                {activeTab === 0 && (
-                    <Button onClick={handleSave} variant="contained" disabled={saving || !trail}>{saving ? 'Saving...' : 'Save Changes'}</Button>
-                )}
+            <DialogActions sx={{ justifyContent: 'space-between', borderTop: 1, borderColor: 'divider' }}>
+                {activeTab === 0 ? (
+                    <Button
+                        startIcon={translating ? <CircularProgress size={16} /> : <TranslateIcon />}
+                        disabled={translating || (!trail?.name.trim() && !trail?.description.trim())}
+                        onClick={async () => {
+                            if (!trail) return;
+                            const [nameEn, descEn] = await translate([trail.name, trail.description]);
+                            if (nameEn) setTrail(prev => prev ? { ...prev, nameEn } : null);
+                            if (descEn) setTrail(prev => prev ? { ...prev, descriptionEn: descEn } : null);
+                        }}
+                    >
+                        Translate to EN
+                    </Button>
+                ) : <Box />}
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button onClick={onClose} disabled={saving}>Cancel</Button>
+                    {activeTab === 0 && (
+                        <Button onClick={handleSave} variant="contained" disabled={saving || !trail}>{saving ? 'Saving...' : 'Save Changes'}</Button>
+                    )}
+                </Box>
             </DialogActions>
         </Dialog>
     );

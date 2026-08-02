@@ -1,3 +1,4 @@
+using System.Text.Json;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
@@ -88,15 +89,18 @@ public class GetTrailBySlugQueryHandler : IRequestHandler<GetTrailBySlugQuery, T
             (trail.GpxData as LineString)?.StartPoint.X,
             trail.TrailLocations
                 .OrderBy(tl => tl.Order)
-                .Select(tl => new LocationInfoDto(tl.LocationId, tl.Location.Name, tl.Location.Slug, tl.Order, tl.Role.ToString(), tl.Location.Center?.Y, tl.Location.Center?.X))
+                .Select(tl => new LocationInfoDto(tl.LocationId, tl.Location.Name, tl.Location.NameEn, tl.Location.Slug, tl.Order, tl.Role.ToString(), tl.Location.Center?.Y, tl.Location.Center?.X))
                 .ToList(),
             trail.TrailTags
-                .Select(tt => new TagInfoDto(tt.Tag.Name, tt.Tag.Slug, tt.Tag.Color))
+                .Select(tt => new TagInfoDto(tt.Tag.Name, tt.Tag.NameEn, tt.Tag.Slug, tt.Tag.Color))
                 .ToList(),
             LinkedRaces: linkedRaceDtos.Count > 0 ? linkedRaceDtos : null,
             YoutubeUrl: trail.YoutubeUrl,
             ElevationProfile: trail.ElevationProfile,
-            TerrainType: trail.TerrainType?.ToString()
+            TerrainType: trail.TerrainType?.ToString(),
+            NameEn: trail.NameEn,
+            DescriptionEn: trail.DescriptionEn,
+            TranslationHashes: trail.TranslationHashes == null ? null : JsonSerializer.Deserialize<Dictionary<string, string>>(trail.TranslationHashes)
         );
     }
 }

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
@@ -17,7 +18,10 @@ public record UpdateLocationCommand(
     double? Latitude,
     double? Longitude,
     double? Radius,
-    string? UpdatedBy
+    string? UpdatedBy,
+    string? NameEn = null,
+    string? DescriptionEn = null,
+    Dictionary<string, string>? TranslationHashes = null
 ) : IRequest;
 
 public class UpdateLocationCommandHandler : IRequestHandler<UpdateLocationCommand>
@@ -52,13 +56,17 @@ public class UpdateLocationCommandHandler : IRequestHandler<UpdateLocationComman
 
         var oldSlug = location.Slug;
         location.Name = request.Name;
+        location.NameEn = request.NameEn;
         location.Slug = request.Slug;
         location.Description = request.Description;
+        location.DescriptionEn = request.DescriptionEn;
         location.Type = type;
         location.ParentId = request.ParentId;
         location.Center = center;
         location.Radius = request.Radius;
         location.UpdatedBy = request.UpdatedBy;
+        if (request.TranslationHashes != null)
+            location.TranslationHashes = JsonSerializer.Serialize(request.TranslationHashes);
         location.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesWithAuditAsync(request.UpdatedBy);

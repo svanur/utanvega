@@ -4,14 +4,14 @@
 - **Goal**: A site to find fun and exciting trails for trail running, hiking & cycling to share with friends. Mobile-first PWA targeting Icelandic trail runners with bilingual support (Icelandic default, English available).
 - **Tech Stack**:
 
-  | Layer | Technology |
-  |-------|-----------|
+  | Layer        | Technology                                                              |
+  |--------------|-------------------------------------------------------------------------|
   | **Frontend** | React 18, TypeScript, Vite 7, MUI 5, Leaflet, Recharts 3, react-i18next |
-  | **Admin** | React 18, TypeScript, Vite 7, MUI 5, Leaflet, Supabase Auth |
-  | **Backend** | .NET 9, MediatR (CQRS), EF Core, PostGIS, JWT Auth |
-  | **Database** | PostgreSQL + PostGIS (via Supabase) |
-  | **Tests** | xUnit, Moq, SQLite in-memory |
-  | **Hosting** | Fly.io (backend), Vercel (frontend + admin) |
+  | **Admin**    | React 18, TypeScript, Vite 7, MUI 5, Leaflet, Supabase Auth             |
+  | **Backend**  | .NET 9, MediatR (CQRS), EF Core, PostGIS, JWT Auth                      |
+  | **Database** | PostgreSQL + PostGIS (via Supabase)                                     |
+  | **Tests**    | xUnit, Moq, SQLite in-memory                                            |
+  | **Hosting**  | Fly.io (backend), Vercel (frontend + admin)                             |
 
 ## Development Setup
 - **Secrets**: Uses `dotnet user-secrets`. Do not hardcode keys.

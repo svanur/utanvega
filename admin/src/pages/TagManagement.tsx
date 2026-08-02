@@ -2,11 +2,14 @@ import React, { useState, useMemo } from 'react';
 import {
   Box, Typography, Paper, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, IconButton, Button, TextField, Chip, Dialog,
-  DialogTitle, DialogContent, DialogActions, CircularProgress, InputAdornment
+  DialogTitle, DialogContent, DialogActions, CircularProgress, InputAdornment,
 } from '@mui/material';
 import { Delete as DeleteIcon, Edit as EditIcon, Add as AddIcon, Search as SearchIcon, Clear as ClearIcon } from '@mui/icons-material';
 import { useTags, TagDto } from '../hooks/useTags';
 import { apiFetch } from '../hooks/api';
+import BilingualTextField from '../components/BilingualTextField';
+import { useTranslate } from '../hooks/useTranslate';
+import TranslateIcon from '@mui/icons-material/Translate';
 
 const PRESET_COLORS = [
   '#2196f3', '#4caf50', '#ff9800', '#f44336', '#9c27b0',
@@ -19,8 +22,9 @@ interface TagManagementProps {
 
 export default function TagManagement({ onNotify }: TagManagementProps) {
   const { tags, loading, refresh } = useTags();
-  const [editTag, setEditTag] = useState<{ id?: string; name: string; color: string | null } | null>(null);
+  const [editTag, setEditTag] = useState<{ id?: string; name: string; nameEn?: string; color: string | null } | null>(null);
   const [saving, setSaving] = useState(false);
+  const { translate, translating } = useTranslate(msg => onNotify(msg, 'error'));
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredTags = useMemo(() => {
@@ -36,13 +40,13 @@ export default function TagManagement({ onNotify }: TagManagementProps) {
       if (editTag.id) {
         await apiFetch(`/api/v1/admin/tags/${editTag.id}`, {
           method: 'PUT',
-          body: JSON.stringify({ name: editTag.name, color: editTag.color }),
+          body: JSON.stringify({ name: editTag.name, nameEn: editTag.nameEn || undefined, color: editTag.color }),
         });
         onNotify(`Tag "${editTag.name}" updated`, 'success');
       } else {
         await apiFetch('/api/v1/admin/tags', {
           method: 'POST',
-          body: JSON.stringify({ name: editTag.name, color: editTag.color }),
+          body: JSON.stringify({ name: editTag.name, nameEn: editTag.nameEn || undefined, color: editTag.color }),
         });
         onNotify(`Tag "${editTag.name}" created`, 'success');
       }
@@ -126,7 +130,7 @@ export default function TagManagement({ onNotify }: TagManagementProps) {
                 <TableCell>{tag.slug}</TableCell>
                 <TableCell align="center">{tag.trailCount}</TableCell>
                 <TableCell align="right">
-                  <IconButton size="small" onClick={() => setEditTag({ id: tag.id, name: tag.name, color: tag.color })}>
+                  <IconButton size="small" onClick={() => setEditTag({ id: tag.id, name: tag.name, nameEn: tag.nameEn ?? undefined, color: tag.color })}>
                     <EditIcon fontSize="small" />
                   </IconButton>
                   <IconButton size="small" color="error" onClick={() => handleDelete(tag)}>
@@ -152,11 +156,13 @@ export default function TagManagement({ onNotify }: TagManagementProps) {
       <Dialog open={!!editTag} onClose={() => setEditTag(null)} maxWidth="xs" fullWidth>
         <DialogTitle>{editTag?.id ? 'Edit Tag' : 'New Tag'}</DialogTitle>
         <DialogContent>
-          <TextField
+          <BilingualTextField
             label="Tag Name"
             fullWidth
-            value={editTag?.name || ''}
-            onChange={e => setEditTag(prev => prev ? { ...prev, name: e.target.value } : null)}
+            valueIs={editTag?.name || ''}
+            valueEn={editTag?.nameEn || ''}
+            onChangeIs={v => setEditTag(prev => prev ? { ...prev, name: v } : null)}
+            onChangeEn={v => setEditTag(prev => prev ? { ...prev, nameEn: v } : null)}
             sx={{ mt: 1, mb: 2 }}
             autoFocus
           />
@@ -197,11 +203,24 @@ export default function TagManagement({ onNotify }: TagManagementProps) {
             </Box>
           )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setEditTag(null)}>Cancel</Button>
-          <Button onClick={handleSave} variant="contained" disabled={saving || !editTag?.name.trim()}>
-            {saving ? 'Saving...' : editTag?.id ? 'Update' : 'Create'}
+        <DialogActions sx={{ justifyContent: 'space-between', borderTop: 1, borderColor: 'divider' }}>
+          <Button
+            startIcon={translating ? <CircularProgress size={16} /> : <TranslateIcon />}
+            disabled={translating || !editTag?.name.trim()}
+            onClick={async () => {
+              if (!editTag) return;
+              const [nameEn] = await translate([editTag.name]);
+              setEditTag(prev => prev ? { ...prev, nameEn } : null);
+            }}
+          >
+            Translate to EN
           </Button>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button onClick={() => setEditTag(null)}>Cancel</Button>
+            <Button onClick={handleSave} variant="contained" disabled={saving || !editTag?.name.trim()}>
+              {saving ? 'Saving...' : editTag?.id ? 'Update' : 'Create'}
+            </Button>
+          </Box>
         </DialogActions>
       </Dialog>
     </Box>

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -46,23 +47,29 @@ public class GetLocationsQueryHandler : IRequestHandler<GetLocationsQuery, List<
             query = query.Where(l => l.Name.ToLower().Contains(search) || l.Slug.ToLower().Contains(search));
         }
 
-        var result = await query
+        var raw = await query
             .OrderBy(l => l.Name)
-            .Select(l => new LocationDto(
-                l.Id,
-                l.Name,
-                l.Slug,
-                l.Description,
-                l.Type.ToString(),
+            .Select(l => new {
+                l.Id, l.Name, l.NameEn, l.Slug, l.Description, l.DescriptionEn,
+                Type = l.Type.ToString(),
                 l.ParentId,
-                l.Parent != null ? l.Parent.Name : null,
-                l.Center != null ? l.Center.Y : null,
-                l.Center != null ? l.Center.X : null,
+                ParentName = l.Parent != null ? l.Parent.Name : null,
+                ParentNameEn = l.Parent != null ? l.Parent.NameEn : null,
+                Latitude = l.Center != null ? l.Center.Y : (double?)null,
+                Longitude = l.Center != null ? l.Center.X : (double?)null,
                 l.Radius,
-                l.Children.Count,
-                l.TrailLocations.Count
-            ))
+                ChildrenCount = l.Children.Count,
+                TrailsCount = l.TrailLocations.Count,
+                l.TranslationHashes,
+            })
             .ToListAsync(cancellationToken);
+
+        var result = raw.Select(l => new LocationDto(
+            l.Id, l.Name, l.NameEn, l.Slug, l.Description, l.DescriptionEn,
+            l.Type, l.ParentId, l.ParentName, l.ParentNameEn, l.Latitude, l.Longitude, l.Radius,
+            l.ChildrenCount, l.TrailsCount,
+            l.TranslationHashes == null ? null : JsonSerializer.Deserialize<Dictionary<string, string>>(l.TranslationHashes)
+        )).ToList();
 
         if (isCacheable)
             _cache.Set(CacheKeys.LocationsAll, result, TimeSpan.FromHours(1));

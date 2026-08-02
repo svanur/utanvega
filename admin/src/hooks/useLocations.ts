@@ -6,15 +6,19 @@ export type LocationType = 'Country' | 'Area' | 'Region' | 'Municipality' | 'Pla
 export interface LocationDto {
     id: string;
     name: string;
+    nameEn: string | null;
     slug: string;
     description: string | null;
+    descriptionEn: string | null;
     type: LocationType;
     parentId: string | null;
     parentName: string | null;
+    parentNameEn?: string | null;
     latitude: number | null;
     longitude: number | null;
     radius: number | null;
     childrenCount: number;
+    translationHashes?: Record<string, string>;
 }
 
 export function useLocations(parentId: string | null = null, search: string | null = null) {

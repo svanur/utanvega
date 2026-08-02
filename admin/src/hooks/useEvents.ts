@@ -34,21 +34,26 @@ export interface RaceDto {
     trailName: string | null;
     trailSlug: string | null;
     name: string;
+    nameEn: string | null;
     distanceLabel: string | null;
     cutoffMinutes: number | null;
     description: string | null;
+    descriptionEn: string | null;
     status: RaceStatus;
     sortOrder: number;
     ticketStatus: TicketStatus;
     maxParticipants: number | null;
     itraPoints: number | null;
     certifiedBy: string | null;
+    certifiedByEn: string | null;
     prizeMoney: number;
     championshipCategory: string | null;
+    championshipCategoryEn: string | null;
     dateOfRace: string | null;
     startTime: string | null;
     trailDistanceMeters: number | null;
     trailElevationGain: number | null;
+    translationHashes?: Record<string, string>;
 }
 
 export interface EventEditionDto {
@@ -57,9 +62,11 @@ export interface EventEditionDto {
     year: number | null;
     date: string | null;
     title: string | null;
+    titleEn: string | null;
     registrationUrl: string | null;
     resultsUrl: string | null;
     notes: string | null;
+    notesEn: string | null;
     registrationStatus: RegistrationStatus;
     trailId: string | null;
     trailName: string | null;
@@ -67,6 +74,7 @@ export interface EventEditionDto {
     races: RaceDto[];
     createdAt: string;
     updatedAt: string | null;
+    translationHashes?: Record<string, string>;
 }
 
 export interface SeriesRaceDto {
@@ -82,15 +90,19 @@ export interface SeriesRaceDto {
 export interface EventSummaryDto {
     id: string;
     name: string;
+    nameEn: string | null;
     slug: string;
     description: string | null;
+    descriptionEn: string | null;
     type: EventType;
     activityType: ActivityType;
     status: EventStatus;
     organizerName: string | null;
+    organizerNameEn: string | null;
     organizerWebsite: string | null;
     organizerId: string | null;
     alertMessage: string | null;
+    alertMessageEn: string | null;
     alertSeverity: AlertSeverity | null;
     locationId: string | null;
     locationName: string | null;
@@ -107,24 +119,30 @@ export interface EventSummaryDto {
     isMountainRace: boolean;
     terrainType: string | null;
     hasFutureEdition: boolean;
+    translationHashes?: Record<string, string>;
 }
 
 export interface EventDetailDto extends EventSummaryDto {
     upcomingDates: string[];
     editions: EventEditionDto[];
+    translationHashes?: Record<string, string>;
 }
 
 export interface CreateEventInput {
     name: string;
+    nameEn?: string;
     slug?: string;
     description?: string;
+    descriptionEn?: string;
     type: EventType;
     activityType: ActivityType;
     status: EventStatus;
     organizerName?: string;
+    organizerNameEn?: string;
     organizerWebsite?: string;
     organizerId?: string | null;
     alertMessage?: string;
+    alertMessageEn?: string;
     alertSeverity?: AlertSeverity;
     locationId?: string | null;
     scheduleRule?: ScheduleRule | null;
@@ -136,20 +154,25 @@ export interface CreateEventInput {
 export interface UpdateEventInput {
     id: string;
     name: string;
+    nameEn?: string;
     description?: string;
+    descriptionEn?: string;
     type: EventType;
     activityType: ActivityType;
     status: EventStatus;
     organizerName?: string;
+    organizerNameEn?: string;
     organizerWebsite?: string;
     organizerId?: string | null;
     alertMessage?: string;
+    alertMessageEn?: string;
     alertSeverity?: AlertSeverity;
     locationId?: string | null;
     scheduleRule?: ScheduleRule | null;
     socialLinks?: SocialLink[] | null;
     gpxPointLat?: number | null;
     gpxPointLng?: number | null;
+    translationHashes?: Record<string, string>;
 }
 
 export interface CreateEditionInput {
@@ -157,9 +180,11 @@ export interface CreateEditionInput {
     year?: number | null;
     date?: string | null;
     title?: string;
+    titleEn?: string;
     registrationUrl?: string;
     resultsUrl?: string;
     notes?: string;
+    notesEn?: string;
     registrationStatus: RegistrationStatus;
     trailId?: string | null;
 }
@@ -169,28 +194,35 @@ export interface UpdateEditionInput {
     year?: number | null;
     date?: string | null;
     title?: string;
+    titleEn?: string;
     registrationUrl?: string;
     resultsUrl?: string;
     notes?: string;
+    notesEn?: string;
     registrationStatus: RegistrationStatus;
     trailId?: string | null;
+    translationHashes?: Record<string, string>;
 }
 
 export interface CreateRaceInput {
     eventEditionId: string;
     trailId?: string | null;
     name: string;
+    nameEn?: string;
     distanceLabel?: string;
     cutoffMinutes?: number | null;
     description?: string;
+    descriptionEn?: string;
     status: RaceStatus;
     sortOrder: number;
     ticketStatus: TicketStatus;
     maxParticipants?: number | null;
     itraPoints?: number | null;
     certifiedBy?: string;
+    certifiedByEn?: string;
     prizeMoney: number;
     championshipCategory?: string;
+    championshipCategoryEn?: string;
     dateOfRace?: string | null;
     startTime?: string | null;
 }
@@ -199,19 +231,24 @@ export interface UpdateRaceInput {
     id: string;
     trailId?: string | null;
     name: string;
+    nameEn?: string;
     distanceLabel?: string;
     cutoffMinutes?: number | null;
     description?: string;
+    descriptionEn?: string;
     status: RaceStatus;
     sortOrder: number;
     ticketStatus: TicketStatus;
     maxParticipants?: number | null;
     itraPoints?: number | null;
     certifiedBy?: string;
+    certifiedByEn?: string;
     prizeMoney: number;
     championshipCategory?: string;
+    championshipCategoryEn?: string;
     dateOfRace?: string | null;
     startTime?: string | null;
+    translationHashes?: Record<string, string>;
 }
 
 export interface GenerateEditionsForSeasonInput {

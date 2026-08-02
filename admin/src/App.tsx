@@ -31,6 +31,8 @@ import HeroThemesPage from './pages/HeroThemesPage';
 import SponsorsPage from './pages/SponsorsPage';
 import OrganizersPage from './pages/OrganizersPage';
 import PoolsPage from './pages/PoolsPage';
+import TranslationHealth from './pages/TranslationHealth';
+import TranslateIcon from '@mui/icons-material/Translate';
 import GpxUploadDialog from './components/GpxUploadDialog';
 import LoginPage from './pages/LoginPage';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -72,6 +74,7 @@ const PAGE_PATHS: Record<PageKey, string> = {
   'sponsors': '/sponsors',
   'pools': '/pools',
   'organizers': '/organizers',
+  'translation-health': '/translation-health',
 };
 
 function pathToPage(pathname: string): PageKey {
@@ -253,6 +256,7 @@ function AdminContent() {
               { key: 'health' as const, icon: <HealthAndSafetyIcon />, label: 'Trail Health' },
               { key: 'event-health' as const, icon: <HealthAndSafetyIcon sx={{ color: '#ed6c02' }} />, label: 'Event Health' },
               { key: 'edition-health' as const, icon: <HealthAndSafetyIcon sx={{ color: '#9c27b0' }} />, label: 'Edition Health' },
+              { key: 'translation-health' as const, icon: <TranslateIcon />, label: 'Translations' },
               { key: 'map' as const, icon: <MapIcon />, label: 'Trail Map' },
               { key: 'tags' as const, icon: <LocalOfferIcon />, label: 'Tags' },
               { key: 'analytics' as const, icon: <BarChartIcon />, label: 'Analytics' },
@@ -315,6 +319,8 @@ function AdminContent() {
             <PoolsPage />
           ) : currentPage === 'organizers' ? (
             <OrganizersPage onNotify={notify} />
+          ) : currentPage === 'translation-health' ? (
+            <TranslationHealth onNotify={notify} />
           ) : (
             <LocationList onNotify={notify} />
           )}

@@ -4,8 +4,11 @@ public class Tag
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get; set; } = string.Empty;
+    public string? NameEn { get; set; }
     public string Slug { get; set; } = string.Empty;
     public string? Color { get; set; }
+
+    public string? TranslationHashes { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

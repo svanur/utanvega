@@ -1,3 +1,4 @@
+using System.Text.Json;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Utanvega.Backend.Application.Caching;
@@ -15,7 +16,10 @@ public record UpdateEditionCommand(
     string? ResultsUrl,
     string? Notes,
     string RegistrationStatus,
-    Guid? TrailId
+    Guid? TrailId,
+    string? TitleEn = null,
+    string? NotesEn = null,
+    Dictionary<string, string>? TranslationHashes = null
 ) : IRequest<bool>;
 
 public class UpdateEditionCommandHandler : IRequestHandler<UpdateEditionCommand, bool>
@@ -42,11 +46,15 @@ public class UpdateEditionCommandHandler : IRequestHandler<UpdateEditionCommand,
         edition.Year = request.Year;
         edition.Date = request.Date;
         edition.Title = request.Title;
+        edition.TitleEn = request.TitleEn;
         edition.RegistrationUrl = request.RegistrationUrl;
         edition.ResultsUrl = request.ResultsUrl;
         edition.Notes = request.Notes;
+        edition.NotesEn = request.NotesEn;
         edition.RegistrationStatus = regStatus;
         edition.TrailId = request.TrailId;
+        if (request.TranslationHashes != null)
+            edition.TranslationHashes = JsonSerializer.Serialize(request.TranslationHashes);
         edition.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync(cancellationToken);

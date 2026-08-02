@@ -690,8 +690,10 @@ app.MapGet("/api/v1/admin/trails/{idOrSlug}", [Authorize] async (string idOrSlug
     {
         trail.Id,
         trail.Name,
+        trail.NameEn,
         trail.Slug,
         trail.Description,
+        trail.DescriptionEn,
         ActivityType = trail.ActivityTypeId.ToString(),
         Status = trail.Status.ToString(),
         Type = trail.Type.ToString(),
@@ -702,6 +704,7 @@ app.MapGet("/api/v1/admin/trails/{idOrSlug}", [Authorize] async (string idOrSlug
         trail.ElevationLoss,
         trail.YoutubeUrl,
         TerrainType = trail.TerrainType?.ToString(),
+        TranslationHashes = trail.TranslationHashes == null ? null : System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(trail.TranslationHashes),
         MaxAltitude = trail.ElevationProfile != null && trail.ElevationProfile.Length > 0 ? trail.ElevationProfile.Max() : (double?)null,
         Locations = trail.TrailLocations
             .OrderBy(tl => tl.Order)
@@ -1174,7 +1177,7 @@ app.MapGet("/api/v1/admin/tags", [Authorize] async (UtanvegaDbContext context) =
     var tags = await context.Tags
         .AsNoTracking()
         .OrderBy(t => t.Name)
-        .Select(t => new { t.Id, t.Name, t.Slug, t.Color, TrailCount = t.TrailTags.Count })
+        .Select(t => new { t.Id, t.Name, t.NameEn, t.Slug, t.Color, TrailCount = t.TrailTags.Count, t.TranslationHashes })
         .ToListAsync();
     return Results.Ok(tags);
 })
@@ -1185,6 +1188,7 @@ app.MapPost("/api/v1/admin/tags", [Authorize] async (TagCreateDto dto, UtanvegaD
     var tag = new Utanvega.Backend.Core.Entities.Tag
     {
         Name = dto.Name,
+        NameEn = dto.NameEn,
         Slug = Utanvega.Backend.Core.Services.SlugGenerator.Generate(dto.Name),
         Color = dto.Color
     };
@@ -1199,8 +1203,11 @@ app.MapPut("/api/v1/admin/tags/{id:guid}", [Authorize] async (Guid id, TagCreate
     var tag = await context.Tags.FindAsync(id);
     if (tag == null) return Results.NotFound();
     tag.Name = dto.Name;
+    tag.NameEn = dto.NameEn;
     tag.Slug = Utanvega.Backend.Core.Services.SlugGenerator.Generate(dto.Name);
     tag.Color = dto.Color;
+    if (dto.TranslationHashes != null)
+        tag.TranslationHashes = System.Text.Json.JsonSerializer.Serialize(dto.TranslationHashes);
     await context.SaveChangesWithAuditAsync("admin");
     return Results.NoContent();
 })
@@ -1216,6 +1223,41 @@ app.MapDelete("/api/v1/admin/tags/{id:guid}", [Authorize] async (Guid id, Utanve
     return Results.NoContent();
 })
 .WithName("DeleteTag");
+
+// Translation API
+app.MapPost("/api/v1/admin/translate", [Authorize] async (TranslateRequest req, IConfiguration config) =>
+{
+    var apiKey = config["DeepL:ApiKey"];
+    if (string.IsNullOrWhiteSpace(apiKey))
+        return Results.Problem("DeepL API key not configured.");
+
+    if (req.Texts == null || req.Texts.Count == 0)
+        return Results.BadRequest("No texts provided.");
+
+    try
+    {
+        var translator = new DeepL.Translator(apiKey);
+        var results = await translator.TranslateTextAsync(
+            req.Texts,
+            DeepL.LanguageCode.Icelandic,
+            DeepL.LanguageCode.EnglishAmerican
+        );
+        return Results.Ok(new { translations = results.Select(r => r.Text).ToList() });
+    }
+    catch (DeepL.AuthorizationException)
+    {
+        return Results.Problem("Invalid DeepL API key.", statusCode: 502);
+    }
+    catch (DeepL.QuotaExceededException)
+    {
+        return Results.Problem("DeepL translation quota exceeded.", statusCode: 429);
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Translation failed: {ex.Message}", statusCode: 502);
+    }
+})
+.WithName("Translate");
 
 // History / Audit API
 app.MapGet("/api/v1/admin/history", [Authorize] async (string? entityName, string? entityId, int? limit, IMediator mediator) =>
@@ -1947,7 +1989,8 @@ finally
 }
 
 public record SendTipRequest(string PageUrl, string Message);
-public record TagCreateDto(string Name, string? Color);
+public record TagCreateDto(string Name, string? Color, string? NameEn = null, Dictionary<string, string>? TranslationHashes = null);
+public record TranslateRequest(List<string> Texts);
 public record BulkAddTagRequest(List<Guid> TrailIds, Guid TagId);
 public record TrailLocationAddRequest(Guid LocationId, string? Role);
 public record FeatureFlagCreateDto(string Name, bool Enabled = true, string? Description = null);

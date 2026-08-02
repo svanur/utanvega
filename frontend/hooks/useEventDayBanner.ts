@@ -32,7 +32,7 @@ function getDateWindow(): { from: string; to: string; days: Date[] } {
 export interface BannerDay {
     date: Date;
     label: string;
-    events: { name: string; slug: string; locationName: string | null }[];
+    events: { name: string; nameEn: string | null; slug: string; locationName: string | null }[];
     overflow: number;
 }
 

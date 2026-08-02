@@ -15,7 +15,9 @@ public record CreateEditionCommand(
     string? ResultsUrl,
     string? Notes,
     string RegistrationStatus,
-    Guid? TrailId
+    Guid? TrailId,
+    string? TitleEn = null,
+    string? NotesEn = null
 ) : IRequest<Guid>;
 
 public class CreateEditionCommandHandler : IRequestHandler<CreateEditionCommand, Guid>
@@ -39,9 +41,11 @@ public class CreateEditionCommandHandler : IRequestHandler<CreateEditionCommand,
             Year = request.Year,
             Date = request.Date,
             Title = request.Title,
+            TitleEn = request.TitleEn,
             RegistrationUrl = request.RegistrationUrl,
             ResultsUrl = request.ResultsUrl,
             Notes = request.Notes,
+            NotesEn = request.NotesEn,
             RegistrationStatus = regStatus,
             TrailId = request.TrailId,
             CreatedAt = DateTime.UtcNow,
