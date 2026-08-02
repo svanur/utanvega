@@ -987,6 +987,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
   const [prefillRaces, setPrefillRaces] = useState<RaceDto[]>([]);
   const [showBulkDatesDialog, setShowBulkDatesDialog] = useState(false);
   const [bulkDatesEditionDate, setBulkDatesEditionDate] = useState<string>('');
+  const [bulkDatesIsSeries, setBulkDatesIsSeries] = useState(false);
   const [pendingDateShift, setPendingDateShift] = useState<{ offsetDays: number; races: RaceDto[] } | null>(null);
   const [showOlderEditions, setShowOlderEditions] = useState(false);
   const [showAttentionPanel, setShowAttentionPanel] = useState(true);
@@ -2024,6 +2025,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
       if (allSorted[i].races.length > 0) { prevEdition = allSorted[i]; break; }
     }
     setBulkDatesEditionDate(edition.date ?? '');
+    setBulkDatesIsSeries(expandedDetail?.type === 'Series');
     setBulkDates(
       [...edition.races].sort(sortRaces).map(race => {
         const prevRace = prevEdition?.races.find(r => r.name === race.name);
@@ -3798,7 +3800,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
         <DialogTitle>Set Race Dates</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
-            {bulkDatesEditionDate && bulkDates.some(d => !d.dateOfRace) && (
+            {bulkDatesEditionDate && !bulkDatesIsSeries && bulkDates.some(d => !d.dateOfRace) && (
               <Button
                 size="small"
                 variant="outlined"
