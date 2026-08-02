@@ -243,7 +243,12 @@ builder.Services.AddAuthorization(options =>
 });
 
 builder.Services.AddDbContext<UtanvegaDbContext>(options =>
-    options.UseNpgsql(connectionString, o => o.UseNetTopologySuite()));
+    options.UseNpgsql(connectionString, o =>
+    {
+        o.UseNetTopologySuite();
+        o.EnableRetryOnFailure(maxRetryCount: 3, maxRetryDelay: TimeSpan.FromSeconds(5), errorCodesToAdd: null);
+        o.CommandTimeout(60);
+    }));
 
 // Add CQRS with MediatR
 builder.Services.AddMediatR(cfg =>
