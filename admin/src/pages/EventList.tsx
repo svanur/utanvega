@@ -64,6 +64,8 @@ import {
   Link as LinkIcon,
   Map as MapIcon,
   MyLocation as MyLocationIcon,
+  Notes as NotesIcon,
+  OpenInNew as OpenInNewIcon,
   Search as SearchIcon,
   Translate as TranslateIcon,
 } from '@mui/icons-material';
@@ -741,12 +743,13 @@ interface SortableRaceItemProps {
   onDuplicate: () => void;
   onDelete: () => void;
   onCycleTicketStatus: () => void;
+  ticketLoading: boolean;
   getIcon: (trailId: string | null) => string;
   formatDateLabel: (d: string | null | undefined, fallback: string) => string;
   formatTimeLabel: (t: string | null | undefined) => string;
 }
 
-function SortableRaceItem({ race, onEdit, onDuplicate, onDelete, onCycleTicketStatus, getIcon, formatDateLabel, formatTimeLabel }: SortableRaceItemProps) {
+function SortableRaceItem({ race, onEdit, onDuplicate, onDelete, onCycleTicketStatus, ticketLoading, getIcon, formatDateLabel, formatTimeLabel }: SortableRaceItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: race.id });
 
   return (
@@ -781,8 +784,8 @@ function SortableRaceItem({ race, onEdit, onDuplicate, onDelete, onCycleTicketSt
             <Typography variant="body2" fontWeight={700}>{race.name}</Typography>
             {race.distanceLabel && <Chip label={race.distanceLabel} size="small" variant="outlined" />}
             <Chip label={race.status} size="small" color={getRaceStatusColor(race.status)} />
-            <Tooltip title="Click to cycle ticket status">
-              <Chip label={race.ticketStatus} size="small" color={getTicketStatusColor(race.ticketStatus)} variant="outlined" onClick={onCycleTicketStatus} sx={{ cursor: 'pointer' }} />
+            <Tooltip title={ticketLoading ? 'Updating…' : 'Click to cycle ticket status'}>
+              <Chip label={race.ticketStatus} size="small" color={getTicketStatusColor(race.ticketStatus)} variant="outlined" onClick={ticketLoading ? undefined : onCycleTicketStatus} disabled={ticketLoading} sx={{ cursor: ticketLoading ? 'default' : 'pointer' }} />
             </Tooltip>
             {race.cutoffMinutes != null && (
               <Chip label={`Time limit: ${formatMinutesToHHmm(race.cutoffMinutes) ?? `${race.cutoffMinutes} min`}`} size="small" variant="outlined" color="warning" />
@@ -956,6 +959,8 @@ function TrailStartPicker({ trailsWithCoords, onPick }: TrailPickerProps) {
 
 // ── Main component ───────────────────────────────────────────────────────────
 
+const PUBLIC_SITE_URL = (import.meta.env.VITE_PUBLIC_SITE_URL ?? '') as string;
+
 export default function EventList({ onNotify, initialEventId, onEventIdConsumed }: EventListProps) {
   const {
     events,
@@ -1024,6 +1029,14 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
     regUrl: string;
     resultsUrl: string;
   } | null>(null);
+  const [notesPopover, setNotesPopover] = useState<{
+    anchorEl: HTMLElement;
+    edition: EventEditionDto;
+    notes: string;
+    notesEn: string;
+  } | null>(null);
+  const [cyclingTicketIds, setCyclingTicketIds] = useState<Set<string>>(new Set());
+  const [cyclingRegIds, setCyclingRegIds] = useState<Set<string>>(new Set());
   const [copyRacesConfirm, setCopyRacesConfirm] = useState<{ edition: EventEditionDto; source: EventEditionDto } | null>(null);
   const [showBulkMissingDialog, setShowBulkMissingDialog] = useState(false);
   const [bulkMissingLoading, setBulkMissingLoading] = useState(false);
@@ -1294,16 +1307,19 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
 
   const openDuplicateRace = (race: RaceDto) => {
     const edition = expandedDetail?.editions.find(ed => ed.races.some(r => r.id === race.id)) ?? null;
+    const maxSort = edition ? Math.max(...edition.races.map(r => r.sortOrder), -1) : -1;
     setEditRaceId(null);
     setRaceDialogEdition(edition);
     setPrefillRaces([]);
-    setRaceForm({ ...buildRaceForm(race), sortOrder: String((edition?.races.length ?? 0)) });
+    setRaceForm({ ...buildRaceForm(race), sortOrder: String(maxSort + 1) });
     setShowRaceDialog(true);
   };
 
   const handleCycleTicketStatus = async (race: RaceDto) => {
+    if (cyclingTicketIds.has(race.id)) return;
     const cycle: TicketStatus[] = ['NotStarted', 'Available', 'AlmostSoldOut', 'SoldOut', 'Closed'];
     const next = cycle[(cycle.indexOf(race.ticketStatus as TicketStatus) + 1) % cycle.length] ?? 'Available';
+    setCyclingTicketIds(prev => new Set(prev).add(race.id));
     try {
       await updateRace(race.id, {
         trailId: race.trailId ?? null,
@@ -1325,6 +1341,8 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
       await refreshExpandedEvent();
     } catch {
       onNotify('Failed to update ticket status', 'error');
+    } finally {
+      setCyclingTicketIds(prev => { const s = new Set(prev); s.delete(race.id); return s; });
     }
   };
 
@@ -2004,8 +2022,10 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
   };
 
   const handleCycleRegistrationStatus = async (edition: EventEditionDto) => {
+    if (cyclingRegIds.has(edition.id)) return;
     const cycle: RegistrationStatus[] = ['NotStarted', 'Open', 'Closed'];
     const next = cycle[(cycle.indexOf(edition.registrationStatus) + 1) % cycle.length];
+    setCyclingRegIds(prev => new Set(prev).add(edition.id));
     try {
       await updateEdition(edition.id, {
         year: edition.year ?? null,
@@ -2020,6 +2040,24 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
       await refreshExpandedEvent();
     } catch (err) {
       onNotify(err instanceof Error ? err.message : 'Failed to update status', 'error');
+    } finally {
+      setCyclingRegIds(prev => { const s = new Set(prev); s.delete(edition.id); return s; });
+    }
+  };
+
+  const handleSaveNotesPopover = async () => {
+    if (!notesPopover) return;
+    const { edition, notes, notesEn } = notesPopover;
+    try {
+      await updateEdition(edition.id, {
+        registrationStatus: edition.registrationStatus,
+        notes: notes || undefined,
+        notesEn: notesEn || undefined,
+      });
+      setNotesPopover(null);
+      await refreshExpandedEvent();
+    } catch {
+      onNotify('Failed to save notes', 'error');
     }
   };
 
@@ -2458,6 +2496,13 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                     </Typography>
                   </TableCell>
                   <TableCell align="right" onClick={clickEvent => clickEvent.stopPropagation()} sx={expandedEventId === event.id ? { borderTop: '2px solid', borderRight: '2px solid', borderColor: 'primary.main' } : {}}>
+                    {PUBLIC_SITE_URL && (
+                      <Tooltip title="View on public site">
+                        <IconButton size="small" component="a" href={`${PUBLIC_SITE_URL}/events/${event.slug}`} target="_blank" rel="noopener noreferrer">
+                          <OpenInNewIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
                     <Tooltip title="Edit event">
                       <IconButton size="small" onClick={() => openEditEvent(event)}>
                         <EditIcon fontSize="small" />
@@ -2609,13 +2654,14 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                                           )}
                                           <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ mt: 0.75 }}>
                                             <Chip label={edition.date ?? (edition.year != null ? String(edition.year) : 'Date TBD')} size="small" variant="outlined" />
-                                            <Tooltip title="Click to cycle: NotStarted → Open → Closed">
+                                            <Tooltip title={cyclingRegIds.has(edition.id) ? 'Updating…' : 'Click to cycle: NotStarted → Open → Closed'}>
                                               <Chip
                                                 label={edition.registrationStatus}
                                                 size="small"
                                                 color={getRegistrationStatusColor(edition.registrationStatus)}
-                                                onClick={() => handleCycleRegistrationStatus(edition)}
-                                                sx={{ cursor: 'pointer' }}
+                                                onClick={cyclingRegIds.has(edition.id) ? undefined : () => handleCycleRegistrationStatus(edition)}
+                                                disabled={cyclingRegIds.has(edition.id)}
+                                                sx={{ cursor: cyclingRegIds.has(edition.id) ? 'default' : 'pointer' }}
                                               />
                                             </Tooltip>
                                             <Chip label={`${edition.races.length} race${edition.races.length === 1 ? '' : 's'}`} size="small" variant="outlined" />
@@ -2653,6 +2699,11 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                                         </Box>
                                       </Box>
                                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                        <Tooltip title={edition.notes ? `Notes: ${edition.notes.slice(0, 60)}${edition.notes.length > 60 ? '…' : ''}` : 'Add notes'}>
+                                          <IconButton size="small" color={edition.notes ? 'primary' : 'default'} onClick={(e) => setNotesPopover({ anchorEl: e.currentTarget, edition, notes: edition.notes ?? '', notesEn: edition.notesEn ?? '' })}>
+                                            <NotesIcon fontSize="small" />
+                                          </IconButton>
+                                        </Tooltip>
                                         <Tooltip title="Edit registration & results URLs">
                                           <IconButton size="small" onClick={(e) => setUrlPopover({ anchorEl: e.currentTarget, edition, regUrl: edition.registrationUrl ?? '', resultsUrl: edition.resultsUrl ?? '' })}>
                                             <LinkIcon fontSize="small" />
@@ -2746,6 +2797,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                                                     onDuplicate={() => openDuplicateRace(race)}
                                                     onDelete={() => handleDeleteRace(race)}
                                                     onCycleTicketStatus={() => handleCycleTicketStatus(race)}
+                                                    ticketLoading={cyclingTicketIds.has(race.id)}
                                                     getIcon={getTrailActivityIcon}
                                                     formatDateLabel={formatDateLabel}
                                                     formatTimeLabel={formatTimeLabel}
@@ -3808,6 +3860,45 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
           </Popover>
         );
       })()}
+
+      {/* Quick notes edit popover */}
+      {notesPopover && (
+        <Popover
+          open
+          anchorEl={notesPopover.anchorEl}
+          onClose={() => setNotesPopover(null)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        >
+          <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1.5, width: 360 }}>
+            <Typography variant="subtitle2">Notes — {buildEditionLabel(notesPopover.edition)}</Typography>
+            <TextField
+              label="Notes (IS)"
+              size="small"
+              fullWidth
+              multiline
+              rows={3}
+              autoFocus
+              value={notesPopover.notes}
+              onChange={(e) => setNotesPopover(prev => prev ? { ...prev, notes: e.target.value } : null)}
+              placeholder="Internal notes about this edition…"
+            />
+            <TextField
+              label="Notes (EN)"
+              size="small"
+              fullWidth
+              multiline
+              rows={2}
+              value={notesPopover.notesEn}
+              onChange={(e) => setNotesPopover(prev => prev ? { ...prev, notesEn: e.target.value } : null)}
+            />
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+              <Button size="small" onClick={() => setNotesPopover(null)}>Cancel</Button>
+              <Button size="small" variant="contained" onClick={handleSaveNotesPopover}>Save</Button>
+            </Box>
+          </Box>
+        </Popover>
+      )}
 
       {/* Shift race dates confirm dialog */}
       <Dialog open={!!pendingDateShift} onClose={() => setPendingDateShift(null)} maxWidth="xs" fullWidth>
