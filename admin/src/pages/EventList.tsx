@@ -410,6 +410,8 @@ const DAY_OF_WEEK_INDEX: Record<string, number> = {
 function nthWeekdayOfMonth(year: number, month: number, weekOfMonth: number, dayOfWeek: string): string {
   const dayIdx = DAY_OF_WEEK_INDEX[dayOfWeek] ?? 0;
   const firstOfMonth = dayjs(new Date(year, month - 1, 1));
+  // dayjs.day(n) where n >= 7 advances to the same weekday in the following week,
+  // so +7 is used when the first of the month is already past the target weekday.
   const firstOccurrence = firstOfMonth.day() <= dayIdx
     ? firstOfMonth.day(dayIdx)
     : firstOfMonth.day(dayIdx + 7);
@@ -994,7 +996,7 @@ function TrailStartPicker({ trailsWithCoords, onPick }: TrailPickerProps) {
 
 // ── Main component ───────────────────────────────────────────────────────────
 
-const PUBLIC_SITE_URL = (import.meta.env.VITE_PUBLIC_SITE_URL ?? '') as string;
+const PUBLIC_SITE_URL = ((import.meta.env.VITE_PUBLIC_SITE_URL ?? '') as string).replace(/\/$/, '');
 
 export default function EventList({ onNotify, initialEventId, onEventIdConsumed }: EventListProps) {
   const {
@@ -1138,6 +1140,9 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
     });
   }, [expandedEventId]);
 
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const in30daysStr = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
   const filteredEvents = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
 
@@ -1175,11 +1180,9 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
           if (!(!event.hasFutureEdition && (event.type === 'Race' || event.type === 'Series') && event.status !== 'Cancelled')) return false;
         }
         if (attentionFilter === 'seriesMissingReg') {
-          const in30days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-          if (!(event.type === 'Series' && event.nextEditionDate && event.nextEditionDate <= in30days && event.seriesRaces?.some(r => !r.registrationUrl))) return false;
+          if (!(event.type === 'Series' && event.nextEditionDate && event.nextEditionDate <= in30daysStr && event.seriesRaces?.some(r => !r.registrationUrl))) return false;
         }
         if (attentionFilter === 'pastActive') {
-          const todayStr = new Date().toISOString().slice(0, 10);
           if (!(event.status === 'Confirmed' && event.nextEditionDate && event.nextEditionDate < todayStr)) return false;
         }
 
@@ -1232,13 +1235,13 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
     setRaceForm(prev => ({ ...prev, [field]: value }));
   };
 
-  const loadExpandedEvent = async (eventId: string, slug: string) => {
+  const loadExpandedEvent = async (eventId: string, slug: string, resetOlderEditions = true) => {
     setLoadingDetail(true);
     try {
       const detail = await getEvent(slug);
       setExpandedEventId(eventId);
       setExpandedDetail(detail);
-      setShowOlderEditions(false);
+      if (resetOlderEditions) setShowOlderEditions(false);
     } catch {
       onNotify('Failed to load event editions', 'error');
     } finally {
@@ -1250,7 +1253,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
     if (!expandedEventId) return;
     const slug = expandedDetail?.slug ?? events.find(event => event.id === expandedEventId)?.slug;
     if (!slug) return;
-    await loadExpandedEvent(expandedEventId, slug);
+    await loadExpandedEvent(expandedEventId, slug, false);
   };
 
   const toggleExpand = async (event: EventSummaryDto) => {
@@ -2334,8 +2337,6 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
 
   const selectedBulkCount = bulkMissingItems.filter(i => i.selected).length;
 
-  const today = new Date().toISOString().slice(0, 10);
-  const in30days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const attentionItems: { key: string; label: string }[] = [];
   {
     const noEdition = events.filter(e =>
@@ -2345,14 +2346,14 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
   }
   {
     const seriesMissingReg = events.filter(e =>
-      e.type === 'Series' && e.nextEditionDate && e.nextEditionDate <= in30days &&
+      e.type === 'Series' && e.nextEditionDate && e.nextEditionDate <= in30daysStr &&
       e.seriesRaces?.some(r => !r.registrationUrl)
     ).length;
     if (seriesMissingReg > 0) attentionItems.push({ key: 'seriesMissingReg', label: `${seriesMissingReg} series event${seriesMissingReg !== 1 ? 's' : ''} with races in ≤30 days missing registration URL` });
   }
   {
     const pastActive = events.filter(e =>
-      e.status === 'Confirmed' && e.nextEditionDate && e.nextEditionDate < today
+      e.status === 'Confirmed' && e.nextEditionDate && e.nextEditionDate < todayStr
     ).length;
     if (pastActive > 0) attentionItems.push({ key: 'pastActive', label: `${pastActive} event${pastActive !== 1 ? 's' : ''} whose latest edition has passed — check results URL and registration status` });
   }
