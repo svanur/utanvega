@@ -10,6 +10,7 @@ public record RaceDistanceSummaryDto(
 public record SeriesRaceDto(
     Guid RaceId,
     string RaceName,
+    string? RaceNameEn,
     DateOnly? DateOfRace,
     TimeOnly? StartTime,
     string? DistanceLabel,

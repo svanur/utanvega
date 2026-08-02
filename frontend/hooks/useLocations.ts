@@ -11,6 +11,7 @@ export interface Location {
     type: string;
     parentId?: string;
     parentName?: string;
+    parentNameEn?: string;
     latitude?: number;
     longitude?: number;
     radius?: number;

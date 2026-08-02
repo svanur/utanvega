@@ -146,6 +146,7 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                         .Select(r => new SeriesRaceDto(
                             r.Id,
                             r.Name,
+                            r.NameEn,
                             r.DateOfRace,
                             r.StartTime,
                             !string.IsNullOrWhiteSpace(r.DistanceLabel) ? r.DistanceLabel

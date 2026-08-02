@@ -54,6 +54,7 @@ public class GetLocationsQueryHandler : IRequestHandler<GetLocationsQuery, List<
                 Type = l.Type.ToString(),
                 l.ParentId,
                 ParentName = l.Parent != null ? l.Parent.Name : null,
+                ParentNameEn = l.Parent != null ? l.Parent.NameEn : null,
                 Latitude = l.Center != null ? l.Center.Y : (double?)null,
                 Longitude = l.Center != null ? l.Center.X : (double?)null,
                 l.Radius,
@@ -65,7 +66,7 @@ public class GetLocationsQueryHandler : IRequestHandler<GetLocationsQuery, List<
 
         var result = raw.Select(l => new LocationDto(
             l.Id, l.Name, l.NameEn, l.Slug, l.Description, l.DescriptionEn,
-            l.Type, l.ParentId, l.ParentName, l.Latitude, l.Longitude, l.Radius,
+            l.Type, l.ParentId, l.ParentName, l.ParentNameEn, l.Latitude, l.Longitude, l.Radius,
             l.ChildrenCount, l.TrailsCount,
             l.TranslationHashes == null ? null : JsonSerializer.Deserialize<Dictionary<string, string>>(l.TranslationHashes)
         )).ToList();

@@ -13,6 +13,7 @@ export interface LocationDto {
     type: LocationType;
     parentId: string | null;
     parentName: string | null;
+    parentNameEn?: string | null;
     latitude: number | null;
     longitude: number | null;
     radius: number | null;

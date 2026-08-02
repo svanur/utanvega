@@ -12,6 +12,7 @@ public record LocationDto(
     string Type,
     Guid? ParentId,
     string? ParentName,
+    string? ParentNameEn,
     double? Latitude,
     double? Longitude,
     double? Radius,

@@ -20,6 +20,7 @@ export interface SocialLink {
 export interface SeriesRaceDto {
     raceId: string;
     raceName: string;
+    raceNameEn: string | null;
     dateOfRace: string | null;
     startTime: string | null;
     distanceLabel: string | null;

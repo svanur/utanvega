@@ -883,7 +883,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                             onClick={(e: React.MouseEvent) => {
                                                                 e.stopPropagation();
                                                                 downloadIcs({
-                                                                    title: race.raceName,
+                                                                    title: loc(race.raceName, race.raceNameEn) ?? race.raceName,
                                                                     date: race.dateOfRace!,
                                                                     location: comp.locationName ?? undefined,
                                                                     url: `https://hlaupadagskra.is/events/${comp.slug}`,
@@ -909,7 +909,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                     <Box sx={{ color: 'text.secondary', pt: 0.3, flexShrink: 0 }}>{getActivityIcon(comp.activityType)}</Box>
                                                                 </Tooltip>
                                                                 <Box sx={{ minWidth: 0 }}>
-                                                                    <Typography variant="subtitle1" fontWeight={700} noWrap>{race.raceName}</Typography>
+                                                                    <Typography variant="subtitle1" fontWeight={700} noWrap>{loc(race.raceName, race.raceNameEn) ?? race.raceName}</Typography>
                                                                 </Box>
                                                             </Stack>
                                                             <Stack direction="row" alignItems="center" gap={0.5} sx={{ flexShrink: 0 }}>
@@ -1216,8 +1216,8 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                         <RaceShareCard
                             open
                             onClose={() => setShareEventId(null)}
-                            eventName={ev.name}
-                            raceName={ev.name}
+                            eventName={loc(ev.name, ev.nameEn) ?? ev.name}
+                            raceName={loc(ev.name, ev.nameEn) ?? ev.name}
                             distanceLabel={firstDistance}
                             date={ev.displayDate ?? ev.nextEditionDate}
                             daysUntil={ev.daysUntil}

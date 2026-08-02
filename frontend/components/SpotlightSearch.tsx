@@ -147,7 +147,7 @@ export default function SpotlightSearch() {
                 type: 'location' as const,
                 name: loc(location.name, location.nameEn) ?? location.name,
                 slug: location.slug,
-                subtitle: location.parentName ? `${location.parentName} · ${location.trailsCount} ${t('spotlight.trails')}` : `${location.trailsCount} ${t('spotlight.trails')}`,
+                subtitle: location.parentName ? `${loc(location.parentName, location.parentNameEn) ?? location.parentName} · ${location.trailsCount} ${t('spotlight.trails')}` : `${location.trailsCount} ${t('spotlight.trails')}`,
                 score: Math.max(scoreMatch(q, location.name), scoreMatch(q, location.nameEn ?? '')),
             }))
             .filter(r => r.score > 0)
