@@ -3596,37 +3596,86 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
       </Dialog>
 
       {/* Quick URL edit popover */}
-      <Popover
-        open={!!urlPopover}
-        anchorEl={urlPopover?.anchorEl}
-        onClose={() => setUrlPopover(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-      >
-        <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1.5, width: 360 }}>
-          <Typography variant="subtitle2">URLs</Typography>
-          <TextField
-            label="Registration URL"
-            size="small"
-            fullWidth
-            value={urlPopover?.regUrl ?? ''}
-            onChange={(e) => setUrlPopover(prev => prev ? { ...prev, regUrl: e.target.value } : null)}
-            placeholder="https://..."
-          />
-          <TextField
-            label="Results URL"
-            size="small"
-            fullWidth
-            value={urlPopover?.resultsUrl ?? ''}
-            onChange={(e) => setUrlPopover(prev => prev ? { ...prev, resultsUrl: e.target.value } : null)}
-            placeholder="https://..."
-          />
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-            <Button size="small" onClick={() => setUrlPopover(null)}>Cancel</Button>
-            <Button size="small" variant="contained" onClick={handleSaveUrlPopover}>Save</Button>
-          </Box>
-        </Box>
-      </Popover>
+      {urlPopover && (() => {
+        const targetYear = urlPopover.edition.year;
+        const source = [...(expandedDetail?.editions ?? [])]
+          .sort(sortEditions)
+          .find(ed => ed.id !== urlPopover.edition.id && (ed.registrationUrl || ed.resultsUrl));
+        const suggestedReg = source?.registrationUrl ?? '';
+        const suggestedResults = source && targetYear
+          ? bumpYearInUrl(source.resultsUrl ?? '', source.year, targetYear) || (source.resultsUrl ?? '')
+          : (source?.resultsUrl ?? '');
+        const hasSuggestion = !!source && (suggestedReg || suggestedResults);
+        return (
+          <Popover
+            open
+            anchorEl={urlPopover.anchorEl}
+            onClose={() => setUrlPopover(null)}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+          >
+            <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1.5, width: 380 }}>
+              <Typography variant="subtitle2">URLs — {buildEditionLabel(urlPopover.edition)}</Typography>
+              {hasSuggestion && (
+                <Box sx={{ bgcolor: 'action.hover', borderRadius: 1, p: 1.5, display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                      Suggest from {source!.year ?? 'previous'} edition
+                    </Typography>
+                    <Button
+                      size="small"
+                      sx={{ minWidth: 0, py: 0 }}
+                      onClick={() => setUrlPopover(prev => prev ? { ...prev, regUrl: suggestedReg, resultsUrl: suggestedResults } : null)}
+                    >
+                      Apply all
+                    </Button>
+                  </Box>
+                  {suggestedReg && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <Typography variant="caption" color="text.secondary" noWrap sx={{ flexGrow: 1, fontFamily: 'monospace', fontSize: '0.7rem' }}>{suggestedReg}</Typography>
+                      <Tooltip title="Use for registration URL">
+                        <IconButton size="small" onClick={() => setUrlPopover(prev => prev ? { ...prev, regUrl: suggestedReg } : null)}>
+                          <CopyIcon sx={{ fontSize: 14 }} />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  )}
+                  {suggestedResults && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <Typography variant="caption" color="text.secondary" noWrap sx={{ flexGrow: 1, fontFamily: 'monospace', fontSize: '0.7rem' }}>{suggestedResults}</Typography>
+                      <Tooltip title="Use for results URL">
+                        <IconButton size="small" onClick={() => setUrlPopover(prev => prev ? { ...prev, resultsUrl: suggestedResults } : null)}>
+                          <CopyIcon sx={{ fontSize: 14 }} />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  )}
+                </Box>
+              )}
+              <TextField
+                label="Registration URL"
+                size="small"
+                fullWidth
+                value={urlPopover.regUrl}
+                onChange={(e) => setUrlPopover(prev => prev ? { ...prev, regUrl: e.target.value } : null)}
+                placeholder="https://..."
+              />
+              <TextField
+                label="Results URL"
+                size="small"
+                fullWidth
+                value={urlPopover.resultsUrl}
+                onChange={(e) => setUrlPopover(prev => prev ? { ...prev, resultsUrl: e.target.value } : null)}
+                placeholder="https://..."
+              />
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                <Button size="small" onClick={() => setUrlPopover(null)}>Cancel</Button>
+                <Button size="small" variant="contained" onClick={handleSaveUrlPopover}>Save</Button>
+              </Box>
+            </Box>
+          </Popover>
+        );
+      })()}
 
       {/* Shift race dates confirm dialog */}
       <Dialog open={!!pendingDateShift} onClose={() => setPendingDateShift(null)} maxWidth="xs" fullWidth>
