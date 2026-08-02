@@ -517,21 +517,23 @@ export function LocationDialog({ open, onClose, onSaveSuccess, onNotify, locatio
                     <ChangeLogList entityName="Location" entityId={location?.id} title="Location History" />
                 )}
             </DialogContent>
-            <DialogActions>
-                <Button onClick={onClose}>Cancel</Button>
-                {activeTab === 0 && (
-                    <>
-                        <Button
-                            startIcon={translating ? <CircularProgress size={16} /> : <TranslateIcon />}
-                            disabled={translating || (!name.trim() && !description.trim())}
-                            onClick={async () => {
-                                const [nameEnResult, descEnResult] = await translate([name, description]);
-                                if (nameEnResult) setNameEn(nameEnResult);
-                                if (descEnResult) setDescriptionEn(descEnResult);
-                            }}
-                        >
-                            Translate to EN
-                        </Button>
+            <DialogActions sx={{ justifyContent: 'space-between', borderTop: 1, borderColor: 'divider' }}>
+                {activeTab === 0 ? (
+                    <Button
+                        startIcon={translating ? <CircularProgress size={16} /> : <TranslateIcon />}
+                        disabled={translating || (!name.trim() && !description.trim())}
+                        onClick={async () => {
+                            const [nameEnResult, descEnResult] = await translate([name, description]);
+                            if (nameEnResult) setNameEn(nameEnResult);
+                            if (descEnResult) setDescriptionEn(descEnResult);
+                        }}
+                    >
+                        Translate to EN
+                    </Button>
+                ) : <Box />}
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button onClick={onClose}>Cancel</Button>
+                    {activeTab === 0 && (
                         <Button
                             onClick={handleSave}
                             variant="contained"
@@ -540,8 +542,8 @@ export function LocationDialog({ open, onClose, onSaveSuccess, onNotify, locatio
                         >
                             {saving ? 'Saving...' : 'Save'}
                         </Button>
-                    </>
-                )}
+                    )}
+                </Box>
             </DialogActions>
         </Dialog>
     );

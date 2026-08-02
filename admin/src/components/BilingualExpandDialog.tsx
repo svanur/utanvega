@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-    Dialog, DialogTitle, DialogContent, DialogActions,
+    Dialog, DialogTitle, DialogContent,
     Button, TextField, Box, Typography, CircularProgress,
     IconButton, Tooltip,
 } from '@mui/material';
@@ -92,8 +92,7 @@ export default function BilingualExpandDialog({
                     </Box>
                 </Box>
             </DialogContent>
-            <DialogActions>
-                <Button onClick={onClose}>Cancel</Button>
+            <Box sx={{ display: 'flex', alignItems: 'center', px: 3, py: 1.5, gap: 1, borderTop: 1, borderColor: 'divider' }}>
                 <Tooltip title="Translate IS → EN using DeepL">
                     <span>
                         <Button
@@ -105,10 +104,10 @@ export default function BilingualExpandDialog({
                         </Button>
                     </span>
                 </Tooltip>
-                <Button variant="contained" onClick={handleSave}>
-                    Apply
-                </Button>
-            </DialogActions>
+                <Box sx={{ flexGrow: 1 }} />
+                <Button onClick={onClose}>Cancel</Button>
+                <Button variant="contained" onClick={handleSave}>Apply</Button>
+            </Box>
         </Dialog>
     );
 }

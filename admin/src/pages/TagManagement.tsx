@@ -203,8 +203,7 @@ export default function TagManagement({ onNotify }: TagManagementProps) {
             </Box>
           )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setEditTag(null)}>Cancel</Button>
+        <DialogActions sx={{ justifyContent: 'space-between', borderTop: 1, borderColor: 'divider' }}>
           <Button
             startIcon={translating ? <CircularProgress size={16} /> : <TranslateIcon />}
             disabled={translating || !editTag?.name.trim()}
@@ -216,9 +215,12 @@ export default function TagManagement({ onNotify }: TagManagementProps) {
           >
             Translate to EN
           </Button>
-          <Button onClick={handleSave} variant="contained" disabled={saving || !editTag?.name.trim()}>
-            {saving ? 'Saving...' : editTag?.id ? 'Update' : 'Create'}
-          </Button>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button onClick={() => setEditTag(null)}>Cancel</Button>
+            <Button onClick={handleSave} variant="contained" disabled={saving || !editTag?.name.trim()}>
+              {saving ? 'Saving...' : editTag?.id ? 'Update' : 'Create'}
+            </Button>
+          </Box>
         </DialogActions>
       </Dialog>
     </Box>

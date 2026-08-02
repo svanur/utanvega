@@ -2751,8 +2751,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
             </Box>
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowEventDialog(false)}>Cancel</Button>
+        <DialogActions sx={{ justifyContent: 'space-between', borderTop: 1, borderColor: 'divider' }}>
           <Button
             startIcon={translating ? <CircularProgress size={16} /> : <TranslateIcon />}
             disabled={translating || (!eventForm.name.trim() && !eventForm.description.trim() && !eventForm.organizerName.trim() && !eventForm.alertMessage.trim())}
@@ -2768,9 +2767,12 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
           >
             Translate to EN
           </Button>
-          <Button variant="contained" onClick={handleSaveEvent} disabled={!eventForm.name.trim() || saving}>
-            {saving ? <CircularProgress size={20} /> : editEventId ? 'Update Event' : 'Create Event'}
-          </Button>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button onClick={() => setShowEventDialog(false)}>Cancel</Button>
+            <Button variant="contained" onClick={handleSaveEvent} disabled={!eventForm.name.trim() || saving}>
+              {saving ? <CircularProgress size={20} /> : editEventId ? 'Update Event' : 'Create Event'}
+            </Button>
+          </Box>
         </DialogActions>
       </Dialog>
 
@@ -2898,8 +2900,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
             />
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowEditionDialog(false)}>Cancel</Button>
+        <DialogActions sx={{ justifyContent: 'space-between', borderTop: 1, borderColor: 'divider' }}>
           <Button
             startIcon={translating ? <CircularProgress size={16} /> : <TranslateIcon />}
             disabled={translating || (!editionForm.title.trim() && !editionForm.notes.trim())}
@@ -2911,9 +2912,12 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
           >
             Translate to EN
           </Button>
-          <Button variant="contained" onClick={handleSaveEdition} disabled={saving}>
-            {saving ? <CircularProgress size={20} /> : editEditionId ? 'Update Edition' : 'Create Edition'}
-          </Button>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button onClick={() => setShowEditionDialog(false)}>Cancel</Button>
+            <Button variant="contained" onClick={handleSaveEdition} disabled={saving}>
+              {saving ? <CircularProgress size={20} /> : editEditionId ? 'Update Edition' : 'Create Edition'}
+            </Button>
+          </Box>
         </DialogActions>
       </Dialog>
 
@@ -3095,19 +3099,8 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
             />
           </Box>
         </DialogContent>
-        <DialogActions sx={{ justifyContent: 'space-between', px: 3 }}>
-          {editRaceId && expandedDetail && (
-            expandedDetail.type === 'Series'
-              ? expandedDetail.editions.find(ed => ed.id === raceForm.eventEditionId)?.races && expandedDetail.editions.find(ed => ed.id === raceForm.eventEditionId)!.races.length > 1
-              : expandedDetail.editions.length > 1
-          ) ? (
-            <FormControlLabel
-              control={<Switch checked={applyToAllEditions} onChange={(_, checked) => setApplyToAllEditions(checked)} size="small" />}
-              label={<Typography variant="body2">{expandedDetail.type === 'Series' ? 'Apply to other races in edition' : 'Apply to other editions'}</Typography>}
-            />
-          ) : <Box />}
-          <Box>
-            <Button onClick={() => { setShowRaceDialog(false); setApplyToAllEditions(false); }}>Cancel</Button>
+        <DialogActions sx={{ justifyContent: 'space-between', px: 3, borderTop: 1, borderColor: 'divider' }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
             <Button
               startIcon={translating ? <CircularProgress size={16} /> : <TranslateIcon />}
               disabled={translating || (!raceForm.name.trim() && !raceForm.description.trim() && !raceForm.certifiedBy.trim() && !raceForm.championshipCategory.trim())}
@@ -3123,6 +3116,19 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
             >
               Translate to EN
             </Button>
+            {editRaceId && expandedDetail && (
+              expandedDetail.type === 'Series'
+                ? expandedDetail.editions.find(ed => ed.id === raceForm.eventEditionId)?.races && expandedDetail.editions.find(ed => ed.id === raceForm.eventEditionId)!.races.length > 1
+                : expandedDetail.editions.length > 1
+            ) && (
+              <FormControlLabel
+                control={<Switch checked={applyToAllEditions} onChange={(_, checked) => setApplyToAllEditions(checked)} size="small" />}
+                label={<Typography variant="body2">{expandedDetail.type === 'Series' ? 'Apply to other races in edition' : 'Apply to other editions'}</Typography>}
+              />
+            )}
+          </Box>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button onClick={() => { setShowRaceDialog(false); setApplyToAllEditions(false); }}>Cancel</Button>
             <Button variant="contained" onClick={handleSaveRace} disabled={!raceForm.name.trim() || saving}>
               {saving ? <CircularProgress size={20} /> : editRaceId ? 'Update Race' : 'Create Race'}
             </Button>

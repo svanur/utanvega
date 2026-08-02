@@ -277,8 +277,7 @@ export default function OrganizersPage({ onNotify }: Props) {
                         />
                     </Stack>
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
+                <DialogActions sx={{ justifyContent: 'space-between', borderTop: 1, borderColor: 'divider' }}>
                     <Button
                         startIcon={translating ? <CircularProgress size={16} /> : <TranslateIcon />}
                         disabled={translating || !form.description.trim()}
@@ -289,13 +288,16 @@ export default function OrganizersPage({ onNotify }: Props) {
                     >
                         Translate to EN
                     </Button>
-                    <Button
-                        variant="contained"
-                        onClick={handleSave}
-                        disabled={saving || !form.name.trim()}
-                    >
-                        {saving ? <CircularProgress size={20} /> : (editTarget ? 'Save' : 'Create')}
-                    </Button>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
+                        <Button
+                            variant="contained"
+                            onClick={handleSave}
+                            disabled={saving || !form.name.trim()}
+                        >
+                            {saving ? <CircularProgress size={20} /> : (editTarget ? 'Save' : 'Create')}
+                        </Button>
+                    </Box>
                 </DialogActions>
             </Dialog>
 
