@@ -286,7 +286,7 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                                         <Tooltip title={t(`difficulty.${trail.activityType.charAt(0).toLowerCase() + trail.activityType.slice(1)}`, trail.activityType)}>
                                             <Box sx={{ color: 'text.secondary', pt: 0.3, flexShrink: 0 }}>{getActivityIcon(trail.activityType)}</Box>
                                         </Tooltip>
-                                        <Typography variant="subtitle1" component="div" fontWeight="bold" sx={{ minWidth: 0 }}>
+                                        <Typography variant="subtitle1" component="div" fontWeight="bold" sx={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', sm: 'nowrap' } }}>
                                             {trail.name}
                                         </Typography>
                                     </Stack>
