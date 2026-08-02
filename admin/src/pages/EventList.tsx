@@ -1,4 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { TimePicker } from '@mui/x-date-pickers/TimePicker';
+import dayjs, { type Dayjs } from 'dayjs';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -2739,13 +2742,11 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                   )}
 
                   {eventForm.scheduleType === 'Fixed' && (
-                    <TextField
+                    <DatePicker
                       label="Date"
-                      type="date"
-                      value={eventForm.scheduleDate}
-                      onChange={(event) => setEventField('scheduleDate', event.target.value)}
-                      InputLabelProps={{ shrink: true }}
-                      inputProps={{ lang: 'is' }}
+                      value={eventForm.scheduleDate ? dayjs(eventForm.scheduleDate) : null}
+                      onChange={(val: Dayjs | null) => setEventField('scheduleDate', val ? val.format('YYYY-MM-DD') : '')}
+                      slotProps={{ textField: { fullWidth: true } }}
                     />
                   )}
 
@@ -2888,17 +2889,15 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                 value={editionForm.year}
                 onChange={(event) => handleEditionYearChange(event.target.value)}
               />
-              <TextField
+              <DatePicker
                 label="Date"
-                type="date"
-                value={editionForm.date}
-                onChange={(event) => {
-                  const d = event.target.value;
+                value={editionForm.date ? dayjs(editionForm.date) : null}
+                onChange={(val: Dayjs | null) => {
+                  const d = val ? val.format('YYYY-MM-DD') : '';
                   setEditionField('date', d);
                   if (!editEditionId && isPastDate(d)) setEditionField('registrationStatus', 'Closed');
                 }}
-                InputLabelProps={{ shrink: true }}
-                inputProps={{ lang: 'is' }}
+                slotProps={{ textField: { fullWidth: true } }}
               />
             </Box>
             <BilingualTextField
@@ -3126,38 +3125,40 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
               />
             </Box>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
-              <TextField
+              <DatePicker
                 label="Date of Race"
-                type="date"
-                value={raceForm.dateOfRace}
-                onChange={(event) => {
-                  const d = event.target.value;
+                value={raceForm.dateOfRace ? dayjs(raceForm.dateOfRace) : null}
+                onChange={(val: Dayjs | null) => {
+                  const d = val ? val.format('YYYY-MM-DD') : '';
                   setRaceField('dateOfRace', d);
                   if (!editRaceId && isPastDate(d)) {
                     setRaceField('status', 'Completed');
                     setRaceField('ticketStatus', 'Closed');
                   }
                 }}
-                InputLabelProps={{ shrink: true }}
-                inputProps={{ lang: 'is' }}
-                InputProps={raceDialogEdition?.date ? {
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <Tooltip title={`Copy date from edition (${raceDialogEdition.date})`}>
-                        <IconButton size="small" onClick={() => setRaceField('dateOfRace', raceDialogEdition!.date!)}>
-                          <CopyIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </InputAdornment>
-                  ),
-                } : undefined}
+                slotProps={{
+                  textField: {
+                    fullWidth: true,
+                    InputProps: raceDialogEdition?.date ? {
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Tooltip title={`Copy date from edition (${raceDialogEdition.date})`}>
+                            <IconButton size="small" onClick={() => setRaceField('dateOfRace', raceDialogEdition!.date!)}>
+                              <CopyIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </InputAdornment>
+                      ),
+                    } : undefined,
+                  },
+                }}
               />
-              <TextField
+              <TimePicker
                 label="Start Time"
-                type="time"
-                value={raceForm.startTime}
-                onChange={(event) => setRaceField('startTime', event.target.value)}
-                InputLabelProps={{ shrink: true }}
+                ampm={false}
+                value={raceForm.startTime ? dayjs(`2000-01-01T${raceForm.startTime}`) : null}
+                onChange={(val: Dayjs | null) => setRaceField('startTime', val ? val.format('HH:mm') : '')}
+                slotProps={{ textField: { fullWidth: true } }}
               />
             </Box>
             <BilingualTextField
@@ -3415,22 +3416,18 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                   )}
                 </Box>
                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 140px', gap: 1.5 }}>
-                  <TextField
+                  <DatePicker
                     label="Date"
-                    type="date"
-                    size="small"
-                    value={entry.dateOfRace}
-                    onChange={(e) => setBulkDates(prev => prev.map((d, j) => j === i ? { ...d, dateOfRace: e.target.value } : d))}
-                    InputLabelProps={{ shrink: true }}
-                    inputProps={{ lang: 'is' }}
+                    value={entry.dateOfRace ? dayjs(entry.dateOfRace) : null}
+                    onChange={(val: Dayjs | null) => setBulkDates(prev => prev.map((d, j) => j === i ? { ...d, dateOfRace: val ? val.format('YYYY-MM-DD') : '' } : d))}
+                    slotProps={{ textField: { size: 'small', fullWidth: true } }}
                   />
-                  <TextField
+                  <TimePicker
                     label="Start time"
-                    type="time"
-                    size="small"
-                    value={entry.startTime}
-                    onChange={(e) => setBulkDates(prev => prev.map((d, j) => j === i ? { ...d, startTime: e.target.value } : d))}
-                    InputLabelProps={{ shrink: true }}
+                    ampm={false}
+                    value={entry.startTime ? dayjs(`2000-01-01T${entry.startTime}`) : null}
+                    onChange={(val: Dayjs | null) => setBulkDates(prev => prev.map((d, j) => j === i ? { ...d, startTime: val ? val.format('HH:mm') : '' } : d))}
+                    slotProps={{ textField: { size: 'small' } }}
                   />
                 </Box>
               </Box>
