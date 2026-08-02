@@ -948,6 +948,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
   const [editEventId, setEditEventId] = useState<string | null>(null);
   const [editEditionId, setEditEditionId] = useState<string | null>(null);
   const [editRaceId, setEditRaceId] = useState<string | null>(null);
+  const [raceDialogEdition, setRaceDialogEdition] = useState<EventEditionDto | null>(null);
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
   const deepLinkScrollTarget = useRef<string | null>(null);
   const [expandedDetail, setExpandedDetail] = useState<EventDetailDto | null>(null);
@@ -1220,6 +1221,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
 
   const openCreateRace = (edition: EventEditionDto) => {
     setEditRaceId(null);
+    setRaceDialogEdition(edition);
     const past = isPastDate(edition.date ?? '');
     setRaceForm({
       ...createEmptyRaceForm(edition.id, edition.races.length),
@@ -1232,6 +1234,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
 
   const openEditRace = (race: RaceDto) => {
     setEditRaceId(race.id);
+    setRaceDialogEdition(expandedDetail?.editions.find(ed => ed.races.some(r => r.id === race.id)) ?? null);
     setPrefillRaces([]);
     setRaceForm(buildRaceForm(race));
     setShowRaceDialog(true);
@@ -3137,6 +3140,17 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                 }}
                 InputLabelProps={{ shrink: true }}
                 inputProps={{ lang: 'is' }}
+                InputProps={raceDialogEdition?.date ? {
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <Tooltip title={`Copy date from edition (${raceDialogEdition.date})`}>
+                        <IconButton size="small" onClick={() => setRaceField('dateOfRace', raceDialogEdition!.date!)}>
+                          <CopyIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </InputAdornment>
+                  ),
+                } : undefined}
               />
               <TextField
                 label="Start Time"
