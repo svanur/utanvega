@@ -165,6 +165,7 @@ interface EditionFormState {
   translationHashes?: Record<string, string>;
   _initialTitleEn?: string;
   _initialNotesEn?: string;
+  _originalDate?: string;
 }
 
 interface RaceFormState {
@@ -625,6 +626,7 @@ function buildEditionForm(edition: EventEditionDto, eventType: EventType = 'Race
     translationHashes: edition.translationHashes,
     _initialTitleEn: edition.titleEn ?? '',
     _initialNotesEn: edition.notesEn ?? '',
+    _originalDate: edition.date ?? '',
   };
 }
 
@@ -976,6 +978,8 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
   const [localRaceOrder, setLocalRaceOrder] = useState<Map<string, string[]>>(new Map());
   const [prefillRaces, setPrefillRaces] = useState<RaceDto[]>([]);
   const [showBulkDatesDialog, setShowBulkDatesDialog] = useState(false);
+  const [bulkDatesEditionDate, setBulkDatesEditionDate] = useState<string>('');
+  const [pendingDateShift, setPendingDateShift] = useState<{ offsetDays: number; races: RaceDto[] } | null>(null);
   const [copyRacesConfirm, setCopyRacesConfirm] = useState<{ edition: EventEditionDto; source: EventEditionDto } | null>(null);
   const [showBulkMissingDialog, setShowBulkMissingDialog] = useState(false);
   const [bulkMissingLoading, setBulkMissingLoading] = useState(false);
@@ -1382,6 +1386,16 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
           trailId: input.trailId,
         });
         onNotify(`Edition "${editionLabel}" updated`);
+        const origDate = editionForm._originalDate;
+        if (origDate && input.date && origDate !== input.date) {
+          const offsetDays = dayjs(input.date).diff(dayjs(origDate), 'day');
+          const racesWithDates = expandedDetail?.editions
+            .find(ed => ed.id === editEditionId)?.races
+            .filter(r => r.dateOfRace) ?? [];
+          if (offsetDays !== 0 && racesWithDates.length > 0) {
+            setPendingDateShift({ offsetDays, races: racesWithDates });
+          }
+        }
       } else {
         const newEditionId = await createEdition(input);
         const sourceEdition = cloneFromEditionId
@@ -1882,6 +1896,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
     for (let i = idx + 1; i < allSorted.length; i++) {
       if (allSorted[i].races.length > 0) { prevEdition = allSorted[i]; break; }
     }
+    setBulkDatesEditionDate(edition.date ?? '');
     setBulkDates(
       [...edition.races].sort(sortRaces).map(race => {
         const prevRace = prevEdition?.races.find(r => r.name === race.name);
@@ -1894,6 +1909,38 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
       }),
     );
     setShowBulkDatesDialog(true);
+  };
+
+  const handleShiftRaceDates = async () => {
+    if (!pendingDateShift) return;
+    const { offsetDays, races } = pendingDateShift;
+    setPendingDateShift(null);
+    try {
+      await Promise.all(races.map(race =>
+        updateRace(race.id, {
+          trailId: race.trailId ?? null,
+          name: race.name,
+          distanceLabel: race.distanceLabel ?? undefined,
+          cutoffMinutes: race.cutoffMinutes ?? null,
+          description: race.description ?? undefined,
+          status: race.status,
+          sortOrder: race.sortOrder,
+          ticketStatus: race.ticketStatus,
+          maxParticipants: race.maxParticipants ?? null,
+          itraPoints: race.itraPoints ?? null,
+          certifiedBy: race.certifiedBy ?? undefined,
+          prizeMoney: race.prizeMoney,
+          championshipCategory: race.championshipCategory ?? undefined,
+          dateOfRace: dayjs(race.dateOfRace!).add(offsetDays, 'day').format('YYYY-MM-DD'),
+          startTime: race.startTime ?? null,
+        })
+      ));
+      await refreshExpandedEvent();
+      const sign = offsetDays > 0 ? '+' : '';
+      onNotify(`Shifted ${races.length} race date${races.length !== 1 ? 's' : ''} by ${sign}${offsetDays} day${Math.abs(offsetDays) !== 1 ? 's' : ''}`);
+    } catch {
+      onNotify('Failed to shift race dates', 'error');
+    }
   };
 
   const handleSaveBulkDates = async () => {
@@ -2225,7 +2272,10 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                               mx: -2, px: 2, py: 1,
                               display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1,
                             }}>
-                              <Typography variant="subtitle1" fontWeight={700}>{expandedDetail.name}</Typography>
+                              <Typography variant="subtitle1" fontWeight={700}>
+                                <Typography component="span" variant="subtitle1" color="text.secondary" fontWeight={400}>Edition list for: </Typography>
+                                {expandedDetail.name}
+                              </Typography>
                               <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
                                 {expandedDetail.scheduleRule && (
                                   <Button size="small" variant="outlined" startIcon={<GenerateIcon />} onClick={() => openGenerateEditionDialog(event)}>
@@ -3396,11 +3446,37 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
         </DialogActions>
       </Dialog>
 
+      {/* Shift race dates confirm dialog */}
+      <Dialog open={!!pendingDateShift} onClose={() => setPendingDateShift(null)} maxWidth="xs" fullWidth>
+        <DialogTitle>Shift race dates?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            The edition date moved by {pendingDateShift && (pendingDateShift.offsetDays > 0 ? '+' : '')}{pendingDateShift?.offsetDays} day{Math.abs(pendingDateShift?.offsetDays ?? 0) !== 1 ? 's' : ''}.
+            Shift {pendingDateShift?.races.length} race date{(pendingDateShift?.races.length ?? 0) !== 1 ? 's' : ''} by the same amount?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPendingDateShift(null)}>Skip</Button>
+          <Button variant="contained" onClick={handleShiftRaceDates}>Shift Dates</Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Bulk date entry dialog */}
       <Dialog open={showBulkDatesDialog} onClose={() => setShowBulkDatesDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Set Race Dates</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            {bulkDatesEditionDate && bulkDates.some(d => !d.dateOfRace) && (
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<CalendarIcon />}
+                onClick={() => setBulkDates(prev => prev.map(d => d.dateOfRace ? d : { ...d, dateOfRace: bulkDatesEditionDate }))}
+                sx={{ alignSelf: 'flex-start' }}
+              >
+                Fill empty dates from edition ({bulkDatesEditionDate})
+              </Button>
+            )}
             {bulkDates.length === 0 ? (
               <Typography variant="body2" color="text.secondary">No races in this edition.</Typography>
             ) : bulkDates.map((entry, i) => (
@@ -3415,7 +3491,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                     </Typography>
                   )}
                 </Box>
-                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 140px', gap: 1.5 }}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
                   <DatePicker
                     label="Date"
                     value={entry.dateOfRace ? dayjs(entry.dateOfRace) : null}
@@ -3427,7 +3503,23 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                     ampm={false}
                     value={entry.startTime ? dayjs(`2000-01-01T${entry.startTime}`) : null}
                     onChange={(val: Dayjs | null) => setBulkDates(prev => prev.map((d, j) => j === i ? { ...d, startTime: val ? val.format('HH:mm') : '' } : d))}
-                    slotProps={{ textField: { size: 'small' } }}
+                    slotProps={{
+                      textField: {
+                        size: 'small',
+                        fullWidth: true,
+                        InputProps: entry.startTime && bulkDates.length > 1 ? {
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              <Tooltip title="Apply to all races">
+                                <IconButton size="small" onClick={() => setBulkDates(prev => prev.map(d => ({ ...d, startTime: entry.startTime })))}>
+                                  <CopyIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            </InputAdornment>
+                          ),
+                        } : undefined,
+                      },
+                    }}
                   />
                 </Box>
               </Box>
