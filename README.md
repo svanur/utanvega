@@ -52,10 +52,10 @@ cd backend
 dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=...;Database=...;Username=...;Password=..."
 dotnet user-secrets set "SUPABASE_URL" "https://your-project-ref.supabase.co"
 dotnet user-secrets set "SUPABASE_JWT_SECRET" "your-supabase-jwt-secret"
-```
+`````
 
 #### DeepL Translation (optional)
-
+``
 The admin panel can auto-translate Icelandic content to English using [DeepL](https://www.deepl.com/en/pro-api). To enable:
 
 1. Sign up for a DeepL API Free account at https://www.deepl.com/en/pro-api (500,000 characters/month free).

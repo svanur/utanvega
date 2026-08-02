@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NetTopologySuite.Geometries;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -12,9 +13,11 @@ using Utanvega.Backend.Infrastructure.Persistence;
 namespace Utanvega.Backend.Migrations
 {
     [DbContext(typeof(UtanvegaDbContext))]
-    partial class UtanvegaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260802094457_AddTrailTranslationHashes")]
+    partial class AddTrailTranslationHashes
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -63,7 +66,7 @@ namespace Utanvega.Backend.Migrations
 
                     b.HasIndex("EntityName");
 
-                    b.ToTable("ChangeLogs", (string)null);
+                    b.ToTable("ChangeLogs");
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.Event", b =>
@@ -162,7 +165,7 @@ namespace Utanvega.Backend.Migrations
                     b.HasIndex("Slug")
                         .IsUnique();
 
-                    b.ToTable("Events", (string)null);
+                    b.ToTable("Events");
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.EventEdition", b =>
@@ -225,7 +228,7 @@ namespace Utanvega.Backend.Migrations
 
                     b.HasIndex("TrailId");
 
-                    b.ToTable("EventEditions", (string)null);
+                    b.ToTable("EventEditions");
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.FeatureFlag", b =>
@@ -254,7 +257,7 @@ namespace Utanvega.Backend.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("FeatureFlags", (string)null);
+                    b.ToTable("FeatureFlags");
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.Location", b =>
@@ -317,7 +320,7 @@ namespace Utanvega.Backend.Migrations
                     b.HasIndex("Slug")
                         .IsUnique();
 
-                    b.ToTable("Locations", (string)null);
+                    b.ToTable("Locations");
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.Organizer", b =>
@@ -370,7 +373,7 @@ namespace Utanvega.Backend.Migrations
 
                     b.HasIndex("Name");
 
-                    b.ToTable("Organizers", (string)null);
+                    b.ToTable("Organizers");
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.Profile", b =>
@@ -485,7 +488,7 @@ namespace Utanvega.Backend.Migrations
 
                     b.HasIndex("TrailId");
 
-                    b.ToTable("Races", (string)null);
+                    b.ToTable("Races");
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.Tag", b =>
@@ -522,7 +525,7 @@ namespace Utanvega.Backend.Migrations
                     b.HasIndex("Slug")
                         .IsUnique();
 
-                    b.ToTable("Tags", (string)null);
+                    b.ToTable("Tags");
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.Trail", b =>
@@ -542,9 +545,6 @@ namespace Utanvega.Backend.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("Description")
-                        .HasColumnType("text");
-
-                    b.Property<string>("DescriptionEn")
                         .HasColumnType("text");
 
                     b.Property<string>("Difficulty")
@@ -571,9 +571,6 @@ namespace Utanvega.Backend.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<string>("NameEn")
-                        .HasColumnType("text");
-
                     b.Property<string>("Slug")
                         .IsRequired()
                         .HasMaxLength(250)
@@ -584,9 +581,6 @@ namespace Utanvega.Backend.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("TerrainType")
-                        .HasColumnType("text");
-
-                    b.Property<string>("TranslationHashes")
                         .HasColumnType("text");
 
                     b.Property<string>("Type")
@@ -611,7 +605,7 @@ namespace Utanvega.Backend.Migrations
                     b.HasIndex("Slug")
                         .IsUnique();
 
-                    b.ToTable("Trails", (string)null);
+                    b.ToTable("Trails");
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.TrailCheckIn", b =>
@@ -677,7 +671,7 @@ namespace Utanvega.Backend.Migrations
 
                     b.HasIndex("TrailId");
 
-                    b.ToTable("TrailLocations", (string)null);
+                    b.ToTable("TrailLocations");
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.TrailTag", b =>
@@ -699,7 +693,7 @@ namespace Utanvega.Backend.Migrations
                     b.HasIndex("TrailId", "TagId")
                         .IsUnique();
 
-                    b.ToTable("TrailTags", (string)null);
+                    b.ToTable("TrailTags");
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.TrailView", b =>
@@ -726,7 +720,7 @@ namespace Utanvega.Backend.Migrations
 
                     b.HasIndex("TrailId", "IpHash", "ViewedAtUtc");
 
-                    b.ToTable("TrailViews", (string)null);
+                    b.ToTable("TrailViews");
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.UserTrailActivity", b =>
@@ -850,7 +844,7 @@ namespace Utanvega.Backend.Migrations
 
                             b1.HasKey("EventId");
 
-                            b1.ToTable("Events", (string)null);
+                            b1.ToTable("Events");
 
                             b1.WithOwner()
                                 .HasForeignKey("EventId");

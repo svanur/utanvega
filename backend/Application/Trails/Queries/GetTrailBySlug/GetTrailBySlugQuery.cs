@@ -1,3 +1,4 @@
+using System.Text.Json;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
@@ -96,7 +97,10 @@ public class GetTrailBySlugQueryHandler : IRequestHandler<GetTrailBySlugQuery, T
             LinkedRaces: linkedRaceDtos.Count > 0 ? linkedRaceDtos : null,
             YoutubeUrl: trail.YoutubeUrl,
             ElevationProfile: trail.ElevationProfile,
-            TerrainType: trail.TerrainType?.ToString()
+            TerrainType: trail.TerrainType?.ToString(),
+            NameEn: trail.NameEn,
+            DescriptionEn: trail.DescriptionEn,
+            TranslationHashes: trail.TranslationHashes == null ? null : JsonSerializer.Deserialize<Dictionary<string, string>>(trail.TranslationHashes)
         );
     }
 }

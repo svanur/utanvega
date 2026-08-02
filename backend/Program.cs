@@ -243,7 +243,12 @@ builder.Services.AddAuthorization(options =>
 });
 
 builder.Services.AddDbContext<UtanvegaDbContext>(options =>
-    options.UseNpgsql(connectionString, o => o.UseNetTopologySuite()));
+    options.UseNpgsql(connectionString, o =>
+    {
+        o.UseNetTopologySuite();
+        o.EnableRetryOnFailure(maxRetryCount: 3, maxRetryDelay: TimeSpan.FromSeconds(5), errorCodesToAdd: null);
+        o.CommandTimeout(60);
+    }));
 
 // Add CQRS with MediatR
 builder.Services.AddMediatR(cfg =>
@@ -685,8 +690,10 @@ app.MapGet("/api/v1/admin/trails/{idOrSlug}", [Authorize] async (string idOrSlug
     {
         trail.Id,
         trail.Name,
+        trail.NameEn,
         trail.Slug,
         trail.Description,
+        trail.DescriptionEn,
         ActivityType = trail.ActivityTypeId.ToString(),
         Status = trail.Status.ToString(),
         Type = trail.Type.ToString(),
@@ -697,6 +704,7 @@ app.MapGet("/api/v1/admin/trails/{idOrSlug}", [Authorize] async (string idOrSlug
         trail.ElevationLoss,
         trail.YoutubeUrl,
         TerrainType = trail.TerrainType?.ToString(),
+        TranslationHashes = trail.TranslationHashes == null ? null : System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(trail.TranslationHashes),
         MaxAltitude = trail.ElevationProfile != null && trail.ElevationProfile.Length > 0 ? trail.ElevationProfile.Max() : (double?)null,
         Locations = trail.TrailLocations
             .OrderBy(tl => tl.Order)

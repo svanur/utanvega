@@ -1,3 +1,4 @@
+using System.Text.Json;
 using MediatR;
 using Serilog;
 using Microsoft.EntityFrameworkCore;
@@ -50,7 +51,10 @@ public record TrailDto(
     string? YoutubeUrl = null,
     double[]? ElevationProfile = null,
     DateTime? UpdatedAt = null,
-    string? TerrainType = null
+    string? TerrainType = null,
+    string? NameEn = null,
+    string? DescriptionEn = null,
+    Dictionary<string, string>? TranslationHashes = null
 );
 
 public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailDto>>
@@ -122,7 +126,10 @@ public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailD
             YoutubeUrl: t.YoutubeUrl,
             ElevationProfile: null,
             UpdatedAt: t.UpdatedAt,
-            TerrainType: t.TerrainType?.ToString()
+            TerrainType: t.TerrainType?.ToString(),
+            NameEn: t.NameEn,
+            DescriptionEn: t.DescriptionEn,
+            TranslationHashes: t.TranslationHashes == null ? null : JsonSerializer.Deserialize<Dictionary<string, string>>(t.TranslationHashes)
         )).ToList();
 
         return result;

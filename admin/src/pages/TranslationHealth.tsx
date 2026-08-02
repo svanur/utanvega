@@ -1,14 +1,16 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   Alert, Box, Button, Card, CardContent, Chip, CircularProgress,
-  IconButton, LinearProgress, Paper, Stack, Table, TableBody,
-  TableCell, TableContainer, TableHead, TableRow, Tooltip, Typography,
+  IconButton, InputAdornment, LinearProgress, Paper, Stack, Table, TableBody,
+  TableCell, TableContainer, TableHead, TableRow, TextField, Tooltip, Typography,
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import TranslateIcon from '@mui/icons-material/Translate';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
 import { apiFetch } from '../hooks/api';
 import { useTranslate } from '../hooks/useTranslate';
 import { hashText } from '../utils/translationHash';
@@ -16,6 +18,7 @@ import type { EventDetailDto, EventEditionDto, RaceDto } from '../hooks/useEvent
 import type { LocationDto } from '../hooks/useLocations';
 import type { OrganizerDto } from '../hooks/useOrganizers';
 import type { TagDto } from '../hooks/useTags';
+import type { Trail } from '../hooks/useTrails';
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
@@ -25,9 +28,9 @@ interface FieldDef {
   getEn: (item: EntityItem) => string | null | undefined;
 }
 
-type EntityKind = 'Event' | 'Edition' | 'Race' | 'Location' | 'Organizer' | 'Tag';
+type EntityKind = 'Event' | 'Edition' | 'Race' | 'Trail' | 'Location' | 'Organizer' | 'Tag';
 
-type RawItem = EventDetailDto | EventEditionDto | RaceDto | LocationDto | OrganizerDto | TagDto;
+type RawItem = EventDetailDto | EventEditionDto | RaceDto | Trail | LocationDto | OrganizerDto | TagDto;
 
 interface EntityItem {
   id: string;
@@ -59,6 +62,11 @@ const RACE_FIELDS: FieldDef[] = [
   { label: 'Championship', getIs: r => (r.raw as RaceDto).championshipCategory,getEn: r => (r.raw as RaceDto).championshipCategoryEn },
 ];
 
+const TRAIL_FIELDS: FieldDef[] = [
+  { label: 'Name',        getIs: r => (r.raw as Trail).name,        getEn: r => (r.raw as Trail).nameEn },
+  { label: 'Description', getIs: r => (r.raw as Trail).description, getEn: r => (r.raw as Trail).descriptionEn },
+];
+
 const LOCATION_FIELDS: FieldDef[] = [
   { label: 'Name',        getIs: r => (r.raw as LocationDto).name,        getEn: r => (r.raw as LocationDto).nameEn },
   { label: 'Description', getIs: r => (r.raw as LocationDto).description, getEn: r => (r.raw as LocationDto).descriptionEn },
@@ -73,7 +81,7 @@ const TAG_FIELDS: FieldDef[] = [
 ];
 
 const FIELDS_BY_KIND: Record<EntityKind, FieldDef[]> = {
-  Event: EVENT_FIELDS, Edition: EDITION_FIELDS, Race: RACE_FIELDS,
+  Event: EVENT_FIELDS, Edition: EDITION_FIELDS, Race: RACE_FIELDS, Trail: TRAIL_FIELDS,
   Location: LOCATION_FIELDS, Organizer: ORGANIZER_FIELDS, Tag: TAG_FIELDS,
 };
 
@@ -82,6 +90,7 @@ const EN_FIELD_MAP: Record<EntityKind, Record<string, string>> = {
   Event:     { Name: 'nameEn', Description: 'descriptionEn', Organizer: 'organizerNameEn', Alert: 'alertMessageEn' },
   Edition:   { Title: 'titleEn', Notes: 'notesEn' },
   Race:      { Name: 'nameEn', Description: 'descriptionEn', CertifiedBy: 'certifiedByEn', Championship: 'championshipCategoryEn' },
+  Trail:     { Name: 'nameEn', Description: 'descriptionEn' },
   Location:  { Name: 'nameEn', Description: 'descriptionEn' },
   Organizer: { Description: 'descriptionEn' },
   Tag:       { Name: 'nameEn' },
@@ -171,6 +180,20 @@ async function savePatch(item: EntityItem, patch: Record<string, string>, transl
         ...(translationHashes ? { translationHashes } : {}),
       }),
     });
+  } else if (item.kind === 'Trail') {
+    const t = item.raw as Trail;
+    await apiFetch(`/api/v1/admin/trails/${item.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        id: t.id, name: t.name, nameEn: t.nameEn ?? null, slug: t.slug,
+        description: t.description, descriptionEn: t.descriptionEn ?? null,
+        activityType: t.activityType, status: t.status, type: t.trailType,
+        difficulty: t.difficulty ?? 'Moderate', visibility: 'Public',
+        updatedBy: 'admin',
+        ...patch,
+        ...(translationHashes ? { translationHashes } : {}),
+      }),
+    });
   } else if (item.kind === 'Location') {
     const l = item.raw as LocationDto;
     await apiFetch(`/api/v1/admin/locations/${item.id}`, {
@@ -214,6 +237,7 @@ async function savePatch(item: EntityItem, patch: Record<string, string>, transl
 
 function buildItems(
   events: EventDetailDto[],
+  trails: Trail[],
   locations: LocationDto[],
   organizers: OrganizerDto[],
   tags: TagDto[],
@@ -241,6 +265,10 @@ function buildItems(
         });
       }
     }
+  }
+
+  for (const tr of trails) {
+    items.push({ id: tr.id, kind: 'Trail', displayName: tr.name, fields: TRAIL_FIELDS, raw: tr });
   }
 
   for (const l of locations) {
@@ -296,19 +324,21 @@ export default function TranslationHealth({ onNotify }: Props) {
   const [filterKind, setFilterKind] = useState<EntityKind | 'All'>('All');
   const [filterMissing, setFilterMissing] = useState(false);
   const [filterStale, setFilterStale] = useState(false);
+  const [search, setSearch] = useState('');
   const { translate } = useTranslate();
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [events, locations, organizers, tags] = await Promise.all([
+      const [events, trails, locations, organizers, tags] = await Promise.all([
         apiFetch<EventDetailDto[]>('/api/v1/admin/events/details'),
+        apiFetch<Trail[]>('/api/v1/admin/trails'),
         apiFetch<LocationDto[]>('/api/v1/admin/locations'),
         apiFetch<OrganizerDto[]>('/api/v1/admin/organizers'),
         apiFetch<TagDto[]>('/api/v1/admin/tags'),
       ]);
-      setItems(buildItems(events, locations, organizers, tags));
+      setItems(buildItems(events, trails, locations, organizers, tags));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load data');
     } finally {
@@ -320,7 +350,7 @@ export default function TranslationHealth({ onNotify }: Props) {
 
   const byKind = useMemo(() => {
     const map: Record<EntityKind, EntityItem[]> = {
-      Event: [], Edition: [], Race: [], Location: [], Organizer: [], Tag: [],
+      Event: [], Edition: [], Race: [], Trail: [], Location: [], Organizer: [], Tag: [],
     };
     for (const item of items) map[item.kind].push(item);
     return map;
@@ -331,8 +361,15 @@ export default function TranslationHealth({ onNotify }: Props) {
     let result = base;
     if (filterMissing) result = result.filter(item => item.fields.some(f => isMissing(f, item)));
     if (filterStale)   result = result.filter(item => item.fields.some(f => isStale(f, item)));
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      result = result.filter(item =>
+        item.displayName.toLowerCase().includes(q) ||
+        item.parentName?.toLowerCase().includes(q)
+      );
+    }
     return result;
-  }, [items, byKind, filterKind, filterMissing, filterStale]);
+  }, [items, byKind, filterKind, filterMissing, filterStale, search]);
 
   const missingCount = useMemo(
     () => items.filter(item => item.fields.some(f => isMissing(f, item))).length,
@@ -414,7 +451,7 @@ export default function TranslationHealth({ onNotify }: Props) {
     );
   }, [items, translate, load, onNotify]);
 
-  const kinds: EntityKind[] = ['Event', 'Edition', 'Race', 'Location', 'Organizer', 'Tag'];
+  const kinds: EntityKind[] = ['Event', 'Edition', 'Race', 'Trail', 'Location', 'Organizer', 'Tag'];
 
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>;
 
@@ -460,6 +497,23 @@ export default function TranslationHealth({ onNotify }: Props) {
           <CoverageCard key={k} label={k + 's'} pct={coveragePct(byKind[k])} count={byKind[k].length} />
         ))}
       </Stack>
+
+      {/* Search */}
+      <TextField
+        size="small"
+        placeholder="Search by name…"
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        sx={{ mb: 2, width: 280 }}
+        InputProps={{
+          startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment>,
+          endAdornment: search ? (
+            <InputAdornment position="end">
+              <IconButton size="small" onClick={() => setSearch('')}><ClearIcon fontSize="small" /></IconButton>
+            </InputAdornment>
+          ) : null,
+        }}
+      />
 
       {/* Filters */}
       <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap' }}>

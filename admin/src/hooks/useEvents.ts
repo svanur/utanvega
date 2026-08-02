@@ -119,6 +119,7 @@ export interface EventSummaryDto {
     isMountainRace: boolean;
     terrainType: string | null;
     hasFutureEdition: boolean;
+    translationHashes?: Record<string, string>;
 }
 
 export interface EventDetailDto extends EventSummaryDto {
@@ -171,6 +172,7 @@ export interface UpdateEventInput {
     socialLinks?: SocialLink[] | null;
     gpxPointLat?: number | null;
     gpxPointLng?: number | null;
+    translationHashes?: Record<string, string>;
 }
 
 export interface CreateEditionInput {
@@ -199,6 +201,7 @@ export interface UpdateEditionInput {
     notesEn?: string;
     registrationStatus: RegistrationStatus;
     trailId?: string | null;
+    translationHashes?: Record<string, string>;
 }
 
 export interface CreateRaceInput {
@@ -245,6 +248,7 @@ export interface UpdateRaceInput {
     championshipCategoryEn?: string;
     dateOfRace?: string | null;
     startTime?: string | null;
+    translationHashes?: Record<string, string>;
 }
 
 export interface GenerateEditionsForSeasonInput {

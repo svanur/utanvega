@@ -86,6 +86,7 @@ import { useOrganizers } from '../hooks/useOrganizers';
 import { useTrails, type Trail } from '../hooks/useTrails';
 import { formatMinutesToHHmm, parseHHmmToMinutes } from '../utils/cutoffTime';
 import { trimToUndefined } from '../utils/strings';
+import { hashText } from '../utils/translationHash';
 import BilingualTextField from '../components/BilingualTextField';
 import { useTranslate } from '../hooks/useTranslate';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
@@ -137,6 +138,11 @@ interface EventFormState {
   socialLinks: SocialLink[];
   gpxPointLat: string;
   gpxPointLng: string;
+  translationHashes?: Record<string, string>;
+  _initialNameEn?: string;
+  _initialDescriptionEn?: string;
+  _initialOrganizerNameEn?: string;
+  _initialAlertMessageEn?: string;
 }
 
 interface EditionFormState {
@@ -153,6 +159,9 @@ interface EditionFormState {
   notesEn: string;
   registrationStatus: RegistrationStatus;
   trailId: string;
+  translationHashes?: Record<string, string>;
+  _initialTitleEn?: string;
+  _initialNotesEn?: string;
 }
 
 interface RaceFormState {
@@ -176,6 +185,11 @@ interface RaceFormState {
   championshipCategoryEn: string;
   dateOfRace: string;
   startTime: string;
+  translationHashes?: Record<string, string>;
+  _initialNameEn?: string;
+  _initialDescriptionEn?: string;
+  _initialCertifiedByEn?: string;
+  _initialChampionshipCategoryEn?: string;
 }
 
 interface GenerateFormState {
@@ -582,6 +596,11 @@ function buildEventForm(event: EventSummaryDto): EventFormState {
     socialLinks: event.socialLinks?.map(link => ({ ...link })) ?? [],
     gpxPointLat: event.gpxPointLat != null ? String(event.gpxPointLat) : '',
     gpxPointLng: event.gpxPointLng != null ? String(event.gpxPointLng) : '',
+    translationHashes: event.translationHashes,
+    _initialNameEn: event.nameEn ?? '',
+    _initialDescriptionEn: event.descriptionEn ?? '',
+    _initialOrganizerNameEn: event.organizerNameEn ?? '',
+    _initialAlertMessageEn: event.alertMessageEn ?? '',
   };
 }
 
@@ -600,6 +619,9 @@ function buildEditionForm(edition: EventEditionDto, eventType: EventType = 'Race
     notesEn: edition.notesEn ?? '',
     registrationStatus: edition.registrationStatus,
     trailId: edition.trailId ?? '',
+    translationHashes: edition.translationHashes,
+    _initialTitleEn: edition.titleEn ?? '',
+    _initialNotesEn: edition.notesEn ?? '',
   };
 }
 
@@ -625,6 +647,11 @@ function buildRaceForm(race: RaceDto): RaceFormState {
     championshipCategoryEn: race.championshipCategoryEn ?? '',
     dateOfRace: race.dateOfRace ?? '',
     startTime: race.startTime ? race.startTime.slice(0, 5) : '',
+    translationHashes: race.translationHashes,
+    _initialNameEn: race.nameEn ?? '',
+    _initialDescriptionEn: race.descriptionEn ?? '',
+    _initialCertifiedByEn: race.certifiedByEn ?? '',
+    _initialChampionshipCategoryEn: race.championshipCategoryEn ?? '',
   };
 }
 
@@ -1255,6 +1282,18 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
         socialLinks: socialLinks.length > 0 ? socialLinks : null,
         gpxPointLat: eventForm.gpxPointLat.trim() ? parseFloat(eventForm.gpxPointLat) : null,
         gpxPointLng: eventForm.gpxPointLng.trim() ? parseFloat(eventForm.gpxPointLng) : null,
+        translationHashes: (() => {
+          const h: Record<string, string> = { ...(eventForm.translationHashes ?? {}) };
+          if (eventForm.name?.trim() && eventForm.nameEn?.trim() && eventForm.nameEn !== eventForm._initialNameEn)
+            h['Name'] = hashText(eventForm.name.trim());
+          if (eventForm.description?.trim() && eventForm.descriptionEn?.trim() && eventForm.descriptionEn !== eventForm._initialDescriptionEn)
+            h['Description'] = hashText(eventForm.description.trim());
+          if (eventForm.organizerName?.trim() && eventForm.organizerNameEn?.trim() && eventForm.organizerNameEn !== eventForm._initialOrganizerNameEn)
+            h['Organizer'] = hashText(eventForm.organizerName.trim());
+          if (eventForm.alertMessage?.trim() && eventForm.alertMessageEn?.trim() && eventForm.alertMessageEn !== eventForm._initialAlertMessageEn)
+            h['Alert'] = hashText(eventForm.alertMessage.trim());
+          return Object.keys(h).length > 0 ? h : undefined;
+        })(),
       };
 
       if (editEventId) {
@@ -1314,6 +1353,14 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
         notesEn: trimToUndefined(editionForm.notesEn),
         registrationStatus: editionForm.registrationStatus,
         trailId: isRaceOrSeries ? null : (editionForm.trailId || null),
+        translationHashes: (() => {
+          const h: Record<string, string> = { ...(editionForm.translationHashes ?? {}) };
+          if (editionForm.title?.trim() && editionForm.titleEn?.trim() && editionForm.titleEn !== editionForm._initialTitleEn)
+            h['Title'] = hashText(editionForm.title.trim());
+          if (editionForm.notes?.trim() && editionForm.notesEn?.trim() && editionForm.notesEn !== editionForm._initialNotesEn)
+            h['Notes'] = hashText(editionForm.notes.trim());
+          return Object.keys(h).length > 0 ? h : undefined;
+        })(),
       };
       const editionLabel = trimToUndefined(editionForm.title) || editionForm.date || editionForm.year || 'Untitled edition';
 
@@ -1523,6 +1570,18 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
         championshipCategoryEn: trimToUndefined(raceForm.championshipCategoryEn),
         dateOfRace: raceForm.dateOfRace || null,
         startTime: raceForm.startTime || null,
+        translationHashes: (() => {
+          const h: Record<string, string> = { ...(raceForm.translationHashes ?? {}) };
+          if (raceForm.name?.trim() && raceForm.nameEn?.trim() && raceForm.nameEn !== raceForm._initialNameEn)
+            h['Name'] = hashText(raceForm.name.trim());
+          if (raceForm.description?.trim() && raceForm.descriptionEn?.trim() && raceForm.descriptionEn !== raceForm._initialDescriptionEn)
+            h['Description'] = hashText(raceForm.description.trim());
+          if (raceForm.certifiedBy?.trim() && raceForm.certifiedByEn?.trim() && raceForm.certifiedByEn !== raceForm._initialCertifiedByEn)
+            h['CertifiedBy'] = hashText(raceForm.certifiedBy.trim());
+          if (raceForm.championshipCategory?.trim() && raceForm.championshipCategoryEn?.trim() && raceForm.championshipCategoryEn !== raceForm._initialChampionshipCategoryEn)
+            h['Championship'] = hashText(raceForm.championshipCategory.trim());
+          return Object.keys(h).length > 0 ? h : undefined;
+        })(),
       };
 
       if (editRaceId) {
