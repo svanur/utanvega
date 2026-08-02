@@ -499,6 +499,19 @@ function sortRaces(a: RaceDto, b: RaceDto): number {
   return a.name.localeCompare(b.name);
 }
 
+function isTxStale(isText: string | null | undefined, enText: string | null | undefined, hash: string | undefined): boolean {
+  if (!isText?.trim() || !enText?.trim() || !hash) return false;
+  return hashText(isText.trim()) !== hash;
+}
+
+function eventHasStaleTx(event: EventSummaryDto): boolean {
+  const h = event.translationHashes ?? {};
+  return isTxStale(event.name, event.nameEn, h['Name'])
+    || isTxStale(event.description, event.descriptionEn, h['Description'])
+    || isTxStale(event.organizerName, event.organizerNameEn, h['Organizer'])
+    || isTxStale(event.alertMessage, event.alertMessageEn, h['Alert']);
+}
+
 function createEmptyEventForm(): EventFormState {
   return {
     name: '',
@@ -1023,6 +1036,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
   const [pendingDateShift, setPendingDateShift] = useState<{ offsetDays: number; races: RaceDto[] } | null>(null);
   const [showOlderEditions, setShowOlderEditions] = useState(false);
   const [showAttentionPanel, setShowAttentionPanel] = useState(true);
+  const [attentionFilter, setAttentionFilter] = useState<'noEdition' | 'seriesMissingReg' | 'pastActive' | null>(null);
   const [urlPopover, setUrlPopover] = useState<{
     anchorEl: HTMLElement;
     edition: EventEditionDto;
@@ -1075,10 +1089,10 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
     return [...new Set(years)].sort((a, b) => b.localeCompare(a));
   }, [events]);
 
-  const hasActiveFilters = activityFilter !== 'all' || typeFilter !== 'all' || statusFilter !== 'all' || locationFilter !== 'all' || yearFilter !== 'all' || monthFilter !== 'all';
+  const hasActiveFilters = attentionFilter !== null || activityFilter !== 'all' || typeFilter !== 'all' || statusFilter !== 'all' || locationFilter !== 'all' || yearFilter !== 'all' || monthFilter !== 'all';
   const resetFilters = () => {
     setActivityFilter('all'); setTypeFilter('all'); setStatusFilter('all'); setLocationFilter('all');
-    setYearFilter('all'); setMonthFilter('all');
+    setYearFilter('all'); setMonthFilter('all'); setAttentionFilter(null);
   };
 
   // Deep-link: expand and scroll to the target event once events are loaded
@@ -1132,6 +1146,18 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
         if (monthFilter !== 'all') {
           if (!event.hasFutureEdition) return true;
           if (!event.nextEditionDate || event.nextEditionDate.slice(5, 7) !== monthFilter) return false;
+        }
+
+        if (attentionFilter === 'noEdition') {
+          if (!(!event.hasFutureEdition && (event.type === 'Race' || event.type === 'Series') && event.status !== 'Cancelled')) return false;
+        }
+        if (attentionFilter === 'seriesMissingReg') {
+          const in30days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+          if (!(event.type === 'Series' && event.nextEditionDate && event.nextEditionDate <= in30days && event.seriesRaces?.some(r => !r.registrationUrl))) return false;
+        }
+        if (attentionFilter === 'pastActive') {
+          const todayStr = new Date().toISOString().slice(0, 10);
+          if (!(event.status === 'Confirmed' && event.nextEditionDate && event.nextEditionDate < todayStr)) return false;
         }
 
         return true;
@@ -1269,6 +1295,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
       ...createEmptyEditionForm(event.id, event.type, event.name),
       year: nextYear,
       date: suggestedDate,
+      title: nextYear,
       registrationUrl: clonedRegUrl,
       resultsUrl: clonedResultsUrl,
       registrationStatus: isPastYear ? 'Closed' : 'NotStarted',
@@ -2062,6 +2089,10 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
   };
 
   const handleEditionYearChange = (yearStr: string) => {
+    // Keep title in sync with year if it still matches the old year value
+    if (!editEditionId && (editionForm.title === editionForm.year || editionForm.title === '')) {
+      setEditionField('title', yearStr);
+    }
     setEditionField('year', yearStr);
     if (editEditionId || yearStr.length !== 4 || !expandedDetail) return;
     const toYear = Number(yearStr);
@@ -2248,14 +2279,12 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
   const in30days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const attentionItems: { key: string; label: string }[] = [];
   {
-    // Events coming up within 30 days with no future edition registered
     const noEdition = events.filter(e =>
       !e.hasFutureEdition && (e.type === 'Race' || e.type === 'Series') && e.status !== 'Cancelled'
     ).length;
     if (noEdition > 0) attentionItems.push({ key: 'noEdition', label: `${noEdition} active event${noEdition !== 1 ? 's' : ''} missing a future edition` });
   }
   {
-    // Series events with next edition coming up in 30 days but some races missing registration URL
     const seriesMissingReg = events.filter(e =>
       e.type === 'Series' && e.nextEditionDate && e.nextEditionDate <= in30days &&
       e.seriesRaces?.some(r => !r.registrationUrl)
@@ -2263,7 +2292,6 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
     if (seriesMissingReg > 0) attentionItems.push({ key: 'seriesMissingReg', label: `${seriesMissingReg} series event${seriesMissingReg !== 1 ? 's' : ''} with races in ≤30 days missing registration URL` });
   }
   {
-    // Events whose next edition date has passed but are still active
     const pastActive = events.filter(e =>
       e.status === 'Confirmed' && e.nextEditionDate && e.nextEditionDate < today
     ).length;
@@ -2281,7 +2309,16 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
           <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>Needs attention</Typography>
           <Stack component="ul" sx={{ m: 0, pl: 2, gap: 0.25 }}>
             {attentionItems.map(item => (
-              <li key={item.key}><Typography variant="body2">{item.label}</Typography></li>
+              <li key={item.key}>
+                <Typography
+                  variant="body2"
+                  component="button"
+                  onClick={() => setAttentionFilter(attentionFilter === item.key as typeof attentionFilter ? null : item.key as typeof attentionFilter)}
+                  sx={{ background: 'none', border: 'none', p: 0, cursor: 'pointer', textAlign: 'left', textDecoration: attentionFilter === item.key ? 'underline' : 'underline dotted', textUnderlineOffset: 3, color: 'inherit' }}
+                >
+                  {item.label} {attentionFilter === item.key ? '(showing — click to clear)' : '→ click to filter'}
+                </Typography>
+              </li>
             ))}
           </Stack>
         </Alert>
@@ -2435,8 +2472,25 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                     </IconButton>
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2" fontWeight={700}>{event.name}</Typography>
-                    <Typography variant="caption" color="text.secondary" fontFamily="monospace">{event.slug}</Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                      <Typography variant="body2" fontWeight={700}>{event.name}</Typography>
+                      {eventHasStaleTx(event) && (
+                        <Tooltip title="English translation may be outdated — IS text changed since last translate">
+                          <Chip label="EN" size="small" color="warning" variant="filled" sx={{ height: 16, fontSize: '0.6rem', '& .MuiChip-label': { px: 0.75 } }} />
+                        </Tooltip>
+                      )}
+                    </Box>
+                    <Tooltip title="Click to copy slug">
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        fontFamily="monospace"
+                        sx={{ cursor: 'pointer', '&:hover': { color: 'primary.main' } }}
+                        onClick={(e) => { e.stopPropagation(); void navigator.clipboard.writeText(event.slug); onNotify(`Copied: ${event.slug}`); }}
+                      >
+                        {event.slug}
+                      </Typography>
+                    </Tooltip>
                   </TableCell>
                   <TableCell>
                     <Chip label={`${ACTIVITY_ICONS[event.activityType] ?? '🏅'} ${event.activityType}`} size="small" color={ACTIVITY_TYPE_COLORS[event.activityType as ActivityType] ?? 'default'} variant="outlined" />
@@ -3425,11 +3479,14 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
               fullWidth
             />
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 140px' }, gap: 2 }}>
-              <TextField
-                label="Distance Label"
+              <Autocomplete
+                freeSolo
+                options={[...new Set(
+                  (expandedDetail?.editions ?? []).flatMap(ed => ed.races).map(r => r.distanceLabel).filter((d): d is string => !!d)
+                )].sort()}
                 value={raceForm.distanceLabel}
-                onChange={(event) => setRaceField('distanceLabel', event.target.value)}
-                placeholder="e.g. 55"
+                onInputChange={(_, val) => setRaceField('distanceLabel', val)}
+                renderInput={(params) => <TextField {...params} label="Distance Label" placeholder="e.g. 50K" />}
               />
               <TextField
                 label="Cutoff Time (hrs)"
