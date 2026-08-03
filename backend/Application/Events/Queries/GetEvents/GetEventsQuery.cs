@@ -100,7 +100,7 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
             // Determine the relevant edition for distances/registration
             var relevantEdition = ongoingEdition
                 ?? (recentlyCompleted
-                    ? e.Editions.FirstOrDefault(ed => ed.Date == mostRecentPast)
+                    ? e.Editions.FirstOrDefault(ed => (ed.EndDate ?? ed.Date) == mostRecentPast)
                     : e.Editions
                         .Where(ed => ed.Date.HasValue && ed.Date.Value >= today)
                         .OrderBy(ed => ed.Date)

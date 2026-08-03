@@ -318,6 +318,7 @@ public class EventHandlerTests : IDisposable
             EventId: ev.Id,
             Year: 2025,
             Date: new DateOnly(2025, 7, 12),
+            EndDate: null,
             Title: "2025 Edition",
             RegistrationUrl: "https://register.is",
             ResultsUrl: null,
@@ -357,6 +358,7 @@ public class EventHandlerTests : IDisposable
                 Id: edition.Id,
                 Year: 2026,
                 Date: new DateOnly(2026, 7, 11),
+                EndDate: null,
                 Title: "2026 Edition",
                 RegistrationUrl: "https://new-register.is",
                 ResultsUrl: "https://results.is",
@@ -1093,5 +1095,406 @@ public class EventHandlerTests : IDisposable
         // NextEditionDate should still be a future date (from schedule rule)
         Assert.NotNull(dto.NextEditionDate);
         Assert.True(dto.NextEditionDate > pastDate);
+    }
+
+    // ─── Multi-day event: EndDate logic ───
+
+    [Fact]
+    public async Task GetEvents_OngoingMultiDay_ReturnsDaysUntilZero()
+    {
+        var ev = CreateTestEvent("Multi Day Race");
+        ev.Slug = "multi-day-race";
+        ev.ScheduleRule = null;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var edition = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Year = today.Year,
+            Date = today.AddDays(-1),    // started yesterday
+            EndDate = today.AddDays(1),  // ends tomorrow
+            RegistrationStatus = RegistrationStatus.Closed,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.Equal(0, dto.DaysUntil);
+        Assert.True(dto.HasFutureEdition);
+    }
+
+    [Fact]
+    public async Task GetEvents_OngoingMultiDay_LastDay_ReturnsDaysUntilZero()
+    {
+        var ev = CreateTestEvent("Last Day Race");
+        ev.Slug = "last-day-race";
+        ev.ScheduleRule = null;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var edition = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Year = today.Year,
+            Date = today.AddDays(-2),  // started 2 days ago
+            EndDate = today,           // ends today
+            RegistrationStatus = RegistrationStatus.Closed,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.Equal(0, dto.DaysUntil);
+        Assert.True(dto.HasFutureEdition);
+    }
+
+    [Fact]
+    public async Task GetEvents_MultiDay_RecentlyCompleted_UsesDaysSinceEndDate()
+    {
+        var ev = CreateTestEvent("Just Finished Race");
+        ev.Slug = "just-finished-race";
+        ev.ScheduleRule = null;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var edition = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Year = today.Year,
+            Date = today.AddDays(-3),   // started 3 days ago
+            EndDate = today.AddDays(-1), // ended yesterday
+            RegistrationStatus = RegistrationStatus.Closed,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.Equal(-1, dto.DaysUntil);                    // days since EndDate
+        Assert.Equal(edition.Date, dto.DisplayDate);         // displayDate = start date, not end
+        Assert.Equal(edition.EndDate, dto.EndDisplayDate);
+    }
+
+    [Fact]
+    public async Task GetEvents_MultiDay_EndedTooLongAgo_NullDaysUntil()
+    {
+        var ev = CreateTestEvent("Old Multi Day");
+        ev.Slug = "old-multi-day";
+        ev.ScheduleRule = null;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var edition = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Year = today.Year,
+            Date = today.AddDays(-7),
+            EndDate = today.AddDays(-4),  // ended 4 days ago — beyond 3-day window
+            RegistrationStatus = RegistrationStatus.Closed,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.Null(dto.DaysUntil);
+        Assert.Null(dto.DisplayDate);
+    }
+
+    [Fact]
+    public async Task GetEvents_HasFutureEdition_TrueForDatelessEditionInCurrentYear()
+    {
+        var ev = CreateTestEvent("Dateless Edition");
+        ev.Slug = "dateless-edition";
+        ev.ScheduleRule = null;
+        var edition = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Year = DateOnly.FromDateTime(DateTime.UtcNow).Year,
+            Date = null,   // no date set yet
+            EndDate = null,
+            RegistrationStatus = RegistrationStatus.NotStarted,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.True(dto.HasFutureEdition);
+    }
+
+    [Fact]
+    public async Task GetEvents_HasFutureEdition_FalseForDatelessEditionInPastYear()
+    {
+        var ev = CreateTestEvent("Old Dateless");
+        ev.Slug = "old-dateless";
+        ev.ScheduleRule = null;
+        var edition = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Year = DateOnly.FromDateTime(DateTime.UtcNow).Year - 1,
+            Date = null,
+            EndDate = null,
+            RegistrationStatus = RegistrationStatus.NotStarted,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.False(dto.HasFutureEdition);
+    }
+
+    [Fact]
+    public async Task CreateEdition_StoresEndDate()
+    {
+        var ev = CreateTestEvent();
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var edCtx = _factory.CreateContext();
+        var handler = new CreateEditionCommandHandler(edCtx, _cacheInvalidator);
+        var id = await handler.Handle(new CreateEditionCommand(
+            EventId: ev.Id,
+            Year: 2026,
+            Date: new DateOnly(2026, 8, 1),
+            EndDate: new DateOnly(2026, 8, 3),
+            Title: "2026 Edition",
+            RegistrationUrl: null,
+            ResultsUrl: null,
+            Notes: null,
+            RegistrationStatus: "Open",
+            TrailId: null
+        ), CancellationToken.None);
+
+        using var verifyCtx = _factory.CreateContext();
+        var edition = verifyCtx.EventEditions.Find(id);
+        Assert.NotNull(edition);
+        Assert.Equal(new DateOnly(2026, 8, 1), edition!.Date);
+        Assert.Equal(new DateOnly(2026, 8, 3), edition.EndDate);
+    }
+
+    [Fact]
+    public async Task UpdateEdition_StoresEndDate()
+    {
+        var ev = CreateTestEvent();
+        var edition = CreateTestEdition(ev.Id);
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new UpdateEditionCommandHandler(ctx, _cacheInvalidator);
+            await handler.Handle(new UpdateEditionCommand(
+                Id: edition.Id,
+                Year: 2026,
+                Date: new DateOnly(2026, 8, 1),
+                EndDate: new DateOnly(2026, 8, 3),
+                Title: "2026 Multi-Day",
+                RegistrationUrl: null,
+                ResultsUrl: null,
+                Notes: null,
+                RegistrationStatus: "Open",
+                TrailId: null
+            ), CancellationToken.None);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        var updated = verifyCtx.EventEditions.Find(edition.Id);
+        Assert.Equal(new DateOnly(2026, 8, 3), updated!.EndDate);
+    }
+
+    [Fact]
+    public async Task UpdateEdition_ClearsEndDate_WhenSetToNull()
+    {
+        var ev = CreateTestEvent();
+        var edition = CreateTestEdition(ev.Id);
+        edition.EndDate = new DateOnly(2025, 7, 14);
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new UpdateEditionCommandHandler(ctx, _cacheInvalidator);
+            await handler.Handle(new UpdateEditionCommand(
+                Id: edition.Id,
+                Year: 2025,
+                Date: new DateOnly(2025, 7, 12),
+                EndDate: null,
+                Title: "2025 Edition",
+                RegistrationUrl: null,
+                ResultsUrl: null,
+                Notes: null,
+                RegistrationStatus: "Open",
+                TrailId: null
+            ), CancellationToken.None);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        var updated = verifyCtx.EventEditions.Find(edition.Id);
+        Assert.Null(updated!.EndDate);
+    }
+
+    [Fact]
+    public async Task GetEventCalendar_MultiDay_AppearsOnEachDay()
+    {
+        var ev = CreateTestEvent("3-Day Festival");
+        ev.Slug = "3-day-festival";
+        var edition = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Year = 2025,
+            Date = new DateOnly(2025, 8, 1),
+            EndDate = new DateOnly(2025, 8, 3),
+            RegistrationStatus = RegistrationStatus.Open,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventCalendarQueryHandler(queryCtx, _memoryCache);
+        var result = await handler.Handle(
+            new GetEventCalendarQuery(new DateOnly(2025, 8, 1), new DateOnly(2025, 8, 31)),
+            CancellationToken.None);
+
+        Assert.Equal(3, result.Count);
+        Assert.Contains(result, d => d.Date == new DateOnly(2025, 8, 1));
+        Assert.Contains(result, d => d.Date == new DateOnly(2025, 8, 2));
+        Assert.Contains(result, d => d.Date == new DateOnly(2025, 8, 3));
+        Assert.All(result, d => Assert.Single(d.Events));
+    }
+
+    [Fact]
+    public async Task GetEventCalendar_MultiDay_ClipsToRequestRange()
+    {
+        var ev = CreateTestEvent("Cross-Month Race");
+        ev.Slug = "cross-month-race";
+        var edition = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Year = 2025,
+            Date = new DateOnly(2025, 7, 30),
+            EndDate = new DateOnly(2025, 8, 2),
+            RegistrationStatus = RegistrationStatus.Open,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventCalendarQueryHandler(queryCtx, _memoryCache);
+
+        // Query only August — should see Aug 1 and Aug 2, not Jul 30/31
+        var result = await handler.Handle(
+            new GetEventCalendarQuery(new DateOnly(2025, 8, 1), new DateOnly(2025, 8, 31)),
+            CancellationToken.None);
+
+        Assert.Equal(2, result.Count);
+        Assert.Contains(result, d => d.Date == new DateOnly(2025, 8, 1));
+        Assert.Contains(result, d => d.Date == new DateOnly(2025, 8, 2));
+        Assert.DoesNotContain(result, d => d.Date.Month == 7);
+    }
+
+    [Fact]
+    public async Task GetEvent_OngoingMultiDay_ReturnsDaysUntilZero()
+    {
+        var ev = CreateTestEvent("Ongoing Multi Day");
+        ev.Slug = "ongoing-multi-day";
+        ev.ScheduleRule = null;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var edition = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Year = today.Year,
+            Date = today.AddDays(-1),
+            EndDate = today.AddDays(1),
+            RegistrationStatus = RegistrationStatus.Closed,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventQuery("ongoing-multi-day"), CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Equal(0, result!.DaysUntil);
     }
 }

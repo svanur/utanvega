@@ -56,7 +56,7 @@ public class GetEventCalendarQueryHandler : IRequestHandler<GetEventCalendarQuer
             .Where(ed =>
                 ed.Date.HasValue &&
                 ed.Date <= request.To &&
-                (ed.EndDate ?? ed.Date) >= request.From &&
+                (ed.EndDate.HasValue ? ed.EndDate >= request.From : ed.Date >= request.From) &&
                 ed.Event.Status != EventStatus.Hidden &&
                 ed.Event.Status != EventStatus.Unlisted)
             .ToListAsync(cancellationToken);

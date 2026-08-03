@@ -3954,7 +3954,10 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                     </Box>
                     <Box component="th" sx={{ textAlign: 'left', pb: 1, pr: 1 }}><Typography variant="caption" fontWeight={600}>Event</Typography></Box>
                     <Box component="th" sx={{ textAlign: 'left', pb: 1, pr: 1 }}><Typography variant="caption" fontWeight={600}>Year</Typography></Box>
-                    <Box component="th" sx={{ textAlign: 'left', pb: 1, pr: 1 }}><Typography variant="caption" fontWeight={600}>Proposed date</Typography></Box>
+                    <Box component="th" sx={{ textAlign: 'left', pb: 1, pr: 1 }}><Typography variant="caption" fontWeight={600}>Start date</Typography></Box>
+                    {bulkMissingItems.some(i => i.endDate) && (
+                      <Box component="th" sx={{ textAlign: 'left', pb: 1, pr: 1 }}><Typography variant="caption" fontWeight={600}>End date</Typography></Box>
+                    )}
                     <Box component="th" sx={{ textAlign: 'left', pb: 1 }}><Typography variant="caption" fontWeight={600}>Races to clone</Typography></Box>
                   </Box>
                 </Box>
@@ -3973,6 +3976,11 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                       <Box component="td" sx={{ py: 1, pr: 1 }}>
                         <Typography variant="body2">{item.date || <em style={{ color: 'gray' }}>TBD</em>}</Typography>
                       </Box>
+                      {bulkMissingItems.some(i => i.endDate) && (
+                        <Box component="td" sx={{ py: 1, pr: 1 }}>
+                          <Typography variant="body2">{item.endDate || <em style={{ color: 'gray' }}>—</em>}</Typography>
+                        </Box>
+                      )}
                       <Box component="td" sx={{ py: 1 }}>
                         <Typography variant="body2">
                           {item.sourceEdition ? `${item.sourceEdition.races.length} race${item.sourceEdition.races.length !== 1 ? 's' : ''}` : '—'}
