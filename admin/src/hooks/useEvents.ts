@@ -253,6 +253,7 @@ export interface UpdateRaceInput {
     championshipCategoryEn?: string;
     dateOfRace?: string | null;
     startTime?: string | null;
+    activityType?: ActivityType | null;
     translationHashes?: Record<string, string>;
 }
 

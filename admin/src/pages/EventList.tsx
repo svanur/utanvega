@@ -1920,6 +1920,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
           championshipCategoryEn: input.championshipCategoryEn,
           dateOfRace: input.dateOfRace,
           startTime: input.startTime,
+          activityType: input.activityType,
         });
         onNotify(`Race "${raceForm.name.trim()}" updated`);
 
