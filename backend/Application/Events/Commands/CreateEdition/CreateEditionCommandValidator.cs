@@ -33,5 +33,9 @@ public class CreateEditionCommandValidator : AbstractValidator<CreateEditionComm
         RuleFor(x => x.Year)
             .InclusiveBetween(2000, 2100)
             .When(x => x.Year.HasValue);
+
+        RuleFor(x => x.EndDate)
+            .Must((cmd, endDate) => endDate == null || cmd.Date == null || endDate >= cmd.Date)
+            .WithMessage("EndDate must be on or after Date.");
     }
 }

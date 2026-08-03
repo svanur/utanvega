@@ -258,6 +258,38 @@ public class EventValidatorTests
         result.ShouldHaveValidationErrorFor(x => x.Year);
     }
 
+    [Fact]
+    public void CreateEdition_EndDateAfterDate_Passes()
+    {
+        var cmd = ValidCreateEditionCommand with { Date = new DateOnly(2025, 8, 1), EndDate = new DateOnly(2025, 8, 3) };
+        var result = _createEditionValidator.TestValidate(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.EndDate);
+    }
+
+    [Fact]
+    public void CreateEdition_EndDateSameAsDate_Passes()
+    {
+        var cmd = ValidCreateEditionCommand with { Date = new DateOnly(2025, 8, 1), EndDate = new DateOnly(2025, 8, 1) };
+        var result = _createEditionValidator.TestValidate(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.EndDate);
+    }
+
+    [Fact]
+    public void CreateEdition_EndDateBeforeDate_Fails()
+    {
+        var cmd = ValidCreateEditionCommand with { Date = new DateOnly(2025, 8, 3), EndDate = new DateOnly(2025, 8, 1) };
+        var result = _createEditionValidator.TestValidate(cmd);
+        result.ShouldHaveValidationErrorFor(x => x.EndDate);
+    }
+
+    [Fact]
+    public void CreateEdition_EndDateWithNullDate_Passes()
+    {
+        var cmd = ValidCreateEditionCommand with { Date = null, EndDate = new DateOnly(2025, 8, 1) };
+        var result = _createEditionValidator.TestValidate(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.EndDate);
+    }
+
     // ─── UpdateEditionCommandValidator ───
 
     private readonly UpdateEditionCommandValidator _updateEditionValidator = new();
@@ -296,6 +328,22 @@ public class EventValidatorTests
         var cmd = ValidUpdateEditionCommand with { ResultsUrl = "bad-url" };
         var result = _updateEditionValidator.TestValidate(cmd);
         result.ShouldHaveValidationErrorFor(x => x.ResultsUrl);
+    }
+
+    [Fact]
+    public void UpdateEdition_EndDateBeforeDate_Fails()
+    {
+        var cmd = ValidUpdateEditionCommand with { Date = new DateOnly(2025, 8, 3), EndDate = new DateOnly(2025, 8, 1) };
+        var result = _updateEditionValidator.TestValidate(cmd);
+        result.ShouldHaveValidationErrorFor(x => x.EndDate);
+    }
+
+    [Fact]
+    public void UpdateEdition_EndDateAfterDate_Passes()
+    {
+        var cmd = ValidUpdateEditionCommand with { Date = new DateOnly(2025, 8, 1), EndDate = new DateOnly(2025, 8, 3) };
+        var result = _updateEditionValidator.TestValidate(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.EndDate);
     }
 
     // ─── CreateRaceCommandValidator ───

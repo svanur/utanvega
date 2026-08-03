@@ -1497,4 +1497,71 @@ public class EventHandlerTests : IDisposable
         Assert.NotNull(result);
         Assert.Equal(0, result!.DaysUntil);
     }
+
+    [Fact]
+    public async Task GetEvent_MultiDay_RecentlyCompleted_UsesDaysSinceEndDate()
+    {
+        var ev = CreateTestEvent("Finished Multi Day");
+        ev.Slug = "finished-multi-day";
+        ev.ScheduleRule = null;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var edition = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Year = today.Year,
+            Date = today.AddDays(-3),
+            EndDate = today.AddDays(-1),
+            RegistrationStatus = RegistrationStatus.Closed,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventQuery("finished-multi-day"), CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Equal(-1, result!.DaysUntil);
+        Assert.Equal(edition.Date, result.DisplayDate);
+    }
+
+    [Fact]
+    public async Task GetEvents_OngoingMultiDay_EndDisplayDate_IsSet()
+    {
+        var ev = CreateTestEvent("Ongoing With EndDate");
+        ev.Slug = "ongoing-with-enddate";
+        ev.ScheduleRule = null;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var endDate = today.AddDays(2);
+        var edition = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Year = today.Year,
+            Date = today.AddDays(-1),
+            EndDate = endDate,
+            RegistrationStatus = RegistrationStatus.Closed,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.Equal(0, dto.DaysUntil);
+        Assert.Equal(endDate, dto.EndDisplayDate);
+    }
 }
