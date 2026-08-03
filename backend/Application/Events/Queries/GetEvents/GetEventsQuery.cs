@@ -76,7 +76,7 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
             if (ongoingEdition != null)
             {
                 daysUntil = 0;
-                displayDate = today;
+                displayDate = ongoingEdition.Date;
             }
             else if (recentlyCompleted)
             {

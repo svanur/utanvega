@@ -1485,17 +1485,27 @@ app.MapGet("/api/v1/events/calendar.ics", async (IMediator mediator, IConfigurat
         var ical = new Ical.Net.Calendar();
         ical.ProductId = "-//Hlaupadagskra.is//Events//IS";
 
-        // Collapse multi-day events: track (slug, editionTitle) → (firstDay, lastDay, event)
+        // Collapse multi-day events: track full key → (firstDay, lastDay, event)
+        // keyMap maps slug|title → current active full key; gap detection prevents collapsing separate editions
         var seen = new Dictionary<string, (DateOnly First, DateOnly Last, CalendarEventDto Ev)>();
+        var keyMap = new Dictionary<string, string>();
         foreach (var day in days.OrderBy(d => d.Date))
         {
             foreach (var ev in day.Events)
             {
-                var key = $"{ev.Slug}|{ev.EditionTitle}";
-                if (seen.TryGetValue(key, out var existing))
-                    seen[key] = (existing.First, day.Date, existing.Ev);
+                var baseKey = $"{ev.Slug}|{ev.EditionTitle}";
+                if (keyMap.TryGetValue(baseKey, out var currentFullKey) &&
+                    seen.TryGetValue(currentFullKey, out var existing) &&
+                    day.Date <= existing.Last.AddDays(1))
+                {
+                    seen[currentFullKey] = (existing.First, day.Date, existing.Ev);
+                }
                 else
-                    seen[key] = (day.Date, day.Date, ev);
+                {
+                    var fullKey = $"{ev.Slug}|{ev.EditionTitle}|{day.Date:yyyy-MM-dd}";
+                    seen[fullKey] = (day.Date, day.Date, ev);
+                    keyMap[baseKey] = fullKey;
+                }
             }
         }
 

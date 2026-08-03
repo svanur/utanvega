@@ -3495,7 +3495,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                   setEditionField('endDate', d);
                   if (!editEditionId && isPastDate(d || editionForm.date)) setEditionField('registrationStatus', 'Closed');
                 }}
-                minDate={editionForm.date ? dayjs(editionForm.date).add(1, 'day') : undefined}
+                minDate={editionForm.date ? dayjs(editionForm.date) : undefined}
                 slotProps={{ textField: { fullWidth: true } }}
               />
             </Box>

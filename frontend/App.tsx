@@ -170,7 +170,7 @@ export default function App() {
                     />
                     <Route
                         path="/events/calendar"
-                        element={<RaceCalendarPage mode={mode} onToggleMode={handleToggleMode} />}
+                        element={<Navigate to={`/events/calendar/${new Date().getFullYear()}/${String(new Date().getMonth() + 1).padStart(2, '0')}`} replace />}
                     />
                     <Route
                         path="/events/calendar/:year/:month"

@@ -1129,6 +1129,7 @@ public class EventHandlerTests : IDisposable
 
         var dto = Assert.Single(result);
         Assert.Equal(0, dto.DaysUntil);
+        Assert.Equal(edition.Date, dto.DisplayDate);
         Assert.True(dto.HasFutureEdition);
     }
 
@@ -1162,6 +1163,7 @@ public class EventHandlerTests : IDisposable
 
         var dto = Assert.Single(result);
         Assert.Equal(0, dto.DaysUntil);
+        Assert.Equal(edition.Date, dto.DisplayDate);
         Assert.True(dto.HasFutureEdition);
     }
 
@@ -1496,6 +1498,7 @@ public class EventHandlerTests : IDisposable
 
         Assert.NotNull(result);
         Assert.Equal(0, result!.DaysUntil);
+        Assert.Equal(edition.Date, result.DisplayDate);
     }
 
     [Fact]
