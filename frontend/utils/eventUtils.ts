@@ -20,7 +20,7 @@ export function formatNextDate(dateStr: string, t: TFunc): string {
 }
 
 export function formatDateRange(startStr: string, endStr: string | null | undefined, t: TFunc): string {
-    if (!endStr) return formatNextDate(startStr, t);
+    if (!endStr || endStr === startStr) return formatNextDate(startStr, t);
     const months = t('races.months', { returnObjects: true }) as unknown as string[];
     const start = new Date(startStr + 'T00:00:00');
     const end = new Date(endStr + 'T00:00:00');

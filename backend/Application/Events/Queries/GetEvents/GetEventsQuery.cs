@@ -79,7 +79,10 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
             else if (recentlyCompleted)
             {
                 daysUntil = mostRecentPast!.Value.DayNumber - today.DayNumber;
-                displayDate = mostRecentPast.Value;
+                // Use the edition's start date as displayDate so the range "start – end" renders correctly.
+                // daysUntil stays end-date-based so the -1/-2/-3 countdown is accurate.
+                var recentEdition = e.Editions.FirstOrDefault(ed => (ed.EndDate ?? ed.Date) == mostRecentPast);
+                displayDate = recentEdition?.Date ?? mostRecentPast.Value;
             }
             else if (nextDate.HasValue)
             {

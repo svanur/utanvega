@@ -1214,7 +1214,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
 
         return cmp !== 0 ? dir * cmp : a.name.localeCompare(b.name);
       });
-  }, [events, searchQuery, sortBy, sortDir, activityFilter, typeFilter, statusFilter, locationFilter, yearFilter, monthFilter]);
+  }, [events, searchQuery, sortBy, sortDir, activityFilter, typeFilter, statusFilter, locationFilter, yearFilter, monthFilter, attentionFilter]);
 
   
   const handleRequestSort = (field: typeof sortBy) => {
@@ -1646,11 +1646,14 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
           date: input.date,
           endDate: input.endDate,
           title: input.title,
+          titleEn: input.titleEn,
           registrationUrl: input.registrationUrl,
           resultsUrl: input.resultsUrl,
           notes: input.notes,
+          notesEn: input.notesEn,
           registrationStatus: input.registrationStatus,
           trailId: input.trailId,
+          translationHashes: input.translationHashes,
         });
         onNotify(`Edition "${editionLabel}" updated`);
         const origDate = editionForm._originalDate;
@@ -2692,7 +2695,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                               </Typography>
                               <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
                                 {(() => {
-                                  const staleCount = expandedDetail.editions.filter(ed => ed.date && isPastDate(ed.date) && (ed.registrationStatus === 'Open' || ed.registrationStatus === 'NotStarted')).length;
+                                  const staleCount = expandedDetail.editions.filter(ed => (ed.endDate ?? ed.date) && isPastDate(ed.endDate ?? ed.date ?? '') && (ed.registrationStatus === 'Open' || ed.registrationStatus === 'NotStarted')).length;
                                   return staleCount > 0 ? (
                                     <Button size="small" variant="outlined" color="warning" onClick={handleCloseRegistrationOnPastEditions}>
                                       Close registration on {staleCount} past edition{staleCount !== 1 ? 's' : ''}
@@ -2784,7 +2787,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                               ) : (() => {
                                 const currentYear = new Date().getFullYear();
                                 const sorted = [...expandedDetail.editions].sort(sortEditions);
-                                const older = sorted.filter(ed => (ed.year ?? 0) < currentYear && (!ed.date || isPastDate(ed.date)));
+                                const older = sorted.filter(ed => (ed.year ?? 0) < currentYear && (!(ed.endDate ?? ed.date) || isPastDate(ed.endDate ?? ed.date ?? '')));
                                 const visible = showOlderEditions ? sorted : sorted.filter(ed => !older.includes(ed));
                                 const hiddenCount = older.length;
                                 return (
@@ -2856,7 +2859,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                                                 </Tooltip>
                                               ) : null;
                                             })()}
-                                            {edition.date && isPastDate(edition.date) && !edition.resultsUrl && (
+                                            {(edition.endDate ?? edition.date) && isPastDate(edition.endDate ?? edition.date ?? '') && !edition.resultsUrl && (
                                               <Tooltip title="Results URL missing — click to add">
                                                 <Chip
                                                   label="Results missing"

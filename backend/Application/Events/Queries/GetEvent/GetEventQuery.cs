@@ -88,24 +88,36 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
         var nextDate = nextEditionDate
             ?? (ev.ScheduleRule != null ? _scheduleEngine.GetNextOccurrence(ev.ScheduleRule, today) : null);
 
+        // An edition is "ongoing" when it has started (Date <= today) but not yet ended (EndDate ?? Date >= today)
+        var ongoingEdition = ev.Editions.FirstOrDefault(ed =>
+            ed.Date.HasValue && ed.Date.Value <= today &&
+            (ed.EndDate ?? ed.Date).HasValue && (ed.EndDate ?? ed.Date)!.Value >= today);
+
         // Check for recently-past editions (up to 3 days ago)
         // so events with schedule rules still show as "recently completed"
         var mostRecentPast = ev.Editions
-            .Where(ed => ed.Date.HasValue && ed.Date.Value < today)
-            .OrderByDescending(ed => ed.Date)
-            .Select(ed => ed.Date)
+            .Where(ed => (ed.EndDate ?? ed.Date).HasValue && (ed.EndDate ?? ed.Date)!.Value < today)
+            .OrderByDescending(ed => ed.EndDate ?? ed.Date)
+            .Select(ed => ed.EndDate ?? ed.Date)
             .FirstOrDefault();
 
         var recentlyCompleted = ev.Status != EventStatus.Cancelled
+            && ongoingEdition == null
             && mostRecentPast.HasValue
             && (today.DayNumber - mostRecentPast.Value.DayNumber) <= 3;
 
         int? daysUntil;
         DateOnly? displayDate;
-        if (recentlyCompleted)
+        if (ongoingEdition != null)
+        {
+            daysUntil = 0;
+            displayDate = today;
+        }
+        else if (recentlyCompleted)
         {
             daysUntil = mostRecentPast!.Value.DayNumber - today.DayNumber;
-            displayDate = mostRecentPast.Value;
+            var recentEdition = ev.Editions.FirstOrDefault(ed => (ed.EndDate ?? ed.Date) == mostRecentPast);
+            displayDate = recentEdition?.Date ?? mostRecentPast.Value;
         }
         else if (nextDate.HasValue)
         {
@@ -178,12 +190,13 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
             ))
             .ToList();
 
-        var relevantEdition = recentlyCompleted
-            ? ev.Editions.FirstOrDefault(ed => ed.Date == mostRecentPast)
-            : ev.Editions
-                .Where(ed => ed.Date.HasValue && ed.Date.Value >= today)
-                .OrderBy(ed => ed.Date)
-                .FirstOrDefault();
+        var relevantEdition = ongoingEdition
+            ?? (recentlyCompleted
+                ? ev.Editions.FirstOrDefault(ed => (ed.EndDate ?? ed.Date) == mostRecentPast)
+                : ev.Editions
+                    .Where(ed => ed.Date.HasValue && ed.Date.Value >= today)
+                    .OrderBy(ed => ed.Date)
+                    .FirstOrDefault());
 
         var relevantRaces = relevantEdition?.Races
             .Where(r => r.Status != RaceStatus.Cancelled)
