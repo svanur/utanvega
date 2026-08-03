@@ -75,7 +75,7 @@ function getEventHealthScore(event: EventSummaryDto): number {
         { passed: !!event.locationId, na: isAd },
         { passed: event.gpxPointLat != null && event.gpxPointLng != null, na: isAd },
         { passed: !!(event.organizerName || event.organizerWebsite), na: isAd },
-        { passed: !!event.scheduleRule, na: isAd },
+        { passed: !!event.scheduleRule, na: isAd || event.type === 'Race' },
         { passed: event.status === 'Confirmed', na: false },
     ];
     const applicable = checks.filter(c => !c.na);
@@ -115,7 +115,7 @@ function QuickActionButton({
             sx={{
                 display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
                 gap: 0.5, p: 2.5, cursor: 'pointer', border: 'none',
-                background: 'white', width: '100%', textAlign: 'left',
+                width: '100%', textAlign: 'left',
                 transition: 'box-shadow 0.15s, transform 0.1s',
                 '&:hover': { boxShadow: 6, transform: 'translateY(-1px)' },
                 '&:active': { transform: 'translateY(0)' },
@@ -250,7 +250,7 @@ export default function DashboardPage({ onNewEvent, onUploadTrail, onNavigate }:
                             onClick={stat.onClick}
                             sx={{
                                 width: '100%', p: 2, border: 'none', cursor: 'pointer',
-                                background: 'white', textAlign: 'left',
+                                textAlign: 'left',
                                 borderLeft: '3px solid',
                                 borderColor: stat.warn ? 'warning.main' : 'primary.main',
                                 transition: 'box-shadow 0.15s',
