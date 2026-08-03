@@ -59,16 +59,6 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
     const year = params.year ? parseInt(params.year, 10) : today.getFullYear();
     const month = params.month ? parseInt(params.month, 10) - 1 : today.getMonth();
 
-    // Redirect bare /events/calendar to the current year/month URL
-    useEffect(() => {
-        if (!params.year || !params.month) {
-            navigate(
-                `/events/calendar/${today.getFullYear()}/${String(today.getMonth() + 1).padStart(2, '0')}`,
-                { replace: true }
-            );
-        }
-    }, []);
-
     const navigateToMonth = (y: number, m: number) => {
         navigate(`/events/calendar/${y}/${String(m + 1).padStart(2, '0')}`);
     };
