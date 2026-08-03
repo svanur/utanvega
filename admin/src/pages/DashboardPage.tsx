@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
     Box, Typography, Paper, Grid, Button, Chip, Skeleton,
     Stack, Divider, Tooltip, List, ListItem, ListItemText, ListItemButton,
+    InputBase,
 } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
@@ -155,6 +156,14 @@ export default function DashboardPage({ onNewEvent, onUploadTrail, onNavigate }:
     const [changelog, setChangelog] = useState<ChangeLogDto[]>([]);
     const [changelogLoading, setChangelogLoading] = useState(true);
     const [backendHealth, setBackendHealth] = useState<AdminHealth | null>(null);
+    const [note, setNote] = useState(() => localStorage.getItem('admin_dashboard_note') ?? '');
+    const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const handleNoteChange = (value: string) => {
+        setNote(value);
+        if (saveTimer.current) clearTimeout(saveTimer.current);
+        saveTimer.current = setTimeout(() => localStorage.setItem('admin_dashboard_note', value), 500);
+    };
 
     const frontendHash = import.meta.env.VITE_GIT_HASH ?? 'unknown';
     const adminVersion = import.meta.env.VITE_ADMIN_VERSION ?? '?';
@@ -524,9 +533,6 @@ export default function DashboardPage({ onNewEvent, onUploadTrail, onNavigate }:
                                 ))}
                             </List>
                         )}
-                        <Box mt={1.5} textAlign="right">
-                            <Button size="small" onClick={() => onNavigate('trails')}>View full history →</Button>
-                        </Box>
                     </Paper>
                 </Grid>
             </Grid>
@@ -576,8 +582,24 @@ export default function DashboardPage({ onNewEvent, onUploadTrail, onNavigate }:
                 )}
             </Paper>
 
+            {/* Scratch pad */}
+            <Paper elevation={1} sx={{ mt: 3, p: 2.5, border: '1px dashed', borderColor: 'divider' }}>
+                <Typography variant="caption" color="text.secondary" fontWeight={600} letterSpacing={0.5} display="block" mb={1}>
+                    📝 SCRATCH PAD — saved locally in your browser
+                </Typography>
+                <InputBase
+                    multiline
+                    minRows={3}
+                    fullWidth
+                    value={note}
+                    onChange={e => handleNoteChange(e.target.value)}
+                    placeholder="Jot something down… tasks, reminders, things to check"
+                    sx={{ fontSize: '0.875rem', alignItems: 'flex-start', fontFamily: 'inherit' }}
+                />
+            </Paper>
+
             {/* Build info */}
-            <Divider sx={{ mt: 5, mb: 2 }} />
+            <Divider sx={{ mt: 3, mb: 2 }} />
             <Stack direction="row" alignItems="center" gap={1} flexWrap="wrap">
                 <BuildIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
                 <Typography variant="caption" color="text.disabled">Build info</Typography>
