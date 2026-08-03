@@ -109,6 +109,23 @@ public class DifficultyCalculatorTests
         Assert.Equal(Difficulty.Easy, result); // 5 + 2 = 7 effort < 8
     }
 
+    // ─── Unknown/swim types fall back to TrailRunning thresholds ───
+
+    [Theory]
+    [InlineData(ActivityType.Swim)]
+    [InlineData(ActivityType.Social)]
+    [InlineData(ActivityType.Other)]
+    public void Calculate_UnknownActivityType_UsesTrailRunningThresholds(ActivityType activityType)
+    {
+        // 11 km flat = Easy under TrailRunning thresholds (< 12 effort)
+        var result = DifficultyCalculator.Calculate(11000, 0, activityType);
+        Assert.Equal(Difficulty.Easy, result);
+
+        // 25 km flat = Hard under TrailRunning thresholds (≥ 25 effort)
+        var hard = DifficultyCalculator.Calculate(25000, 0, activityType);
+        Assert.Equal(Difficulty.Hard, hard);
+    }
+
     // ─── Boundary tests ───
 
     [Theory]
