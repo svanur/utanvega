@@ -1214,7 +1214,7 @@ function RaceCard({
                         ...(race.status === 'Cancelled' && { textDecoration: 'line-through' }),
                     }}>
                         <Box component="span" sx={{ fontSize: 20, color: 'primary.main', display: 'flex' }}>
-                            {getActivityIcon(race.activityType ?? activityType ?? 'TrailRunning')}
+                            {getActivityIcon(race.activityType ?? race.trailActivityType ?? activityType ?? 'TrailRunning')}
                         </Box>
                         {loc(race.name, race.nameEn)}
                         {race.status === 'Cancelled' && (
@@ -1284,9 +1284,12 @@ function RaceCard({
                         </Tooltip>
                     )}
                     {race.activityType && (
-                        <Tooltip title={t(`races.activityTypes.${race.activityType}`, { defaultValue: race.activityType })}>
-                            <Chip icon={<Box component="span" sx={{ display: 'flex', pl: 0.5 }}>{getActivityIcon(race.activityType)}</Box>} label={race.activityType} size="small" variant="outlined" />
-                        </Tooltip>
+                        <Chip
+                            icon={<Box component="span" sx={{ display: 'flex', pl: 0.5 }}>{getActivityIcon(race.activityType)}</Box>}
+                            label={t(`races.activityTypes.${race.activityType}`, { defaultValue: race.activityType })}
+                            size="small"
+                            variant="outlined"
+                        />
                     )}
                     {raceDateTime && (
                         <Tooltip title={t('races.raceDateTime', { defaultValue: 'Date & start time' })}>
