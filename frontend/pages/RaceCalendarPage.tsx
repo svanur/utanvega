@@ -314,7 +314,7 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
                 {/* Event count summary or empty state */}
                 {!loading && days.length > 0 && (
                     <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
-                        {t('calendar.eventCount', { count: days.reduce((sum, d) => sum + d.events.length, 0) })}
+                        {t('calendar.eventCount', { count: new Set(days.flatMap(d => d.events.map(e => e.slug))).size })}
                     </Typography>
                 )}
                 {!loading && days.length === 0 && (
