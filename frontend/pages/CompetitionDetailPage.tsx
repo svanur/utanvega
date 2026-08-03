@@ -44,6 +44,7 @@ import TimerIcon from '@mui/icons-material/Timer';
 import StraightenIcon from '@mui/icons-material/Straighten';
 import TerrainIcon from '@mui/icons-material/Terrain';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
+import { getActivityIcon } from '../utils/activityIcon';
 import QueryStatsIcon from '@mui/icons-material/QueryStats';
 import confetti from 'canvas-confetti';
 import ShareButtons from '../components/ShareButtons';
@@ -1212,7 +1213,9 @@ function RaceCard({
                         display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap',
                         ...(race.status === 'Cancelled' && { textDecoration: 'line-through' }),
                     }}>
-                        <DirectionsRunIcon sx={{ fontSize: 20, color: theme.palette.primary.main }} />
+                        <Box component="span" sx={{ fontSize: 20, color: 'primary.main', display: 'flex' }}>
+                            {getActivityIcon(race.activityType ?? activityType ?? 'TrailRunning')}
+                        </Box>
                         {loc(race.name, race.nameEn)}
                         {race.status === 'Cancelled' && (
                             <Chip label={t('races.statusCancelled')} size="small" color="error" sx={{ ml: 0.5, fontWeight: 600 }} />
@@ -1278,6 +1281,11 @@ function RaceCard({
                     {race.distanceLabel && (
                         <Tooltip title={t('races.raceDistance', { defaultValue: 'Race distance' })}>
                             <Chip icon={<StraightenIcon />} label={race.distanceLabel} size="small" color="primary" variant="outlined" />
+                        </Tooltip>
+                    )}
+                    {race.activityType && (
+                        <Tooltip title={t(`races.activityTypes.${race.activityType}`, { defaultValue: race.activityType })}>
+                            <Chip icon={<Box component="span" sx={{ display: 'flex', pl: 0.5 }}>{getActivityIcon(race.activityType)}</Box>} label={race.activityType} size="small" variant="outlined" />
                         </Tooltip>
                     )}
                     {raceDateTime && (
