@@ -15,6 +15,7 @@ interface UseAdminShortcutsOptions {
 
 // g+letter → page mapping (mnemonic letters match the underlined char in the sidebar label)
 export const GO_TO_PAGES: Record<string, PageKey> = {
+    g: 'dashboard', // g+g → home
     e: 'events',
     t: 'trails',
     l: 'locations',

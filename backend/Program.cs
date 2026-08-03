@@ -635,6 +635,7 @@ app.MapGet("/api/v1/admin/health", [Authorize] () => Results.Ok(new
     service = "backend 1",
     area = "admin",
     version = "v1",
+    gitHash = Environment.GetEnvironmentVariable("GIT_HASH") ?? "unknown",
     timestampUtc = DateTime.UtcNow
 }))
 .WithName("AdminHealth");
