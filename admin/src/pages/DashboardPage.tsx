@@ -11,9 +11,11 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import EventIcon from '@mui/icons-material/Event';
 import RouteIcon from '@mui/icons-material/Route';
+import HistoryIcon from '@mui/icons-material/History';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import BuildIcon from '@mui/icons-material/Build';
+import type { ChangeLogDto } from '../components/ChangeLogList';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import { apiFetch } from '../hooks/api';
 import type { PageKey } from '../types/PageKey';
@@ -47,6 +49,19 @@ interface AdminHealth {
     status: string;
     gitHash: string;
     timestampUtc: string;
+}
+
+function getTrailHealthScore(trail: Trail): number {
+    const checks = [
+        !!trail.description && trail.description.trim().length > 0,
+        trail.startLatitude != null && trail.startLongitude != null,
+        trail.elevationGain > 0 || trail.elevationLoss > 0,
+        trail.locations.length > 0,
+        trail.length > 0,
+        trail.status === 'Published',
+        trail.startLatitude == null ? true : trail.terrainType != null,
+    ];
+    return Math.round((checks.filter(Boolean).length / checks.length) * 100);
 }
 
 function getEventHealthScore(event: EventSummaryDto): number {
@@ -137,6 +152,8 @@ export default function DashboardPage({ onNewEvent, onUploadTrail, onNavigate }:
     const [eventsLoading, setEventsLoading] = useState(true);
     const [trails, setTrails] = useState<Trail[]>([]);
     const [trailsLoading, setTrailsLoading] = useState(true);
+    const [changelog, setChangelog] = useState<ChangeLogDto[]>([]);
+    const [changelogLoading, setChangelogLoading] = useState(true);
     const [backendHealth, setBackendHealth] = useState<AdminHealth | null>(null);
 
     const frontendHash = import.meta.env.VITE_GIT_HASH ?? 'unknown';
@@ -158,6 +175,11 @@ export default function DashboardPage({ onNewEvent, onUploadTrail, onNavigate }:
             .then(setTrails)
             .catch(() => {})
             .finally(() => setTrailsLoading(false));
+
+        apiFetch<ChangeLogDto[]>('/api/v1/admin/history?limit=5')
+            .then(setChangelog)
+            .catch(() => {})
+            .finally(() => setChangelogLoading(false));
 
         apiFetch<AdminHealth>('/api/v1/admin/health')
             .then(setBackendHealth)
@@ -204,6 +226,38 @@ export default function DashboardPage({ onNewEvent, onUploadTrail, onNavigate }:
                 <Typography variant="body2" color="text.secondary">{todayLabel}</Typography>
             </Box>
 
+            {/* Stats strip */}
+            <Grid container spacing={2} mb={3}>
+                {[
+                    { label: 'Total Events', value: eventsLoading ? null : activeEvents.length, onClick: () => onNavigate('events') },
+                    { label: 'Total Trails', value: trailsLoading ? null : trails.length, onClick: () => onNavigate('trails') },
+                    { label: 'Events Needing Attention', value: eventsLoading ? null : needsAttention.length, onClick: () => onNavigate('event-health'), warn: needsAttention.length > 0 },
+                    { label: 'Trail Health Issues', value: trailsLoading ? null : trails.filter(t => getTrailHealthScore(t) < 50).length, onClick: () => onNavigate('health'), warn: trails.filter(t => getTrailHealthScore(t) < 50).length > 0 },
+                ].map(stat => (
+                    <Grid item xs={6} md={3} key={stat.label}>
+                        <Paper
+                            elevation={1}
+                            component="button"
+                            onClick={stat.onClick}
+                            sx={{
+                                width: '100%', p: 2, border: 'none', cursor: 'pointer',
+                                background: 'white', textAlign: 'left',
+                                borderLeft: '3px solid',
+                                borderColor: stat.warn ? 'warning.main' : 'primary.main',
+                                transition: 'box-shadow 0.15s',
+                                '&:hover': { boxShadow: 3 },
+                            }}
+                        >
+                            <Typography variant="caption" color="text.secondary" display="block">{stat.label}</Typography>
+                            {stat.value === null
+                                ? <Skeleton width={40} height={36} />
+                                : <Typography variant="h4" fontWeight="bold" color={stat.warn ? 'warning.main' : 'text.primary'}>{stat.value}</Typography>
+                            }
+                        </Paper>
+                    </Grid>
+                ))}
+            </Grid>
+
             {/* Quick Actions */}
             <Typography variant="overline" color="text.secondary" fontWeight={600} letterSpacing={1}>
                 Quick Actions
@@ -246,10 +300,10 @@ export default function DashboardPage({ onNewEvent, onUploadTrail, onNavigate }:
                 </Grid>
             </Grid>
 
-            {/* Three-column row: Upcoming Events | Recent Trails | Event Health */}
+            {/* Four-column row: Upcoming Events | Recent Trails | Event Health | Recent Activity */}
             <Grid container spacing={3}>
                 {/* Upcoming Events */}
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12} md={3}>
                     <Paper elevation={2} sx={{ p: 2.5, height: '100%', display: 'flex', flexDirection: 'column' }}>
                         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1}>
                             <Stack direction="row" alignItems="center" gap={1}>
@@ -305,7 +359,7 @@ export default function DashboardPage({ onNewEvent, onUploadTrail, onNavigate }:
                 </Grid>
 
                 {/* Recently Updated Trails */}
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12} md={3}>
                     <Paper elevation={2} sx={{ p: 2.5, height: '100%', display: 'flex', flexDirection: 'column' }}>
                         <Stack direction="row" alignItems="center" gap={1} mb={1}>
                             <RouteIcon sx={{ color: 'secondary.main', fontSize: 20 }} />
@@ -357,7 +411,7 @@ export default function DashboardPage({ onNewEvent, onUploadTrail, onNavigate }:
                 </Grid>
 
                 {/* Event Health */}
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12} md={3}>
                     <Paper elevation={2} sx={{ p: 2.5, height: '100%', display: 'flex', flexDirection: 'column' }}>
                         <Stack direction="row" alignItems="center" gap={1} mb={1}>
                             <WarningAmberIcon sx={{ color: 'warning.main', fontSize: 20 }} />
@@ -426,6 +480,52 @@ export default function DashboardPage({ onNewEvent, onUploadTrail, onNavigate }:
                         )}
                         <Box mt={1.5} textAlign="right">
                             <Button size="small" onClick={() => onNavigate('event-health')}>Full health report →</Button>
+                        </Box>
+                    </Paper>
+                </Grid>
+
+                {/* Recent Activity */}
+                <Grid item xs={12} md={3}>
+                    <Paper elevation={2} sx={{ p: 2.5, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                        <Stack direction="row" alignItems="center" gap={1} mb={1}>
+                            <HistoryIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
+                            <Typography variant="h6" fontWeight={600}>Recent Activity</Typography>
+                        </Stack>
+                        {changelogLoading ? (
+                            <Stack gap={1}>{[1, 2, 3, 4, 5].map(i => <Skeleton key={i} variant="rounded" height={40} />)}</Stack>
+                        ) : changelog.length === 0 ? (
+                            <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Typography variant="body2" color="text.secondary">No recent activity</Typography>
+                            </Box>
+                        ) : (
+                            <List disablePadding sx={{ flexGrow: 1 }}>
+                                {changelog.map((entry, i) => (
+                                    <ListItem key={entry.id} disablePadding divider={i < changelog.length - 1} sx={{ py: 0.75 }}>
+                                        <ListItemText
+                                            primary={
+                                                <Stack direction="row" alignItems="center" gap={0.75}>
+                                                    <Chip
+                                                        label={entry.action}
+                                                        size="small"
+                                                        color={entry.action === 'Create' ? 'success' : entry.action === 'Delete' ? 'error' : 'primary'}
+                                                        variant="outlined"
+                                                        sx={{ fontSize: '0.65rem', height: 18, flexShrink: 0 }}
+                                                    />
+                                                    <Typography variant="body2" noWrap sx={{ fontSize: '0.8rem' }}>{entry.description}</Typography>
+                                                </Stack>
+                                            }
+                                            secondary={
+                                                <Typography variant="caption" color="text.secondary">
+                                                    {formatRelative(entry.timestampUtc)}
+                                                </Typography>
+                                            }
+                                        />
+                                    </ListItem>
+                                ))}
+                            </List>
+                        )}
+                        <Box mt={1.5} textAlign="right">
+                            <Button size="small" onClick={() => onNavigate('trails')}>View full history →</Button>
                         </Box>
                     </Paper>
                 </Grid>
