@@ -1012,6 +1012,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                         downloadIcs({
                                                             title: loc(comp.name, comp.nameEn) ?? comp.name,
                                                             date: (comp.displayDate ?? comp.nextEditionDate)!,
+                                                            endDate: comp.endDisplayDate ?? undefined,
                                                             location: comp.locationName ?? undefined,
                                                             url: `https://hlaupadagskra.is/events/${comp.slug}`,
                                                         });

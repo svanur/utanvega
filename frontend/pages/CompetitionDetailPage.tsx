@@ -807,7 +807,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             </Button>
                         )}
                         {isEnabled('calendar_integration', false) && (event.displayDate ?? event.nextEditionDate) && event.status !== 'Cancelled' && event.daysUntil != null && event.daysUntil >= 0 && (
-                            <AddToCalendarButton event={event} t={t} />
+                            <AddToCalendarButton event={event} endDate={primaryEdition?.endDate ?? event.endDisplayDate} t={t} />
                         )}
                         {isEnabled('directions_to_trailhead') && mapPin && (
                             <Tooltip title={t('races.directionsToEvent', 'Directions to event')} arrow>
@@ -1113,12 +1113,13 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     );
 }
 
-function AddToCalendarButton({ event, t }: { event: { name: string; displayDate?: string | null; nextEditionDate?: string | null; locationName?: string | null; slug: string; description?: string | null }; t: (key: string, opts?: Record<string, unknown>) => string }) {
+function AddToCalendarButton({ event, endDate, t }: { event: { name: string; displayDate?: string | null; nextEditionDate?: string | null; locationName?: string | null; slug: string; description?: string | null }; endDate?: string | null; t: (key: string, opts?: Record<string, unknown>) => string }) {
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const date = (event.displayDate ?? event.nextEditionDate)!;
     const calEvent = {
         title: event.name,
         date,
+        endDate: endDate ?? undefined,
         location: event.locationName ?? undefined,
         description: event.description ?? undefined,
         url: `${window.location.origin}/events/${event.slug}`,
