@@ -111,6 +111,8 @@ interface EventListProps {
   onNotify: (message: ReactNode, severity?: 'success' | 'error') => void;
   initialEventId?: string | null;
   onEventIdConsumed?: () => void;
+  initialCreate?: boolean;
+  onInitialCreateConsumed?: () => void;
 }
 
 interface EventFormState {
@@ -1023,7 +1025,7 @@ function TrailStartPicker({ trailsWithCoords, onPick }: TrailPickerProps) {
 
 const PUBLIC_SITE_URL = ((import.meta.env.VITE_PUBLIC_SITE_URL ?? '') as string).replace(/\/$/, '');
 
-export default function EventList({ onNotify, initialEventId, onEventIdConsumed }: EventListProps) {
+export default function EventList({ onNotify, initialEventId, onEventIdConsumed, initialCreate, onInitialCreateConsumed }: EventListProps) {
   const {
     events,
     loading,
@@ -1155,6 +1157,13 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
     onEventIdConsumed?.();
   // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount after events load
   }, [initialEventId, loading]);
+
+  useEffect(() => {
+    if (!initialCreate || loading) return;
+    openCreateEvent();
+    onInitialCreateConsumed?.();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount after events load
+  }, [initialCreate, loading]);
 
   // Scroll to the deep-linked row after it has actually rendered (expandedEventId is set)
   useEffect(() => {

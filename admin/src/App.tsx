@@ -1,4 +1,5 @@
 import { Box, CssBaseline, ThemeProvider, createTheme, AppBar, Toolbar, Typography, Container, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Snackbar, Alert, Button, CircularProgress, Link, IconButton, Tooltip } from '@mui/material';
+import HomeIcon from '@mui/icons-material/Home';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
@@ -30,6 +31,7 @@ import TagManagement from './pages/TagManagement';
 import AnalyticsPage from './pages/AnalyticsPage';
 import FeatureFlagsPage from './pages/FeatureFlagsPage';
 import EventList from './pages/EventList';
+import DashboardPage from './pages/DashboardPage';
 import HeroThemesPage from './pages/HeroThemesPage';
 import SponsorsPage from './pages/SponsorsPage';
 import OrganizersPage from './pages/OrganizersPage';
@@ -63,26 +65,27 @@ const DRAWER_COLLAPSED = 56;
 
 
 const PAGE_PATHS: Record<PageKey, string> = {
+  dashboard: '/',
+  events: '/events',
   trails: '/trails',
   locations: '/locations',
+  organizers: '/organizers',
   health: '/health',
   'event-health': '/event-health',
   'edition-health': '/edition-health',
+  'translation-health': '/translation-health',
   map: '/map',
   tags: '/tags',
   analytics: '/analytics',
-  events: '/',
   features: '/features',
   'hero-themes': '/hero-themes',
   'sponsors': '/sponsors',
   'pools': '/pools',
-  'organizers': '/organizers',
-  'translation-health': '/translation-health',
 };
 
 function pathToPage(pathname: string): PageKey {
   const entry = Object.entries(PAGE_PATHS).find(([, path]) => path === pathname);
-  return (entry?.[0] as PageKey) ?? 'events';
+  return (entry?.[0] as PageKey) ?? 'dashboard';
 }
 
 function MnemonicLabel({ label, mnemonic }: { label: string; mnemonic?: string }) {
@@ -109,6 +112,7 @@ function AdminContent() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [selectedTrailId, setSelectedTrailId] = useState<string | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [createEventIntent, setCreateEventIntent] = useState(false);
   const [searchTerm, setSearchTerm] = useState<string | null>(null);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [pendingNav, setPendingNav] = useState(false);
@@ -193,7 +197,7 @@ function AdminContent() {
           </IconButton>
           <Box
             component="button"
-            onClick={() => setCurrentPage('events')}
+            onClick={() => setCurrentPage('dashboard')}
             sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1, background: 'none', border: 'none', cursor: 'pointer', p: 0, color: 'inherit' }}
           >
             <img src="/images/hlaupadagskra.avif" alt="Hlaupadagskra logo" style={{ height: 32 }} />
@@ -252,6 +256,7 @@ function AdminContent() {
         <Box sx={{ overflow: 'auto' }}>
           <List>
             {[
+              { key: 'dashboard' as const, icon: <HomeIcon />, label: 'Home' },
               { key: 'events' as const, icon: <EmojiEventsIcon />, label: 'Events' },
               { key: 'trails' as const, icon: <DashboardIcon />, label: 'Trails' },
               { key: 'locations' as const, icon: <LocationOnIcon />, label: 'Locations' },
@@ -296,7 +301,13 @@ function AdminContent() {
       <Box component="main" sx={{ flexGrow: 1, p: 3, transition: 'margin-left 0.2s' }}>
         <Toolbar />
         <Container maxWidth={false}>
-          {currentPage === 'trails' ? (
+          {currentPage === 'dashboard' ? (
+            <DashboardPage
+              onNewEvent={() => { setCreateEventIntent(true); setCurrentPage('events'); }}
+              onUploadTrail={() => setIsUploadOpen(true)}
+              onNavigate={setCurrentPage}
+            />
+          ) : currentPage === 'trails' ? (
             <TrailList key={`${refreshTrigger}-${selectedTrailId}-${searchTerm}`} onNotify={notify} initialTrailId={selectedTrailId} initialSearch={searchTerm} />
           ) : currentPage === 'health' ? (
             <TrailHealth onEditTrail={(id) => { setSelectedTrailId(id); setCurrentPage('trails'); }} onNotify={notify} />
@@ -313,7 +324,13 @@ function AdminContent() {
           ) : currentPage === 'features' ? (
             <FeatureFlagsPage onNotify={notify} />
           ) : currentPage === 'events' ? (
-            <EventList initialEventId={selectedEventId} onEventIdConsumed={() => setSelectedEventId(null)} onNotify={notify} />
+            <EventList
+              initialEventId={selectedEventId}
+              onEventIdConsumed={() => setSelectedEventId(null)}
+              initialCreate={createEventIntent}
+              onInitialCreateConsumed={() => setCreateEventIntent(false)}
+              onNotify={notify}
+            />
           ) : currentPage === 'hero-themes' ? (
             <HeroThemesPage />
           ) : currentPage === 'sponsors' ? (
