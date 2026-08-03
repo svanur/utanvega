@@ -143,7 +143,7 @@ if (!string.IsNullOrEmpty(rawConnectionString) && rawConnectionString.Contains("
         string host = hostAndPort[0];
         string port = hostAndPort.Length > 1 ? hostAndPort[1] : "5432";
 
-        var migrationExtra = isMigrateMode ? ";Pooling=false;CommandTimeout=120" : "";
+        var migrationExtra = isMigrateMode ? ";Pooling=false;CommandTimeout=120" : ";Keepalive=30;Connection Idle Lifetime=300;Connection Pruning Interval=10";
         connectionString = $"Host={host};Port={port};Database={database};Username={user};Password={password};Include Error Detail=true{migrationExtra}";
         Log.Information("Successfully parsed connection string. Host={Host}, Port={Port}, Database={Database}", host, port, database);
     }
