@@ -2595,7 +2595,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                     {event.nextEditionDate ? (
                       <Box>
                         <Typography variant="body2">{event.nextEditionDate}</Typography>
-                        {formatDaysUntil(event.daysUntil) && (
+                        {formatDaysUntil(event.daysUntil) && (event.daysUntil == null || event.daysUntil >= 0) && (
                           <Chip
                             label={formatDaysUntil(event.daysUntil)}
                             size="small"
