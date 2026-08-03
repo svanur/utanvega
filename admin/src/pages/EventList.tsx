@@ -234,10 +234,11 @@ const ACTIVITY_TYPE_COLORS: Record<ActivityType, 'primary' | 'secondary' | 'warn
   FunRun: 'secondary',
   ObstacleCourse: 'error',
   CrossCountryRun: 'primary',
+  Swim: 'info',
   Social: 'default',
   Other: 'default',
 };
-const ACTIVITY_TYPES: ActivityType[] = ['TrailRunning', 'Running', 'Cycling', 'Hiking', 'FunRun', 'ObstacleCourse', 'CrossCountryRun', 'Social', 'Other'];
+const ACTIVITY_TYPES: ActivityType[] = ['TrailRunning', 'Running', 'Cycling', 'Hiking', 'FunRun', 'ObstacleCourse', 'CrossCountryRun', 'Swim', 'Social', 'Other'];
 const EVENT_STATUSES: EventStatus[] = ['Unconfirmed', 'Confirmed', 'Cancelled', 'Hidden', 'Unlisted'];
 const REGISTRATION_STATUSES: RegistrationStatus[] = ['NotStarted', 'Open', 'Closed'];
 const RACE_STATUSES: RaceStatus[] = ['Active', 'Completed', 'Cancelled', 'Hidden'];
@@ -265,6 +266,7 @@ const ACTIVITY_ICONS: Record<string, string> = {
   FunRun: '🎊',
   ObstacleCourse: '🧗',
   CrossCountryRun: '🌾',
+  Swim: '🏊',
   Social: '🎉',
   Other: '🏅',
 };
