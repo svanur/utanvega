@@ -844,6 +844,7 @@ function SortableRaceItem({ race, onEdit, onDuplicate, onDelete, onCycleTicketSt
               </Tooltip>
             )}
             {race.distanceLabel && <Chip label={race.distanceLabel} size="small" variant="outlined" />}
+            {race.activityType && <Chip label={`${ACTIVITY_ICONS[race.activityType] ?? '🏅'} ${race.activityType}`} size="small" variant="outlined" color={ACTIVITY_TYPE_COLORS[race.activityType] ?? 'default'} />}
             <Chip label={race.status} size="small" color={getRaceStatusColor(race.status)} />
             <Tooltip title={ticketLoading ? 'Updating…' : 'Click to cycle ticket status'}>
               <Chip label={race.ticketStatus} size="small" color={getTicketStatusColor(race.ticketStatus)} variant="outlined" onClick={ticketLoading ? undefined : onCycleTicketStatus} disabled={ticketLoading} sx={{ cursor: ticketLoading ? 'default' : 'pointer' }} />
