@@ -2111,6 +2111,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
     setShowBulkMissingDialog(false);
     setBulkMissingItems([]);
     await refreshEvents();
+    await refreshExpandedEvent();
     if (failed > 0) {
       onNotify(`Created ${succeeded} edition${succeeded !== 1 ? 's' : ''}, ${failed} failed`, 'error');
     } else {

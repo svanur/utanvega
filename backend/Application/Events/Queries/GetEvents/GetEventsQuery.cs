@@ -48,8 +48,10 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
         return events.Select(e =>
         {
             var nextDate = ResolveNextDate(e, today);
-            // True only when an actual edition record with a future date exists — does not count schedule-rule projections
-            var hasFutureEdition = e.Editions.Any(ed => (ed.EndDate ?? ed.Date).HasValue && (ed.EndDate ?? ed.Date)!.Value >= today);
+            // True when a future edition exists — either with a specific date, or a dateless edition for the current year or later
+            var hasFutureEdition = e.Editions.Any(ed =>
+                ((ed.EndDate ?? ed.Date).HasValue && (ed.EndDate ?? ed.Date)!.Value >= today) ||
+                (!ed.Date.HasValue && ed.Year.HasValue && ed.Year.Value >= today.Year));
 
             // An edition is "ongoing" when it has started (Date <= today) but not yet ended (EndDate ?? Date >= today)
             var ongoingEdition = e.Editions.FirstOrDefault(ed =>
