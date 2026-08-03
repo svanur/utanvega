@@ -120,6 +120,7 @@ export interface EventSummaryDto {
     isMountainRace: boolean;
     terrainType: string | null;
     hasFutureEdition: boolean;
+    endDisplayDate: string | null;
     translationHashes?: Record<string, string>;
 }
 

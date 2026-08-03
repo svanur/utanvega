@@ -97,7 +97,7 @@ type PreparedEdition = EventEditionDto & {
 import { ACTIVITY_EMOJI } from '../constants/activityEmoji';
 import { googleCalendarUrl, outlookCalendarUrl, downloadIcs } from '../utils/calendarLinks';
 import EventDateBadge from '../components/EventDateBadge';
-import { formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor } from '../utils/eventUtils';
+import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor } from '../utils/eventUtils';
 import { getTicketStatusColor } from '../utils/ticketStatus';
 
 type RaceDayChecklistKey = 'bib' | 'shoes' | 'gels' | 'goodMood';
@@ -123,6 +123,8 @@ function formatScheduleDescription(
     rule: ScheduleRule | null,
     upcomingCount: number,
     t: (key: string, opts?: Record<string, unknown>) => string,
+    endDate?: string | null,
+    startDate?: string | null,
 ): string | null {
     if (!rule) return null;
 
@@ -154,7 +156,7 @@ function formatScheduleDescription(
 
     if (rule.type === 'Fixed' && rule.date) {
         return t('races.scheduleFixed', {
-            date: formatNextDate(rule.date, t),
+            date: formatDateRange(startDate ?? rule.date, endDate, t),
         });
     }
 
@@ -211,7 +213,7 @@ function EditionMeta({
                 {!hideMeta && edition.date && (
                     <Chip
                         icon={<CalendarTodayIcon />}
-                        label={formatNextDate(edition.date, t)}
+                        label={formatDateRange(edition.date, edition.endDate, t)}
                         size="small"
                         variant="outlined"
                     />
@@ -661,10 +663,13 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                     )}
 
                     {event.status !== 'Cancelled' && (() => {
+                        const editionEndDate = primaryEdition?.endDate ?? event.endDisplayDate;
                         const desc = formatScheduleDescription(
                             event.scheduleRule,
                             event.upcomingDates?.length ?? 0,
                             t,
+                            editionEndDate,
+                            primaryEdition?.date ?? event.displayDate,
                         );
                         return desc ? (
                             <Typography variant="body2" sx={{ mt: 1.5, fontStyle: 'italic', color: 'text.secondary' }}>
@@ -680,9 +685,9 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 {t(event.daysUntil != null && event.daysUntil < 0 ? 'races.lastRace' : 'races.nextRace')}
                             </Typography>
                             <Typography variant="body1" fontWeight={600}>
-                                {formatNextDate((event.displayDate ?? event.nextEditionDate)!, t)}
+                                {formatDateRange((event.displayDate ?? event.nextEditionDate)!, primaryEdition?.endDate ?? event.endDisplayDate, t)}
                             </Typography>
-                            <EventDateBadge dateStr={(event.displayDate ?? event.nextEditionDate)!} />
+                            <EventDateBadge dateStr={(event.displayDate ?? event.nextEditionDate)!} endDateStr={primaryEdition?.endDate ?? event.endDisplayDate} />
                         </Box>
                     )}
 

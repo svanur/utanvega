@@ -51,6 +51,11 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
             // True only when an actual edition record with a future date exists — does not count schedule-rule projections
             var hasFutureEdition = e.Editions.Any(ed => (ed.EndDate ?? ed.Date).HasValue && (ed.EndDate ?? ed.Date)!.Value >= today);
 
+            // An edition is "ongoing" when it has started (Date <= today) but not yet ended (EndDate ?? Date >= today)
+            var ongoingEdition = e.Editions.FirstOrDefault(ed =>
+                ed.Date.HasValue && ed.Date.Value <= today &&
+                (ed.EndDate ?? ed.Date).HasValue && (ed.EndDate ?? ed.Date)!.Value >= today);
+
             // Check for recently-past editions (up to 3 days ago)
             // so events with schedule rules still show as "recently completed"
             var mostRecentPast = e.Editions
@@ -60,12 +65,18 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 .FirstOrDefault();
 
             var recentlyCompleted = e.Status != EventStatus.Cancelled
+                && ongoingEdition == null
                 && mostRecentPast.HasValue
                 && (today.DayNumber - mostRecentPast.Value.DayNumber) <= 3;
 
             int? daysUntil;
             DateOnly? displayDate;
-            if (recentlyCompleted)
+            if (ongoingEdition != null)
+            {
+                daysUntil = 0;
+                displayDate = today;
+            }
+            else if (recentlyCompleted)
             {
                 daysUntil = mostRecentPast!.Value.DayNumber - today.DayNumber;
                 displayDate = mostRecentPast.Value;
@@ -82,12 +93,13 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
             }
 
             // Determine the relevant edition for distances/registration
-            var relevantEdition = recentlyCompleted
-                ? e.Editions.FirstOrDefault(ed => ed.Date == mostRecentPast)
-                : e.Editions
-                    .Where(ed => ed.Date.HasValue && ed.Date.Value >= today)
-                    .OrderBy(ed => ed.Date)
-                    .FirstOrDefault();
+            var relevantEdition = ongoingEdition
+                ?? (recentlyCompleted
+                    ? e.Editions.FirstOrDefault(ed => ed.Date == mostRecentPast)
+                    : e.Editions
+                        .Where(ed => ed.Date.HasValue && ed.Date.Value >= today)
+                        .OrderBy(ed => ed.Date)
+                        .FirstOrDefault());
 
             var relevantRaces = relevantEdition?.Races
                 .Where(r => r.Status != RaceStatus.Cancelled)

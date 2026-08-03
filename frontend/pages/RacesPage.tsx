@@ -1080,7 +1080,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                 <Typography variant="body2" color="text.secondary" noWrap>
                                                                     {formatDateRange((comp.displayDate ?? comp.nextEditionDate)!, comp.endDisplayDate, t)}
                                                                 </Typography>
-                                                                <EventDateBadge dateStr={(comp.displayDate ?? comp.nextEditionDate)!} />
+                                                                <EventDateBadge dateStr={(comp.displayDate ?? comp.nextEditionDate)!} endDateStr={comp.endDisplayDate} />
                                                             </>
                                                         )}
                                                         {comp.daysUntil != null && (
