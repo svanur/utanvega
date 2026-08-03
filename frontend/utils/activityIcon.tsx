@@ -5,7 +5,8 @@ import DirectionsBikeIcon from '@mui/icons-material/DirectionsBike';
 import CelebrationIcon from '@mui/icons-material/Celebration';
 import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
 import GrassIcon from '@mui/icons-material/Grass';
-import CampaignIcon from '@mui/icons-material/Campaign';
+import PeopleIcon from '@mui/icons-material/People';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import RouteIcon from '@mui/icons-material/Route';
 import PoolIcon from '@mui/icons-material/Pool';
 import { Box, Tooltip } from '@mui/material';
@@ -21,7 +22,8 @@ export function getActivityIcon(type: string) {
         case 'ObstacleCourse': return <FitnessCenterIcon fontSize="small" />;
         case 'CrossCountryRun': return <GrassIcon fontSize="small" />;
         case 'Swim': return <PoolIcon fontSize="small" />;
-        case 'Advertisement': return <CampaignIcon fontSize="small" />;
+        case 'Social': return <PeopleIcon fontSize="small" />;
+        case 'Other': return <HelpOutlineIcon fontSize="small" />;
         default: return <RouteIcon fontSize="small" />;
     }
 }
