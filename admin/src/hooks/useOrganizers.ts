@@ -9,9 +9,11 @@ export interface OrganizerDto {
     email: string | null;
     website: string | null;
     description: string | null;
+    descriptionEn: string | null;
     contactName: string | null;
     createdAt: string;
     updatedAt: string | null;
+    translationHashes?: Record<string, string>;
 }
 
 export interface CreateOrganizerInput {
@@ -21,6 +23,7 @@ export interface CreateOrganizerInput {
     email?: string;
     website?: string;
     description?: string;
+    descriptionEn?: string;
     contactName?: string;
 }
 

@@ -4,11 +4,14 @@ import { API_URL, Trail } from './useTrails';
 export interface Location {
     id: string;
     name: string;
+    nameEn?: string | null;
     slug: string;
     description?: string;
+    descriptionEn?: string | null;
     type: string;
     parentId?: string;
     parentName?: string;
+    parentNameEn?: string;
     latitude?: number;
     longitude?: number;
     radius?: number;
@@ -19,6 +22,7 @@ export interface Location {
 export interface LocationTreeNode {
     id: string;
     name: string;
+    nameEn: string | null;
     slug: string;
     type: string;
     trailsCount: number;

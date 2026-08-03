@@ -5,14 +5,18 @@ using Utanvega.Backend.Core.Entities;
 public record LocationDto(
     Guid Id,
     string Name,
+    string? NameEn,
     string Slug,
     string? Description,
+    string? DescriptionEn,
     string Type,
     Guid? ParentId,
     string? ParentName,
+    string? ParentNameEn,
     double? Latitude,
     double? Longitude,
     double? Radius,
     int ChildrenCount,
-    int TrailsCount
+    int TrailsCount,
+    Dictionary<string, string>? TranslationHashes = null
 );

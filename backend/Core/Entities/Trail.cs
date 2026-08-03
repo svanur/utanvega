@@ -11,6 +11,7 @@ public enum ActivityType
     FunRun,
     ObstacleCourse,
     CrossCountryRun,
+    Swim,
     Social,
     Other,
 }
@@ -58,8 +59,11 @@ public class Trail
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get; set; } = string.Empty;
+    public string? NameEn { get; set; }
     public string Slug { get; set; } = string.Empty;
     public string? Description { get; set; }
+    public string? DescriptionEn { get; set; }
+    public string? TranslationHashes { get; set; }
     
     public ActivityType ActivityTypeId { get; set; }
     public TrailStatus Status { get; set; } = TrailStatus.Draft;

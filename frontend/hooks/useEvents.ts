@@ -20,6 +20,7 @@ export interface SocialLink {
 export interface SeriesRaceDto {
     raceId: string;
     raceName: string;
+    raceNameEn: string | null;
     dateOfRace: string | null;
     startTime: string | null;
     distanceLabel: string | null;
@@ -30,14 +31,19 @@ export interface SeriesRaceDto {
 export interface EventSummary {
     id: string;
     name: string;
+    nameEn: string | null;
     slug: string;
     description: string | null;
+    descriptionEn: string | null;
     type: string;
     activityType: string;
+    activityTypes: string[] | null;
     status: string;
     organizerName: string | null;
+    organizerNameEn: string | null;
     organizerWebsite: string | null;
     alertMessage: string | null;
+    alertMessageEn: string | null;
     alertSeverity: string | null;
     locationId: string | null;
     locationName: string | null;
@@ -61,6 +67,7 @@ export interface EventSummary {
     gpxPointLat: number | null;
     gpxPointLng: number | null;
     isMountainRace: boolean;
+    endDisplayDate: string | null;
 }
 
 export interface RaceDto {
@@ -70,17 +77,21 @@ export interface RaceDto {
     trailName: string | null;
     trailSlug: string | null;
     name: string;
+    nameEn: string | null;
     distanceLabel: string | null;
     cutoffMinutes: number | null;
     description: string | null;
+    descriptionEn: string | null;
     status: string;
     sortOrder: number;
     ticketStatus: string | null;
     maxParticipants: number | null;
     itraPoints: number | null;
     certifiedBy: string | null;
+    certifiedByEn: string | null;
     prizeMoney: number | null;
     championshipCategory: string | null;
+    championshipCategoryEn: string | null;
     dateOfRace: string | null;
     startTime: string | null;
     trailDistanceMeters: number | null;
@@ -88,6 +99,7 @@ export interface RaceDto {
     trailTerrainType: string | null;
     trailDifficulty: string | null;
     trailActivityType: string | null;
+    activityType: string | null;
 }
 
 export interface EventEditionDto {
@@ -95,10 +107,13 @@ export interface EventEditionDto {
     eventId: string;
     year: number | null;
     date: string | null;
+    endDate: string | null;
     title: string | null;
+    titleEn: string | null;
     registrationUrl: string | null;
     resultsUrl: string | null;
     notes: string | null;
+    notesEn: string | null;
     registrationStatus: string | null;
     trailId: string | null;
     trailName: string | null;
@@ -142,11 +157,13 @@ export function useEventBySlug(slug: string | undefined) {
 
 export interface CalendarEvent {
     name: string;
+    nameEn: string | null;
     slug: string;
     locationName: string | null;
     editionTitle: string | null;
     raceCount: number;
     type: string;
+    activityTypes: string[] | null;
 }
 
 export interface CalendarDay {

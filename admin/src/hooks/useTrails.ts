@@ -4,8 +4,11 @@ import { apiFetch } from './api';
 export type Trail = {
     id: string;
     name: string;
+    nameEn?: string | null;
     description?: string;
+    descriptionEn?: string | null;
     slug: string;
+    translationHashes?: Record<string, string>;
     length: number;
     elevationGain: number;
     elevationLoss: number;

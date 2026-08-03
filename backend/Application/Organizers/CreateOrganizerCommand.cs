@@ -11,7 +11,8 @@ public record CreateOrganizerCommand(
     string? Email,
     string? Website,
     string? Description,
-    string? ContactName
+    string? ContactName,
+    string? DescriptionEn = null
 ) : IRequest<Guid>;
 
 public class CreateOrganizerCommandHandler : IRequestHandler<CreateOrganizerCommand, Guid>
@@ -33,6 +34,7 @@ public class CreateOrganizerCommandHandler : IRequestHandler<CreateOrganizerComm
             Email = request.Email,
             Website = request.Website,
             Description = request.Description,
+            DescriptionEn = request.DescriptionEn,
             ContactName = request.ContactName,
         };
 

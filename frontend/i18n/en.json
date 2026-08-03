@@ -1263,6 +1263,7 @@
             "FunRun": "Fun Run",
             "ObstacleCourse": "Obstacle Course",
             "CrossCountryRun": "Cross Country",
+            "Swim": "Swimming",
             "Social": "Social"
         },
         "eventTypes": {

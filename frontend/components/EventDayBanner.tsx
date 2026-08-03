@@ -3,11 +3,13 @@ import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
 import { Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useEventDayBanner } from '../hooks/useEventDayBanner';
+import { useLocalize } from '../utils/localize';
 
 const MAX_VISIBLE = 4;
 
 export default function EventDayBanner() {
     const { t } = useTranslation();
+    const loc = useLocalize();
     const { days, loading } = useEventDayBanner();
 
     if (loading) {
@@ -59,7 +61,7 @@ export default function EventDayBanner() {
                                 key={event.slug}
                                 label={
                                     <span>
-                                        {event.name}
+                                        {loc(event.name, event.nameEn) ?? event.name}
                                         {event.locationName && (
                                             <Typography component="span" variant="inherit" sx={{ opacity: 0.6, ml: 0.5 }}>
                                                 · {event.locationName}

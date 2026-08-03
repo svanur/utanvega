@@ -31,6 +31,7 @@ import VideocamIcon from '@mui/icons-material/Videocam';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Trail } from '../hooks/useTrails';
+import { useLocalize } from '../utils/localize';
 import ElevationSparkline from './ElevationSparkline';
 import QRCodeShare from './QRCodeShare';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
@@ -83,6 +84,7 @@ const getTerrainIcon = (type: string) => {
 export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, onTagClick, isHiding, isFavorited: isFavoritedProp, compact, disableGestures }) => {
     const navigate = useNavigate();
     const { t } = useTranslation();
+    const loc = useLocalize();
     const { isEnabled } = useFeatureFlags();
     const loginEnabled = useLoginEnabled();
     const locationsPageEnabled = isEnabled('locations_page');
@@ -286,7 +288,7 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                                         <Tooltip title={t(`difficulty.${trail.activityType.charAt(0).toLowerCase() + trail.activityType.slice(1)}`, trail.activityType)}>
                                             <Box sx={{ color: 'text.secondary', pt: 0.3, flexShrink: 0 }}>{getActivityIcon(trail.activityType)}</Box>
                                         </Tooltip>
-                                        <Typography variant="subtitle1" component="div" fontWeight="bold" sx={{ minWidth: 0 }}>
+                                        <Typography variant="subtitle1" component="div" fontWeight="bold" sx={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', sm: 'nowrap' } }}>
                                             {trail.name}
                                         </Typography>
                                     </Stack>
@@ -384,7 +386,7 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                             .map(tag => (
                                 <Chip
                                     key={tag.slug}
-                                    label={tag.name}
+                                    label={loc(tag.name, tag.nameEn) ?? tag.name}
                                     size="small"
                                     onClick={onTagClick ? (e) => {
                                         e.stopPropagation();

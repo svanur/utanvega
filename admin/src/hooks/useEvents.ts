@@ -4,7 +4,7 @@ import { apiFetch } from './api';
 export type DayOfWeek = 'Sunday' | 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
 export type ScheduleType = 'Yearly' | 'Seasonal' | 'Fixed' | 'Approximate';
 export type EventType = 'Race' | 'Series' | 'Advertisement' | 'Festival' | 'Other';
-export type ActivityType = 'TrailRunning' | 'Running' | 'Cycling' | 'Hiking' | 'FunRun' | 'ObstacleCourse' | 'CrossCountryRun' | 'Social' | 'Other';
+export type ActivityType = 'TrailRunning' | 'Running' | 'Cycling' | 'Hiking' | 'FunRun' | 'ObstacleCourse' | 'CrossCountryRun' | 'Swim' | 'Social' | 'Other';
 export type EventStatus = 'Unconfirmed' | 'Confirmed' | 'Cancelled' | 'Hidden' | 'Unlisted';
 export type RegistrationStatus = 'NotStarted' | 'Open' | 'Closed';
 export type RaceStatus = 'Active' | 'Completed' | 'Cancelled' | 'Hidden';
@@ -34,21 +34,27 @@ export interface RaceDto {
     trailName: string | null;
     trailSlug: string | null;
     name: string;
+    nameEn: string | null;
     distanceLabel: string | null;
     cutoffMinutes: number | null;
     description: string | null;
+    descriptionEn: string | null;
     status: RaceStatus;
     sortOrder: number;
     ticketStatus: TicketStatus;
     maxParticipants: number | null;
     itraPoints: number | null;
     certifiedBy: string | null;
+    certifiedByEn: string | null;
     prizeMoney: number;
     championshipCategory: string | null;
+    championshipCategoryEn: string | null;
     dateOfRace: string | null;
     startTime: string | null;
     trailDistanceMeters: number | null;
     trailElevationGain: number | null;
+    activityType: ActivityType | null;
+    translationHashes?: Record<string, string>;
 }
 
 export interface EventEditionDto {
@@ -56,10 +62,13 @@ export interface EventEditionDto {
     eventId: string;
     year: number | null;
     date: string | null;
+    endDate: string | null;
     title: string | null;
+    titleEn: string | null;
     registrationUrl: string | null;
     resultsUrl: string | null;
     notes: string | null;
+    notesEn: string | null;
     registrationStatus: RegistrationStatus;
     trailId: string | null;
     trailName: string | null;
@@ -67,6 +76,7 @@ export interface EventEditionDto {
     races: RaceDto[];
     createdAt: string;
     updatedAt: string | null;
+    translationHashes?: Record<string, string>;
 }
 
 export interface SeriesRaceDto {
@@ -82,15 +92,19 @@ export interface SeriesRaceDto {
 export interface EventSummaryDto {
     id: string;
     name: string;
+    nameEn: string | null;
     slug: string;
     description: string | null;
+    descriptionEn: string | null;
     type: EventType;
     activityType: ActivityType;
     status: EventStatus;
     organizerName: string | null;
+    organizerNameEn: string | null;
     organizerWebsite: string | null;
     organizerId: string | null;
     alertMessage: string | null;
+    alertMessageEn: string | null;
     alertSeverity: AlertSeverity | null;
     locationId: string | null;
     locationName: string | null;
@@ -107,24 +121,31 @@ export interface EventSummaryDto {
     isMountainRace: boolean;
     terrainType: string | null;
     hasFutureEdition: boolean;
+    endDisplayDate: string | null;
+    translationHashes?: Record<string, string>;
 }
 
 export interface EventDetailDto extends EventSummaryDto {
     upcomingDates: string[];
     editions: EventEditionDto[];
+    translationHashes?: Record<string, string>;
 }
 
 export interface CreateEventInput {
     name: string;
+    nameEn?: string;
     slug?: string;
     description?: string;
+    descriptionEn?: string;
     type: EventType;
     activityType: ActivityType;
     status: EventStatus;
     organizerName?: string;
+    organizerNameEn?: string;
     organizerWebsite?: string;
     organizerId?: string | null;
     alertMessage?: string;
+    alertMessageEn?: string;
     alertSeverity?: AlertSeverity;
     locationId?: string | null;
     scheduleRule?: ScheduleRule | null;
@@ -136,30 +157,38 @@ export interface CreateEventInput {
 export interface UpdateEventInput {
     id: string;
     name: string;
+    nameEn?: string;
     description?: string;
+    descriptionEn?: string;
     type: EventType;
     activityType: ActivityType;
     status: EventStatus;
     organizerName?: string;
+    organizerNameEn?: string;
     organizerWebsite?: string;
     organizerId?: string | null;
     alertMessage?: string;
+    alertMessageEn?: string;
     alertSeverity?: AlertSeverity;
     locationId?: string | null;
     scheduleRule?: ScheduleRule | null;
     socialLinks?: SocialLink[] | null;
     gpxPointLat?: number | null;
     gpxPointLng?: number | null;
+    translationHashes?: Record<string, string>;
 }
 
 export interface CreateEditionInput {
     eventId: string;
     year?: number | null;
     date?: string | null;
+    endDate?: string | null;
     title?: string;
+    titleEn?: string;
     registrationUrl?: string;
     resultsUrl?: string;
     notes?: string;
+    notesEn?: string;
     registrationStatus: RegistrationStatus;
     trailId?: string | null;
 }
@@ -168,29 +197,37 @@ export interface UpdateEditionInput {
     id: string;
     year?: number | null;
     date?: string | null;
+    endDate?: string | null;
     title?: string;
+    titleEn?: string;
     registrationUrl?: string;
     resultsUrl?: string;
     notes?: string;
+    notesEn?: string;
     registrationStatus: RegistrationStatus;
     trailId?: string | null;
+    translationHashes?: Record<string, string>;
 }
 
 export interface CreateRaceInput {
     eventEditionId: string;
     trailId?: string | null;
     name: string;
+    nameEn?: string;
     distanceLabel?: string;
     cutoffMinutes?: number | null;
     description?: string;
+    descriptionEn?: string;
     status: RaceStatus;
     sortOrder: number;
     ticketStatus: TicketStatus;
     maxParticipants?: number | null;
     itraPoints?: number | null;
     certifiedBy?: string;
+    certifiedByEn?: string;
     prizeMoney: number;
     championshipCategory?: string;
+    championshipCategoryEn?: string;
     dateOfRace?: string | null;
     startTime?: string | null;
 }
@@ -199,19 +236,25 @@ export interface UpdateRaceInput {
     id: string;
     trailId?: string | null;
     name: string;
+    nameEn?: string;
     distanceLabel?: string;
     cutoffMinutes?: number | null;
     description?: string;
+    descriptionEn?: string;
     status: RaceStatus;
     sortOrder: number;
     ticketStatus: TicketStatus;
     maxParticipants?: number | null;
     itraPoints?: number | null;
     certifiedBy?: string;
+    certifiedByEn?: string;
     prizeMoney: number;
     championshipCategory?: string;
+    championshipCategoryEn?: string;
     dateOfRace?: string | null;
     startTime?: string | null;
+    activityType?: ActivityType | null;
+    translationHashes?: Record<string, string>;
 }
 
 export interface GenerateEditionsForSeasonInput {

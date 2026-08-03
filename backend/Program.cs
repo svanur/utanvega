@@ -143,7 +143,7 @@ if (!string.IsNullOrEmpty(rawConnectionString) && rawConnectionString.Contains("
         string host = hostAndPort[0];
         string port = hostAndPort.Length > 1 ? hostAndPort[1] : "5432";
 
-        var migrationExtra = isMigrateMode ? ";Pooling=false;CommandTimeout=120" : "";
+        var migrationExtra = isMigrateMode ? ";Pooling=false;CommandTimeout=120" : ";Keepalive=30;Connection Idle Lifetime=300;Connection Pruning Interval=10";
         connectionString = $"Host={host};Port={port};Database={database};Username={user};Password={password};Include Error Detail=true{migrationExtra}";
         Log.Information("Successfully parsed connection string. Host={Host}, Port={Port}, Database={Database}", host, port, database);
     }
@@ -243,7 +243,12 @@ builder.Services.AddAuthorization(options =>
 });
 
 builder.Services.AddDbContext<UtanvegaDbContext>(options =>
-    options.UseNpgsql(connectionString, o => o.UseNetTopologySuite()));
+    options.UseNpgsql(connectionString, o =>
+    {
+        o.UseNetTopologySuite();
+        o.EnableRetryOnFailure(maxRetryCount: 3, maxRetryDelay: TimeSpan.FromSeconds(5), errorCodesToAdd: null);
+        o.CommandTimeout(60);
+    }));
 
 // Add CQRS with MediatR
 builder.Services.AddMediatR(cfg =>
@@ -630,6 +635,7 @@ app.MapGet("/api/v1/admin/health", [Authorize] () => Results.Ok(new
     service = "backend 1",
     area = "admin",
     version = "v1",
+    gitHash = Environment.GetEnvironmentVariable("GIT_HASH") ?? "unknown",
     timestampUtc = DateTime.UtcNow
 }))
 .WithName("AdminHealth");
@@ -685,8 +691,10 @@ app.MapGet("/api/v1/admin/trails/{idOrSlug}", [Authorize] async (string idOrSlug
     {
         trail.Id,
         trail.Name,
+        trail.NameEn,
         trail.Slug,
         trail.Description,
+        trail.DescriptionEn,
         ActivityType = trail.ActivityTypeId.ToString(),
         Status = trail.Status.ToString(),
         Type = trail.Type.ToString(),
@@ -697,6 +705,7 @@ app.MapGet("/api/v1/admin/trails/{idOrSlug}", [Authorize] async (string idOrSlug
         trail.ElevationLoss,
         trail.YoutubeUrl,
         TerrainType = trail.TerrainType?.ToString(),
+        TranslationHashes = trail.TranslationHashes == null ? null : System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(trail.TranslationHashes),
         MaxAltitude = trail.ElevationProfile != null && trail.ElevationProfile.Length > 0 ? trail.ElevationProfile.Max() : (double?)null,
         Locations = trail.TrailLocations
             .OrderBy(tl => tl.Order)
@@ -1169,7 +1178,7 @@ app.MapGet("/api/v1/admin/tags", [Authorize] async (UtanvegaDbContext context) =
     var tags = await context.Tags
         .AsNoTracking()
         .OrderBy(t => t.Name)
-        .Select(t => new { t.Id, t.Name, t.Slug, t.Color, TrailCount = t.TrailTags.Count })
+        .Select(t => new { t.Id, t.Name, t.NameEn, t.Slug, t.Color, TrailCount = t.TrailTags.Count, t.TranslationHashes })
         .ToListAsync();
     return Results.Ok(tags);
 })
@@ -1180,6 +1189,7 @@ app.MapPost("/api/v1/admin/tags", [Authorize] async (TagCreateDto dto, UtanvegaD
     var tag = new Utanvega.Backend.Core.Entities.Tag
     {
         Name = dto.Name,
+        NameEn = dto.NameEn,
         Slug = Utanvega.Backend.Core.Services.SlugGenerator.Generate(dto.Name),
         Color = dto.Color
     };
@@ -1194,8 +1204,11 @@ app.MapPut("/api/v1/admin/tags/{id:guid}", [Authorize] async (Guid id, TagCreate
     var tag = await context.Tags.FindAsync(id);
     if (tag == null) return Results.NotFound();
     tag.Name = dto.Name;
+    tag.NameEn = dto.NameEn;
     tag.Slug = Utanvega.Backend.Core.Services.SlugGenerator.Generate(dto.Name);
     tag.Color = dto.Color;
+    if (dto.TranslationHashes != null)
+        tag.TranslationHashes = System.Text.Json.JsonSerializer.Serialize(dto.TranslationHashes);
     await context.SaveChangesWithAuditAsync("admin");
     return Results.NoContent();
 })
@@ -1211,6 +1224,41 @@ app.MapDelete("/api/v1/admin/tags/{id:guid}", [Authorize] async (Guid id, Utanve
     return Results.NoContent();
 })
 .WithName("DeleteTag");
+
+// Translation API
+app.MapPost("/api/v1/admin/translate", [Authorize] async (TranslateRequest req, IConfiguration config) =>
+{
+    var apiKey = config["DeepL:ApiKey"];
+    if (string.IsNullOrWhiteSpace(apiKey))
+        return Results.Problem("DeepL API key not configured.");
+
+    if (req.Texts == null || req.Texts.Count == 0)
+        return Results.BadRequest("No texts provided.");
+
+    try
+    {
+        var translator = new DeepL.Translator(apiKey);
+        var results = await translator.TranslateTextAsync(
+            req.Texts,
+            DeepL.LanguageCode.Icelandic,
+            DeepL.LanguageCode.EnglishAmerican
+        );
+        return Results.Ok(new { translations = results.Select(r => r.Text).ToList() });
+    }
+    catch (DeepL.AuthorizationException)
+    {
+        return Results.Problem("Invalid DeepL API key.", statusCode: 502);
+    }
+    catch (DeepL.QuotaExceededException)
+    {
+        return Results.Problem("DeepL translation quota exceeded.", statusCode: 429);
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Translation failed: {ex.Message}", statusCode: 502);
+    }
+})
+.WithName("Translate");
 
 // History / Audit API
 app.MapGet("/api/v1/admin/history", [Authorize] async (string? entityName, string? entityId, int? limit, IMediator mediator) =>
@@ -1438,25 +1486,47 @@ app.MapGet("/api/v1/events/calendar.ics", async (IMediator mediator, IConfigurat
         var ical = new Ical.Net.Calendar();
         ical.ProductId = "-//Hlaupadagskra.is//Events//IS";
 
-        foreach (var day in days)
+        // Collapse multi-day events: track full key → (firstDay, lastDay, event)
+        // keyMap maps slug|title → current active full key; gap detection prevents collapsing separate editions
+        var seen = new Dictionary<string, (DateOnly First, DateOnly Last, CalendarEventDto Ev)>();
+        var keyMap = new Dictionary<string, string>();
+        foreach (var day in days.OrderBy(d => d.Date))
         {
             foreach (var ev in day.Events)
             {
-                var vEvent = new Ical.Net.CalendarComponents.CalendarEvent
+                var baseKey = $"{ev.Slug}|{ev.EditionTitle}";
+                if (keyMap.TryGetValue(baseKey, out var currentFullKey) &&
+                    seen.TryGetValue(currentFullKey, out var existing) &&
+                    day.Date <= existing.Last.AddDays(1))
                 {
-                    Uid = $"{ev.Slug}-{day.Date:yyyy-MM-dd}@hlaupadagskra.is",
-                    DtStart = new Ical.Net.DataTypes.CalDateTime(day.Date.Year, day.Date.Month, day.Date.Day),
-                    DtEnd = new Ical.Net.DataTypes.CalDateTime(day.Date.AddDays(1).Year, day.Date.AddDays(1).Month, day.Date.AddDays(1).Day),
-                    IsAllDay = true,
-                    Summary = ev.EditionTitle != null ? $"{ev.Name} – {ev.EditionTitle}" : ev.Name,
-                    Location = ev.LocationName ?? "",
-                    Url = new Uri($"{siteUrl}/events/{ev.Slug}"),
-                };
-                vEvent.Description = ev.RaceCount > 0
-                    ? $"{ev.RaceCount} race(s). More info: {siteUrl}/events/{ev.Slug}\n\nhttps://www.hlaupadagskra.is – Öll hlaup á einum stað"
-                    : $"More info: {siteUrl}/events/{ev.Slug}\n\nhttps://www.hlaupadagskra.is – Öll hlaup á einum stað";
-                ical.Events.Add(vEvent);
+                    seen[currentFullKey] = (existing.First, day.Date, existing.Ev);
+                }
+                else
+                {
+                    var fullKey = $"{ev.Slug}|{ev.EditionTitle}|{day.Date:yyyy-MM-dd}";
+                    seen[fullKey] = (day.Date, day.Date, ev);
+                    keyMap[baseKey] = fullKey;
+                }
             }
+        }
+
+        foreach (var (key, (first, last, ev)) in seen)
+        {
+            var dtEnd = last.AddDays(1); // iCal all-day end is exclusive
+            var vEvent = new Ical.Net.CalendarComponents.CalendarEvent
+            {
+                Uid = $"{ev.Slug}-{first:yyyy-MM-dd}@hlaupadagskra.is",
+                DtStart = new Ical.Net.DataTypes.CalDateTime(first.Year, first.Month, first.Day),
+                DtEnd = new Ical.Net.DataTypes.CalDateTime(dtEnd.Year, dtEnd.Month, dtEnd.Day),
+                IsAllDay = true,
+                Summary = ev.EditionTitle != null ? $"{ev.Name} – {ev.EditionTitle}" : ev.Name,
+                Location = ev.LocationName ?? "",
+                Url = new Uri($"{siteUrl}/events/{ev.Slug}"),
+            };
+            vEvent.Description = ev.RaceCount > 0
+                ? $"{ev.RaceCount} race(s). More info: {siteUrl}/events/{ev.Slug}\n\nhttps://www.hlaupadagskra.is – Öll hlaup á einum stað"
+                : $"More info: {siteUrl}/events/{ev.Slug}\n\nhttps://www.hlaupadagskra.is – Öll hlaup á einum stað";
+            ical.Events.Add(vEvent);
         }
 
         var serializer = new Ical.Net.Serialization.CalendarSerializer();
@@ -1942,7 +2012,8 @@ finally
 }
 
 public record SendTipRequest(string PageUrl, string Message);
-public record TagCreateDto(string Name, string? Color);
+public record TagCreateDto(string Name, string? Color, string? NameEn = null, Dictionary<string, string>? TranslationHashes = null);
+public record TranslateRequest(List<string> Texts);
 public record BulkAddTagRequest(List<Guid> TrailIds, Guid TagId);
 public record TrailLocationAddRequest(Guid LocationId, string? Role);
 public record FeatureFlagCreateDto(string Name, bool Enabled = true, string? Description = null);

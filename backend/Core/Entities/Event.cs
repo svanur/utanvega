@@ -28,21 +28,27 @@ public class Event
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get; set; } = string.Empty;
+    public string? NameEn { get; set; }
     public string Slug { get; set; } = string.Empty;
     public string? Description { get; set; }
+    public string? DescriptionEn { get; set; }
 
     public EventType Type { get; set; } = EventType.Race;
     public ActivityType ActivityType { get; set; } = ActivityType.TrailRunning;
     public EventStatus Status { get; set; } = EventStatus.Unconfirmed;
 
     public string? OrganizerName { get; set; }
+    public string? OrganizerNameEn { get; set; }
     public string? OrganizerWebsite { get; set; }
 
     public Guid? OrganizerId { get; set; }
     public Organizer? Organizer { get; set; }
 
     public string? AlertMessage { get; set; }
+    public string? AlertMessageEn { get; set; }
     public string? AlertSeverity { get; set; }
+
+    public string? TranslationHashes { get; set; }
 
     public Guid? LocationId { get; set; }
     public Location? Location { get; set; }

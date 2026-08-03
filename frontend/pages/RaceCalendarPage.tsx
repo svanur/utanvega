@@ -29,7 +29,9 @@ import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import Layout from '../components/Layout';
 import RunningLoader from '../components/RunningLoader';
 import { useEventCalendar, CalendarDay } from '../hooks/useEvents';
-import { useNavigate } from 'react-router-dom';
+import { useLocalize } from '../utils/localize';
+import { ActivityIcons } from '../utils/activityIcon';
+import { useNavigate, useParams } from 'react-router-dom';
 import { API_URL } from '../hooks/useTrails';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { useIcelandicHolidays } from '../hooks/useIcelandicHolidays';
@@ -48,13 +50,19 @@ function getMonthRange(year: number, month: number): { from: string; to: string 
 
 export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPageProps) {
     const { t } = useTranslation();
+    const loc = useLocalize();
     const theme = useTheme();
     const navigate = useNavigate();
+    const params = useParams<{ year?: string; month?: string }>();
     const { isEnabled } = useFeatureFlags();
     const today = new Date();
 
-    const [year, setYear] = useState(today.getFullYear());
-    const [month, setMonth] = useState(today.getMonth());
+    const year = params.year ? parseInt(params.year, 10) : today.getFullYear();
+    const month = params.month ? parseInt(params.month, 10) - 1 : today.getMonth();
+
+    const navigateToMonth = (y: number, m: number) => {
+        navigate(`/events/calendar/${y}/${String(m + 1).padStart(2, '0')}`);
+    };
 
     const { from, to } = useMemo(() => getMonthRange(year, month), [year, month]);
     const { days, loading } = useEventCalendar(from, to);
@@ -98,8 +106,7 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
         day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
 
     const goToToday = () => {
-        setYear(today.getFullYear());
-        setMonth(today.getMonth());
+        navigateToMonth(today.getFullYear(), today.getMonth());
         // Flash the today cell
         setTodayFlash(true);
         setTimeout(() => {
@@ -109,13 +116,13 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
     };
 
     const prevMonth = () => {
-        if (month === 0) { setMonth(11); setYear(y => y - 1); }
-        else setMonth(m => m - 1);
+        if (month === 0) navigateToMonth(year - 1, 11);
+        else navigateToMonth(year, month - 1);
     };
 
     const nextMonth = () => {
-        if (month === 11) { setMonth(0); setYear(y => y + 1); }
-        else setMonth(m => m + 1);
+        if (month === 11) navigateToMonth(year + 1, 0);
+        else navigateToMonth(year, month + 1);
     };
 
     const handleDayClick = (day: number, event: React.MouseEvent<HTMLElement>) => {
@@ -228,7 +235,7 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
                                 return (
                                     <Tooltip
                                         key={i}
-                                        title={isHoliday ? holidays.map(h => h.name).join(' · ') : ''}
+                                        title={isHoliday ? holidays.map(h => loc(h.name, h.nameEn) ?? h.name).join(' · ') : ''}
                                         arrow
                                         disableHoverListener={!isHoliday}
                                     >
@@ -312,7 +319,7 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
                 {/* Event count summary or empty state */}
                 {!loading && days.length > 0 && (
                     <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
-                        {t('calendar.eventCount', { count: days.reduce((sum, d) => sum + d.events.length, 0) })}
+                        {t('calendar.eventCount', { count: new Set(days.flatMap(d => d.events.map(e => e.slug))).size })}
                     </Typography>
                 )}
                 {!loading && days.length === 0 && (
@@ -340,7 +347,7 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
                             {popoverHolidays.length > 0 && (
                                 <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ px: 1, pb: 0.5 }}>
                                     {popoverHolidays.map((h, i) => (
-                                        <Chip key={i} label={h.name} size="small" color="warning" variant="outlined" sx={{ height: 20, fontSize: '0.68rem' }} />
+                                        <Chip key={i} label={loc(h.name, h.nameEn) ?? h.name} size="small" color="warning" variant="outlined" sx={{ height: 20, fontSize: '0.68rem' }} />
                                     ))}
                                 </Stack>
                             )}
@@ -354,8 +361,11 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
                                         <ListItemText
                                             primary={
                                                 <Stack direction="row" alignItems="center" spacing={0.5}>
-                                                    <EmojiEventsIcon sx={{ fontSize: 16, color: 'warning.main' }} />
-                                                    <Typography variant="body2" fontWeight={600}>{ev.name}</Typography>
+                                                    {ev.activityTypes && ev.activityTypes.length > 0
+                                                        ? <ActivityIcons activityTypes={ev.activityTypes} activityType={ev.activityTypes[0]} />
+                                                        : <EmojiEventsIcon sx={{ fontSize: 16, color: 'warning.main' }} />
+                                                    }
+                                                    <Typography variant="body2" fontWeight={600}>{loc(ev.name, ev.nameEn) ?? ev.name}</Typography>
                                                 </Stack>
                                             }
                                             secondary={

@@ -168,9 +168,13 @@ export default function App() {
                         path="/events" 
                         element={<RacesPage mode={mode} onToggleMode={handleToggleMode} />} 
                     />
-                    <Route 
-                        path="/events/calendar" 
-                        element={<RaceCalendarPage mode={mode} onToggleMode={handleToggleMode} />} 
+                    <Route
+                        path="/events/calendar"
+                        element={<Navigate to={`/events/calendar/${new Date().getFullYear()}/${String(new Date().getMonth() + 1).padStart(2, '0')}`} replace />}
+                    />
+                    <Route
+                        path="/events/calendar/:year/:month"
+                        element={<RaceCalendarPage mode={mode} onToggleMode={handleToggleMode} />}
                     />
                     <Route 
                         path="/events/:slug" 

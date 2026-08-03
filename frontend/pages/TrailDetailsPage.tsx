@@ -83,6 +83,7 @@ import { useLoginEnabled } from '../hooks/useLoginEnabled';
 import TrailLeaderboardCard from '../components/TrailLeaderboardCard';
 import { useTrailCheckIns } from '../hooks/useTrailCheckIns';
 import { getAvatarFallbackText, getAvatarImageSrc } from '../utils/avatarPresets';
+import { useLocalize } from '../utils/localize';
 
 const ALLOWED_YT_HOSTS = ['www.youtube.com', 'youtube.com', 'youtu.be', 'www.youtube-nocookie.com'];
 
@@ -140,6 +141,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     const { slug } = useParams<{ slug: string }>();
     const navigate = useNavigate();
     const { t } = useTranslation();
+    const localize = useLocalize();
     const { trail, loading, error } = useTrailBySlug(slug);
     const { weather, loading: weatherLoading, error: weatherError } = useTrailWeather(slug);
     const { isEnabled } = useFeatureFlags();
@@ -551,9 +553,10 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                 Near: <NearMeIcon sx={{ fontSize: '1rem' }} />,
                             }[loc.role] || <LocationOnIcon sx={{ fontSize: '1rem' }} />;
                             
+                            const locName = localize(loc.name, loc.nameEn) ?? loc.name;
                             const roleLabel = loc.role && loc.role !== 'BelongsTo'
-                                ? `${loc.name} · ${t(`trail.role.${loc.role}`)}`
-                                : loc.name;
+                                ? `${locName} · ${t(`trail.role.${loc.role}`)}`
+                                : locName;
 
                             return (
                                 <Chip 
@@ -572,7 +575,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                         {tagsEnabled && trail.tags && trail.tags.length > 0 && trail.tags.map((tag) => (
                             <Chip
                                 key={tag.slug}
-                                label={tag.name}
+                                label={localize(tag.name, tag.nameEn) ?? tag.name}
                                 size="small"
                                 component={RouterLink}
                                 to={`/tags/${tag.slug}`}

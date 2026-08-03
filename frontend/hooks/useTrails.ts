@@ -4,6 +4,7 @@ import { haversineKm } from '../utils/geo';
 
 export interface LocationInfo {
     name: string;
+    nameEn: string | null;
     slug: string;
     order: number;
     role: string;
@@ -13,6 +14,7 @@ export interface LocationInfo {
 
 export interface TagInfo {
     name: string;
+    nameEn: string | null;
     slug: string;
     color: string | null;
 }

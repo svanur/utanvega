@@ -13,13 +13,17 @@ public record EventDetailDto(
     string Name,
     string Slug,
     string? Description,
+    string? NameEn,
+    string? DescriptionEn,
     string Type,
     string ActivityType,
     string Status,
     string? OrganizerName,
+    string? OrganizerNameEn,
     string? OrganizerWebsite,
     Guid? OrganizerId,
     string? AlertMessage,
+    string? AlertMessageEn,
     string? AlertSeverity,
     Guid? LocationId,
     string? LocationName,
@@ -37,7 +41,9 @@ public record EventDetailDto(
     List<string>? ChampionshipCategories = null,
     List<int>? ItraPoints = null,
     double? GpxPointLat = null,
-    double? GpxPointLng = null
+    double? GpxPointLng = null,
+    Dictionary<string, string>? TranslationHashes = null,
+    List<string>? ActivityTypes = null
 );
 
 public record GetEventQuery(string Slug) : IRequest<EventDetailDto?>, ICacheable
@@ -83,24 +89,36 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
         var nextDate = nextEditionDate
             ?? (ev.ScheduleRule != null ? _scheduleEngine.GetNextOccurrence(ev.ScheduleRule, today) : null);
 
+        // An edition is "ongoing" when it has started (Date <= today) but not yet ended (EndDate ?? Date >= today)
+        var ongoingEdition = ev.Editions.FirstOrDefault(ed =>
+            ed.Date.HasValue && ed.Date.Value <= today &&
+            (ed.EndDate ?? ed.Date).HasValue && (ed.EndDate ?? ed.Date)!.Value >= today);
+
         // Check for recently-past editions (up to 3 days ago)
         // so events with schedule rules still show as "recently completed"
         var mostRecentPast = ev.Editions
-            .Where(ed => ed.Date.HasValue && ed.Date.Value < today)
-            .OrderByDescending(ed => ed.Date)
-            .Select(ed => ed.Date)
+            .Where(ed => (ed.EndDate ?? ed.Date).HasValue && (ed.EndDate ?? ed.Date)!.Value < today)
+            .OrderByDescending(ed => ed.EndDate ?? ed.Date)
+            .Select(ed => ed.EndDate ?? ed.Date)
             .FirstOrDefault();
 
         var recentlyCompleted = ev.Status != EventStatus.Cancelled
+            && ongoingEdition == null
             && mostRecentPast.HasValue
             && (today.DayNumber - mostRecentPast.Value.DayNumber) <= 3;
 
         int? daysUntil;
         DateOnly? displayDate;
-        if (recentlyCompleted)
+        if (ongoingEdition != null)
+        {
+            daysUntil = 0;
+            displayDate = ongoingEdition.Date;
+        }
+        else if (recentlyCompleted)
         {
             daysUntil = mostRecentPast!.Value.DayNumber - today.DayNumber;
-            displayDate = mostRecentPast.Value;
+            var recentEdition = ev.Editions.FirstOrDefault(ed => (ed.EndDate ?? ed.Date) == mostRecentPast);
+            displayDate = recentEdition?.Date ?? mostRecentPast.Value;
         }
         else if (nextDate.HasValue)
         {
@@ -124,10 +142,13 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
                 ed.EventId,
                 ed.Year,
                 ed.Date,
+                ed.EndDate,
                 ed.Title,
+                ed.TitleEn,
                 ed.RegistrationUrl,
                 ed.ResultsUrl,
                 ed.Notes,
+                ed.NotesEn,
                 ed.RegistrationStatus.ToString(),
                 ed.TrailId,
                 ed.Trail?.Name,
@@ -141,24 +162,30 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
                         r.Trail?.Name,
                         r.Trail?.Slug,
                         r.Name,
+                        r.NameEn,
                         r.DistanceLabel,
                         r.CutoffMinutes,
                         r.Description,
+                        r.DescriptionEn,
                         r.Status.ToString(),
                         r.SortOrder,
                         r.TicketStatus.ToString(),
                         r.MaxParticipants,
                         r.ItraPoints,
                         r.CertifiedBy,
+                        r.CertifiedByEn,
                         r.PrizeMoney,
                         r.ChampionshipCategory,
+                        r.ChampionshipCategoryEn,
                         r.DateOfRace,
                         r.StartTime,
                         r.Trail?.Length,
                         r.Trail?.ElevationGain,
                         r.Trail?.TerrainType?.ToString(),
                         r.Trail?.Difficulty.ToString(),
-                        r.Trail?.ActivityTypeId.ToString()
+                        r.Trail?.ActivityTypeId.ToString(),
+                        TranslationHashes: null,
+                        ActivityType: r.ActivityType?.ToString()
                     ))
                     .ToList(),
                 ed.CreatedAt,
@@ -166,12 +193,13 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
             ))
             .ToList();
 
-        var relevantEdition = recentlyCompleted
-            ? ev.Editions.FirstOrDefault(ed => ed.Date == mostRecentPast)
-            : ev.Editions
-                .Where(ed => ed.Date.HasValue && ed.Date.Value >= today)
-                .OrderBy(ed => ed.Date)
-                .FirstOrDefault();
+        var relevantEdition = ongoingEdition
+            ?? (recentlyCompleted
+                ? ev.Editions.FirstOrDefault(ed => (ed.EndDate ?? ed.Date) == mostRecentPast)
+                : ev.Editions
+                    .Where(ed => ed.Date.HasValue && ed.Date.Value >= today)
+                    .OrderBy(ed => ed.Date)
+                    .FirstOrDefault());
 
         var relevantRaces = relevantEdition?.Races
             .Where(r => r.Status != RaceStatus.Cancelled)
@@ -197,18 +225,32 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
             .Select(r => r.Trail?.YoutubeUrl)
             .FirstOrDefault(u => !string.IsNullOrWhiteSpace(u));
 
+        var activityTypes = ev.Editions
+            .SelectMany(ed => ed.Races)
+            .Where(r => r.Status != RaceStatus.Cancelled)
+            .Select(r => (r.ActivityType?.ToString() ?? r.Trail?.ActivityTypeId.ToString()))
+            .Where(a => a != null)
+            .Distinct()
+            .OrderBy(a => a)
+            .Cast<string>()
+            .ToList();
+
         return new EventDetailDto(
             ev.Id,
             ev.Name,
             ev.Slug,
             ev.Description,
+            ev.NameEn,
+            ev.DescriptionEn,
             ev.Type.ToString(),
             ev.ActivityType.ToString(),
             ev.Status.ToString(),
             ev.Organizer?.Name ?? ev.OrganizerName,
+            ev.OrganizerNameEn,
             ev.OrganizerWebsite ?? ev.Organizer?.Website,
             ev.OrganizerId,
             ev.AlertMessage,
+            ev.AlertMessageEn,
             ev.AlertSeverity,
             ev.LocationId,
             ev.Location?.Name,
@@ -226,7 +268,9 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
             championshipCategories?.Count > 0 ? championshipCategories : null,
             itraPoints?.Count > 0 ? itraPoints : null,
             ev.GpxPointLat,
-            ev.GpxPointLng
+            ev.GpxPointLng,
+            TranslationHashes: null,
+            ActivityTypes: activityTypes.Count > 0 ? activityTypes : null
         );
     }
 }

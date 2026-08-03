@@ -44,6 +44,7 @@ import TimerIcon from '@mui/icons-material/Timer';
 import StraightenIcon from '@mui/icons-material/Straighten';
 import TerrainIcon from '@mui/icons-material/Terrain';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
+import { getActivityIcon } from '../utils/activityIcon';
 import QueryStatsIcon from '@mui/icons-material/QueryStats';
 import confetti from 'canvas-confetti';
 import ShareButtons from '../components/ShareButtons';
@@ -57,6 +58,7 @@ import LostRunner from '../components/LostRunner';
 import WeatherCard from '../components/WeatherCard';
 import { useEvents, useEventBySlug } from '../hooks/useEvents';
 import type { EventEditionDto, RaceDto, ScheduleRule } from '../hooks/useEvents';
+import { useLocalize } from '../utils/localize';
 import { useTrailWeather } from '../hooks/useTrails';
 import { useLocations } from '../hooks/useLocations';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
@@ -96,7 +98,7 @@ type PreparedEdition = EventEditionDto & {
 import { ACTIVITY_EMOJI } from '../constants/activityEmoji';
 import { googleCalendarUrl, outlookCalendarUrl, downloadIcs } from '../utils/calendarLinks';
 import EventDateBadge from '../components/EventDateBadge';
-import { formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor } from '../utils/eventUtils';
+import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor } from '../utils/eventUtils';
 import { getTicketStatusColor } from '../utils/ticketStatus';
 
 type RaceDayChecklistKey = 'bib' | 'shoes' | 'gels' | 'goodMood';
@@ -122,6 +124,8 @@ function formatScheduleDescription(
     rule: ScheduleRule | null,
     upcomingCount: number,
     t: (key: string, opts?: Record<string, unknown>) => string,
+    endDate?: string | null,
+    startDate?: string | null,
 ): string | null {
     if (!rule) return null;
 
@@ -153,7 +157,7 @@ function formatScheduleDescription(
 
     if (rule.type === 'Fixed' && rule.date) {
         return t('races.scheduleFixed', {
-            date: formatNextDate(rule.date, t),
+            date: formatDateRange(startDate ?? rule.date, endDate, t),
         });
     }
 
@@ -190,7 +194,8 @@ function EditionMeta({
     showHeader?: boolean;
     hideMeta?: boolean;
 }) {
-    const heading = edition.title?.trim() || String(edition.year);
+    const loc = useLocalize();
+    const heading = loc(edition.title?.trim() || null, edition.titleEn) ?? String(edition.year);
 
     return (
         <Box>
@@ -201,7 +206,7 @@ function EditionMeta({
             )}
             <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
                 {!showHeader && edition.title && (
-                    <Chip label={edition.title} size="small" variant="outlined" />
+                    <Chip label={loc(edition.title, edition.titleEn) ?? edition.title} size="small" variant="outlined" />
                 )}
                 {!hideMeta && (
                     <Chip label={String(edition.year)} size="small" variant="outlined" color="primary" />
@@ -209,7 +214,7 @@ function EditionMeta({
                 {!hideMeta && edition.date && (
                     <Chip
                         icon={<CalendarTodayIcon />}
-                        label={formatNextDate(edition.date, t)}
+                        label={formatDateRange(edition.date, edition.endDate, t)}
                         size="small"
                         variant="outlined"
                     />
@@ -217,7 +222,7 @@ function EditionMeta({
             </Stack>
             {edition.notes && (
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5, whiteSpace: 'pre-line' }}>
-                    {edition.notes}
+                    {loc(edition.notes, edition.notesEn)}
                 </Typography>
             )}
             {!hideMeta && (
@@ -260,6 +265,7 @@ function EditionMeta({
 export default function CompetitionDetailPage({ mode, onToggleMode }: CompetitionDetailPageProps) {
     const { slug } = useParams<{ slug: string }>();
     const { t } = useTranslation();
+    const loc = useLocalize();
     const { event, loading, error } = useEventBySlug(slug);
     const { events, loading: eventsLoading } = useEvents();
     const navigate = useNavigate();
@@ -365,7 +371,8 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
         for (const edition of preparedEditions) {
             const edDate = edition.date;
             const isNextEdition = nextDate && edDate === nextDate;
-            const isFuture = edDate && edDate >= today;
+            const effectiveEnd = edition.endDate ?? edDate;
+            const isFuture = effectiveEnd && effectiveEnd >= today;
             const hasNoDate = !edDate;
             const isDisplayDate = isPostRace && displayDate && edDate === displayDate;
             if (isNextEdition || isFuture || hasNoDate || isDisplayDate) {
@@ -566,7 +573,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             ...(event.status === 'Cancelled' && { textDecoration: 'line-through', opacity: 0.7 }),
                         }}>
                             <EmojiEventsIcon sx={{ color: theme.palette.warning.main, flexShrink: 0 }} />
-                            {event.name}
+                            {loc(event.name, event.nameEn)}
                         </Typography>
                         <Stack direction="row" spacing={1} alignItems="center">
                             {isPostRace ? (
@@ -621,7 +628,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                     }}
                                 />
                             )}
-                            {isEnabled('share_trail') && <ShareButtons title={event.name} />}
+                            {isEnabled('share_trail') && <ShareButtons title={loc(event.name, event.nameEn) ?? event.name} />}
                         </Stack>
                     </Box>
 
@@ -636,7 +643,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             <Chip icon={<LocationOnIcon />} label={event.locationName} size="small" variant="outlined" />
                         )}
                         {event.organizerName && (
-                            <Chip label={event.organizerName} size="small" variant="outlined" />
+                            <Chip label={loc(event.organizerName, event.organizerNameEn) ?? event.organizerName} size="small" variant="outlined" />
                         )}
                         {event.type !== 'Advertisement' && (
                             <Chip
@@ -652,15 +659,18 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             severity={(event.alertSeverity as 'info' | 'success' | 'warning' | 'error') ?? 'info'}
                             sx={{ mt: 2, borderRadius: 2, alignItems: 'center' }}
                         >
-                            {event.alertMessage}
+                            {loc(event.alertMessage, event.alertMessageEn)}
                         </Alert>
                     )}
 
                     {event.status !== 'Cancelled' && (() => {
+                        const editionEndDate = primaryEdition?.endDate ?? event.endDisplayDate;
                         const desc = formatScheduleDescription(
                             event.scheduleRule,
                             event.upcomingDates?.length ?? 0,
                             t,
+                            editionEndDate,
+                            primaryEdition?.date ?? event.displayDate,
                         );
                         return desc ? (
                             <Typography variant="body2" sx={{ mt: 1.5, fontStyle: 'italic', color: 'text.secondary' }}>
@@ -676,15 +686,15 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 {t(event.daysUntil != null && event.daysUntil < 0 ? 'races.lastRace' : 'races.nextRace')}
                             </Typography>
                             <Typography variant="body1" fontWeight={600}>
-                                {formatNextDate((event.displayDate ?? event.nextEditionDate)!, t)}
+                                {formatDateRange((event.displayDate ?? event.nextEditionDate)!, primaryEdition?.endDate ?? event.endDisplayDate, t)}
                             </Typography>
-                            <EventDateBadge dateStr={(event.displayDate ?? event.nextEditionDate)!} />
+                            <EventDateBadge dateStr={(event.displayDate ?? event.nextEditionDate)!} endDateStr={primaryEdition?.endDate ?? event.endDisplayDate} />
                         </Box>
                     )}
 
                     {event.description && (
                         <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5, whiteSpace: 'pre-line' }}>
-                            {event.description}
+                            {loc(event.description, event.descriptionEn)}
                         </Typography>
                     )}
 
@@ -798,7 +808,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             </Button>
                         )}
                         {isEnabled('calendar_integration', false) && (event.displayDate ?? event.nextEditionDate) && event.status !== 'Cancelled' && event.daysUntil != null && event.daysUntil >= 0 && (
-                            <AddToCalendarButton event={event} t={t} />
+                            <AddToCalendarButton event={event} endDate={primaryEdition?.endDate ?? event.endDisplayDate} t={t} />
                         )}
                         {isEnabled('directions_to_trailhead') && mapPin && (
                             <Tooltip title={t('races.directionsToEvent', 'Directions to event')} arrow>
@@ -916,7 +926,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                                 key={race.id}
                                                 race={race}
                                                 anchor={raceAnchorMap.get(race.id) ?? `race-${race.id}`}
-                                                competitionName={event.name}
+                                                competitionName={loc(event.name, event.nameEn) ?? event.name}
                                                 t={t}
                                                 showPredict={isEnabled('tool_trail_predictor')}
                                                 showShareCard={isRaceWeek && isEnabled('share_trail')}
@@ -941,7 +951,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 key={race.id}
                                 race={race}
                                 anchor={anchor}
-                                competitionName={event.name}
+                                competitionName={loc(event.name, event.nameEn) ?? event.name}
                                 t={t}
                                 showPredict={isEnabled('tool_trail_predictor')}
                                 showShareCard={isRaceWeek && isEnabled('share_trail')}
@@ -1104,12 +1114,13 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     );
 }
 
-function AddToCalendarButton({ event, t }: { event: { name: string; displayDate?: string | null; nextEditionDate?: string | null; locationName?: string | null; slug: string; description?: string | null }; t: (key: string, opts?: Record<string, unknown>) => string }) {
+function AddToCalendarButton({ event, endDate, t }: { event: { name: string; displayDate?: string | null; nextEditionDate?: string | null; locationName?: string | null; slug: string; description?: string | null }; endDate?: string | null; t: (key: string, opts?: Record<string, unknown>) => string }) {
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const date = (event.displayDate ?? event.nextEditionDate)!;
     const calEvent = {
         title: event.name,
         date,
+        endDate: endDate ?? undefined,
         location: event.locationName ?? undefined,
         description: event.description ?? undefined,
         url: `${window.location.origin}/events/${event.slug}`,
@@ -1171,6 +1182,7 @@ function RaceCard({
     now: Date;
 }) {
     const theme = useTheme();
+    const loc = useLocalize();
     const raceDateTime = formatRaceDateTime(race.dateOfRace, race.startTime, t);
 
     // Race phase: determine if race is in progress (started but not finished)
@@ -1201,8 +1213,10 @@ function RaceCard({
                         display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap',
                         ...(race.status === 'Cancelled' && { textDecoration: 'line-through' }),
                     }}>
-                        <DirectionsRunIcon sx={{ fontSize: 20, color: theme.palette.primary.main }} />
-                        {race.name}
+                        <Box component="span" sx={{ fontSize: 20, color: 'primary.main', display: 'flex' }}>
+                            {getActivityIcon(race.activityType ?? race.trailActivityType ?? activityType ?? 'TrailRunning')}
+                        </Box>
+                        {loc(race.name, race.nameEn)}
                         {race.status === 'Cancelled' && (
                             <Chip label={t('races.statusCancelled')} size="small" color="error" sx={{ ml: 0.5, fontWeight: 600 }} />
                         )}
@@ -1243,7 +1257,7 @@ function RaceCard({
                             {showShareCard && racePhase !== 'finished' && race.status !== 'Cancelled' && (
                                 <RaceShareCard
                                     eventName={competitionName}
-                                    raceName={race.name}
+                                    raceName={loc(race.name, race.nameEn) ?? race.name}
                                     distanceLabel={race.distanceLabel}
                                     date={race.dateOfRace ?? editionDate ?? null}
                                     daysUntil={daysUntil ?? null}
@@ -1253,7 +1267,7 @@ function RaceCard({
                             {(showFinishCard || (showShareCard && racePhase === 'finished')) && race.status !== 'Cancelled' && (
                                 <RaceFinishCard
                                     eventName={competitionName}
-                                    raceName={race.name}
+                                    raceName={loc(race.name, race.nameEn) ?? race.name}
                                     distanceLabel={race.distanceLabel}
                                     date={race.dateOfRace ?? editionDate ?? null}
                                     activityType={activityType}
@@ -1268,6 +1282,14 @@ function RaceCard({
                         <Tooltip title={t('races.raceDistance', { defaultValue: 'Race distance' })}>
                             <Chip icon={<StraightenIcon />} label={race.distanceLabel} size="small" color="primary" variant="outlined" />
                         </Tooltip>
+                    )}
+                    {race.activityType && (
+                        <Chip
+                            icon={<Box component="span" sx={{ display: 'flex', pl: 0.5 }}>{getActivityIcon(race.activityType)}</Box>}
+                            label={t(`races.activityTypes.${race.activityType}`, { defaultValue: race.activityType })}
+                            size="small"
+                            variant="outlined"
+                        />
                     )}
                     {raceDateTime && (
                         <Tooltip title={t('races.raceDateTime', { defaultValue: 'Date & start time' })}>
@@ -1341,7 +1363,7 @@ function RaceCard({
 
                 {race.description && (
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1, whiteSpace: 'pre-line' }}>
-                        {race.description}
+                        {loc(race.description, race.descriptionEn)}
                     </Typography>
                 )}
             </CardContent>

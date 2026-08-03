@@ -43,11 +43,14 @@ public class GetLocationBySlugQueryHandler : IRequestHandler<GetLocationBySlugQu
         var locationDto = new LocationDto(
             location.Id,
             location.Name,
+            location.NameEn,
             location.Slug,
             location.Description,
+            location.DescriptionEn,
             location.Type.ToString(),
             location.ParentId,
             location.Parent?.Name,
+            location.Parent?.NameEn,
             location.Center?.Y,
             location.Center?.X,
             location.Radius,
@@ -56,15 +59,24 @@ public class GetLocationBySlugQueryHandler : IRequestHandler<GetLocationBySlugQu
         );
 
         // Build child location DTOs
-        var childDtos = await _context.Locations
+        var childRaw = await _context.Locations
             .Where(l => l.ParentId == location.Id)
             .OrderBy(l => l.Name)
-            .Select(l => new LocationDto(
-                l.Id, l.Name, l.Slug, l.Description, l.Type.ToString(),
-                l.ParentId, location.Name, l.Center != null ? l.Center.Y : null,
-                l.Center != null ? l.Center.X : null, l.Radius,
-                l.Children.Count, l.TrailLocations.Count))
+            .Select(l => new {
+                l.Id, l.Name, l.NameEn, l.Slug, l.Description, l.DescriptionEn,
+                Type = l.Type.ToString(), l.ParentId,
+                Latitude = l.Center != null ? l.Center.Y : (double?)null,
+                Longitude = l.Center != null ? l.Center.X : (double?)null,
+                l.Radius,
+                ChildrenCount = l.Children.Count,
+                TrailsCount = l.TrailLocations.Count,
+            })
             .ToListAsync(cancellationToken);
+        var childDtos = childRaw.Select(l => new LocationDto(
+            l.Id, l.Name, l.NameEn, l.Slug, l.Description, l.DescriptionEn,
+            l.Type, l.ParentId, location.Name, location.NameEn, l.Latitude, l.Longitude, l.Radius,
+            l.ChildrenCount, l.TrailsCount
+        )).ToList();
 
         // Collect all descendant location IDs for ancestor-aware trail query
         var allLocationIds = await CollectDescendantIds(location.Id, cancellationToken);
@@ -96,10 +108,10 @@ public class GetLocationBySlugQueryHandler : IRequestHandler<GetLocationBySlugQu
             (t.GpxData as LineString)?.StartPoint.X,
             t.TrailLocations
                 .OrderBy(tl => tl.Order)
-                .Select(tl => new LocationInfoDto(tl.LocationId, tl.Location.Name, tl.Location.Slug, tl.Order, tl.Role.ToString(), tl.Location.Center?.Y, tl.Location.Center?.X))
+                .Select(tl => new LocationInfoDto(tl.LocationId, tl.Location.Name, tl.Location.NameEn, tl.Location.Slug, tl.Order, tl.Role.ToString(), tl.Location.Center?.Y, tl.Location.Center?.X))
                 .ToList(),
             t.TrailTags
-                .Select(tt => new TagInfoDto(tt.Tag.Name, tt.Tag.Slug, tt.Tag.Color))
+                .Select(tt => new TagInfoDto(tt.Tag.Name, tt.Tag.NameEn, tt.Tag.Slug, tt.Tag.Color))
                 .ToList(),
             YoutubeUrl: t.YoutubeUrl
         )).ToList();
@@ -107,16 +119,12 @@ public class GetLocationBySlugQueryHandler : IRequestHandler<GetLocationBySlugQu
         return new LocationWithTrailsDto(locationDto, childDtos, trailDtos);
     }
 
-    /// <summary>
-    /// Recursively collect all descendant location IDs using BFS.
-    /// </summary>
     private async Task<HashSet<Guid>> CollectDescendantIds(Guid parentId, CancellationToken ct)
     {
         var all = new HashSet<Guid>();
         var queue = new Queue<Guid>();
         queue.Enqueue(parentId);
 
-        // Load the full parent→children map once
         var childrenMap = (await _context.Locations
             .AsNoTracking()
             .Where(l => l.ParentId != null)

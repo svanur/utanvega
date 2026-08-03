@@ -9,11 +9,13 @@ namespace Utanvega.Backend.Application.Events.Queries.GetEventCalendar;
 
 public record CalendarEventDto(
     string Name,
+    string? NameEn,
     string Slug,
     string? LocationName,
     string? EditionTitle,
     int RaceCount,
-    string Type
+    string Type,
+    List<string>? ActivityTypes = null
 );
 
 public record CalendarDayDto(
@@ -52,10 +54,11 @@ public class GetEventCalendarQueryHandler : IRequestHandler<GetEventCalendarQuer
             .Include(ed => ed.Event)
                 .ThenInclude(ev => ev.Location)
             .Include(ed => ed.Races)
+                .ThenInclude(r => r.Trail)
             .Where(ed =>
                 ed.Date.HasValue &&
-                ed.Date >= request.From &&
                 ed.Date <= request.To &&
+                (ed.EndDate.HasValue ? ed.EndDate >= request.From : ed.Date >= request.From) &&
                 ed.Event.Status != EventStatus.Hidden &&
                 ed.Event.Status != EventStatus.Unlisted)
             .ToListAsync(cancellationToken);
@@ -64,20 +67,38 @@ public class GetEventCalendarQueryHandler : IRequestHandler<GetEventCalendarQuer
 
         foreach (var ed in editions)
         {
-            var date = ed.Date!.Value;
-            if (!dayMap.TryGetValue(date, out var events))
-            {
-                events = [];
-                dayMap[date] = events;
-            }
-            events.Add(new CalendarEventDto(
+            var startDate = ed.Date!.Value;
+            var endDate = ed.EndDate ?? startDate;
+            var activityTypes = ed.Races
+                .Where(r => r.Status != RaceStatus.Cancelled)
+                .Select(r => r.ActivityType?.ToString() ?? r.Trail?.ActivityTypeId.ToString())
+                .Where(a => a != null)
+                .Distinct()
+                .OrderBy(a => a)
+                .Cast<string>()
+                .ToList();
+
+            var dto = new CalendarEventDto(
                 ed.Event.Name,
+                ed.Event.NameEn,
                 ed.Event.Slug,
                 ed.Event.Location?.Name,
                 ed.Title,
                 ed.Races.Count,
-                ed.Event.Type.ToString()
-            ));
+                ed.Event.Type.ToString(),
+                activityTypes.Count > 0 ? activityTypes : null
+            );
+
+            for (var day = startDate; day <= endDate; day = day.AddDays(1))
+            {
+                if (day < request.From || day > request.To) continue;
+                if (!dayMap.TryGetValue(day, out var events))
+                {
+                    events = [];
+                    dayMap[day] = events;
+                }
+                events.Add(dto);
+            }
         }
 
         var result = dayMap

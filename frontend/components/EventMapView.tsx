@@ -10,6 +10,7 @@ import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import type { EventSummary } from '../hooks/useEvents';
 import { useLocations } from '../hooks/useLocations';
 import { getCountdownColor } from '../utils/eventUtils';
+import { useLocalize } from '../utils/localize';
 import MapFollowController from './MapFollowController';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerIconRetina from 'leaflet/dist/images/marker-icon-2x.png';
@@ -47,6 +48,7 @@ const ICELAND_ZOOM = 6;
 
 const EventMapView: React.FC<EventMapViewProps> = ({ events }) => {
     const { t } = useTranslation();
+    const loc = useLocalize();
     const { locations } = useLocations();
     const [followMe, setFollowMe] = useState(false);
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -92,7 +94,7 @@ const EventMapView: React.FC<EventMapViewProps> = ({ events }) => {
                     <Popup>
                         <Box sx={{ minWidth: 180 }}>
                             <Typography variant="subtitle2" fontWeight={700}>
-                                {event.name}
+                                {loc(event.name, event.nameEn) ?? event.name}
                             </Typography>
                             {event.locationName && (
                                 <Typography variant="caption" color="text.secondary" display="block">

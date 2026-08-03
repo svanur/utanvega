@@ -10,6 +10,7 @@ public record RaceDistanceSummaryDto(
 public record SeriesRaceDto(
     Guid RaceId,
     string RaceName,
+    string? RaceNameEn,
     DateOnly? DateOfRace,
     TimeOnly? StartTime,
     string? DistanceLabel,
@@ -22,13 +23,17 @@ public record EventSummaryDto(
     string Name,
     string Slug,
     string? Description,
+    string? NameEn,
+    string? DescriptionEn,
     string Type,
     string ActivityType,
     string Status,
     string? OrganizerName,
+    string? OrganizerNameEn,
     string? OrganizerWebsite,
     Guid? OrganizerId,
     string? AlertMessage,
+    string? AlertMessageEn,
     string? AlertSeverity,
     Guid? LocationId,
     string? LocationName,
@@ -53,7 +58,9 @@ public record EventSummaryDto(
     double? GpxPointLng = null,
     bool IsMountainRace = false,
     string? TerrainType = null,
-    bool HasFutureEdition = false
+    bool HasFutureEdition = false,
+    DateOnly? EndDisplayDate = null,
+    List<string>? ActivityTypes = null
 );
 
 public record RaceDto(
@@ -63,24 +70,30 @@ public record RaceDto(
     string? TrailName,
     string? TrailSlug,
     string Name,
+    string? NameEn,
     string? DistanceLabel,
     int? CutoffMinutes,
     string? Description,
+    string? DescriptionEn,
     string Status,
     int SortOrder,
     string TicketStatus,
     int? MaxParticipants,
     int? ItraPoints,
     string? CertifiedBy,
+    string? CertifiedByEn,
     decimal PrizeMoney,
     string? ChampionshipCategory,
+    string? ChampionshipCategoryEn,
     DateOnly? DateOfRace,
     TimeOnly? StartTime,
     double? TrailDistanceMeters,
     double? TrailElevationGain,
     string? TrailTerrainType = null,
     string? TrailDifficulty = null,
-    string? TrailActivityType = null
+    string? TrailActivityType = null,
+    Dictionary<string, string>? TranslationHashes = null,
+    string? ActivityType = null
 );
 
 public record EventEditionDto(
@@ -88,15 +101,19 @@ public record EventEditionDto(
     Guid EventId,
     int? Year,
     DateOnly? Date,
+    DateOnly? EndDate,
     string? Title,
+    string? TitleEn,
     string? RegistrationUrl,
     string? ResultsUrl,
     string? Notes,
+    string? NotesEn,
     string RegistrationStatus,
     Guid? TrailId,
     string? TrailName,
     string? TrailSlug,
     List<RaceDto> Races,
     DateTime CreatedAt,
-    DateTime? UpdatedAt
+    DateTime? UpdatedAt,
+    Dictionary<string, string>? TranslationHashes = null
 );

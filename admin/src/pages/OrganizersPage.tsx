@@ -27,6 +27,9 @@ import EditIcon from '@mui/icons-material/Edit';
 import GroupIcon from '@mui/icons-material/Group';
 import { useOrganizers, type OrganizerDto } from '../hooks/useOrganizers';
 import { trimToUndefined } from '../utils/strings';
+import BilingualTextField from '../components/BilingualTextField';
+import { useTranslate } from '../hooks/useTranslate';
+import TranslateIcon from '@mui/icons-material/Translate';
 
 interface Props {
     onNotify: (message: ReactNode, severity?: 'success' | 'error') => void;
@@ -39,6 +42,7 @@ const EMPTY_FORM = {
     email: '',
     website: '',
     description: '',
+    descriptionEn: '',
     contactName: '',
 };
 
@@ -52,6 +56,7 @@ export default function OrganizersPage({ onNotify }: Props) {
     const [saving, setSaving] = useState(false);
     const [deleteConfirm, setDeleteConfirm] = useState<OrganizerDto | null>(null);
     const [deleting, setDeleting] = useState(false);
+    const { translate, translating } = useTranslate(msg => onNotify(msg, 'error'));
 
     const setField = (field: keyof FormState, value: string) =>
         setForm(prev => ({ ...prev, [field]: value }));
@@ -71,6 +76,7 @@ export default function OrganizersPage({ onNotify }: Props) {
             email: org.email ?? '',
             website: org.website ?? '',
             description: org.description ?? '',
+            descriptionEn: org.descriptionEn ?? '',
             contactName: org.contactName ?? '',
         });
         setDialogOpen(true);
@@ -87,6 +93,7 @@ export default function OrganizersPage({ onNotify }: Props) {
                 email: trimToUndefined(form.email),
                 website: trimToUndefined(form.website),
                 description: trimToUndefined(form.description),
+                descriptionEn: trimToUndefined(form.descriptionEn),
                 contactName: trimToUndefined(form.contactName),
             };
             if (editTarget) {
@@ -258,25 +265,39 @@ export default function OrganizersPage({ onNotify }: Props) {
                                 fullWidth
                             />
                         </Box>
-                        <TextField
+                        <BilingualTextField
                             label="Description"
-                            value={form.description}
-                            onChange={e => setField('description', e.target.value)}
+                            valueIs={form.description}
+                            valueEn={form.descriptionEn}
+                            onChangeIs={v => setField('description', v)}
+                            onChangeEn={v => setField('descriptionEn', v)}
                             multiline
                             rows={3}
                             fullWidth
                         />
                     </Stack>
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
+                <DialogActions sx={{ justifyContent: 'space-between', borderTop: 1, borderColor: 'divider' }}>
                     <Button
-                        variant="contained"
-                        onClick={handleSave}
-                        disabled={saving || !form.name.trim()}
+                        startIcon={translating ? <CircularProgress size={16} /> : <TranslateIcon />}
+                        disabled={translating || !form.description.trim()}
+                        onClick={async () => {
+                            const [descEn] = await translate([form.description]);
+                            setField('descriptionEn', descEn);
+                        }}
                     >
-                        {saving ? <CircularProgress size={20} /> : (editTarget ? 'Save' : 'Create')}
+                        Translate to EN
                     </Button>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
+                        <Button
+                            variant="contained"
+                            onClick={handleSave}
+                            disabled={saving || !form.name.trim()}
+                        >
+                            {saving ? <CircularProgress size={20} /> : (editTarget ? 'Save' : 'Create')}
+                        </Button>
+                    </Box>
                 </DialogActions>
             </Dialog>
 

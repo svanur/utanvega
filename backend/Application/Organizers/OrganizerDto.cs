@@ -14,7 +14,9 @@ public record OrganizerDto(
     string? Email,
     string? Website,
     string? Description,
+    string? DescriptionEn,
     string? ContactName,
     DateTime CreatedAt,
-    DateTime? UpdatedAt
+    DateTime? UpdatedAt,
+    Dictionary<string, string>? TranslationHashes = null
 );

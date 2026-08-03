@@ -1,3 +1,4 @@
+using System.Text.Json;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Utanvega.Backend.Application.Caching;
@@ -22,7 +23,12 @@ public record UpdateEventCommand(
     ScheduleRule? ScheduleRule,
     List<SocialLink>? SocialLinks,
     double? GpxPointLat,
-    double? GpxPointLng
+    double? GpxPointLng,
+    string? NameEn = null,
+    string? DescriptionEn = null,
+    string? OrganizerNameEn = null,
+    string? AlertMessageEn = null,
+    Dictionary<string, string>? TranslationHashes = null
 ) : IRequest<bool>;
 
 public class UpdateEventCommandHandler : IRequestHandler<UpdateEventCommand, bool>
@@ -48,20 +54,26 @@ public class UpdateEventCommandHandler : IRequestHandler<UpdateEventCommand, boo
         Enum.TryParse<EventStatus>(request.Status, ignoreCase: true, out var status);
 
         ev.Name = request.Name;
+        ev.NameEn = request.NameEn;
         ev.Description = request.Description;
+        ev.DescriptionEn = request.DescriptionEn;
         ev.Type = type;
         ev.ActivityType = activityType;
         ev.Status = status;
         ev.OrganizerName = request.OrganizerName;
+        ev.OrganizerNameEn = request.OrganizerNameEn;
         ev.OrganizerWebsite = request.OrganizerWebsite;
         ev.OrganizerId = request.OrganizerId;
         ev.AlertMessage = request.AlertMessage;
+        ev.AlertMessageEn = request.AlertMessageEn;
         ev.AlertSeverity = request.AlertSeverity;
         ev.LocationId = request.LocationId;
         ev.ScheduleRule = request.ScheduleRule;
         ev.SocialLinks = request.SocialLinks;
         ev.GpxPointLat = request.GpxPointLat;
         ev.GpxPointLng = request.GpxPointLng;
+        if (request.TranslationHashes != null)
+            ev.TranslationHashes = JsonSerializer.Serialize(request.TranslationHashes);
         ev.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync(cancellationToken);

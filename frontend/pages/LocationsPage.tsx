@@ -36,6 +36,7 @@ import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import Layout from '../components/Layout';
 import { useLocations, Location } from '../hooks/useLocations';
+import { useLocalize } from '../utils/localize';
 import { useTrails, Trail } from '../hooks/useTrails';
 import RunningLoader from '../components/RunningLoader';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
@@ -117,6 +118,7 @@ type LocationsPageProps = {
 
 export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps) {
     const { t } = useTranslation();
+    const localize = useLocalize();
     const { locations, loading, error } = useLocations();
     const { trails } = useTrails();
     const navigate = useNavigate();
@@ -141,8 +143,10 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
             const q = search.toLowerCase();
             result = result.filter(l =>
                 l.name.toLowerCase().includes(q) ||
+                (l.nameEn?.toLowerCase().includes(q) ?? false) ||
                 l.type.toLowerCase().includes(q) ||
-                l.description?.toLowerCase().includes(q)
+                l.description?.toLowerCase().includes(q) ||
+                (l.descriptionEn?.toLowerCase().includes(q) ?? false)
             );
         }
         result.sort((a, b) => {
@@ -150,10 +154,10 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
             const sb = statsMap[b.slug];
             if (sortBy === 'trails') return (sb?.trailCount || 0) - (sa?.trailCount || 0);
             if (sortBy === 'distance') return (sb?.totalKm || 0) - (sa?.totalKm || 0);
-            return a.name.localeCompare(b.name, 'is');
+            return (localize(a.name, a.nameEn) ?? a.name).localeCompare(localize(b.name, b.nameEn) ?? b.name, 'is');
         });
         return result;
-    }, [locations, search, sortBy, statsMap]);
+    }, [locations, search, sortBy, statsMap, localize]);
 
     const locationsWithCoords = useMemo(() =>
         filtered.filter(l => l.latitude && l.longitude),
@@ -287,7 +291,7 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                                         }}
                                     >
                                         <LeafletTooltip direction="top" offset={[0, -14]}>
-                                            <Typography variant="caption" fontWeight="bold">{loc.name}</Typography>
+                                            <Typography variant="caption" fontWeight="bold">{localize(loc.name, loc.nameEn) ?? loc.name}</Typography>
                                             <Typography variant="caption" display="block" color="text.secondary">
                                                 {count} {count === 1 ? 'trail' : 'trails'}
                                             </Typography>
@@ -379,7 +383,7 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                                                 <Stack direction="row" alignItems="center" spacing={1} mb={0.5}>
                                                     <LocationOnIcon color="primary" />
                                                     <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.3 }}>
-                                                        {loc.name}
+                                                        {localize(loc.name, loc.nameEn) ?? loc.name}
                                                     </Typography>
                                                 </Stack>
 
@@ -392,7 +396,7 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                                                 </Stack>
 
                                                 {/* Description */}
-                                                {loc.description && (
+                                                {(loc.description || loc.descriptionEn) && (
                                                     <Typography variant="body2" color="text.secondary" sx={{
                                                         mb: 1.5,
                                                         overflow: 'hidden',
@@ -401,7 +405,7 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                                                         WebkitLineClamp: 2,
                                                         WebkitBoxOrient: 'vertical',
                                                     }}>
-                                                        {loc.description}
+                                                        {localize(loc.description, loc.descriptionEn)}
                                                     </Typography>
                                                 )}
 

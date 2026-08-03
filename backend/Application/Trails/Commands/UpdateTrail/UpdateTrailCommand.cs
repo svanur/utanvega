@@ -1,3 +1,4 @@
+using System.Text.Json;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -27,7 +28,10 @@ public record UpdateTrailCommand(
     string? YoutubeUrl = null,
     List<TrailLocationUpdateDto>? Locations = null,
     List<Guid>? TagIds = null,
-    string? TerrainType = null
+    string? TerrainType = null,
+    string? NameEn = null,
+    string? DescriptionEn = null,
+    Dictionary<string, string>? TranslationHashes = null
 ) : IRequest<bool>;
 
 public class UpdateTrailCommandHandler : IRequestHandler<UpdateTrailCommand, bool>
@@ -63,6 +67,10 @@ public class UpdateTrailCommandHandler : IRequestHandler<UpdateTrailCommand, boo
         trail.Slug = request.Slug;
         
         trail.Description = request.Description;
+        trail.NameEn = request.NameEn;
+        trail.DescriptionEn = request.DescriptionEn;
+        if (request.TranslationHashes != null)
+            trail.TranslationHashes = JsonSerializer.Serialize(request.TranslationHashes);
         trail.YoutubeUrl = request.YoutubeUrl;
         
         if (Enum.TryParse<ActivityType>(request.ActivityType, true, out var activityType))

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using MediatR;
 using Serilog;
 using Microsoft.EntityFrameworkCore;
@@ -14,9 +15,9 @@ public record GetTrailsQuery(bool IncludeArchived = false, bool PublishedOnly = 
     public TimeSpan CacheDuration => TimeSpan.FromHours(1);
 }
 
-public record LocationInfoDto(Guid Id, string Name, string Slug, int Order, string Role, double? CenterLatitude = null, double? CenterLongitude = null);
+public record LocationInfoDto(Guid Id, string Name, string? NameEn, string Slug, int Order, string Role, double? CenterLatitude = null, double? CenterLongitude = null);
 
-public record TagInfoDto(string Name, string Slug, string? Color);
+public record TagInfoDto(string Name, string? NameEn, string Slug, string? Color);
 
 public record LinkedRaceDto(
     string EventName,
@@ -50,7 +51,10 @@ public record TrailDto(
     string? YoutubeUrl = null,
     double[]? ElevationProfile = null,
     DateTime? UpdatedAt = null,
-    string? TerrainType = null
+    string? TerrainType = null,
+    string? NameEn = null,
+    string? DescriptionEn = null,
+    Dictionary<string, string>? TranslationHashes = null
 );
 
 public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailDto>>
@@ -113,16 +117,19 @@ public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailD
             (t.GpxData as LineString)?.StartPoint.X,
             t.TrailLocations
                 .OrderBy(tl => tl.Order)
-                .Select(tl => new LocationInfoDto(tl.LocationId, tl.Location.Name, tl.Location.Slug, tl.Order, tl.Role.ToString(), tl.Location.Center?.Y, tl.Location.Center?.X))
+                .Select(tl => new LocationInfoDto(tl.LocationId, tl.Location.Name, tl.Location.NameEn, tl.Location.Slug, tl.Order, tl.Role.ToString(), tl.Location.Center?.Y, tl.Location.Center?.X))
                 .ToList(),
             t.TrailTags
-                .Select(tt => new TagInfoDto(tt.Tag.Name, tt.Tag.Slug, tt.Tag.Color))
+                .Select(tt => new TagInfoDto(tt.Tag.Name, tt.Tag.NameEn, tt.Tag.Slug, tt.Tag.Color))
                 .ToList(),
             viewCounts.GetValueOrDefault(t.Id, 0),
             YoutubeUrl: t.YoutubeUrl,
             ElevationProfile: null,
             UpdatedAt: t.UpdatedAt,
-            TerrainType: t.TerrainType?.ToString()
+            TerrainType: t.TerrainType?.ToString(),
+            NameEn: t.NameEn,
+            DescriptionEn: t.DescriptionEn,
+            TranslationHashes: t.TranslationHashes == null ? null : JsonSerializer.Deserialize<Dictionary<string, string>>(t.TranslationHashes)
         )).ToList();
 
         return result;

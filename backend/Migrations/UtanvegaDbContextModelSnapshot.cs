@@ -79,6 +79,9 @@ namespace Utanvega.Backend.Migrations
                     b.Property<string>("AlertMessage")
                         .HasColumnType("text");
 
+                    b.Property<string>("AlertMessageEn")
+                        .HasColumnType("text");
+
                     b.Property<string>("AlertSeverity")
                         .HasColumnType("text");
 
@@ -89,6 +92,9 @@ namespace Utanvega.Backend.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<string>("DescriptionEn")
                         .HasColumnType("text");
 
                     b.Property<double?>("GpxPointLat")
@@ -105,12 +111,18 @@ namespace Utanvega.Backend.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<string>("NameEn")
+                        .HasColumnType("text");
+
                     b.Property<Guid?>("OrganizerId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("OrganizerName")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<string>("OrganizerNameEn")
+                        .HasColumnType("text");
 
                     b.Property<string>("OrganizerWebsite")
                         .HasMaxLength(500)
@@ -126,6 +138,9 @@ namespace Utanvega.Backend.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TranslationHashes")
                         .HasColumnType("text");
 
                     b.Property<string>("Type")
@@ -162,10 +177,16 @@ namespace Utanvega.Backend.Migrations
                     b.Property<DateOnly?>("Date")
                         .HasColumnType("date");
 
+                    b.Property<DateOnly?>("EndDate")
+                        .HasColumnType("date");
+
                     b.Property<Guid>("EventId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("Notes")
+                        .HasColumnType("text");
+
+                    b.Property<string>("NotesEn")
                         .HasColumnType("text");
 
                     b.Property<string>("RegistrationStatus")
@@ -184,8 +205,14 @@ namespace Utanvega.Backend.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<string>("TitleEn")
+                        .HasColumnType("text");
+
                     b.Property<Guid?>("TrailId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("TranslationHashes")
+                        .HasColumnType("text");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -251,10 +278,16 @@ namespace Utanvega.Backend.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
+                    b.Property<string>("DescriptionEn")
+                        .HasColumnType("text");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<string>("NameEn")
+                        .HasColumnType("text");
 
                     b.Property<Guid?>("ParentId")
                         .HasColumnType("uuid");
@@ -266,6 +299,9 @@ namespace Utanvega.Backend.Migrations
                         .IsRequired()
                         .HasMaxLength(250)
                         .HasColumnType("character varying(250)");
+
+                    b.Property<string>("TranslationHashes")
+                        .HasColumnType("text");
 
                     b.Property<string>("Type")
                         .IsRequired()
@@ -303,6 +339,9 @@ namespace Utanvega.Backend.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
+                    b.Property<string>("DescriptionEn")
+                        .HasColumnType("text");
+
                     b.Property<string>("Email")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
@@ -319,6 +358,9 @@ namespace Utanvega.Backend.Migrations
                     b.Property<string>("Phone")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
+
+                    b.Property<string>("TranslationHashes")
+                        .HasColumnType("text");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -369,13 +411,22 @@ namespace Utanvega.Backend.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ActivityType")
+                        .HasColumnType("text");
+
                     b.Property<string>("CertifiedBy")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<string>("CertifiedByEn")
+                        .HasColumnType("text");
+
                     b.Property<string>("ChampionshipCategory")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<string>("ChampionshipCategoryEn")
+                        .HasColumnType("text");
 
                     b.Property<int?>("CutoffMinutes")
                         .HasColumnType("integer");
@@ -384,6 +435,9 @@ namespace Utanvega.Backend.Migrations
                         .HasColumnType("date");
 
                     b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<string>("DescriptionEn")
                         .HasColumnType("text");
 
                     b.Property<string>("DistanceLabel")
@@ -403,6 +457,9 @@ namespace Utanvega.Backend.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<string>("NameEn")
+                        .HasColumnType("text");
 
                     b.Property<decimal>("PrizeMoney")
                         .HasPrecision(10, 2)
@@ -424,6 +481,9 @@ namespace Utanvega.Backend.Migrations
 
                     b.Property<Guid?>("TrailId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("TranslationHashes")
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
@@ -452,10 +512,16 @@ namespace Utanvega.Backend.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<string>("NameEn")
+                        .HasColumnType("text");
+
                     b.Property<string>("Slug")
                         .IsRequired()
                         .HasMaxLength(120)
                         .HasColumnType("character varying(120)");
+
+                    b.Property<string>("TranslationHashes")
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
@@ -484,6 +550,9 @@ namespace Utanvega.Backend.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
+                    b.Property<string>("DescriptionEn")
+                        .HasColumnType("text");
+
                     b.Property<string>("Difficulty")
                         .IsRequired()
                         .HasColumnType("text");
@@ -508,6 +577,9 @@ namespace Utanvega.Backend.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<string>("NameEn")
+                        .HasColumnType("text");
+
                     b.Property<string>("Slug")
                         .IsRequired()
                         .HasMaxLength(250)
@@ -518,6 +590,9 @@ namespace Utanvega.Backend.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("TerrainType")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TranslationHashes")
                         .HasColumnType("text");
 
                     b.Property<string>("Type")

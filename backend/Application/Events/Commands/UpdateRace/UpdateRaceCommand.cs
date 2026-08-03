@@ -1,3 +1,4 @@
+using System.Text.Json;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Utanvega.Backend.Application.Caching;
@@ -22,7 +23,13 @@ public record UpdateRaceCommand(
     decimal PrizeMoney,
     string? ChampionshipCategory,
     DateOnly? DateOfRace,
-    TimeOnly? StartTime
+    TimeOnly? StartTime,
+    string? NameEn = null,
+    string? DescriptionEn = null,
+    string? CertifiedByEn = null,
+    string? ChampionshipCategoryEn = null,
+    Dictionary<string, string>? TranslationHashes = null,
+    string? ActivityType = null
 ) : IRequest<bool>;
 
 public class UpdateRaceCommandHandler : IRequestHandler<UpdateRaceCommand, bool>
@@ -47,22 +54,29 @@ public class UpdateRaceCommandHandler : IRequestHandler<UpdateRaceCommand, bool>
 
         Enum.TryParse<RaceStatus>(request.Status, ignoreCase: true, out var status);
         Enum.TryParse<TicketStatus>(request.TicketStatus, ignoreCase: true, out var ticketStatus);
+        race.ActivityType = Enum.TryParse<ActivityType>(request.ActivityType, ignoreCase: true, out var at) ? at : (ActivityType?)null;
 
         race.TrailId = request.TrailId;
         race.Name = request.Name;
+        race.NameEn = request.NameEn;
         race.DistanceLabel = request.DistanceLabel;
         race.CutoffMinutes = request.CutoffMinutes;
         race.Description = request.Description;
+        race.DescriptionEn = request.DescriptionEn;
         race.Status = status;
         race.SortOrder = request.SortOrder;
         race.TicketStatus = ticketStatus;
         race.MaxParticipants = request.MaxParticipants;
         race.ItraPoints = request.ItraPoints;
         race.CertifiedBy = request.CertifiedBy;
+        race.CertifiedByEn = request.CertifiedByEn;
         race.PrizeMoney = request.PrizeMoney;
         race.ChampionshipCategory = request.ChampionshipCategory;
+        race.ChampionshipCategoryEn = request.ChampionshipCategoryEn;
         race.DateOfRace = request.DateOfRace;
         race.StartTime = request.StartTime;
+        if (request.TranslationHashes != null)
+            race.TranslationHashes = JsonSerializer.Serialize(request.TranslationHashes);
 
         await _context.SaveChangesAsync(cancellationToken);
         _cacheInvalidator.InvalidateEvent(race.EventEdition.Event.Slug);

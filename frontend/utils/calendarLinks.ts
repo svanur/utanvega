@@ -4,7 +4,8 @@
 
 export interface CalendarEventInfo {
     title: string;
-    date: string; // YYYY-MM-DD
+    date: string;      // YYYY-MM-DD (start)
+    endDate?: string;  // YYYY-MM-DD (inclusive end for multi-day events)
     location?: string;
     description?: string;
     url?: string;
@@ -32,7 +33,7 @@ function nextDayCompact(yyyymmdd: string): string {
 export function googleCalendarUrl(event: CalendarEventInfo): string {
     // Google uses all-day format: YYYYMMDD/YYYYMMDD (end is exclusive)
     const start = event.date.replace(/-/g, '');
-    const end = nextDayCompact(event.date);
+    const end = nextDayCompact(event.endDate ?? event.date);
 
     const params = new URLSearchParams({
         action: 'TEMPLATE',
@@ -49,7 +50,7 @@ export function googleCalendarUrl(event: CalendarEventInfo): string {
  * Generate an Outlook.com "Add Event" URL.
  */
 export function outlookCalendarUrl(event: CalendarEventInfo): string {
-    const endCompact = nextDayCompact(event.date);
+    const endCompact = nextDayCompact(event.endDate ?? event.date);
     const enddt = `${endCompact.slice(0, 4)}-${endCompact.slice(4, 6)}-${endCompact.slice(6, 8)}`;
     const params = new URLSearchParams({
         path: '/calendar/action/compose',
@@ -70,7 +71,7 @@ export function outlookCalendarUrl(event: CalendarEventInfo): string {
  */
 export function generateIcs(event: CalendarEventInfo): string {
     const start = event.date.replace(/-/g, '');
-    const end = nextDayCompact(event.date);
+    const end = nextDayCompact(event.endDate ?? event.date);
 
     const uid = `${event.title.replace(/\s/g, '-').toLowerCase()}-${event.date}@hlaupadagskra.is`;
 

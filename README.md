@@ -54,6 +54,21 @@ dotnet user-secrets set "SUPABASE_URL" "https://your-project-ref.supabase.co"
 dotnet user-secrets set "SUPABASE_JWT_SECRET" "your-supabase-jwt-secret"
 ```
 
+#### DeepL Translation (optional)
+
+The admin panel can auto-translate Icelandic content to English using [DeepL](https://www.deepl.com/en/pro-api). To enable:
+
+1. Sign up for a DeepL API Free account at https://www.deepl.com/en/pro-api (500,000 characters/month free).
+2. Copy your API key from the DeepL dashboard (Free keys end in `:fx`).
+3. Add it to .NET user-secrets:
+
+```bash
+cd backend
+dotnet user-secrets set "DeepL:ApiKey" "your-deepl-api-key"
+```
+
+The key is stored in user-secrets and never committed to source control. Without it, the "Translate to EN" buttons in the admin panel will return a 502 error; the rest of the app works normally.
+
 ### 3. Start local Supabase
 
 If the hosted Supabase project is quota-limited or unavailable, use the local stack:
