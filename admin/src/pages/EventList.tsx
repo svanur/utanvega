@@ -448,6 +448,7 @@ interface BulkMissingItem {
   sourceEdition: EventEditionDto | null;
   year: number;
   date: string;
+  endDate: string;
   registrationUrl: string;
   resultsUrl: string;
   registrationStatus: RegistrationStatus;
@@ -481,6 +482,21 @@ function suggestEditionDateForYear(prevDateStr: string | null | undefined, toYea
   const diff = prev.getDay() - candidate.getDay();
   candidate.setDate(candidate.getDate() + (Math.abs(diff) <= 3 ? diff : diff > 0 ? diff - 7 : diff + 7));
   return candidate.toISOString().slice(0, 10);
+}
+
+function suggestEditionEndDateForYear(
+  prevStartStr: string | null | undefined,
+  prevEndStr: string | null | undefined,
+  newStartStr: string,
+): string {
+  if (!prevStartStr || !prevEndStr || !newStartStr) return '';
+  const srcStart = new Date(prevStartStr + 'T00:00:00');
+  const srcEnd = new Date(prevEndStr + 'T00:00:00');
+  const durationDays = Math.round((srcEnd.getTime() - srcStart.getTime()) / (1000 * 60 * 60 * 24));
+  if (durationDays <= 0) return '';
+  const newStart = new Date(newStartStr + 'T00:00:00');
+  newStart.setDate(newStart.getDate() + durationDays);
+  return newStart.toISOString().slice(0, 10);
 }
 
 function computeClonedRaceDate(
@@ -1318,12 +1334,14 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
     const clonedRegUrl = bumpYearInUrl(defaultClone?.registrationUrl ?? '', defaultClone?.year, Number(nextYear)) || (defaultClone?.registrationUrl ?? '');
     const clonedResultsUrl = bumpYearInUrl(defaultClone?.resultsUrl ?? '', defaultClone?.year, Number(nextYear)) || (defaultClone?.resultsUrl ?? '');
     const suggestedDate = suggestEditionDateForYear(defaultClone?.date, Number(nextYear));
+    const suggestedEndDate = suggestEditionEndDateForYear(defaultClone?.date, defaultClone?.endDate, suggestedDate);
     const isPastYear = suggestedDate ? isPastDate(suggestedDate) : Number(nextYear) < new Date().getFullYear();
     setCloneFromEditionId(defaultClone?.id ?? '');
     setEditionForm({
       ...createEmptyEditionForm(event.id, event.type, event.name),
       year: nextYear,
       date: suggestedDate,
+      endDate: suggestedEndDate,
       title: nextYear,
       registrationUrl: clonedRegUrl,
       resultsUrl: clonedResultsUrl,
@@ -2038,6 +2056,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
         const source = editionsWithRaces[editionsWithRaces.length - 1] ?? detail?.editions.sort(sortEditions)[detail.editions.length - 1] ?? null;
         const nextYear = source?.year ? source.year + 1 : new Date().getFullYear();
         const suggestedDate = suggestEditionDateForYear(source?.date, nextYear);
+        const suggestedEndDate = suggestEditionEndDateForYear(source?.date, source?.endDate, suggestedDate);
         const isPast = suggestedDate ? isPastDate(suggestedDate) : nextYear < new Date().getFullYear();
         return {
           event,
@@ -2045,6 +2064,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
           sourceEdition: source ?? null,
           year: nextYear,
           date: suggestedDate,
+          endDate: suggestedEndDate,
           registrationUrl: bumpYearInUrl(source?.registrationUrl ?? '', source?.year, nextYear) || (source?.registrationUrl ?? ''),
           resultsUrl: bumpYearInUrl(source?.resultsUrl ?? '', source?.year, nextYear) || (source?.resultsUrl ?? ''),
           registrationStatus: isPast ? 'Closed' : 'NotStarted',
@@ -2074,6 +2094,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
           year: item.year,
           title: String(item.year),
           date: item.date || null,
+          endDate: item.endDate || null,
           registrationUrl: item.registrationUrl || undefined,
           resultsUrl: item.resultsUrl || undefined,
           registrationStatus: item.registrationStatus,
