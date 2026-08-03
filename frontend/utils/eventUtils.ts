@@ -19,6 +19,18 @@ export function formatNextDate(dateStr: string, t: TFunc): string {
     return formatted.charAt(0).toUpperCase() + formatted.slice(1);
 }
 
+export function formatDateRange(startStr: string, endStr: string | null | undefined, t: TFunc): string {
+    if (!endStr) return formatNextDate(startStr, t);
+    const months = t('races.months', { returnObjects: true }) as unknown as string[];
+    const start = new Date(startStr + 'T00:00:00');
+    const end = new Date(endStr + 'T00:00:00');
+    if (start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth()) {
+        const s = `${start.getDate()}.–${end.getDate()}. ${months[start.getMonth()]} ${start.getFullYear()}`;
+        return s.charAt(0).toUpperCase() + s.slice(1);
+    }
+    return `${formatNextDate(startStr, t)} – ${formatNextDate(endStr, t)}`;
+}
+
 export function getCountdownColor(daysUntil: number | null): 'success' | 'warning' | 'error' | 'default' {
     if (daysUntil === null) return 'default';
     if (daysUntil < 0) return 'default';

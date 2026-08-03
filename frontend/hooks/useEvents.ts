@@ -66,6 +66,7 @@ export interface EventSummary {
     gpxPointLat: number | null;
     gpxPointLng: number | null;
     isMountainRace: boolean;
+    endDisplayDate: string | null;
 }
 
 export interface RaceDto {

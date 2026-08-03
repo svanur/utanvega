@@ -212,7 +212,8 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 e.GpxPointLng,
                 IsMountainRace: isMountainRace,
                 TerrainType: terrainType,
-                HasFutureEdition: hasFutureEdition
+                HasFutureEdition: hasFutureEdition,
+                EndDisplayDate: relevantEdition?.EndDate
             );
         }).ToList();
     }

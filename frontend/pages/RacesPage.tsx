@@ -63,7 +63,7 @@ import { downloadIcs } from '../utils/calendarLinks';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
 import { getTicketStatusColor, groupDistances } from '../utils/ticketStatus';
-import { formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor } from '../utils/eventUtils';
+import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor } from '../utils/eventUtils';
 import { useLocalize } from '../utils/localize';
 import { getActivityIcon } from '../utils/activityIcon';
 import LandscapeIcon from '@mui/icons-material/Landscape';
@@ -802,7 +802,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                 </Typography>
                                                                 {(comp.displayDate ?? comp.nextEditionDate) && (
                                                                     <Typography variant="body2" color="text.secondary">
-                                                                        {formatNextDate((comp.displayDate ?? comp.nextEditionDate)!, t)}
+                                                                        {formatDateRange((comp.displayDate ?? comp.nextEditionDate)!, comp.endDisplayDate, t)}
                                                                     </Typography>
                                                                 )}
                                                                 {userLocation && comp.gpxPointLat != null && comp.gpxPointLng != null && (
@@ -1078,7 +1078,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                             <>
                                                                 <CalendarTodayIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
                                                                 <Typography variant="body2" color="text.secondary" noWrap>
-                                                                    {formatNextDate((comp.displayDate ?? comp.nextEditionDate)!, t)}
+                                                                    {formatDateRange((comp.displayDate ?? comp.nextEditionDate)!, comp.endDisplayDate, t)}
                                                                 </Typography>
                                                                 <EventDateBadge dateStr={(comp.displayDate ?? comp.nextEditionDate)!} />
                                                             </>
