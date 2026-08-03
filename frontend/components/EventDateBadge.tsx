@@ -5,26 +5,48 @@ import { useIcelandicHolidays } from '../hooks/useIcelandicHolidays';
 
 interface EventDateBadgeProps {
     dateStr: string;
+    endDateStr?: string | null;
 }
 
-export default function EventDateBadge({ dateStr }: EventDateBadgeProps) {
+export default function EventDateBadge({ dateStr, endDateStr }: EventDateBadgeProps) {
     const { t } = useTranslation();
     const { getHolidays } = useIcelandicHolidays();
 
-    const date = new Date(dateStr + 'T00:00:00');
-    const day = date.getDay(); // 0 = Sun, 6 = Sat
-    const isWeekend = day === 0 || day === 6;
+    const weekdays = t('races.weekdays', { returnObjects: true }) as string[];
+
+    const startDate = new Date(dateStr + 'T00:00:00');
+    const startDay = startDate.getDay();
+    const startFull = weekdays[startDay] ?? '';
+    const startShort = startFull.charAt(0).toUpperCase() + startFull.slice(1, 3);
+
+    const endDate = endDateStr ? new Date(endDateStr + 'T00:00:00') : null;
+
+    const isMultiDay = endDate !== null && endDateStr !== dateStr;
+
+    let label: string;
+    let isWeekend: boolean;
+    let tooltipTitle: string;
+
+    if (isMultiDay && endDate) {
+        const endDay = endDate.getDay();
+        const endFull = weekdays[endDay] ?? '';
+        const endShort = endFull.charAt(0).toUpperCase() + endFull.slice(1, 3);
+        label = `${startShort}–${endShort}`;
+        isWeekend = startDay === 0 || startDay === 6 || endDay === 0 || endDay === 6;
+        tooltipTitle = `${startFull.charAt(0).toUpperCase() + startFull.slice(1)} – ${endFull.charAt(0).toUpperCase() + endFull.slice(1)}`;
+    } else {
+        label = startShort;
+        isWeekend = startDay === 0 || startDay === 6;
+        tooltipTitle = startFull.charAt(0).toUpperCase() + startFull.slice(1);
+    }
+
     const holidays = getHolidays(dateStr);
     const isHoliday = holidays.length > 0;
 
-    const weekdays = t('races.weekdays', { returnObjects: true }) as string[];
-    const fullName = weekdays[day] ?? '';
-    const shortName = fullName.charAt(0).toUpperCase() + fullName.slice(1, 3);
-
     const weekdayChip = (
-        <Tooltip title={fullName.charAt(0).toUpperCase() + fullName.slice(1)} arrow>
+        <Tooltip title={tooltipTitle} arrow>
             <Chip
-                label={shortName}
+                label={label}
                 size="small"
                 color={isWeekend ? 'info' : 'default'}
                 variant={isWeekend ? 'filled' : 'outlined'}

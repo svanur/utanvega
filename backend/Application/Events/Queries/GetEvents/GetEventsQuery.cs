@@ -48,27 +48,43 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
         return events.Select(e =>
         {
             var nextDate = ResolveNextDate(e, today);
-            // True only when an actual edition record with a future date exists — does not count schedule-rule projections
-            var hasFutureEdition = e.Editions.Any(ed => ed.Date.HasValue && ed.Date.Value >= today);
+            // True when a future edition exists — either with a specific date, or a dateless edition for the current year or later
+            var hasFutureEdition = e.Editions.Any(ed =>
+                ((ed.EndDate ?? ed.Date).HasValue && (ed.EndDate ?? ed.Date)!.Value >= today) ||
+                (!ed.Date.HasValue && ed.Year.HasValue && ed.Year.Value >= today.Year));
+
+            // An edition is "ongoing" when it has started (Date <= today) but not yet ended (EndDate ?? Date >= today)
+            var ongoingEdition = e.Editions.FirstOrDefault(ed =>
+                ed.Date.HasValue && ed.Date.Value <= today &&
+                (ed.EndDate ?? ed.Date).HasValue && (ed.EndDate ?? ed.Date)!.Value >= today);
 
             // Check for recently-past editions (up to 3 days ago)
             // so events with schedule rules still show as "recently completed"
             var mostRecentPast = e.Editions
-                .Where(ed => ed.Date.HasValue && ed.Date.Value < today)
-                .OrderByDescending(ed => ed.Date)
-                .Select(ed => ed.Date)
+                .Where(ed => (ed.EndDate ?? ed.Date).HasValue && (ed.EndDate ?? ed.Date)!.Value < today)
+                .OrderByDescending(ed => ed.EndDate ?? ed.Date)
+                .Select(ed => ed.EndDate ?? ed.Date)
                 .FirstOrDefault();
 
             var recentlyCompleted = e.Status != EventStatus.Cancelled
+                && ongoingEdition == null
                 && mostRecentPast.HasValue
                 && (today.DayNumber - mostRecentPast.Value.DayNumber) <= 3;
 
             int? daysUntil;
             DateOnly? displayDate;
-            if (recentlyCompleted)
+            if (ongoingEdition != null)
+            {
+                daysUntil = 0;
+                displayDate = ongoingEdition.Date;
+            }
+            else if (recentlyCompleted)
             {
                 daysUntil = mostRecentPast!.Value.DayNumber - today.DayNumber;
-                displayDate = mostRecentPast.Value;
+                // Use the edition's start date as displayDate so the range "start – end" renders correctly.
+                // daysUntil stays end-date-based so the -1/-2/-3 countdown is accurate.
+                var recentEdition = e.Editions.FirstOrDefault(ed => (ed.EndDate ?? ed.Date) == mostRecentPast);
+                displayDate = recentEdition?.Date ?? mostRecentPast.Value;
             }
             else if (nextDate.HasValue)
             {
@@ -82,12 +98,13 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
             }
 
             // Determine the relevant edition for distances/registration
-            var relevantEdition = recentlyCompleted
-                ? e.Editions.FirstOrDefault(ed => ed.Date == mostRecentPast)
-                : e.Editions
-                    .Where(ed => ed.Date.HasValue && ed.Date.Value >= today)
-                    .OrderBy(ed => ed.Date)
-                    .FirstOrDefault();
+            var relevantEdition = ongoingEdition
+                ?? (recentlyCompleted
+                    ? e.Editions.FirstOrDefault(ed => (ed.EndDate ?? ed.Date) == mostRecentPast)
+                    : e.Editions
+                        .Where(ed => ed.Date.HasValue && ed.Date.Value >= today)
+                        .OrderBy(ed => ed.Date)
+                        .FirstOrDefault());
 
             var relevantRaces = relevantEdition?.Races
                 .Where(r => r.Status != RaceStatus.Cancelled)
@@ -212,7 +229,8 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 e.GpxPointLng,
                 IsMountainRace: isMountainRace,
                 TerrainType: terrainType,
-                HasFutureEdition: hasFutureEdition
+                HasFutureEdition: hasFutureEdition,
+                EndDisplayDate: relevantEdition?.EndDate
             );
         }).ToList();
     }

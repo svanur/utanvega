@@ -143,7 +143,7 @@ if (!string.IsNullOrEmpty(rawConnectionString) && rawConnectionString.Contains("
         string host = hostAndPort[0];
         string port = hostAndPort.Length > 1 ? hostAndPort[1] : "5432";
 
-        var migrationExtra = isMigrateMode ? ";Pooling=false;CommandTimeout=120" : "";
+        var migrationExtra = isMigrateMode ? ";Pooling=false;CommandTimeout=120" : ";Keepalive=30;Connection Idle Lifetime=300;Connection Pruning Interval=10";
         connectionString = $"Host={host};Port={port};Database={database};Username={user};Password={password};Include Error Detail=true{migrationExtra}";
         Log.Information("Successfully parsed connection string. Host={Host}, Port={Port}, Database={Database}", host, port, database);
     }
@@ -1485,25 +1485,47 @@ app.MapGet("/api/v1/events/calendar.ics", async (IMediator mediator, IConfigurat
         var ical = new Ical.Net.Calendar();
         ical.ProductId = "-//Hlaupadagskra.is//Events//IS";
 
-        foreach (var day in days)
+        // Collapse multi-day events: track full key → (firstDay, lastDay, event)
+        // keyMap maps slug|title → current active full key; gap detection prevents collapsing separate editions
+        var seen = new Dictionary<string, (DateOnly First, DateOnly Last, CalendarEventDto Ev)>();
+        var keyMap = new Dictionary<string, string>();
+        foreach (var day in days.OrderBy(d => d.Date))
         {
             foreach (var ev in day.Events)
             {
-                var vEvent = new Ical.Net.CalendarComponents.CalendarEvent
+                var baseKey = $"{ev.Slug}|{ev.EditionTitle}";
+                if (keyMap.TryGetValue(baseKey, out var currentFullKey) &&
+                    seen.TryGetValue(currentFullKey, out var existing) &&
+                    day.Date <= existing.Last.AddDays(1))
                 {
-                    Uid = $"{ev.Slug}-{day.Date:yyyy-MM-dd}@hlaupadagskra.is",
-                    DtStart = new Ical.Net.DataTypes.CalDateTime(day.Date.Year, day.Date.Month, day.Date.Day),
-                    DtEnd = new Ical.Net.DataTypes.CalDateTime(day.Date.AddDays(1).Year, day.Date.AddDays(1).Month, day.Date.AddDays(1).Day),
-                    IsAllDay = true,
-                    Summary = ev.EditionTitle != null ? $"{ev.Name} – {ev.EditionTitle}" : ev.Name,
-                    Location = ev.LocationName ?? "",
-                    Url = new Uri($"{siteUrl}/events/{ev.Slug}"),
-                };
-                vEvent.Description = ev.RaceCount > 0
-                    ? $"{ev.RaceCount} race(s). More info: {siteUrl}/events/{ev.Slug}\n\nhttps://www.hlaupadagskra.is – Öll hlaup á einum stað"
-                    : $"More info: {siteUrl}/events/{ev.Slug}\n\nhttps://www.hlaupadagskra.is – Öll hlaup á einum stað";
-                ical.Events.Add(vEvent);
+                    seen[currentFullKey] = (existing.First, day.Date, existing.Ev);
+                }
+                else
+                {
+                    var fullKey = $"{ev.Slug}|{ev.EditionTitle}|{day.Date:yyyy-MM-dd}";
+                    seen[fullKey] = (day.Date, day.Date, ev);
+                    keyMap[baseKey] = fullKey;
+                }
             }
+        }
+
+        foreach (var (key, (first, last, ev)) in seen)
+        {
+            var dtEnd = last.AddDays(1); // iCal all-day end is exclusive
+            var vEvent = new Ical.Net.CalendarComponents.CalendarEvent
+            {
+                Uid = $"{ev.Slug}-{first:yyyy-MM-dd}@hlaupadagskra.is",
+                DtStart = new Ical.Net.DataTypes.CalDateTime(first.Year, first.Month, first.Day),
+                DtEnd = new Ical.Net.DataTypes.CalDateTime(dtEnd.Year, dtEnd.Month, dtEnd.Day),
+                IsAllDay = true,
+                Summary = ev.EditionTitle != null ? $"{ev.Name} – {ev.EditionTitle}" : ev.Name,
+                Location = ev.LocationName ?? "",
+                Url = new Uri($"{siteUrl}/events/{ev.Slug}"),
+            };
+            vEvent.Description = ev.RaceCount > 0
+                ? $"{ev.RaceCount} race(s). More info: {siteUrl}/events/{ev.Slug}\n\nhttps://www.hlaupadagskra.is – Öll hlaup á einum stað"
+                : $"More info: {siteUrl}/events/{ev.Slug}\n\nhttps://www.hlaupadagskra.is – Öll hlaup á einum stað";
+            ical.Events.Add(vEvent);
         }
 
         var serializer = new Ical.Net.Serialization.CalendarSerializer();

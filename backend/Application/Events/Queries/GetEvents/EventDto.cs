@@ -58,7 +58,8 @@ public record EventSummaryDto(
     double? GpxPointLng = null,
     bool IsMountainRace = false,
     string? TerrainType = null,
-    bool HasFutureEdition = false
+    bool HasFutureEdition = false,
+    DateOnly? EndDisplayDate = null
 );
 
 public record RaceDto(
@@ -98,6 +99,7 @@ public record EventEditionDto(
     Guid EventId,
     int? Year,
     DateOnly? Date,
+    DateOnly? EndDate,
     string? Title,
     string? TitleEn,
     string? RegistrationUrl,

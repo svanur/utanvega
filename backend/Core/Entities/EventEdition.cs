@@ -19,6 +19,7 @@ public class EventEdition
 
     public int? Year { get; set; }
     public DateOnly? Date { get; set; }
+    public DateOnly? EndDate { get; set; }
 
     public string? Title { get; set; }
     public string? TitleEn { get; set; }

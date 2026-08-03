@@ -67,6 +67,7 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
                     ed.EventId,
                     ed.Year,
                     ed.Date,
+                    ed.EndDate,
                     ed.Title,
                     ed.TitleEn,
                     ed.RegistrationUrl,

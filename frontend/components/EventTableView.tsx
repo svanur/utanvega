@@ -344,7 +344,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                                     {formatNextDate((event.displayDate ?? event.nextEditionDate)!, t)}
                                                 </Typography>
                                                 <Stack direction="row" alignItems="center" gap={0.5} flexWrap="wrap" justifyContent="center">
-                                                    <EventDateBadge dateStr={(event.displayDate ?? event.nextEditionDate)!} />
+                                                    <EventDateBadge dateStr={(event.displayDate ?? event.nextEditionDate)!} endDateStr={event.endDisplayDate} />
                                                     {event.daysUntil !== null && event.status !== 'Cancelled' && (
                                                         <Chip
                                                             label={

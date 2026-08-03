@@ -11,6 +11,7 @@ public record UpdateEditionCommand(
     Guid Id,
     int? Year,
     DateOnly? Date,
+    DateOnly? EndDate,
     string? Title,
     string? RegistrationUrl,
     string? ResultsUrl,
@@ -45,6 +46,7 @@ public class UpdateEditionCommandHandler : IRequestHandler<UpdateEditionCommand,
 
         edition.Year = request.Year;
         edition.Date = request.Date;
+        edition.EndDate = request.EndDate;
         edition.Title = request.Title;
         edition.TitleEn = request.TitleEn;
         edition.RegistrationUrl = request.RegistrationUrl;

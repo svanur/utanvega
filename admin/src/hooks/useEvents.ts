@@ -61,6 +61,7 @@ export interface EventEditionDto {
     eventId: string;
     year: number | null;
     date: string | null;
+    endDate: string | null;
     title: string | null;
     titleEn: string | null;
     registrationUrl: string | null;
@@ -119,6 +120,7 @@ export interface EventSummaryDto {
     isMountainRace: boolean;
     terrainType: string | null;
     hasFutureEdition: boolean;
+    endDisplayDate: string | null;
     translationHashes?: Record<string, string>;
 }
 
@@ -179,6 +181,7 @@ export interface CreateEditionInput {
     eventId: string;
     year?: number | null;
     date?: string | null;
+    endDate?: string | null;
     title?: string;
     titleEn?: string;
     registrationUrl?: string;
@@ -193,6 +196,7 @@ export interface UpdateEditionInput {
     id: string;
     year?: number | null;
     date?: string | null;
+    endDate?: string | null;
     title?: string;
     titleEn?: string;
     registrationUrl?: string;

@@ -97,7 +97,7 @@ type PreparedEdition = EventEditionDto & {
 import { ACTIVITY_EMOJI } from '../constants/activityEmoji';
 import { googleCalendarUrl, outlookCalendarUrl, downloadIcs } from '../utils/calendarLinks';
 import EventDateBadge from '../components/EventDateBadge';
-import { formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor } from '../utils/eventUtils';
+import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor } from '../utils/eventUtils';
 import { getTicketStatusColor } from '../utils/ticketStatus';
 
 type RaceDayChecklistKey = 'bib' | 'shoes' | 'gels' | 'goodMood';
@@ -123,6 +123,8 @@ function formatScheduleDescription(
     rule: ScheduleRule | null,
     upcomingCount: number,
     t: (key: string, opts?: Record<string, unknown>) => string,
+    endDate?: string | null,
+    startDate?: string | null,
 ): string | null {
     if (!rule) return null;
 
@@ -154,7 +156,7 @@ function formatScheduleDescription(
 
     if (rule.type === 'Fixed' && rule.date) {
         return t('races.scheduleFixed', {
-            date: formatNextDate(rule.date, t),
+            date: formatDateRange(startDate ?? rule.date, endDate, t),
         });
     }
 
@@ -211,7 +213,7 @@ function EditionMeta({
                 {!hideMeta && edition.date && (
                     <Chip
                         icon={<CalendarTodayIcon />}
-                        label={formatNextDate(edition.date, t)}
+                        label={formatDateRange(edition.date, edition.endDate, t)}
                         size="small"
                         variant="outlined"
                     />
@@ -368,7 +370,8 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
         for (const edition of preparedEditions) {
             const edDate = edition.date;
             const isNextEdition = nextDate && edDate === nextDate;
-            const isFuture = edDate && edDate >= today;
+            const effectiveEnd = edition.endDate ?? edDate;
+            const isFuture = effectiveEnd && effectiveEnd >= today;
             const hasNoDate = !edDate;
             const isDisplayDate = isPostRace && displayDate && edDate === displayDate;
             if (isNextEdition || isFuture || hasNoDate || isDisplayDate) {
@@ -660,10 +663,13 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                     )}
 
                     {event.status !== 'Cancelled' && (() => {
+                        const editionEndDate = primaryEdition?.endDate ?? event.endDisplayDate;
                         const desc = formatScheduleDescription(
                             event.scheduleRule,
                             event.upcomingDates?.length ?? 0,
                             t,
+                            editionEndDate,
+                            primaryEdition?.date ?? event.displayDate,
                         );
                         return desc ? (
                             <Typography variant="body2" sx={{ mt: 1.5, fontStyle: 'italic', color: 'text.secondary' }}>
@@ -679,9 +685,9 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 {t(event.daysUntil != null && event.daysUntil < 0 ? 'races.lastRace' : 'races.nextRace')}
                             </Typography>
                             <Typography variant="body1" fontWeight={600}>
-                                {formatNextDate((event.displayDate ?? event.nextEditionDate)!, t)}
+                                {formatDateRange((event.displayDate ?? event.nextEditionDate)!, primaryEdition?.endDate ?? event.endDisplayDate, t)}
                             </Typography>
-                            <EventDateBadge dateStr={(event.displayDate ?? event.nextEditionDate)!} />
+                            <EventDateBadge dateStr={(event.displayDate ?? event.nextEditionDate)!} endDateStr={primaryEdition?.endDate ?? event.endDisplayDate} />
                         </Box>
                     )}
 
@@ -801,7 +807,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             </Button>
                         )}
                         {isEnabled('calendar_integration', false) && (event.displayDate ?? event.nextEditionDate) && event.status !== 'Cancelled' && event.daysUntil != null && event.daysUntil >= 0 && (
-                            <AddToCalendarButton event={event} t={t} />
+                            <AddToCalendarButton event={event} endDate={primaryEdition?.endDate ?? event.endDisplayDate} t={t} />
                         )}
                         {isEnabled('directions_to_trailhead') && mapPin && (
                             <Tooltip title={t('races.directionsToEvent', 'Directions to event')} arrow>
@@ -1107,12 +1113,13 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     );
 }
 
-function AddToCalendarButton({ event, t }: { event: { name: string; displayDate?: string | null; nextEditionDate?: string | null; locationName?: string | null; slug: string; description?: string | null }; t: (key: string, opts?: Record<string, unknown>) => string }) {
+function AddToCalendarButton({ event, endDate, t }: { event: { name: string; displayDate?: string | null; nextEditionDate?: string | null; locationName?: string | null; slug: string; description?: string | null }; endDate?: string | null; t: (key: string, opts?: Record<string, unknown>) => string }) {
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const date = (event.displayDate ?? event.nextEditionDate)!;
     const calEvent = {
         title: event.name,
         date,
+        endDate: endDate ?? undefined,
         location: event.locationName ?? undefined,
         description: event.description ?? undefined,
         url: `${window.location.origin}/events/${event.slug}`,

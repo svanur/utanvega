@@ -30,7 +30,7 @@ import Layout from '../components/Layout';
 import RunningLoader from '../components/RunningLoader';
 import { useEventCalendar, CalendarDay } from '../hooks/useEvents';
 import { useLocalize } from '../utils/localize';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { API_URL } from '../hooks/useTrails';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { useIcelandicHolidays } from '../hooks/useIcelandicHolidays';
@@ -52,11 +52,16 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
     const loc = useLocalize();
     const theme = useTheme();
     const navigate = useNavigate();
+    const params = useParams<{ year?: string; month?: string }>();
     const { isEnabled } = useFeatureFlags();
     const today = new Date();
 
-    const [year, setYear] = useState(today.getFullYear());
-    const [month, setMonth] = useState(today.getMonth());
+    const year = params.year ? parseInt(params.year, 10) : today.getFullYear();
+    const month = params.month ? parseInt(params.month, 10) - 1 : today.getMonth();
+
+    const navigateToMonth = (y: number, m: number) => {
+        navigate(`/events/calendar/${y}/${String(m + 1).padStart(2, '0')}`);
+    };
 
     const { from, to } = useMemo(() => getMonthRange(year, month), [year, month]);
     const { days, loading } = useEventCalendar(from, to);
@@ -100,8 +105,7 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
         day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
 
     const goToToday = () => {
-        setYear(today.getFullYear());
-        setMonth(today.getMonth());
+        navigateToMonth(today.getFullYear(), today.getMonth());
         // Flash the today cell
         setTodayFlash(true);
         setTimeout(() => {
@@ -111,13 +115,13 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
     };
 
     const prevMonth = () => {
-        if (month === 0) { setMonth(11); setYear(y => y - 1); }
-        else setMonth(m => m - 1);
+        if (month === 0) navigateToMonth(year - 1, 11);
+        else navigateToMonth(year, month - 1);
     };
 
     const nextMonth = () => {
-        if (month === 11) { setMonth(0); setYear(y => y + 1); }
-        else setMonth(m => m + 1);
+        if (month === 11) navigateToMonth(year + 1, 0);
+        else navigateToMonth(year, month + 1);
     };
 
     const handleDayClick = (day: number, event: React.MouseEvent<HTMLElement>) => {
@@ -314,7 +318,7 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
                 {/* Event count summary or empty state */}
                 {!loading && days.length > 0 && (
                     <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
-                        {t('calendar.eventCount', { count: days.reduce((sum, d) => sum + d.events.length, 0) })}
+                        {t('calendar.eventCount', { count: new Set(days.flatMap(d => d.events.map(e => e.slug))).size })}
                     </Typography>
                 )}
                 {!loading && days.length === 0 && (

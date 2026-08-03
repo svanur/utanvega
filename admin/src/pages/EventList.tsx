@@ -157,6 +157,7 @@ interface EditionFormState {
   eventName: string;
   year: string;
   date: string;
+  endDate: string;
   title: string;
   titleEn: string;
   registrationUrl: string;
@@ -447,15 +448,16 @@ interface BulkMissingItem {
   sourceEdition: EventEditionDto | null;
   year: number;
   date: string;
+  endDate: string;
   registrationUrl: string;
   resultsUrl: string;
   registrationStatus: RegistrationStatus;
   selected: boolean;
 }
 
-function buildEditionLabel(edition: Pick<EventEditionDto, 'title' | 'year' | 'date'>): string {
+function buildEditionLabel(edition: Pick<EventEditionDto, 'title' | 'year' | 'date' | 'endDate'>): string {
   if (edition.title?.trim()) return edition.title;
-  if (edition.date) return edition.date;
+  if (edition.date) return edition.endDate ? `${edition.date} – ${edition.endDate}` : edition.date;
   if (edition.year != null) return `Edition ${edition.year}`;
   return 'Untitled edition';
 }
@@ -480,6 +482,21 @@ function suggestEditionDateForYear(prevDateStr: string | null | undefined, toYea
   const diff = prev.getDay() - candidate.getDay();
   candidate.setDate(candidate.getDate() + (Math.abs(diff) <= 3 ? diff : diff > 0 ? diff - 7 : diff + 7));
   return candidate.toISOString().slice(0, 10);
+}
+
+function suggestEditionEndDateForYear(
+  prevStartStr: string | null | undefined,
+  prevEndStr: string | null | undefined,
+  newStartStr: string,
+): string {
+  if (!prevStartStr || !prevEndStr || !newStartStr) return '';
+  const srcStart = new Date(prevStartStr + 'T00:00:00');
+  const srcEnd = new Date(prevEndStr + 'T00:00:00');
+  const durationDays = Math.round((srcEnd.getTime() - srcStart.getTime()) / (1000 * 60 * 60 * 24));
+  if (durationDays <= 0) return '';
+  const newStart = new Date(newStartStr + 'T00:00:00');
+  newStart.setDate(newStart.getDate() + durationDays);
+  return newStart.toISOString().slice(0, 10);
 }
 
 function computeClonedRaceDate(
@@ -572,6 +589,7 @@ function createEmptyEditionForm(eventId = '', eventType: EventType = 'Race', eve
     eventName,
     year: new Date().getFullYear().toString(),
     date: '',
+    endDate: '',
     title: '',
     titleEn: '',
     registrationUrl: '',
@@ -674,6 +692,7 @@ function buildEditionForm(edition: EventEditionDto, eventType: EventType = 'Race
     eventName,
     year: edition.year?.toString() ?? '',
     date: edition.date ?? '',
+    endDate: edition.endDate ?? '',
     title: edition.title ?? '',
     titleEn: edition.titleEn ?? '',
     registrationUrl: edition.registrationUrl ?? '',
@@ -1211,7 +1230,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
 
         return cmp !== 0 ? dir * cmp : a.name.localeCompare(b.name);
       });
-  }, [events, searchQuery, sortBy, sortDir, activityFilter, typeFilter, statusFilter, locationFilter, yearFilter, monthFilter]);
+  }, [events, searchQuery, sortBy, sortDir, activityFilter, typeFilter, statusFilter, locationFilter, yearFilter, monthFilter, attentionFilter]);
 
   
   const handleRequestSort = (field: typeof sortBy) => {
@@ -1315,12 +1334,14 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
     const clonedRegUrl = bumpYearInUrl(defaultClone?.registrationUrl ?? '', defaultClone?.year, Number(nextYear)) || (defaultClone?.registrationUrl ?? '');
     const clonedResultsUrl = bumpYearInUrl(defaultClone?.resultsUrl ?? '', defaultClone?.year, Number(nextYear)) || (defaultClone?.resultsUrl ?? '');
     const suggestedDate = suggestEditionDateForYear(defaultClone?.date, Number(nextYear));
+    const suggestedEndDate = suggestEditionEndDateForYear(defaultClone?.date, defaultClone?.endDate, suggestedDate);
     const isPastYear = suggestedDate ? isPastDate(suggestedDate) : Number(nextYear) < new Date().getFullYear();
     setCloneFromEditionId(defaultClone?.id ?? '');
     setEditionForm({
       ...createEmptyEditionForm(event.id, event.type, event.name),
       year: nextYear,
       date: suggestedDate,
+      endDate: suggestedEndDate,
       title: nextYear,
       registrationUrl: clonedRegUrl,
       resultsUrl: clonedResultsUrl,
@@ -1340,7 +1361,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
   const openCreateRace = (edition: EventEditionDto) => {
     setEditRaceId(null);
     setRaceDialogEdition(edition);
-    const past = isPastDate(edition.date ?? '');
+    const past = isPastDate(edition.endDate ?? edition.date ?? '');
     setRaceForm({
       ...createEmptyRaceForm(edition.id, edition.races.length),
       status: past ? 'Completed' : 'Active',
@@ -1401,7 +1422,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
 
   const handleCloseRegistrationOnPastEditions = async () => {
     const stale = expandedDetail?.editions.filter(
-      ed => ed.date && isPastDate(ed.date) && (ed.registrationStatus === 'Open' || ed.registrationStatus === 'NotStarted')
+      ed => (ed.endDate ?? ed.date) && isPastDate(ed.endDate ?? ed.date ?? '') && (ed.registrationStatus === 'Open' || ed.registrationStatus === 'NotStarted')
     ) ?? [];
     if (stale.length === 0) return;
     try {
@@ -1617,6 +1638,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
         eventId: editionForm.eventId,
         year: editionForm.year.trim() ? Number(editionForm.year) : null,
         date: editionForm.date || null,
+        endDate: editionForm.endDate || null,
         title: trimToUndefined(editionForm.title),
         titleEn: trimToUndefined(editionForm.titleEn),
         registrationUrl: trimToUndefined(editionForm.registrationUrl),
@@ -1640,12 +1662,16 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
         await updateEdition(editEditionId, {
           year: input.year,
           date: input.date,
+          endDate: input.endDate,
           title: input.title,
+          titleEn: input.titleEn,
           registrationUrl: input.registrationUrl,
           resultsUrl: input.resultsUrl,
           notes: input.notes,
+          notesEn: input.notesEn,
           registrationStatus: input.registrationStatus,
           trailId: input.trailId,
+          translationHashes: input.translationHashes,
         });
         onNotify(`Edition "${editionLabel}" updated`);
         const origDate = editionForm._originalDate;
@@ -2030,6 +2056,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
         const source = editionsWithRaces[editionsWithRaces.length - 1] ?? detail?.editions.sort(sortEditions)[detail.editions.length - 1] ?? null;
         const nextYear = source?.year ? source.year + 1 : new Date().getFullYear();
         const suggestedDate = suggestEditionDateForYear(source?.date, nextYear);
+        const suggestedEndDate = suggestEditionEndDateForYear(source?.date, source?.endDate, suggestedDate);
         const isPast = suggestedDate ? isPastDate(suggestedDate) : nextYear < new Date().getFullYear();
         return {
           event,
@@ -2037,6 +2064,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
           sourceEdition: source ?? null,
           year: nextYear,
           date: suggestedDate,
+          endDate: suggestedEndDate,
           registrationUrl: bumpYearInUrl(source?.registrationUrl ?? '', source?.year, nextYear) || (source?.registrationUrl ?? ''),
           resultsUrl: bumpYearInUrl(source?.resultsUrl ?? '', source?.year, nextYear) || (source?.resultsUrl ?? ''),
           registrationStatus: isPast ? 'Closed' : 'NotStarted',
@@ -2066,6 +2094,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
           year: item.year,
           title: String(item.year),
           date: item.date || null,
+          endDate: item.endDate || null,
           registrationUrl: item.registrationUrl || undefined,
           resultsUrl: item.resultsUrl || undefined,
           registrationStatus: item.registrationStatus,
@@ -2103,6 +2132,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
     setShowBulkMissingDialog(false);
     setBulkMissingItems([]);
     await refreshEvents();
+    await refreshExpandedEvent();
     if (failed > 0) {
       onNotify(`Created ${succeeded} edition${succeeded !== 1 ? 's' : ''}, ${failed} failed`, 'error');
     } else {
@@ -2119,12 +2149,16 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
       await updateEdition(edition.id, {
         year: edition.year ?? null,
         date: edition.date ?? null,
+        endDate: edition.endDate ?? null,
         title: edition.title ?? undefined,
+        titleEn: edition.titleEn ?? undefined,
         registrationUrl: edition.registrationUrl ?? undefined,
         resultsUrl: edition.resultsUrl ?? undefined,
         notes: edition.notes ?? undefined,
+        notesEn: edition.notesEn ?? undefined,
         registrationStatus: next,
         trailId: edition.trailId ?? null,
+        translationHashes: edition.translationHashes,
       });
       await refreshExpandedEvent();
     } catch (err) {
@@ -2139,9 +2173,18 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
     const { edition, notes, notesEn } = notesPopover;
     try {
       await updateEdition(edition.id, {
+        year: edition.year,
+        date: edition.date,
+        endDate: edition.endDate,
+        title: edition.title ?? undefined,
+        titleEn: edition.titleEn ?? undefined,
+        registrationUrl: edition.registrationUrl ?? undefined,
+        resultsUrl: edition.resultsUrl ?? undefined,
         registrationStatus: edition.registrationStatus,
+        trailId: edition.trailId,
         notes: notes || undefined,
         notesEn: notesEn || undefined,
+        translationHashes: edition.translationHashes,
       });
       setNotesPopover(null);
       await refreshExpandedEvent();
@@ -2205,7 +2248,16 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
     const { edition, regUrl, resultsUrl } = urlPopover;
     try {
       await updateEdition(edition.id, {
+        year: edition.year,
+        date: edition.date,
+        endDate: edition.endDate,
+        title: edition.title ?? undefined,
+        titleEn: edition.titleEn ?? undefined,
         registrationStatus: edition.registrationStatus,
+        trailId: edition.trailId,
+        notes: edition.notes ?? undefined,
+        notesEn: edition.notesEn ?? undefined,
+        translationHashes: edition.translationHashes,
         registrationUrl: regUrl || undefined,
         resultsUrl: resultsUrl || undefined,
       });
@@ -2565,7 +2617,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                     {event.nextEditionDate ? (
                       <Box>
                         <Typography variant="body2">{event.nextEditionDate}</Typography>
-                        {formatDaysUntil(event.daysUntil) && (
+                        {formatDaysUntil(event.daysUntil) && (event.daysUntil == null || event.daysUntil >= 0) && (
                           <Chip
                             label={formatDaysUntil(event.daysUntil)}
                             size="small"
@@ -2665,7 +2717,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                               </Typography>
                               <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
                                 {(() => {
-                                  const staleCount = expandedDetail.editions.filter(ed => ed.date && isPastDate(ed.date) && (ed.registrationStatus === 'Open' || ed.registrationStatus === 'NotStarted')).length;
+                                  const staleCount = expandedDetail.editions.filter(ed => (ed.endDate ?? ed.date) && isPastDate(ed.endDate ?? ed.date ?? '') && (ed.registrationStatus === 'Open' || ed.registrationStatus === 'NotStarted')).length;
                                   return staleCount > 0 ? (
                                     <Button size="small" variant="outlined" color="warning" onClick={handleCloseRegistrationOnPastEditions}>
                                       Close registration on {staleCount} past edition{staleCount !== 1 ? 's' : ''}
@@ -2757,7 +2809,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                               ) : (() => {
                                 const currentYear = new Date().getFullYear();
                                 const sorted = [...expandedDetail.editions].sort(sortEditions);
-                                const older = sorted.filter(ed => (ed.year ?? 0) < currentYear && (!ed.date || isPastDate(ed.date)));
+                                const older = sorted.filter(ed => (ed.year ?? 0) < currentYear && (!(ed.endDate ?? ed.date) || isPastDate(ed.endDate ?? ed.date ?? '')));
                                 const visible = showOlderEditions ? sorted : sorted.filter(ed => !older.includes(ed));
                                 const hiddenCount = older.length;
                                 return (
@@ -2781,7 +2833,13 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                                             </Typography>
                                           )}
                                           <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ mt: 0.75 }}>
-                                            <Chip label={edition.date ?? (edition.year != null ? String(edition.year) : 'Date TBD')} size="small" variant="outlined" />
+                                            <Chip
+                                              label={edition.date
+                                                ? edition.endDate ? `${edition.date} – ${edition.endDate}` : edition.date
+                                                : edition.year != null ? String(edition.year) : 'Date TBD'}
+                                              size="small"
+                                              variant="outlined"
+                                            />
                                             <Tooltip title={cyclingRegIds.has(edition.id) ? 'Updating…' : 'Click to cycle: NotStarted → Open → Closed'}>
                                               <Chip
                                                 label={edition.registrationStatus}
@@ -2823,7 +2881,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                                                 </Tooltip>
                                               ) : null;
                                             })()}
-                                            {edition.date && isPastDate(edition.date) && !edition.resultsUrl && (
+                                            {(edition.endDate ?? edition.date) && isPastDate(edition.endDate ?? edition.date ?? '') && !edition.resultsUrl && (
                                               <Tooltip title="Results URL missing — click to add">
                                                 <Chip
                                                   label="Results missing"
@@ -3411,21 +3469,33 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                 </Select>
               </FormControl>
             )}
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 2fr 2fr' }, gap: 2 }}>
               <TextField
                 label="Year"
                 type="number"
                 value={editionForm.year}
                 onChange={(event) => handleEditionYearChange(event.target.value)}
+                onFocus={() => { if (!editionForm.year) setEditionField('year', new Date().getFullYear().toString()); }}
               />
               <DatePicker
-                label="Date"
+                label="Start Date"
                 value={editionForm.date ? dayjs(editionForm.date) : null}
                 onChange={(val: Dayjs | null) => {
                   const d = val ? val.format('YYYY-MM-DD') : '';
                   setEditionField('date', d);
-                  if (!editEditionId && isPastDate(d)) setEditionField('registrationStatus', 'Closed');
+                  if (!editEditionId && isPastDate(editionForm.endDate || d)) setEditionField('registrationStatus', 'Closed');
                 }}
+                slotProps={{ textField: { fullWidth: true } }}
+              />
+              <DatePicker
+                label="End Date (multi-day)"
+                value={editionForm.endDate ? dayjs(editionForm.endDate) : null}
+                onChange={(val: Dayjs | null) => {
+                  const d = val ? val.format('YYYY-MM-DD') : '';
+                  setEditionField('endDate', d);
+                  if (!editEditionId && isPastDate(d || editionForm.date)) setEditionField('registrationStatus', 'Closed');
+                }}
+                minDate={editionForm.date ? dayjs(editionForm.date) : undefined}
                 slotProps={{ textField: { fullWidth: true } }}
               />
             </Box>
@@ -3884,7 +3954,10 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                     </Box>
                     <Box component="th" sx={{ textAlign: 'left', pb: 1, pr: 1 }}><Typography variant="caption" fontWeight={600}>Event</Typography></Box>
                     <Box component="th" sx={{ textAlign: 'left', pb: 1, pr: 1 }}><Typography variant="caption" fontWeight={600}>Year</Typography></Box>
-                    <Box component="th" sx={{ textAlign: 'left', pb: 1, pr: 1 }}><Typography variant="caption" fontWeight={600}>Proposed date</Typography></Box>
+                    <Box component="th" sx={{ textAlign: 'left', pb: 1, pr: 1 }}><Typography variant="caption" fontWeight={600}>Start date</Typography></Box>
+                    {bulkMissingItems.some(i => i.endDate) && (
+                      <Box component="th" sx={{ textAlign: 'left', pb: 1, pr: 1 }}><Typography variant="caption" fontWeight={600}>End date</Typography></Box>
+                    )}
                     <Box component="th" sx={{ textAlign: 'left', pb: 1 }}><Typography variant="caption" fontWeight={600}>Races to clone</Typography></Box>
                   </Box>
                 </Box>
@@ -3903,6 +3976,11 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                       <Box component="td" sx={{ py: 1, pr: 1 }}>
                         <Typography variant="body2">{item.date || <em style={{ color: 'gray' }}>TBD</em>}</Typography>
                       </Box>
+                      {bulkMissingItems.some(i => i.endDate) && (
+                        <Box component="td" sx={{ py: 1, pr: 1 }}>
+                          <Typography variant="body2">{item.endDate || <em style={{ color: 'gray' }}>—</em>}</Typography>
+                        </Box>
+                      )}
                       <Box component="td" sx={{ py: 1 }}>
                         <Typography variant="body2">
                           {item.sourceEdition ? `${item.sourceEdition.races.length} race${item.sourceEdition.races.length !== 1 ? 's' : ''}` : '—'}

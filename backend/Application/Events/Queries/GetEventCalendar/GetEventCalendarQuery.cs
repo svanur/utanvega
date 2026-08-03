@@ -55,8 +55,8 @@ public class GetEventCalendarQueryHandler : IRequestHandler<GetEventCalendarQuer
             .Include(ed => ed.Races)
             .Where(ed =>
                 ed.Date.HasValue &&
-                ed.Date >= request.From &&
                 ed.Date <= request.To &&
+                (ed.EndDate.HasValue ? ed.EndDate >= request.From : ed.Date >= request.From) &&
                 ed.Event.Status != EventStatus.Hidden &&
                 ed.Event.Status != EventStatus.Unlisted)
             .ToListAsync(cancellationToken);
@@ -65,13 +65,9 @@ public class GetEventCalendarQueryHandler : IRequestHandler<GetEventCalendarQuer
 
         foreach (var ed in editions)
         {
-            var date = ed.Date!.Value;
-            if (!dayMap.TryGetValue(date, out var events))
-            {
-                events = [];
-                dayMap[date] = events;
-            }
-            events.Add(new CalendarEventDto(
+            var startDate = ed.Date!.Value;
+            var endDate = ed.EndDate ?? startDate;
+            var dto = new CalendarEventDto(
                 ed.Event.Name,
                 ed.Event.NameEn,
                 ed.Event.Slug,
@@ -79,7 +75,18 @@ public class GetEventCalendarQueryHandler : IRequestHandler<GetEventCalendarQuer
                 ed.Title,
                 ed.Races.Count,
                 ed.Event.Type.ToString()
-            ));
+            );
+
+            for (var day = startDate; day <= endDate; day = day.AddDays(1))
+            {
+                if (day < request.From || day > request.To) continue;
+                if (!dayMap.TryGetValue(day, out var events))
+                {
+                    events = [];
+                    dayMap[day] = events;
+                }
+                events.Add(dto);
+            }
         }
 
         var result = dayMap
