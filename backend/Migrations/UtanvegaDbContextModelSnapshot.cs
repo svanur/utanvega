@@ -411,8 +411,8 @@ namespace Utanvega.Backend.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<int?>("ActivityType")
-                        .HasColumnType("integer");
+                    b.Property<string>("ActivityType")
+                        .HasColumnType("text");
 
                     b.Property<string>("CertifiedBy")
                         .HasMaxLength(100)

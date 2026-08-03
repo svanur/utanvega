@@ -244,6 +244,7 @@ public class UtanvegaDbContext : DbContext
             entity.Property(e => e.PrizeMoney).HasPrecision(10, 2);
             entity.Property(e => e.Status).HasConversion<string>();
             entity.Property(e => e.TicketStatus).HasConversion<string>();
+            entity.Property(e => e.ActivityType).HasConversion<string>();
 
             entity.HasOne(e => e.EventEdition)
                   .WithMany(ed => ed.Races)

@@ -10,10 +10,10 @@ namespace Utanvega.Backend.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<int>(
+            migrationBuilder.AddColumn<string>(
                 name: "ActivityType",
                 table: "Races",
-                type: "integer",
+                type: "text",
                 nullable: true);
         }
 

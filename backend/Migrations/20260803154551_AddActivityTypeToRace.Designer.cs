@@ -13,7 +13,7 @@ using Utanvega.Backend.Infrastructure.Persistence;
 namespace Utanvega.Backend.Migrations
 {
     [DbContext(typeof(UtanvegaDbContext))]
-    [Migration("20260803145843_AddActivityTypeToRace")]
+    [Migration("20260803154551_AddActivityTypeToRace")]
     partial class AddActivityTypeToRace
     {
         /// <inheritdoc />
@@ -414,8 +414,8 @@ namespace Utanvega.Backend.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<int?>("ActivityType")
-                        .HasColumnType("integer");
+                    b.Property<string>("ActivityType")
+                        .HasColumnType("text");
 
                     b.Property<string>("CertifiedBy")
                         .HasMaxLength(100)

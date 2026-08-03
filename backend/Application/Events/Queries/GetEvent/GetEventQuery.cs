@@ -184,8 +184,8 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
                         r.Trail?.TerrainType?.ToString(),
                         r.Trail?.Difficulty.ToString(),
                         r.Trail?.ActivityTypeId.ToString(),
-                        null,
-                        r.ActivityType?.ToString()
+                        TranslationHashes: null,
+                        ActivityType: r.ActivityType?.ToString()
                     ))
                     .ToList(),
                 ed.CreatedAt,
@@ -269,8 +269,8 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
             itraPoints?.Count > 0 ? itraPoints : null,
             ev.GpxPointLat,
             ev.GpxPointLng,
-            null,
-            activityTypes.Count > 0 ? activityTypes : null
+            TranslationHashes: null,
+            ActivityTypes: activityTypes.Count > 0 ? activityTypes : null
         );
     }
 }
