@@ -180,6 +180,7 @@ export interface CreateEditionInput {
     eventId: string;
     year?: number | null;
     date?: string | null;
+    endDate?: string | null;
     title?: string;
     titleEn?: string;
     registrationUrl?: string;

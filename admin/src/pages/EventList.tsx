@@ -454,9 +454,9 @@ interface BulkMissingItem {
   selected: boolean;
 }
 
-function buildEditionLabel(edition: Pick<EventEditionDto, 'title' | 'year' | 'date'>): string {
+function buildEditionLabel(edition: Pick<EventEditionDto, 'title' | 'year' | 'date' | 'endDate'>): string {
   if (edition.title?.trim()) return edition.title;
-  if (edition.date) return edition.date;
+  if (edition.date) return edition.endDate ? `${edition.date} – ${edition.endDate}` : edition.date;
   if (edition.year != null) return `Edition ${edition.year}`;
   return 'Untitled edition';
 }
@@ -1644,6 +1644,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
         await updateEdition(editEditionId, {
           year: input.year,
           date: input.date,
+          endDate: input.endDate,
           title: input.title,
           registrationUrl: input.registrationUrl,
           resultsUrl: input.resultsUrl,
@@ -2123,12 +2124,16 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
       await updateEdition(edition.id, {
         year: edition.year ?? null,
         date: edition.date ?? null,
+        endDate: edition.endDate ?? null,
         title: edition.title ?? undefined,
+        titleEn: edition.titleEn ?? undefined,
         registrationUrl: edition.registrationUrl ?? undefined,
         resultsUrl: edition.resultsUrl ?? undefined,
         notes: edition.notes ?? undefined,
+        notesEn: edition.notesEn ?? undefined,
         registrationStatus: next,
         trailId: edition.trailId ?? null,
+        translationHashes: edition.translationHashes,
       });
       await refreshExpandedEvent();
     } catch (err) {
@@ -2143,9 +2148,18 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
     const { edition, notes, notesEn } = notesPopover;
     try {
       await updateEdition(edition.id, {
+        year: edition.year,
+        date: edition.date,
+        endDate: edition.endDate,
+        title: edition.title ?? undefined,
+        titleEn: edition.titleEn ?? undefined,
+        registrationUrl: edition.registrationUrl ?? undefined,
+        resultsUrl: edition.resultsUrl ?? undefined,
         registrationStatus: edition.registrationStatus,
+        trailId: edition.trailId,
         notes: notes || undefined,
         notesEn: notesEn || undefined,
+        translationHashes: edition.translationHashes,
       });
       setNotesPopover(null);
       await refreshExpandedEvent();
@@ -2209,7 +2223,16 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
     const { edition, regUrl, resultsUrl } = urlPopover;
     try {
       await updateEdition(edition.id, {
+        year: edition.year,
+        date: edition.date,
+        endDate: edition.endDate,
+        title: edition.title ?? undefined,
+        titleEn: edition.titleEn ?? undefined,
         registrationStatus: edition.registrationStatus,
+        trailId: edition.trailId,
+        notes: edition.notes ?? undefined,
+        notesEn: edition.notesEn ?? undefined,
+        translationHashes: edition.translationHashes,
         registrationUrl: regUrl || undefined,
         resultsUrl: resultsUrl || undefined,
       });
@@ -2785,7 +2808,13 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                                             </Typography>
                                           )}
                                           <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ mt: 0.75 }}>
-                                            <Chip label={edition.date ?? (edition.year != null ? String(edition.year) : 'Date TBD')} size="small" variant="outlined" />
+                                            <Chip
+                                              label={edition.date
+                                                ? edition.endDate ? `${edition.date} – ${edition.endDate}` : edition.date
+                                                : edition.year != null ? String(edition.year) : 'Date TBD'}
+                                              size="small"
+                                              variant="outlined"
+                                            />
                                             <Tooltip title={cyclingRegIds.has(edition.id) ? 'Updating…' : 'Click to cycle: NotStarted → Open → Closed'}>
                                               <Chip
                                                 label={edition.registrationStatus}
@@ -3415,12 +3444,13 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                 </Select>
               </FormControl>
             )}
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 2fr 2fr' }, gap: 2 }}>
               <TextField
                 label="Year"
                 type="number"
                 value={editionForm.year}
                 onChange={(event) => handleEditionYearChange(event.target.value)}
+                onFocus={() => { if (!editionForm.year) setEditionField('year', new Date().getFullYear().toString()); }}
               />
               <DatePicker
                 label="Start Date"
