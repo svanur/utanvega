@@ -53,6 +53,7 @@ export interface RaceDto {
     startTime: string | null;
     trailDistanceMeters: number | null;
     trailElevationGain: number | null;
+    activityType: ActivityType | null;
     translationHashes?: Record<string, string>;
 }
 

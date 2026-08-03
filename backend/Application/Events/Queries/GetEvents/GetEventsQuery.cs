@@ -189,6 +189,17 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 .Select(g => g.Key!.Value.ToString())
                 .FirstOrDefault();
 
+            // Derive activity types from races: explicit ActivityType on race takes precedence over trail's type
+            var activityTypes = e.Editions
+                .SelectMany(ed => ed.Races)
+                .Where(r => r.Status != RaceStatus.Cancelled)
+                .Select(r => (r.ActivityType?.ToString() ?? r.Trail?.ActivityTypeId.ToString()))
+                .Where(a => a != null)
+                .Distinct()
+                .OrderBy(a => a)
+                .Cast<string>()
+                .ToList();
+
             return new EventSummaryDto(
                 e.Id,
                 e.Name,
@@ -230,7 +241,8 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 IsMountainRace: isMountainRace,
                 TerrainType: terrainType,
                 HasFutureEdition: hasFutureEdition,
-                EndDisplayDate: relevantEdition?.EndDate
+                EndDisplayDate: relevantEdition?.EndDate,
+                ActivityTypes: activityTypes.Count > 0 ? activityTypes : null
             );
         }).ToList();
     }

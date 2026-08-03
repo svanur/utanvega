@@ -65,7 +65,7 @@ import { toUserFriendlyFetchError } from '../utils/apiErrors';
 import { getTicketStatusColor, groupDistances } from '../utils/ticketStatus';
 import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor } from '../utils/eventUtils';
 import { useLocalize } from '../utils/localize';
-import { getActivityIcon } from '../utils/activityIcon';
+import { ActivityIcons, getActivityIcon } from '../utils/activityIcon';
 import LandscapeIcon from '@mui/icons-material/Landscape';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
 import HikingIcon from '@mui/icons-material/Hiking';
@@ -905,9 +905,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                         {/* Name + countdown */}
                                                         <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'flex-start' }} justifyContent="space-between" gap={0.5}>
                                                             <Stack direction="row" alignItems="flex-start" gap={1} sx={{ minWidth: 0, width: '100%' }}>
-                                                                <Tooltip title={t(`races.activityTypes.${comp.activityType}`, comp.activityType)}>
-                                                                    <Box sx={{ color: 'text.secondary', pt: 0.3, flexShrink: 0 }}>{getActivityIcon(comp.activityType)}</Box>
-                                                                </Tooltip>
+                                                                <ActivityIcons activityTypes={comp.activityTypes} activityType={comp.activityType} />
                                                                 <Box sx={{ minWidth: 0 }}>
                                                                     <Typography variant="subtitle1" fontWeight={700} sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', sm: 'nowrap' } }}>{loc(race.raceName, race.raceNameEn) ?? race.raceName}</Typography>
                                                                 </Box>
@@ -1053,9 +1051,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                             {/* Row 1: activity icon + name + status chips + countdown */}
                                             <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'flex-start' }} justifyContent="space-between" gap={0.5}>
                                                 <Stack direction="row" alignItems="flex-start" gap={1} sx={{ minWidth: 0, width: '100%' }}>
-                                                    <Tooltip title={t(`races.activityTypes.${comp.activityType}`, comp.activityType)}>
-                                                        <Box sx={{ color: 'text.secondary', pt: 0.3, flexShrink: 0 }}>{getActivityIcon(comp.activityType)}</Box>
-                                                    </Tooltip>
+                                                    <ActivityIcons activityTypes={comp.activityTypes} activityType={comp.activityType} />
                                                     <Box sx={{ minWidth: 0 }}>
                                                         <Stack direction="row" alignItems="center" gap={0.5} flexWrap="wrap">
                                                             <Typography variant="subtitle1" fontWeight={700} sx={{ ...(comp.status === 'Cancelled' ? { textDecoration: 'line-through' } : {}), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', sm: 'nowrap' } }}>

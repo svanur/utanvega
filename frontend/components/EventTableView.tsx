@@ -21,7 +21,7 @@ import { haversineKm, formatDistanceKm } from '../utils/geo';
 import NearMeIcon from '@mui/icons-material/NearMe';
 import EventDateBadge from './EventDateBadge';
 import { getCountdownColor, getEventTypeColor, formatNextDate } from '../utils/eventUtils';
-import { getActivityIcon } from '../utils/activityIcon';
+import { ActivityIcons, getActivityIcon } from '../utils/activityIcon';
 import { useLocalize } from '../utils/localize';
 
 
@@ -241,9 +241,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                     </TableCell>
                                     <TableCell>
                                         <Stack direction="row" alignItems="flex-start" spacing={0.5}>
-                                            <Tooltip title={t(`races.activityTypes.${event.activityType}`, event.activityType)}>
-                                                <span style={{ paddingTop: 2 }}>{getActivityIcon(event.activityType)}</span>
-                                            </Tooltip>
+                                            <ActivityIcons activityTypes={event.activityTypes} activityType={event.activityType} />
                                             <Stack spacing={0.25}>
                                                 <Typography variant="body2" fontWeight={700} noWrap sx={{ maxWidth: 220 }}>
                                                     {race.raceName}
@@ -370,9 +368,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                     {/* Name — activity icon + type pill below */}
                                     <TableCell>
                                         <Stack direction="row" alignItems="flex-start" spacing={0.5}>
-                                            <Tooltip title={t(`races.activityTypes.${event.activityType}`, event.activityType)}>
-                                                <span style={{ paddingTop: 2 }}>{getActivityIcon(event.activityType)}</span>
-                                            </Tooltip>
+                                            <ActivityIcons activityTypes={event.activityTypes} activityType={event.activityType} />
                                             <Stack spacing={0.25}>
                                                 <Stack direction="row" alignItems="center" spacing={0.5}>
                                                     <Typography

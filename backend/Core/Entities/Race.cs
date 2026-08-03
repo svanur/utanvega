@@ -50,5 +50,7 @@ public class Race
     public DateOnly? DateOfRace { get; set; }
     public TimeOnly? StartTime { get; set; }
 
+    public ActivityType? ActivityType { get; set; }
+
     public string? TranslationHashes { get; set; }
 }

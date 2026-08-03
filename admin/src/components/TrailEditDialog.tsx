@@ -333,6 +333,7 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
                 startTime: null,
                 trailDistanceMeters: trail.length,
                 trailElevationGain: trail.elevationGain,
+                activityType: null,
                 eventId: selectedEventToLink.id,
                 eventName: selectedEventToLink.name,
                 eventSlug: selectedEventToLink.slug,
