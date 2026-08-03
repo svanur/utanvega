@@ -30,6 +30,7 @@ import Layout from '../components/Layout';
 import RunningLoader from '../components/RunningLoader';
 import { useEventCalendar, CalendarDay } from '../hooks/useEvents';
 import { useLocalize } from '../utils/localize';
+import { ActivityIcons } from '../utils/activityIcon';
 import { useNavigate, useParams } from 'react-router-dom';
 import { API_URL } from '../hooks/useTrails';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
@@ -360,7 +361,10 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
                                         <ListItemText
                                             primary={
                                                 <Stack direction="row" alignItems="center" spacing={0.5}>
-                                                    <EmojiEventsIcon sx={{ fontSize: 16, color: 'warning.main' }} />
+                                                    {ev.activityTypes && ev.activityTypes.length > 0
+                                                        ? <ActivityIcons activityTypes={ev.activityTypes} activityType={ev.activityTypes[0]} />
+                                                        : <EmojiEventsIcon sx={{ fontSize: 16, color: 'warning.main' }} />
+                                                    }
                                                     <Typography variant="body2" fontWeight={600}>{loc(ev.name, ev.nameEn) ?? ev.name}</Typography>
                                                 </Stack>
                                             }

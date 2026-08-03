@@ -26,6 +26,7 @@ public static class DifficultyCalculator
             ActivityType.FunRun          => FromDistance(distanceKm, FunRunThresholds),
             ActivityType.ObstacleCourse  => FromDistance(distanceKm, ObstacleCourseThresholds),
             ActivityType.CrossCountryRun => FromDistance(distanceKm, CrossCountryRunThresholds),
+            ActivityType.Swim            => FromDistance(distanceKm, SwimThresholds),
             _                            => FromEffort(effortKm, TrailRunningThresholds),
         };
     }
@@ -59,6 +60,9 @@ public static class DifficultyCalculator
 
     // Cross Country Run — softer ground than road, slightly harder per km
     private static readonly double[] CrossCountryRunThresholds = [8, 18, 35, 80];
+
+    // Swim — pure distance, no elevation; sprint/Olympic/marathon open water benchmarks
+    private static readonly double[] SwimThresholds = [0.75, 1.5, 5, 10];
 
     private static Difficulty FromEffort(double effortKm, double[] thresholds)
     {

@@ -109,7 +109,8 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
                             r.Trail?.TerrainType?.ToString(),
                             r.Trail?.Difficulty.ToString(),
                             r.Trail?.ActivityTypeId.ToString(),
-                            DeserHashes(r.TranslationHashes)
+                            DeserHashes(r.TranslationHashes),
+                            r.ActivityType?.ToString()
                         ))
                         .ToList(),
                     ed.CreatedAt,

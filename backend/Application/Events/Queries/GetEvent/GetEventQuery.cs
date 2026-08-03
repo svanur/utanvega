@@ -42,7 +42,8 @@ public record EventDetailDto(
     List<int>? ItraPoints = null,
     double? GpxPointLat = null,
     double? GpxPointLng = null,
-    Dictionary<string, string>? TranslationHashes = null
+    Dictionary<string, string>? TranslationHashes = null,
+    List<string>? ActivityTypes = null
 );
 
 public record GetEventQuery(string Slug) : IRequest<EventDetailDto?>, ICacheable
@@ -182,7 +183,9 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
                         r.Trail?.ElevationGain,
                         r.Trail?.TerrainType?.ToString(),
                         r.Trail?.Difficulty.ToString(),
-                        r.Trail?.ActivityTypeId.ToString()
+                        r.Trail?.ActivityTypeId.ToString(),
+                        TranslationHashes: null,
+                        ActivityType: r.ActivityType?.ToString()
                     ))
                     .ToList(),
                 ed.CreatedAt,
@@ -222,6 +225,16 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
             .Select(r => r.Trail?.YoutubeUrl)
             .FirstOrDefault(u => !string.IsNullOrWhiteSpace(u));
 
+        var activityTypes = ev.Editions
+            .SelectMany(ed => ed.Races)
+            .Where(r => r.Status != RaceStatus.Cancelled)
+            .Select(r => (r.ActivityType?.ToString() ?? r.Trail?.ActivityTypeId.ToString()))
+            .Where(a => a != null)
+            .Distinct()
+            .OrderBy(a => a)
+            .Cast<string>()
+            .ToList();
+
         return new EventDetailDto(
             ev.Id,
             ev.Name,
@@ -255,7 +268,9 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
             championshipCategories?.Count > 0 ? championshipCategories : null,
             itraPoints?.Count > 0 ? itraPoints : null,
             ev.GpxPointLat,
-            ev.GpxPointLng
+            ev.GpxPointLng,
+            TranslationHashes: null,
+            ActivityTypes: activityTypes.Count > 0 ? activityTypes : null
         );
     }
 }

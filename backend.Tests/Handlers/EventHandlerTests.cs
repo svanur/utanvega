@@ -537,6 +537,153 @@ public class EventHandlerTests : IDisposable
         Assert.False(result);
     }
 
+    [Fact]
+    public async Task Create_Race_WithActivityType_SavesCorrectly()
+    {
+        var ev = CreateTestEvent();
+        var edition = CreateTestEdition(ev.Id);
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var raceCtx = _factory.CreateContext();
+        var handler = new CreateRaceCommandHandler(raceCtx, _cacheInvalidator);
+        var id = await handler.Handle(new CreateRaceCommand(
+            EventEditionId: edition.Id,
+            TrailId: null,
+            Name: "1km Swim",
+            DistanceLabel: "1 km",
+            CutoffMinutes: null,
+            Description: null,
+            Status: "Active",
+            SortOrder: 0,
+            TicketStatus: "Available",
+            MaxParticipants: null,
+            ItraPoints: null,
+            CertifiedBy: null,
+            PrizeMoney: 0,
+            ChampionshipCategory: null,
+            DateOfRace: null,
+            StartTime: null,
+            ActivityType: "Swim"
+        ), CancellationToken.None);
+
+        using var verifyCtx = _factory.CreateContext();
+        var race = verifyCtx.Races.Find(id);
+        Assert.NotNull(race);
+        Assert.Equal(ActivityType.Swim, race!.ActivityType);
+    }
+
+    [Fact]
+    public async Task Update_Race_ActivityType_SavesCorrectly()
+    {
+        var ev = CreateTestEvent();
+        var edition = CreateTestEdition(ev.Id);
+        var race = new Race
+        {
+            Id = Guid.NewGuid(),
+            EventEditionId = edition.Id,
+            Name = "1km Swim",
+            SortOrder = 0,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new UpdateRaceCommandHandler(ctx, _cacheInvalidator);
+            var result = await handler.Handle(new UpdateRaceCommand(
+                Id: race.Id,
+                TrailId: null,
+                Name: "1km Swim",
+                DistanceLabel: "1 km",
+                CutoffMinutes: null,
+                Description: null,
+                Status: "Active",
+                SortOrder: 0,
+                TicketStatus: "Available",
+                MaxParticipants: null,
+                ItraPoints: null,
+                CertifiedBy: null,
+                PrizeMoney: 0,
+                ChampionshipCategory: null,
+                DateOfRace: null,
+                StartTime: null,
+                ActivityType: "Swim"
+            ), CancellationToken.None);
+
+            Assert.True(result);
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var updated = ctx.Races.Find(race.Id);
+            Assert.Equal(ActivityType.Swim, updated!.ActivityType);
+        }
+    }
+
+    [Fact]
+    public async Task Update_Race_ActivityType_ClearsWhenNull()
+    {
+        var ev = CreateTestEvent();
+        var edition = CreateTestEdition(ev.Id);
+        var race = new Race
+        {
+            Id = Guid.NewGuid(),
+            EventEditionId = edition.Id,
+            Name = "Swim Leg",
+            SortOrder = 0,
+            ActivityType = ActivityType.Swim,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new UpdateRaceCommandHandler(ctx, _cacheInvalidator);
+            await handler.Handle(new UpdateRaceCommand(
+                Id: race.Id,
+                TrailId: null,
+                Name: "Swim Leg",
+                DistanceLabel: null,
+                CutoffMinutes: null,
+                Description: null,
+                Status: "Active",
+                SortOrder: 0,
+                TicketStatus: "Available",
+                MaxParticipants: null,
+                ItraPoints: null,
+                CertifiedBy: null,
+                PrizeMoney: 0,
+                ChampionshipCategory: null,
+                DateOfRace: null,
+                StartTime: null,
+                ActivityType: null   // explicitly cleared
+            ), CancellationToken.None);
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var updated = ctx.Races.Find(race.Id);
+            Assert.Null(updated!.ActivityType);
+        }
+    }
+
     // ─── DeleteRaceCommand ───
 
     [Fact]
@@ -1532,6 +1679,162 @@ public class EventHandlerTests : IDisposable
         Assert.NotNull(result);
         Assert.Equal(-1, result!.DaysUntil);
         Assert.Equal(edition.Date, result.DisplayDate);
+    }
+
+    // ─── ActivityTypes derived from races ───
+
+    [Fact]
+    public async Task GetEvents_ActivityTypes_DerivedFromRaceActivityType()
+    {
+        var ev = CreateTestEvent("Triathlon");
+        ev.Slug = "triathlon";
+        var edition = CreateTestEdition(ev.Id);
+        var swimRace = new Race
+        {
+            Id = Guid.NewGuid(),
+            EventEditionId = edition.Id,
+            Name = "1km Swim",
+            SortOrder = 0,
+            ActivityType = ActivityType.Swim,
+        };
+        var runRace = new Race
+        {
+            Id = Guid.NewGuid(),
+            EventEditionId = edition.Id,
+            Name = "10km Run",
+            SortOrder = 1,
+            ActivityType = ActivityType.Running,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.AddRange(swimRace, runRace);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(IncludeHidden: true), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.NotNull(dto.ActivityTypes);
+        Assert.Equal(2, dto.ActivityTypes!.Count);
+        Assert.Contains("Running", dto.ActivityTypes);
+        Assert.Contains("Swim", dto.ActivityTypes);
+    }
+
+    [Fact]
+    public async Task GetEvents_ActivityTypes_ExcludesCancelledRaces()
+    {
+        var ev = CreateTestEvent("Mixed Event");
+        ev.Slug = "mixed-event";
+        var edition = CreateTestEdition(ev.Id);
+        var activeRace = new Race
+        {
+            Id = Guid.NewGuid(),
+            EventEditionId = edition.Id,
+            Name = "Trail Run",
+            SortOrder = 0,
+            ActivityType = ActivityType.TrailRunning,
+        };
+        var cancelledRace = new Race
+        {
+            Id = Guid.NewGuid(),
+            EventEditionId = edition.Id,
+            Name = "Cancelled Swim",
+            SortOrder = 1,
+            ActivityType = ActivityType.Swim,
+            Status = RaceStatus.Cancelled,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.AddRange(activeRace, cancelledRace);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(IncludeHidden: true), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.NotNull(dto.ActivityTypes);
+        Assert.Single(dto.ActivityTypes!);
+        Assert.Contains("TrailRunning", dto.ActivityTypes);
+        Assert.DoesNotContain("Swim", dto.ActivityTypes);
+    }
+
+    [Fact]
+    public async Task GetEvents_ActivityTypes_FallsBackToTrailActivityType()
+    {
+        var trail = CreateTestTrail();
+        trail.ActivityTypeId = ActivityType.Cycling;
+        var ev = CreateTestEvent("Cycling Event");
+        ev.Slug = "cycling-event";
+        var edition = CreateTestEdition(ev.Id);
+        var race = new Race
+        {
+            Id = Guid.NewGuid(),
+            EventEditionId = edition.Id,
+            TrailId = trail.Id,
+            Name = "Bike Race",
+            SortOrder = 0,
+            ActivityType = null,  // no explicit override — should fall back to trail
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Trails.Add(trail);
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(IncludeHidden: true), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.NotNull(dto.ActivityTypes);
+        Assert.Single(dto.ActivityTypes!);
+        Assert.Contains("Cycling", dto.ActivityTypes);
+    }
+
+    [Fact]
+    public async Task GetEvents_ActivityTypes_Null_WhenNoRacesHaveType()
+    {
+        var ev = CreateTestEvent("No Type Event");
+        ev.Slug = "no-type-event";
+        var edition = CreateTestEdition(ev.Id);
+        var race = new Race
+        {
+            Id = Guid.NewGuid(),
+            EventEditionId = edition.Id,
+            Name = "Mystery Race",
+            SortOrder = 0,
+            ActivityType = null,
+            TrailId = null,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(IncludeHidden: true), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.Null(dto.ActivityTypes);
     }
 
     [Fact]

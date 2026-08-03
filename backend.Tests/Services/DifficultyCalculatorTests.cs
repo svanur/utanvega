@@ -109,6 +109,43 @@ public class DifficultyCalculatorTests
         Assert.Equal(Difficulty.Easy, result); // 5 + 2 = 7 effort < 8
     }
 
+    // ─── Swim uses distance-only thresholds [0.75, 1.5, 5, 10] km ───
+
+    [Theory]
+    [InlineData(500, 0, Difficulty.Easy)]       // 0.5 km sprint
+    [InlineData(750, 0, Difficulty.Moderate)]   // at boundary
+    [InlineData(1500, 0, Difficulty.Hard)]      // Olympic distance
+    [InlineData(5000, 0, Difficulty.Expert)]    // 5 km
+    [InlineData(10000, 0, Difficulty.Extreme)]  // marathon swim
+    public void Calculate_Swim_UsesDistanceOnlyThresholds(double lengthM, double gainM, Difficulty expected)
+    {
+        Assert.Equal(expected, DifficultyCalculator.Calculate(lengthM, gainM, ActivityType.Swim));
+    }
+
+    [Fact]
+    public void Calculate_Swim_IgnoresElevation()
+    {
+        var flat = DifficultyCalculator.Calculate(1000, 0, ActivityType.Swim);
+        var withGain = DifficultyCalculator.Calculate(1000, 500, ActivityType.Swim);
+        Assert.Equal(flat, withGain);
+    }
+
+    // ─── Unknown types fall back to TrailRunning thresholds ───
+
+    [Theory]
+    [InlineData(ActivityType.Social)]
+    [InlineData(ActivityType.Other)]
+    public void Calculate_UnknownActivityType_UsesTrailRunningThresholds(ActivityType activityType)
+    {
+        // 11 km flat = Easy under TrailRunning thresholds (< 12 effort)
+        var result = DifficultyCalculator.Calculate(11000, 0, activityType);
+        Assert.Equal(Difficulty.Easy, result);
+
+        // 25 km flat = Hard under TrailRunning thresholds (≥ 25 effort)
+        var hard = DifficultyCalculator.Calculate(25000, 0, activityType);
+        Assert.Equal(Difficulty.Hard, hard);
+    }
+
     // ─── Boundary tests ───
 
     [Theory]

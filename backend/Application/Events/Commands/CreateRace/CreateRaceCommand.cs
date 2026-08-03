@@ -26,7 +26,8 @@ public record CreateRaceCommand(
     string? NameEn = null,
     string? DescriptionEn = null,
     string? CertifiedByEn = null,
-    string? ChampionshipCategoryEn = null
+    string? ChampionshipCategoryEn = null,
+    string? ActivityType = null
 ) : IRequest<Guid>;
 
 public class CreateRaceCommandHandler : IRequestHandler<CreateRaceCommand, Guid>
@@ -44,6 +45,7 @@ public class CreateRaceCommandHandler : IRequestHandler<CreateRaceCommand, Guid>
     {
         Enum.TryParse<RaceStatus>(request.Status, ignoreCase: true, out var status);
         Enum.TryParse<TicketStatus>(request.TicketStatus, ignoreCase: true, out var ticketStatus);
+        var activityType = Enum.TryParse<ActivityType>(request.ActivityType, ignoreCase: true, out var at) ? at : (ActivityType?)null;
 
         var race = new Race
         {
@@ -67,6 +69,7 @@ public class CreateRaceCommandHandler : IRequestHandler<CreateRaceCommand, Guid>
             ChampionshipCategoryEn = request.ChampionshipCategoryEn,
             DateOfRace = request.DateOfRace,
             StartTime = request.StartTime,
+            ActivityType = activityType,
         };
 
         _context.Races.Add(race);

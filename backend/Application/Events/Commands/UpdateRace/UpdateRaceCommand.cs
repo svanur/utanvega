@@ -28,7 +28,8 @@ public record UpdateRaceCommand(
     string? DescriptionEn = null,
     string? CertifiedByEn = null,
     string? ChampionshipCategoryEn = null,
-    Dictionary<string, string>? TranslationHashes = null
+    Dictionary<string, string>? TranslationHashes = null,
+    string? ActivityType = null
 ) : IRequest<bool>;
 
 public class UpdateRaceCommandHandler : IRequestHandler<UpdateRaceCommand, bool>
@@ -53,6 +54,7 @@ public class UpdateRaceCommandHandler : IRequestHandler<UpdateRaceCommand, bool>
 
         Enum.TryParse<RaceStatus>(request.Status, ignoreCase: true, out var status);
         Enum.TryParse<TicketStatus>(request.TicketStatus, ignoreCase: true, out var ticketStatus);
+        race.ActivityType = Enum.TryParse<ActivityType>(request.ActivityType, ignoreCase: true, out var at) ? at : (ActivityType?)null;
 
         race.TrailId = request.TrailId;
         race.Name = request.Name;

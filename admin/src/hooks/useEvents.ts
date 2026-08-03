@@ -4,7 +4,7 @@ import { apiFetch } from './api';
 export type DayOfWeek = 'Sunday' | 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
 export type ScheduleType = 'Yearly' | 'Seasonal' | 'Fixed' | 'Approximate';
 export type EventType = 'Race' | 'Series' | 'Advertisement' | 'Festival' | 'Other';
-export type ActivityType = 'TrailRunning' | 'Running' | 'Cycling' | 'Hiking' | 'FunRun' | 'ObstacleCourse' | 'CrossCountryRun' | 'Social' | 'Other';
+export type ActivityType = 'TrailRunning' | 'Running' | 'Cycling' | 'Hiking' | 'FunRun' | 'ObstacleCourse' | 'CrossCountryRun' | 'Swim' | 'Social' | 'Other';
 export type EventStatus = 'Unconfirmed' | 'Confirmed' | 'Cancelled' | 'Hidden' | 'Unlisted';
 export type RegistrationStatus = 'NotStarted' | 'Open' | 'Closed';
 export type RaceStatus = 'Active' | 'Completed' | 'Cancelled' | 'Hidden';
@@ -53,6 +53,7 @@ export interface RaceDto {
     startTime: string | null;
     trailDistanceMeters: number | null;
     trailElevationGain: number | null;
+    activityType: ActivityType | null;
     translationHashes?: Record<string, string>;
 }
 
@@ -252,6 +253,7 @@ export interface UpdateRaceInput {
     championshipCategoryEn?: string;
     dateOfRace?: string | null;
     startTime?: string | null;
+    activityType?: ActivityType | null;
     translationHashes?: Record<string, string>;
 }
 

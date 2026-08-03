@@ -59,7 +59,8 @@ public record EventSummaryDto(
     bool IsMountainRace = false,
     string? TerrainType = null,
     bool HasFutureEdition = false,
-    DateOnly? EndDisplayDate = null
+    DateOnly? EndDisplayDate = null,
+    List<string>? ActivityTypes = null
 );
 
 public record RaceDto(
@@ -91,7 +92,8 @@ public record RaceDto(
     string? TrailTerrainType = null,
     string? TrailDifficulty = null,
     string? TrailActivityType = null,
-    Dictionary<string, string>? TranslationHashes = null
+    Dictionary<string, string>? TranslationHashes = null,
+    string? ActivityType = null
 );
 
 public record EventEditionDto(

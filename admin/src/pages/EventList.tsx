@@ -175,6 +175,7 @@ interface EditionFormState {
 interface RaceFormState {
   eventEditionId: string;
   trailId: string;
+  activityType: ActivityType | '';
   name: string;
   nameEn: string;
   distanceLabel: string;
@@ -233,10 +234,11 @@ const ACTIVITY_TYPE_COLORS: Record<ActivityType, 'primary' | 'secondary' | 'warn
   FunRun: 'secondary',
   ObstacleCourse: 'error',
   CrossCountryRun: 'primary',
+  Swim: 'info',
   Social: 'default',
   Other: 'default',
 };
-const ACTIVITY_TYPES: ActivityType[] = ['TrailRunning', 'Running', 'Cycling', 'Hiking', 'FunRun', 'ObstacleCourse', 'CrossCountryRun', 'Social', 'Other'];
+const ACTIVITY_TYPES: ActivityType[] = ['TrailRunning', 'Running', 'Cycling', 'Hiking', 'FunRun', 'ObstacleCourse', 'CrossCountryRun', 'Swim', 'Social', 'Other'];
 const EVENT_STATUSES: EventStatus[] = ['Unconfirmed', 'Confirmed', 'Cancelled', 'Hidden', 'Unlisted'];
 const REGISTRATION_STATUSES: RegistrationStatus[] = ['NotStarted', 'Open', 'Closed'];
 const RACE_STATUSES: RaceStatus[] = ['Active', 'Completed', 'Cancelled', 'Hidden'];
@@ -264,6 +266,7 @@ const ACTIVITY_ICONS: Record<string, string> = {
   FunRun: '🎊',
   ObstacleCourse: '🧗',
   CrossCountryRun: '🌾',
+  Swim: '🏊',
   Social: '🎉',
   Other: '🏅',
 };
@@ -605,6 +608,7 @@ function createEmptyRaceForm(eventEditionId = '', sortOrder = 0): RaceFormState 
   return {
     eventEditionId,
     trailId: '',
+    activityType: '',
     name: '',
     nameEn: '',
     distanceLabel: '',
@@ -712,6 +716,7 @@ function buildRaceForm(race: RaceDto): RaceFormState {
   return {
     eventEditionId: race.eventEditionId,
     trailId: race.trailId ?? '',
+    activityType: (race.activityType as ActivityType) ?? '',
     name: race.name,
     nameEn: race.nameEn ?? '',
     distanceLabel: race.distanceLabel ?? '',
@@ -839,6 +844,7 @@ function SortableRaceItem({ race, onEdit, onDuplicate, onDelete, onCycleTicketSt
               </Tooltip>
             )}
             {race.distanceLabel && <Chip label={race.distanceLabel} size="small" variant="outlined" />}
+            {race.activityType && <Chip label={`${ACTIVITY_ICONS[race.activityType] ?? '🏅'} ${race.activityType}`} size="small" variant="outlined" color={ACTIVITY_TYPE_COLORS[race.activityType] ?? 'default'} />}
             <Chip label={race.status} size="small" color={getRaceStatusColor(race.status)} />
             <Tooltip title={ticketLoading ? 'Updating…' : 'Click to cycle ticket status'}>
               <Chip label={race.ticketStatus} size="small" color={getTicketStatusColor(race.ticketStatus)} variant="outlined" onClick={ticketLoading ? undefined : onCycleTicketStatus} disabled={ticketLoading} sx={{ cursor: ticketLoading ? 'default' : 'pointer' }} />
@@ -1878,6 +1884,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
         championshipCategoryEn: trimToUndefined(raceForm.championshipCategoryEn),
         dateOfRace: raceForm.dateOfRace || null,
         startTime: raceForm.startTime || null,
+        activityType: raceForm.activityType || null,
         translationHashes: (() => {
           const h: Record<string, string> = { ...(raceForm.translationHashes ?? {}) };
           if (raceForm.name?.trim() && raceForm.nameEn?.trim() && raceForm.nameEn !== raceForm._initialNameEn)
@@ -1913,6 +1920,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
           championshipCategoryEn: input.championshipCategoryEn,
           dateOfRace: input.dateOfRace,
           startTime: input.startTime,
+          activityType: input.activityType,
         });
         onNotify(`Race "${raceForm.name.trim()}" updated`);
 
@@ -3611,25 +3619,40 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed 
                 </Select>
               </FormControl>
             )}
-            <Autocomplete
-              options={sortedTrails}
-              value={sortedTrails.find(trail => trail.id === raceForm.trailId) ?? null}
-              onChange={(_, value) => {
-                setRaceField('trailId', value?.id ?? '');
-                if (value && !editRaceId) {
-                  const rounded = Math.round(value.length / 1000);
-                  setRaceForm(prev => ({
-                    ...prev,
-                    trailId: value.id,
-                    name: prev.name.trim() ? prev.name : `${rounded} km`,
-                    distanceLabel: prev.distanceLabel.trim() ? prev.distanceLabel : `${rounded}`,
-                  }));
-                }
-              }}
-              getOptionLabel={(trail) => `${trail.name} (${(trail.length / 1000).toFixed(1)} km)`}
-              isOptionEqualToValue={(option, value) => option.id === value.id}
-              renderInput={(params) => <TextField {...params} label="Linked Trail" />}
-            />
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+              <Autocomplete
+                options={sortedTrails}
+                value={sortedTrails.find(trail => trail.id === raceForm.trailId) ?? null}
+                onChange={(_, value) => {
+                  setRaceField('trailId', value?.id ?? '');
+                  if (value && !editRaceId) {
+                    const rounded = Math.round(value.length / 1000);
+                    setRaceForm(prev => ({
+                      ...prev,
+                      trailId: value.id,
+                      name: prev.name.trim() ? prev.name : `${rounded} km`,
+                      distanceLabel: prev.distanceLabel.trim() ? prev.distanceLabel : `${rounded}`,
+                    }));
+                  }
+                }}
+                getOptionLabel={(trail) => `${trail.name} (${(trail.length / 1000).toFixed(1)} km)`}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+                renderInput={(params) => <TextField {...params} label="Linked Trail" />}
+              />
+              <FormControl fullWidth>
+                <InputLabel>Activity Type (override)</InputLabel>
+                <Select
+                  value={raceForm.activityType}
+                  label="Activity Type (override)"
+                  onChange={(e) => setRaceField('activityType', e.target.value as ActivityType | '')}
+                >
+                  <MenuItem value=""><em>From trail / not set</em></MenuItem>
+                  {ACTIVITY_TYPES.map(at => (
+                    <MenuItem key={at} value={at}>{ACTIVITY_ICONS[at]} {at}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
             <BilingualTextField
               label="Race Name"
               placeholder="e.g. 55 km"

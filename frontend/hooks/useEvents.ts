@@ -37,6 +37,7 @@ export interface EventSummary {
     descriptionEn: string | null;
     type: string;
     activityType: string;
+    activityTypes: string[] | null;
     status: string;
     organizerName: string | null;
     organizerNameEn: string | null;
@@ -98,6 +99,7 @@ export interface RaceDto {
     trailTerrainType: string | null;
     trailDifficulty: string | null;
     trailActivityType: string | null;
+    activityType: string | null;
 }
 
 export interface EventEditionDto {
@@ -161,6 +163,7 @@ export interface CalendarEvent {
     editionTitle: string | null;
     raceCount: number;
     type: string;
+    activityTypes: string[] | null;
 }
 
 export interface CalendarDay {
