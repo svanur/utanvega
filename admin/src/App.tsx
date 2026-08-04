@@ -256,22 +256,22 @@ function AdminContent() {
         <Box sx={{ overflow: 'auto' }}>
           <List>
             {[
-              { key: 'dashboard' as const, icon: <HomeIcon />, label: 'Home' },
-              { key: 'events' as const, icon: <EmojiEventsIcon />, label: 'Events' },
-              { key: 'trails' as const, icon: <DashboardIcon />, label: 'Trails' },
-              { key: 'locations' as const, icon: <LocationOnIcon />, label: 'Locations' },
-              { key: 'organizers' as const, icon: <GroupIcon />, label: 'Organizers' },
-              { key: 'health' as const, icon: <HealthAndSafetyIcon />, label: 'Trail Health' },
-              { key: 'event-health' as const, icon: <HealthAndSafetyIcon sx={{ color: '#ed6c02' }} />, label: 'Event Health' },
-              { key: 'edition-health' as const, icon: <HealthAndSafetyIcon sx={{ color: '#9c27b0' }} />, label: 'Edition Health' },
-              { key: 'translation-health' as const, icon: <TranslateIcon />, label: 'Translations' },
-              { key: 'map' as const, icon: <MapIcon />, label: 'Trail Map' },
-              { key: 'tags' as const, icon: <LocalOfferIcon />, label: 'Tags' },
-              { key: 'analytics' as const, icon: <BarChartIcon />, label: 'Analytics' },
-              { key: 'features' as const, icon: <ToggleOnIcon />, label: 'Features' },
-              { key: 'hero-themes' as const, icon: <ViewDayOutlinedIcon />, label: 'Hero Themes' },
-              { key: 'sponsors' as const, icon: <ImageOutlinedIcon />, label: 'Sponsors' },
-              { key: 'pools' as const, icon: <PoolIcon />, label: 'Pools' },
+              { key: 'dashboard' as const,          icon: <HomeIcon />,                                      label: 'Home' },
+              { key: 'events' as const,              icon: <EmojiEventsIcon />,                               label: 'Events' },
+              { key: 'trails' as const,              icon: <DashboardIcon />,                                 label: 'Trails' },
+              { key: 'locations' as const,           icon: <LocationOnIcon />,                                label: 'Locations' },
+              { key: 'organizers' as const,          icon: <GroupIcon />,                                     label: 'Organizers' },
+              { key: 'tags' as const,                icon: <LocalOfferIcon />,                                label: 'Tags' },
+              { key: 'features' as const,            icon: <ToggleOnIcon />,                                  label: 'Features' },
+              { key: 'health' as const,              icon: <HealthAndSafetyIcon />,                           label: 'Trail Health' },
+              { key: 'event-health' as const,        icon: <HealthAndSafetyIcon sx={{ color: '#ed6c02' }} />, label: 'Event Health' },
+              { key: 'edition-health' as const,      icon: <HealthAndSafetyIcon sx={{ color: '#9c27b0' }} />, label: 'Edition Health' },
+              { key: 'translation-health' as const,  icon: <TranslateIcon />,                                 label: 'Translations' },
+              { key: 'map' as const,                 icon: <MapIcon />,                                       label: 'Trail Map' },
+              { key: 'analytics' as const,           icon: <BarChartIcon />,                                  label: 'Analytics' },
+              { key: 'hero-themes' as const,         icon: <ViewDayOutlinedIcon />,                           label: 'Hero Themes' },
+              { key: 'sponsors' as const,            icon: <ImageOutlinedIcon />,                             label: 'Sponsors' },
+              { key: 'pools' as const,               icon: <PoolIcon />,                                      label: 'Pools' },
             ].map(item => {
               const mnemonic = Object.entries(GO_TO_PAGES).find(([, v]) => v === item.key)?.[0];
               const label = drawerOpen ? <MnemonicLabel label={item.label} mnemonic={mnemonic} /> : null;

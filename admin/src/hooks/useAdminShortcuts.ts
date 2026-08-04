@@ -15,22 +15,21 @@ interface UseAdminShortcutsOptions {
 
 // g+letter → page mapping (mnemonic letters match the underlined char in the sidebar label)
 export const GO_TO_PAGES: Record<string, PageKey> = {
-    g: 'dashboard', // g+g → home
-    e: 'events',
-    t: 'trails',
-    l: 'locations',
-    h: 'health',
-    v: 'event-health',   // e[v]ent health
-    d: 'edition-health', // e[d]ition health
-    m: 'map',
-    s: 'tags',          // tag[s]
-    a: 'analytics',
-    f: 'features',
-    r: 'hero-themes',   // he[r]o themes
-    n: 'sponsors',      // spo[n]sors
-    p: 'pools',
-    o: 'organizers',    // [o]rganizers
-    i: 'translation-health', // translat[i]ons
+    h: 'dashboard',          // [h]ome
+    e: 'events',             // [e]vents
+    t: 'trails',             // [t]rails
+    l: 'locations',          // [l]ocations
+    o: 'organizers',         // [o]rganizers
+    s: 'tags',               // tag[s]
+    r: 'health',             // t[r]ail health
+    v: 'event-health',       // e[v]ent health
+    d: 'edition-health',     // e[d]ition health
+    i: 'translation-health', // translat[i]on
+    m: 'map',                // trail [m]ap
+    a: 'analytics',          // [a]nalytics
+    f: 'features',           // [f]eatures
+    n: 'sponsors',           // spo[n]sors
+    p: 'pools',              // [p]ools
 };
 
 function isInputFocused(): boolean {
