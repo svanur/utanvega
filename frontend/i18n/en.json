@@ -542,6 +542,17 @@
         "description": "A decorative A2 wall poster featuring 42 trail running events across Iceland, each hiding a unique illustration behind a silver scratch panel. Designed by ARRA Design Studio — handcrafted and packaged in Iceland. The perfect gift for runners, nature enthusiasts, and goal-setters.",
         "order": "Order by email"
     },
+    "runningTrips": {
+        "title": "Running Trips",
+        "intro": "We organise small-group guided trail running trips abroad. Each trip is led by Óskar Þór, Tómas G. or Svanur from hlaupadagskra.is.",
+        "statusOpen": "Registration open",
+        "statusUpcoming": "Upcoming",
+        "statusCompleted": "Completed",
+        "trip2026Switzerland": {
+            "label": "2026 — Switzerland",
+            "dates": "September 3rd – 9th, 2026"
+        }
+    },
     "runningTrip": {
         "title": "Running Trip to Switzerland 2026",
         "subtitle": "A guided running adventure in Kandersteg, Swiss Alps — September 3–9, 2026",

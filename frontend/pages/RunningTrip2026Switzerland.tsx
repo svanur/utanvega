@@ -3,7 +3,7 @@ import { Box, Typography, Chip, Divider, Button, Stack, Table, TableBody, TableR
 import { useTranslation } from 'react-i18next';
 import Layout from '../components/Layout';
 
-export default function RunningTripPage({ mode, onToggleMode }: { mode: PaletteMode; onToggleMode: () => void }) {
+export default function RunningTrip2026Switzerland({ mode, onToggleMode }: { mode: PaletteMode; onToggleMode: () => void }) {
     const { t } = useTranslation();
     return (
         <Layout mode={mode} onToggleMode={onToggleMode} maxWidth="sm">

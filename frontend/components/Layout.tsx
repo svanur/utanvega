@@ -121,7 +121,7 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
             label: t('nav.onlineStore'),
             children: [
                 { label: t('nav.scratchCard'), path: '/shop/skafkort/2025' },
-                { label: t('nav.runningTrip'), path: '/shop/hlaupaferd' },
+                { label: t('nav.runningTrip'), path: '/shop/running-trip' },
             ],
         },
         { key: 'services', label: t('nav.services'), path: '/services' },
