@@ -50,7 +50,7 @@ export const PROMO_SLOTS: PromoSlot[] = [
         flag: 'ad_top_promo_2',
         name: 'Hlaupaferð í Svissnesku Alpana',
         img: '/sponsors/running-trip-2026.avif',
-        href: '/shop/hlaupaferd',
+        href: '/shop/running-trip',
         alt: 'Hlaupaferð í Svissnesku Alpana',
         position: 'top',
         textOverlay: { i18nPrefix: 'promos.runningTrip' },

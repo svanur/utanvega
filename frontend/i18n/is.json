@@ -542,6 +542,17 @@
         "description": "Falleg A2 veggspjaldsmynd með 42 utanvegahlaupum um allt Ísland, hvert með einstaka mynd falin á bak við silfurlaga skaflag. Hannað af ARRA Design Studio — handgert og pakkað á Íslandi. Fullkomið gjöf fyrir hlaupara og náttúruunnendur.",
         "order": "Panta með tölvupósti"
     },
+    "runningTrips": {
+        "title": "Hlaupaferðir",
+        "intro": "Við skipuleggjum hlaupaferðir erlendis. Ferðirnar leiða Óskar Þór, Tómas G. eða Svanur frá hlaupadagskra.is.",
+        "statusOpen": "Skráning opin",
+        "statusUpcoming": "Væntanleg",
+        "statusCompleted": "Lokið",
+        "trip2026Switzerland": {
+            "label": "2026 — Sviss",
+            "dates": "3.– 9. september 2026"
+        }
+    },
     "runningTrip": {
         "title": "Hlaupaferð til Sviss 2026",
         "subtitle": "Hlaupaferð til Kandersteg, Svissnesku Alpunum — 3.–9. september 2026",
