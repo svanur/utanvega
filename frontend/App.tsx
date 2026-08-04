@@ -222,10 +222,8 @@ export default function App() {
                         element={<MyTrailDetailsPage mode={mode} onToggleMode={handleToggleMode} />}
                     />}
                     <Route path="/shop/scratch-card/2025" element={<ScratchCardPage mode={mode} onToggleMode={handleToggleMode} />} />
-                    <Route path="/shop/skafkort/2025" element={<Navigate to="/shop/scratch-card/2025" replace />} />
                     <Route path="/shop/running-trip" element={<RunningTripsPage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="/shop/running-trip/2026/switzerland" element={<RunningTrip2026Switzerland mode={mode} onToggleMode={handleToggleMode} />} />
-                    <Route path="/shop/hlaupaferd" element={<Navigate to="/shop/running-trip/2026/switzerland" replace />} />
                     <Route path="/services" element={<ServicesPage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="/challenge/2026" element={<ChallengePage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="/about-us" element={<Navigate to="/about" replace />} />
