@@ -30,6 +30,7 @@ export const GO_TO_PAGES: Record<string, PageKey> = {
     f: 'features',           // [f]eatures
     n: 'sponsors',           // spo[n]sors
     p: 'pools',              // [p]ools
+    // hero-themes has no shortcut — rarely used config page, no good mnemonic letter remaining
 };
 
 function isInputFocused(): boolean {
