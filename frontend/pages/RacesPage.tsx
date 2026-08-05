@@ -74,6 +74,7 @@ import CelebrationIcon from '@mui/icons-material/Celebration';
 import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
 import GrassIcon from '@mui/icons-material/Grass';
 import { haversineKm, formatDistanceKm } from '../utils/geo';
+import { useIcelandicHolidays } from '../hooks/useIcelandicHolidays';
 
 const EventTableView = lazy(() => import('../components/EventTableView'));
 const EventMapView = lazy(() => import('../components/EventMapView'));
@@ -127,6 +128,7 @@ const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
 export default function RacesPage({ mode, onToggleMode, showQuote = false }: RacesPageProps) {
     const { t } = useTranslation();
     const loc = useLocalize();
+    const { getHolidays } = useIcelandicHolidays();
     const { events, loading, error, refresh } = useEvents();
     const { isEnabled } = useFeatureFlags();
     const navigate = useNavigate();
@@ -916,15 +918,47 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                             )}
                             
                         <Stack spacing={2}>
-                            {flattenedUpcoming.map((row, idx) => {
+                            {(() => {
+                                let lastHolidayDate: string | null = null;
+                                return flattenedUpcoming.map((row, idx) => {
+                                const rowDate = row.kind === 'series-race'
+                                    ? row.race.dateOfRace
+                                    : (row.comp.displayDate ?? row.comp.nextEditionDate);
+                                const holidays = rowDate ? getHolidays(rowDate) : [];
+                                const holidayBanner = holidays.length > 0 && rowDate !== lastHolidayDate ? (() => {
+                                    lastHolidayDate = rowDate!;
+                                    const d = new Date(rowDate! + 'T00:00:00');
+                                    const months = t('races.months', { returnObjects: true }) as string[];
+                                    const dateLabel = `${d.getDate()}. ${months[d.getMonth()]}`;
+                                    return (
+                                        <Box
+                                            key={`holiday-${rowDate}`}
+                                            sx={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 1,
+                                                px: 1.5,
+                                                py: 0.75,
+                                                borderRadius: 1,
+                                                bgcolor: alpha(theme.palette.warning.main, 0.12),
+                                            }}
+                                        >
+                                            <CelebrationIcon sx={{ fontSize: 15, color: 'warning.dark' }} />
+                                            <Typography variant="caption" fontWeight={700} sx={{ color: 'warning.dark' }}>
+                                                {dateLabel} — {holidays.map(h => loc(h.name, h.nameEn) ?? h.name).join(' · ')}
+                                            </Typography>
+                                        </Box>
+                                    );
+                                })() : null;
                                 if (row.kind === 'series-race') {
                                     const { comp, race } = row;
                                     const raceDaysUntil = race.dateOfRace
                                         ? Math.round((new Date(race.dateOfRace + 'T00:00:00').getTime() - Date.now()) / 86400000)
                                         : null;
                                     return (
+                                        <Box key={`${comp.id}-${race.raceId}`}>
+                                        {holidayBanner}
                                         <SwipeableCard
-                                            key={`${comp.id}-${race.raceId}`}
                                             onSwipeRight={race.registrationUrl && raceDaysUntil != null && raceDaysUntil >= 0
                                                 ? () => setShareEventId(comp.id)
                                                 : undefined
@@ -1030,12 +1064,14 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                 </CardActionArea>
                                             </Card>
                                         </SwipeableCard>
+                                        </Box>
                                     );
                                 }
                                 const comp = row.comp;
                                 return (
+                                <Box key={comp.id}>
+                                {holidayBanner}
                                 <SwipeableCard
-                                    key={comp.id}
                                     peek={idx === 0 && showSwipeHint}
                                     onSwipeRight={comp.status !== 'Cancelled' && comp.daysUntil != null && comp.daysUntil >= 0
                                         ? () => setShareEventId(comp.id)
@@ -1241,8 +1277,10 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                     </CardActionArea>
                                 </Card>
                                 </SwipeableCard>
+                                </Box>
                                 );
-                            })}
+                                });
+                            })()}
                         </Stack>
                         </>
                     )
