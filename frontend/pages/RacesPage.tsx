@@ -288,7 +288,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         const result = applyFilters(visible, filters, q);
 
         // Sort: Active/Upcoming first, Cancelled last; then by upcoming date, then name
-        return [...result].sort((a, b) => {
+        return result.sort((a, b) => {
             const cancelledA = a.status === 'Cancelled' ? 1 : 0;
             const cancelledB = b.status === 'Cancelled' ? 1 : 0;
             if (cancelledA !== cancelledB) return cancelledA - cancelledB;
@@ -714,66 +714,66 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
 
                 {/* Quick-filter pills */}
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1.5 }}>
-                            {pillMeta.hasTrailRun && (
-                                <Chip
-                                    icon={<LandscapeIcon fontSize="small" />}
-                                    label={t('races.activityTypes.TrailRunning', 'Trail Run')}
-                                    size="small"
-                                    variant={filters.activityTypes.includes('TrailRunning') ? 'filled' : 'outlined'}
-                                    color={filters.activityTypes.includes('TrailRunning') ? 'primary' : 'default'}
-                                    onClick={() => toggleActivity('TrailRunning')}
-                                />
-                            )}
-                            {pillMeta.hasRun && (
-                                <Chip
-                                    icon={<DirectionsRunIcon fontSize="small" />}
-                                    label={t('races.activityTypes.Running', 'Run')}
-                                    size="small"
-                                    variant={filters.activityTypes.includes('Running') ? 'filled' : 'outlined'}
-                                    color={filters.activityTypes.includes('Running') ? 'primary' : 'default'}
-                                    onClick={() => toggleActivity('Running')}
-                                />
-                            )}
-                            {pillMeta.hasItra && (
-                                <Chip
-                                    label="ITRA"
-                                    size="small"
-                                    variant={filters.itraAny ? 'filled' : 'outlined'}
-                                    color={filters.itraAny ? 'warning' : 'default'}
-                                    onClick={() => setFilters(f => ({ ...f, itraAny: !f.itraAny, itraPoints: [] }))}
-                                    sx={{ fontWeight: 600 }}
-                                />
-                            )}
+                    {pillMeta.hasTrailRun && (
+                        <Chip
+                            icon={<LandscapeIcon fontSize="small" />}
+                            label={t('races.activityTypes.TrailRunning', 'Trail Run')}
+                            size="small"
+                            variant={filters.activityTypes.includes('TrailRunning') ? 'filled' : 'outlined'}
+                            color={filters.activityTypes.includes('TrailRunning') ? 'primary' : 'default'}
+                            onClick={() => toggleActivity('TrailRunning')}
+                        />
+                    )}
+                    {pillMeta.hasRun && (
+                        <Chip
+                            icon={<DirectionsRunIcon fontSize="small" />}
+                            label={t('races.activityTypes.Running', 'Run')}
+                            size="small"
+                            variant={filters.activityTypes.includes('Running') ? 'filled' : 'outlined'}
+                            color={filters.activityTypes.includes('Running') ? 'primary' : 'default'}
+                            onClick={() => toggleActivity('Running')}
+                        />
+                    )}
+                    {pillMeta.hasItra && (
+                        <Chip
+                            label="ITRA"
+                            size="small"
+                            variant={filters.itraAny ? 'filled' : 'outlined'}
+                            color={filters.itraAny ? 'warning' : 'default'}
+                            onClick={() => setFilters(f => ({ ...f, itraAny: !f.itraAny, itraPoints: [] }))}
+                            sx={{ fontWeight: 600 }}
+                        />
+                    )}
+                    <Chip
+                        label={t('races.filters.weekendOnly')}
+                        size="small"
+                        variant={filters.weekendOnly ? 'filled' : 'outlined'}
+                        color={filters.weekendOnly ? 'secondary' : 'default'}
+                        onClick={() => setFilters(f => ({ ...f, weekendOnly: !f.weekendOnly }))}
+                    />
+                    {Array.from({ length: 12 }, (_, idx) => idx)
+                        .filter(idx => monthsWithEvents.has(idx))
+                        .map(idx => (
                             <Chip
-                                label={t('races.filters.weekendOnly')}
+                                key={idx}
+                                label={monthNames[idx].slice(0, 3)}
                                 size="small"
-                                variant={filters.weekendOnly ? 'filled' : 'outlined'}
-                                color={filters.weekendOnly ? 'secondary' : 'default'}
-                                onClick={() => setFilters(f => ({ ...f, weekendOnly: !f.weekendOnly }))}
+                                variant={filters.months.includes(idx) ? 'filled' : 'outlined'}
+                                color={filters.months.includes(idx) ? 'primary' : 'default'}
+                                onClick={() => toggleMonth(idx)}
                             />
-                            {Array.from({ length: 12 }, (_, idx) => idx)
-                                .filter(idx => monthsWithEvents.has(idx))
-                                .map(idx => (
-                                    <Chip
-                                        key={idx}
-                                        label={monthNames[idx].slice(0, 3)}
-                                        size="small"
-                                        variant={filters.months.includes(idx) ? 'filled' : 'outlined'}
-                                        color={filters.months.includes(idx) ? 'primary' : 'default'}
-                                        onClick={() => toggleMonth(idx)}
-                                    />
-                                ))
-                            }
-                            {activeFilterCount > 0 && (
-                                <Chip
-                                    label={t('races.filters.reset')}
-                                    size="small"
-                                    variant="outlined"
-                                    color="error"
-                                    icon={<CloseIcon fontSize="small" />}
-                                    onClick={() => setFilters(DEFAULT_FILTERS)}
-                                />
-                            )}
+                        ))
+                    }
+                    {activeFilterCount > 0 && (
+                        <Chip
+                            label={t('races.filters.reset')}
+                            size="small"
+                            variant="outlined"
+                            color="error"
+                            icon={<CloseIcon fontSize="small" />}
+                            onClick={() => setFilters(DEFAULT_FILTERS)}
+                        />
+                    )}
                 </Box>
 
                 {/* View toggle + result count */}
