@@ -62,7 +62,7 @@ import { useEvents, type EventSummary, type SeriesRaceDto } from '../hooks/useEv
 import { downloadIcs } from '../utils/calendarLinks';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
-import { getTicketStatusColor, groupDistances } from '../utils/ticketStatus';
+import { getTicketStatusColor, groupDistances, isAllSoldOut } from '../utils/ticketStatus';
 import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor } from '../utils/eventUtils';
 import { useLocalize } from '../utils/localize';
 import { ActivityIcons, getActivityIcon } from '../utils/activityIcon';
@@ -1043,7 +1043,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                     }
                                     leftActions={
                                         <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-                                            {comp.registrationUrl && comp.daysUntil != null && comp.daysUntil >= 0 && (
+                                            {comp.registrationUrl && comp.daysUntil != null && comp.daysUntil >= 0 && !isAllSoldOut(comp.distances) && (
                                                 <Box
                                                     component="a"
                                                     href={comp.registrationUrl}
@@ -1219,7 +1219,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                             {/* Row 4: actions */}
                                             {(comp.registrationUrl || comp.youtubeUrl) && (
                                                 <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.75 }}>
-                                                    {comp.registrationUrl && comp.daysUntil != null && comp.daysUntil >= 0 && (
+                                                    {comp.registrationUrl && comp.daysUntil != null && comp.daysUntil >= 0 && !isAllSoldOut(comp.distances) && (
                                                         <Button size="small" variant="outlined" href={comp.registrationUrl} target="_blank" rel="noopener noreferrer" endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.8rem' }}>
                                                             {t('races.register', 'Register')}
                                                         </Button>

@@ -6,7 +6,7 @@ import {
     TableSortLabel, Paper, Typography, Chip, IconButton, Tooltip, Stack,
     Collapse, Box, Skeleton, Button,
 } from '@mui/material';
-import { getTicketStatusColor, groupDistances } from '../utils/ticketStatus';
+import { getTicketStatusColor, groupDistances, isAllSoldOut } from '../utils/ticketStatus';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
@@ -455,7 +455,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                     {/* Links */}
                                     <TableCell align="center">
                                         <Stack alignItems="center" spacing={0.5}>
-                                            {event.registrationUrl && event.daysUntil != null && event.daysUntil >= 0 ? (
+                                            {event.registrationUrl && event.daysUntil != null && event.daysUntil >= 0 && !isAllSoldOut(event.distances) ? (
                                                 <>
                                                     <Button
                                                         size="small"
@@ -477,6 +477,13 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                                         />
                                                     )}
                                                 </>
+                                            ) : event.registrationUrl && event.daysUntil != null && event.daysUntil >= 0 && isAllSoldOut(event.distances) ? (
+                                                <Chip
+                                                    label={t('races.ticketStatus.SoldOut', 'Sold out')}
+                                                    size="small"
+                                                    color="error"
+                                                    variant="outlined"
+                                                />
                                             ) : event.resultsUrl && event.daysUntil != null && event.daysUntil < 0 ? (
                                                 <Button
                                                     size="small"

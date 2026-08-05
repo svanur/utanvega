@@ -17,6 +17,12 @@ export function groupDistances(distances: DistanceEntry[]): GroupedDistance[] {
     return Array.from(map.values());
 }
 
+// Returns true when every race in the relevant edition is sold out — used to suppress the Register button
+export function isAllSoldOut(distances: DistanceEntry[] | null | undefined): boolean {
+    if (!distances || distances.length === 0) return false;
+    return distances.every(d => d.ticketStatus === 'SoldOut' || d.ticketStatus === 'Closed');
+}
+
 export function getTicketStatusColor(status: string | null): 'success' | 'error' | 'warning' | 'info' | 'default' {
     switch (status) {
         case 'Free': return 'success';
