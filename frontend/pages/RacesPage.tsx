@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useState, useRef, useEffect } from 'react';
+import { lazy, Suspense, useMemo, useCallback, useState, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -236,7 +236,32 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         const certifications = [...new Set(visible.flatMap(e => e.certifications ?? []))].sort();
         const championships = [...new Set(visible.flatMap(e => e.championshipCategories ?? []))].sort();
         return { activityTypes, eventTypes, locations, certifications, championships };
+
     }, [events]);
+
+    // Pill visibility: derived from all events (not filtered) so pills don't disappear
+    const pillMeta = useMemo(() => {
+        const visible = events.filter(e => e.status !== 'Hidden' && e.status !== 'Unlisted');
+        return {
+            hasTrailRun: visible.some(e => e.activityType === 'TrailRunning'),
+            hasRun: visible.some(e => e.activityType === 'Running'),
+            hasItra: visible.some(e => e.itraPoints && e.itraPoints.length > 0),
+        };
+    }, [events]);
+
+    const toggleActivity = useCallback((type: string) =>
+        setFilters(f => ({
+            ...f,
+            activityTypes: f.activityTypes.includes(type)
+                ? f.activityTypes.filter(x => x !== type)
+                : [...f.activityTypes, type],
+        })), []);
+
+    const toggleMonth = useCallback((idx: number) =>
+        setFilters(f => ({
+            ...f,
+            months: f.months.includes(idx) ? f.months.filter(m => m !== idx) : [...f.months, idx],
+        })), []);
 
     const filtered = useMemo(() => {
         const q = search.toLowerCase().trim();
@@ -311,6 +336,24 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
 
         return result;
     }, [events, search, filters, loc]);
+
+    // Months that have events after all filters except month are applied — so month pills
+    // narrow to the active activity/ITRA/weekend context without hiding switchable months
+    const monthsWithEvents = useMemo(() => {
+        const q = search.toLowerCase().trim();
+        let result = events.filter(e => e.status !== 'Hidden' && e.status !== 'Unlisted');
+        if (q) result = result.filter(c => c.name.toLowerCase().includes(q) || (c.locationName?.toLowerCase().includes(q)) || (c.organizerName?.toLowerCase().includes(q)));
+        if (filters.locations.length > 0) result = result.filter(c => c.locationName && filters.locations.includes(c.locationName));
+        if (filters.activityTypes.length > 0) result = result.filter(c => filters.activityTypes.includes(c.activityType));
+        if (filters.eventTypes.length > 0) result = result.filter(c => filters.eventTypes.includes(c.type));
+        if (filters.itraAny) result = result.filter(c => c.itraPoints && c.itraPoints.length > 0);
+        else if (filters.itraPoints.length > 0) result = result.filter(c => c.itraPoints?.some(p => filters.itraPoints.includes(p)));
+        if (filters.certifications.length > 0) result = result.filter(c => c.certifications?.some(cert => filters.certifications.includes(cert)));
+        if (filters.championships.length > 0) result = result.filter(c => c.championshipCategories?.some(ch => filters.championships.includes(ch)));
+        if (filters.weekendOnly) result = result.filter(c => { const d = c.displayDate ?? c.nextEditionDate; if (!d) return false; const day = new Date(d + 'T00:00:00').getDay(); return day === 0 || day === 6; });
+        if (filters.mountainRaceOnly) result = result.filter(c => c.isMountainRace === true);
+        return new Set(result.map(e => e.displayDate ?? e.nextEditionDate).filter(Boolean).map(d => new Date(d! + 'T00:00:00').getMonth()));
+    }, [events, search, filters]);
 
     const sortedFiltered = useMemo(() => {
         if (sortBy === 'distance' && userLocation) {
@@ -713,34 +756,9 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                 {/* Quick-filter pills */}
                 {(() => {
                     const monthNames = t('races.months', { returnObjects: true }) as string[];
-                    const visibleEvents = events.filter(e => e.status !== 'Hidden' && e.status !== 'Unlisted');
-                    const monthsWithEvents = new Set(
-                        visibleEvents
-                            .map(e => e.displayDate ?? e.nextEditionDate)
-                            .filter(Boolean)
-                            .map(d => new Date(d! + 'T00:00:00').getMonth())
-                    );
-                    const hasTrailRun = visibleEvents.some(e => e.activityType === 'TrailRunning');
-                    const hasRun = visibleEvents.some(e => e.activityType === 'Running');
-                    const hasItra = visibleEvents.some(e => e.itraPoints && e.itraPoints.length > 0);
-
-                    const toggleActivity = (type: string) =>
-                        setFilters(f => ({
-                            ...f,
-                            activityTypes: f.activityTypes.includes(type)
-                                ? f.activityTypes.filter(x => x !== type)
-                                : [...f.activityTypes, type],
-                        }));
-
-                    const toggleMonth = (idx: number) =>
-                        setFilters(f => ({
-                            ...f,
-                            months: f.months.includes(idx) ? f.months.filter(m => m !== idx) : [...f.months, idx],
-                        }));
-
                     return (
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1.5 }}>
-                            {hasTrailRun && (
+                            {pillMeta.hasTrailRun && (
                                 <Chip
                                     icon={<LandscapeIcon fontSize="small" />}
                                     label={t('races.activityTypes.TrailRunning', 'Trail Run')}
@@ -748,10 +766,9 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                     variant={filters.activityTypes.includes('TrailRunning') ? 'filled' : 'outlined'}
                                     color={filters.activityTypes.includes('TrailRunning') ? 'primary' : 'default'}
                                     onClick={() => toggleActivity('TrailRunning')}
-                                    sx={{ cursor: 'pointer' }}
                                 />
                             )}
-                            {hasRun && (
+                            {pillMeta.hasRun && (
                                 <Chip
                                     icon={<DirectionsRunIcon fontSize="small" />}
                                     label={t('races.activityTypes.Running', 'Run')}
@@ -759,17 +776,16 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                     variant={filters.activityTypes.includes('Running') ? 'filled' : 'outlined'}
                                     color={filters.activityTypes.includes('Running') ? 'primary' : 'default'}
                                     onClick={() => toggleActivity('Running')}
-                                    sx={{ cursor: 'pointer' }}
                                 />
                             )}
-                            {hasItra && (
+                            {pillMeta.hasItra && (
                                 <Chip
                                     label="ITRA"
                                     size="small"
                                     variant={filters.itraAny ? 'filled' : 'outlined'}
                                     color={filters.itraAny ? 'warning' : 'default'}
                                     onClick={() => setFilters(f => ({ ...f, itraAny: !f.itraAny, itraPoints: [] }))}
-                                    sx={{ cursor: 'pointer', fontWeight: 600 }}
+                                    sx={{ fontWeight: 600 }}
                                 />
                             )}
                             <Chip
@@ -778,19 +794,17 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                 variant={filters.weekendOnly ? 'filled' : 'outlined'}
                                 color={filters.weekendOnly ? 'secondary' : 'default'}
                                 onClick={() => setFilters(f => ({ ...f, weekendOnly: !f.weekendOnly }))}
-                                sx={{ cursor: 'pointer' }}
                             />
                             {Array.from({ length: 12 }, (_, idx) => idx)
                                 .filter(idx => monthsWithEvents.has(idx))
                                 .map(idx => (
                                     <Chip
                                         key={idx}
-                                        label={monthNames[idx]?.slice(0, 3) ?? String(idx + 1)}
+                                        label={monthNames[idx].slice(0, 3)}
                                         size="small"
                                         variant={filters.months.includes(idx) ? 'filled' : 'outlined'}
                                         color={filters.months.includes(idx) ? 'primary' : 'default'}
                                         onClick={() => toggleMonth(idx)}
-                                        sx={{ cursor: 'pointer' }}
                                     />
                                 ))
                             }
@@ -802,7 +816,6 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                     color="error"
                                     icon={<CloseIcon fontSize="small" />}
                                     onClick={() => setFilters(DEFAULT_FILTERS)}
-                                    sx={{ cursor: 'pointer' }}
                                 />
                             )}
                         </Box>
