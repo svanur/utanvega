@@ -241,9 +241,10 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
             </Box>
             )}
 
-            <Card 
-                sx={{ 
-                    overflow: 'visible', 
+            <Card
+                variant="outlined"
+                sx={{
+                    overflow: 'visible',
                     position: 'relative',
                     transform: disableGestures ? undefined : `translateX(${swipeOffset}px)`,
                     transition: disableGestures ? undefined : (swipeOffset === 0 ? 'transform 0.3s ease' : 'none'),
@@ -251,6 +252,7 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                     flex: 1,
                     display: 'flex',
                     flexDirection: 'column',
+                    '@media (hover: hover)': { '&:hover': { transform: `translateX(${disableGestures ? 0 : swipeOffset}px) translateY(-2px)`, boxShadow: 4 } },
                 }}
                 onTouchStart={disableGestures ? undefined : handleTouchStart}
                 onTouchMove={disableGestures ? undefined : handleTouchMove}

@@ -4,9 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     TableSortLabel, Paper, Typography, Chip, IconButton, Tooltip, Stack,
-    Collapse, Box, Skeleton, Button,
+    Collapse, Box, Skeleton, Button, alpha, useTheme,
 } from '@mui/material';
-import { getTicketStatusColor, groupDistances } from '../utils/ticketStatus';
+import { getTicketStatusColor, groupDistances, isAllSoldOut } from '../utils/ticketStatus';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
@@ -15,6 +15,7 @@ import StraightenIcon from '@mui/icons-material/Straighten';
 import TimerIcon from '@mui/icons-material/Timer';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import VideocamIcon from '@mui/icons-material/Videocam';
+import CelebrationIcon from '@mui/icons-material/Celebration';
 import type { EventSummary, EventDetail, RaceDto, SeriesRaceDto } from '../hooks/useEvents';
 import { API_URL } from '../hooks/useTrails';
 import { haversineKm, formatDistanceKm } from '../utils/geo';
@@ -23,6 +24,7 @@ import EventDateBadge from './EventDateBadge';
 import { getCountdownColor, getEventTypeColor, formatNextDate } from '../utils/eventUtils';
 import { ActivityIcons, getActivityIcon } from '../utils/activityIcon';
 import { useLocalize } from '../utils/localize';
+import { useIcelandicHolidays } from '../hooks/useIcelandicHolidays';
 
 
 
@@ -52,6 +54,8 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
     const { t, i18n } = useTranslation();
     const loc = useLocalize();
     const navigate = useNavigate();
+    const theme = useTheme();
+    const { getHolidays } = useIcelandicHolidays();
     const [sortField, setSortField] = useState<SortField>('daysUntil');
     const [sortDir, setSortDir] = useState<SortDir>('asc');
     const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
@@ -194,21 +198,46 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                     </TableRow>
                 </TableHead>
                 <TableBody>
-                    {sortedRows.map((row, idx) => {
+                    {(() => {
+                        let lastHolidayDate: string | null = null;
+                        return sortedRows.map((row, idx) => {
+                        const rowDate = row.kind === 'series-race'
+                            ? row.race.dateOfRace
+                            : (row.event.displayDate ?? row.event.nextEditionDate);
+                        const holidays = rowDate ? getHolidays(rowDate) : [];
+                        const holidaySeparator = holidays.length > 0 && rowDate !== lastHolidayDate ? (() => {
+                            lastHolidayDate = rowDate!;
+                            const d = new Date(rowDate! + 'T00:00:00');
+                            const months = t('races.months', { returnObjects: true }) as string[];
+                            const dateLabel = `${d.getDate()}. ${months[d.getMonth()]}`;
+                            return (
+                                <TableRow key={`holiday-${rowDate}`} sx={{ bgcolor: alpha(theme.palette.warning.main, 0.12) }}>
+                                    <TableCell colSpan={totalColumns} sx={{ py: 0.5, px: 2, borderBottom: 0 }}>
+                                        <Stack direction="row" alignItems="center" gap={1}>
+                                            <CelebrationIcon sx={{ fontSize: 15, color: 'warning.dark' }} />
+                                            <Typography variant="caption" fontWeight={700} sx={{ color: 'warning.dark', letterSpacing: 0.3 }}>
+                                                {dateLabel} — {holidays.map(h => loc(h.name, h.nameEn) ?? h.name).join(' · ')}
+                                            </Typography>
+                                        </Stack>
+                                    </TableCell>
+                                </TableRow>
+                            );
+                        })() : null;
                         if (row.kind === 'series-race') {
                             const { event, race } = row;
                             const raceDaysUntil = race.dateOfRace
                                 ? Math.round((new Date(race.dateOfRace + 'T00:00:00').getTime() - Date.now()) / 86400000)
                                 : null;
                             return (
-                                <TableRow
-                                    key={`${event.id}-${race.raceId}`}
-                                    hover
-                                    tabIndex={0}
-                                    role="link"
-                                    sx={{ cursor: 'pointer', bgcolor: idx % 2 === 1 ? 'action.hover' : 'transparent' }}
-                                    onClick={() => navigate(`/events/${event.slug}`)}
-                                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/events/${event.slug}`); } }}
+                                <React.Fragment key={`${event.id}-${race.raceId}`}>
+                                    {holidaySeparator}
+                                    <TableRow
+                                        hover
+                                        tabIndex={0}
+                                        role="link"
+                                        sx={{ cursor: 'pointer', bgcolor: idx % 2 === 1 ? 'action.hover' : 'transparent' }}
+                                        onClick={() => navigate(`/events/${event.slug}`)}
+                                        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/events/${event.slug}`); } }}
                                 >
                                     <TableCell sx={{ p: 0.5 }} />
                                     <TableCell align="center">
@@ -297,6 +326,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                         )}
                                     </TableCell>
                                 </TableRow>
+                                </React.Fragment>
                             );
                         }
 
@@ -310,6 +340,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
 
                         return (
                             <React.Fragment key={event.id}>
+                                {holidaySeparator}
                                 <TableRow
                                     hover
                                     tabIndex={0}
@@ -456,27 +487,36 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                     <TableCell align="center">
                                         <Stack alignItems="center" spacing={0.5}>
                                             {event.registrationUrl && event.daysUntil != null && event.daysUntil >= 0 ? (
-                                                <>
-                                                    <Button
+                                                isAllSoldOut(event.distances) ? (
+                                                    <Chip
+                                                        label={t('races.ticketStatus.SoldOut', 'Sold out')}
                                                         size="small"
+                                                        color="error"
                                                         variant="outlined"
-                                                        href={event.registrationUrl}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        sx={{ textTransform: 'none', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
-                                                    >
-                                                        {t('races.register', 'Register')}
-                                                    </Button>
-                                                    {event.registrationStatus && (
-                                                        <Chip
-                                                            label={t(`races.registrationStatus.${event.registrationStatus}`, event.registrationStatus)}
+                                                    />
+                                                ) : (
+                                                    <>
+                                                        <Button
                                                             size="small"
-                                                            color={getRegistrationStatusColor(event.registrationStatus)}
-                                                        />
-                                                    )}
-                                                </>
+                                                            variant="outlined"
+                                                            href={event.registrationUrl}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            sx={{ textTransform: 'none', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+                                                        >
+                                                            {t('races.register', 'Register')}
+                                                        </Button>
+                                                        {event.registrationStatus && (
+                                                            <Chip
+                                                                label={t(`races.registrationStatus.${event.registrationStatus}`, event.registrationStatus)}
+                                                                size="small"
+                                                                color={getRegistrationStatusColor(event.registrationStatus)}
+                                                            />
+                                                        )}
+                                                    </>
+                                                )
                                             ) : event.resultsUrl && event.daysUntil != null && event.daysUntil < 0 ? (
                                                 <Button
                                                     size="small"
@@ -545,7 +585,8 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                 </TableRow>
                             </React.Fragment>
                         );
-                    })}
+                    });
+                    })()}
                     {sortedRows.length === 0 && (
                         <TableRow>
                             <TableCell colSpan={totalColumns} align="center" sx={{ py: 4 }}>

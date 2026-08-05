@@ -62,7 +62,7 @@ import { useEvents, type EventSummary, type SeriesRaceDto } from '../hooks/useEv
 import { downloadIcs } from '../utils/calendarLinks';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
-import { getTicketStatusColor, groupDistances } from '../utils/ticketStatus';
+import { getTicketStatusColor, groupDistances, isAllSoldOut } from '../utils/ticketStatus';
 import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor } from '../utils/eventUtils';
 import { useLocalize } from '../utils/localize';
 import { ActivityIcons, getActivityIcon } from '../utils/activityIcon';
@@ -74,6 +74,7 @@ import CelebrationIcon from '@mui/icons-material/Celebration';
 import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
 import GrassIcon from '@mui/icons-material/Grass';
 import { haversineKm, formatDistanceKm } from '../utils/geo';
+import { useIcelandicHolidays } from '../hooks/useIcelandicHolidays';
 
 const EventTableView = lazy(() => import('../components/EventTableView'));
 const EventMapView = lazy(() => import('../components/EventMapView'));
@@ -127,6 +128,7 @@ const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
 export default function RacesPage({ mode, onToggleMode, showQuote = false }: RacesPageProps) {
     const { t } = useTranslation();
     const loc = useLocalize();
+    const { getHolidays } = useIcelandicHolidays();
     const { events, loading, error, refresh } = useEvents();
     const { isEnabled } = useFeatureFlags();
     const navigate = useNavigate();
@@ -853,9 +855,9 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                 revealWidth={0}
                                             >
                                             <Card
+                                                variant="outlined"
                                                 sx={{
-                                                    transition: 'transform 0.15s, box-shadow 0.15s',
-                                                    '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] },
+                                                    '@media (hover: hover)': { transition: 'transform 0.15s, box-shadow 0.15s', '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] } },
                                                     borderLeft: `4px solid ${theme.palette.success.main}`,
                                                 }}
                                             >
@@ -916,15 +918,48 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                             )}
                             
                         <Stack spacing={2}>
-                            {flattenedUpcoming.map((row, idx) => {
+                            {(() => {
+                                let lastHolidayDate: string | null = null;
+                                return flattenedUpcoming.map((row, idx) => {
+                                const rowDate = row.kind === 'series-race'
+                                    ? row.race.dateOfRace
+                                    : (row.comp.displayDate ?? row.comp.nextEditionDate);
+                                const holidays = rowDate ? getHolidays(rowDate) : [];
+                                const holidayBanner = holidays.length > 0 && rowDate !== lastHolidayDate ? (() => {
+                                    lastHolidayDate = rowDate!;
+                                    const d = new Date(rowDate! + 'T00:00:00');
+                                    const months = t('races.months', { returnObjects: true }) as string[];
+                                    const dateLabel = `${d.getDate()}. ${months[d.getMonth()]}`;
+                                    return (
+                                        <Box
+                                            key={`holiday-${rowDate}`}
+                                            sx={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 1,
+                                                px: 1.5,
+                                                py: 0.75,
+                                                borderRadius: 1,
+                                                bgcolor: alpha(theme.palette.warning.main, 0.12),
+                                                mb: 1,
+                                            }}
+                                        >
+                                            <CelebrationIcon sx={{ fontSize: 15, color: 'warning.dark' }} />
+                                            <Typography variant="caption" fontWeight={700} sx={{ color: 'warning.dark' }}>
+                                                {dateLabel} — {holidays.map(h => loc(h.name, h.nameEn) ?? h.name).join(' · ')}
+                                            </Typography>
+                                        </Box>
+                                    );
+                                })() : null;
                                 if (row.kind === 'series-race') {
                                     const { comp, race } = row;
                                     const raceDaysUntil = race.dateOfRace
                                         ? Math.round((new Date(race.dateOfRace + 'T00:00:00').getTime() - Date.now()) / 86400000)
                                         : null;
                                     return (
+                                        <Box key={`${comp.id}-${race.raceId}`}>
+                                        {holidayBanner}
                                         <SwipeableCard
-                                            key={`${comp.id}-${race.raceId}`}
                                             onSwipeRight={race.registrationUrl && raceDaysUntil != null && raceDaysUntil >= 0
                                                 ? () => setShareEventId(comp.id)
                                                 : undefined
@@ -965,7 +1000,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                             }
                                             revealWidth={120}
                                         >
-                                            <Card sx={{ transition: 'transform 0.15s, box-shadow 0.15s', '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] } }}>
+                                            <Card variant="outlined" sx={{ '@media (hover: hover)': { transition: 'transform 0.15s, box-shadow 0.15s', '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] } } }}>
                                                 <CardActionArea onClick={() => navigate(`/events/${comp.slug}`)}>
                                                     <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
                                                         {/* Name + countdown */}
@@ -1030,12 +1065,14 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                 </CardActionArea>
                                             </Card>
                                         </SwipeableCard>
+                                        </Box>
                                     );
                                 }
                                 const comp = row.comp;
                                 return (
+                                <Box key={comp.id}>
+                                {holidayBanner}
                                 <SwipeableCard
-                                    key={comp.id}
                                     peek={idx === 0 && showSwipeHint}
                                     onSwipeRight={comp.status !== 'Cancelled' && comp.daysUntil != null && comp.daysUntil >= 0
                                         ? () => setShareEventId(comp.id)
@@ -1043,7 +1080,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                     }
                                     leftActions={
                                         <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-                                            {comp.registrationUrl && comp.daysUntil != null && comp.daysUntil >= 0 && (
+                                            {comp.registrationUrl && comp.daysUntil != null && comp.daysUntil >= 0 && !isAllSoldOut(comp.distances) && (
                                                 <Box
                                                     component="a"
                                                     href={comp.registrationUrl}
@@ -1105,9 +1142,9 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                     revealWidth={120}
                                 >
                                 <Card
+                                    variant="outlined"
                                     sx={{
-                                        transition: 'transform 0.15s, box-shadow 0.15s',
-                                        '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] },
+                                        '@media (hover: hover)': { transition: 'transform 0.15s, box-shadow 0.15s', '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] } },
                                         ...(comp.type === 'Advertisement' && { bgcolor: 'rgba(255, 193, 7, 0.08)' }),
                                         ...(comp.status === 'Cancelled' && { opacity: 0.65 }),
                                     }}
@@ -1219,7 +1256,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                             {/* Row 4: actions */}
                                             {(comp.registrationUrl || comp.youtubeUrl) && (
                                                 <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.75 }}>
-                                                    {comp.registrationUrl && comp.daysUntil != null && comp.daysUntil >= 0 && (
+                                                    {comp.registrationUrl && comp.daysUntil != null && comp.daysUntil >= 0 && !isAllSoldOut(comp.distances) && (
                                                         <Button size="small" variant="outlined" href={comp.registrationUrl} target="_blank" rel="noopener noreferrer" endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.8rem' }}>
                                                             {t('races.register', 'Register')}
                                                         </Button>
@@ -1241,8 +1278,10 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                     </CardActionArea>
                                 </Card>
                                 </SwipeableCard>
+                                </Box>
                                 );
-                            })}
+                                });
+                            })()}
                         </Stack>
                         </>
                     )
