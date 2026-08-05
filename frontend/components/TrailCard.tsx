@@ -252,7 +252,7 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                     flex: 1,
                     display: 'flex',
                     flexDirection: 'column',
-                    '@media (hover: hover)': { transition: 'transform 0.15s, box-shadow 0.15s', '&:hover': { transform: 'translateY(-2px)', boxShadow: 4 } },
+                    '@media (hover: hover)': { '&:hover': { transform: `translateX(${disableGestures ? 0 : swipeOffset}px) translateY(-2px)`, boxShadow: 4 } },
                 }}
                 onTouchStart={disableGestures ? undefined : handleTouchStart}
                 onTouchMove={disableGestures ? undefined : handleTouchMove}

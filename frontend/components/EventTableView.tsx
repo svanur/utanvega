@@ -486,35 +486,37 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                     {/* Links */}
                                     <TableCell align="center">
                                         <Stack alignItems="center" spacing={0.5}>
-                                            {event.registrationUrl && event.daysUntil != null && event.daysUntil >= 0 && !isAllSoldOut(event.distances) ? (
-                                                <>
-                                                    <Button
+                                            {event.registrationUrl && event.daysUntil != null && event.daysUntil >= 0 ? (
+                                                isAllSoldOut(event.distances) ? (
+                                                    <Chip
+                                                        label={t('races.ticketStatus.SoldOut', 'Sold out')}
                                                         size="small"
+                                                        color="error"
                                                         variant="outlined"
-                                                        href={event.registrationUrl}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        sx={{ textTransform: 'none', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
-                                                    >
-                                                        {t('races.register', 'Register')}
-                                                    </Button>
-                                                    {event.registrationStatus && (
-                                                        <Chip
-                                                            label={t(`races.registrationStatus.${event.registrationStatus}`, event.registrationStatus)}
+                                                    />
+                                                ) : (
+                                                    <>
+                                                        <Button
                                                             size="small"
-                                                            color={getRegistrationStatusColor(event.registrationStatus)}
-                                                        />
-                                                    )}
-                                                </>
-                                            ) : event.registrationUrl && event.daysUntil != null && event.daysUntil >= 0 && isAllSoldOut(event.distances) ? (
-                                                <Chip
-                                                    label={t('races.ticketStatus.SoldOut', 'Sold out')}
-                                                    size="small"
-                                                    color="error"
-                                                    variant="outlined"
-                                                />
+                                                            variant="outlined"
+                                                            href={event.registrationUrl}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            sx={{ textTransform: 'none', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+                                                        >
+                                                            {t('races.register', 'Register')}
+                                                        </Button>
+                                                        {event.registrationStatus && (
+                                                            <Chip
+                                                                label={t(`races.registrationStatus.${event.registrationStatus}`, event.registrationStatus)}
+                                                                size="small"
+                                                                color={getRegistrationStatusColor(event.registrationStatus)}
+                                                            />
+                                                        )}
+                                                    </>
+                                                )
                                             ) : event.resultsUrl && event.daysUntil != null && event.daysUntil < 0 ? (
                                                 <Button
                                                     size="small"
