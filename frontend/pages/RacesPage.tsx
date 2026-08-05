@@ -710,6 +710,105 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                     </Box>
                 </Collapse>
 
+                {/* Quick-filter pills */}
+                {(() => {
+                    const monthNames = t('races.months', { returnObjects: true }) as string[];
+                    const visibleEvents = events.filter(e => e.status !== 'Hidden' && e.status !== 'Unlisted');
+                    const monthsWithEvents = new Set(
+                        visibleEvents
+                            .map(e => e.displayDate ?? e.nextEditionDate)
+                            .filter(Boolean)
+                            .map(d => new Date(d! + 'T00:00:00').getMonth())
+                    );
+                    const hasTrailRun = visibleEvents.some(e => e.activityType === 'TrailRunning');
+                    const hasRun = visibleEvents.some(e => e.activityType === 'Running');
+                    const hasItra = visibleEvents.some(e => e.itraPoints && e.itraPoints.length > 0);
+
+                    const toggleActivity = (type: string) =>
+                        setFilters(f => ({
+                            ...f,
+                            activityTypes: f.activityTypes.includes(type)
+                                ? f.activityTypes.filter(x => x !== type)
+                                : [...f.activityTypes, type],
+                        }));
+
+                    const toggleMonth = (idx: number) =>
+                        setFilters(f => ({
+                            ...f,
+                            months: f.months.includes(idx) ? f.months.filter(m => m !== idx) : [...f.months, idx],
+                        }));
+
+                    return (
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1.5 }}>
+                            {hasTrailRun && (
+                                <Chip
+                                    icon={<LandscapeIcon fontSize="small" />}
+                                    label={t('races.activityTypes.TrailRunning', 'Trail Run')}
+                                    size="small"
+                                    variant={filters.activityTypes.includes('TrailRunning') ? 'filled' : 'outlined'}
+                                    color={filters.activityTypes.includes('TrailRunning') ? 'primary' : 'default'}
+                                    onClick={() => toggleActivity('TrailRunning')}
+                                    sx={{ cursor: 'pointer' }}
+                                />
+                            )}
+                            {hasRun && (
+                                <Chip
+                                    icon={<DirectionsRunIcon fontSize="small" />}
+                                    label={t('races.activityTypes.Running', 'Run')}
+                                    size="small"
+                                    variant={filters.activityTypes.includes('Running') ? 'filled' : 'outlined'}
+                                    color={filters.activityTypes.includes('Running') ? 'primary' : 'default'}
+                                    onClick={() => toggleActivity('Running')}
+                                    sx={{ cursor: 'pointer' }}
+                                />
+                            )}
+                            {hasItra && (
+                                <Chip
+                                    label="ITRA"
+                                    size="small"
+                                    variant={filters.itraAny ? 'filled' : 'outlined'}
+                                    color={filters.itraAny ? 'warning' : 'default'}
+                                    onClick={() => setFilters(f => ({ ...f, itraAny: !f.itraAny, itraPoints: [] }))}
+                                    sx={{ cursor: 'pointer', fontWeight: 600 }}
+                                />
+                            )}
+                            <Chip
+                                label={t('races.filters.weekendOnly')}
+                                size="small"
+                                variant={filters.weekendOnly ? 'filled' : 'outlined'}
+                                color={filters.weekendOnly ? 'secondary' : 'default'}
+                                onClick={() => setFilters(f => ({ ...f, weekendOnly: !f.weekendOnly }))}
+                                sx={{ cursor: 'pointer' }}
+                            />
+                            {Array.from({ length: 12 }, (_, idx) => idx)
+                                .filter(idx => monthsWithEvents.has(idx))
+                                .map(idx => (
+                                    <Chip
+                                        key={idx}
+                                        label={monthNames[idx]?.slice(0, 3) ?? String(idx + 1)}
+                                        size="small"
+                                        variant={filters.months.includes(idx) ? 'filled' : 'outlined'}
+                                        color={filters.months.includes(idx) ? 'primary' : 'default'}
+                                        onClick={() => toggleMonth(idx)}
+                                        sx={{ cursor: 'pointer' }}
+                                    />
+                                ))
+                            }
+                            {activeFilterCount > 0 && (
+                                <Chip
+                                    label={t('races.filters.reset')}
+                                    size="small"
+                                    variant="outlined"
+                                    color="error"
+                                    icon={<CloseIcon fontSize="small" />}
+                                    onClick={() => setFilters(DEFAULT_FILTERS)}
+                                    sx={{ cursor: 'pointer' }}
+                                />
+                            )}
+                        </Box>
+                    );
+                })()}
+
                 {/* View toggle + result count */}
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                     <Typography variant="body2" color="text.secondary">
