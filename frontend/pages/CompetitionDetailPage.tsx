@@ -103,6 +103,8 @@ import { getTicketStatusColor } from '../utils/ticketStatus';
 
 type RaceDayChecklistKey = 'bib' | 'shoes' | 'gels' | 'goodMood';
 
+const RUN_ACTIVITY_TYPES = new Set(['TrailRunning', 'Running', 'FunRun', 'CrossCountryRun', 'ObstacleCourse']);
+
 function toAnchorSlug(value: string): string {
     return value
         .toLowerCase()
@@ -402,7 +404,9 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
             return currentTime >= start;
         });
     }, [isRaceDay, visibleRaces, currentTime]);
-    const showChecklist = isRaceWeek && !firstRaceStarted;
+    const isRunningEvent = RUN_ACTIVITY_TYPES.has(event?.activityType ?? '') ||
+        visibleRaces.some(r => RUN_ACTIVITY_TYPES.has(r.activityType ?? '') || RUN_ACTIVITY_TYPES.has(r.trailActivityType ?? ''));
+    const showChecklist = isRaceWeek && !firstRaceStarted && isRunningEvent;
 
     const showEditionSections = currentEditions.length > 1;
     const primaryEdition = useMemo(
