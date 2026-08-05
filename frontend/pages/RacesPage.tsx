@@ -855,9 +855,9 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                 revealWidth={0}
                                             >
                                             <Card
+                                                variant="outlined"
                                                 sx={{
-                                                    transition: 'transform 0.15s, box-shadow 0.15s',
-                                                    '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] },
+                                                    '@media (hover: hover)': { transition: 'transform 0.15s, box-shadow 0.15s', '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] } },
                                                     borderLeft: `4px solid ${theme.palette.success.main}`,
                                                 }}
                                             >
@@ -941,6 +941,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                 py: 0.75,
                                                 borderRadius: 1,
                                                 bgcolor: alpha(theme.palette.warning.main, 0.12),
+                                                mb: 1,
                                             }}
                                         >
                                             <CelebrationIcon sx={{ fontSize: 15, color: 'warning.dark' }} />
@@ -999,7 +1000,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                             }
                                             revealWidth={120}
                                         >
-                                            <Card sx={{ transition: 'transform 0.15s, box-shadow 0.15s', '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] } }}>
+                                            <Card variant="outlined" sx={{ '@media (hover: hover)': { transition: 'transform 0.15s, box-shadow 0.15s', '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] } } }}>
                                                 <CardActionArea onClick={() => navigate(`/events/${comp.slug}`)}>
                                                     <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
                                                         {/* Name + countdown */}
@@ -1141,9 +1142,9 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                     revealWidth={120}
                                 >
                                 <Card
+                                    variant="outlined"
                                     sx={{
-                                        transition: 'transform 0.15s, box-shadow 0.15s',
-                                        '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] },
+                                        '@media (hover: hover)': { transition: 'transform 0.15s, box-shadow 0.15s', '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] } },
                                         ...(comp.type === 'Advertisement' && { bgcolor: 'rgba(255, 193, 7, 0.08)' }),
                                         ...(comp.status === 'Cancelled' && { opacity: 0.65 }),
                                     }}
