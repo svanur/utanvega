@@ -264,6 +264,7 @@ builder.Services.AddSingleton<IScheduleRuleEngine, ScheduleRuleEngine>();
 builder.Services.AddSingleton<ICacheInvalidator, CacheInvalidator>();
 builder.Services.AddHttpClient("OpenMeteo");
 builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<Utanvega.Backend.Infrastructure.Translation.DeepLTranslatorProvider>();
 
 // builder.Services.AddEndpointsApiExplorer();
 // builder.Services.AddSwaggerGen();
@@ -647,10 +648,14 @@ app.MapGet("/api/v1/admin/analytics", [Authorize] async (IMediator mediator) =>
 })
 .WithName("AdminAnalytics");
 
-app.MapGet("/", async (IWebHostEnvironment env, UtanvegaDbContext db) =>
+app.MapGet("/", async (IWebHostEnvironment env, UtanvegaDbContext db, IMemoryCache cache) =>
 {
-    var pending = await db.Database.GetPendingMigrationsAsync();
-    var pendingList = pending.ToList();
+    var pendingList = await cache.GetOrCreateAsync("root:pending-migrations", async entry =>
+    {
+        entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(1);
+        var pending = await db.Database.GetPendingMigrationsAsync();
+        return pending.ToList();
+    }) ?? [];
     return new
     {
         message = "Backend API running!",
@@ -1226,10 +1231,10 @@ app.MapDelete("/api/v1/admin/tags/{id:guid}", [Authorize] async (Guid id, Utanve
 .WithName("DeleteTag");
 
 // Translation API
-app.MapPost("/api/v1/admin/translate", [Authorize] async (TranslateRequest req, IConfiguration config) =>
+app.MapPost("/api/v1/admin/translate", [Authorize] async (TranslateRequest req, Utanvega.Backend.Infrastructure.Translation.DeepLTranslatorProvider translatorProvider) =>
 {
-    var apiKey = config["DeepL:ApiKey"];
-    if (string.IsNullOrWhiteSpace(apiKey))
+    var translator = translatorProvider.Translator;
+    if (translator == null)
         return Results.Problem("DeepL API key not configured.");
 
     if (req.Texts == null || req.Texts.Count == 0)
@@ -1237,7 +1242,6 @@ app.MapPost("/api/v1/admin/translate", [Authorize] async (TranslateRequest req, 
 
     try
     {
-        var translator = new DeepL.Translator(apiKey);
         var results = await translator.TranslateTextAsync(
             req.Texts,
             DeepL.LanguageCode.Icelandic,

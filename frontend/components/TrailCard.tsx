@@ -81,7 +81,7 @@ const getTerrainIcon = (type: string) => {
     }
 };
 
-export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, onTagClick, isHiding, isFavorited: isFavoritedProp, compact, disableGestures }) => {
+const TrailCardComponent: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, onTagClick, isHiding, isFavorited: isFavoritedProp, compact, disableGestures }) => {
     const navigate = useNavigate();
     const { t } = useTranslation();
     const loc = useLocalize();
@@ -470,3 +470,5 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
         </Box>
     );
 };
+
+export const TrailCard = React.memo(TrailCardComponent);

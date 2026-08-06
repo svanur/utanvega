@@ -37,4 +37,7 @@ public static class CacheKeys
 
     /// <summary>Version token incremented on every event/edition/race write.</summary>
     public static string EventVersion => "event:version";
+
+    // Analytics
+    public static string Analytics => "analytics";
 }

@@ -1,6 +1,10 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Box, TextField, Typography, Paper, ToggleButtonGroup, ToggleButton, Chip, Divider, IconButton, InputAdornment, Table, TableBody, TableRow, TableCell, Collapse, Autocomplete } from '@mui/material';
-import { KeyboardArrowUp, KeyboardArrowDown, Terrain, ExpandMore, RestartAlt } from '@mui/icons-material';
+import KeyboardArrowUp from '@mui/icons-material/KeyboardArrowUp';
+import KeyboardArrowDown from '@mui/icons-material/KeyboardArrowDown';
+import Terrain from '@mui/icons-material/Terrain';
+import ExpandMore from '@mui/icons-material/ExpandMore';
+import RestartAlt from '@mui/icons-material/RestartAlt';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { API_URL } from '../hooks/useTrails';
