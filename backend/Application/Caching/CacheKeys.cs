@@ -23,6 +23,7 @@ public static class CacheKeys
     public static string LocationsAll => "locations:all";
     public static string LocationTree => "locations:tree";
     public static string Location(string slug) => $"location:{slug}";
+    public static string LocationCentersAll => "locations:centers:all";
 
     // Events
     public static string Events(bool includeHidden) => $"events:{includeHidden}";

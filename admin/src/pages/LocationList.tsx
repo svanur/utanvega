@@ -4,17 +4,15 @@ import {
     Paper, Button, Typography, Box, CircularProgress, IconButton, Chip,
     Tooltip, TextField, InputAdornment
 } from '@mui/material';
-import {
-    Add as AddIcon,
-    Edit as EditIcon,
-    Delete as DeleteIcon,
-    ExpandMore as ExpandMoreIcon,
-    ChevronRight as ChevronRightIcon,
-    FolderOpen as FolderOpenIcon,
-    LocationOn as LocationOnIcon,
-    Search as SearchIcon,
-    Clear as ClearIcon,
-} from '@mui/icons-material';
+import AddIcon from '@mui/icons-material/Add';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import FolderOpenIcon from '@mui/icons-material/FolderOpen';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
 import { useLocations, LocationDto } from '../hooks/useLocations';
 import { LocationDialog } from '../components/LocationDialog';
 import { apiFetch } from '../hooks/api';

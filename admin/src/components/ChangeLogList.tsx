@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Box, Typography, Paper, List, ListItem, ListItemText, Divider, CircularProgress, Chip, Collapse } from '@mui/material';
-import { ExpandMore as ExpandMoreIcon, ExpandLess as ExpandLessIcon, History as HistoryIcon } from '@mui/icons-material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import HistoryIcon from '@mui/icons-material/History';
 import { apiFetch } from '../hooks/api';
 
 export type ChangeLogDto = {

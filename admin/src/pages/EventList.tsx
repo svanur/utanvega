@@ -48,27 +48,25 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import {
-  Add as AddIcon,
-  AutoAwesome as GenerateIcon,
-  PlaylistAdd as BulkAddIcon,
-  CalendarMonth as CalendarIcon,
-  Clear as ClearIcon,
-  DragIndicator as DragHandleIcon,
-  ContentCopy as CopyIcon,
-  Delete as DeleteIcon,
-  Edit as EditIcon,
-  ExpandLess as ExpandLessIcon,
-  ExpandMore as ExpandMoreIcon,
-  EmojiEvents as TrophyIcon,
-  Link as LinkIcon,
-  Map as MapIcon,
-  MyLocation as MyLocationIcon,
-  Notes as NotesIcon,
-  OpenInNew as OpenInNewIcon,
-  Search as SearchIcon,
-  Translate as TranslateIcon,
-} from '@mui/icons-material';
+import AddIcon from '@mui/icons-material/Add';
+import GenerateIcon from '@mui/icons-material/AutoAwesome';
+import BulkAddIcon from '@mui/icons-material/PlaylistAdd';
+import CalendarIcon from '@mui/icons-material/CalendarMonth';
+import ClearIcon from '@mui/icons-material/Clear';
+import DragHandleIcon from '@mui/icons-material/DragIndicator';
+import CopyIcon from '@mui/icons-material/ContentCopy';
+import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import TrophyIcon from '@mui/icons-material/EmojiEvents';
+import LinkIcon from '@mui/icons-material/Link';
+import MapIcon from '@mui/icons-material/Map';
+import MyLocationIcon from '@mui/icons-material/MyLocation';
+import NotesIcon from '@mui/icons-material/Notes';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import SearchIcon from '@mui/icons-material/Search';
+import TranslateIcon from '@mui/icons-material/Translate';
 import {
   useEvents,
   type AlertSeverity,
@@ -1086,6 +1084,14 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
   const [bulkDatesEditionYear, setBulkDatesEditionYear] = useState<number | null>(null);
   const [pendingDateShift, setPendingDateShift] = useState<{ offsetDays: number; races: RaceDto[] } | null>(null);
   const [showOlderEditions, setShowOlderEditions] = useState(false);
+  const visibleEditions = useMemo(() => {
+    if (!expandedDetail) return null;
+    const currentYear = new Date().getFullYear();
+    const sorted = [...expandedDetail.editions].sort(sortEditions);
+    const older = sorted.filter(ed => (ed.year ?? 0) < currentYear && (!(ed.endDate ?? ed.date) || isPastDate(ed.endDate ?? ed.date ?? '')));
+    const visible = showOlderEditions ? sorted : sorted.filter(ed => !older.includes(ed));
+    return { visible, hiddenCount: older.length };
+  }, [expandedDetail, showOlderEditions]);
   const [showAttentionPanel, setShowAttentionPanel] = useState(true);
   const [attentionFilter, setAttentionFilter] = useState<'noEdition' | 'seriesMissingReg' | 'pastActive' | null>(null);
   const [urlPopover, setUrlPopover] = useState<{
@@ -2824,11 +2830,8 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
                                   No editions yet. Click "Add Edition" to create the first one.
                                 </Typography>
                               ) : (() => {
-                                const currentYear = new Date().getFullYear();
-                                const sorted = [...expandedDetail.editions].sort(sortEditions);
-                                const older = sorted.filter(ed => (ed.year ?? 0) < currentYear && (!(ed.endDate ?? ed.date) || isPastDate(ed.endDate ?? ed.date ?? '')));
-                                const visible = showOlderEditions ? sorted : sorted.filter(ed => !older.includes(ed));
-                                const hiddenCount = older.length;
+                                if (!visibleEditions) return null;
+                                const { visible, hiddenCount } = visibleEditions;
                                 return (
                                 <>
                                 {visible.map((edition, idx) => (

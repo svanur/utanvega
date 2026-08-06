@@ -104,6 +104,7 @@ public class UtanvegaDbContext : DbContext
             entity.Property(e => e.TimestampUtc).IsRequired();
             entity.HasIndex(e => e.EntityId);
             entity.HasIndex(e => e.EntityName);
+            entity.HasIndex(e => e.TimestampUtc);
         });
 
         modelBuilder.Entity<Tag>(entity =>
@@ -286,6 +287,7 @@ public class UtanvegaDbContext : DbContext
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => e.LogDate);
             entity.HasIndex(e => e.CreatedAt);
+            entity.HasIndex(e => new { e.TrailSlug, e.IsPublic });
         });
 
         modelBuilder.Entity<Profile>(entity =>

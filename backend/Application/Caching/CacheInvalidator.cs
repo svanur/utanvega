@@ -32,6 +32,7 @@ public class CacheInvalidator : ICacheInvalidator
     {
         _cache.Remove(CacheKeys.LocationsAll);
         _cache.Remove(CacheKeys.LocationTree);
+        _cache.Remove(CacheKeys.LocationCentersAll);
         _cache.Remove(CacheKeys.Trails(false, true));
         _cache.Remove(CacheKeys.Trails(false, false));
         _cache.Remove(CacheKeys.Trails(true, false));

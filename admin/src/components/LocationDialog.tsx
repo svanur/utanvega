@@ -4,7 +4,8 @@ import {
     Button, TextField, Box, Alert, Typography, Slider,
     Tabs, Tab, Autocomplete, CircularProgress, Stack
 } from '@mui/material';
-import { History as HistoryIcon, AutoFixHigh as WikiIcon } from '@mui/icons-material';
+import HistoryIcon from '@mui/icons-material/History';
+import WikiIcon from '@mui/icons-material/AutoFixHigh';
 import TranslateIcon from '@mui/icons-material/Translate';
 import { MapContainer, TileLayer, Marker, Circle, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';

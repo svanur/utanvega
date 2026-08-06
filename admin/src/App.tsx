@@ -16,27 +16,11 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import SearchIcon from '@mui/icons-material/Search';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, lazy, Suspense } from 'react';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import 'dayjs/locale/is';
 import { BrowserRouter, useNavigate, useLocation } from 'react-router-dom';
-import TrailList from './pages/TrailList';
-import { LocationList } from './pages/LocationList';
-import TrailHealth from './pages/TrailHealth';
-import EventHealth from './pages/EventHealth';
-import EditionHealth from './pages/EditionHealth';
-import TrailMapView from './pages/TrailMapView';
-import TagManagement from './pages/TagManagement';
-import AnalyticsPage from './pages/AnalyticsPage';
-import FeatureFlagsPage from './pages/FeatureFlagsPage';
-import EventList from './pages/EventList';
-import DashboardPage from './pages/DashboardPage';
-import HeroThemesPage from './pages/HeroThemesPage';
-import SponsorsPage from './pages/SponsorsPage';
-import OrganizersPage from './pages/OrganizersPage';
-import PoolsPage from './pages/PoolsPage';
-import TranslationHealth from './pages/TranslationHealth';
 import TranslateIcon from '@mui/icons-material/Translate';
 import GpxUploadDialog from './components/GpxUploadDialog';
 import LoginPage from './pages/LoginPage';
@@ -47,6 +31,24 @@ import KeyboardShortcutsDialog from './components/KeyboardShortcutsDialog';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { useAdminShortcuts, GO_TO_PAGES } from './hooks/useAdminShortcuts';
 import KeyboardIcon from '@mui/icons-material/Keyboard';
+
+// Lazy-loaded pages (only the active page's chunk needs to load)
+const TrailList = lazy(() => import('./pages/TrailList'));
+const LocationList = lazy(() => import('./pages/LocationList').then(m => ({ default: m.LocationList })));
+const TrailHealth = lazy(() => import('./pages/TrailHealth'));
+const EventHealth = lazy(() => import('./pages/EventHealth'));
+const EditionHealth = lazy(() => import('./pages/EditionHealth'));
+const TrailMapView = lazy(() => import('./pages/TrailMapView'));
+const TagManagement = lazy(() => import('./pages/TagManagement'));
+const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));
+const FeatureFlagsPage = lazy(() => import('./pages/FeatureFlagsPage'));
+const EventList = lazy(() => import('./pages/EventList'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const HeroThemesPage = lazy(() => import('./pages/HeroThemesPage'));
+const SponsorsPage = lazy(() => import('./pages/SponsorsPage'));
+const OrganizersPage = lazy(() => import('./pages/OrganizersPage'));
+const PoolsPage = lazy(() => import('./pages/PoolsPage'));
+const TranslationHealth = lazy(() => import('./pages/TranslationHealth'));
 
 const theme = createTheme({
   palette: {
@@ -177,9 +179,24 @@ function AdminContent() {
   };
 
   if (authLoading) {
+    // Paint the branded header immediately instead of a blank screen while the
+    // Supabase session check resolves — we can't know whether to show the login
+    // form or the dashboard yet, but we can avoid looking like nothing loaded.
     return (
-      <Box sx={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center' }}>
-        <CircularProgress />
+      <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+        <AppBar position="static">
+          <Toolbar>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <img src="/images/hlaupadagskra.avif" alt="Hlaupadagskra logo" style={{ height: 32 }} />
+              <Typography variant="h6" noWrap>
+                Hlaupadagskra.is
+              </Typography>
+            </Box>
+          </Toolbar>
+        </AppBar>
+        <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <CircularProgress />
+        </Box>
       </Box>
     );
   }
@@ -301,6 +318,11 @@ function AdminContent() {
       <Box component="main" sx={{ flexGrow: 1, p: 3, transition: 'margin-left 0.2s' }}>
         <Toolbar />
         <Container maxWidth={false}>
+          <Suspense fallback={
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}>
+              <CircularProgress />
+            </Box>
+          }>
           {currentPage === 'dashboard' ? (
             <DashboardPage
               onNewEvent={() => { setCreateEventIntent(true); setCurrentPage('events'); }}
@@ -344,7 +366,8 @@ function AdminContent() {
           ) : (
             <LocationList onNotify={notify} />
           )}
-          
+          </Suspense>
+
           <GpxUploadDialog 
               open={isUploadOpen} 
               onClose={() => setIsUploadOpen(false)} 

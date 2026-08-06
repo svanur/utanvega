@@ -122,6 +122,17 @@ public class GenerateEditionsForSeasonCommandHandler : IRequestHandler<GenerateE
 
         var createdEditionIds = new List<Guid>();
 
+        // Load any editions already covering these seasons up front, instead of one query per group below.
+        // GroupBy then First() guards against the rare case of duplicate Year values for the same event
+        // (ToDictionaryAsync would throw ArgumentException on duplicate keys).
+        var seasonYears = seasonGroups.Select(g => g.Key).ToList();
+        var existingEditionsByYear = (await _context.EventEditions
+            .Include(ed => ed.Races)
+            .Where(ed => ed.EventId == ev.Id && ed.Year != null && seasonYears.Contains(ed.Year.Value))
+            .ToListAsync(cancellationToken))
+            .GroupBy(ed => ed.Year!.Value)
+            .ToDictionary(g => g.Key, g => g.First());
+
         foreach (var group in seasonGroups)
         {
             var seasonYear = group.Key;
@@ -146,13 +157,8 @@ public class GenerateEditionsForSeasonCommandHandler : IRequestHandler<GenerateE
             }
 
             // Check if an edition for this season already exists
-            var existingEdition = await _context.EventEditions
-                .Include(ed => ed.Races)
-                .Where(ed => ed.EventId == ev.Id && ed.Year == seasonYear)
-                .FirstOrDefaultAsync(cancellationToken);
-
             EventEdition edition;
-            if (existingEdition != null)
+            if (existingEditionsByYear.TryGetValue(seasonYear, out var existingEdition))
             {
                 edition = existingEdition;
             }
