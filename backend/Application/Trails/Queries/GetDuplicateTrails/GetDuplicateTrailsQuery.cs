@@ -26,6 +26,8 @@ public class GetDuplicateTrailsQueryHandler : IRequestHandler<GetDuplicateTrails
         // Let PostGIS find spatially-close candidate pairs server-side (bounding-box overlap via
         // `&&`, accelerated by the GiST index on GpxData) instead of pulling every trail's
         // geometry into memory and comparing all O(n^2) pairs in .NET.
+        // EF Core's SqlQuery<T>(FormattableString) parameterizes interpolated values ($1, $2, …)
+        // — this is NOT raw string concatenation and is safe from SQL injection.
         var candidates = await _context.Database
             .SqlQuery<CandidatePairRow>($"""
                 SELECT a."Id" AS "AId", a."Name" AS "AName", a."Length" AS "ALength",

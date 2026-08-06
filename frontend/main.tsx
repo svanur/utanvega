@@ -25,7 +25,7 @@ const ReactQueryDevtools = import.meta.env.DEV
       )
     : null;
 
-i18nReady.then(() => {
+const renderApp = () => {
     ReactDOM.createRoot(document.getElementById('root')!).render(
         <QueryClientProvider client={queryClient}>
             <App />
@@ -36,4 +36,7 @@ i18nReady.then(() => {
             )}
         </QueryClientProvider>
     );
-});
+};
+
+// Render even if translation chunks fail to load — app works, just missing translated strings.
+i18nReady.then(renderApp).catch(renderApp);
