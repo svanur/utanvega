@@ -20,10 +20,14 @@ export default function EventQRShare({ slug, eventName, open, onClose }: EventQR
 
     const eventUrl = `${window.location.origin}/events/${slug}`;
 
-    const handleCopy = () => {
-        navigator.clipboard.writeText(eventUrl);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+    const handleCopy = async () => {
+        try {
+            await navigator.clipboard.writeText(eventUrl);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } catch {
+            // clipboard unavailable — silently ignore
+        }
     };
 
     return (
@@ -37,7 +41,7 @@ export default function EventQRShare({ slug, eventName, open, onClose }: EventQR
                         <QRCodeSVG value={eventUrl} size={200} level="H" includeMargin />
                     </Box>
                     <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 2 }}>
-                        {t('qr.scanTrail')}
+                        {t('qr.scanEvent')}
                     </Typography>
                     <Button
                         variant="outlined"

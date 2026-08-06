@@ -1108,7 +1108,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                 flexDirection: 'column',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
-                                                bgcolor: isFavoriteEvent(comp.slug) ? 'warning.light' : 'warning.main',
+                                                bgcolor: isFavoriteEvent(comp.slug) ? 'warning.dark' : 'warning.main',
                                                 color: 'white',
                                                 gap: 0.5,
                                                 fontSize: '0.7rem',
