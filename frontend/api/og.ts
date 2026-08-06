@@ -70,7 +70,7 @@ export default async function handler(request: Request) {
     const distance = fmtDistance(trail.length);
     const gain = Math.round(trail.elevationGain);
     const activity = ACTIVITY_LABELS[trail.activityType] || trail.activityType;
-    const canonicalUrl = `${SITE_URL}/trails/${slug}`;
+    const canonicalUrl = `${SITE_URL}/trails/${encodeURIComponent(slug)}`;
 
     const description = trail.description
       ? esc(trail.description.slice(0, 200))
@@ -81,6 +81,7 @@ export default async function handler(request: Request) {
 
     const ogTitle = `${title} – ${distance} km${subtitle}`;
     const ogImageUrl = `${SITE_URL}/api/og-image?slug=${encodeURIComponent(slug)}`;
+    const safeCanonicalUrl = esc(canonicalUrl);
 
     const html = `<!DOCTYPE html>
 <html lang="en">
@@ -91,7 +92,7 @@ export default async function handler(request: Request) {
 
   <meta property="og:title" content="${ogTitle}" />
   <meta property="og:description" content="${description}" />
-  <meta property="og:url" content="${canonicalUrl}" />
+  <meta property="og:url" content="${safeCanonicalUrl}" />
   <meta property="og:site_name" content="Hlaupadagskra.is" />
   <meta property="og:type" content="website" />
   <meta property="og:image" content="${ogImageUrl}" />
@@ -105,10 +106,10 @@ export default async function handler(request: Request) {
   <meta name="twitter:description" content="${description}" />
   <meta name="twitter:image" content="${ogImageUrl}" />
 
-  <meta http-equiv="refresh" content="0;url=${canonicalUrl}" />
+  <meta http-equiv="refresh" content="0;url=${safeCanonicalUrl}" />
 </head>
 <body>
-  <p>Redirecting to <a href="${canonicalUrl}">${title} on Hlaupadagskra.is</a>…</p>
+  <p>Redirecting to <a href="${safeCanonicalUrl}">${title} on Hlaupadagskra.is</a>…</p>
 </body>
 </html>`;
 
@@ -126,6 +127,7 @@ export default async function handler(request: Request) {
 
 function defaultPage(path: string = '') {
   const canonicalUrl = path ? `${SITE_URL}${path}` : SITE_URL;
+  const safeCanonicalUrl = esc(canonicalUrl);
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -135,7 +137,7 @@ function defaultPage(path: string = '') {
 
   <meta property="og:title" content="Hlaupadagskra.is – Öll hlaup á einum stað" />
   <meta property="og:description" content="Vefur til að finna og deila skemmtilegum leiðum, hvort sem þær eru utanvega eða innanbæjar." />
-  <meta property="og:url" content="${canonicalUrl}" />
+  <meta property="og:url" content="${safeCanonicalUrl}" />
   <meta property="og:site_name" content="Hlaupadagskra.is" />
   <meta property="og:type" content="website" />
   <meta property="og:image" content="${SITE_URL}/api/og-image" />
@@ -147,10 +149,10 @@ function defaultPage(path: string = '') {
   <meta name="twitter:description" content="Vefur til að finna og deila skemmtilegum leiðum, hvort sem þær eru utanvega eða innanbæjar." />
   <meta name="twitter:image" content="${SITE_URL}/api/og-image" />
 
-  <meta http-equiv="refresh" content="0;url=${canonicalUrl}" />
+  <meta http-equiv="refresh" content="0;url=${safeCanonicalUrl}" />
 </head>
 <body>
-  <p>Redirecting to <a href="${canonicalUrl}">Hlaupadagskra.is</a>…</p>
+  <p>Redirecting to <a href="${safeCanonicalUrl}">Hlaupadagskra.is</a>…</p>
 </body>
 </html>`;
 
