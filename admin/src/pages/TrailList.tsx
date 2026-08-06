@@ -3,7 +3,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import BuildIcon from '@mui/icons-material/Build';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import AddIcon from '@mui/icons-material/Add';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTrails, Trail } from '../hooks/useTrails';
 import { useTags } from '../hooks/useTags';
 import { useLocations } from '../hooks/useLocations';
@@ -123,11 +123,11 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
     }
   };
 
-  const handleSelectOne = (id: string) => {
+  const handleSelectOne = useCallback((id: string) => {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
-  };
+  }, []);
 
   const handleBulkTag = async (tagId: string, action: 'add' | 'remove') => {
     if (selectedIds.length === 0) return;
@@ -205,7 +205,7 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
     }
   };
 
-  const handleRestore = async (trail: Trail) => {
+  const handleRestore = useCallback(async (trail: Trail) => {
     try {
         await apiFetch(`/api/v1/admin/trails/${trail.id}`, {
             method: 'PUT',
@@ -221,9 +221,9 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
     } catch (_err) {
         onNotify('Failed to restore trail', 'error');
     }
-  };
+  }, [onNotify, setTrails]);
 
-  const handleUpdateStatus = async (trailId: string, newStatus: string) => {
+  const handleUpdateStatus = useCallback(async (trailId: string, newStatus: string) => {
     try {
         await apiFetch(`/api/v1/admin/trails/${trailId}/status`, {
             method: 'PATCH',
@@ -235,9 +235,9 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
     } catch (_err) {
         onNotify('Failed to update trail status', 'error');
     }
-  };
+  }, [onNotify, setTrails]);
 
-  const handlePatchTrail = async (trailId: string, field: string, value: string) => {
+  const handlePatchTrail = useCallback(async (trailId: string, field: string, value: string) => {
     await apiFetch(`/api/v1/admin/trails/${trailId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -245,9 +245,9 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
     });
     onNotify(`Updated ${field}`);
     setTrails(prev => prev.map(t => t.id === trailId ? { ...t, [field]: value } : t));
-  };
+  }, [onNotify, setTrails]);
 
-  const handleAddLocation = async (trailId: string, locationId: string, role: string = 'BelongsTo') => {
+  const handleAddLocation = useCallback(async (trailId: string, locationId: string, role: string = 'BelongsTo') => {
     try {
       await apiFetch(`/api/v1/admin/trails/${trailId}/locations`, {
         method: 'POST',
@@ -264,9 +264,9 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
     } catch (err) {
       onNotify(err instanceof Error ? err.message : 'Failed to add location', 'error');
     }
-  };
+  }, [allLocations, onNotify, setTrails]);
 
-  const handleRemoveLocation = async (trailId: string, locationId: string) => {
+  const handleRemoveLocation = useCallback(async (trailId: string, locationId: string) => {
     try {
       await apiFetch(`/api/v1/admin/trails/${trailId}/locations/${locationId}`, {
         method: 'DELETE',
@@ -279,9 +279,9 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
     } catch (err) {
       onNotify(err instanceof Error ? err.message : 'Failed to remove location', 'error');
     }
-  };
+  }, [onNotify, setTrails]);
 
-  const handleAddTag = async (trailId: string, tagId: string) => {
+  const handleAddTag = useCallback(async (trailId: string, tagId: string) => {
     try {
       await apiFetch('/api/v1/admin/trails/bulk-add-tag', {
         method: 'POST',
@@ -299,9 +299,9 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
     } catch (err) {
       onNotify(err instanceof Error ? err.message : 'Failed to add tag', 'error');
     }
-  };
+  }, [tags, onNotify, setTrails]);
 
-  const handleRemoveTag = async (trailId: string, tagId: string) => {
+  const handleRemoveTag = useCallback(async (trailId: string, tagId: string) => {
     try {
       await apiFetch('/api/v1/admin/trails/bulk-remove-tag', {
         method: 'POST',
@@ -317,7 +317,7 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
     } catch (err) {
       onNotify(err instanceof Error ? err.message : 'Failed to remove tag', 'error');
     }
-  };
+  }, [tags, onNotify, setTrails]);
 
 
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>;

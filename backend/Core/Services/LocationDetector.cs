@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
+using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Infrastructure.Persistence;
 
@@ -13,10 +15,12 @@ public class LocationDetector
 {
     private const int SampleCount = 12;
     private readonly UtanvegaDbContext _context;
+    private readonly IMemoryCache _cache;
 
-    public LocationDetector(UtanvegaDbContext context)
+    public LocationDetector(UtanvegaDbContext context, IMemoryCache cache)
     {
         _context = context;
+        _cache = cache;
     }
 
     /// <summary>
@@ -118,13 +122,16 @@ public class LocationDetector
     {
         var detected = await DetectAlongRouteAsync(trail, ct);
 
+        var existingLocationIds = await _context.TrailLocations
+            .Where(tl => tl.TrailId == trail.Id)
+            .Select(tl => tl.LocationId)
+            .ToListAsync(ct);
+        var existingSet = existingLocationIds.ToHashSet();
+
         int order = 0;
         foreach (var loc in detected)
         {
-            var exists = await _context.TrailLocations
-                .AnyAsync(tl => tl.TrailId == trail.Id && tl.LocationId == loc.Id, ct);
-
-            if (!exists)
+            if (!existingSet.Contains(loc.Id))
             {
                 _context.TrailLocations.Add(new TrailLocation
                 {
@@ -234,11 +241,17 @@ public class LocationDetector
 
     private async Task<List<LocationCenter>> GetAllLocationCenters(CancellationToken ct)
     {
-        return await _context.Locations
+        if (_cache.TryGetValue(CacheKeys.LocationCentersAll, out List<LocationCenter>? cached) && cached is not null)
+            return cached;
+
+        var centers = await _context.Locations
             .AsNoTracking()
             .Where(l => l.Center != null && l.Radius != null && l.Radius > 0)
             .Select(l => new LocationCenter(l.Id, l.Name, l.Type, l.Center!.Y, l.Center!.X, l.Radius!.Value, l.ParentId))
             .ToListAsync(ct);
+
+        _cache.Set(CacheKeys.LocationCentersAll, centers, TimeSpan.FromHours(1));
+        return centers;
     }
 
     private record LocationCenter(Guid Id, string Name, LocationType Type, double CenterY, double CenterX, double Radius, Guid? ParentId);

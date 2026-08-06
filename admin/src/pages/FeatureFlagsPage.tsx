@@ -5,7 +5,10 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress,
   Tooltip, InputAdornment, TableSortLabel,
 } from '@mui/material';
-import { Delete as DeleteIcon, Add as AddIcon, Search as SearchIcon, Clear as ClearIcon } from '@mui/icons-material';
+import DeleteIcon from '@mui/icons-material/Delete';
+import AddIcon from '@mui/icons-material/Add';
+import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 
 interface FeatureFlagsPageProps {

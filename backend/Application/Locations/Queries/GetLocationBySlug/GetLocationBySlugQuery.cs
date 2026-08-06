@@ -90,6 +90,7 @@ public class GetLocationBySlugQueryHandler : IRequestHandler<GetLocationBySlugQu
             .Where(t => t.Status == TrailStatus.Published
                 && t.TrailLocations.Any(tl => allLocationIds.Contains(tl.LocationId)))
             .AsNoTracking()
+            .AsSplitQuery()
             .ToListAsync(cancellationToken);
 
         var trailDtos = trails.Select(t => new TrailDto(

@@ -23,6 +23,7 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
     {
         var events = await _context.Events
             .AsNoTracking()
+            .AsSplitQuery()
             .Include(e => e.Location)
             .Include(e => e.Organizer)
             .Include(e => e.Editions)

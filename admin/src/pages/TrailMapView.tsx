@@ -1,8 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { Box, Typography, Paper, Chip, Stack, TextField, MenuItem, CircularProgress } from '@mui/material';
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from 'react-leaflet';
+import MarkerClusterGroup from '@changey/react-leaflet-markercluster';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet.markercluster/dist/MarkerCluster.css';
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import { useTrails, Trail } from '../hooks/useTrails';
 import { useLocations } from '../hooks/useLocations';
 
@@ -161,46 +164,53 @@ export default function TrailMapView({ onEditTrail }: TrailMapViewProps) {
               )}
             </>
           )}
-          {mappable.map(trail => (
-            <Marker
-              key={trail.id}
-              position={[trail.startLatitude!, trail.startLongitude!]}
-              icon={createPinIcon(trail)}
-            >
-              <Popup>
-                <Box sx={{ minWidth: 200 }}>
-                  <Typography variant="subtitle2" fontWeight="bold">{trail.name}</Typography>
-                  <Typography variant="caption" display="block" color="text.secondary">
-                    {trail.activityType} · {trail.trailType} · {trail.difficulty || '—'}
-                  </Typography>
-                  <Typography variant="caption" display="block">
-                    {(trail.length / 1000).toFixed(1)} km · ↑{Math.round(trail.elevationGain)}m · ↓{Math.round(trail.elevationLoss)}m
-                  </Typography>
-                  <Chip
-                    label={trail.status}
-                    size="small"
-                    sx={{ mt: 0.5, mr: 0.5 }}
-                    color={trail.status === 'Published' ? 'success' : trail.status === 'Draft' ? 'warning' : 'default'}
-                    variant="outlined"
-                  />
-                  {trail.locations.length > 0 && (
-                    <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
-                      📍 {trail.locations.map(l => l.name).join(', ')}
+          <MarkerClusterGroup
+            chunkedLoading
+            maxClusterRadius={50}
+            spiderfyOnMaxZoom
+            showCoverageOnHover={false}
+          >
+            {mappable.map(trail => (
+              <Marker
+                key={trail.id}
+                position={[trail.startLatitude!, trail.startLongitude!]}
+                icon={createPinIcon(trail)}
+              >
+                <Popup>
+                  <Box sx={{ minWidth: 200 }}>
+                    <Typography variant="subtitle2" fontWeight="bold">{trail.name}</Typography>
+                    <Typography variant="caption" display="block" color="text.secondary">
+                      {trail.activityType} · {trail.trailType} · {trail.difficulty || '—'}
                     </Typography>
-                  )}
-                  {onEditTrail && (
-                    <Typography
-                      variant="caption"
-                      sx={{ mt: 1, display: 'block', cursor: 'pointer', color: 'primary.main', fontWeight: 'bold' }}
-                      onClick={() => onEditTrail(trail.id)}
-                    >
-                      ✏️ Edit Trail
+                    <Typography variant="caption" display="block">
+                      {(trail.length / 1000).toFixed(1)} km · ↑{Math.round(trail.elevationGain)}m · ↓{Math.round(trail.elevationLoss)}m
                     </Typography>
-                  )}
-                </Box>
-              </Popup>
-            </Marker>
-          ))}
+                    <Chip
+                      label={trail.status}
+                      size="small"
+                      sx={{ mt: 0.5, mr: 0.5 }}
+                      color={trail.status === 'Published' ? 'success' : trail.status === 'Draft' ? 'warning' : 'default'}
+                      variant="outlined"
+                    />
+                    {trail.locations.length > 0 && (
+                      <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+                        📍 {trail.locations.map(l => l.name).join(', ')}
+                      </Typography>
+                    )}
+                    {onEditTrail && (
+                      <Typography
+                        variant="caption"
+                        sx={{ mt: 1, display: 'block', cursor: 'pointer', color: 'primary.main', fontWeight: 'bold' }}
+                        onClick={() => onEditTrail(trail.id)}
+                      >
+                        ✏️ Edit Trail
+                      </Typography>
+                    )}
+                  </Box>
+                </Popup>
+              </Marker>
+            ))}
+          </MarkerClusterGroup>
         </MapContainer>
       </Paper>
     </Box>

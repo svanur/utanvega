@@ -1,6 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Box, Typography, Alert, CircularProgress, MenuItem, Paper, Chip, Tabs, Tab, Autocomplete, Checkbox } from '@mui/material';
-import { Add as AddIcon, History as HistoryIcon, Map as MapIcon, LocalOffer as TagIcon, CheckBoxOutlineBlank, CheckBox as CheckBoxIcon, UploadFile as UploadFileIcon, EmojiEvents as RaceIcon, Translate as TranslateIcon } from '@mui/icons-material';
+import AddIcon from '@mui/icons-material/Add';
+import HistoryIcon from '@mui/icons-material/History';
+import MapIcon from '@mui/icons-material/Map';
+import TagIcon from '@mui/icons-material/LocalOffer';
+import CheckBoxOutlineBlank from '@mui/icons-material/CheckBoxOutlineBlank';
+import CheckBoxIcon from '@mui/icons-material/CheckBox';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
+import RaceIcon from '@mui/icons-material/EmojiEvents';
+import TranslateIcon from '@mui/icons-material/Translate';
 import { MapContainer, TileLayer, Polyline, CircleMarker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
