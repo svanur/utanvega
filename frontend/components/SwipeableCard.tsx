@@ -4,7 +4,9 @@ import { Box, useTheme } from '@mui/material';
 interface SwipeableCardProps {
     children: React.ReactNode;
     leftActions?: React.ReactNode;
+    rightActions?: React.ReactNode;
     revealWidth?: number;
+    rightRevealWidth?: number;
     onSwipeRight?: () => void;
     disabled?: boolean;
     peek?: boolean;
@@ -16,7 +18,9 @@ const RIGHT_THRESHOLD = 60;
 export default function SwipeableCard({
     children,
     leftActions,
+    rightActions,
     revealWidth = 130,
+    rightRevealWidth = 80,
     onSwipeRight,
     disabled = false,
     peek = false,
@@ -73,8 +77,8 @@ export default function SwipeableCard({
             setOffsetX(newOffset);
         } else if (deltaX < 0 && leftActions) {
             setOffsetX(Math.max(-revealWidth, deltaX));
-        } else if (deltaX > 0 && onSwipeRight) {
-            setOffsetX(Math.min(80, deltaX * 0.4));
+        } else if (deltaX > 0 && (rightActions || onSwipeRight)) {
+            setOffsetX(Math.min(rightRevealWidth, deltaX));
         }
     };
 
@@ -101,9 +105,9 @@ export default function SwipeableCard({
 
         if (deltaX < -LEFT_THRESHOLD && leftActions) {
             snapTo(-revealWidth, true);
-        } else if (deltaX > RIGHT_THRESHOLD && onSwipeRight) {
+        } else if (deltaX > RIGHT_THRESHOLD && (rightActions || onSwipeRight)) {
             snapTo(0, false);
-            onSwipeRight();
+            onSwipeRight?.();
         } else {
             snapTo(0, false);
         }
@@ -113,12 +117,13 @@ export default function SwipeableCard({
         if (revealed) snapTo(0, false);
     };
 
-    const showPanel = offsetX < 0 || revealed;
+    const showLeftPanel = offsetX < 0 || revealed;
+    const showRightPanel = offsetX > 0;
 
     return (
         <Box sx={{ position: 'relative', overflow: 'hidden', borderRadius: `${theme.shape.borderRadius}px` }}>
-            {/* Left-swipe action panel — only rendered while swiping or revealed */}
-            {leftActions && showPanel && (
+            {/* Left-swipe action panel */}
+            {leftActions && showLeftPanel && (
                 <Box sx={{
                     position: 'absolute',
                     right: 0,
@@ -129,6 +134,21 @@ export default function SwipeableCard({
                     alignItems: 'stretch',
                 }}>
                     {leftActions}
+                </Box>
+            )}
+
+            {/* Right-swipe action panel */}
+            {rightActions && showRightPanel && (
+                <Box sx={{
+                    position: 'absolute',
+                    left: 0,
+                    top: 0,
+                    bottom: 0,
+                    width: rightRevealWidth,
+                    display: 'flex',
+                    alignItems: 'stretch',
+                }}>
+                    {rightActions}
                 </Box>
             )}
 
