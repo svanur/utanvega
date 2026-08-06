@@ -242,7 +242,7 @@ builder.Services.AddAuthorization(options =>
     });
 });
 
-builder.Services.AddDbContext<UtanvegaDbContext>(options =>
+builder.Services.AddDbContextPool<UtanvegaDbContext>(options =>
     options.UseNpgsql(connectionString, o =>
     {
         o.UseNetTopologySuite();
