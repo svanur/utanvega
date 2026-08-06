@@ -78,6 +78,7 @@ import { useIcelandicHolidays } from '../hooks/useIcelandicHolidays';
 import { useFavoriteEvents } from '../hooks/useFavoriteEvents';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
+import EventQRShare from '../components/EventQRShare';
 
 const EventTableView = lazy(() => import('../components/EventTableView'));
 const EventMapView = lazy(() => import('../components/EventMapView'));
@@ -143,6 +144,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
     const [showFilters, setShowFilters] = useState(false);
     const [filters, setFilters] = useState<EventFilters>(DEFAULT_FILTERS);
     const [shareEventId, setShareEventId] = useState<string | null>(null);
+    const [shareEventSlug, setShareEventSlug] = useState<string | null>(null);
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
     const [locationLoading, setLocationLoading] = useState(false);
     const [locationDenied, setLocationDenied] = useState(false);
@@ -1182,9 +1184,32 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                     {t('races.addToCalendar', 'Calendar')}
                                                 </Box>
                                             )}
+                                            <Box
+                                                onClick={(e: React.MouseEvent) => {
+                                                    e.stopPropagation();
+                                                    setShareEventSlug(comp.slug);
+                                                }}
+                                                sx={{
+                                                    flex: 1,
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    bgcolor: 'info.main',
+                                                    color: 'white',
+                                                    cursor: 'pointer',
+                                                    gap: 0.5,
+                                                    px: 1,
+                                                    fontSize: '0.7rem',
+                                                    fontWeight: 600,
+                                                }}
+                                            >
+                                                <ShareIcon sx={{ fontSize: 18 }} />
+                                                {t('trailCard.share')}
+                                            </Box>
                                         </Box>
                                     }
-                                    revealWidth={120}
+                                    revealWidth={168}
                                 >
                                 <Card
                                     variant="outlined"
@@ -1372,6 +1397,20 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                             date={ev.displayDate ?? ev.nextEditionDate}
                             daysUntil={ev.daysUntil}
                             activityType={ev.activityType}
+                        />
+                    );
+                })()}
+
+                {/* Swipe-left QR share dialog for event cards */}
+                {shareEventSlug && (() => {
+                    const ev = upcoming.find(e => e.slug === shareEventSlug);
+                    if (!ev) return null;
+                    return (
+                        <EventQRShare
+                            slug={ev.slug}
+                            eventName={loc(ev.name, ev.nameEn) ?? ev.name}
+                            open
+                            onClose={() => setShareEventSlug(null)}
                         />
                     );
                 })()}
