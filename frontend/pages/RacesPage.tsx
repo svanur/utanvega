@@ -75,6 +75,9 @@ import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
 import GrassIcon from '@mui/icons-material/Grass';
 import { haversineKm, formatDistanceKm } from '../utils/geo';
 import { useIcelandicHolidays } from '../hooks/useIcelandicHolidays';
+import { useFavoriteEvents } from '../hooks/useFavoriteEvents';
+import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
 
 const EventTableView = lazy(() => import('../components/EventTableView'));
 const EventMapView = lazy(() => import('../components/EventMapView'));
@@ -100,6 +103,7 @@ interface EventFilters {
     championships: string[];
     weekendOnly: boolean;
     mountainRaceOnly: boolean;
+    favoritesOnly: boolean;
 }
 
 const DEFAULT_FILTERS: EventFilters = {
@@ -113,6 +117,7 @@ const DEFAULT_FILTERS: EventFilters = {
     championships: [],
     weekendOnly: false,
     mountainRaceOnly: false,
+    favoritesOnly: false,
 };
 
 const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
@@ -129,6 +134,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
     const { t } = useTranslation();
     const loc = useLocalize();
     const { getHolidays } = useIcelandicHolidays();
+    const { favoriteEvents, toggleFavoriteEvent, isFavoriteEvent } = useFavoriteEvents();
     const { events, loading, error, refresh } = useEvents();
     const { isEnabled } = useFeatureFlags();
     const navigate = useNavigate();
@@ -227,7 +233,8 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         filters.certifications.length +
         filters.championships.length +
         (filters.weekendOnly ? 1 : 0) +
-        (filters.mountainRaceOnly ? 1 : 0),
+        (filters.mountainRaceOnly ? 1 : 0) +
+        (filters.favoritesOnly ? 1 : 0),
     [filters]);
 
     const filterOptions = useMemo(() => {
@@ -281,8 +288,9 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         if (f.championships.length > 0) result = result.filter(c => c.championshipCategories?.some(ch => f.championships.includes(ch)));
         if (f.weekendOnly) result = result.filter(c => { const d = c.displayDate ?? c.nextEditionDate; if (!d) return false; const day = new Date(d + 'T00:00:00').getDay(); return day === 0 || day === 6; });
         if (f.mountainRaceOnly) result = result.filter(c => c.isMountainRace === true);
+        if (f.favoritesOnly) result = result.filter(c => favoriteEvents.includes(c.slug));
         return result;
-    }, []);
+    }, [favoriteEvents]);
 
     const filtered = useMemo(() => {
         const q = search.toLowerCase().trim();
@@ -691,6 +699,18 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                 }
                                 label={<Typography variant="body2">{t('races.filters.weekendOnly')}</Typography>}
                             />
+                            <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        size="small"
+                                        checked={filters.favoritesOnly}
+                                        onChange={e => setFilters(f => ({ ...f, favoritesOnly: e.target.checked }))}
+                                        icon={<StarBorderIcon fontSize="small" />}
+                                        checkedIcon={<StarIcon fontSize="small" sx={{ color: 'warning.main' }} />}
+                                    />
+                                }
+                                label={<Typography variant="body2">{t('races.filters.favoritesOnly')}</Typography>}
+                            />
                             <Chip
                                 label={`⛰ ${t('races.mountainRace', 'Mountain race')}`}
                                 size="small"
@@ -1074,9 +1094,34 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                 {holidayBanner}
                                 <SwipeableCard
                                     peek={idx === 0 && showSwipeHint}
-                                    onSwipeRight={comp.status !== 'Cancelled' && comp.daysUntil != null && comp.daysUntil >= 0
-                                        ? () => setShareEventId(comp.id)
-                                        : undefined
+                                    onSwipeRight={() => {
+                                        toggleFavoriteEvent(comp.slug);
+                                        if ('vibrate' in navigator) navigator.vibrate(10);
+                                    }}
+                                    rightActions={
+                                        <Box
+                                            sx={{
+                                                width: '100%',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                bgcolor: isFavoriteEvent(comp.slug) ? 'warning.light' : 'warning.main',
+                                                color: 'white',
+                                                gap: 0.5,
+                                                fontSize: '0.7rem',
+                                                fontWeight: 600,
+                                            }}
+                                        >
+                                            {isFavoriteEvent(comp.slug)
+                                                ? <StarIcon sx={{ fontSize: 18 }} />
+                                                : <StarBorderIcon sx={{ fontSize: 18 }} />
+                                            }
+                                            {isFavoriteEvent(comp.slug)
+                                                ? t('races.removeFavorite')
+                                                : t('races.addFavorite')
+                                            }
+                                        </Box>
                                     }
                                     leftActions={
                                         <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
@@ -1168,6 +1213,9 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                             )}
                                                             {comp.status === 'Unconfirmed' && (
                                                                 <Chip label={t('races.statusUpcoming')} size="small" color="info" sx={{ height: 18, fontSize: '0.65rem' }} />
+                                                            )}
+                                                            {isFavoriteEvent(comp.slug) && (
+                                                                <StarIcon sx={{ fontSize: 16, color: 'warning.main', flexShrink: 0 }} />
                                                             )}
                                                         </Stack>
                                                     </Box>
