@@ -2830,7 +2830,8 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
                                   No editions yet. Click "Add Edition" to create the first one.
                                 </Typography>
                               ) : (() => {
-                                const { visible, hiddenCount } = visibleEditions!;
+                                if (!visibleEditions) return null;
+                                const { visible, hiddenCount } = visibleEditions;
                                 return (
                                 <>
                                 {visible.map((edition, idx) => (
