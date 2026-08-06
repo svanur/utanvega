@@ -1,6 +1,10 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { Box, TextField, Typography, Paper, InputAdornment, IconButton, useTheme, Slider, Button, Dialog, AppBar, Toolbar } from '@mui/material';
-import { KeyboardArrowUp, KeyboardArrowDown, PrintOutlined, FullscreenOutlined, CloseOutlined } from '@mui/icons-material';
+import KeyboardArrowUp from '@mui/icons-material/KeyboardArrowUp';
+import KeyboardArrowDown from '@mui/icons-material/KeyboardArrowDown';
+import PrintOutlined from '@mui/icons-material/PrintOutlined';
+import FullscreenOutlined from '@mui/icons-material/FullscreenOutlined';
+import CloseOutlined from '@mui/icons-material/CloseOutlined';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 

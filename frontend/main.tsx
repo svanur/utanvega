@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
 import { registerSW } from 'virtual:pwa-register';
-import './i18n/i18n';
+import { i18nReady } from './i18n/i18n';
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -25,13 +25,18 @@ const ReactQueryDevtools = import.meta.env.DEV
       )
     : null;
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-    <QueryClientProvider client={queryClient}>
-        <App />
-        {ReactQueryDevtools && (
-            <React.Suspense fallback={null}>
-                <ReactQueryDevtools initialIsOpen={false} />
-            </React.Suspense>
-        )}
-    </QueryClientProvider>
-);
+const renderApp = () => {
+    ReactDOM.createRoot(document.getElementById('root')!).render(
+        <QueryClientProvider client={queryClient}>
+            <App />
+            {ReactQueryDevtools && (
+                <React.Suspense fallback={null}>
+                    <ReactQueryDevtools initialIsOpen={false} />
+                </React.Suspense>
+            )}
+        </QueryClientProvider>
+    );
+};
+
+// Render even if translation chunks fail to load — app works, just missing translated strings.
+i18nReady.then(renderApp).catch(renderApp);

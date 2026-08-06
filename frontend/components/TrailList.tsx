@@ -31,34 +31,32 @@ import {
     Autocomplete,
     Divider,
 } from '@mui/material';
-import { 
-    Search as SearchIcon, 
-    Clear as ClearIcon, 
-    FilterList as FilterIcon,
-    List as ListIcon,
-    Map as MapIcon,
-    TableChart as TableChartIcon,
-    Star as StarIcon,
-    StarBorder as StarBorderIcon,
-    VisibilityOff as VisibilityOffIcon,
-    Visibility as VisibilityIcon,
-    Refresh as RefreshIcon,
-    Sort as SortIcon,
-    MyLocation as MyLocationIcon,
-    Landscape as LandscapeIcon,
-    DirectionsRun as DirectionsRunIcon,
-    Hiking as HikingIcon,
-    DirectionsBike as DirectionsBikeIcon,
-    Celebration as CelebrationIcon,
-    FitnessCenter as FitnessCenterIcon,
-    Grass as GrassIcon,
-    ChevronLeft as ChevronLeftIcon,
-    ChevronRight as ChevronRightIcon,
-    Casino as CasinoIcon,
-    Whatshot as WhatshotIcon,
-    History as HistoryIcon,
-    EmojiEvents as EmojiEventsIcon
-} from '@mui/icons-material';
+import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
+import FilterIcon from '@mui/icons-material/FilterList';
+import ListIcon from '@mui/icons-material/List';
+import MapIcon from '@mui/icons-material/Map';
+import TableChartIcon from '@mui/icons-material/TableChart';
+import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import SortIcon from '@mui/icons-material/Sort';
+import MyLocationIcon from '@mui/icons-material/MyLocation';
+import LandscapeIcon from '@mui/icons-material/Landscape';
+import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
+import HikingIcon from '@mui/icons-material/Hiking';
+import DirectionsBikeIcon from '@mui/icons-material/DirectionsBike';
+import CelebrationIcon from '@mui/icons-material/Celebration';
+import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
+import GrassIcon from '@mui/icons-material/Grass';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import CasinoIcon from '@mui/icons-material/Casino';
+import WhatshotIcon from '@mui/icons-material/Whatshot';
+import HistoryIcon from '@mui/icons-material/History';
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import { useTrails, ALL_ACTIVITY_TYPES, DEFAULT_FILTERS, useTrendingTrails } from '../hooks/useTrails';
 import type { SortOption, FilterState } from '../hooks/useTrails';
 import { useFavorites } from '../hooks/useFavorites';
@@ -111,6 +109,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
     } = useTrails();
 
     const { favorites, toggleFavorite } = useFavorites();
+    const favoritesSet = React.useMemo(() => new Set(favorites), [favorites]);
     const { hiddenSlugs } = useHiddenTrails();
     const { recentSlugs } = useRecentlyViewed();
     const { trending } = useTrendingTrails();
@@ -161,6 +160,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
         }
     }, [searchQuery]);
     const [hidingSlugs, setHidingSlugs] = React.useState<string[]>([]);
+    const hidingSlugsSet = React.useMemo(() => new Set(hidingSlugs), [hidingSlugs]);
     const [discoveryTab, setDiscoveryTab] = React.useState<'trending' | 'recent' | 'races'>('trending');
     const discoveryScrollRef = React.useRef<HTMLDivElement>(null);
     const navigatingAway = React.useRef(false);
@@ -241,6 +241,10 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
         setSlotMachine(s => ({ ...s, open: false }));
         if (slug) navigate(`/trails/${slug}`);
     }, [navigate, slotMachine.winnerSlug]);
+
+    const handleTagClick = React.useCallback((tagSlug: string) => {
+        navigate(`/tags/${tagSlug}`);
+    }, [navigate]);
 
     const { supported: shakeSupported, permissionGranted: shakePermission, requestPermission: requestShakePermission } = useShake({
         onShake: handleShake,
@@ -391,14 +395,14 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
     const filteredTrails = React.useMemo(() => {
         let result = trails;
         if (filters.favoritesOnly) {
-            result = result.filter(t => favorites.includes(t.slug));
+            result = result.filter(t => favoritesSet.has(t.slug));
         }
         if (filters.offlineOnly) {
             result = result.filter(t => isOffline(t.slug));
         }
-        result = result.filter(t => !hiddenSlugs.includes(t.slug) || hidingSlugs.includes(t.slug));
+        result = result.filter(t => !hiddenSlugs.includes(t.slug) || hidingSlugsSet.has(t.slug));
         return result;
-    }, [trails, filters.favoritesOnly, filters.offlineOnly, favorites, isOffline, hiddenSlugs, hidingSlugs]);
+    }, [trails, filters.favoritesOnly, filters.offlineOnly, favoritesSet, isOffline, hiddenSlugs, hidingSlugsSet]);
     React.useEffect(() => { filteredTrailsRef.current = filteredTrails; }, [filteredTrails]);
 
     // Gather trail names for the slot machine display
@@ -1243,13 +1247,13 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                     />
                 ) : (
                     filteredTrails.map(trail => (
-                        <Collapse key={trail.id} in={!hidingSlugs.includes(trail.slug)}>
+                        <Collapse key={trail.id} in={!hidingSlugsSet.has(trail.slug)}>
                             <TrailCard
                                 trail={trail}
                                 onToggleFavorite={toggleFavorite}
-                                isFavorited={favorites.includes(trail.slug)}
-                                onTagClick={tagsEnabled ? (tagSlug) => navigate(`/tags/${tagSlug}`) : undefined}
-                                isHiding={hidingSlugs.includes(trail.slug)}
+                                isFavorited={favoritesSet.has(trail.slug)}
+                                onTagClick={tagsEnabled ? handleTagClick : undefined}
+                                isHiding={hidingSlugsSet.has(trail.slug)}
                             />
                         </Collapse>
                     ))

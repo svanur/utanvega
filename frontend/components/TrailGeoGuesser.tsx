@@ -3,13 +3,11 @@ import { haversineKm as haversineKmRaw } from '../utils/geo';
 import {
     Box, Typography, Button, Stack, Paper, Chip, Fade, LinearProgress, useTheme,
 } from '@mui/material';
-import {
-    Replay as ReplayIcon,
-    EmojiEvents as TrophyIcon,
-    NavigateNext as NextIcon,
-    MyLocation as PinIcon,
-    Lightbulb as HintIcon,
-} from '@mui/icons-material';
+import ReplayIcon from '@mui/icons-material/Replay';
+import TrophyIcon from '@mui/icons-material/EmojiEvents';
+import NextIcon from '@mui/icons-material/NavigateNext';
+import PinIcon from '@mui/icons-material/MyLocation';
+import HintIcon from '@mui/icons-material/Lightbulb';
 import { MapContainer, TileLayer, Polyline, Marker, useMap, useMapEvents } from 'react-leaflet';
 import type { LatLngTuple } from 'leaflet';
 import L from 'leaflet';

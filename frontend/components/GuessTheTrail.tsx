@@ -3,13 +3,11 @@ import {
     Box, Typography, Button, Stack, Chip, Paper, Fade,
     LinearProgress, IconButton, Tooltip, Collapse, useTheme
 } from '@mui/material';
-import {
-    EmojiEvents as TrophyIcon,
-    Lightbulb as HintIcon,
-    RemoveCircleOutline as EliminateIcon,
-    Replay as ReplayIcon,
-    NavigateNext as NextIcon
-} from '@mui/icons-material';
+import TrophyIcon from '@mui/icons-material/EmojiEvents';
+import HintIcon from '@mui/icons-material/Lightbulb';
+import EliminateIcon from '@mui/icons-material/RemoveCircleOutline';
+import ReplayIcon from '@mui/icons-material/Replay';
+import NextIcon from '@mui/icons-material/NavigateNext';
 import { MapContainer, Polyline, useMap } from 'react-leaflet';
 import type { LatLngTuple } from 'leaflet';
 import L from 'leaflet';

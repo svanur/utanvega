@@ -3,7 +3,10 @@ import {
     Box, TextField, Typography, Paper, Chip, Table, TableBody, TableRow, TableCell,
     InputAdornment, IconButton, Tooltip,
 } from '@mui/material';
-import { KeyboardArrowUp, KeyboardArrowDown, ContentCopy, RestartAlt } from '@mui/icons-material';
+import KeyboardArrowUp from '@mui/icons-material/KeyboardArrowUp';
+import KeyboardArrowDown from '@mui/icons-material/KeyboardArrowDown';
+import ContentCopy from '@mui/icons-material/ContentCopy';
+import RestartAlt from '@mui/icons-material/RestartAlt';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import TimeSlider from './TimeSlider';

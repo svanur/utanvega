@@ -51,6 +51,7 @@ public class GetEventCalendarQueryHandler : IRequestHandler<GetEventCalendarQuer
 
         var editions = await _context.EventEditions
             .AsNoTracking()
+            .AsSplitQuery()
             .Include(ed => ed.Event)
                 .ThenInclude(ev => ev.Location)
             .Include(ed => ed.Races)

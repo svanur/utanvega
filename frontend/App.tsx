@@ -4,7 +4,6 @@ import type { PaletteMode } from '@mui/material';
 import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
 import { createAppTheme } from './theme';
 import ErrorBoundary from './components/ErrorBoundary';
-import HomePage from './pages/HomePage';
 import { useEasterEggs } from './hooks/useEasterEggs';
 import { EasterEggs } from './components/EasterEggs';
 import SpotlightSearch from './components/SpotlightSearch';
@@ -14,6 +13,7 @@ import InstallBanner from './components/InstallBanner';
 import { AuthProvider } from './hooks/useAuth';
 
 // Lazy-loaded pages (not needed on initial load)
+const HomePage = lazy(() => import('./pages/HomePage'));
 const TrailDetailsPage = lazy(() => import('./pages/TrailDetailsPage'));
 const LocationsPage = lazy(() => import('./pages/LocationsPage'));
 const LocationDetailsPage = lazy(() => import('./pages/LocationDetailsPage'));
@@ -92,7 +92,7 @@ export default function App() {
     };
 
     const { activeEgg, clearEgg } = useEasterEggs();
-    const { isEnabled, loaded } = useFeatureFlags();
+    const { isEnabled } = useFeatureFlags();
     const loginEnabled = useLoginEnabled();
 
     return (
@@ -103,9 +103,6 @@ export default function App() {
                     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                         <ScrollToContent />
                         <Suspense fallback={<PageLoader />}>
-                {!loaded ? (
-                    <PageLoader />
-                ) : (
                 <Routes>
                     <Route
                         path="/"
@@ -234,7 +231,6 @@ export default function App() {
                     <Route path="/faq" element={<FaqPage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
-                )}
                 </Suspense>
                 {isEnabled('spotlight_search') && <SpotlightSearch />}
                 <InstallBanner />

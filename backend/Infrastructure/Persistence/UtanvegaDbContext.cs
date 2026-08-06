@@ -41,7 +41,8 @@ public class UtanvegaDbContext : DbContext
             // Map NetTopologySuite Geometry to PostGIS
             // Use geometry(LineStringZ, 4326) to ensure elevation (Z) is preserved
             entity.Property(e => e.GpxData).HasColumnType("geometry(LineStringZ, 4326)");
-            
+            entity.HasIndex(e => e.GpxData).HasMethod("GIST");
+
             // Log for debugging (this will run on every context instantiation, maybe too much?)
             // Console.WriteLine("[DEBUG_LOG] UtanvegaDbContext: GpxData configured as geometry(LineStringZ, 4326)");
             
@@ -68,7 +69,8 @@ public class UtanvegaDbContext : DbContext
             entity.HasIndex(e => e.Slug).IsUnique();
             
             entity.Property(e => e.Center).HasColumnType("geometry(Point, 4326)"); // Using 4326 (WGS 84) for PostGIS
-            
+            entity.HasIndex(e => e.Center).HasMethod("GIST");
+
             entity.Property(e => e.Type).HasConversion<string>();
 
             // Self-referencing relationship

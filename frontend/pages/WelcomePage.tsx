@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import confetti from 'canvas-confetti';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
+import { changeLanguage } from '../i18n/i18n';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
 import PlaceIcon from '@mui/icons-material/Place';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
@@ -276,7 +277,7 @@ export default function WelcomePage({ mode, onToggleMode, forceLang }: Props) {
 
     useEffect(() => {
         if (forceLang && i18n.language !== forceLang) {
-            i18n.changeLanguage(forceLang);
+            changeLanguage(forceLang);
             localStorage.setItem('utanvega-lang', forceLang);
         }
     }, [forceLang, i18n]);

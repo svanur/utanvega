@@ -1,5 +1,6 @@
 import { IconButton, Tooltip } from '@mui/material';
 import { useTranslation } from 'react-i18next';
+import { changeLanguage } from '../i18n/i18n';
 
 export default function LanguageToggle() {
     const { i18n, t } = useTranslation();
@@ -7,7 +8,7 @@ export default function LanguageToggle() {
 
     const toggle = () => {
         const next = isIcelandic ? 'en' : 'is';
-        i18n.changeLanguage(next);
+        changeLanguage(next);
         localStorage.setItem('utanvega-lang', next);
     };
 
