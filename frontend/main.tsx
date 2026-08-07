@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Analytics } from '@vercel/analytics/react';
 import App from './App';
 import { registerSW } from 'virtual:pwa-register';
 import { i18nReady } from './i18n/i18n';
@@ -29,6 +30,7 @@ const renderApp = () => {
     ReactDOM.createRoot(document.getElementById('root')!).render(
         <QueryClientProvider client={queryClient}>
             <App />
+            <Analytics />
             {ReactQueryDevtools && (
                 <React.Suspense fallback={null}>
                     <ReactQueryDevtools initialIsOpen={false} />
