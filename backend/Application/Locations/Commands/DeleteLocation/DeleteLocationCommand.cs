@@ -5,7 +5,7 @@ using Utanvega.Backend.Infrastructure.Persistence;
 
 namespace Utanvega.Backend.Application.Locations.Commands.DeleteLocation;
 
-public record DeleteLocationCommand(Guid Id) : IRequest;
+public record DeleteLocationCommand(Guid Id, string? ActorUserId = null) : IRequest;
 
 public class DeleteLocationCommandHandler : IRequestHandler<DeleteLocationCommand>
 {
@@ -32,7 +32,7 @@ public class DeleteLocationCommandHandler : IRequestHandler<DeleteLocationComman
 
         var slug = location.Slug;
         _context.Locations.Remove(location);
-        await _context.SaveChangesWithAuditAsync("system");
+        await _context.SaveChangesWithAuditAsync(request.ActorUserId);
         _cacheInvalidator.InvalidateLocation(slug);
     }
 }
