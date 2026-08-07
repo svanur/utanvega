@@ -1595,24 +1595,21 @@ app.MapGet("/api/v1/admin/events", [Authorize(Policy = "AdminOnly")] async (IMed
     var events = await mediator.Send(new GetEventsQuery(IncludeHidden: true));
     return Results.Ok(events);
 })
-.WithName("GetAdminEvents")
-.RequireAuthorization();
+.WithName("GetAdminEvents");
 
 app.MapGet("/api/v1/admin/events/details", [Authorize(Policy = "AdminOnly")] async (IMediator mediator) =>
 {
     var events = await mediator.Send(new GetAllEventDetailsQuery());
     return Results.Ok(events);
 })
-.WithName("GetAdminEventDetails")
-.RequireAuthorization();
+.WithName("GetAdminEventDetails");
 
 app.MapPost("/api/v1/admin/events", [Authorize(Policy = "AdminOnly")] async (CreateEventCommand command, IMediator mediator) =>
 {
     var id = await mediator.Send(command);
     return Results.Created($"/api/v1/events/{id}", new { id });
 })
-.WithName("CreateEvent")
-.RequireAuthorization();
+.WithName("CreateEvent");
 
 app.MapPut("/api/v1/admin/events/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, UpdateEventCommand command, IMediator mediator) =>
 {
@@ -1620,16 +1617,14 @@ app.MapPut("/api/v1/admin/events/{id:guid}", [Authorize(Policy = "AdminOnly")] a
     var success = await mediator.Send(command);
     return success ? Results.NoContent() : Results.NotFound();
 })
-.WithName("UpdateEvent")
-.RequireAuthorization();
+.WithName("UpdateEvent");
 
 app.MapDelete("/api/v1/admin/events/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, IMediator mediator) =>
 {
     var success = await mediator.Send(new DeleteEventCommand(id));
     return success ? Results.NoContent() : Results.NotFound();
 })
-.WithName("DeleteEvent")
-.RequireAuthorization();
+.WithName("DeleteEvent");
 
 // Organizers (public list for dropdowns — trimmed DTO, no PII)
 app.MapGet("/api/v1/organizers", async (IMediator mediator) =>
@@ -1645,16 +1640,14 @@ app.MapGet("/api/v1/admin/organizers", [Authorize(Policy = "AdminOnly")] async (
     var organizers = await mediator.Send(new GetOrganizersQuery());
     return Results.Ok(organizers);
 })
-.WithName("GetAdminOrganizers")
-.RequireAuthorization();
+.WithName("GetAdminOrganizers");
 
 app.MapPost("/api/v1/admin/organizers", [Authorize(Policy = "AdminOnly")] async (CreateOrganizerCommand command, IMediator mediator) =>
 {
     var id = await mediator.Send(command);
     return Results.Created($"/api/v1/organizers/{id}", new { id });
 })
-.WithName("CreateOrganizer")
-.RequireAuthorization();
+.WithName("CreateOrganizer");
 
 app.MapPut("/api/v1/admin/organizers/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, UpdateOrganizerCommand command, IMediator mediator) =>
 {
@@ -1662,16 +1655,14 @@ app.MapPut("/api/v1/admin/organizers/{id:guid}", [Authorize(Policy = "AdminOnly"
     var success = await mediator.Send(command);
     return success ? Results.NoContent() : Results.NotFound();
 })
-.WithName("UpdateOrganizer")
-.RequireAuthorization();
+.WithName("UpdateOrganizer");
 
 app.MapDelete("/api/v1/admin/organizers/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, IMediator mediator) =>
 {
     var success = await mediator.Send(new DeleteOrganizerCommand(id));
     return success ? Results.NoContent() : Results.NotFound();
 })
-.WithName("DeleteOrganizer")
-.RequireAuthorization();
+.WithName("DeleteOrganizer");
 
 // Admin Edition CRUD
 app.MapPost("/api/v1/admin/events/{eventId:guid}/editions", [Authorize(Policy = "AdminOnly")] async (Guid eventId, CreateEditionCommand command, IMediator mediator) =>
@@ -1680,8 +1671,7 @@ app.MapPost("/api/v1/admin/events/{eventId:guid}/editions", [Authorize(Policy = 
     var id = await mediator.Send(command);
     return Results.Created($"/api/v1/admin/events/{eventId}/editions/{id}", new { id });
 })
-.WithName("CreateEdition")
-.RequireAuthorization();
+.WithName("CreateEdition");
 
 app.MapPut("/api/v1/admin/editions/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, UpdateEditionCommand command, IMediator mediator) =>
 {
@@ -1689,16 +1679,14 @@ app.MapPut("/api/v1/admin/editions/{id:guid}", [Authorize(Policy = "AdminOnly")]
     var success = await mediator.Send(command);
     return success ? Results.NoContent() : Results.NotFound();
 })
-.WithName("UpdateEdition")
-.RequireAuthorization();
+.WithName("UpdateEdition");
 
 app.MapDelete("/api/v1/admin/editions/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, IMediator mediator) =>
 {
     var success = await mediator.Send(new DeleteEditionCommand(id));
     return success ? Results.NoContent() : Results.NotFound();
 })
-.WithName("DeleteEdition")
-.RequireAuthorization();
+.WithName("DeleteEdition");
 
 app.MapPost("/api/v1/admin/events/{eventId:guid}/editions/generate", [Authorize(Policy = "AdminOnly")] async (Guid eventId, GenerateEditionsForSeasonCommand command, IMediator mediator) =>
 {
@@ -1706,8 +1694,7 @@ app.MapPost("/api/v1/admin/events/{eventId:guid}/editions/generate", [Authorize(
     var result = await mediator.Send(command);
     return Results.Ok(new { editionIds = result.EditionIds, count = result.EditionIds.Count, racesCreated = result.RacesCreated });
 })
-.WithName("GenerateEditionsForSeason")
-.RequireAuthorization();
+.WithName("GenerateEditionsForSeason");
 
 // Admin Race CRUD
 app.MapPost("/api/v1/admin/editions/{editionId:guid}/races", [Authorize(Policy = "AdminOnly")] async (Guid editionId, CreateRaceCommand command, IMediator mediator) =>
@@ -1716,8 +1703,7 @@ app.MapPost("/api/v1/admin/editions/{editionId:guid}/races", [Authorize(Policy =
     var id = await mediator.Send(command);
     return Results.Created($"/api/v1/admin/editions/{editionId}/races/{id}", new { id });
 })
-.WithName("CreateRace")
-.RequireAuthorization();
+.WithName("CreateRace");
 
 app.MapPut("/api/v1/admin/races/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, UpdateRaceCommand command, IMediator mediator) =>
 {
@@ -1725,16 +1711,14 @@ app.MapPut("/api/v1/admin/races/{id:guid}", [Authorize(Policy = "AdminOnly")] as
     var success = await mediator.Send(command);
     return success ? Results.NoContent() : Results.NotFound();
 })
-.WithName("UpdateRace")
-.RequireAuthorization();
+.WithName("UpdateRace");
 
 app.MapDelete("/api/v1/admin/races/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, IMediator mediator) =>
 {
     var success = await mediator.Send(new DeleteRaceCommand(id));
     return success ? Results.NoContent() : Results.NotFound();
 })
-.WithName("DeleteRace")
-.RequireAuthorization();
+.WithName("DeleteRace");
 
 app.MapPost("/api/v1/admin/events/detect-gpx", [Authorize(Policy = "AdminOnly")] async (UtanvegaDbContext context, HttpContext httpContext) =>
 {
@@ -1777,8 +1761,7 @@ app.MapPost("/api/v1/admin/events/detect-gpx", [Authorize(Policy = "AdminOnly")]
     if (updated > 0) await context.SaveChangesWithAuditAsync(GetAuthenticatedUserId(httpContext));
     return Results.Ok(new { total, updated, skipped });
 })
-.WithName("DetectEventGpx")
-.RequireAuthorization();
+.WithName("DetectEventGpx");
 
 // User Trail Activities Endpoints
 app.MapPost("/api/v1/user/activities", [Authorize] async (IMediator mediator, HttpContext context, CreateUserTrailActivityDto dto) =>
