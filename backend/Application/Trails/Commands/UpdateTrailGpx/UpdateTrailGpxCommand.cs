@@ -14,7 +14,7 @@ public record UpdateTrailGpxResult(
     string Difficulty
 );
 
-public record UpdateTrailGpxCommand(Guid TrailId, string GpxXml) : IRequest<UpdateTrailGpxResult?>;
+public record UpdateTrailGpxCommand(Guid TrailId, string GpxXml, string? ActorUserId = null) : IRequest<UpdateTrailGpxResult?>;
 
 public class UpdateTrailGpxCommandHandler : IRequestHandler<UpdateTrailGpxCommand, UpdateTrailGpxResult?>
 {
@@ -44,9 +44,9 @@ public class UpdateTrailGpxCommandHandler : IRequestHandler<UpdateTrailGpxComman
         trail.Type = result.DetectedType;
         trail.Difficulty = result.Difficulty;
         trail.UpdatedAt = DateTime.UtcNow;
-        trail.UpdatedBy = "admin";
+        trail.UpdatedBy = request.ActorUserId;
 
-        await _context.SaveChangesWithAuditAsync("admin");
+        await _context.SaveChangesWithAuditAsync(request.ActorUserId);
         _cacheInvalidator.InvalidateTrail(trail.Slug);
 
         return new UpdateTrailGpxResult(

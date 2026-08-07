@@ -6,7 +6,7 @@ using Utanvega.Backend.Infrastructure.Persistence;
 
 namespace Utanvega.Backend.Application.Trails.Commands.DeleteTrail;
 
-public record DeleteTrailCommand(Guid Id) : IRequest<bool>;
+public record DeleteTrailCommand(Guid Id, string? ActorUserId = null) : IRequest<bool>;
 
 public class DeleteTrailCommandHandler : IRequestHandler<DeleteTrailCommand, bool>
 {
@@ -31,7 +31,7 @@ public class DeleteTrailCommandHandler : IRequestHandler<DeleteTrailCommand, boo
         trail.Slug = $"{trail.Slug}-deleted-{Guid.NewGuid().ToString()[..8]}";
         trail.UpdatedAt = DateTime.UtcNow;
 
-        await _context.SaveChangesWithAuditAsync("system");
+        await _context.SaveChangesWithAuditAsync(request.ActorUserId);
         _cacheInvalidator.InvalidateTrail(slug);
         return true;
     }

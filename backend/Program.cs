@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Security.Claims;
 using System.Data;
 using Serilog;
 using Serilog.Events;
@@ -215,6 +216,35 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         {
             OnTokenValidated = context =>
             {
+                // Supabase carries app-level roles in the app_metadata claim (a JSON object,
+                // settable only via the Supabase service role / dashboard — never by the user
+                // themselves). Promote app_metadata.role to a standard role claim so
+                // [Authorize(Policy = "AdminOnly")] can check it.
+                if (context.Principal?.Identity is ClaimsIdentity identity)
+                {
+                    var appMetadataClaim = context.Principal.FindFirst("app_metadata");
+                    if (appMetadataClaim != null)
+                    {
+                        try
+                        {
+                            using var doc = System.Text.Json.JsonDocument.Parse(appMetadataClaim.Value);
+                            if (doc.RootElement.TryGetProperty("role", out var roleElement) &&
+                                roleElement.ValueKind == System.Text.Json.JsonValueKind.String)
+                            {
+                                var role = roleElement.GetString();
+                                if (!string.IsNullOrEmpty(role))
+                                {
+                                    identity.AddClaim(new Claim(ClaimTypes.Role, role));
+                                }
+                            }
+                        }
+                        catch (System.Text.Json.JsonException ex)
+                        {
+                            Log.Warning(ex, "Failed to parse app_metadata claim for role extraction");
+                        }
+                    }
+                }
+
                 Log.Information("JWT token validated successfully for user");
                 return Task.CompletedTask;
             },
@@ -234,11 +264,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("AdminOnly", policy => 
+    options.AddPolicy("AdminOnly", policy =>
     {
         policy.RequireAuthenticatedUser();
-        // You can add role checks here if you store roles in Supabase user metadata
-        // e.g., policy.RequireClaim("role", "admin");
+        // Requires app_metadata.role == "admin" on the Supabase user (set via the
+        // Supabase dashboard/service role — see OnTokenValidated above).
+        policy.RequireRole("admin");
     });
 });
 
@@ -337,6 +368,14 @@ if (string.IsNullOrEmpty(tipRecipient))
 }
 
 var app = builder.Build();
+
+// Resolves the Supabase user id from the validated JWT, for audit-trail attribution.
+// Never trust a client-supplied "who did this" value instead of this.
+static string? GetAuthenticatedUserId(HttpContext context) =>
+    context.User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value
+    ?? context.User.FindFirst("sub")?.Value
+    ?? context.User.FindFirst("user_id")?.Value
+    ?? context.User.FindFirst("uid")?.Value;
 
 Log.Information("Application built. Starting up...");
 
@@ -630,7 +669,7 @@ app.MapGet("/api/v1/health", () => Results.Ok(new
 }))
 .WithName("Health");
 
-app.MapGet("/api/v1/admin/health", [Authorize] () => Results.Ok(new
+app.MapGet("/api/v1/admin/health", [Authorize(Policy = "AdminOnly")] () => Results.Ok(new
 {
     status = "healthy",
     service = "backend 1",
@@ -641,7 +680,7 @@ app.MapGet("/api/v1/admin/health", [Authorize] () => Results.Ok(new
 }))
 .WithName("AdminHealth");
 
-app.MapGet("/api/v1/admin/analytics", [Authorize] async (IMediator mediator) =>
+app.MapGet("/api/v1/admin/analytics", [Authorize(Policy = "AdminOnly")] async (IMediator mediator) =>
 {
     var analytics = await mediator.Send(new GetAnalyticsQuery());
     return Results.Ok(analytics);
@@ -671,14 +710,14 @@ app.MapGet("/", async (IWebHostEnvironment env, UtanvegaDbContext db, IMemoryCac
     };
 });
 
-app.MapGet("/api/v1/admin/trails", [Authorize] async (IMediator mediator, bool includeArchived = false) =>
+app.MapGet("/api/v1/admin/trails", [Authorize(Policy = "AdminOnly")] async (IMediator mediator, bool includeArchived = false) =>
 {
     var trails = await mediator.Send(new GetTrailsQuery(includeArchived));
     return Results.Ok(trails);
 })
 .WithName("GetTrails");
 
-app.MapGet("/api/v1/admin/trails/{idOrSlug}", [Authorize] async (string idOrSlug, UtanvegaDbContext context) =>
+app.MapGet("/api/v1/admin/trails/{idOrSlug}", [Authorize(Policy = "AdminOnly")] async (string idOrSlug, UtanvegaDbContext context) =>
 {
     var isGuid = Guid.TryParse(idOrSlug, out var id);
     var query = context.Trails
@@ -723,12 +762,13 @@ app.MapGet("/api/v1/admin/trails/{idOrSlug}", [Authorize] async (string idOrSlug
 })
 .WithName("GetAdminTrail");
 
-app.MapPut("/api/v1/admin/trails/{id:guid}", [Authorize] async (Guid id, UpdateTrailCommand command, IMediator mediator) =>
+app.MapPut("/api/v1/admin/trails/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, UpdateTrailCommand command, IMediator mediator, HttpContext httpContext) =>
 {
     if (id != command.Id) return Results.BadRequest("ID mismatch");
     try
     {
-        var success = await mediator.Send(command);
+        // UpdatedBy must reflect who actually authenticated the request, not whatever the client body claims.
+        var success = await mediator.Send(command with { UpdatedBy = GetAuthenticatedUserId(httpContext) });
         return success ? Results.NoContent() : Results.NotFound();
     }
     catch (InvalidOperationException ex)
@@ -738,7 +778,7 @@ app.MapPut("/api/v1/admin/trails/{id:guid}", [Authorize] async (Guid id, UpdateT
 })
 .WithName("UpdateTrail");
 
-app.MapPatch("/api/v1/admin/trails/{id:guid}", [Authorize] async (Guid id, PatchTrailCommand command, IMediator mediator) =>
+app.MapPatch("/api/v1/admin/trails/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, PatchTrailCommand command, IMediator mediator) =>
 {
     if (id != command.Id) return Results.BadRequest("ID mismatch");
     var success = await mediator.Send(command);
@@ -746,15 +786,15 @@ app.MapPatch("/api/v1/admin/trails/{id:guid}", [Authorize] async (Guid id, Patch
 })
 .WithName("PatchTrail");
 
-app.MapDelete("/api/v1/admin/trails/{id:guid}", [Authorize] async (Guid id, IMediator mediator) =>
+app.MapDelete("/api/v1/admin/trails/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, IMediator mediator, HttpContext httpContext) =>
 {
-    var success = await mediator.Send(new DeleteTrailCommand(id));
+    var success = await mediator.Send(new DeleteTrailCommand(id, GetAuthenticatedUserId(httpContext)));
     return success ? Results.NoContent() : Results.NotFound();
 })
 .WithName("DeleteTrail");
 
 // --- Trail Location inline management ---
-app.MapPost("/api/v1/admin/trails/{trailId}/locations", [Authorize] async (Guid trailId, TrailLocationAddRequest body, UtanvegaDbContext context) =>
+app.MapPost("/api/v1/admin/trails/{trailId}/locations", [Authorize(Policy = "AdminOnly")] async (Guid trailId, TrailLocationAddRequest body, UtanvegaDbContext context) =>
 {
     var trail = await context.Trails.FindAsync(trailId);
     if (trail == null) return Results.NotFound();
@@ -788,7 +828,7 @@ app.MapPost("/api/v1/admin/trails/{trailId}/locations", [Authorize] async (Guid 
 })
 .WithName("AddTrailLocation");
 
-app.MapDelete("/api/v1/admin/trails/{trailId}/locations/{locationId}", [Authorize] async (Guid trailId, Guid locationId, UtanvegaDbContext context) =>
+app.MapDelete("/api/v1/admin/trails/{trailId}/locations/{locationId}", [Authorize(Policy = "AdminOnly")] async (Guid trailId, Guid locationId, UtanvegaDbContext context) =>
 {
     var link = await context.Set<TrailLocation>()
         .FirstOrDefaultAsync(tl => tl.TrailId == trailId && tl.LocationId == locationId);
@@ -804,7 +844,7 @@ app.MapDelete("/api/v1/admin/trails/{trailId}/locations/{locationId}", [Authoriz
 })
 .WithName("RemoveTrailLocation");
 
-app.MapPatch("/api/v1/admin/trails/{id:guid}/status", [Authorize] async (Guid id, [Microsoft.AspNetCore.Mvc.FromBody] string status, UtanvegaDbContext context) =>
+app.MapPatch("/api/v1/admin/trails/{id:guid}/status", [Authorize(Policy = "AdminOnly")] async (Guid id, [Microsoft.AspNetCore.Mvc.FromBody] string status, UtanvegaDbContext context, HttpContext httpContext) =>
 {
     var trail = await context.Trails.FindAsync(id);
     if (trail == null) return Results.NotFound();
@@ -812,21 +852,21 @@ app.MapPatch("/api/v1/admin/trails/{id:guid}/status", [Authorize] async (Guid id
     if (Enum.TryParse<Utanvega.Backend.Core.Entities.TrailStatus>(status, true, out var trailStatus))
     {
         trail.Status = trailStatus;
-        await context.SaveChangesWithAuditAsync("admin");
+        await context.SaveChangesWithAuditAsync(GetAuthenticatedUserId(httpContext));
         return Results.NoContent();
     }
     return Results.BadRequest("Invalid status");
 })
 .WithName("UpdateTrailStatus");
 
-app.MapPost("/api/v1/admin/trails/bulk-action", [Authorize] async (BulkTrailActionCommand command, IMediator mediator) =>
+app.MapPost("/api/v1/admin/trails/bulk-action", [Authorize(Policy = "AdminOnly")] async (BulkTrailActionCommand command, IMediator mediator, HttpContext httpContext) =>
 {
-    var count = await mediator.Send(command);
+    var count = await mediator.Send(command with { ActorUserId = GetAuthenticatedUserId(httpContext) });
     return Results.Ok(new { count });
 })
 .WithName("BulkTrailAction");
 
-app.MapPost("/api/v1/admin/trails/backfill-elevation-profiles", [Authorize] async (UtanvegaDbContext context) =>
+app.MapPost("/api/v1/admin/trails/backfill-elevation-profiles", [Authorize(Policy = "AdminOnly")] async (UtanvegaDbContext context) =>
 {
     var trails = await context.Trails
         .Where(t => t.GpxData != null && t.ElevationProfile == null)
@@ -866,7 +906,7 @@ app.MapPost("/api/v1/admin/trails/backfill-elevation-profiles", [Authorize] asyn
 })
 .WithName("BackfillElevationProfiles");
 
-app.MapPost("/api/v1/admin/trails/bulk-add-tag", [Authorize] async (BulkAddTagRequest request, UtanvegaDbContext context) =>
+app.MapPost("/api/v1/admin/trails/bulk-add-tag", [Authorize(Policy = "AdminOnly")] async (BulkAddTagRequest request, UtanvegaDbContext context) =>
 {
     var tag = await context.Tags.FindAsync(request.TagId);
     if (tag == null) return Results.NotFound("Tag not found");
@@ -890,7 +930,7 @@ app.MapPost("/api/v1/admin/trails/bulk-add-tag", [Authorize] async (BulkAddTagRe
 })
 .WithName("BulkAddTag");
 
-app.MapPost("/api/v1/admin/trails/bulk-remove-tag", [Authorize] async (BulkAddTagRequest request, UtanvegaDbContext context) =>
+app.MapPost("/api/v1/admin/trails/bulk-remove-tag", [Authorize(Policy = "AdminOnly")] async (BulkAddTagRequest request, UtanvegaDbContext context) =>
 {
     var toRemove = context.TrailTags
         .Where(tt => request.TrailIds.Contains(tt.TrailId) && tt.TagId == request.TagId)
@@ -901,20 +941,20 @@ app.MapPost("/api/v1/admin/trails/bulk-remove-tag", [Authorize] async (BulkAddTa
 })
 .WithName("BulkRemoveTag");
 
-app.MapPost("/api/v1/admin/trails/{id:guid}/recalculate-difficulty", [Authorize] async (Guid id, UtanvegaDbContext context) =>
+app.MapPost("/api/v1/admin/trails/{id:guid}/recalculate-difficulty", [Authorize(Policy = "AdminOnly")] async (Guid id, UtanvegaDbContext context, HttpContext httpContext) =>
 {
     var trail = await context.Trails.FindAsync(id);
     if (trail == null) return Results.NotFound();
 
     trail.Difficulty = DifficultyCalculator.Calculate(trail);
     trail.UpdatedAt = DateTime.UtcNow;
-    await context.SaveChangesWithAuditAsync("admin");
+    await context.SaveChangesWithAuditAsync(GetAuthenticatedUserId(httpContext));
 
     return Results.Ok(new { trail.Id, difficulty = trail.Difficulty.ToString() });
 })
 .WithName("RecalculateTrailDifficulty");
 
-app.MapPost("/api/v1/admin/trails/recalculate-all-difficulties", [Authorize] async (UtanvegaDbContext context) =>
+app.MapPost("/api/v1/admin/trails/recalculate-all-difficulties", [Authorize(Policy = "AdminOnly")] async (UtanvegaDbContext context, HttpContext httpContext) =>
 {
     var trails = await context.Trails
         .Where(t => t.Status != Utanvega.Backend.Core.Entities.TrailStatus.Archived)
@@ -926,19 +966,19 @@ app.MapPost("/api/v1/admin/trails/recalculate-all-difficulties", [Authorize] asy
         trail.UpdatedAt = DateTime.UtcNow;
     }
 
-    await context.SaveChangesWithAuditAsync("admin");
+    await context.SaveChangesWithAuditAsync(GetAuthenticatedUserId(httpContext));
     return Results.Ok(new { count = trails.Count });
 })
 .WithName("RecalculateAllDifficulties");
 
-app.MapGet("/api/v1/admin/detect-locations", [Authorize] async (double lat, double lng, LocationDetector detector) =>
+app.MapGet("/api/v1/admin/detect-locations", [Authorize(Policy = "AdminOnly")] async (double lat, double lng, LocationDetector detector) =>
 {
     var locations = await detector.DetectLocationsAsync(lat, lng);
     return Results.Ok(locations.Select(l => new { l.Id, l.Name, l.Type, l.DistanceMeters }));
 })
 .WithName("DetectLocations");
 
-app.MapGet("/api/v1/admin/trails/{idOrSlug}/geometry", [Authorize] async (string idOrSlug, IMediator mediator) =>
+app.MapGet("/api/v1/admin/trails/{idOrSlug}/geometry", [Authorize(Policy = "AdminOnly")] async (string idOrSlug, IMediator mediator) =>
 {
     var isGuid = Guid.TryParse(idOrSlug, out var id);
     var query = isGuid ? new GetTrailGeometryQuery(Id: id) : new GetTrailGeometryQuery(Slug: idOrSlug);
@@ -947,7 +987,7 @@ app.MapGet("/api/v1/admin/trails/{idOrSlug}/geometry", [Authorize] async (string
 })
 .WithName("GetTrailGeometry");
 
-app.MapPost("/api/v1/admin/trails/upload-gpx", [Authorize] async (string name, IFormFile file, IMediator mediator, string? activityType, ILogger<Program> logger) =>
+app.MapPost("/api/v1/admin/trails/upload-gpx", [Authorize(Policy = "AdminOnly")] async (string name, IFormFile file, IMediator mediator, string? activityType, ILogger<Program> logger, HttpContext httpContext) =>
 {
     if (file == null || file.Length == 0) return Results.BadRequest("No file uploaded.");
     
@@ -966,7 +1006,7 @@ app.MapPost("/api/v1/admin/trails/upload-gpx", [Authorize] async (string name, I
     
     try 
     {
-        var command = new CreateTrailFromGpxCommand(name, gpxXml, parsedActivityType);
+        var command = new CreateTrailFromGpxCommand(name, gpxXml, parsedActivityType, GetAuthenticatedUserId(httpContext));
         var result = await mediator.Send(command);
         
         var response = new 
@@ -1001,7 +1041,7 @@ app.MapPost("/api/v1/admin/trails/upload-gpx", [Authorize] async (string name, I
 .WithName("UploadGpx")
 .DisableAntiforgery(); // Bearer token auth is not vulnerable to CSRF; antiforgery not needed
 
-app.MapPut("/api/v1/admin/trails/{id:guid}/gpx", [Authorize] async (Guid id, IFormFile file, IMediator mediator, ILogger<Program> logger) =>
+app.MapPut("/api/v1/admin/trails/{id:guid}/gpx", [Authorize(Policy = "AdminOnly")] async (Guid id, IFormFile file, IMediator mediator, ILogger<Program> logger, HttpContext httpContext) =>
 {
     if (file == null || file.Length == 0) return Results.BadRequest("No file uploaded.");
 
@@ -1010,7 +1050,7 @@ app.MapPut("/api/v1/admin/trails/{id:guid}/gpx", [Authorize] async (Guid id, IFo
 
     try
     {
-        var result = await mediator.Send(new UpdateTrailGpxCommand(id, gpxXml));
+        var result = await mediator.Send(new UpdateTrailGpxCommand(id, gpxXml, GetAuthenticatedUserId(httpContext)));
         if (result == null) return Results.NotFound();
         return Results.Ok(result);
     }
@@ -1023,7 +1063,7 @@ app.MapPut("/api/v1/admin/trails/{id:guid}/gpx", [Authorize] async (Guid id, IFo
 .WithName("UpdateTrailGpx")
 .DisableAntiforgery();
 
-app.MapPost("/api/v1/admin/trails/check-similarity", [Authorize] async (string? name, IFormFile file, IMediator mediator, ILogger<Program> logger) =>
+app.MapPost("/api/v1/admin/trails/check-similarity", [Authorize(Policy = "AdminOnly")] async (string? name, IFormFile file, IMediator mediator, ILogger<Program> logger) =>
 {
     if (file == null || file.Length == 0) return Results.BadRequest("No file uploaded.");
     
@@ -1053,7 +1093,7 @@ app.MapPost("/api/v1/admin/trails/check-similarity", [Authorize] async (string? 
 .WithName("CheckTrailSimilarity")
 .DisableAntiforgery(); // Bearer token auth is not vulnerable to CSRF; antiforgery not needed
 
-app.MapPost("/api/v1/admin/trails/bulk-check-similarity", [Authorize] async (HttpContext context, IMediator mediator, ILogger<Program> logger) =>
+app.MapPost("/api/v1/admin/trails/bulk-check-similarity", [Authorize(Policy = "AdminOnly")] async (HttpContext context, IMediator mediator, ILogger<Program> logger) =>
 {
     var form = await context.Request.ReadFormAsync();
     var files = form.Files.GetFiles("files");
@@ -1100,7 +1140,7 @@ app.MapPost("/api/v1/admin/trails/bulk-check-similarity", [Authorize] async (Htt
 .WithName("BulkCheckTrailSimilarity")
 .DisableAntiforgery(); // Bearer token auth is not vulnerable to CSRF; antiforgery not needed
 
-app.MapPost("/api/v1/admin/trails/bulk-upload-gpx", [Authorize] async (HttpContext context, IMediator mediator, ILogger<Program> logger) =>
+app.MapPost("/api/v1/admin/trails/bulk-upload-gpx", [Authorize(Policy = "AdminOnly")] async (HttpContext context, IMediator mediator, ILogger<Program> logger) =>
 {
     var form = await context.Request.ReadFormAsync();
     var files = form.Files.GetFiles("files");
@@ -1122,7 +1162,7 @@ app.MapPost("/api/v1/admin/trails/bulk-upload-gpx", [Authorize] async (HttpConte
     
     try 
     {
-        var command = new BulkCreateTrailsFromGpxCommand(gpxFiles);
+        var command = new BulkCreateTrailsFromGpxCommand(gpxFiles, GetAuthenticatedUserId(context));
         var trailIds = await mediator.Send(command);
         return Results.Ok(new { count = trailIds.Count, ids = trailIds });
     }
@@ -1136,33 +1176,34 @@ app.MapPost("/api/v1/admin/trails/bulk-upload-gpx", [Authorize] async (HttpConte
 .DisableAntiforgery(); // Bearer token auth is not vulnerable to CSRF; antiforgery not needed
 
 // Locations Admin API
-app.MapGet("/api/v1/admin/locations", [Authorize] async (Guid? parentId, string? search, IMediator mediator) =>
+app.MapGet("/api/v1/admin/locations", [Authorize(Policy = "AdminOnly")] async (Guid? parentId, string? search, IMediator mediator) =>
 {
     var locations = await mediator.Send(new GetLocationsQuery(parentId, search));
     return Results.Ok(locations);
 })
 .WithName("GetLocations");
 
-app.MapPost("/api/v1/admin/locations", [Authorize] async (CreateLocationCommand command, IMediator mediator) =>
+app.MapPost("/api/v1/admin/locations", [Authorize(Policy = "AdminOnly")] async (CreateLocationCommand command, IMediator mediator) =>
 {
     var id = await mediator.Send(command);
     return Results.Created($"/api/v1/admin/locations/{id}", new { id });
 })
 .WithName("CreateLocation");
 
-app.MapPut("/api/v1/admin/locations/{id:guid}", [Authorize] async (Guid id, UpdateLocationCommand command, IMediator mediator) =>
+app.MapPut("/api/v1/admin/locations/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, UpdateLocationCommand command, IMediator mediator, HttpContext httpContext) =>
 {
     if (id != command.Id) return Results.BadRequest("ID mismatch");
-    await mediator.Send(command);
+    // UpdatedBy must reflect who actually authenticated the request, not whatever the client body claims.
+    await mediator.Send(command with { UpdatedBy = GetAuthenticatedUserId(httpContext) });
     return Results.NoContent();
 })
 .WithName("UpdateLocation");
 
-app.MapDelete("/api/v1/admin/locations/{id:guid}", [Authorize] async (Guid id, IMediator mediator, ILogger<Program> logger) =>
+app.MapDelete("/api/v1/admin/locations/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, IMediator mediator, ILogger<Program> logger, HttpContext httpContext) =>
 {
-    try 
+    try
     {
-        await mediator.Send(new DeleteLocationCommand(id));
+        await mediator.Send(new DeleteLocationCommand(id, GetAuthenticatedUserId(httpContext)));
         return Results.NoContent();
     }
     catch (InvalidOperationException)
@@ -1178,7 +1219,7 @@ app.MapDelete("/api/v1/admin/locations/{id:guid}", [Authorize] async (Guid id, I
 .WithName("DeleteLocation");
 
 // Tags Admin API
-app.MapGet("/api/v1/admin/tags", [Authorize] async (UtanvegaDbContext context) =>
+app.MapGet("/api/v1/admin/tags", [Authorize(Policy = "AdminOnly")] async (UtanvegaDbContext context) =>
 {
     var tags = await context.Tags
         .AsNoTracking()
@@ -1189,7 +1230,7 @@ app.MapGet("/api/v1/admin/tags", [Authorize] async (UtanvegaDbContext context) =
 })
 .WithName("GetTags");
 
-app.MapPost("/api/v1/admin/tags", [Authorize] async (TagCreateDto dto, UtanvegaDbContext context) =>
+app.MapPost("/api/v1/admin/tags", [Authorize(Policy = "AdminOnly")] async (TagCreateDto dto, UtanvegaDbContext context, HttpContext httpContext) =>
 {
     var tag = new Utanvega.Backend.Core.Entities.Tag
     {
@@ -1199,12 +1240,12 @@ app.MapPost("/api/v1/admin/tags", [Authorize] async (TagCreateDto dto, UtanvegaD
         Color = dto.Color
     };
     context.Tags.Add(tag);
-    await context.SaveChangesWithAuditAsync("admin");
+    await context.SaveChangesWithAuditAsync(GetAuthenticatedUserId(httpContext));
     return Results.Created($"/api/v1/admin/tags/{tag.Id}", new { tag.Id, tag.Name, tag.Slug, tag.Color });
 })
 .WithName("CreateTag");
 
-app.MapPut("/api/v1/admin/tags/{id:guid}", [Authorize] async (Guid id, TagCreateDto dto, UtanvegaDbContext context) =>
+app.MapPut("/api/v1/admin/tags/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, TagCreateDto dto, UtanvegaDbContext context, HttpContext httpContext) =>
 {
     var tag = await context.Tags.FindAsync(id);
     if (tag == null) return Results.NotFound();
@@ -1214,24 +1255,24 @@ app.MapPut("/api/v1/admin/tags/{id:guid}", [Authorize] async (Guid id, TagCreate
     tag.Color = dto.Color;
     if (dto.TranslationHashes != null)
         tag.TranslationHashes = System.Text.Json.JsonSerializer.Serialize(dto.TranslationHashes);
-    await context.SaveChangesWithAuditAsync("admin");
+    await context.SaveChangesWithAuditAsync(GetAuthenticatedUserId(httpContext));
     return Results.NoContent();
 })
 .WithName("UpdateTag");
 
-app.MapDelete("/api/v1/admin/tags/{id:guid}", [Authorize] async (Guid id, UtanvegaDbContext context) =>
+app.MapDelete("/api/v1/admin/tags/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, UtanvegaDbContext context, HttpContext httpContext) =>
 {
     var tag = await context.Tags.Include(t => t.TrailTags).FirstOrDefaultAsync(t => t.Id == id);
     if (tag == null) return Results.NotFound();
     context.TrailTags.RemoveRange(tag.TrailTags);
     context.Tags.Remove(tag);
-    await context.SaveChangesWithAuditAsync("admin");
+    await context.SaveChangesWithAuditAsync(GetAuthenticatedUserId(httpContext));
     return Results.NoContent();
 })
 .WithName("DeleteTag");
 
 // Translation API
-app.MapPost("/api/v1/admin/translate", [Authorize] async (TranslateRequest req, Utanvega.Backend.Infrastructure.Translation.DeepLTranslatorProvider translatorProvider) =>
+app.MapPost("/api/v1/admin/translate", [Authorize(Policy = "AdminOnly")] async (TranslateRequest req, Utanvega.Backend.Infrastructure.Translation.DeepLTranslatorProvider translatorProvider) =>
 {
     var translator = translatorProvider.Translator;
     if (translator == null)
@@ -1265,7 +1306,7 @@ app.MapPost("/api/v1/admin/translate", [Authorize] async (TranslateRequest req, 
 .WithName("Translate");
 
 // History / Audit API
-app.MapGet("/api/v1/admin/history", [Authorize] async (string? entityName, string? entityId, int? limit, IMediator mediator) =>
+app.MapGet("/api/v1/admin/history", [Authorize(Policy = "AdminOnly")] async (string? entityName, string? entityId, int? limit, IMediator mediator) =>
 {
     var logs = await mediator.Send(new GetChangeLogsQuery(entityName, entityId, limit ?? 50));
     return Results.Ok(logs);
@@ -1273,7 +1314,7 @@ app.MapGet("/api/v1/admin/history", [Authorize] async (string? entityName, strin
 .WithName("GetHistory");
 
 // Duplicate Detection
-app.MapGet("/api/v1/admin/trails/duplicates", [Authorize] async (double? threshold, IMediator mediator) =>
+app.MapGet("/api/v1/admin/trails/duplicates", [Authorize(Policy = "AdminOnly")] async (double? threshold, IMediator mediator) =>
 {
     var duplicates = await mediator.Send(new GetDuplicateTrailsQuery(threshold ?? 95));
     return Results.Ok(duplicates);
@@ -1281,7 +1322,7 @@ app.MapGet("/api/v1/admin/trails/duplicates", [Authorize] async (double? thresho
 .WithName("GetDuplicateTrails");
 
 // Re-detect trail types for all trails with GPX data
-app.MapPost("/api/v1/admin/trails/detect-types", [Authorize] async (UtanvegaDbContext context) =>
+app.MapPost("/api/v1/admin/trails/detect-types", [Authorize(Policy = "AdminOnly")] async (UtanvegaDbContext context, HttpContext httpContext) =>
 {
     var trails = await context.Trails
         .Where(t => t.GpxData != null && t.Status != TrailStatus.Archived)
@@ -1298,13 +1339,13 @@ app.MapPost("/api/v1/admin/trails/detect-types", [Authorize] async (UtanvegaDbCo
         }
     }
 
-    await context.SaveChangesWithAuditAsync("system");
-    
+    await context.SaveChangesWithAuditAsync(GetAuthenticatedUserId(httpContext));
+
     return Results.Ok(new { total = trails.Count, updated });
 })
 .WithName("DetectTrailTypes");
 
-app.MapPost("/api/v1/admin/trails/detect-locations", [Authorize] async (UtanvegaDbContext context, LocationDetector detector) =>
+app.MapPost("/api/v1/admin/trails/detect-locations", [Authorize(Policy = "AdminOnly")] async (UtanvegaDbContext context, LocationDetector detector, HttpContext httpContext) =>
 {
     var trails = await context.Trails
         .Where(t => t.GpxData != null && t.Status != TrailStatus.Archived)
@@ -1317,13 +1358,13 @@ app.MapPost("/api/v1/admin/trails/detect-locations", [Authorize] async (Utanvega
         if (detected.Count > 0) updated++;
     }
 
-    await context.SaveChangesWithAuditAsync("system");
+    await context.SaveChangesWithAuditAsync(GetAuthenticatedUserId(httpContext));
 
     return Results.Ok(new { total = trails.Count, updated });
 })
 .WithName("DetectTrailLocations");
 
-app.MapPost("/api/v1/admin/trails/detect-terrain-types", [Authorize] async (UtanvegaDbContext context, ICacheInvalidator cacheInvalidator) =>
+app.MapPost("/api/v1/admin/trails/detect-terrain-types", [Authorize(Policy = "AdminOnly")] async (UtanvegaDbContext context, ICacheInvalidator cacheInvalidator, HttpContext httpContext) =>
 {
     var trails = await context.Trails
         .Where(t => t.TerrainType == null && t.GpxData != null)
@@ -1362,7 +1403,7 @@ app.MapPost("/api/v1/admin/trails/detect-terrain-types", [Authorize] async (Utan
 
     if (updated > 0)
     {
-        await context.SaveChangesWithAuditAsync("system");
+        await context.SaveChangesWithAuditAsync(GetAuthenticatedUserId(httpContext));
         cacheInvalidator.InvalidateTrail();
         cacheInvalidator.InvalidateEvent();
     }
@@ -1385,7 +1426,7 @@ app.MapGet("/api/v1/features", async (UtanvegaDbContext context, IMemoryCache ca
 })
 .WithName("GetFeatureFlags");
 
-app.MapGet("/api/v1/admin/features", [Authorize] async (UtanvegaDbContext context) =>
+app.MapGet("/api/v1/admin/features", [Authorize(Policy = "AdminOnly")] async (UtanvegaDbContext context) =>
 {
     var flags = await context.FeatureFlags
         .AsNoTracking()
@@ -1395,7 +1436,7 @@ app.MapGet("/api/v1/admin/features", [Authorize] async (UtanvegaDbContext contex
 })
 .WithName("GetAdminFeatureFlags");
 
-app.MapPost("/api/v1/admin/features", [Authorize] async (FeatureFlagCreateDto body, UtanvegaDbContext context, IMemoryCache cache) =>
+app.MapPost("/api/v1/admin/features", [Authorize(Policy = "AdminOnly")] async (FeatureFlagCreateDto body, UtanvegaDbContext context, IMemoryCache cache) =>
 {
     var exists = await context.FeatureFlags.AnyAsync(f => f.Name == body.Name);
     if (exists) return Results.Conflict("Feature flag already exists");
@@ -1413,7 +1454,7 @@ app.MapPost("/api/v1/admin/features", [Authorize] async (FeatureFlagCreateDto bo
 })
 .WithName("CreateFeatureFlag");
 
-app.MapPatch("/api/v1/admin/features/{id:guid}", [Authorize] async (Guid id, FeatureFlagUpdateDto body, UtanvegaDbContext context, IMemoryCache cache) =>
+app.MapPatch("/api/v1/admin/features/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, FeatureFlagUpdateDto body, UtanvegaDbContext context, IMemoryCache cache) =>
 {
     var flag = await context.FeatureFlags.FindAsync(id);
     if (flag == null) return Results.NotFound();
@@ -1428,7 +1469,7 @@ app.MapPatch("/api/v1/admin/features/{id:guid}", [Authorize] async (Guid id, Fea
 })
 .WithName("UpdateFeatureFlag");
 
-app.MapDelete("/api/v1/admin/features/{id:guid}", [Authorize] async (Guid id, UtanvegaDbContext context, IMemoryCache cache) =>
+app.MapDelete("/api/v1/admin/features/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, UtanvegaDbContext context, IMemoryCache cache) =>
 {
     var flag = await context.FeatureFlags.FindAsync(id);
     if (flag == null) return Results.NotFound();
@@ -1549,7 +1590,7 @@ app.MapGet("/api/v1/events/{slug}", async (string slug, IMediator mediator) =>
 .WithName("GetEventBySlug");
 
 // Admin Event CRUD
-app.MapGet("/api/v1/admin/events", [Authorize] async (IMediator mediator) =>
+app.MapGet("/api/v1/admin/events", [Authorize(Policy = "AdminOnly")] async (IMediator mediator) =>
 {
     var events = await mediator.Send(new GetEventsQuery(IncludeHidden: true));
     return Results.Ok(events);
@@ -1557,7 +1598,7 @@ app.MapGet("/api/v1/admin/events", [Authorize] async (IMediator mediator) =>
 .WithName("GetAdminEvents")
 .RequireAuthorization();
 
-app.MapGet("/api/v1/admin/events/details", [Authorize] async (IMediator mediator) =>
+app.MapGet("/api/v1/admin/events/details", [Authorize(Policy = "AdminOnly")] async (IMediator mediator) =>
 {
     var events = await mediator.Send(new GetAllEventDetailsQuery());
     return Results.Ok(events);
@@ -1565,7 +1606,7 @@ app.MapGet("/api/v1/admin/events/details", [Authorize] async (IMediator mediator
 .WithName("GetAdminEventDetails")
 .RequireAuthorization();
 
-app.MapPost("/api/v1/admin/events", [Authorize] async (CreateEventCommand command, IMediator mediator) =>
+app.MapPost("/api/v1/admin/events", [Authorize(Policy = "AdminOnly")] async (CreateEventCommand command, IMediator mediator) =>
 {
     var id = await mediator.Send(command);
     return Results.Created($"/api/v1/events/{id}", new { id });
@@ -1573,7 +1614,7 @@ app.MapPost("/api/v1/admin/events", [Authorize] async (CreateEventCommand comman
 .WithName("CreateEvent")
 .RequireAuthorization();
 
-app.MapPut("/api/v1/admin/events/{id:guid}", [Authorize] async (Guid id, UpdateEventCommand command, IMediator mediator) =>
+app.MapPut("/api/v1/admin/events/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, UpdateEventCommand command, IMediator mediator) =>
 {
     if (id != command.Id) return Results.BadRequest("ID mismatch");
     var success = await mediator.Send(command);
@@ -1582,7 +1623,7 @@ app.MapPut("/api/v1/admin/events/{id:guid}", [Authorize] async (Guid id, UpdateE
 .WithName("UpdateEvent")
 .RequireAuthorization();
 
-app.MapDelete("/api/v1/admin/events/{id:guid}", [Authorize] async (Guid id, IMediator mediator) =>
+app.MapDelete("/api/v1/admin/events/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, IMediator mediator) =>
 {
     var success = await mediator.Send(new DeleteEventCommand(id));
     return success ? Results.NoContent() : Results.NotFound();
@@ -1599,7 +1640,7 @@ app.MapGet("/api/v1/organizers", async (IMediator mediator) =>
 .WithName("GetOrganizers");
 
 // Admin Organizer CRUD
-app.MapGet("/api/v1/admin/organizers", [Authorize] async (IMediator mediator) =>
+app.MapGet("/api/v1/admin/organizers", [Authorize(Policy = "AdminOnly")] async (IMediator mediator) =>
 {
     var organizers = await mediator.Send(new GetOrganizersQuery());
     return Results.Ok(organizers);
@@ -1607,7 +1648,7 @@ app.MapGet("/api/v1/admin/organizers", [Authorize] async (IMediator mediator) =>
 .WithName("GetAdminOrganizers")
 .RequireAuthorization();
 
-app.MapPost("/api/v1/admin/organizers", [Authorize] async (CreateOrganizerCommand command, IMediator mediator) =>
+app.MapPost("/api/v1/admin/organizers", [Authorize(Policy = "AdminOnly")] async (CreateOrganizerCommand command, IMediator mediator) =>
 {
     var id = await mediator.Send(command);
     return Results.Created($"/api/v1/organizers/{id}", new { id });
@@ -1615,7 +1656,7 @@ app.MapPost("/api/v1/admin/organizers", [Authorize] async (CreateOrganizerComman
 .WithName("CreateOrganizer")
 .RequireAuthorization();
 
-app.MapPut("/api/v1/admin/organizers/{id:guid}", [Authorize] async (Guid id, UpdateOrganizerCommand command, IMediator mediator) =>
+app.MapPut("/api/v1/admin/organizers/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, UpdateOrganizerCommand command, IMediator mediator) =>
 {
     if (id != command.Id) return Results.BadRequest("ID mismatch");
     var success = await mediator.Send(command);
@@ -1624,7 +1665,7 @@ app.MapPut("/api/v1/admin/organizers/{id:guid}", [Authorize] async (Guid id, Upd
 .WithName("UpdateOrganizer")
 .RequireAuthorization();
 
-app.MapDelete("/api/v1/admin/organizers/{id:guid}", [Authorize] async (Guid id, IMediator mediator) =>
+app.MapDelete("/api/v1/admin/organizers/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, IMediator mediator) =>
 {
     var success = await mediator.Send(new DeleteOrganizerCommand(id));
     return success ? Results.NoContent() : Results.NotFound();
@@ -1633,7 +1674,7 @@ app.MapDelete("/api/v1/admin/organizers/{id:guid}", [Authorize] async (Guid id, 
 .RequireAuthorization();
 
 // Admin Edition CRUD
-app.MapPost("/api/v1/admin/events/{eventId:guid}/editions", [Authorize] async (Guid eventId, CreateEditionCommand command, IMediator mediator) =>
+app.MapPost("/api/v1/admin/events/{eventId:guid}/editions", [Authorize(Policy = "AdminOnly")] async (Guid eventId, CreateEditionCommand command, IMediator mediator) =>
 {
     if (eventId != command.EventId) return Results.BadRequest("EventId mismatch");
     var id = await mediator.Send(command);
@@ -1642,7 +1683,7 @@ app.MapPost("/api/v1/admin/events/{eventId:guid}/editions", [Authorize] async (G
 .WithName("CreateEdition")
 .RequireAuthorization();
 
-app.MapPut("/api/v1/admin/editions/{id:guid}", [Authorize] async (Guid id, UpdateEditionCommand command, IMediator mediator) =>
+app.MapPut("/api/v1/admin/editions/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, UpdateEditionCommand command, IMediator mediator) =>
 {
     if (id != command.Id) return Results.BadRequest("ID mismatch");
     var success = await mediator.Send(command);
@@ -1651,7 +1692,7 @@ app.MapPut("/api/v1/admin/editions/{id:guid}", [Authorize] async (Guid id, Updat
 .WithName("UpdateEdition")
 .RequireAuthorization();
 
-app.MapDelete("/api/v1/admin/editions/{id:guid}", [Authorize] async (Guid id, IMediator mediator) =>
+app.MapDelete("/api/v1/admin/editions/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, IMediator mediator) =>
 {
     var success = await mediator.Send(new DeleteEditionCommand(id));
     return success ? Results.NoContent() : Results.NotFound();
@@ -1659,7 +1700,7 @@ app.MapDelete("/api/v1/admin/editions/{id:guid}", [Authorize] async (Guid id, IM
 .WithName("DeleteEdition")
 .RequireAuthorization();
 
-app.MapPost("/api/v1/admin/events/{eventId:guid}/editions/generate", [Authorize] async (Guid eventId, GenerateEditionsForSeasonCommand command, IMediator mediator) =>
+app.MapPost("/api/v1/admin/events/{eventId:guid}/editions/generate", [Authorize(Policy = "AdminOnly")] async (Guid eventId, GenerateEditionsForSeasonCommand command, IMediator mediator) =>
 {
     if (eventId != command.EventId) return Results.BadRequest("EventId mismatch");
     var result = await mediator.Send(command);
@@ -1669,7 +1710,7 @@ app.MapPost("/api/v1/admin/events/{eventId:guid}/editions/generate", [Authorize]
 .RequireAuthorization();
 
 // Admin Race CRUD
-app.MapPost("/api/v1/admin/editions/{editionId:guid}/races", [Authorize] async (Guid editionId, CreateRaceCommand command, IMediator mediator) =>
+app.MapPost("/api/v1/admin/editions/{editionId:guid}/races", [Authorize(Policy = "AdminOnly")] async (Guid editionId, CreateRaceCommand command, IMediator mediator) =>
 {
     if (editionId != command.EventEditionId) return Results.BadRequest("EventEditionId mismatch");
     var id = await mediator.Send(command);
@@ -1678,7 +1719,7 @@ app.MapPost("/api/v1/admin/editions/{editionId:guid}/races", [Authorize] async (
 .WithName("CreateRace")
 .RequireAuthorization();
 
-app.MapPut("/api/v1/admin/races/{id:guid}", [Authorize] async (Guid id, UpdateRaceCommand command, IMediator mediator) =>
+app.MapPut("/api/v1/admin/races/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, UpdateRaceCommand command, IMediator mediator) =>
 {
     if (id != command.Id) return Results.BadRequest("ID mismatch");
     var success = await mediator.Send(command);
@@ -1687,7 +1728,7 @@ app.MapPut("/api/v1/admin/races/{id:guid}", [Authorize] async (Guid id, UpdateRa
 .WithName("UpdateRace")
 .RequireAuthorization();
 
-app.MapDelete("/api/v1/admin/races/{id:guid}", [Authorize] async (Guid id, IMediator mediator) =>
+app.MapDelete("/api/v1/admin/races/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, IMediator mediator) =>
 {
     var success = await mediator.Send(new DeleteRaceCommand(id));
     return success ? Results.NoContent() : Results.NotFound();
@@ -1695,7 +1736,7 @@ app.MapDelete("/api/v1/admin/races/{id:guid}", [Authorize] async (Guid id, IMedi
 .WithName("DeleteRace")
 .RequireAuthorization();
 
-app.MapPost("/api/v1/admin/events/detect-gpx", [Authorize] async (UtanvegaDbContext context) =>
+app.MapPost("/api/v1/admin/events/detect-gpx", [Authorize(Policy = "AdminOnly")] async (UtanvegaDbContext context, HttpContext httpContext) =>
 {
     var events = await context.Events
         .Where(e => e.GpxPointLat == null)
@@ -1733,7 +1774,7 @@ app.MapPost("/api/v1/admin/events/detect-gpx", [Authorize] async (UtanvegaDbCont
         updated++;
     }
 
-    if (updated > 0) await context.SaveChangesWithAuditAsync("system");
+    if (updated > 0) await context.SaveChangesWithAuditAsync(GetAuthenticatedUserId(httpContext));
     return Results.Ok(new { total, updated, skipped });
 })
 .WithName("DetectEventGpx")
@@ -1803,7 +1844,7 @@ app.MapPost("/api/v1/user/activities", [Authorize] async (IMediator mediator, Ht
         
         return Results.Problem(
             title: "Failed to create activity",
-            detail: $"Database error ({pg.SqlState}): {pg.MessageText}",
+            detail: "A database error occurred while saving the activity.",
             statusCode: StatusCodes.Status500InternalServerError);
     }
     catch (DbUpdateException ex)

@@ -205,6 +205,17 @@ function AdminContent() {
     return <LoginPage />;
   }
 
+  // Authorization is enforced by the backend on every request (app_metadata.role == "admin").
+  // This check only avoids showing the admin UI to a logged-in non-admin; it is not the security boundary.
+  if (user.app_metadata?.role !== 'admin') {
+    return (
+      <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
+        <Typography variant="h6">You don't have access to this admin panel.</Typography>
+        <Button variant="outlined" onClick={() => signOut()}>Sign out</Button>
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ display: 'flex' }}>
       <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
