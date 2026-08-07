@@ -1,5 +1,6 @@
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Chip, Button, Box, Checkbox, TableSortLabel, Tooltip, IconButton, Paper, Autocomplete, TextField } from '@mui/material';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import DownloadIcon from '@mui/icons-material/Download';
 import MapIcon from '@mui/icons-material/Map';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -16,6 +17,7 @@ import { InlineEditText, InlineEditSelect } from './InlineEditCell';
 import { memo, useCallback, useMemo, useState } from 'react';
 
 const SITE_URL = import.meta.env.VITE_SITE_URL?.trim() || 'https://utanvega.vercel.app';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 interface TrailTableProps {
   trails: Trail[];
@@ -404,6 +406,11 @@ function TrailRowComponent({ trail, selected, onSelectOne, onViewMap, onEdit, on
           <Tooltip title="View trail on website">
             <IconButton size="small" component="a" href={`${SITE_URL}/trails/${trail.slug}`} target="_blank" rel="noopener noreferrer" aria-label={`View ${trail.name} on website`}>
               <OpenInNewIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Download GPX">
+            <IconButton size="small" component="a" href={`${API_URL}/api/v1/trails/${trail.slug}/gpx`} download={`${trail.slug}.gpx`} aria-label={`Download GPX for ${trail.name}`}>
+              <DownloadIcon fontSize="small" />
             </IconButton>
           </Tooltip>
           {trail.youtubeUrl && /^https?:\/\//i.test(trail.youtubeUrl) && (
