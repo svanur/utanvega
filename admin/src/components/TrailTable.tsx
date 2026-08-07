@@ -409,7 +409,13 @@ function TrailRowComponent({ trail, selected, onSelectOne, onViewMap, onEdit, on
             </IconButton>
           </Tooltip>
           <Tooltip title="Download GPX">
-            <IconButton size="small" component="a" href={`${API_URL}/api/v1/trails/${trail.slug}/gpx`} download={`${trail.slug}.gpx`} aria-label={`Download GPX for ${trail.name}`}>
+            <IconButton
+              size="small"
+              component="a"
+              href={`${API_URL}/api/v1/trails/${trail.slug}/gpx`}
+              download={`${trail.slug}.gpx`}
+              aria-label={`Download GPX for ${trail.name}`}
+            >
               <DownloadIcon fontSize="small" />
             </IconButton>
           </Tooltip>
