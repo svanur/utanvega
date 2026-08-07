@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
     Box, Typography, Paper, Grid, Skeleton, Chip, Table, TableBody,
-    TableCell, TableContainer, TableHead, TableRow, Stack
+    TableCell, TableContainer, TableHead, TableRow, Stack, Button, Tooltip as MuiTooltip
 } from '@mui/material';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
@@ -9,6 +9,9 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import PeopleIcon from '@mui/icons-material/People';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import RouteIcon from '@mui/icons-material/Route';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+
+const VERCEL_ANALYTICS_URL = import.meta.env.VITE_VERCEL_ANALYTICS_URL as string | undefined;
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid,
     Tooltip, ResponsiveContainer, Cell, Area, AreaChart, Line
@@ -184,9 +187,25 @@ export default function AnalyticsPage() {
 
     return (
         <Box>
-            <Typography variant="h5" fontWeight="bold" mb={3}>
-                📊 Analytics
-            </Typography>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" mb={3}>
+                <Typography variant="h5" fontWeight="bold">
+                    📊 Analytics
+                </Typography>
+                {VERCEL_ANALYTICS_URL && (
+                    <MuiTooltip title="Open Vercel Analytics dashboard">
+                        <Button
+                            variant="outlined"
+                            size="small"
+                            endIcon={<OpenInNewIcon />}
+                            href={VERCEL_ANALYTICS_URL}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            Vercel Analytics
+                        </Button>
+                    </MuiTooltip>
+                )}
+            </Stack>
 
             {/* Summary Cards */}
             <Grid container spacing={2} mb={3}>
