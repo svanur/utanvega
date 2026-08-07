@@ -10,13 +10,13 @@ import PeopleIcon from '@mui/icons-material/People';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import RouteIcon from '@mui/icons-material/Route';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-
-const VERCEL_ANALYTICS_URL = import.meta.env.VITE_VERCEL_ANALYTICS_URL as string | undefined;
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid,
     Tooltip, ResponsiveContainer, Cell, Area, AreaChart, Line
 } from 'recharts';
 import { apiFetch } from '../hooks/api';
+
+const VERCEL_ANALYTICS_URL = import.meta.env.VITE_VERCEL_ANALYTICS_URL as string | undefined;
 
 interface Summary {
     totalViews: number;
