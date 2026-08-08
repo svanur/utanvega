@@ -84,6 +84,7 @@ import TrailLeaderboardCard from '../components/TrailLeaderboardCard';
 import { useTrailCheckIns } from '../hooks/useTrailCheckIns';
 import { getAvatarFallbackText, getAvatarImageSrc } from '../utils/avatarPresets';
 import { useLocalize } from '../utils/localize';
+import AssociatedEventBanner from '../components/AssociatedEventBanner';
 
 const ALLOWED_YT_HOSTS = ['www.youtube.com', 'youtube.com', 'youtu.be', 'www.youtube-nocookie.com'];
 
@@ -483,11 +484,14 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
 
     const distanceKm = (trail.length / 1000).toFixed(2);
     const estTime = estimateDuration(trail.length, trail.elevationGain, trail.activityType);
-
     return (
         <Layout mode={mode} onToggleMode={onToggleMode}>
-            <Button 
-                startIcon={<ArrowBackIcon />} 
+            {trail.linkedRaces && (
+                <AssociatedEventBanner linkedRaces={trail.linkedRaces} activityType={trail.activityType} />
+            )}
+
+            <Button
+                startIcon={<ArrowBackIcon />}
                 onClick={() => navigate('/')}
                 sx={{ mb: 2 }}
             >
@@ -948,83 +952,88 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                     return acc;
                 }, {});
 
+                // Single event is already shown inline above the stats — only render the grid for 2+
+                if (Object.keys(byEvent).length < 2) return null;
+
                 return (
                     <Box mt={4} mb={3}>
                         <Typography variant="h5" component="h2" fontWeight="bold" mb={1.5}>
                             {t('trail.racesOnTrail')}
                         </Typography>
                         <Grid container spacing={1.5}>
-                            {Object.values(byEvent).flatMap(races =>
-                                races.map(race => {
-                                    const past = race.daysUntil != null && race.daysUntil < 0;
-                                    return (
-                                        <Grid item xs={12} sm={6} md={4} key={`${race.eventSlug}-${race.raceName}`}>
-                                            <Paper
-                                                component={RouterLink}
-                                                to={`/events/${race.eventSlug}`}
-                                                elevation={0}
-                                                sx={{
-                                                    display: 'flex',
-                                                    flexDirection: 'column',
-                                                    gap: 0.5,
-                                                    p: 2,
-                                                    borderRadius: 2,
-                                                    bgcolor: 'action.hover',
-                                                    textDecoration: 'none',
-                                                    color: 'inherit',
-                                                    height: '100%',
-                                                    transition: 'background-color 0.2s',
-                                                    '&:hover': { bgcolor: 'action.selected' },
-                                                }}
-                                            >
-                                                <Typography variant="caption" color="text.secondary" noWrap>
-                                                    {race.eventName}
-                                                </Typography>
-                                                <Typography variant="body2" fontWeight={600} noWrap>
-                                                    {race.raceName}
-                                                </Typography>
-                                                {race.startTime && (
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        🕐 {race.startTime}
-                                                    </Typography>
-                                                )}
-                                                <Stack direction="row" spacing={0.75} alignItems="center" mt={0.75} flexWrap="wrap" gap={0.5}>
-                                                    {race.distanceLabel && (
-                                                        <Chip label={race.distanceLabel} size="small" variant="outlined" sx={{ fontSize: '0.7rem', height: 22 }} />
-                                                    )}
-                                                    {race.itraPoints != null && (
-                                                        <Chip label={`ITRA ${race.itraPoints}`} size="small" variant="outlined" sx={{ fontSize: '0.7rem', height: 22 }} />
-                                                    )}
-                                                    {race.ticketStatus && race.ticketStatus !== 'Available' && race.ticketStatus !== 'NotStarted' && (
+                            {Object.values(byEvent).map(races => {
+                                const rep = races[0];
+                                const past = rep.daysUntil != null && rep.daysUntil < 0;
+                                // Only show individual race sub-list when races have distinct, meaningful labels
+                                const distinctRaces = races.filter(r => r.distanceLabel || r.itraPoints != null);
+                                const showSubList = distinctRaces.length > 0 && new Set(distinctRaces.map(r => r.distanceLabel)).size > 1;
+
+                                return (
+                                    <Grid item xs={12} sm={6} md={4} key={rep.eventSlug}>
+                                        <Paper
+                                            component={RouterLink}
+                                            to={`/events/${rep.eventSlug}`}
+                                            elevation={0}
+                                            sx={{
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                gap: 0.5,
+                                                p: 2,
+                                                borderRadius: 2,
+                                                bgcolor: 'action.hover',
+                                                textDecoration: 'none',
+                                                color: 'inherit',
+                                                height: '100%',
+                                                transition: 'background-color 0.2s',
+                                                '&:hover': { bgcolor: 'action.selected' },
+                                            }}
+                                        >
+                                            <Typography variant="body2" fontWeight={600} noWrap>
+                                                {rep.eventName}
+                                            </Typography>
+                                            {showSubList && (
+                                                <Stack direction="row" flexWrap="wrap" gap={0.5} mt={0.25}>
+                                                    {distinctRaces.map(r => (
                                                         <Chip
-                                                            label={t(`races.ticketStatus.${race.ticketStatus}`)}
+                                                            key={r.raceName}
+                                                            label={r.distanceLabel ?? r.raceName}
                                                             size="small"
-                                                            color={race.ticketStatus === 'SoldOut' || race.ticketStatus === 'Closed' ? 'error' : race.ticketStatus === 'AlmostSoldOut' ? 'warning' : 'default'}
+                                                            variant="outlined"
                                                             sx={{ fontSize: '0.7rem', height: 22 }}
                                                         />
-                                                    )}
-                                                    {race.daysUntil != null && (
-                                                        <Chip
-                                                            label={
-                                                                race.daysUntil === 0
-                                                                    ? t('races.today')
-                                                                    : race.daysUntil === 1
-                                                                    ? t('races.tomorrow')
-                                                                    : past
-                                                                    ? t('races.daysAgo_other', { count: Math.abs(race.daysUntil) })
-                                                                    : t('races.daysUntil', { count: race.daysUntil })
-                                                            }
-                                                            size="small"
-                                                            color={past ? 'default' : race.daysUntil <= 7 ? 'warning' : 'success'}
-                                                            sx={{ fontSize: '0.7rem', height: 22 }}
-                                                        />
-                                                    )}
+                                                    ))}
                                                 </Stack>
-                                            </Paper>
-                                        </Grid>
-                                    );
-                                })
-                            )}
+                                            )}
+                                            <Stack direction="row" spacing={0.75} alignItems="center" mt={0.75} flexWrap="wrap" gap={0.5}>
+                                                {rep.ticketStatus && rep.ticketStatus !== 'Available' && rep.ticketStatus !== 'NotStarted' && (
+                                                    <Chip
+                                                        label={t(`races.ticketStatus.${rep.ticketStatus}`)}
+                                                        size="small"
+                                                        color={rep.ticketStatus === 'SoldOut' || rep.ticketStatus === 'Closed' ? 'error' : rep.ticketStatus === 'AlmostSoldOut' ? 'warning' : 'default'}
+                                                        sx={{ fontSize: '0.7rem', height: 22 }}
+                                                    />
+                                                )}
+                                                {rep.daysUntil != null && (
+                                                    <Chip
+                                                        label={
+                                                            rep.daysUntil === 0
+                                                                ? t('races.today')
+                                                                : rep.daysUntil === 1
+                                                                ? t('races.tomorrow')
+                                                                : past
+                                                                ? t('races.daysAgo_other', { count: Math.abs(rep.daysUntil) })
+                                                                : t('races.daysUntil', { count: rep.daysUntil })
+                                                        }
+                                                        size="small"
+                                                        color={past ? 'default' : rep.daysUntil <= 7 ? 'warning' : 'success'}
+                                                        sx={{ fontSize: '0.7rem', height: 22 }}
+                                                    />
+                                                )}
+                                            </Stack>
+                                        </Paper>
+                                    </Grid>
+                                );
+                            })}
                         </Grid>
                     </Box>
                 );

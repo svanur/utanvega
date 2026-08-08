@@ -155,7 +155,8 @@
         "loadingMap": "Loading Map...",
         "noGpsData": "No GPS data available for this trail.",
         "wereYouLookingFor": "Were you looking for one of these?",
-        "racesOnTrail": "Associated races",
+        "racesOnTrail": "Associated events",
+        "associatedEvent": "Associated Event",
         "climbRatio": "Climb ratio",
         "video360": "360° Video",
         "role": {

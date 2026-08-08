@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useEventCalendar, type CalendarDay } from './useEvents';
 
-const INCLUDED_TYPES = ['Race', 'Series'];
+const EXCLUDED_TYPES = ['Advertisement'];
 const MAX_PER_DAY = 4;
 
 const DAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
@@ -56,7 +56,7 @@ function buildBannerDays(
 
             const dateStr = toDateStr(date);
             const day = byDate.get(dateStr);
-            const filtered = (day?.events ?? []).filter(e => INCLUDED_TYPES.includes(e.type));
+            const filtered = (day?.events ?? []).filter(e => !EXCLUDED_TYPES.includes(e.type));
             const visible = filtered.slice(0, MAX_PER_DAY);
             const overflow = Math.max(0, filtered.length - MAX_PER_DAY);
             return { date, label, events: visible, overflow };
