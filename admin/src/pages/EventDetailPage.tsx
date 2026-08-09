@@ -42,7 +42,9 @@ import {
   type EventDetailDto,
   type EventEditionDto,
   type RaceDto,
+  type RaceStatus,
   type RegistrationStatus,
+  type TicketStatus,
   type UpdateEventInput,
 } from '../hooks/useEvents';
 import { useTrails } from '../hooks/useTrails';
@@ -55,9 +57,45 @@ import {
   getRaceStatusColor,
   getTicketStatusColor,
   raceHasStaleTx,
+  RACE_STATUSES,
+  TICKET_STATUSES,
 } from '../utils/eventForms';
 
 const PUBLIC_SITE_URL = ((import.meta.env.VITE_PUBLIC_SITE_URL ?? '') as string).replace(/\/$/, '');
+
+function fmtDate(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-').map(Number);
+  const months = ['jan', 'feb', 'mar', 'apr', 'maí', 'jún', 'júl', 'ágú', 'sep', 'okt', 'nóv', 'des'];
+  return `${d}. ${months[(m ?? 1) - 1]} ${y}`;
+}
+
+const MONTHS = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+function formatSchedule(rule: import('../hooks/useEvents').ScheduleRule | null | undefined): string | null {
+  if (!rule) return null;
+  if (rule.type === 'Fixed') return rule.date ? fmtDate(rule.date) : null;
+  if (rule.type === 'Yearly') {
+    if (rule.dayOfMonth != null)
+      return `${MONTHS[rule.month ?? 1]} ${rule.dayOfMonth}`;
+    if (rule.weekOfMonth != null && rule.dayOfWeek && rule.month != null) {
+      const w = rule.weekOfMonth === -1 ? 'Last' : `${rule.weekOfMonth}.`;
+      return `${w} ${rule.dayOfWeek} in ${MONTHS[rule.month]}`;
+    }
+  }
+  if (rule.type === 'Seasonal' && rule.dayOfWeek && rule.monthStart != null && rule.monthEnd != null) {
+    const w = rule.weekOfMonth != null
+      ? (rule.weekOfMonth === -1 ? 'Last ' : `${rule.weekOfMonth}. `)
+      : 'Every ';
+    return `${w}${rule.dayOfWeek}, ${MONTHS[rule.monthStart]}–${MONTHS[rule.monthEnd]}`;
+  }
+  if (rule.type === 'Approximate' && rule.month != null) {
+    return rule.monthEnd != null
+      ? `Usually ${MONTHS[rule.month]}–${MONTHS[rule.monthEnd]}`
+      : `Usually in ${MONTHS[rule.month]}`;
+  }
+  return null;
+}
 
 const REGISTRATION_STATUSES: RegistrationStatus[] = ['NotStarted', 'Open', 'Closed'];
 
@@ -77,7 +115,7 @@ function sortEditions(a: EventEditionDto, b: EventEditionDto): number {
 
 function editionLabel(ed: EventEditionDto): string {
   if (ed.title?.trim()) return ed.title;
-  if (ed.date) return ed.endDate ? `${ed.date} – ${ed.endDate}` : ed.date;
+  if (ed.date) return ed.endDate ? `${fmtDate(ed.date)} – ${fmtDate(ed.endDate)}` : fmtDate(ed.date);
   if (ed.year != null) return `Edition ${ed.year}`;
   return 'Untitled edition';
 }
@@ -255,7 +293,7 @@ interface EventDetailPageProps {
 export default function EventDetailPage({ onNotify }: EventDetailPageProps) {
   const { slug = '' } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const { detail, loading, error, refresh } = useEventDetail(slug);
+  const { detail, loading, error, refresh, setDetail } = useEventDetail(slug);
   const { trails } = useTrails();
 
   const [expandedEditionIds, setExpandedEditionIds] = useState<Set<string>>(new Set());
@@ -323,6 +361,65 @@ export default function EventDetailPage({ onNotify }: EventDetailPageProps) {
     void updated;
   };
 
+  const patchRaceInDetail = (raceId: string, patch: Partial<RaceDto>) =>
+    setDetail(prev => prev ? {
+      ...prev,
+      editions: prev.editions.map(ed => ({
+        ...ed,
+        races: ed.races.map(r => r.id === raceId ? { ...r, ...patch } : r),
+      })),
+    } : prev);
+
+  const racePayload = (race: RaceDto, patch: Partial<RaceDto>) => {
+    const r = { ...race, ...patch };
+    return {
+      id: r.id,
+      trailId: r.trailId,
+      name: r.name,
+      nameEn: r.nameEn,
+      distanceLabel: r.distanceLabel,
+      distanceLabelEn: r.distanceLabelEn,
+      cutoffMinutes: r.cutoffMinutes,
+      description: r.description,
+      descriptionEn: r.descriptionEn,
+      status: r.status,
+      sortOrder: r.sortOrder,
+      ticketStatus: r.ticketStatus,
+      maxParticipants: r.maxParticipants,
+      itraPoints: r.itraPoints,
+      certifiedBy: r.certifiedBy,
+      certifiedByEn: r.certifiedByEn,
+      prizeMoney: r.prizeMoney,
+      championshipCategory: r.championshipCategory,
+      championshipCategoryEn: r.championshipCategoryEn,
+      dateOfRace: r.dateOfRace,
+      startTime: r.startTime,
+      activityType: r.activityType,
+    };
+  };
+
+  const handleCycleRaceStatus = (race: RaceDto) => {
+    const next = RACE_STATUSES[(RACE_STATUSES.indexOf(race.status) + 1) % RACE_STATUSES.length]! as RaceStatus;
+    patchRaceInDetail(race.id, { status: next });
+    apiFetch(`/api/v1/admin/races/${race.id}`, {
+      method: 'PUT', body: JSON.stringify(racePayload(race, { status: next })),
+    }).catch(() => {
+      patchRaceInDetail(race.id, { status: race.status });
+      onNotify('Failed to update race status', 'error');
+    });
+  };
+
+  const handleCycleTicketStatus = (race: RaceDto) => {
+    const next = TICKET_STATUSES[(TICKET_STATUSES.indexOf(race.ticketStatus) + 1) % TICKET_STATUSES.length]! as TicketStatus;
+    patchRaceInDetail(race.id, { ticketStatus: next });
+    apiFetch(`/api/v1/admin/races/${race.id}`, {
+      method: 'PUT', body: JSON.stringify(racePayload(race, { ticketStatus: next })),
+    }).catch(() => {
+      patchRaceInDetail(race.id, { ticketStatus: race.ticketStatus });
+      onNotify('Failed to update ticket status', 'error');
+    });
+  };
+
   const handleDeleteEdition = async (edition: EventEditionDto) => {
     if (deletingEditionId !== edition.id) {
       setDeletingEditionId(edition.id);
@@ -338,32 +435,39 @@ export default function EventDetailPage({ onNotify }: EventDetailPageProps) {
     }
   };
 
-  const handleCycleRegStatus = async (edition: EventEditionDto) => {
+  const handleCycleRegStatus = (edition: EventEditionDto) => {
     const cycle: RegistrationStatus[] = ['NotStarted', 'Open', 'Closed'];
     const next = cycle[(cycle.indexOf(edition.registrationStatus) + 1) % cycle.length]!;
-    try {
-      await apiFetch(`/api/v1/admin/editions/${edition.id}`, {
-        method: 'PUT',
-        body: JSON.stringify({
-          id: edition.id,
-          eventId: edition.eventId,
-          registrationStatus: next,
-          year: edition.year,
-          date: edition.date,
-          endDate: edition.endDate,
-          title: edition.title ?? undefined,
-          titleEn: edition.titleEn ?? undefined,
-          registrationUrl: edition.registrationUrl ?? undefined,
-          resultsUrl: edition.resultsUrl ?? undefined,
-          notes: edition.notes ?? undefined,
-          notesEn: edition.notesEn ?? undefined,
-          trailId: edition.trailId,
-        }),
-      });
-      await refresh();
-    } catch {
+    // Optimistic update
+    setDetail(prev => prev ? {
+      ...prev,
+      editions: prev.editions.map(ed => ed.id === edition.id ? { ...ed, registrationStatus: next } : ed),
+    } : prev);
+    apiFetch(`/api/v1/admin/editions/${edition.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        id: edition.id,
+        eventId: edition.eventId,
+        registrationStatus: next,
+        year: edition.year,
+        date: edition.date,
+        endDate: edition.endDate,
+        title: edition.title ?? undefined,
+        titleEn: edition.titleEn ?? undefined,
+        registrationUrl: edition.registrationUrl ?? undefined,
+        resultsUrl: edition.resultsUrl ?? undefined,
+        notes: edition.notes ?? undefined,
+        notesEn: edition.notesEn ?? undefined,
+        trailId: edition.trailId,
+      }),
+    }).catch(() => {
+      // Roll back on failure
+      setDetail(prev => prev ? {
+        ...prev,
+        editions: prev.editions.map(ed => ed.id === edition.id ? { ...ed, registrationStatus: edition.registrationStatus } : ed),
+      } : prev);
       onNotify('Failed to update registration status', 'error');
-    }
+    });
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -420,6 +524,11 @@ export default function EventDetailPage({ onNotify }: EventDetailPageProps) {
                 <Typography variant="caption" color="text.secondary">by {detail.organizerName}</Typography>
               )}
             </Stack>
+            {formatSchedule(detail.scheduleRule) && (
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                🗓 {formatSchedule(detail.scheduleRule)}
+              </Typography>
+            )}
           </Box>
           <Stack direction="row" spacing={1} flexShrink={0}>
             {PUBLIC_SITE_URL && (
@@ -518,10 +627,10 @@ export default function EventDetailPage({ onNotify }: EventDetailPageProps) {
                 : <ChevronRightIcon fontSize="small" sx={{ color: 'text.disabled' }} />}
 
               <Typography variant="body2" fontWeight={600} sx={{ minWidth: 90 }}>
-                {edition.date ?? (edition.year ? `Year ${edition.year}` : 'No date')}
+                {edition.date ? fmtDate(edition.date) : (edition.year ? `Year ${edition.year}` : 'No date')}
               </Typography>
               {edition.endDate && edition.endDate !== edition.date && (
-                <Typography variant="caption" color="text.secondary">– {edition.endDate}</Typography>
+                <Typography variant="caption" color="text.secondary">– {fmtDate(edition.endDate)}</Typography>
               )}
               <Typography variant="body2" color={expanded ? 'primary.main' : 'text.secondary'} sx={{ flex: 1 }} noWrap>
                 {editionLabel(edition)}
@@ -665,16 +774,24 @@ export default function EventDetailPage({ onNotify }: EventDetailPageProps) {
                               </TableCell>
                               <TableCell>
                                 <Typography variant="body2">
-                                  {race.dateOfRace ?? <span style={{ color: 'orange' }}>Missing</span>}
+                                  {race.dateOfRace ? fmtDate(race.dateOfRace) : <span style={{ color: 'orange' }}>Missing</span>}
                                   {race.startTime && ` · ${race.startTime.slice(0, 5)}`}
                                 </Typography>
                               </TableCell>
                               <TableCell>
-                                <Chip label={race.status} size="small" color={getRaceStatusColor(race.status)} />
+                                <Tooltip title="Click to cycle status">
+                                  <Chip label={race.status} size="small" color={getRaceStatusColor(race.status)}
+                                    onClick={e => { e.stopPropagation(); handleCycleRaceStatus(race); }}
+                                    sx={{ cursor: 'pointer' }} />
+                                </Tooltip>
                               </TableCell>
                               <TableCell>
-                                <Chip label={race.ticketStatus} size="small" variant="outlined"
-                                  color={getTicketStatusColor(race.ticketStatus)} />
+                                <Tooltip title="Click to cycle ticket status">
+                                  <Chip label={race.ticketStatus} size="small" variant="outlined"
+                                    color={getTicketStatusColor(race.ticketStatus)}
+                                    onClick={e => { e.stopPropagation(); handleCycleTicketStatus(race); }}
+                                    sx={{ cursor: 'pointer' }} />
+                                </Tooltip>
                               </TableCell>
                               <TableCell>
                                 <Typography variant="body2" color="text.secondary">

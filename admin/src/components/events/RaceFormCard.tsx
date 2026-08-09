@@ -15,6 +15,8 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import dayjs from 'dayjs';
 import TranslateIcon from '@mui/icons-material/Translate';
 import type { EventEditionDto, RaceDto } from '../../hooks/useEvents';
 import type { Trail } from '../../hooks/useTrails';
@@ -221,8 +223,12 @@ function RaceFormCardInner({
 
           <SectionLabel>Schedule</SectionLabel>
           <Stack direction="row" spacing={1.5} sx={{ mb: 1.5 }}>
-            <TextField size="small" fullWidth label="Date" type="date" value={form.dateOfRace}
-              onChange={e => set('dateOfRace', e.target.value)} InputLabelProps={{ shrink: true }} />
+            <DatePicker
+              label="Date"
+              value={form.dateOfRace ? dayjs(form.dateOfRace) : null}
+              onChange={v => set('dateOfRace', v ? v.format('YYYY-MM-DD') : '')}
+              slotProps={{ textField: { size: 'small', fullWidth: true } }}
+            />
             <TextField size="small" fullWidth label="Start time" type="time" value={form.startTime}
               onChange={e => set('startTime', e.target.value)} InputLabelProps={{ shrink: true }} />
           </Stack>
