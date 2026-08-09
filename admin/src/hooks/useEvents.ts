@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { apiFetch } from './api';
 
 export type DayOfWeek = 'Sunday' | 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
@@ -391,6 +391,13 @@ export function useEvents() {
         await apiFetch(`/api/v1/admin/races/${id}`, { method: 'DELETE' });
     };
 
+    const reorderRaces = async (editionId: string, orderedIds: string[]) => {
+        await apiFetch(`/api/v1/admin/editions/${editionId}/races/reorder`, {
+            method: 'PUT',
+            body: JSON.stringify({ orderedIds }),
+        });
+    };
+
     return {
         events,
         loading,
@@ -410,5 +417,30 @@ export function useEvents() {
         createRace,
         updateRace,
         deleteRace,
+        reorderRaces,
     };
+}
+
+export function useEventDetail(slug: string) {
+    const [detail, setDetail] = useState<EventDetailDto | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const load = useCallback(async () => {
+        if (!slug) return;
+        try {
+            setLoading(true);
+            const data = await apiFetch<EventDetailDto>(`/api/v1/events/${slug}`);
+            setDetail(data);
+            setError(null);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to load event');
+        } finally {
+            setLoading(false);
+        }
+    }, [slug]);
+
+    useEffect(() => { void load(); }, [load]);
+
+    return { detail, loading, error, refresh: load, setDetail };
 }

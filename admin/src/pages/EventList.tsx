@@ -113,6 +113,7 @@ interface EventListProps {
   initialCreate?: boolean;
   onInitialCreateConsumed?: () => void;
   onNavigateToRaceManager?: (date: string) => void;
+  onViewEventDetail?: (slug: string) => void;
 }
 
 interface EventFormState {
@@ -1021,7 +1022,7 @@ function TrailStartPicker({ trailsWithCoords, onPick }: TrailPickerProps) {
 
 const PUBLIC_SITE_URL = ((import.meta.env.VITE_PUBLIC_SITE_URL ?? '') as string).replace(/\/$/, '');
 
-export default function EventList({ onNotify, initialEventId, onEventIdConsumed, initialCreate, onInitialCreateConsumed, onNavigateToRaceManager }: EventListProps) {
+export default function EventList({ onNotify, initialEventId, onEventIdConsumed, initialCreate, onInitialCreateConsumed, onNavigateToRaceManager, onViewEventDetail }: EventListProps) {
   const {
     events,
     loading,
@@ -2803,6 +2804,13 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
                       <Tooltip title="View on public site">
                         <IconButton size="small" component="a" href={`${PUBLIC_SITE_URL}/events/${event.slug}`} target="_blank" rel="noopener noreferrer">
                           <OpenInNewIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    {onViewEventDetail && (
+                      <Tooltip title="Editions & races">
+                        <IconButton size="small" onClick={() => onViewEventDetail(event.slug)}>
+                          <OpenInNewIcon fontSize="small" sx={{ color: 'primary.main' }} />
                         </IconButton>
                       </Tooltip>
                     )}

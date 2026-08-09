@@ -21,7 +21,7 @@ import { useState, useCallback, lazy, Suspense } from 'react';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import 'dayjs/locale/is';
-import { BrowserRouter, useNavigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, useNavigate, useLocation, Routes, Route } from 'react-router-dom';
 import TranslateIcon from '@mui/icons-material/Translate';
 import GpxUploadDialog from './components/GpxUploadDialog';
 import LoginPage from './pages/LoginPage';
@@ -53,6 +53,7 @@ const PoolsPage = lazy(() => import('./pages/PoolsPage'));
 const TranslationHealth = lazy(() => import('./pages/TranslationHealth'));
 const RaceDayPage = lazy(() => import('./pages/RaceDayPage'));
 const FeedbackPage = lazy(() => import('./pages/FeedbackPage'));
+const EventDetailPage = lazy(() => import('./pages/EventDetailPage'));
 
 const theme = createTheme({
   palette: {
@@ -92,6 +93,7 @@ const PAGE_PATHS: Record<PageKey, string> = {
 };
 
 function pathToPage(pathname: string): PageKey {
+  if (pathname.startsWith('/events')) return 'events';
   const entry = Object.entries(PAGE_PATHS).find(([, path]) => path === pathname);
   return (entry?.[0] as PageKey) ?? 'dashboard';
 }
@@ -366,14 +368,20 @@ function AdminContent() {
           ) : currentPage === 'features' ? (
             <FeatureFlagsPage onNotify={notify} />
           ) : currentPage === 'events' ? (
-            <EventList
-              initialEventId={selectedEventId}
-              onEventIdConsumed={() => setSelectedEventId(null)}
-              initialCreate={createEventIntent}
-              onInitialCreateConsumed={() => setCreateEventIntent(false)}
-              onNotify={notify}
-              onNavigateToRaceManager={(date) => { setRaceDayInitialDate(date); setCurrentPage('race-day'); }}
-            />
+            <Routes>
+              <Route path="/events/:slug" element={<EventDetailPage onNotify={notify} />} />
+              <Route path="/events" element={
+                <EventList
+                  initialEventId={selectedEventId}
+                  onEventIdConsumed={() => setSelectedEventId(null)}
+                  initialCreate={createEventIntent}
+                  onInitialCreateConsumed={() => setCreateEventIntent(false)}
+                  onNotify={notify}
+                  onNavigateToRaceManager={(date) => { setRaceDayInitialDate(date); setCurrentPage('race-day'); }}
+                  onViewEventDetail={(slug) => navigate(`/events/${slug}`)}
+                />
+              } />
+            </Routes>
           ) : currentPage === 'hero-themes' ? (
             <HeroThemesPage />
           ) : currentPage === 'sponsors' ? (
