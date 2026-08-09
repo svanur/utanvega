@@ -316,6 +316,17 @@ export function useEvents() {
         await fetchEvents();
     };
 
+    const updateEventSilently = async (id: string, input: Omit<UpdateEventInput, 'id'>) => {
+        await apiFetch(`/api/v1/admin/events/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ id, ...input }),
+        });
+    };
+
+    const patchEventLocally = (id: string, patch: Partial<EventSummaryDto>) => {
+        setEvents(prev => prev.map(e => e.id === id ? { ...e, ...patch } : e));
+    };
+
     const deleteEvent = async (id: string) => {
         await apiFetch(`/api/v1/admin/events/${id}`, { method: 'DELETE' });
         setEvents(prev => prev.filter(event => event.id !== id));
@@ -338,6 +349,13 @@ export function useEvents() {
             body: JSON.stringify({ id, ...input }),
         });
         await fetchEvents();
+    };
+
+    const updateEditionSilently = async (id: string, input: Omit<UpdateEditionInput, 'id'>) => {
+        await apiFetch(`/api/v1/admin/editions/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ id, ...input }),
+        });
     };
 
     const deleteEdition = async (id: string) => {
@@ -380,10 +398,13 @@ export function useEvents() {
         refresh: fetchEvents,
         createEvent,
         updateEvent,
+        updateEventSilently,
+        patchEventLocally,
         deleteEvent,
         getEvent,
         createEdition,
         updateEdition,
+        updateEditionSilently,
         deleteEdition,
         generateEditionsForSeason,
         createRace,

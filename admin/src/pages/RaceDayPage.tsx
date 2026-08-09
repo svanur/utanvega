@@ -6,6 +6,7 @@ import {
     Select, MenuItem, ToggleButton, ToggleButtonGroup,
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import LinkIcon from '@mui/icons-material/Link';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
@@ -18,6 +19,7 @@ import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import dayjs, { type Dayjs } from 'dayjs';
 import { apiFetch } from '../hooks/api';
 import type { RaceStatus, TicketStatus } from '../hooks/useEvents';
+import { formatMinutesToHHmm, parseHHmmToMinutes, normalizeCutoffTimeInput, normalizeCutoffTimeOnBlur } from '../utils/cutoffTime';
 
 const RACE_STATUSES: RaceStatus[] = ['Active', 'Completed', 'Cancelled', 'Hidden'];
 const TICKET_STATUSES: TicketStatus[] = ['Available', 'AlmostSoldOut', 'SoldOut', 'Closed', 'NotStarted', 'Free'];
@@ -90,6 +92,8 @@ export default function RaceDayPage({ onNotify, onNavigateToEvent, initialDate }
     const [updatingEditions, setUpdatingEditions] = useState<Set<string>>(new Set());
     const [raceNames, setRaceNames] = useState<Record<string, { name: string; nameEn: string }>>({});
     const [raceDistanceLabels, setRaceDistanceLabels] = useState<Record<string, { distanceLabel: string; distanceLabelEn: string }>>({});
+    const [raceStartTimes, setRaceStartTimes] = useState<Record<string, string>>({});
+    const [raceCutoffTimes, setRaceCutoffTimes] = useState<Record<string, string>>({});
     const [raceNameLang, setRaceNameLang] = useState<'is' | 'en'>('is');
     const [sortByStart, setSortByStart] = useState(false);
     const [bulkEvents, setBulkEvents] = useState(false);
@@ -339,7 +343,7 @@ export default function RaceDayPage({ onNotify, onNavigateToEvent, initialDate }
     const updateRaceField = async (
         race: RaceDayRace,
         editionId: string,
-        patch: { status?: RaceStatus; ticketStatus?: TicketStatus; name?: string; nameEn?: string; distanceLabel?: string; distanceLabelEn?: string }
+        patch: { status?: RaceStatus; ticketStatus?: TicketStatus; name?: string; nameEn?: string; distanceLabel?: string; distanceLabelEn?: string; startTime?: string | null; cutoffMinutes?: number | null }
     ) => {
         setUpdatingRace(prev => new Set(prev).add(race.id));
         try {
@@ -351,13 +355,15 @@ export default function RaceDayPage({ onNotify, onNavigateToEvent, initialDate }
                     nameEn: patch.nameEn !== undefined ? (patch.nameEn || null) : race.nameEn,
                     distanceLabel: patch.distanceLabel !== undefined ? (patch.distanceLabel || null) : race.distanceLabel,
                     distanceLabelEn: patch.distanceLabelEn !== undefined ? (patch.distanceLabelEn || null) : race.distanceLabelEn,
-                    cutoffMinutes: race.cutoffMinutes, description: null,
+                    cutoffMinutes: patch.cutoffMinutes !== undefined ? patch.cutoffMinutes : race.cutoffMinutes,
+                    description: null,
                     status: patch.status ?? race.status,
                     sortOrder: race.sortOrder,
                     ticketStatus: patch.ticketStatus ?? race.ticketStatus,
                     maxParticipants: null, itraPoints: null, certifiedBy: null,
                     prizeMoney: 0, championshipCategory: null, dateOfRace: null,
-                    startTime: race.startTime, activityType: race.activityType, trailId: null,
+                    startTime: patch.startTime !== undefined ? patch.startTime : race.startTime,
+                    activityType: race.activityType, trailId: null,
                     eventEditionId: editionId,
                 }),
             });
@@ -991,19 +997,60 @@ export default function RaceDayPage({ onNotify, onNavigateToEvent, initialDate }
                                                             );
                                                         })()}
                                                     </TableCell>
-                                                    <TableCell>
-                                                        <Typography variant="body2" sx={{ fontVariantNumeric: 'tabular-nums' }}>
-                                                            {race.startTime ? race.startTime.slice(0, 5) : '—'}
-                                                        </Typography>
+                                                    <TableCell sx={{ minWidth: 90 }}>
+                                                        <TimePicker
+                                                            ampm={false}
+                                                            value={(() => {
+                                                                const t = raceStartTimes[race.id] ?? (race.startTime ? race.startTime.slice(0, 5) : null);
+                                                                return t ? dayjs(`${dateStr}T${t}`) : null;
+                                                            })()}
+                                                            onChange={val => {
+                                                                const str = val?.isValid() ? val.format('HH:mm') : '';
+                                                                setRaceStartTimes(prev => ({ ...prev, [race.id]: str }));
+                                                            }}
+                                                            onAccept={val => {
+                                                                const newTime = val?.isValid() ? `${val.format('HH:mm')}:00` : null;
+                                                                if (newTime !== (race.startTime ?? null))
+                                                                    updateRaceField(race, ed.id, { startTime: newTime });
+                                                            }}
+                                                            disabled={isSaving}
+                                                            slotProps={{
+                                                                textField: {
+                                                                    size: 'small',
+                                                                    variant: 'standard',
+                                                                    inputProps: { style: { fontSize: '0.875rem', fontVariantNumeric: 'tabular-nums', width: 52 } },
+                                                                    onBlur: () => {
+                                                                        const str = raceStartTimes[race.id];
+                                                                        if (str === undefined) return;
+                                                                        const newTime = str ? `${str}:00` : null;
+                                                                        if (newTime !== (race.startTime ?? null))
+                                                                            updateRaceField(race, ed.id, { startTime: newTime });
+                                                                    },
+                                                                },
+                                                            }}
+                                                        />
                                                     </TableCell>
-                                                    <TableCell>
-                                                        <Typography variant="body2" sx={{ fontVariantNumeric: 'tabular-nums' }} color={
-                                                            race.startTime && race.cutoffMinutes ? 'text.primary' : 'text.disabled'
-                                                        }>
-                                                            {race.startTime && race.cutoffMinutes
-                                                                ? dayjs(`${dateStr}T${race.startTime}`).add(race.cutoffMinutes, 'minute').format('HH:mm')
-                                                                : '—'}
-                                                        </Typography>
+                                                    <TableCell sx={{ minWidth: 80 }}>
+                                                        <TextField
+                                                            size="small"
+                                                            placeholder="0400"
+                                                            value={raceCutoffTimes[race.id] ?? (formatMinutesToHHmm(race.cutoffMinutes) ?? '')}
+                                                            onChange={e => setRaceCutoffTimes(prev => ({ ...prev, [race.id]: normalizeCutoffTimeInput(e.target.value) }))}
+                                                            onBlur={() => {
+                                                                const raw = raceCutoffTimes[race.id];
+                                                                if (raw === undefined) return;
+                                                                const normalized = normalizeCutoffTimeOnBlur(raw);
+                                                                setRaceCutoffTimes(prev => ({ ...prev, [race.id]: normalized }));
+                                                                const newMinutes = normalized ? parseHHmmToMinutes(normalized) : null;
+                                                                if (newMinutes !== race.cutoffMinutes)
+                                                                    updateRaceField(race, ed.id, { cutoffMinutes: newMinutes });
+                                                            }}
+                                                            onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+                                                            disabled={isSaving}
+                                                            inputProps={{ style: { fontSize: '0.875rem', fontVariantNumeric: 'tabular-nums' } }}
+                                                            variant="standard"
+                                                            sx={{ width: 70 }}
+                                                        />
                                                     </TableCell>
                                                     <TableCell>
                                                         {isSaving || updatingRace.has(race.id) ? (
