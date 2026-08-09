@@ -1,6 +1,6 @@
 namespace Utanvega.Backend.Core.Entities;
 
-public class BetaFeedback
+public class BetaFeedback  // table name: "Feedback" (see DbContext)
 {
     public Guid Id { get; set; }
     public string PageUrl { get; set; } = "";
@@ -11,6 +11,9 @@ public class BetaFeedback
     public string? StepsToReproduce { get; set; }
     public string? BrowserInfo { get; set; }   // JSON blob
     public string? ScreenshotUrl { get; set; }
-    public string Status { get; set; } = "new"; // new | reviewed | closed
+    public string Status { get; set; } = "new";     // new | reviewed | closed
+    public string Priority { get; set; } = "medium"; // low | medium | high
+    public int? GitHubIssue { get; set; }
+    public string? AdminComment { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
 }

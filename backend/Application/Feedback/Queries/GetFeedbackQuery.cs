@@ -15,6 +15,9 @@ public record FeedbackDto(
     string? BrowserInfo,
     string? ScreenshotUrl,
     string Status,
+    string Priority,
+    int? GitHubIssue,
+    string? AdminComment,
     DateTimeOffset CreatedAt
 );
 
@@ -35,7 +38,8 @@ public class GetFeedbackQueryHandler(UtanvegaDbContext db) : IRequestHandler<Get
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
             .Select(f => new FeedbackDto(f.Id, f.PageUrl, f.Message, f.Category, f.Name, f.Email,
-                                         f.StepsToReproduce, f.BrowserInfo, f.ScreenshotUrl, f.Status, f.CreatedAt))
+                                         f.StepsToReproduce, f.BrowserInfo, f.ScreenshotUrl,
+                                         f.Status, f.Priority, f.GitHubIssue, f.AdminComment, f.CreatedAt))
             .ToListAsync(cancellationToken);
 
         return new GetFeedbackResult(items, total);

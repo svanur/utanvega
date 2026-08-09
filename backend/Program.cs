@@ -2103,13 +2103,14 @@ app.MapGet("/api/v1/admin/feedback", [Authorize(Policy = "AdminOnly")] async (
 })
 .WithName("GetFeedback");
 
-app.MapPatch("/api/v1/admin/feedback/{id:guid}/status", [Authorize(Policy = "AdminOnly")] async (
-    Guid id, PatchFeedbackStatusRequest req, IMediator mediator) =>
+app.MapPatch("/api/v1/admin/feedback/{id:guid}", [Authorize(Policy = "AdminOnly")] async (
+    Guid id, PatchFeedbackRequest req, IMediator mediator) =>
 {
-    var ok = await mediator.Send(new PatchFeedbackStatusCommand(id, req.Status));
+    var ok = await mediator.Send(new PatchFeedbackCommand(
+        id, req.Status, req.Priority, req.GitHubIssue, req.ClearGitHubIssue ?? false, req.AdminComment));
     return ok ? Results.Ok() : Results.NotFound();
 })
-.WithName("PatchFeedbackStatus");
+.WithName("PatchFeedback");
 
 if (isMigrateMode)
 {
@@ -2137,7 +2138,8 @@ public record SendTipRequest(string PageUrl, string Message);
 public record SubmitFeedbackRequest(
     string PageUrl, string Message, string? Category, string? Name, string? Email,
     string? StepsToReproduce, string? BrowserInfo, string? ScreenshotUrl);
-public record PatchFeedbackStatusRequest(string Status);
+public record PatchFeedbackRequest(
+    string? Status, string? Priority, int? GitHubIssue, bool? ClearGitHubIssue, string? AdminComment);
 public record TagCreateDto(string Name, string? Color, string? NameEn = null, Dictionary<string, string>? TranslationHashes = null);
 public record TranslateRequest(List<string> Texts);
 public record BulkAddTagRequest(List<Guid> TrailIds, Guid TagId);

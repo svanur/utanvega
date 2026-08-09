@@ -306,6 +306,7 @@ public class UtanvegaDbContext : DbContext
 
         modelBuilder.Entity<BetaFeedback>(entity =>
         {
+            entity.ToTable("Feedback");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.PageUrl).IsRequired().HasMaxLength(500);
             entity.Property(e => e.Message).IsRequired().HasMaxLength(2000);
@@ -314,8 +315,10 @@ public class UtanvegaDbContext : DbContext
             entity.Property(e => e.Email).HasMaxLength(200);
             entity.Property(e => e.StepsToReproduce).HasMaxLength(2000);
             entity.Property(e => e.BrowserInfo).HasColumnType("jsonb");
-            entity.Property(e => e.ScreenshotUrl).HasMaxLength(1000);
+            entity.Property(e => e.ScreenshotUrl).HasColumnType("text");
             entity.Property(e => e.Status).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Priority).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.AdminComment).HasMaxLength(2000);
             entity.HasIndex(e => e.Status);
             entity.HasIndex(e => e.CreatedAt);
         });

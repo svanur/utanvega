@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NetTopologySuite.Geometries;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -12,9 +13,11 @@ using Utanvega.Backend.Infrastructure.Persistence;
 namespace Utanvega.Backend.Migrations
 {
     [DbContext(typeof(UtanvegaDbContext))]
-    partial class UtanvegaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260809170256_FixFeedbackScreenshotColumn")]
+    partial class FixFeedbackScreenshotColumn
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -30,10 +33,6 @@ namespace Utanvega.Backend.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("AdminComment")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
-
                     b.Property<string>("BrowserInfo")
                         .HasColumnType("jsonb");
 
@@ -48,9 +47,6 @@ namespace Utanvega.Backend.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<int?>("GitHubIssue")
-                        .HasColumnType("integer");
-
                     b.Property<string>("Message")
                         .IsRequired()
                         .HasMaxLength(2000)
@@ -64,11 +60,6 @@ namespace Utanvega.Backend.Migrations
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
-
-                    b.Property<string>("Priority")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
 
                     b.Property<string>("ScreenshotUrl")
                         .HasColumnType("text");
@@ -88,7 +79,7 @@ namespace Utanvega.Backend.Migrations
 
                     b.HasIndex("Status");
 
-                    b.ToTable("Feedback", (string)null);
+                    b.ToTable("BetaFeedback");
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.ChangeLog", b =>
