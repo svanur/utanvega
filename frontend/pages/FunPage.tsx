@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Box, Tabs, Tab, Stack, Typography } from '@mui/material';
+import { Box, Tabs, Tab, Typography } from '@mui/material';
 import type { PaletteMode } from '@mui/material';
 import Layout from '../components/Layout';
 import ShareButtons from '../components/ShareButtons';
@@ -65,20 +65,25 @@ export default function FunPage({ mode, onToggleMode }: FunPageProps) {
                 </Typography>
             ) : (
                 <>
-                    <Stack direction="row" alignItems="center" justifyContent="center" sx={{ mb: 3, position: 'relative' }}>
+                    <Box sx={{ mb: 3, display: 'flex', alignItems: 'center' }}>
                         <Tabs
                             value={tab >= enabledGames.length ? 0 : tab}
                             onChange={handleTabChange}
-                            centered
+                            variant="scrollable"
+                            scrollButtons="auto"
+                            allowScrollButtonsMobile
+                            sx={{ flexGrow: 1 }}
                         >
                             {enabledGames.map(g => (
                                 <Tab key={g.key} label={g.label} />
                             ))}
                         </Tabs>
-                        <Box sx={{ position: 'absolute', right: 0 }}>
-                            {isEnabled('share_trail') && <ShareButtons title={enabledGames[tab >= enabledGames.length ? 0 : tab]?.label ?? ''} />}
-                        </Box>
-                    </Stack>
+                        {isEnabled('share_trail') && (
+                            <Box sx={{ flexShrink: 0, ml: 1 }}>
+                                <ShareButtons title={enabledGames[tab >= enabledGames.length ? 0 : tab]?.label ?? ''} />
+                            </Box>
+                        )}
+                    </Box>
 
                     {enabledGames[tab >= enabledGames.length ? 0 : tab]?.component}
                 </>
