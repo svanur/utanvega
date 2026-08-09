@@ -2078,6 +2078,13 @@ app.MapPost("/api/v1/feedback", async (SubmitFeedbackRequest req, IMediator medi
         return Results.BadRequest("Message is required and must be under 2000 characters.");
     if (string.IsNullOrWhiteSpace(req.PageUrl))
         return Results.BadRequest("PageUrl is required.");
+    if (req.Email is not null)
+    {
+        try { _ = new System.Net.Mail.MailAddress(req.Email); }
+        catch { return Results.BadRequest("Email format is invalid."); }
+    }
+    if (req.ScreenshotUrl?.Length > 500_000)
+        return Results.BadRequest("Screenshot exceeds maximum allowed size.");
 
     try
     {

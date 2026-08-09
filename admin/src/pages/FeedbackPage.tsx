@@ -211,8 +211,8 @@ export default function FeedbackPage({ onNotify }: { onNotify: (msg: string, sev
         setSelected(s => s?.id === id ? { ...s, ...patch } : s);
     }
 
-    async function cycleStatus(item: FeedbackDto) {
-        const next = STATUS_CYCLE[item.status] ?? 'new';
+    async function cycleStatus(item: FeedbackDto, targetStatus?: string) {
+        const next = targetStatus ?? STATUS_CYCLE[item.status] ?? 'new';
         const now = new Date().toISOString();
         setCycling(prev => new Set(prev).add(item.id));
         patchLocal(item.id, {
@@ -450,7 +450,7 @@ export default function FeedbackPage({ onNotify }: { onNotify: (msg: string, sev
                                             )}
                                             {item.status !== 'closed' && (
                                                 <Tooltip title="Close">
-                                                    <IconButton size="small" onClick={() => void cycleStatus({ ...item, status: 'reviewed' })}>
+                                                    <IconButton size="small" onClick={() => void cycleStatus(item, 'closed')}>
                                                         <ArchiveIcon fontSize="small" />
                                                     </IconButton>
                                                 </Tooltip>
