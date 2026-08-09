@@ -1,8 +1,9 @@
-import { useState } from 'react';
 import { TextField, InputAdornment, Chip, Tooltip, IconButton, Box } from '@mui/material';
 import type { TextFieldProps } from '@mui/material';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import BilingualExpandDialog from './BilingualExpandDialog';
+import { useBilingualLang } from '../contexts/BilingualLangContext';
+import { useState } from 'react';
 
 type BilingualTextFieldProps = Omit<TextFieldProps, 'value' | 'onChange'> & {
   valueIs: string;
@@ -19,19 +20,19 @@ export default function BilingualTextField({
   label,
   ...rest
 }: BilingualTextFieldProps) {
-  const [lang, setLang] = useState<'is' | 'en'>('is');
+  const { lang, toggle } = useBilingualLang();
   const [expandOpen, setExpandOpen] = useState(false);
   const isEn = lang === 'en';
   const isMultiline = !!rest.multiline;
   const { sx: _sx, ...restWithoutSx } = rest;
 
-  const toggle = (
-    <InputAdornment position="end" sx={{ alignItems: 'flex-start', pt: isMultiline ? 1 : 0 }}>
-      <Tooltip title={isEn ? 'Switch to Icelandic' : 'Switch to English'}>
+  const chip = (
+    <InputAdornment position="end" sx={{ alignItems: isMultiline ? 'flex-start' : 'center', pt: isMultiline ? 1 : 0 }}>
+      <Tooltip title={isEn ? 'Switch all fields to Icelandic' : 'Switch all fields to English'}>
         <Chip
           label={isEn ? 'IS' : 'EN'}
           size="small"
-          onClick={() => setLang(isEn ? 'is' : 'en')}
+          onClick={toggle}
           color={isEn ? 'default' : 'primary'}
           variant={isEn ? 'outlined' : 'filled'}
           sx={{ fontWeight: 700, fontSize: '0.7rem', cursor: 'pointer', height: 22, minWidth: 32 }}
@@ -39,11 +40,7 @@ export default function BilingualTextField({
       </Tooltip>
       {isMultiline && (
         <Tooltip title="Expand — view & edit IS and EN side by side">
-          <IconButton
-            size="small"
-            onClick={() => setExpandOpen(true)}
-            sx={{ ml: 0.5, p: 0.25 }}
-          >
+          <IconButton size="small" onClick={() => setExpandOpen(true)} sx={{ ml: 0.5, p: 0.25 }}>
             <OpenInFullIcon sx={{ fontSize: 15 }} />
           </IconButton>
         </Tooltip>
@@ -61,7 +58,7 @@ export default function BilingualTextField({
           onChange={(e) => isEn ? onChangeEn(e.target.value) : onChangeIs(e.target.value)}
           InputProps={{
             ...((restWithoutSx as { InputProps?: object }).InputProps ?? {}),
-            endAdornment: toggle,
+            endAdornment: chip,
           }}
           sx={{
             width: '100%',
@@ -80,10 +77,7 @@ export default function BilingualTextField({
           label={String(label ?? '')}
           valueIs={valueIs}
           valueEn={valueEn}
-          onSave={(is, en) => {
-            onChangeIs(is);
-            onChangeEn(en);
-          }}
+          onSave={(is, en) => { onChangeIs(is); onChangeEn(en); }}
         />
       )}
     </>

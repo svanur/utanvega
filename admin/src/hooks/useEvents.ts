@@ -282,14 +282,16 @@ export function useEvents() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const fetchEvents = async () => {
+    const fetchEvents = async (): Promise<EventSummaryDto[]> => {
         try {
             setLoading(true);
             const data = await apiFetch<EventSummaryDto[]>('/api/v1/admin/events');
             setEvents(data);
             setError(null);
+            return data;
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Unknown error');
+            return [];
         } finally {
             setLoading(false);
         }
@@ -299,13 +301,14 @@ export function useEvents() {
         void fetchEvents();
     }, []);
 
-    const createEvent = async (input: CreateEventInput) => {
-        const result = await apiFetch<{ id: string }>('/api/v1/admin/events', {
+    const createEvent = async (input: CreateEventInput): Promise<{ id: string; slug: string }> => {
+        const result = await apiFetch<{ id: string; slug?: string }>('/api/v1/admin/events', {
             method: 'POST',
             body: JSON.stringify(input),
         });
-        await fetchEvents();
-        return result.id;
+        const refreshed = await fetchEvents();
+        const slug = result.slug ?? refreshed.find(e => e.id === result.id)?.slug ?? result.id;
+        return { id: result.id, slug };
     };
 
     const updateEvent = async (id: string, input: Omit<UpdateEventInput, 'id'>) => {

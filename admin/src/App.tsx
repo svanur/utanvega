@@ -45,6 +45,7 @@ const TagManagement = lazy(() => import('./pages/TagManagement'));
 const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));
 const FeatureFlagsPage = lazy(() => import('./pages/FeatureFlagsPage'));
 const EventList = lazy(() => import('./pages/EventList'));
+const EventsListPage = lazy(() => import('./pages/EventsListPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const HeroThemesPage = lazy(() => import('./pages/HeroThemesPage'));
 const SponsorsPage = lazy(() => import('./pages/SponsorsPage'));
@@ -371,14 +372,10 @@ function AdminContent() {
             <Routes>
               <Route path="/events/:slug" element={<EventDetailPage onNotify={notify} />} />
               <Route path="/events" element={
-                <EventList
-                  initialEventId={selectedEventId}
-                  onEventIdConsumed={() => setSelectedEventId(null)}
+                <EventsListPage
+                  onNotify={notify}
                   initialCreate={createEventIntent}
                   onInitialCreateConsumed={() => setCreateEventIntent(false)}
-                  onNotify={notify}
-                  onNavigateToRaceManager={(date) => { setRaceDayInitialDate(date); setCurrentPage('race-day'); }}
-                  onViewEventDetail={(slug) => navigate(`/events/${slug}`)}
                 />
               } />
             </Routes>

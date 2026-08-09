@@ -39,18 +39,22 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 
 import {
   useEventDetail,
+  type EventDetailDto,
   type EventEditionDto,
   type RaceDto,
   type RegistrationStatus,
+  type UpdateEventInput,
 } from '../hooks/useEvents';
 import { useTrails } from '../hooks/useTrails';
 import { apiFetch } from '../hooks/api';
-import RaceDrawer from '../components/events/RaceDrawer';
+import RaceFormCard from '../components/events/RaceFormCard';
+import EventFormCard from '../components/events/EventFormCard';
+import BilingualTextField from '../components/BilingualTextField';
+import { BilingualLangProvider, useBilingualLang } from '../contexts/BilingualLangContext';
 import {
   getRaceStatusColor,
   getTicketStatusColor,
   raceHasStaleTx,
-  createEmptyRaceForm,
 } from '../utils/eventForms';
 
 const PUBLIC_SITE_URL = ((import.meta.env.VITE_PUBLIC_SITE_URL ?? '') as string).replace(/\/$/, '');
@@ -123,7 +127,21 @@ interface EditionDialogProps {
   onNotify: (msg: ReactNode, sev?: 'success' | 'error') => void;
 }
 
-function EditionDialog({ open, edition, eventId, onClose, onSaved, onNotify }: EditionDialogProps) {
+function LangToggleButton() {
+  const { lang, toggle } = useBilingualLang();
+  return (
+    <Chip
+      label={lang === 'is' ? 'IS' : 'EN'}
+      size="small"
+      onClick={toggle}
+      color={lang === 'en' ? 'primary' : 'default'}
+      variant={lang === 'en' ? 'filled' : 'outlined'}
+      sx={{ fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', minWidth: 36 }}
+    />
+  );
+}
+
+function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onNotify }: EditionDialogProps) {
   const isNew = edition === null;
   const [form, setForm] = useState<EditionFormState>(edition ? buildEditionForm(edition) : emptyEditionForm());
   const [saving, setSaving] = useState(false);
@@ -171,7 +189,12 @@ function EditionDialog({ open, edition, eventId, onClose, onSaved, onNotify }: E
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth
       TransitionProps={{ onEnter: () => setForm(edition ? buildEditionForm(edition) : emptyEditionForm()) }}>
-      <DialogTitle>{isNew ? 'Add edition' : 'Edit edition'}</DialogTitle>
+      <DialogTitle>
+        <Stack direction="row" justifyContent="space-between" alignItems="center">
+          {isNew ? 'Add edition' : 'Edit edition'}
+          <LangToggleButton />
+        </Stack>
+      </DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
           <Stack direction="row" spacing={1.5}>
@@ -182,12 +205,11 @@ function EditionDialog({ open, edition, eventId, onClose, onSaved, onNotify }: E
             <TextField size="small" fullWidth label="End date" type="date" value={form.endDate}
               onChange={e => set('endDate', e.target.value)} InputLabelProps={{ shrink: true }} />
           </Stack>
-          <Stack direction="row" spacing={1.5}>
-            <TextField size="small" fullWidth label="Title (IS)" value={form.title}
-              onChange={e => set('title', e.target.value)} />
-            <TextField size="small" fullWidth label="Title (EN)" value={form.titleEn}
-              onChange={e => set('titleEn', e.target.value)} />
-          </Stack>
+          <BilingualTextField
+            size="small" fullWidth label="Title"
+            valueIs={form.title} valueEn={form.titleEn}
+            onChangeIs={v => set('title', v)} onChangeEn={v => set('titleEn', v)}
+          />
           <FormControl size="small" fullWidth>
             <InputLabel>Registration status</InputLabel>
             <Select value={form.registrationStatus} label="Registration status"
@@ -199,12 +221,11 @@ function EditionDialog({ open, edition, eventId, onClose, onSaved, onNotify }: E
             onChange={e => set('registrationUrl', e.target.value)} />
           <TextField size="small" fullWidth label="Results URL" value={form.resultsUrl}
             onChange={e => set('resultsUrl', e.target.value)} />
-          <Stack direction="row" spacing={1.5}>
-            <TextField size="small" fullWidth multiline rows={2} label="Notes (IS)" value={form.notes}
-              onChange={e => set('notes', e.target.value)} />
-            <TextField size="small" fullWidth multiline rows={2} label="Notes (EN)" value={form.notesEn}
-              onChange={e => set('notesEn', e.target.value)} />
-          </Stack>
+          <BilingualTextField
+            size="small" fullWidth label="Notes" multiline rows={2}
+            valueIs={form.notes} valueEn={form.notesEn}
+            onChangeIs={v => set('notes', v)} onChangeEn={v => set('notesEn', v)}
+          />
         </Stack>
       </DialogContent>
       <DialogActions>
@@ -214,6 +235,14 @@ function EditionDialog({ open, edition, eventId, onClose, onSaved, onNotify }: E
         </Button>
       </DialogActions>
     </Dialog>
+  );
+}
+
+function EditionDialog(props: EditionDialogProps) {
+  return (
+    <BilingualLangProvider>
+      <EditionDialogInner {...props} />
+    </BilingualLangProvider>
   );
 }
 
@@ -232,9 +261,10 @@ export default function EventDetailPage({ onNotify }: EventDetailPageProps) {
   const [expandedEditionIds, setExpandedEditionIds] = useState<Set<string>>(new Set());
   const [showOlderEditions, setShowOlderEditions] = useState(false);
 
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerRace, setDrawerRace] = useState<RaceDto | null>(null);
-  const [drawerEdition, setDrawerEdition] = useState<EventEditionDto | null>(null);
+  // { editionId, race: RaceDto | null } — null race = create mode; undefined = no form open
+  const [raceForm, setRaceForm] = useState<{ editionId: string; race: RaceDto | null } | null>(null);
+
+  const [editingEvent, setEditingEvent] = useState(false);
 
   const [editionDialogOpen, setEditionDialogOpen] = useState(false);
   const [editingEdition, setEditingEdition] = useState<EventEditionDto | null>(null);
@@ -264,20 +294,33 @@ export default function EventDetailPage({ onNotify }: EventDetailPageProps) {
       return next;
     });
 
-  const openRaceDrawer = (race: RaceDto | null, edition: EventEditionDto) => {
-    setDrawerRace(race);
-    setDrawerEdition(edition);
-    setDrawerOpen(true);
+  const openRaceForm = (race: RaceDto | null, edition: EventEditionDto) => {
+    // Ensure the edition is expanded so the form is visible
+    setExpandedEditionIds(prev => { const n = new Set(prev); n.add(edition.id); return n; });
+    setRaceForm({ editionId: edition.id, race });
   };
 
   const handleRaceSaved = async () => {
-    setDrawerOpen(false);
+    setRaceForm(null);
     await refresh();
   };
 
   const handleRaceDeleted = async () => {
-    setDrawerOpen(false);
+    setRaceForm(null);
     await refresh();
+  };
+
+  const handleUpdateEvent = async (id: string, input: Omit<UpdateEventInput, 'id'>) => {
+    await apiFetch(`/api/v1/admin/events/${id}`, {
+      method: 'PUT', body: JSON.stringify({ id, ...input }),
+    });
+    await refresh();
+  };
+
+  const handleEventSaved = (updated: EventDetailDto) => {
+    void refresh();
+    // header will re-render on next refresh; detail already patched optimistically in EventFormCard
+    void updated;
   };
 
   const handleDeleteEdition = async (edition: EventEditionDto) => {
@@ -387,12 +430,13 @@ export default function EventDetailPage({ onNotify }: EventDetailPageProps) {
                 </Button>
               </Tooltip>
             )}
-            <Tooltip title="Edit in Events list">
-              <Button size="small" variant="outlined" startIcon={<EditIcon />}
-                onClick={() => navigate('/events', { state: { openEventId: detail.id } })}>
-                Edit event
-              </Button>
-            </Tooltip>
+            <Button size="small"
+              variant={editingEvent ? 'contained' : 'outlined'}
+              startIcon={<EditIcon />}
+              onClick={() => setEditingEvent(v => !v)}
+            >
+              {editingEvent ? 'Close editor' : 'Edit event'}
+            </Button>
             <Button size="small" variant="contained" startIcon={<AddIcon />}
               onClick={() => { setEditingEdition(null); setEditionDialogOpen(true); }}>
               Add edition
@@ -405,6 +449,16 @@ export default function EventDetailPage({ onNotify }: EventDetailPageProps) {
           </Typography>
         )}
       </Box>
+
+      {editingEvent && (
+        <EventFormCard
+          event={detail}
+          onClose={() => setEditingEvent(false)}
+          onSaved={handleEventSaved}
+          onNotify={onNotify}
+          onUpdateEvent={handleUpdateEvent}
+        />
+      )}
 
       {/* Editions */}
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
@@ -554,7 +608,7 @@ export default function EventDetailPage({ onNotify }: EventDetailPageProps) {
                   <Typography variant="caption" fontWeight={600} textTransform="uppercase" letterSpacing={0.5} color="text.secondary">
                     Races
                   </Typography>
-                  <Button size="small" startIcon={<AddIcon />} onClick={() => openRaceDrawer(null, edition)}>
+                  <Button size="small" startIcon={<AddIcon />} onClick={() => openRaceForm(null, edition)}>
                     Add race
                   </Button>
                 </Stack>
@@ -588,9 +642,9 @@ export default function EventDetailPage({ onNotify }: EventDetailPageProps) {
                               hover
                               sx={{
                                 cursor: 'pointer',
-                                bgcolor: drawerOpen && drawerRace?.id === race.id ? 'primary.50' : undefined,
+                                bgcolor: raceForm?.race?.id === race.id ? 'primary.50' : undefined,
                               }}
-                              onClick={() => openRaceDrawer(race, edition)}
+                              onClick={() => openRaceForm(race, edition)}
                             >
                               <TableCell sx={{ px: 0.5, color: 'text.disabled' }}>
                                 <DragHandleIcon fontSize="small" />
@@ -630,7 +684,7 @@ export default function EventDetailPage({ onNotify }: EventDetailPageProps) {
                               <TableCell align="right" onClick={e => e.stopPropagation()}>
                                 <Stack direction="row" justifyContent="flex-end" spacing={0.25}>
                                   <Tooltip title="Edit race">
-                                    <IconButton size="small" onClick={() => openRaceDrawer(race, edition)}>
+                                    <IconButton size="small" onClick={() => openRaceForm(race, edition)}>
                                       <EditIcon fontSize="small" />
                                     </IconButton>
                                   </Tooltip>
@@ -648,30 +702,31 @@ export default function EventDetailPage({ onNotify }: EventDetailPageProps) {
                     </TableBody>
                   </Table>
                 )}
+
+                {/* Inline race form — shown when this edition is the target */}
+                {raceForm?.editionId === edition.id && (
+                  <RaceFormCard
+                    race={raceForm.race}
+                    edition={edition}
+                    trails={trails}
+                    onClose={() => setRaceForm(null)}
+                    onSaved={() => void handleRaceSaved()}
+                    onDeleted={() => void handleRaceDeleted()}
+                    onNotify={onNotify}
+                    onCreateRace={(input) => apiFetch(`/api/v1/admin/editions/${edition.id}/races`, {
+                      method: 'POST', body: JSON.stringify(input),
+                    }).then((r) => (r as { id: string }).id)}
+                    onUpdateRace={(id, input) => apiFetch(`/api/v1/admin/races/${id}`, {
+                      method: 'PUT', body: JSON.stringify({ id, ...input }),
+                    })}
+                    onDeleteRace={(id) => apiFetch(`/api/v1/admin/races/${id}`, { method: 'DELETE' })}
+                  />
+                )}
               </Box>
             </Collapse>
           </Box>
         );
       })}
-
-      {/* Race drawer */}
-      <RaceDrawer
-        open={drawerOpen}
-        race={drawerRace}
-        edition={drawerEdition}
-        trails={trails}
-        onClose={() => setDrawerOpen(false)}
-        onSaved={() => void handleRaceSaved()}
-        onDeleted={() => void handleRaceDeleted()}
-        onNotify={onNotify}
-        onCreateRace={(input) => apiFetch(`/api/v1/admin/editions/${drawerEdition!.id}/races`, {
-          method: 'POST', body: JSON.stringify(input),
-        }).then((r) => (r as { id: string }).id)}
-        onUpdateRace={(id, input) => apiFetch(`/api/v1/admin/races/${id}`, {
-          method: 'PUT', body: JSON.stringify({ id, ...input }),
-        })}
-        onDeleteRace={(id) => apiFetch(`/api/v1/admin/races/${id}`, { method: 'DELETE' })}
-      />
 
       {/* Edition dialog */}
       <EditionDialog
