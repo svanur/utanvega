@@ -1622,9 +1622,9 @@ app.MapGet("/api/v1/admin/prev-race-day", [Authorize(Policy = "AdminOnly")] asyn
 })
 .WithName("GetPrevRaceDay");
 
-app.MapPatch("/api/v1/admin/events/{id}/status", [Authorize(Policy = "AdminOnly")] async (IMediator mediator, Guid id, PatchEventStatusCommand body) =>
+app.MapPatch("/api/v1/admin/events/{id}/status", [Authorize(Policy = "AdminOnly")] async (IMediator mediator, Guid id, PatchEventStatusCommand body, HttpContext httpContext) =>
 {
-    var result = await mediator.Send(body with { Id = id });
+    var result = await mediator.Send(body with { Id = id, ActorUserId = GetAuthenticatedUserId(httpContext) });
     return result ? Results.NoContent() : Results.NotFound();
 })
 .WithName("PatchEventStatus");

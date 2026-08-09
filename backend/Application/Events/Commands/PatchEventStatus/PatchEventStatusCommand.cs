@@ -5,7 +5,7 @@ using Utanvega.Backend.Infrastructure.Persistence;
 
 namespace Utanvega.Backend.Application.Events.Commands.PatchEventStatus;
 
-public record PatchEventStatusCommand(Guid Id, string Status) : IRequest<bool>;
+public record PatchEventStatusCommand(Guid Id, string Status, string? ActorUserId = null) : IRequest<bool>;
 
 public class PatchEventStatusCommandHandler : IRequestHandler<PatchEventStatusCommand, bool>
 {
@@ -26,7 +26,7 @@ public class PatchEventStatusCommandHandler : IRequestHandler<PatchEventStatusCo
         if (!Enum.TryParse<EventStatus>(request.Status, out var status)) return false;
 
         ev.Status = status;
-        await _context.SaveChangesAsync(cancellationToken);
+        await _context.SaveChangesWithAuditAsync(request.ActorUserId);
         return true;
     }
 }
