@@ -358,12 +358,13 @@ export default function HigherLower() {
                         {t('higherLower.higher')}
                     </Button>
                     <Button
-                        variant="outlined"
+                        variant="contained"
+                        color="info"
                         startIcon={<SameIcon />}
                         onClick={() => handleGuess('same')}
-                        sx={{ borderRadius: 2, textTransform: 'none', minWidth: 80 }}
+                        sx={{ borderRadius: 2, flex: 1, maxWidth: 160, textTransform: 'none' }}
                     >
-                        ≈
+                        {t('higherLower.same')}
                     </Button>
                     <Button
                         variant="contained"
