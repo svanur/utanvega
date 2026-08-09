@@ -877,9 +877,10 @@
         "noGamesEnabled": "No games are currently enabled."
     },
     "higherLower": {
-        "question": "Does the right trail have higher or lower {{stat}}?",
+        "question": "Does the latter trail have higher or lower {{stat}}?",
         "higher": "Higher",
         "lower": "Lower",
+        "same": "Same",
         "gameOver": "Game Over!",
         "streak": "{{count}} correct in a row!",
         "bestStreak": "Best streak: {{count}}",
@@ -1096,6 +1097,13 @@
             "examples": {
                 "m60_5k":    "Male 60, 5K in 22:00",
                 "f45_half":  "Female 45, Half marathon in 1:50:00"
+            },
+            "ageTable": {
+                "title": "Equivalent times by age",
+                "subtitle": "What time would a runner of each age need to match your {{pct}}% effort?",
+                "age": "Age",
+                "equivalentTime": "Equivalent time",
+                "yourAge": "You"
             }
         }
     },
