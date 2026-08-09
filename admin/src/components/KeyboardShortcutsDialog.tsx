@@ -36,6 +36,7 @@ const shortcutGroups: ShortcutGroup[] = [
             { keys: ['g', 'v'], description: 'Event Health' },
             { keys: ['g', 'd'], description: 'Edition Health' },
             { keys: ['g', 'i'], description: 'Translations' },
+            { keys: ['g', 'b'], description: 'Feedback' },
             { keys: ['g', 'm'], description: 'Trail Map' },
             { keys: ['g', 'a'], description: 'Analytics' },
             { keys: ['g', 'n'], description: 'Sponsors' },

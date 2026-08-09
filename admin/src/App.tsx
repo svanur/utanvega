@@ -32,6 +32,7 @@ import KeyboardShortcutsDialog from './components/KeyboardShortcutsDialog';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { useAdminShortcuts, GO_TO_PAGES } from './hooks/useAdminShortcuts';
 import KeyboardIcon from '@mui/icons-material/Keyboard';
+import FeedbackIcon from '@mui/icons-material/Feedback';
 
 // Lazy-loaded pages (only the active page's chunk needs to load)
 const TrailList = lazy(() => import('./pages/TrailList'));
@@ -51,6 +52,7 @@ const OrganizersPage = lazy(() => import('./pages/OrganizersPage'));
 const PoolsPage = lazy(() => import('./pages/PoolsPage'));
 const TranslationHealth = lazy(() => import('./pages/TranslationHealth'));
 const RaceDayPage = lazy(() => import('./pages/RaceDayPage'));
+const FeedbackPage = lazy(() => import('./pages/FeedbackPage'));
 
 const theme = createTheme({
   palette: {
@@ -86,6 +88,7 @@ const PAGE_PATHS: Record<PageKey, string> = {
   'sponsors': '/sponsors',
   'pools': '/pools',
   'race-day': '/race-day',
+  feedback: '/feedback',
 };
 
 function pathToPage(pathname: string): PageKey {
@@ -300,6 +303,7 @@ function AdminContent() {
               { key: 'event-health' as const,        icon: <HealthAndSafetyIcon sx={{ color: '#ed6c02' }} />, label: 'Event Health' },
               { key: 'edition-health' as const,      icon: <HealthAndSafetyIcon sx={{ color: '#9c27b0' }} />, label: 'Edition Health' },
               { key: 'translation-health' as const,  icon: <TranslateIcon />,                                 label: 'Translations' },
+              { key: 'feedback' as const,            icon: <FeedbackIcon />,                                  label: 'Feedback' },
               { key: 'map' as const,                 icon: <MapIcon />,                                       label: 'Trail Map' },
               { key: 'analytics' as const,           icon: <BarChartIcon />,                                  label: 'Analytics' },
               { key: 'hero-themes' as const,         icon: <ViewDayOutlinedIcon />,                           label: 'Hero Themes' },
@@ -386,6 +390,8 @@ function AdminContent() {
             />
           ) : currentPage === 'translation-health' ? (
             <TranslationHealth onNotify={notify} />
+          ) : currentPage === 'feedback' ? (
+            <FeedbackPage onNotify={notify} />
           ) : (
             <LocationList onNotify={notify} />
           )}

@@ -275,5 +275,27 @@ internal class TestDbContext : UtanvegaDbContext
             entity.HasIndex(e => new { e.TrailId, e.ExpiresAt });
             entity.HasIndex(e => new { e.UserId, e.ExpiresAt });
         });
+
+        modelBuilder.Entity<Core.Entities.Feedback>(entity =>
+        {
+            entity.ToTable("Feedback");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.FeedbackNumber).HasDefaultValue(0);
+            entity.Property(e => e.PageUrl).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.Message).IsRequired().HasMaxLength(2000);
+            entity.Property(e => e.Category).HasMaxLength(50);
+            entity.Property(e => e.Name).HasMaxLength(200);
+            entity.Property(e => e.Email).HasMaxLength(200);
+            entity.Property(e => e.StepsToReproduce).HasMaxLength(2000);
+            entity.Property(e => e.Status).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Priority).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.AdminComment).HasMaxLength(2000);
+            entity.Property(e => e.CreatedAt)
+                  .HasConversion(v => v.UtcTicks, v => new DateTimeOffset(v, TimeSpan.Zero));
+            entity.Property(e => e.ClosedAt)
+                  .HasConversion(
+                      v => v.HasValue ? (long?)v.Value.UtcTicks : null,
+                      v => v.HasValue ? (DateTimeOffset?)new DateTimeOffset(v.Value, TimeSpan.Zero) : null);
+        });
     }
 }
