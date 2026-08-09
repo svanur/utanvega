@@ -315,33 +315,36 @@ export default function AgeGradingCalculator() {
                                 </TableRow>
                             </TableHead>
                             <TableBody>
-                                {AGE_TABLE_ROWS.map(rowAge => {
-                                    const factor = getAgeFactor(gender, rowAge);
-                                    const eqSeconds = result.ageGradedSeconds / factor;
+                                {(() => {
                                     const { tierColor } = getTier(result.percentage);
-                                    const isYou = rowAge === Math.round(ageNum / 5) * 5;
-                                    return (
-                                        <TableRow
-                                            key={rowAge}
-                                            sx={{
-                                                bgcolor: isYou ? `${tierColor}18` : undefined,
-                                                '& td': { borderColor: 'divider' },
-                                            }}
-                                        >
-                                            <TableCell sx={{ pl: 0, fontWeight: isYou ? 700 : 400 }}>
-                                                {rowAge}
-                                                {isYou && (
-                                                    <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.75 }}>
-                                                        ({t('tools.ageGrading.ageTable.yourAge')})
-                                                    </Typography>
-                                                )}
-                                            </TableCell>
-                                            <TableCell align="right" sx={{ pr: 0, fontWeight: isYou ? 700 : 400, fontVariantNumeric: 'tabular-nums' }}>
-                                                {formatSeconds(eqSeconds)}
-                                            </TableCell>
-                                        </TableRow>
-                                    );
-                                })}
+                                    const clampedAge = Math.max(AGE_TABLE_ROWS[0], Math.min(AGE_TABLE_ROWS[AGE_TABLE_ROWS.length - 1], Math.round(ageNum / 5) * 5));
+                                    return AGE_TABLE_ROWS.map(rowAge => {
+                                        const factor = getAgeFactor(gender, rowAge);
+                                        const eqSeconds = factor > 0 ? result.ageGradedSeconds / factor : null;
+                                        const isYou = rowAge === clampedAge;
+                                        return (
+                                            <TableRow
+                                                key={rowAge}
+                                                sx={{
+                                                    bgcolor: isYou ? `${tierColor}18` : undefined,
+                                                    '& td': { borderColor: 'divider' },
+                                                }}
+                                            >
+                                                <TableCell sx={{ pl: 0, fontWeight: isYou ? 700 : 400 }}>
+                                                    {rowAge}
+                                                    {isYou && (
+                                                        <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.75 }}>
+                                                            ({t('tools.ageGrading.ageTable.yourAge')})
+                                                        </Typography>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell align="right" sx={{ pr: 0, fontWeight: isYou ? 700 : 400, fontVariantNumeric: 'tabular-nums' }}>
+                                                    {eqSeconds != null ? formatSeconds(eqSeconds) : '—'}
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    });
+                                })()}
                             </TableBody>
                         </Table>
                     </TableContainer>
