@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import {
     Box, TextField, Typography, Paper, ToggleButton, ToggleButtonGroup,
     MenuItem, Select, FormControl, InputLabel, Divider, Alert, Tooltip,
-    IconButton, InputAdornment, Chip,
+    IconButton, InputAdornment, Chip, Table, TableBody, TableCell,
+    TableContainer, TableHead, TableRow,
 } from '@mui/material';
 import KeyboardArrowUp from '@mui/icons-material/KeyboardArrowUp';
 import KeyboardArrowDown from '@mui/icons-material/KeyboardArrowDown';
@@ -12,8 +13,11 @@ import { useSearchParams } from 'react-router-dom';
 import TimeSlider from './TimeSlider';
 import {
     AG_DISTANCES, calculateAgeGrade, formatSeconds, parseTimeToSeconds,
+    getAgeFactor, getTier,
 } from '../data/ageGrading';
 import type { Gender } from '../data/ageGrading';
+
+const AGE_TABLE_ROWS = [20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80];
 
 export default function AgeGradingCalculator() {
     const { t } = useTranslation();
@@ -291,6 +295,56 @@ export default function AgeGradingCalculator() {
                             </Box>
                         ))}
                     </Box>
+                </Paper>
+            )}
+
+            {result && (
+                <Paper variant="outlined" sx={{ p: 2.5, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    <Typography variant="subtitle2" fontWeight={700}>
+                        {t('tools.ageGrading.ageTable.title')}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                        {t('tools.ageGrading.ageTable.subtitle', { pct: result.percentage.toFixed(1) })}
+                    </Typography>
+                    <TableContainer>
+                        <Table size="small">
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell sx={{ fontWeight: 700, pl: 0 }}>{t('tools.ageGrading.ageTable.age')}</TableCell>
+                                    <TableCell align="right" sx={{ fontWeight: 700, pr: 0 }}>{t('tools.ageGrading.ageTable.equivalentTime')}</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {AGE_TABLE_ROWS.map(rowAge => {
+                                    const factor = getAgeFactor(gender, rowAge);
+                                    const eqSeconds = result.ageGradedSeconds / factor;
+                                    const { tierColor } = getTier(result.percentage);
+                                    const isYou = rowAge === Math.round(ageNum / 5) * 5;
+                                    return (
+                                        <TableRow
+                                            key={rowAge}
+                                            sx={{
+                                                bgcolor: isYou ? `${tierColor}18` : undefined,
+                                                '& td': { borderColor: 'divider' },
+                                            }}
+                                        >
+                                            <TableCell sx={{ pl: 0, fontWeight: isYou ? 700 : 400 }}>
+                                                {rowAge}
+                                                {isYou && (
+                                                    <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.75 }}>
+                                                        ({t('tools.ageGrading.ageTable.yourAge')})
+                                                    </Typography>
+                                                )}
+                                            </TableCell>
+                                            <TableCell align="right" sx={{ pr: 0, fontWeight: isYou ? 700 : 400, fontVariantNumeric: 'tabular-nums' }}>
+                                                {formatSeconds(eqSeconds)}
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
                 </Paper>
             )}
 
