@@ -16,6 +16,7 @@ import HistoryIcon from '@mui/icons-material/History';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import BuildIcon from '@mui/icons-material/Build';
+import FlagIcon from '@mui/icons-material/Flag';
 import type { ChangeLogDto } from '../components/ChangeLogList';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import { apiFetch } from '../hooks/api';
@@ -300,11 +301,11 @@ export default function DashboardPage({ onNewEvent, onUploadTrail, onNavigate }:
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
                     <QuickActionButton
-                        icon={<SearchIcon sx={{ fontSize: 28 }} />}
-                        label="Spotlight Search"
-                        description="Jump anywhere  (Ctrl+K)"
-                        onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
-                        color="inherit"
+                        icon={<FlagIcon sx={{ fontSize: 28 }} />}
+                        label="Race Manager"
+                        description="Setup & wrap-up race statuses"
+                        onClick={() => onNavigate('race-day')}
+                        color="secondary"
                     />
                 </Grid>
             </Grid>

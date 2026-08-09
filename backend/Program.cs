@@ -39,6 +39,10 @@ using Utanvega.Backend.Core.Services;
 using Utanvega.Backend.Application.Events.Queries.GetEvents;
 using Utanvega.Backend.Application.Events.Queries.GetEvent;
 using Utanvega.Backend.Application.Events.Queries.GetEventCalendar;
+using Utanvega.Backend.Application.Events.Queries.GetRaceDayEditions;
+using Utanvega.Backend.Application.Events.Queries.GetNextRaceDay;
+using Utanvega.Backend.Application.Events.Queries.GetPrevRaceDay;
+using Utanvega.Backend.Application.Events.Commands.PatchEventStatus;
 using Utanvega.Backend.Application.Events.Queries.GetAllEventDetails;
 using Utanvega.Backend.Application.Events.Commands.CreateEvent;
 using Utanvega.Backend.Application.Events.Commands.UpdateEvent;
@@ -1592,6 +1596,38 @@ app.MapGet("/api/v1/events/{slug}", async (string slug, IMediator mediator) =>
     return ev != null ? Results.Ok(ev) : Results.NotFound();
 })
 .WithName("GetEventBySlug");
+
+// Race Day
+app.MapGet("/api/v1/admin/race-day", [Authorize(Policy = "AdminOnly")] async (IMediator mediator, DateOnly? date) =>
+{
+    var d = date ?? DateOnly.FromDateTime(DateTime.UtcNow);
+    var result = await mediator.Send(new GetRaceDayEditionsQuery(d));
+    return Results.Ok(result);
+})
+.WithName("GetRaceDay");
+
+app.MapGet("/api/v1/admin/next-race-day", [Authorize(Policy = "AdminOnly")] async (IMediator mediator, DateOnly? after) =>
+{
+    var d = after ?? DateOnly.FromDateTime(DateTime.UtcNow);
+    var result = await mediator.Send(new GetNextRaceDayQuery(d));
+    return Results.Ok(result);
+})
+.WithName("GetNextRaceDay");
+
+app.MapGet("/api/v1/admin/prev-race-day", [Authorize(Policy = "AdminOnly")] async (IMediator mediator, DateOnly? before) =>
+{
+    var d = before ?? DateOnly.FromDateTime(DateTime.UtcNow);
+    var result = await mediator.Send(new GetPrevRaceDayQuery(d));
+    return Results.Ok(result);
+})
+.WithName("GetPrevRaceDay");
+
+app.MapPatch("/api/v1/admin/events/{id}/status", [Authorize(Policy = "AdminOnly")] async (IMediator mediator, Guid id, PatchEventStatusCommand body, HttpContext httpContext) =>
+{
+    var result = await mediator.Send(body with { Id = id, ActorUserId = GetAuthenticatedUserId(httpContext) });
+    return result ? Results.NoContent() : Results.NotFound();
+})
+.WithName("PatchEventStatus");
 
 // Admin Event CRUD
 app.MapGet("/api/v1/admin/events", [Authorize(Policy = "AdminOnly")] async (IMediator mediator) =>

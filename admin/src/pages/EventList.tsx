@@ -67,6 +67,7 @@ import NotesIcon from '@mui/icons-material/Notes';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import SearchIcon from '@mui/icons-material/Search';
 import TranslateIcon from '@mui/icons-material/Translate';
+import FlagIcon from '@mui/icons-material/Flag';
 import {
   useEvents,
   type AlertSeverity,
@@ -111,6 +112,7 @@ interface EventListProps {
   onEventIdConsumed?: () => void;
   initialCreate?: boolean;
   onInitialCreateConsumed?: () => void;
+  onNavigateToRaceManager?: (date: string) => void;
 }
 
 interface EventFormState {
@@ -1023,7 +1025,7 @@ function TrailStartPicker({ trailsWithCoords, onPick }: TrailPickerProps) {
 
 const PUBLIC_SITE_URL = ((import.meta.env.VITE_PUBLIC_SITE_URL ?? '') as string).replace(/\/$/, '');
 
-export default function EventList({ onNotify, initialEventId, onEventIdConsumed, initialCreate, onInitialCreateConsumed }: EventListProps) {
+export default function EventList({ onNotify, initialEventId, onEventIdConsumed, initialCreate, onInitialCreateConsumed, onNavigateToRaceManager }: EventListProps) {
   const {
     events,
     loading,
@@ -2922,6 +2924,13 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
                                         </Box>
                                       </Box>
                                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                        {onNavigateToRaceManager && (edition.date || edition.endDate) && (
+                                          <Tooltip title={`Open in Race Manager (${edition.date ?? edition.endDate})`}>
+                                            <IconButton size="small" onClick={() => onNavigateToRaceManager(edition.date ?? edition.endDate ?? '')}>
+                                              <FlagIcon fontSize="small" />
+                                            </IconButton>
+                                          </Tooltip>
+                                        )}
                                         <Tooltip title={edition.notes ? `Notes: ${edition.notes.slice(0, 60)}${edition.notes.length > 60 ? '…' : ''}` : 'Add notes'}>
                                           <IconButton size="small" color={edition.notes ? 'primary' : 'default'} onClick={(e) => setNotesPopover({ anchorEl: e.currentTarget, edition, notes: edition.notes ?? '', notesEn: edition.notesEn ?? '' })}>
                                             <NotesIcon fontSize="small" />
