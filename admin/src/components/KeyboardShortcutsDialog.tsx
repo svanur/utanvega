@@ -27,6 +27,7 @@ const shortcutGroups: ShortcutGroup[] = [
             { keys: ['g', 'h'], description: 'Home' },
             { keys: ['g', 'e'], description: 'Events' },
             { keys: ['g', 't'], description: 'Trails' },
+            { keys: ['g', 'c'], description: 'Race Manager' },
             { keys: ['g', 'l'], description: 'Locations' },
             { keys: ['g', 'o'], description: 'Organizers' },
             { keys: ['g', 's'], description: 'Tags' },
@@ -46,6 +47,13 @@ const shortcutGroups: ShortcutGroup[] = [
         shortcuts: [
             { keys: ['Ctrl', 'K'], description: 'Spotlight search' },
             { keys: ['/'], description: 'Focus search input' },
+        ],
+    },
+    {
+        title: 'Race Manager',
+        shortcuts: [
+            { keys: ['s'], description: 'Switch to Setup mode' },
+            { keys: ['w'], description: 'Switch to Wrap-up mode' },
         ],
     },
     {

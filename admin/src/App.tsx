@@ -8,6 +8,7 @@ import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import ToggleOnIcon from '@mui/icons-material/ToggleOn';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
+import FlagIcon from '@mui/icons-material/Flag';
 import ViewDayOutlinedIcon from '@mui/icons-material/ViewDayOutlined';
 import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
 import PoolIcon from '@mui/icons-material/Pool';
@@ -49,6 +50,7 @@ const SponsorsPage = lazy(() => import('./pages/SponsorsPage'));
 const OrganizersPage = lazy(() => import('./pages/OrganizersPage'));
 const PoolsPage = lazy(() => import('./pages/PoolsPage'));
 const TranslationHealth = lazy(() => import('./pages/TranslationHealth'));
+const RaceDayPage = lazy(() => import('./pages/RaceDayPage'));
 
 const theme = createTheme({
   palette: {
@@ -83,6 +85,7 @@ const PAGE_PATHS: Record<PageKey, string> = {
   'hero-themes': '/hero-themes',
   'sponsors': '/sponsors',
   'pools': '/pools',
+  'race-day': '/race-day',
 };
 
 function pathToPage(pathname: string): PageKey {
@@ -114,6 +117,7 @@ function AdminContent() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [selectedTrailId, setSelectedTrailId] = useState<string | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [raceDayInitialDate, setRaceDayInitialDate] = useState<string | undefined>(undefined);
   const [createEventIntent, setCreateEventIntent] = useState(false);
   const [searchTerm, setSearchTerm] = useState<string | null>(null);
   const [showShortcuts, setShowShortcuts] = useState(false);
@@ -287,6 +291,7 @@ function AdminContent() {
               { key: 'dashboard' as const,          icon: <HomeIcon />,                                      label: 'Home' },
               { key: 'events' as const,              icon: <EmojiEventsIcon />,                               label: 'Events' },
               { key: 'trails' as const,              icon: <DashboardIcon />,                                 label: 'Trails' },
+              { key: 'race-day' as const,            icon: <FlagIcon />,                                      label: 'Race Manager' },
               { key: 'locations' as const,           icon: <LocationOnIcon />,                                label: 'Locations' },
               { key: 'organizers' as const,          icon: <GroupIcon />,                                     label: 'Organizers' },
               { key: 'tags' as const,                icon: <LocalOfferIcon />,                                label: 'Tags' },
@@ -363,6 +368,7 @@ function AdminContent() {
               initialCreate={createEventIntent}
               onInitialCreateConsumed={() => setCreateEventIntent(false)}
               onNotify={notify}
+              onNavigateToRaceManager={(date) => { setRaceDayInitialDate(date); setCurrentPage('race-day'); }}
             />
           ) : currentPage === 'hero-themes' ? (
             <HeroThemesPage />
@@ -372,6 +378,12 @@ function AdminContent() {
             <PoolsPage />
           ) : currentPage === 'organizers' ? (
             <OrganizersPage onNotify={notify} />
+          ) : currentPage === 'race-day' ? (
+            <RaceDayPage
+              onNotify={notify}
+              initialDate={raceDayInitialDate}
+              onNavigateToEvent={(id) => { setSelectedEventId(id); setCurrentPage('events'); }}
+            />
           ) : currentPage === 'translation-health' ? (
             <TranslationHealth onNotify={notify} />
           ) : (
