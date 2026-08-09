@@ -26,6 +26,7 @@ public class UtanvegaDbContext : DbContext
     public DbSet<Profile> Profiles => Set<Profile>();
     public DbSet<TrailCheckIn> TrailCheckIns => Set<TrailCheckIn>();
     public DbSet<Organizer> Organizers => Set<Organizer>();
+    public DbSet<BetaFeedback> BetaFeedback => Set<BetaFeedback>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -301,6 +302,22 @@ public class UtanvegaDbContext : DbContext
             entity.Property(e => e.AvatarUrl).HasColumnName("AvatarUrl");
             entity.Property(e => e.CreatedAt).HasColumnName("CreatedAt");
             entity.Property(e => e.UpdatedAt).HasColumnName("UpdatedAt");
+        });
+
+        modelBuilder.Entity<BetaFeedback>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.PageUrl).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.Message).IsRequired().HasMaxLength(2000);
+            entity.Property(e => e.Category).HasMaxLength(50);
+            entity.Property(e => e.Name).HasMaxLength(200);
+            entity.Property(e => e.Email).HasMaxLength(200);
+            entity.Property(e => e.StepsToReproduce).HasMaxLength(2000);
+            entity.Property(e => e.BrowserInfo).HasColumnType("jsonb");
+            entity.Property(e => e.ScreenshotUrl).HasMaxLength(1000);
+            entity.Property(e => e.Status).IsRequired().HasMaxLength(50);
+            entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => e.CreatedAt);
         });
 
         modelBuilder.Entity<TrailCheckIn>(entity =>

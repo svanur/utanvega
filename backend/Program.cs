@@ -64,6 +64,8 @@ using Utanvega.Backend.Application.TrailCheckIns.Commands.CheckInToTrail;
 using Utanvega.Backend.Application.TrailCheckIns.Commands.CheckOutFromTrail;
 using Utanvega.Backend.Application.TrailCheckIns.Queries.GetTrailCheckIns;
 using Utanvega.Backend.Application.Tips.Commands;
+using Utanvega.Backend.Application.Feedback.Commands;
+using Utanvega.Backend.Application.Feedback.Queries;
 using Utanvega.Backend.Infrastructure.Email;
 using MediatR;
 using FluentValidation;
@@ -344,6 +346,17 @@ builder.Services.AddRateLimiter(options =>
                 SegmentsPerWindow = 6,
                 QueueLimit = 0,
             }));
+    options.AddPolicy("send-feedback", httpContext =>
+        RateLimitPartition.GetSlidingWindowLimiter(
+            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new SlidingWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(10),
+                SegmentsPerWindow = 5,
+                QueueLimit = 0,
+            }));
+
     options.AddPolicy("send-tip", httpContext =>
         RateLimitPartition.GetSlidingWindowLimiter(
             httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
@@ -2057,6 +2070,47 @@ app.MapPost("/api/v1/tips", async (SendTipRequest request, IMediator mediator, I
 .WithName("SendTip")
 .RequireRateLimiting("send-tip");
 
+// --- Beta Feedback ---
+
+app.MapPost("/api/v1/feedback", async (SubmitFeedbackRequest req, IMediator mediator, ILogger<Program> logger) =>
+{
+    if (string.IsNullOrWhiteSpace(req.Message) || req.Message.Length > 2000)
+        return Results.BadRequest("Message is required and must be under 2000 characters.");
+    if (string.IsNullOrWhiteSpace(req.PageUrl))
+        return Results.BadRequest("PageUrl is required.");
+
+    try
+    {
+        var id = await mediator.Send(new SubmitFeedbackCommand(
+            req.PageUrl, req.Message, req.Category, req.Name, req.Email,
+            req.StepsToReproduce, req.BrowserInfo, req.ScreenshotUrl));
+        return Results.Ok(new { id });
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Failed to save feedback for page {PageUrl}", req.PageUrl);
+        return Results.Problem("Failed to save feedback. Please try again later.");
+    }
+})
+.WithName("SubmitFeedback")
+.RequireRateLimiting("send-feedback");
+
+app.MapGet("/api/v1/admin/feedback", [Authorize(Policy = "AdminOnly")] async (
+    IMediator mediator, string? status, int page = 1, int pageSize = 25) =>
+{
+    var result = await mediator.Send(new GetFeedbackQuery(status, page, pageSize));
+    return Results.Ok(result);
+})
+.WithName("GetFeedback");
+
+app.MapPatch("/api/v1/admin/feedback/{id:guid}/status", [Authorize(Policy = "AdminOnly")] async (
+    Guid id, PatchFeedbackStatusRequest req, IMediator mediator) =>
+{
+    var ok = await mediator.Send(new PatchFeedbackStatusCommand(id, req.Status));
+    return ok ? Results.Ok() : Results.NotFound();
+})
+.WithName("PatchFeedbackStatus");
+
 if (isMigrateMode)
 {
     var directUrlUsed = builder.Configuration["DIRECT_DATABASE_URL"] is not null;
@@ -2080,6 +2134,10 @@ finally
 }
 
 public record SendTipRequest(string PageUrl, string Message);
+public record SubmitFeedbackRequest(
+    string PageUrl, string Message, string? Category, string? Name, string? Email,
+    string? StepsToReproduce, string? BrowserInfo, string? ScreenshotUrl);
+public record PatchFeedbackStatusRequest(string Status);
 public record TagCreateDto(string Name, string? Color, string? NameEn = null, Dictionary<string, string>? TranslationHashes = null);
 public record TranslateRequest(List<string> Texts);
 public record BulkAddTagRequest(List<Guid> TrailIds, Guid TagId);
