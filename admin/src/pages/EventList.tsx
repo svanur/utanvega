@@ -1109,6 +1109,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
   } | null>(null);
   const [cyclingTicketIds, setCyclingTicketIds] = useState<Set<string>>(new Set());
   const [cyclingRaceStatusIds, setCyclingRaceStatusIds] = useState<Set<string>>(new Set());
+  const [copyingDateIds, setCopyingDateIds] = useState<Set<string>>(new Set());
   const [cyclingRegIds, setCyclingRegIds] = useState<Set<string>>(new Set());
   const [cyclingStatusIds, setCyclingStatusIds] = useState<Set<string>>(new Set());
   const [copyRacesConfirm, setCopyRacesConfirm] = useState<{ edition: EventEditionDto; source: EventEditionDto } | null>(null);
@@ -1464,7 +1465,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
 
   const handleCycleRaceStatus = async (race: RaceDto) => {
     if (cyclingRaceStatusIds.has(race.id)) return;
-    const cycle: RaceStatus[] = ['Active', 'Completed', 'Cancelled', 'Hidden'];
+    const cycle: RaceStatus[] = ['Active', 'Completed', 'Hidden', 'Cancelled'];
     const next = cycle[(cycle.indexOf(race.status as RaceStatus) + 1) % cycle.length] ?? 'Active';
     patchRaceInDetail(race.id, { status: next });
     setCyclingRaceStatusIds(prev => new Set(prev).add(race.id));
@@ -1496,6 +1497,8 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
   };
 
   const handleCopyRaceDate = async (race: RaceDto, date: string) => {
+    if (copyingDateIds.has(race.id)) return;
+    setCopyingDateIds(prev => new Set(prev).add(race.id));
     patchRaceInDetail(race.id, { dateOfRace: date });
     try {
       await updateRace(race.id, {
@@ -1519,6 +1522,8 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
     } catch {
       patchRaceInDetail(race.id, { dateOfRace: race.dateOfRace });
       onNotify('Failed to copy date', 'error');
+    } finally {
+      setCopyingDateIds(prev => { const s = new Set(prev); s.delete(race.id); return s; });
     }
   };
 

@@ -1010,6 +1010,7 @@ export default function RaceDayPage({ onNotify, onNavigateToEvent, initialDate }
                                                             }}
                                                             onAccept={val => {
                                                                 const newTime = val?.isValid() ? `${val.format('HH:mm')}:00` : null;
+                                                                setRaceStartTimes(prev => { const n = { ...prev }; delete n[race.id]; return n; });
                                                                 if (newTime !== (race.startTime ?? null))
                                                                     updateRaceField(race, ed.id, { startTime: newTime });
                                                             }}
