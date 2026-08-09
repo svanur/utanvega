@@ -29,7 +29,8 @@ public record UpdateRaceCommand(
     string? CertifiedByEn = null,
     string? ChampionshipCategoryEn = null,
     Dictionary<string, string>? TranslationHashes = null,
-    string? ActivityType = null
+    string? ActivityType = null,
+    string? DistanceLabelEn = null
 ) : IRequest<bool>;
 
 public class UpdateRaceCommandHandler : IRequestHandler<UpdateRaceCommand, bool>
@@ -60,6 +61,7 @@ public class UpdateRaceCommandHandler : IRequestHandler<UpdateRaceCommand, bool>
         race.Name = request.Name;
         race.NameEn = request.NameEn;
         race.DistanceLabel = request.DistanceLabel;
+        race.DistanceLabelEn = request.DistanceLabelEn;
         race.CutoffMinutes = request.CutoffMinutes;
         race.Description = request.Description;
         race.DescriptionEn = request.DescriptionEn;

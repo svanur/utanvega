@@ -324,6 +324,7 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
                 name: raceName,
                 nameEn: null,
                 distanceLabel: `${distanceKm} km`,
+                distanceLabelEn: null,
                 cutoffMinutes: null,
                 description: null,
                 descriptionEn: null,

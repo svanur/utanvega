@@ -27,7 +27,8 @@ public record CreateRaceCommand(
     string? DescriptionEn = null,
     string? CertifiedByEn = null,
     string? ChampionshipCategoryEn = null,
-    string? ActivityType = null
+    string? ActivityType = null,
+    string? DistanceLabelEn = null
 ) : IRequest<Guid>;
 
 public class CreateRaceCommandHandler : IRequestHandler<CreateRaceCommand, Guid>
@@ -54,6 +55,7 @@ public class CreateRaceCommandHandler : IRequestHandler<CreateRaceCommand, Guid>
             Name = request.Name,
             NameEn = request.NameEn,
             DistanceLabel = request.DistanceLabel,
+            DistanceLabelEn = request.DistanceLabelEn,
             CutoffMinutes = request.CutoffMinutes,
             Description = request.Description,
             DescriptionEn = request.DescriptionEn,

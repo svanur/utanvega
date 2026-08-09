@@ -31,6 +31,7 @@ interface RaceDayRace {
     name: string;
     nameEn: string | null;
     distanceLabel: string | null;
+    distanceLabelEn: string | null;
     status: RaceStatus;
     ticketStatus: TicketStatus;
     sortOrder: number;
@@ -88,6 +89,7 @@ export default function RaceDayPage({ onNotify, onNavigateToEvent, initialDate }
     const [prevRaceDate, setPrevRaceDate] = useState<string | null>(null);
     const [updatingEditions, setUpdatingEditions] = useState<Set<string>>(new Set());
     const [raceNames, setRaceNames] = useState<Record<string, { name: string; nameEn: string }>>({});
+    const [raceDistanceLabels, setRaceDistanceLabels] = useState<Record<string, { distanceLabel: string; distanceLabelEn: string }>>({});
     const [raceNameLang, setRaceNameLang] = useState<'is' | 'en'>('is');
     const [sortByStart, setSortByStart] = useState(false);
     const [bulkEvents, setBulkEvents] = useState(false);
@@ -184,7 +186,7 @@ export default function RaceDayPage({ onNotify, onNavigateToEvent, initialDate }
                     method: 'PUT',
                     body: JSON.stringify({
                         id: raceId,
-                        name: race.name, nameEn: race.nameEn, distanceLabel: race.distanceLabel,
+                        name: race.name, nameEn: race.nameEn, distanceLabel: race.distanceLabel, distanceLabelEn: race.distanceLabelEn,
                         cutoffMinutes: race.cutoffMinutes, description: null,
                         status: p.status ?? race.status,
                         sortOrder: race.sortOrder,
@@ -337,7 +339,7 @@ export default function RaceDayPage({ onNotify, onNavigateToEvent, initialDate }
     const updateRaceField = async (
         race: RaceDayRace,
         editionId: string,
-        patch: { status?: RaceStatus; ticketStatus?: TicketStatus; name?: string; nameEn?: string }
+        patch: { status?: RaceStatus; ticketStatus?: TicketStatus; name?: string; nameEn?: string; distanceLabel?: string; distanceLabelEn?: string }
     ) => {
         setUpdatingRace(prev => new Set(prev).add(race.id));
         try {
@@ -347,7 +349,8 @@ export default function RaceDayPage({ onNotify, onNavigateToEvent, initialDate }
                     id: race.id,
                     name: patch.name ?? race.name,
                     nameEn: patch.nameEn !== undefined ? (patch.nameEn || null) : race.nameEn,
-                    distanceLabel: race.distanceLabel,
+                    distanceLabel: patch.distanceLabel !== undefined ? (patch.distanceLabel || null) : race.distanceLabel,
+                    distanceLabelEn: patch.distanceLabelEn !== undefined ? (patch.distanceLabelEn || null) : race.distanceLabelEn,
                     cutoffMinutes: race.cutoffMinutes, description: null,
                     status: patch.status ?? race.status,
                     sortOrder: race.sortOrder,
@@ -957,8 +960,36 @@ export default function RaceDayPage({ onNotify, onNavigateToEvent, initialDate }
                                                             );
                                                         })()}
                                                     </TableCell>
-                                                    <TableCell>
-                                                        <Typography variant="body2">{race.distanceLabel ?? '—'}</Typography>
+                                                    <TableCell sx={{ minWidth: 100 }}>
+                                                        {(() => {
+                                                            const isIS = raceNameLang === 'is';
+                                                            const field = isIS ? 'distanceLabel' : 'distanceLabelEn';
+                                                            const original = isIS ? (race.distanceLabel ?? '') : (race.distanceLabelEn ?? '');
+                                                            const value = raceDistanceLabels[race.id]?.[field] ?? original;
+                                                            return (
+                                                                <TextField
+                                                                    size="small"
+                                                                    placeholder={isIS ? 'e.g. 50K' : 'EN label'}
+                                                                    value={value}
+                                                                    onChange={e => setRaceDistanceLabels(prev => {
+                                                                        const existing = prev[race.id] ?? { distanceLabel: race.distanceLabel ?? '', distanceLabelEn: race.distanceLabelEn ?? '' };
+                                                                        return { ...prev, [race.id]: { ...existing, [field]: e.target.value } };
+                                                                    })}
+                                                                    onBlur={() => {
+                                                                        const cur = raceDistanceLabels[race.id];
+                                                                        if (cur && cur[field] !== original)
+                                                                            updateRaceField(race, ed.id, { distanceLabel: cur.distanceLabel, distanceLabelEn: cur.distanceLabelEn });
+                                                                    }}
+                                                                    onKeyDown={e => {
+                                                                        if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                                                                    }}
+                                                                    disabled={isSaving}
+                                                                    inputProps={{ style: { fontSize: '0.875rem' } }}
+                                                                    variant="standard"
+                                                                    fullWidth
+                                                                />
+                                                            );
+                                                        })()}
                                                     </TableCell>
                                                     <TableCell>
                                                         <Typography variant="body2" sx={{ fontVariantNumeric: 'tabular-nums' }}>

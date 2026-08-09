@@ -36,6 +36,7 @@ export interface RaceDto {
     name: string;
     nameEn: string | null;
     distanceLabel: string | null;
+    distanceLabelEn: string | null;
     cutoffMinutes: number | null;
     description: string | null;
     descriptionEn: string | null;
@@ -85,6 +86,7 @@ export interface SeriesRaceDto {
     dateOfRace: string | null;
     startTime: string | null;
     distanceLabel: string | null;
+    distanceLabelEn: string | null;
     ticketStatus: string;
     registrationUrl: string | null;
 }
@@ -215,6 +217,7 @@ export interface CreateRaceInput {
     name: string;
     nameEn?: string;
     distanceLabel?: string;
+    distanceLabelEn?: string;
     cutoffMinutes?: number | null;
     description?: string;
     descriptionEn?: string;
@@ -238,6 +241,7 @@ export interface UpdateRaceInput {
     name: string;
     nameEn?: string;
     distanceLabel?: string;
+    distanceLabelEn?: string;
     cutoffMinutes?: number | null;
     description?: string;
     descriptionEn?: string;
