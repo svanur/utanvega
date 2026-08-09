@@ -242,6 +242,7 @@ public class UtanvegaDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
             entity.Property(e => e.DistanceLabel).HasMaxLength(50);
+            entity.Property(e => e.DistanceLabelEn).HasMaxLength(50);
             entity.Property(e => e.CertifiedBy).HasMaxLength(100);
             entity.Property(e => e.ChampionshipCategory).HasMaxLength(200);
             entity.Property(e => e.PrizeMoney).HasPrecision(10, 2);

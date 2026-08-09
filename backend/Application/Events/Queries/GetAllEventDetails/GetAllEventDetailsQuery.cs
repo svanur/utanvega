@@ -90,6 +90,7 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
                             r.Name,
                             r.NameEn,
                             r.DistanceLabel,
+                            r.DistanceLabelEn,
                             r.CutoffMinutes,
                             r.Description,
                             r.DescriptionEn,

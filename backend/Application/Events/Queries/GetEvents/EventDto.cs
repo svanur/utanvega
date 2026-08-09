@@ -14,6 +14,7 @@ public record SeriesRaceDto(
     DateOnly? DateOfRace,
     TimeOnly? StartTime,
     string? DistanceLabel,
+    string? DistanceLabelEn,
     string TicketStatus,
     string? RegistrationUrl
 );
@@ -72,6 +73,7 @@ public record RaceDto(
     string Name,
     string? NameEn,
     string? DistanceLabel,
+    string? DistanceLabelEn,
     int? CutoffMinutes,
     string? Description,
     string? DescriptionEn,

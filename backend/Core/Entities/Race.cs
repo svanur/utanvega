@@ -31,6 +31,7 @@ public class Race
     public string Name { get; set; } = string.Empty;
     public string? NameEn { get; set; }
     public string? DistanceLabel { get; set; }
+    public string? DistanceLabelEn { get; set; }
     public int? CutoffMinutes { get; set; }
     public string? Description { get; set; }
     public string? DescriptionEn { get; set; }

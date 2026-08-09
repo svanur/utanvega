@@ -181,6 +181,7 @@ interface RaceFormState {
   name: string;
   nameEn: string;
   distanceLabel: string;
+  distanceLabelEn: string;
   cutoffTime: string;
   description: string;
   descriptionEn: string;
@@ -614,6 +615,7 @@ function createEmptyRaceForm(eventEditionId = '', sortOrder = 0): RaceFormState 
     name: '',
     nameEn: '',
     distanceLabel: '',
+    distanceLabelEn: '',
     cutoffTime: '',
     description: '',
     descriptionEn: '',
@@ -722,6 +724,7 @@ function buildRaceForm(race: RaceDto): RaceFormState {
     name: race.name,
     nameEn: race.nameEn ?? '',
     distanceLabel: race.distanceLabel ?? '',
+    distanceLabelEn: race.distanceLabelEn ?? '',
     cutoffTime: formatMinutesToHHmm(race.cutoffMinutes) ?? '',
     description: race.description ?? '',
     descriptionEn: race.descriptionEn ?? '',
@@ -1422,6 +1425,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
         trailId: race.trailId ?? null,
         name: race.name,
         distanceLabel: race.distanceLabel ?? undefined,
+        distanceLabelEn: race.distanceLabelEn ?? undefined,
         cutoffMinutes: race.cutoffMinutes ?? null,
         description: race.description ?? undefined,
         status: race.status,
@@ -1465,6 +1469,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
         trailId,
         name: race.name,
         distanceLabel: race.distanceLabel ?? undefined,
+        distanceLabelEn: race.distanceLabelEn ?? undefined,
         cutoffMinutes: race.cutoffMinutes ?? null,
         description: race.description ?? undefined,
         status: race.status,
@@ -1496,6 +1501,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
           trailId: race.trailId ?? null,
           name: race.name,
           distanceLabel: race.distanceLabel ?? undefined,
+          distanceLabelEn: race.distanceLabelEn ?? undefined,
           cutoffMinutes: race.cutoffMinutes ?? null,
           description: race.description ?? undefined,
           status: 'Completed',
@@ -1722,6 +1728,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
                 trailId: race.trailId ?? null,
                 name: race.name,
                 distanceLabel: race.distanceLabel ?? undefined,
+                distanceLabelEn: race.distanceLabelEn ?? undefined,
                 cutoffMinutes: race.cutoffMinutes ?? null,
                 description: race.description ?? undefined,
                 status: 'Active',
@@ -1886,6 +1893,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
         name: raceForm.name.trim(),
         nameEn: trimToUndefined(raceForm.nameEn),
         distanceLabel: trimToUndefined(raceForm.distanceLabel),
+        distanceLabelEn: trimToUndefined(raceForm.distanceLabelEn),
         cutoffMinutes: parsedCutoffMinutes,
         description: trimToUndefined(raceForm.description),
         descriptionEn: trimToUndefined(raceForm.descriptionEn),
@@ -1922,6 +1930,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
           name: input.name,
           nameEn: input.nameEn,
           distanceLabel: input.distanceLabel,
+          distanceLabelEn: input.distanceLabelEn,
           cutoffMinutes: input.cutoffMinutes,
           description: input.description,
           descriptionEn: input.descriptionEn,
@@ -1966,6 +1975,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
                 trailId: input.trailId,
                 name: isSeries ? r.name : input.name,
                 distanceLabel: input.distanceLabel,
+                distanceLabelEn: input.distanceLabelEn,
                 cutoffMinutes: input.cutoffMinutes,
                 description: input.description,
                 status: input.status,
@@ -2043,6 +2053,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
           trailId: race.trailId ?? null,
           name: race.name,
           distanceLabel: race.distanceLabel ?? undefined,
+          distanceLabelEn: race.distanceLabelEn ?? undefined,
           cutoffMinutes: race.cutoffMinutes ?? null,
           description: race.description ?? undefined,
           status: 'Active',
@@ -2303,6 +2314,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
           trailId: race.trailId ?? null,
           name: race.name,
           distanceLabel: race.distanceLabel ?? undefined,
+          distanceLabelEn: race.distanceLabelEn ?? undefined,
           cutoffMinutes: race.cutoffMinutes ?? null,
           description: race.description ?? undefined,
           status: race.status,
@@ -2333,6 +2345,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
           trailId: race.trailId ?? null,
           name: race.name,
           distanceLabel: race.distanceLabel ?? undefined,
+          distanceLabelEn: race.distanceLabelEn ?? undefined,
           cutoffMinutes: race.cutoffMinutes ?? null,
           description: race.description ?? undefined,
           status: race.status,
@@ -2377,6 +2390,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
           trailId: race.trailId ?? null,
           name: race.name,
           distanceLabel: race.distanceLabel ?? undefined,
+          distanceLabelEn: race.distanceLabelEn ?? undefined,
           cutoffMinutes: race.cutoffMinutes ?? null,
           description: race.description ?? undefined,
           status: race.status,
@@ -3684,16 +3698,16 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
               required
               fullWidth
             />
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 140px' }, gap: 2 }}>
-              <Autocomplete
-                freeSolo
-                options={[...new Set(
-                  (expandedDetail?.editions ?? []).flatMap(ed => ed.races).map(r => r.distanceLabel).filter((d): d is string => !!d)
-                )].sort()}
-                value={raceForm.distanceLabel}
-                onInputChange={(_, val) => setRaceField('distanceLabel', val)}
-                renderInput={(params) => <TextField {...params} label="Distance Label" placeholder="e.g. 50K" />}
-              />
+            <BilingualTextField
+              label="Distance Label"
+              placeholder="e.g. 50K"
+              valueIs={raceForm.distanceLabel}
+              valueEn={raceForm.distanceLabelEn}
+              onChangeIs={(v) => setRaceField('distanceLabel', v)}
+              onChangeEn={(v) => setRaceField('distanceLabelEn', v)}
+              fullWidth
+            />
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 140px' }, gap: 2 }}>
               <TextField
                 label="Cutoff Time (hrs)"
                 value={raceForm.cutoffTime}

@@ -170,6 +170,7 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                             !string.IsNullOrWhiteSpace(r.DistanceLabel) ? r.DistanceLabel
                                 : r.Trail != null && r.Trail.Length > 0 ? $"{r.Trail.Length / 1000.0:0.#} km"
                                 : null,
+                            r.DistanceLabelEn,
                             r.TicketStatus.ToString(),
                             ed.RegistrationUrl
                         )))
