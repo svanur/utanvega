@@ -17,9 +17,16 @@ public class PatchFeedbackCommandHandler(UtanvegaDbContext db) : IRequestHandler
 {
     public async Task<bool> Handle(PatchFeedbackCommand request, CancellationToken cancellationToken)
     {
-        var entry = await db.BetaFeedback.FirstOrDefaultAsync(f => f.Id == request.Id, cancellationToken);
+        var entry = await db.Feedback.FirstOrDefaultAsync(f => f.Id == request.Id, cancellationToken);
         if (entry is null) return false;
-        if (request.Status is not null) entry.Status = request.Status;
+        if (request.Status is not null)
+        {
+            entry.Status = request.Status;
+            if (request.Status == "closed" && entry.ClosedAt is null)
+                entry.ClosedAt = DateTimeOffset.UtcNow;
+            else if (request.Status != "closed")
+                entry.ClosedAt = null;
+        }
         if (request.Priority is not null) entry.Priority = request.Priority;
         if (request.ClearGitHubIssue) entry.GitHubIssue = null;
         else if (request.GitHubIssue is not null) entry.GitHubIssue = request.GitHubIssue;

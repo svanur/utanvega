@@ -2096,9 +2096,9 @@ app.MapPost("/api/v1/feedback", async (SubmitFeedbackRequest req, IMediator medi
 .RequireRateLimiting("send-feedback");
 
 app.MapGet("/api/v1/admin/feedback", [Authorize(Policy = "AdminOnly")] async (
-    IMediator mediator, string? status, int page = 1, int pageSize = 25) =>
+    IMediator mediator, string? status, int page = 1, int pageSize = 25, string? sortBy = null, string? sortDir = null, string? search = null) =>
 {
-    var result = await mediator.Send(new GetFeedbackQuery(status, page, pageSize));
+    var result = await mediator.Send(new GetFeedbackQuery(status, page, pageSize, sortBy, sortDir, search));
     return Results.Ok(result);
 })
 .WithName("GetFeedback");
@@ -2108,7 +2108,7 @@ app.MapPatch("/api/v1/admin/feedback/{id:guid}", [Authorize(Policy = "AdminOnly"
 {
     var ok = await mediator.Send(new PatchFeedbackCommand(
         id, req.Status, req.Priority, req.GitHubIssue, req.ClearGitHubIssue ?? false, req.AdminComment));
-    return ok ? Results.Ok() : Results.NotFound();
+    return ok ? Results.NoContent() : Results.NotFound();
 })
 .WithName("PatchFeedback");
 

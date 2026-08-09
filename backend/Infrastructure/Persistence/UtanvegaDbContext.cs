@@ -26,7 +26,7 @@ public class UtanvegaDbContext : DbContext
     public DbSet<Profile> Profiles => Set<Profile>();
     public DbSet<TrailCheckIn> TrailCheckIns => Set<TrailCheckIn>();
     public DbSet<Organizer> Organizers => Set<Organizer>();
-    public DbSet<BetaFeedback> BetaFeedback => Set<BetaFeedback>();
+    public DbSet<Feedback> Feedback => Set<Feedback>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -304,10 +304,12 @@ public class UtanvegaDbContext : DbContext
             entity.Property(e => e.UpdatedAt).HasColumnName("UpdatedAt");
         });
 
-        modelBuilder.Entity<BetaFeedback>(entity =>
+        modelBuilder.Entity<Feedback>(entity =>
         {
             entity.ToTable("Feedback");
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.FeedbackNumber).UseIdentityAlwaysColumn();
+            entity.HasIndex(e => e.FeedbackNumber).IsUnique();
             entity.Property(e => e.PageUrl).IsRequired().HasMaxLength(500);
             entity.Property(e => e.Message).IsRequired().HasMaxLength(2000);
             entity.Property(e => e.Category).HasMaxLength(50);
@@ -317,6 +319,7 @@ public class UtanvegaDbContext : DbContext
             entity.Property(e => e.BrowserInfo).HasColumnType("jsonb");
             entity.Property(e => e.ScreenshotUrl).HasColumnType("text");
             entity.Property(e => e.Status).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.ClosedAt);
             entity.Property(e => e.Priority).IsRequired().HasMaxLength(20);
             entity.Property(e => e.AdminComment).HasMaxLength(2000);
             entity.HasIndex(e => e.Status);

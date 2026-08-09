@@ -1,5 +1,5 @@
 using MediatR;
-using Utanvega.Backend.Core.Entities;
+using Utanvega.Backend.Core.Services;
 using Utanvega.Backend.Infrastructure.Persistence;
 
 namespace Utanvega.Backend.Application.Feedback.Commands;
@@ -15,11 +15,16 @@ public record SubmitFeedbackCommand(
     string? ScreenshotUrl
 ) : IRequest<Guid>;
 
-public class SubmitFeedbackCommandHandler(UtanvegaDbContext db) : IRequestHandler<SubmitFeedbackCommand, Guid>
+public class SubmitFeedbackCommandHandler(
+    UtanvegaDbContext db,
+    IEmailService emailService,
+    IConfiguration config,
+    ILogger<SubmitFeedbackCommandHandler> logger
+) : IRequestHandler<SubmitFeedbackCommand, Guid>
 {
     public async Task<Guid> Handle(SubmitFeedbackCommand request, CancellationToken cancellationToken)
     {
-        var entry = new BetaFeedback
+        var entry = new Utanvega.Backend.Core.Entities.Feedback
         {
             Id = Guid.NewGuid(),
             PageUrl = request.PageUrl,
@@ -33,8 +38,39 @@ public class SubmitFeedbackCommandHandler(UtanvegaDbContext db) : IRequestHandle
             Status = "new",
             CreatedAt = DateTimeOffset.UtcNow,
         };
-        db.BetaFeedback.Add(entry);
+        db.Feedback.Add(entry);
         await db.SaveChangesAsync(cancellationToken);
+
+        var recipient = config["Resend:TipRecipient"];
+        if (!string.IsNullOrEmpty(recipient))
+        {
+            try
+            {
+                var from = string.IsNullOrEmpty(request.Name) ? "Anonymous" : request.Name;
+                var category = string.IsNullOrEmpty(request.Category) ? "" : $"[{request.Category}] ";
+                var subject = $"New feedback {category}on hlaupadagskra.is";
+                var body = $"""
+                    New feedback received (#{entry.FeedbackNumber})
+
+                    From:     {from}{(request.Email != null ? $" <{request.Email}>" : "")}
+                    Page:     {request.PageUrl}
+                    Category: {request.Category ?? "—"}
+
+                    Message:
+                    {request.Message}
+
+                    {(request.StepsToReproduce != null ? $"Steps to reproduce:\n{request.StepsToReproduce}\n" : "")}
+                    Review in admin: https://admin.hlaupadagskra.is
+                    """;
+
+                await emailService.SendAsync(recipient, subject, body, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to send feedback notification email");
+            }
+        }
+
         return entry.Id;
     }
 }
