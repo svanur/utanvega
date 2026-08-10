@@ -113,6 +113,7 @@ interface EventListProps {
   initialCreate?: boolean;
   onInitialCreateConsumed?: () => void;
   onNavigateToRaceManager?: (date: string) => void;
+  onViewEventDetail?: (slug: string) => void;
 }
 
 interface EventFormState {
@@ -281,9 +282,16 @@ function ordinal(value: number): string {
   return 'th';
 }
 
+function fmtDate(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-').map(Number);
+  const months = ['jan', 'feb', 'mar', 'apr', 'maí', 'jún', 'júl', 'ágú', 'sep', 'okt', 'nóv', 'des'];
+  return `${d}. ${months[(m ?? 1) - 1]} ${y}`;
+}
+
 function formatSchedule(rule: ScheduleRule | null): string {
   if (!rule) return '—';
-  if (rule.type === 'Fixed') return rule.date ?? '—';
+  if (rule.type === 'Fixed') return fmtDate(rule.date) || '—';
 
   if (rule.type === 'Yearly') {
     if (rule.dayOfMonth != null) {
@@ -1021,7 +1029,7 @@ function TrailStartPicker({ trailsWithCoords, onPick }: TrailPickerProps) {
 
 const PUBLIC_SITE_URL = ((import.meta.env.VITE_PUBLIC_SITE_URL ?? '') as string).replace(/\/$/, '');
 
-export default function EventList({ onNotify, initialEventId, onEventIdConsumed, initialCreate, onInitialCreateConsumed, onNavigateToRaceManager }: EventListProps) {
+export default function EventList({ onNotify, initialEventId, onEventIdConsumed, initialCreate, onInitialCreateConsumed, onNavigateToRaceManager, onViewEventDetail }: EventListProps) {
   const {
     events,
     loading,
@@ -2739,7 +2747,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
                   <TableCell>
                     {event.nextEditionDate ? (
                       <Box>
-                        <Typography variant="body2">{event.nextEditionDate}</Typography>
+                        <Typography variant="body2">{fmtDate(event.nextEditionDate)}</Typography>
                         {formatDaysUntil(event.daysUntil) && (event.daysUntil == null || event.daysUntil >= 0) && (
                           <Chip
                             label={formatDaysUntil(event.daysUntil)}
@@ -2803,6 +2811,13 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
                       <Tooltip title="View on public site">
                         <IconButton size="small" component="a" href={`${PUBLIC_SITE_URL}/events/${event.slug}`} target="_blank" rel="noopener noreferrer">
                           <OpenInNewIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    {onViewEventDetail && (
+                      <Tooltip title="Editions & races">
+                        <IconButton size="small" onClick={() => onViewEventDetail(event.slug)}>
+                          <OpenInNewIcon fontSize="small" sx={{ color: 'primary.main' }} />
                         </IconButton>
                       </Tooltip>
                     )}

@@ -21,7 +21,7 @@ import { useState, useCallback, lazy, Suspense } from 'react';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import 'dayjs/locale/is';
-import { BrowserRouter, useNavigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, useNavigate, useLocation, Routes, Route } from 'react-router-dom';
 import TranslateIcon from '@mui/icons-material/Translate';
 import GpxUploadDialog from './components/GpxUploadDialog';
 import LoginPage from './pages/LoginPage';
@@ -45,6 +45,7 @@ const TagManagement = lazy(() => import('./pages/TagManagement'));
 const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));
 const FeatureFlagsPage = lazy(() => import('./pages/FeatureFlagsPage'));
 const EventList = lazy(() => import('./pages/EventList'));
+const EventsListPage = lazy(() => import('./pages/EventsListPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const HeroThemesPage = lazy(() => import('./pages/HeroThemesPage'));
 const SponsorsPage = lazy(() => import('./pages/SponsorsPage'));
@@ -53,6 +54,7 @@ const PoolsPage = lazy(() => import('./pages/PoolsPage'));
 const TranslationHealth = lazy(() => import('./pages/TranslationHealth'));
 const RaceDayPage = lazy(() => import('./pages/RaceDayPage'));
 const FeedbackPage = lazy(() => import('./pages/FeedbackPage'));
+const EventDetailPage = lazy(() => import('./pages/EventDetailPage'));
 
 const theme = createTheme({
   palette: {
@@ -92,6 +94,7 @@ const PAGE_PATHS: Record<PageKey, string> = {
 };
 
 function pathToPage(pathname: string): PageKey {
+  if (pathname.startsWith('/events-old') || pathname.startsWith('/events')) return 'events';
   const entry = Object.entries(PAGE_PATHS).find(([, path]) => path === pathname);
   return (entry?.[0] as PageKey) ?? 'dashboard';
 }
@@ -366,14 +369,27 @@ function AdminContent() {
           ) : currentPage === 'features' ? (
             <FeatureFlagsPage onNotify={notify} />
           ) : currentPage === 'events' ? (
-            <EventList
-              initialEventId={selectedEventId}
-              onEventIdConsumed={() => setSelectedEventId(null)}
-              initialCreate={createEventIntent}
-              onInitialCreateConsumed={() => setCreateEventIntent(false)}
-              onNotify={notify}
-              onNavigateToRaceManager={(date) => { setRaceDayInitialDate(date); setCurrentPage('race-day'); }}
-            />
+            <Routes>
+              <Route path="/events/:slug" element={
+                <EventDetailPage
+                  onNotify={notify}
+                  onNavigateToRaceManager={date => { setRaceDayInitialDate(date); setCurrentPage('race-day'); }}
+                />
+              } />
+              <Route path="/events-old" element={
+                <EventList
+                  onNotify={notify}
+                  onViewEventDetail={slug => navigate(`/events/${slug}`)}
+                />
+              } />
+              <Route path="/events" element={
+                <EventsListPage
+                  onNotify={notify}
+                  initialCreate={createEventIntent}
+                  onInitialCreateConsumed={() => setCreateEventIntent(false)}
+                />
+              } />
+            </Routes>
           ) : currentPage === 'hero-themes' ? (
             <HeroThemesPage />
           ) : currentPage === 'sponsors' ? (

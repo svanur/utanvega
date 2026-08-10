@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { apiFetch } from './api';
 
 export type DayOfWeek = 'Sunday' | 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
@@ -282,14 +282,16 @@ export function useEvents() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const fetchEvents = async () => {
+    const fetchEvents = async (): Promise<EventSummaryDto[]> => {
         try {
             setLoading(true);
             const data = await apiFetch<EventSummaryDto[]>('/api/v1/admin/events');
             setEvents(data);
             setError(null);
+            return data;
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Unknown error');
+            return [];
         } finally {
             setLoading(false);
         }
@@ -299,13 +301,14 @@ export function useEvents() {
         void fetchEvents();
     }, []);
 
-    const createEvent = async (input: CreateEventInput) => {
-        const result = await apiFetch<{ id: string }>('/api/v1/admin/events', {
+    const createEvent = async (input: CreateEventInput): Promise<{ id: string; slug: string }> => {
+        const result = await apiFetch<{ id: string; slug?: string }>('/api/v1/admin/events', {
             method: 'POST',
             body: JSON.stringify(input),
         });
-        await fetchEvents();
-        return result.id;
+        const refreshed = await fetchEvents();
+        const slug = result.slug ?? refreshed.find(e => e.id === result.id)?.slug ?? result.id;
+        return { id: result.id, slug };
     };
 
     const updateEvent = async (id: string, input: Omit<UpdateEventInput, 'id'>) => {
@@ -391,6 +394,13 @@ export function useEvents() {
         await apiFetch(`/api/v1/admin/races/${id}`, { method: 'DELETE' });
     };
 
+    const reorderRaces = async (editionId: string, orderedIds: string[]) => {
+        await apiFetch(`/api/v1/admin/editions/${editionId}/races/reorder`, {
+            method: 'PUT',
+            body: JSON.stringify({ orderedIds }),
+        });
+    };
+
     return {
         events,
         loading,
@@ -410,5 +420,30 @@ export function useEvents() {
         createRace,
         updateRace,
         deleteRace,
+        reorderRaces,
     };
+}
+
+export function useEventDetail(slug: string) {
+    const [detail, setDetail] = useState<EventDetailDto | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const load = useCallback(async () => {
+        if (!slug) return;
+        try {
+            setLoading(true);
+            const data = await apiFetch<EventDetailDto>(`/api/v1/events/${slug}`);
+            setDetail(data);
+            setError(null);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to load event');
+        } finally {
+            setLoading(false);
+        }
+    }, [slug]);
+
+    useEffect(() => { void load(); }, [load]);
+
+    return { detail, loading, error, refresh: load, setDetail };
 }
