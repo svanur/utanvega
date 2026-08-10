@@ -869,6 +869,7 @@ export default function EventDetailPage({ onNotify }: EventDetailPageProps) {
                         <TableCell sx={{ width: 24, px: 0.5 }} />
                         <TableCell>Name</TableCell>
                         <TableCell>Distance</TableCell>
+                        <TableCell>Route</TableCell>
                         <TableCell>Date / start</TableCell>
                         <TableCell>Status</TableCell>
                         <TableCell>Tickets</TableCell>
@@ -907,6 +908,13 @@ export default function EventDetailPage({ onNotify }: EventDetailPageProps) {
                               </TableCell>
                               <TableCell>
                                 <Typography variant="body2" color="text.secondary">{race.distanceLabel ?? '—'}</Typography>
+                              </TableCell>
+                              <TableCell>
+                                {race.trailName
+                                  ? <Typography variant="body2" color="text.secondary">{race.trailName}</Typography>
+                                  : <Chip label="No route" size="small" color="warning" variant="outlined"
+                                      sx={{ height: 18, fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }} />
+                                }
                               </TableCell>
                               <TableCell onClick={e => e.stopPropagation()}>
                                 {race.dateOfRace ? (
