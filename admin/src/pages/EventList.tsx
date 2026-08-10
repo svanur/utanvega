@@ -282,9 +282,16 @@ function ordinal(value: number): string {
   return 'th';
 }
 
+function fmtDate(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-').map(Number);
+  const months = ['jan', 'feb', 'mar', 'apr', 'maí', 'jún', 'júl', 'ágú', 'sep', 'okt', 'nóv', 'des'];
+  return `${d}. ${months[(m ?? 1) - 1]} ${y}`;
+}
+
 function formatSchedule(rule: ScheduleRule | null): string {
   if (!rule) return '—';
-  if (rule.type === 'Fixed') return rule.date ?? '—';
+  if (rule.type === 'Fixed') return fmtDate(rule.date) || '—';
 
   if (rule.type === 'Yearly') {
     if (rule.dayOfMonth != null) {
@@ -2740,7 +2747,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
                   <TableCell>
                     {event.nextEditionDate ? (
                       <Box>
-                        <Typography variant="body2">{event.nextEditionDate}</Typography>
+                        <Typography variant="body2">{fmtDate(event.nextEditionDate)}</Typography>
                         {formatDaysUntil(event.daysUntil) && (event.daysUntil == null || event.daysUntil >= 0) && (
                           <Chip
                             label={formatDaysUntil(event.daysUntil)}

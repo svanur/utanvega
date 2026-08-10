@@ -4,12 +4,19 @@ import {
   Alert,
   Box,
   Button,
+  Checkbox,
   Chip,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   FormControl,
   IconButton,
   InputAdornment,
   InputLabel,
+  LinearProgress,
   MenuItem,
   Paper,
   Select,
@@ -29,14 +36,20 @@ import AddIcon from '@mui/icons-material/Add';
 import ClearIcon from '@mui/icons-material/Clear';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
 import SearchIcon from '@mui/icons-material/Search';
 
 import {
   useEvents,
   type ActivityType,
+  type CreateEditionInput,
+  type CreateRaceInput,
+  type EventDetailDto,
+  type EventEditionDto,
   type EventStatus,
   type EventSummaryDto,
   type EventType,
+  type RegistrationStatus,
   type ScheduleRule,
 } from '../hooks/useEvents';
 import CreateEventDialog from '../components/events/CreateEventDialog';
@@ -70,6 +83,13 @@ function getEventStatusColor(status: EventStatus): 'default' | 'success' | 'warn
   return 'default';
 }
 
+function fmtDate(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-').map(Number);
+  const months = ['jan', 'feb', 'mar', 'apr', 'maí', 'jún', 'júl', 'ágú', 'sep', 'okt', 'nóv', 'des'];
+  return `${d}. ${months[(m ?? 1) - 1]} ${y}`;
+}
+
 function formatDaysUntil(daysUntil: number | null): string | null {
   if (daysUntil == null) return null;
   if (daysUntil === 0) return 'Today';
@@ -80,6 +100,63 @@ function formatDaysUntil(daysUntil: number | null): string | null {
 
 function ordinal(n: number) {
   if (n === 1) return 'st'; if (n === 2) return 'nd'; if (n === 3) return 'rd'; return 'th';
+}
+
+function isPastDate(iso: string): boolean {
+  return iso < new Date().toISOString().slice(0, 10);
+}
+
+function bumpYearInUrl(url: string, fromYear: number | null | undefined, toYear: number): string {
+  if (!url || !fromYear) return url;
+  return url.replaceAll(String(fromYear), String(toYear));
+}
+
+function suggestEditionDateForYear(prevDateStr: string | null | undefined, year: number): string {
+  if (!prevDateStr) return '';
+  const [, m, d] = prevDateStr.split('-');
+  return `${year}-${m}-${d}`;
+}
+
+function suggestEditionEndDateForYear(
+  prevStartStr: string | null | undefined,
+  prevEndStr: string | null | undefined,
+  newStartStr: string,
+): string {
+  if (!prevStartStr || !prevEndStr || !newStartStr) return '';
+  const startMs = new Date(prevStartStr).getTime();
+  const endMs = new Date(prevEndStr).getTime();
+  const diff = endMs - startMs;
+  if (isNaN(diff) || diff < 0) return '';
+  const newEnd = new Date(new Date(newStartStr).getTime() + diff);
+  return newEnd.toISOString().slice(0, 10);
+}
+
+function computeClonedRaceDate(
+  editionDate: string | null | undefined,
+  raceDateOfRace: string | null | undefined,
+  newEditionDate: string,
+): string | null {
+  if (!editionDate || !raceDateOfRace || !newEditionDate) return null;
+  const offset = new Date(raceDateOfRace).getTime() - new Date(editionDate).getTime();
+  if (isNaN(offset)) return null;
+  return new Date(new Date(newEditionDate).getTime() + offset).toISOString().slice(0, 10);
+}
+
+function sortEditions(a: EventEditionDto, b: EventEditionDto): number {
+  return (a.year ?? 0) - (b.year ?? 0) || (a.date ?? '').localeCompare(b.date ?? '');
+}
+
+interface BulkMissingItem {
+  event: EventSummaryDto;
+  detail: EventDetailDto | null;
+  sourceEdition: EventEditionDto | null;
+  year: number;
+  date: string;
+  endDate: string;
+  registrationUrl: string;
+  resultsUrl: string;
+  registrationStatus: RegistrationStatus;
+  selected: boolean;
 }
 
 function formatSchedule(rule: ScheduleRule | null): string {
@@ -120,9 +197,10 @@ interface EventsListPageProps {
 export default function EventsListPage({ onNotify, initialCreate, onInitialCreateConsumed }: EventsListPageProps) {
   const navigate = useNavigate();
   const {
-    events, loading, error,
+    events, loading, error, refresh,
     createEvent,
     updateEventSilently, patchEventLocally,
+    getEvent, createEdition, createRace,
   } = useEvents();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -138,6 +216,10 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
   const [showAttentionPanel, setShowAttentionPanel] = useState(true);
   const [cyclingStatusIds, setCyclingStatusIds] = useState<Set<string>>(new Set());
   const [createDialogOpen, setCreateDialogOpen] = useState(initialCreate ?? false);
+  const [showBulkMissingDialog, setShowBulkMissingDialog] = useState(false);
+  const [bulkMissingLoading, setBulkMissingLoading] = useState(false);
+  const [bulkMissingProgress, setBulkMissingProgress] = useState<{ done: number; total: number } | null>(null);
+  const [bulkMissingItems, setBulkMissingItems] = useState<BulkMissingItem[]>([]);
 
   const todayStr = new Date().toISOString().slice(0, 10);
   const in30daysStr = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -256,6 +338,101 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
     }
   };
 
+  const openBulkMissingEditions = async () => {
+    const missing = events.filter(e => (e.type === 'Race' || e.type === 'Series') && e.status !== 'Cancelled' && !e.hasFutureEdition);
+    if (missing.length === 0) return;
+    setBulkMissingLoading(true);
+    setShowBulkMissingDialog(true);
+    setBulkMissingItems([]);
+    try {
+      const details = await Promise.all(missing.map(e => getEvent(e.slug)));
+      const items: BulkMissingItem[] = details.map((detail, i) => {
+        const event = missing[i];
+        const editionsWithRaces = [...(detail?.editions ?? [])].filter(ed => ed.races.length > 0).sort(sortEditions);
+        const source = editionsWithRaces[editionsWithRaces.length - 1] ?? detail?.editions.sort(sortEditions)[detail.editions.length - 1] ?? null;
+        const nextYear = source?.year ? source.year + 1 : new Date().getFullYear();
+        const suggestedDate = suggestEditionDateForYear(source?.date, nextYear);
+        const suggestedEndDate = suggestEditionEndDateForYear(source?.date, source?.endDate, suggestedDate);
+        const isPast = suggestedDate ? isPastDate(suggestedDate) : nextYear < new Date().getFullYear();
+        return {
+          event, detail: detail ?? null, sourceEdition: source ?? null,
+          year: nextYear, date: suggestedDate, endDate: suggestedEndDate,
+          registrationUrl: bumpYearInUrl(source?.registrationUrl ?? '', source?.year, nextYear) || (source?.registrationUrl ?? ''),
+          resultsUrl: bumpYearInUrl(source?.resultsUrl ?? '', source?.year, nextYear) || (source?.resultsUrl ?? ''),
+          registrationStatus: isPast ? 'Closed' : 'NotStarted',
+          selected: true,
+        };
+      });
+      setBulkMissingItems(items);
+    } catch {
+      onNotify('Failed to load event details', 'error');
+      setShowBulkMissingDialog(false);
+    } finally {
+      setBulkMissingLoading(false);
+    }
+  };
+
+  const handleBulkCreateMissingEditions = async () => {
+    const selected = bulkMissingItems.filter(i => i.selected);
+    if (selected.length === 0) return;
+    setBulkMissingProgress({ done: 0, total: selected.length });
+    let succeeded = 0;
+    let failed = 0;
+    for (const item of selected) {
+      try {
+        const isRaceOrSeries = item.event.type === 'Race' || item.event.type === 'Series';
+        const newEditionId = await createEdition({
+          eventId: item.event.id,
+          year: item.year,
+          title: String(item.year),
+          date: item.date || null,
+          endDate: item.endDate || null,
+          registrationUrl: item.registrationUrl || undefined,
+          resultsUrl: item.resultsUrl || undefined,
+          registrationStatus: item.registrationStatus,
+          trailId: isRaceOrSeries ? null : (item.sourceEdition?.trailId ?? null),
+        });
+        if (isRaceOrSeries && item.sourceEdition && item.sourceEdition.races.length > 0) {
+          await Promise.allSettled(item.sourceEdition.races.map(race =>
+            createRace({
+              eventEditionId: newEditionId,
+              trailId: race.trailId ?? null,
+              name: race.name,
+              distanceLabel: race.distanceLabel ?? undefined,
+              cutoffMinutes: race.cutoffMinutes ?? null,
+              description: race.description ?? undefined,
+              status: 'Active',
+              sortOrder: race.sortOrder,
+              ticketStatus: 'Available',
+              maxParticipants: race.maxParticipants ?? null,
+              itraPoints: race.itraPoints ?? null,
+              certifiedBy: race.certifiedBy ?? undefined,
+              prizeMoney: race.prizeMoney,
+              championshipCategory: race.championshipCategory ?? undefined,
+              dateOfRace: computeClonedRaceDate(item.sourceEdition!.date, race.dateOfRace, item.date),
+              startTime: race.startTime ? race.startTime.slice(0, 5) : null,
+            }),
+          ));
+        }
+        succeeded++;
+      } catch {
+        failed++;
+      }
+      setBulkMissingProgress(p => p ? { ...p, done: p.done + 1 } : null);
+    }
+    setBulkMissingProgress(null);
+    setShowBulkMissingDialog(false);
+    setBulkMissingItems([]);
+    await refresh();
+    if (failed > 0) {
+      onNotify(`Created ${succeeded} edition${succeeded !== 1 ? 's' : ''}, ${failed} failed`, 'error');
+    } else {
+      onNotify(`Created ${succeeded} edition${succeeded !== 1 ? 's' : ''} with cloned races`, 'success');
+    }
+  };
+
+  const selectedBulkCount = bulkMissingItems.filter(i => i.selected).length;
+
   if (loading) {
     return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}><CircularProgress /></Box>;
   }
@@ -293,9 +470,16 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
             size="small" color="primary"
           />
         </Stack>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setCreateDialogOpen(true); onInitialCreateConsumed?.(); }}>
-          New Event
-        </Button>
+        <Stack direction="row" spacing={1}>
+          {events.some(e => (e.type === 'Race' || e.type === 'Series') && e.status !== 'Cancelled' && !e.hasFutureEdition) && (
+            <Button variant="outlined" startIcon={<PlaylistAddIcon />} onClick={() => void openBulkMissingEditions()}>
+              Create Missing Editions
+            </Button>
+          )}
+          <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setCreateDialogOpen(true); onInitialCreateConsumed?.(); }}>
+            New Event
+          </Button>
+        </Stack>
       </Box>
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
@@ -467,7 +651,7 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
                 <TableCell>
                   {event.nextEditionDate ? (
                     <Box>
-                      <Typography variant="body2">{event.nextEditionDate}</Typography>
+                      <Typography variant="body2">{fmtDate(event.nextEditionDate)}</Typography>
                       {formatDaysUntil(event.daysUntil) && (event.daysUntil == null || event.daysUntil >= 0) && (
                         <Chip label={formatDaysUntil(event.daysUntil)} size="small" variant="outlined"
                           color={event.daysUntil != null && event.daysUntil <= 7 ? 'warning' : 'default'} sx={{ mt: 0.5 }} />
@@ -555,6 +739,92 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
         onNotify={onNotify}
         createEvent={createEvent}
       />
+
+      {/* Bulk create missing editions dialog */}
+      <Dialog open={showBulkMissingDialog} onClose={() => !bulkMissingLoading && !bulkMissingProgress && setShowBulkMissingDialog(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Create Missing Editions</DialogTitle>
+        <DialogContent>
+          {bulkMissingLoading ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 3 }}>
+              <CircularProgress size={24} />
+              <Typography>Loading event details…</Typography>
+            </Box>
+          ) : bulkMissingProgress ? (
+            <Box sx={{ py: 2 }}>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                Creating editions… {bulkMissingProgress.done} / {bulkMissingProgress.total}
+              </Typography>
+              <LinearProgress variant="determinate" value={(bulkMissingProgress.done / bulkMissingProgress.total) * 100} />
+            </Box>
+          ) : (
+            <Box sx={{ pt: 1 }}>
+              <DialogContentText sx={{ mb: 2 }}>
+                The following events have no upcoming edition. Review the proposals below and select which ones to create.
+              </DialogContentText>
+              <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse' }}>
+                <Box component="thead">
+                  <Box component="tr">
+                    <Box component="th" sx={{ width: 40, textAlign: 'left', pb: 1, pr: 1 }}>
+                      <Checkbox
+                        size="small"
+                        checked={bulkMissingItems.length > 0 && bulkMissingItems.every(i => i.selected)}
+                        indeterminate={bulkMissingItems.some(i => i.selected) && !bulkMissingItems.every(i => i.selected)}
+                        onChange={(_, checked) => setBulkMissingItems(prev => prev.map(i => ({ ...i, selected: checked })))}
+                      />
+                    </Box>
+                    <Box component="th" sx={{ textAlign: 'left', pb: 1, pr: 1 }}><Typography variant="caption" fontWeight={600}>Event</Typography></Box>
+                    <Box component="th" sx={{ textAlign: 'left', pb: 1, pr: 1 }}><Typography variant="caption" fontWeight={600}>Year</Typography></Box>
+                    <Box component="th" sx={{ textAlign: 'left', pb: 1, pr: 1 }}><Typography variant="caption" fontWeight={600}>Start date</Typography></Box>
+                    {bulkMissingItems.some(i => i.endDate) && (
+                      <Box component="th" sx={{ textAlign: 'left', pb: 1, pr: 1 }}><Typography variant="caption" fontWeight={600}>End date</Typography></Box>
+                    )}
+                    <Box component="th" sx={{ textAlign: 'left', pb: 1 }}><Typography variant="caption" fontWeight={600}>Races to clone</Typography></Box>
+                  </Box>
+                </Box>
+                <Box component="tbody">
+                  {bulkMissingItems.map((item, i) => (
+                    <Box component="tr" key={item.event.id} sx={{ borderTop: '1px solid', borderColor: 'divider', opacity: item.selected ? 1 : 0.45 }}>
+                      <Box component="td" sx={{ py: 1, pr: 1 }}>
+                        <Checkbox size="small" checked={item.selected} onChange={(_, checked) => setBulkMissingItems(prev => prev.map((x, j) => j === i ? { ...x, selected: checked } : x))} />
+                      </Box>
+                      <Box component="td" sx={{ py: 1, pr: 1 }}>
+                        <Typography variant="body2">{item.event.name}</Typography>
+                      </Box>
+                      <Box component="td" sx={{ py: 1, pr: 1 }}>
+                        <Typography variant="body2">{item.year}</Typography>
+                      </Box>
+                      <Box component="td" sx={{ py: 1, pr: 1 }}>
+                        <Typography variant="body2">{fmtDate(item.date) || <em style={{ color: 'gray' }}>TBD</em>}</Typography>
+                      </Box>
+                      {bulkMissingItems.some(i => i.endDate) && (
+                        <Box component="td" sx={{ py: 1, pr: 1 }}>
+                          <Typography variant="body2">{fmtDate(item.endDate) || <em style={{ color: 'gray' }}>—</em>}</Typography>
+                        </Box>
+                      )}
+                      <Box component="td" sx={{ py: 1 }}>
+                        <Typography variant="body2">
+                          {item.sourceEdition ? `${item.sourceEdition.races.length} race${item.sourceEdition.races.length !== 1 ? 's' : ''}` : '—'}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowBulkMissingDialog(false)} disabled={!!bulkMissingProgress || bulkMissingLoading}>Cancel</Button>
+          <Button
+            variant="contained"
+            startIcon={<PlaylistAddIcon />}
+            onClick={() => void handleBulkCreateMissingEditions()}
+            disabled={bulkMissingLoading || !!bulkMissingProgress || selectedBulkCount === 0}
+          >
+            Create {selectedBulkCount || ''} Edition{selectedBulkCount !== 1 ? 's' : ''}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

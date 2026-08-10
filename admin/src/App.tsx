@@ -94,7 +94,7 @@ const PAGE_PATHS: Record<PageKey, string> = {
 };
 
 function pathToPage(pathname: string): PageKey {
-  if (pathname.startsWith('/events')) return 'events';
+  if (pathname.startsWith('/events-old') || pathname.startsWith('/events')) return 'events';
   const entry = Object.entries(PAGE_PATHS).find(([, path]) => path === pathname);
   return (entry?.[0] as PageKey) ?? 'dashboard';
 }
@@ -371,6 +371,12 @@ function AdminContent() {
           ) : currentPage === 'events' ? (
             <Routes>
               <Route path="/events/:slug" element={<EventDetailPage onNotify={notify} />} />
+              <Route path="/events-old" element={
+                <EventList
+                  onNotify={notify}
+                  onViewEventDetail={slug => navigate(`/events/${slug}`)}
+                />
+              } />
               <Route path="/events" element={
                 <EventsListPage
                   onNotify={notify}

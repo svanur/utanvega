@@ -46,6 +46,7 @@ interface RaceFormCardProps {
   onCreateRace: (input: object) => Promise<string>;
   onUpdateRace: (id: string, input: object) => Promise<void>;
   onDeleteRace: (id: string) => Promise<void>;
+  initialValues?: RaceFormState;
 }
 
 function SectionLabel({ children }: { children: ReactNode }) {
@@ -78,19 +79,20 @@ function RaceFormCardInner({
   race, edition, trails,
   onClose, onSaved, onDeleted, onNotify,
   onCreateRace, onUpdateRace, onDeleteRace,
+  initialValues,
 }: RaceFormCardProps) {
   const isNew = race === null;
   const [form, setForm] = useState<RaceFormState>(
-    race ? buildRaceForm(race) : createEmptyRaceForm(edition.id, edition.races.length),
+    initialValues ?? (race ? buildRaceForm(race) : createEmptyRaceForm(edition.id, edition.races.length)),
   );
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const { translate, translating } = useTranslate(msg => onNotify(msg, 'error'));
 
   useEffect(() => {
-    setForm(race ? buildRaceForm(race) : createEmptyRaceForm(edition.id, edition.races.length));
+    setForm(initialValues ?? (race ? buildRaceForm(race) : createEmptyRaceForm(edition.id, edition.races.length)));
     setConfirmDelete(false);
-  }, [race, edition]);
+  }, [race, edition, initialValues]);
 
   const set = <K extends keyof RaceFormState>(field: K, value: RaceFormState[K]) =>
     setForm(prev => ({ ...prev, [field]: value }));

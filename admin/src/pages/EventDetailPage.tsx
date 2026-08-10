@@ -1,4 +1,6 @@
 import { useState, useMemo, type ReactNode } from 'react';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import dayjs from 'dayjs';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
   Alert,
@@ -18,6 +20,7 @@ import {
   MenuItem,
   Select,
   Stack,
+  Menu,
   Table,
   TableBody,
   TableCell,
@@ -39,8 +42,10 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 
 import {
   useEventDetail,
+  type CreateRaceInput,
   type EventDetailDto,
   type EventEditionDto,
+  type EventStatus,
   type RaceDto,
   type RaceStatus,
   type RegistrationStatus,
@@ -54,11 +59,13 @@ import EventFormCard from '../components/events/EventFormCard';
 import BilingualTextField from '../components/BilingualTextField';
 import { BilingualLangProvider, useBilingualLang } from '../contexts/BilingualLangContext';
 import {
+  buildRaceForm,
   getRaceStatusColor,
   getTicketStatusColor,
   raceHasStaleTx,
   RACE_STATUSES,
   TICKET_STATUSES,
+  type RaceFormState,
 } from '../utils/eventForms';
 
 const PUBLIC_SITE_URL = ((import.meta.env.VITE_PUBLIC_SITE_URL ?? '') as string).replace(/\/$/, '');
@@ -68,6 +75,59 @@ function fmtDate(iso: string | null | undefined): string {
   const [y, m, d] = iso.split('-').map(Number);
   const months = ['jan', 'feb', 'mar', 'apr', 'maí', 'jún', 'júl', 'ágú', 'sep', 'okt', 'nóv', 'des'];
   return `${d}. ${months[(m ?? 1) - 1]} ${y}`;
+}
+
+function isPastDate(dateStr: string): boolean {
+  return !!dateStr && dateStr < new Date().toISOString().slice(0, 10);
+}
+
+function bumpYearInUrl(url: string, fromYear: number | null | undefined, toYear: number): string {
+  if (!url || !fromYear) return '';
+  return url.split(String(fromYear)).join(String(toYear));
+}
+
+function suggestEditionDateForYear(prevDateStr: string | null | undefined, toYear: number): string {
+  if (!prevDateStr) return '';
+  const prev = new Date(prevDateStr + 'T00:00:00');
+  const candidate = new Date(prev);
+  candidate.setFullYear(toYear);
+  const diff = prev.getDay() - candidate.getDay();
+  candidate.setDate(candidate.getDate() + (Math.abs(diff) <= 3 ? diff : diff > 0 ? diff - 7 : diff + 7));
+  return candidate.toISOString().slice(0, 10);
+}
+
+function suggestEditionEndDateForYear(
+  prevStartStr: string | null | undefined,
+  prevEndStr: string | null | undefined,
+  newStartStr: string,
+): string {
+  if (!prevStartStr || !prevEndStr || !newStartStr) return '';
+  const durationDays = Math.round(
+    (new Date(prevEndStr + 'T00:00:00').getTime() - new Date(prevStartStr + 'T00:00:00').getTime()) / 86400000,
+  );
+  if (durationDays <= 0) return '';
+  const newEnd = new Date(newStartStr + 'T00:00:00');
+  newEnd.setDate(newEnd.getDate() + durationDays);
+  return newEnd.toISOString().slice(0, 10);
+}
+
+function computeClonedRaceDate(
+  sourceEditionDate: string | null | undefined,
+  raceDateOfRace: string | null | undefined,
+  newEditionDate: string | null | undefined,
+): string | null {
+  if (!sourceEditionDate || !raceDateOfRace || !newEditionDate) return null;
+  const offsetDays = Math.round(
+    (new Date(raceDateOfRace + 'T00:00:00').getTime() - new Date(sourceEditionDate + 'T00:00:00').getTime()) / 86400000,
+  );
+  const newDate = new Date(newEditionDate + 'T00:00:00');
+  newDate.setDate(newDate.getDate() + offsetDays);
+  return newDate.toISOString().slice(0, 10);
+}
+
+function sortRaces(a: RaceDto, b: RaceDto): number {
+  if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
+  return a.name.localeCompare(b.name);
 }
 
 const MONTHS = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -161,8 +221,9 @@ interface EditionDialogProps {
   edition: EventEditionDto | null;
   eventId: string;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (newEditionId?: string) => void;
   onNotify: (msg: ReactNode, sev?: 'success' | 'error') => void;
+  initialValues?: EditionFormState;
 }
 
 function LangToggleButton() {
@@ -179,9 +240,9 @@ function LangToggleButton() {
   );
 }
 
-function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onNotify }: EditionDialogProps) {
+function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onNotify, initialValues }: EditionDialogProps) {
   const isNew = edition === null;
-  const [form, setForm] = useState<EditionFormState>(edition ? buildEditionForm(edition) : emptyEditionForm());
+  const [form, setForm] = useState<EditionFormState>(initialValues ?? (edition ? buildEditionForm(edition) : emptyEditionForm()));
   const [saving, setSaving] = useState(false);
 
   const set = <K extends keyof EditionFormState>(k: K, v: EditionFormState[K]) =>
@@ -205,17 +266,18 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onNotify
     setSaving(true);
     try {
       if (isNew) {
-        await apiFetch(`/api/v1/admin/events/${eventId}/editions`, {
+        const result = await apiFetch<{ id: string }>(`/api/v1/admin/events/${eventId}/editions`, {
           method: 'POST', body: JSON.stringify(input),
         });
         onNotify('Edition created', 'success');
+        onSaved(result.id);
       } else {
         await apiFetch(`/api/v1/admin/editions/${edition!.id}`, {
           method: 'PUT', body: JSON.stringify({ id: edition!.id, ...input }),
         });
         onNotify('Edition saved', 'success');
+        onSaved();
       }
-      onSaved();
       onClose();
     } catch (err) {
       onNotify(err instanceof Error ? err.message : 'Failed to save edition', 'error');
@@ -226,7 +288,7 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onNotify
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth
-      TransitionProps={{ onEnter: () => setForm(edition ? buildEditionForm(edition) : emptyEditionForm()) }}>
+      TransitionProps={{ onEnter: () => setForm(initialValues ?? (edition ? buildEditionForm(edition) : emptyEditionForm())) }}>
       <DialogTitle>
         <Stack direction="row" justifyContent="space-between" alignItems="center">
           {isNew ? 'Add edition' : 'Edit edition'}
@@ -238,10 +300,14 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onNotify
           <Stack direction="row" spacing={1.5}>
             <TextField size="small" fullWidth label="Year" type="number" value={form.year}
               onChange={e => set('year', e.target.value)} />
-            <TextField size="small" fullWidth label="Start date" type="date" value={form.date}
-              onChange={e => set('date', e.target.value)} InputLabelProps={{ shrink: true }} />
-            <TextField size="small" fullWidth label="End date" type="date" value={form.endDate}
-              onChange={e => set('endDate', e.target.value)} InputLabelProps={{ shrink: true }} />
+            <DatePicker label="Start date"
+              value={form.date ? dayjs(form.date) : null}
+              onChange={v => set('date', v ? v.format('YYYY-MM-DD') : '')}
+              slotProps={{ textField: { size: 'small', fullWidth: true } }} />
+            <DatePicker label="End date"
+              value={form.endDate ? dayjs(form.endDate) : null}
+              onChange={v => set('endDate', v ? v.format('YYYY-MM-DD') : '')}
+              slotProps={{ textField: { size: 'small', fullWidth: true } }} />
           </Stack>
           <BilingualTextField
             size="small" fullWidth label="Title"
@@ -299,13 +365,18 @@ export default function EventDetailPage({ onNotify }: EventDetailPageProps) {
   const [expandedEditionIds, setExpandedEditionIds] = useState<Set<string>>(new Set());
   const [showOlderEditions, setShowOlderEditions] = useState(false);
 
-  // { editionId, race: RaceDto | null } — null race = create mode; undefined = no form open
+  // race: null = new, RaceDto with id = edit, RaceDto with id='' = duplicate (new seeded from existing)
   const [raceForm, setRaceForm] = useState<{ editionId: string; race: RaceDto | null } | null>(null);
 
   const [editingEvent, setEditingEvent] = useState(false);
 
   const [editionDialogOpen, setEditionDialogOpen] = useState(false);
   const [editingEdition, setEditingEdition] = useState<EventEditionDto | null>(null);
+  const [editionInitialValues, setEditionInitialValues] = useState<EditionFormState | undefined>(undefined);
+  const [cloneFromEditionId, setCloneFromEditionId] = useState<string | null>(null);
+
+  // copy-date menu anchor: { raceId, el }
+  const [copyDateAnchor, setCopyDateAnchor] = useState<{ raceId: string; el: HTMLElement } | null>(null);
 
   const [deletingEditionId, setDeletingEditionId] = useState<string | null>(null);
 
@@ -333,19 +404,75 @@ export default function EventDetailPage({ onNotify }: EventDetailPageProps) {
     });
 
   const openRaceForm = (race: RaceDto | null, edition: EventEditionDto) => {
-    // Ensure the edition is expanded so the form is visible
     setExpandedEditionIds(prev => { const n = new Set(prev); n.add(edition.id); return n; });
     setRaceForm({ editionId: edition.id, race });
   };
 
+  const [duplicateRaceValues, setDuplicateRaceValues] = useState<RaceFormState | undefined>(undefined);
+
+  const openDuplicateRace = (race: RaceDto, edition: EventEditionDto) => {
+    const maxSort = Math.max(...edition.races.map(r => r.sortOrder), -1);
+    const values: RaceFormState = { ...buildRaceForm(race), sortOrder: String(maxSort + 1) };
+    setExpandedEditionIds(prev => { const n = new Set(prev); n.add(edition.id); return n; });
+    setDuplicateRaceValues(values);
+    setRaceForm({ editionId: edition.id, race: null });
+  };
+
+  const handleCreateRace = async (editionId: string, input: object): Promise<string> => {
+    const result = await apiFetch<{ id: string }>(`/api/v1/admin/editions/${editionId}/races`, {
+      method: 'POST', body: JSON.stringify(input),
+    });
+    return result.id;
+  };
+
+  const handleCloneEdition = (edition: EventEditionDto) => {
+    const nextYear = (edition.year ?? new Date().getFullYear()) + 1;
+    const suggestedDate = suggestEditionDateForYear(edition.date, nextYear);
+    const suggestedEndDate = suggestEditionEndDateForYear(edition.date, edition.endDate, suggestedDate);
+    setCloneFromEditionId(edition.id);
+    setEditionInitialValues({
+      year: String(nextYear),
+      date: suggestedDate,
+      endDate: suggestedEndDate,
+      title: edition.title ? String(nextYear) : '',
+      titleEn: '',
+      registrationUrl: bumpYearInUrl(edition.registrationUrl ?? '', edition.year, nextYear),
+      resultsUrl: bumpYearInUrl(edition.resultsUrl ?? '', edition.year, nextYear),
+      notes: '',
+      notesEn: '',
+      registrationStatus: suggestedDate && isPastDate(suggestedDate) ? 'Closed' : 'NotStarted',
+      trailId: edition.trailId ?? '',
+    });
+    setEditingEdition(null); // null = create mode
+    setEditionDialogOpen(true);
+  };
+
   const handleRaceSaved = async () => {
     setRaceForm(null);
+    setDuplicateRaceValues(undefined);
     await refresh();
   };
 
   const handleRaceDeleted = async () => {
     setRaceForm(null);
+    setDuplicateRaceValues(undefined);
     await refresh();
+  };
+
+  const EVENT_STATUSES_CYCLE: EventStatus[] = ['Unconfirmed', 'Confirmed', 'Cancelled', 'Hidden', 'Unlisted'];
+
+  const handleCycleEventStatus = () => {
+    const next = EVENT_STATUSES_CYCLE[(EVENT_STATUSES_CYCLE.indexOf(detail!.status) + 1) % EVENT_STATUSES_CYCLE.length]!;
+    setDetail(prev => prev ? { ...prev, status: next } : prev);
+    apiFetch(`/api/v1/admin/events/${detail!.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ id: detail!.id, name: detail!.name, type: detail!.type, activityType: detail!.activityType, status: next,
+        organizerId: detail!.organizerId, locationId: detail!.locationId, scheduleRule: detail!.scheduleRule, socialLinks: detail!.socialLinks,
+        gpxPointLat: detail!.gpxPointLat, gpxPointLng: detail!.gpxPointLng }),
+    }).catch(() => {
+      setDetail(prev => prev ? { ...prev, status: detail!.status } : prev);
+      onNotify('Failed to update event status', 'error');
+    });
   };
 
   const handleUpdateEvent = async (id: string, input: Omit<UpdateEventInput, 'id'>) => {
@@ -515,8 +642,12 @@ export default function EventDetailPage({ onNotify }: EventDetailPageProps) {
           <Box>
             <Typography variant="h5" fontWeight={600} gutterBottom>{detail.name}</Typography>
             <Stack direction="row" flexWrap="wrap" gap={0.75} alignItems="center">
-              <Chip label={detail.status} size="small"
-                color={detail.status === 'Confirmed' ? 'success' : detail.status === 'Cancelled' ? 'error' : detail.status === 'Unconfirmed' ? 'warning' : 'default'} />
+              <Tooltip title="Click to cycle status">
+                <Chip label={detail.status} size="small"
+                  color={detail.status === 'Confirmed' ? 'success' : detail.status === 'Cancelled' ? 'error' : detail.status === 'Unconfirmed' ? 'warning' : 'default'}
+                  onClick={handleCycleEventStatus}
+                  sx={{ cursor: 'pointer' }} />
+              </Tooltip>
               <Chip label={detail.activityType} size="small" variant="outlined" />
               <Chip label={detail.type} size="small" variant="outlined" />
               {detail.locationName && <Chip label={detail.locationName} size="small" variant="outlined" />}
@@ -626,15 +757,20 @@ export default function EventDetailPage({ onNotify }: EventDetailPageProps) {
                 ? <ExpandMoreIcon fontSize="small" color="primary" />
                 : <ChevronRightIcon fontSize="small" sx={{ color: 'text.disabled' }} />}
 
-              <Typography variant="body2" fontWeight={600} sx={{ minWidth: 90 }}>
-                {edition.date ? fmtDate(edition.date) : (edition.year ? `Year ${edition.year}` : 'No date')}
-              </Typography>
-              {edition.endDate && edition.endDate !== edition.date && (
-                <Typography variant="caption" color="text.secondary">– {fmtDate(edition.endDate)}</Typography>
-              )}
-              <Typography variant="body2" color={expanded ? 'primary.main' : 'text.secondary'} sx={{ flex: 1 }} noWrap>
-                {editionLabel(edition)}
-              </Typography>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography variant="body2" fontWeight={600} noWrap>
+                  {editionLabel(edition)}
+                </Typography>
+                {edition.date ? (
+                  <Typography variant="caption" color="text.secondary">
+                    {fmtDate(edition.date)}
+                    {edition.endDate && edition.endDate !== edition.date ? ` – ${fmtDate(edition.endDate)}` : ''}
+                  </Typography>
+                ) : (
+                  <Chip label="Date missing" size="small" color="warning" variant="outlined"
+                    sx={{ height: 16, fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }} />
+                )}
+              </Box>
 
               <Stack direction="row" spacing={0.5} alignItems="center" onClick={e => e.stopPropagation()}>
                 <Chip
@@ -655,8 +791,8 @@ export default function EventDetailPage({ onNotify }: EventDetailPageProps) {
                     <EditIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
-                <Tooltip title="Clone edition (opens events list)">
-                  <IconButton size="small" onClick={() => navigate('/events', { state: { cloneEditionId: edition.id, openEventId: detail.id } })}>
+                <Tooltip title="Clone edition to next year">
+                  <IconButton size="small" onClick={() => handleCloneEdition(edition)}>
                     <ContentCopyIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
@@ -772,11 +908,57 @@ export default function EventDetailPage({ onNotify }: EventDetailPageProps) {
                               <TableCell>
                                 <Typography variant="body2" color="text.secondary">{race.distanceLabel ?? '—'}</Typography>
                               </TableCell>
-                              <TableCell>
-                                <Typography variant="body2">
-                                  {race.dateOfRace ? fmtDate(race.dateOfRace) : <span style={{ color: 'orange' }}>Missing</span>}
-                                  {race.startTime && ` · ${race.startTime.slice(0, 5)}`}
-                                </Typography>
+                              <TableCell onClick={e => e.stopPropagation()}>
+                                {race.dateOfRace ? (
+                                  <Typography variant="body2">
+                                    {fmtDate(race.dateOfRace)}
+                                    {race.startTime && ` · ${race.startTime.slice(0, 5)}`}
+                                  </Typography>
+                                ) : (() => {
+                                  const siblingDates = edition.races
+                                    .filter(r => r.id !== race.id && r.dateOfRace)
+                                    .map(r => r.dateOfRace!);
+                                  const sources = [
+                                    ...(edition.date ? [{ date: edition.date, label: `Parent: ${fmtDate(edition.date)}` }] : []),
+                                    ...siblingDates.filter(d => d !== edition.date).map(d => ({ date: d, label: `Sibling: ${fmtDate(d)}` })),
+                                  ];
+                                  const handleCopyDate = async (date: string) => {
+                                    await apiFetch(`/api/v1/admin/races/${race.id}`, {
+                                      method: 'PUT', body: JSON.stringify(racePayload(race, { dateOfRace: date })),
+                                    });
+                                    patchRaceInDetail(race.id, { dateOfRace: date });
+                                  };
+                                  return (
+                                    <Stack direction="row" alignItems="center" spacing={0.5}>
+                                      <Typography variant="body2" color="warning.main">Missing</Typography>
+                                      {sources.length === 1 ? (
+                                        <Tooltip title={sources[0].label}>
+                                          <Chip size="small" variant="outlined" color="info"
+                                            label={sources[0].date === edition.date ? 'Copy parent' : 'Copy sibling'}
+                                            onClick={() => void handleCopyDate(sources[0].date)}
+                                            sx={{ cursor: 'pointer', height: 20, fontSize: '0.65rem' }} />
+                                        </Tooltip>
+                                      ) : sources.length > 1 ? (
+                                        <>
+                                          <Chip size="small" variant="outlined" color="info" label="Copy date"
+                                            onClick={e => setCopyDateAnchor({ raceId: race.id, el: e.currentTarget })}
+                                            sx={{ cursor: 'pointer', height: 20, fontSize: '0.65rem' }} />
+                                          <Menu
+                                            anchorEl={copyDateAnchor?.raceId === race.id ? copyDateAnchor.el : null}
+                                            open={copyDateAnchor?.raceId === race.id}
+                                            onClose={() => setCopyDateAnchor(null)}
+                                          >
+                                            {sources.map(s => (
+                                              <MenuItem key={s.date} onClick={() => { void handleCopyDate(s.date); setCopyDateAnchor(null); }}>
+                                                {s.label}
+                                              </MenuItem>
+                                            ))}
+                                          </Menu>
+                                        </>
+                                      ) : null}
+                                    </Stack>
+                                  );
+                                })()}
                               </TableCell>
                               <TableCell>
                                 <Tooltip title="Click to cycle status">
@@ -805,9 +987,8 @@ export default function EventDetailPage({ onNotify }: EventDetailPageProps) {
                                       <EditIcon fontSize="small" />
                                     </IconButton>
                                   </Tooltip>
-                                  <Tooltip title="Duplicate race (opens events list)">
-                                    <IconButton size="small"
-                                      onClick={() => navigate('/events', { state: { duplicateRaceId: race.id, openEventId: detail.id } })}>
+                                  <Tooltip title="Duplicate race">
+                                    <IconButton size="small" onClick={e => { e.stopPropagation(); openDuplicateRace(race, edition); }}>
                                       <ContentCopyIcon fontSize="small" />
                                     </IconButton>
                                   </Tooltip>
@@ -826,7 +1007,8 @@ export default function EventDetailPage({ onNotify }: EventDetailPageProps) {
                     race={raceForm.race}
                     edition={edition}
                     trails={trails}
-                    onClose={() => setRaceForm(null)}
+                    initialValues={duplicateRaceValues}
+                    onClose={() => { setRaceForm(null); setDuplicateRaceValues(undefined); }}
                     onSaved={() => void handleRaceSaved()}
                     onDeleted={() => void handleRaceDeleted()}
                     onNotify={onNotify}
@@ -850,8 +1032,52 @@ export default function EventDetailPage({ onNotify }: EventDetailPageProps) {
         open={editionDialogOpen}
         edition={editingEdition}
         eventId={detail.id}
-        onClose={() => setEditionDialogOpen(false)}
-        onSaved={() => { setEditionDialogOpen(false); void refresh(); }}
+        initialValues={editionInitialValues}
+        onClose={() => { setEditionDialogOpen(false); setCloneFromEditionId(null); setEditionInitialValues(undefined); }}
+        onSaved={async (newEditionId) => {
+          setEditionDialogOpen(false);
+          if (newEditionId && cloneFromEditionId) {
+            const sourceEdition = detail?.editions.find(ed => ed.id === cloneFromEditionId);
+            const newEdition = { date: editingEdition?.date ?? null };
+            if (sourceEdition && sourceEdition.races.length > 0) {
+              const results = await Promise.allSettled(
+                [...sourceEdition.races].sort(sortRaces).map(race =>
+                  apiFetch(`/api/v1/admin/editions/${newEditionId}/races`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                      eventEditionId: newEditionId,
+                      trailId: race.trailId ?? null,
+                      name: race.name,
+                      nameEn: race.nameEn ?? undefined,
+                      distanceLabel: race.distanceLabel ?? undefined,
+                      distanceLabelEn: race.distanceLabelEn ?? undefined,
+                      cutoffMinutes: race.cutoffMinutes ?? null,
+                      description: race.description ?? undefined,
+                      status: 'Active' as const,
+                      sortOrder: race.sortOrder,
+                      ticketStatus: 'Available' as const,
+                      maxParticipants: race.maxParticipants ?? null,
+                      itraPoints: race.itraPoints ?? null,
+                      certifiedBy: race.certifiedBy ?? undefined,
+                      prizeMoney: race.prizeMoney,
+                      championshipCategory: race.championshipCategory ?? undefined,
+                      dateOfRace: computeClonedRaceDate(sourceEdition.date, race.dateOfRace, newEdition.date),
+                      startTime: race.startTime ? race.startTime.slice(0, 5) : null,
+                    } satisfies CreateRaceInput),
+                  }),
+                ),
+              );
+              const failed = results.filter(r => r.status === 'rejected').length;
+              if (failed > 0)
+                onNotify(`Edition created but ${failed}/${results.length} races failed to clone`, 'error');
+              else
+                onNotify(`Edition cloned with ${results.length} race${results.length === 1 ? '' : 's'}`, 'success');
+            }
+            setCloneFromEditionId(null);
+            setEditionInitialValues(undefined);
+          }
+          void refresh();
+        }}
         onNotify={onNotify}
       />
     </Box>
