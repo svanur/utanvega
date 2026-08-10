@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   Checkbox,
@@ -33,6 +34,7 @@ import {
   Typography,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import ClearIcon from '@mui/icons-material/Clear';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
@@ -49,9 +51,11 @@ import {
   type EventStatus,
   type EventSummaryDto,
   type EventType,
+  type GenerateEditionsForSeasonInput,
   type RegistrationStatus,
   type ScheduleRule,
 } from '../hooks/useEvents';
+import { useTrails } from '../hooks/useTrails';
 import CreateEventDialog from '../components/events/CreateEventDialog';
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -73,6 +77,7 @@ const ACTIVITY_ICONS: Record<string, string> = {
 };
 const EVENT_STATUSES: EventStatus[] = ['Unconfirmed', 'Confirmed', 'Cancelled', 'Hidden', 'Unlisted'];
 const MONTHS = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTHS_SHORT = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -159,6 +164,43 @@ interface BulkMissingItem {
   selected: boolean;
 }
 
+interface GenerateFormState {
+  eventId: string;
+  eventName: string;
+  eventType: EventType;
+  fromMonth: number;
+  fromYear: number;
+  toMonth: number;
+  toYear: number;
+  trailId: string;
+  registrationUrl: string;
+  seasonStartMonth: number | null;
+  editionName: string;
+}
+
+function createGenerateForm(event: EventSummaryDto): GenerateFormState {
+  const currentYear = new Date().getFullYear();
+  const seasonStart = event.type === 'Series' ? (event.scheduleRule?.monthStart ?? null) : null;
+  return {
+    eventId: event.id,
+    eventName: event.name,
+    eventType: event.type,
+    fromMonth: seasonStart ?? 1,
+    fromYear: currentYear,
+    toMonth: event.scheduleRule?.monthEnd ?? 12,
+    toYear: currentYear + (seasonStart && event.scheduleRule?.monthEnd && event.scheduleRule.monthEnd < seasonStart ? 1 : 0),
+    trailId: '',
+    registrationUrl: '',
+    seasonStartMonth: seasonStart,
+    editionName: '',
+  };
+}
+
+function emptyGenerateForm(): GenerateFormState {
+  const y = new Date().getFullYear();
+  return { eventId: '', eventName: '', eventType: 'Race', fromMonth: 1, fromYear: y, toMonth: 12, toYear: y, trailId: '', registrationUrl: '', seasonStartMonth: null, editionName: '' };
+}
+
 function formatSchedule(rule: ScheduleRule | null): string {
   if (!rule) return '—';
   if (rule.type === 'Fixed') return rule.date ?? '—';
@@ -200,8 +242,10 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
     events, loading, error, refresh,
     createEvent,
     updateEventSilently, patchEventLocally,
-    getEvent, createEdition, createRace,
+    getEvent, createEdition, createRace, generateEditionsForSeason,
   } = useEvents();
+  const { trails } = useTrails();
+  const sortedTrails = [...trails].filter(t => t.status === 'Published' || t.status === 'EventOnly').sort((a, b) => a.name.localeCompare(b.name));
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activityFilter, setActivityFilter] = useState<string>('all');
@@ -220,6 +264,9 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
   const [bulkMissingLoading, setBulkMissingLoading] = useState(false);
   const [bulkMissingProgress, setBulkMissingProgress] = useState<{ done: number; total: number } | null>(null);
   const [bulkMissingItems, setBulkMissingItems] = useState<BulkMissingItem[]>([]);
+  const [showGenerateDialog, setShowGenerateDialog] = useState(false);
+  const [generateForm, setGenerateForm] = useState<GenerateFormState>(emptyGenerateForm());
+  const [generating, setGenerating] = useState(false);
 
   const todayStr = new Date().toISOString().slice(0, 10);
   const in30daysStr = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -433,6 +480,59 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
 
   const selectedBulkCount = bulkMissingItems.filter(i => i.selected).length;
 
+  const handleGenerateEditions = async () => {
+    if (!generateForm.eventId) return;
+    const from = `${generateForm.fromYear}-${String(generateForm.fromMonth).padStart(2, '0')}-01`;
+    const lastDay = new Date(generateForm.toYear, generateForm.toMonth, 0).getDate();
+    const to = `${generateForm.toYear}-${String(generateForm.toMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    setGenerating(true);
+    try {
+      const isSeries = generateForm.eventType === 'Series';
+      const input: GenerateEditionsForSeasonInput = {
+        eventId: generateForm.eventId,
+        from, to,
+        trailId: generateForm.trailId || null,
+        registrationUrl: generateForm.registrationUrl.trim() || null,
+        seasonStartMonth: isSeries ? generateForm.seasonStartMonth : null,
+        editionName: isSeries && generateForm.editionName.trim() ? generateForm.editionName.trim() : null,
+      };
+      const result = await generateEditionsForSeason(input);
+      let racesCreated = result.racesCreated;
+      if (generateForm.eventType === 'Race') {
+        const eventSlug = events.find(e => e.id === generateForm.eventId)?.slug;
+        if (eventSlug) {
+          const freshDetail = await getEvent(eventSlug);
+          const editionsWithoutRaces = freshDetail.editions.filter(ed => ed.races.length === 0);
+          if (editionsWithoutRaces.length > 0) {
+            await Promise.all(editionsWithoutRaces.map(ed =>
+              createRace({
+                eventEditionId: ed.id,
+                trailId: generateForm.trailId || null,
+                name: generateForm.eventName || 'Race',
+                status: 'Active', sortOrder: 0, ticketStatus: 'Available',
+                itraPoints: null, prizeMoney: 0,
+              }),
+            ));
+            racesCreated += editionsWithoutRaces.length;
+          }
+        }
+      }
+      const hasDefaults = generateForm.trailId || generateForm.registrationUrl.trim();
+      const parts: string[] = [];
+      if (result.count > 0) parts.push(`Generated ${result.count} ${isSeries ? 'season' : 'edition'}${result.count === 1 ? '' : 's'}`);
+      if (racesCreated > 0) parts.push(`created ${racesCreated} race${racesCreated === 1 ? '' : 's'}`);
+      if (parts.length === 0 && hasDefaults) parts.push('Defaults applied to existing editions');
+      if (parts.length === 0) parts.push('No new editions to generate — all dates already exist.');
+      onNotify(`${parts.join(' and ')} for "${generateForm.eventName}"`, result.count > 0 || hasDefaults || racesCreated > 0 ? 'success' : 'error');
+      setShowGenerateDialog(false);
+      await refresh();
+    } catch (err) {
+      onNotify(err instanceof Error ? err.message : 'Failed to generate editions', 'error');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   if (loading) {
     return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}><CircularProgress /></Box>;
   }
@@ -474,6 +574,15 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
           {events.some(e => (e.type === 'Race' || e.type === 'Series') && e.status !== 'Cancelled' && !e.hasFutureEdition) && (
             <Button variant="outlined" startIcon={<PlaylistAddIcon />} onClick={() => void openBulkMissingEditions()}>
               Create Missing Editions
+            </Button>
+          )}
+          {events.some(e => (e.type === 'Race' || e.type === 'Series') && e.status !== 'Cancelled' && e.scheduleRule != null) && (
+            <Button variant="outlined" startIcon={<AutoAwesomeIcon />} onClick={() => {
+              const first = events.find(e => (e.type === 'Race' || e.type === 'Series') && e.status !== 'Cancelled' && e.scheduleRule != null);
+              setGenerateForm(first ? createGenerateForm(first) : emptyGenerateForm());
+              setShowGenerateDialog(true);
+            }}>
+              Generate Editions
             </Button>
           )}
           <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setCreateDialogOpen(true); onInitialCreateConsumed?.(); }}>
@@ -822,6 +931,102 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
             disabled={bulkMissingLoading || !!bulkMissingProgress || selectedBulkCount === 0}
           >
             Create {selectedBulkCount || ''} Edition{selectedBulkCount !== 1 ? 's' : ''}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      {/* Generate editions dialog */}
+      <Dialog open={showGenerateDialog} onClose={() => setShowGenerateDialog(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>Generate {generateForm.eventType === 'Series' ? 'Seasons' : 'Editions'}</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            <FormControl size="small">
+              <InputLabel>Event</InputLabel>
+              <Select
+                value={generateForm.eventId}
+                label="Event"
+                onChange={e => {
+                  const ev = events.find(x => x.id === e.target.value);
+                  if (ev) setGenerateForm(createGenerateForm(ev));
+                }}
+              >
+                {events
+                  .filter(e => (e.type === 'Race' || e.type === 'Series') && e.status !== 'Cancelled' && e.scheduleRule != null)
+                  .sort((a, b) => a.name.localeCompare(b.name))
+                  .map(e => <MenuItem key={e.id} value={e.id}>{e.name}</MenuItem>)
+                }
+              </Select>
+            </FormControl>
+            {generateForm.eventId && (
+              <Typography variant="body2" color="text.secondary">
+                {generateForm.eventType === 'Series'
+                  ? `Generate seasons for "${generateForm.eventName}". Each season becomes one edition with individual races. Existing race dates are skipped.`
+                  : `Generate editions for "${generateForm.eventName}" using its schedule rule. Existing dates are skipped.`}
+              </Typography>
+            )}
+            {generateForm.eventType === 'Series' && (
+              <FormControl size="small">
+                <InputLabel>Season starts in</InputLabel>
+                <Select
+                  value={generateForm.seasonStartMonth ?? ''}
+                  label="Season starts in"
+                  onChange={e => setGenerateForm(prev => ({ ...prev, seasonStartMonth: e.target.value ? Number(e.target.value) : null }))}
+                >
+                  {MONTHS_SHORT.slice(1).map((m, i) => <MenuItem key={m} value={i + 1}>{m}</MenuItem>)}
+                </Select>
+              </FormControl>
+            )}
+            {generateForm.eventType === 'Series' && (
+              <TextField
+                label="Season name (optional)" size="small"
+                placeholder="e.g. Vetrarhlaupið"
+                value={generateForm.editionName}
+                onChange={e => setGenerateForm(prev => ({ ...prev, editionName: e.target.value }))}
+                helperText="If set, editions are named 'Season name 2025–2026'"
+              />
+            )}
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+              <FormControl size="small">
+                <InputLabel>From month</InputLabel>
+                <Select value={generateForm.fromMonth} label="From month" onChange={e => setGenerateForm(prev => ({ ...prev, fromMonth: Number(e.target.value) }))}>
+                  {MONTHS_SHORT.slice(1).map((m, i) => <MenuItem key={m} value={i + 1}>{m}</MenuItem>)}
+                </Select>
+              </FormControl>
+              <TextField label="Year" type="number" size="small" value={generateForm.fromYear}
+                onChange={e => setGenerateForm(prev => ({ ...prev, fromYear: Number(e.target.value) }))} />
+            </Box>
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+              <FormControl size="small">
+                <InputLabel>To month</InputLabel>
+                <Select value={generateForm.toMonth} label="To month" onChange={e => setGenerateForm(prev => ({ ...prev, toMonth: Number(e.target.value) }))}>
+                  {MONTHS_SHORT.slice(1).map((m, i) => <MenuItem key={m} value={i + 1}>{m}</MenuItem>)}
+                </Select>
+              </FormControl>
+              <TextField label="Year" type="number" size="small" value={generateForm.toYear}
+                onChange={e => setGenerateForm(prev => ({ ...prev, toYear: Number(e.target.value) }))} />
+            </Box>
+            <Typography variant="caption" color="text.secondary">Defaults (optional)</Typography>
+            <Autocomplete
+              size="small"
+              options={sortedTrails}
+              value={sortedTrails.find(t => t.id === generateForm.trailId) ?? null}
+              onChange={(_, v) => setGenerateForm(prev => ({ ...prev, trailId: v?.id ?? '' }))}
+              getOptionLabel={t => `${t.name} (${(t.length / 1000).toFixed(1)} km)`}
+              isOptionEqualToValue={(o, v) => o.id === v.id}
+              renderInput={params => <TextField {...params} label="Linked Trail" />}
+            />
+            <TextField
+              label="Registration URL" size="small"
+              value={generateForm.registrationUrl}
+              onChange={e => setGenerateForm(prev => ({ ...prev, registrationUrl: e.target.value }))}
+              placeholder="https://..."
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowGenerateDialog(false)}>Cancel</Button>
+          <Button variant="contained" startIcon={generating ? <CircularProgress size={16} /> : <AutoAwesomeIcon />}
+            onClick={() => void handleGenerateEditions()} disabled={generating || !generateForm.eventId}>
+            {generating ? 'Generating…' : 'Generate'}
           </Button>
         </DialogActions>
       </Dialog>
