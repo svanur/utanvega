@@ -57,6 +57,16 @@ import {
 } from '../hooks/useEvents';
 import { useTrails } from '../hooks/useTrails';
 import CreateEventDialog from '../components/events/CreateEventDialog';
+import {
+  MONTHS_SHORT,
+  fmtDate,
+  isPastDate,
+  bumpYearInUrl,
+  suggestEditionDateForYear,
+  suggestEditionEndDateForYear,
+  computeClonedRaceDate,
+  sortEditions,
+} from '../utils/eventHelpers';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -76,9 +86,6 @@ const ACTIVITY_ICONS: Record<string, string> = {
   ObstacleCourse: '🧗', CrossCountryRun: '🌾', Swim: '🏊', Social: '🎉', Other: '🏅',
 };
 const EVENT_STATUSES: EventStatus[] = ['Unconfirmed', 'Confirmed', 'Cancelled', 'Hidden', 'Unlisted'];
-const MONTHS = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const MONTHS_SHORT = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function getEventStatusColor(status: EventStatus): 'default' | 'success' | 'warning' | 'error' {
@@ -86,13 +93,6 @@ function getEventStatusColor(status: EventStatus): 'default' | 'success' | 'warn
   if (status === 'Unconfirmed') return 'warning';
   if (status === 'Cancelled') return 'error';
   return 'default';
-}
-
-function fmtDate(iso: string | null | undefined): string {
-  if (!iso) return '';
-  const [y, m, d] = iso.split('-').map(Number);
-  const months = ['jan', 'feb', 'mar', 'apr', 'maí', 'jún', 'júl', 'ágú', 'sep', 'okt', 'nóv', 'des'];
-  return `${d}. ${months[(m ?? 1) - 1]} ${y}`;
 }
 
 function formatDaysUntil(daysUntil: number | null): string | null {
@@ -105,50 +105,6 @@ function formatDaysUntil(daysUntil: number | null): string | null {
 
 function ordinal(n: number) {
   if (n === 1) return 'st'; if (n === 2) return 'nd'; if (n === 3) return 'rd'; return 'th';
-}
-
-function isPastDate(iso: string): boolean {
-  return iso < new Date().toISOString().slice(0, 10);
-}
-
-function bumpYearInUrl(url: string, fromYear: number | null | undefined, toYear: number): string {
-  if (!url || !fromYear) return url;
-  return url.replaceAll(String(fromYear), String(toYear));
-}
-
-function suggestEditionDateForYear(prevDateStr: string | null | undefined, year: number): string {
-  if (!prevDateStr) return '';
-  const [, m, d] = prevDateStr.split('-');
-  return `${year}-${m}-${d}`;
-}
-
-function suggestEditionEndDateForYear(
-  prevStartStr: string | null | undefined,
-  prevEndStr: string | null | undefined,
-  newStartStr: string,
-): string {
-  if (!prevStartStr || !prevEndStr || !newStartStr) return '';
-  const startMs = new Date(prevStartStr).getTime();
-  const endMs = new Date(prevEndStr).getTime();
-  const diff = endMs - startMs;
-  if (isNaN(diff) || diff < 0) return '';
-  const newEnd = new Date(new Date(newStartStr).getTime() + diff);
-  return newEnd.toISOString().slice(0, 10);
-}
-
-function computeClonedRaceDate(
-  editionDate: string | null | undefined,
-  raceDateOfRace: string | null | undefined,
-  newEditionDate: string,
-): string | null {
-  if (!editionDate || !raceDateOfRace || !newEditionDate) return null;
-  const offset = new Date(raceDateOfRace).getTime() - new Date(editionDate).getTime();
-  if (isNaN(offset)) return null;
-  return new Date(new Date(newEditionDate).getTime() + offset).toISOString().slice(0, 10);
-}
-
-function sortEditions(a: EventEditionDto, b: EventEditionDto): number {
-  return (a.year ?? 0) - (b.year ?? 0) || (a.date ?? '').localeCompare(b.date ?? '');
 }
 
 interface BulkMissingItem {

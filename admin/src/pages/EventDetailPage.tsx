@@ -75,63 +75,17 @@ import {
   type RaceFormState,
 } from '../utils/eventForms';
 import { hashText } from '../utils/translationHash';
+import {
+  fmtDate,
+  isPastDate,
+  bumpYearInUrl,
+  suggestEditionDateForYear,
+  suggestEditionEndDateForYear,
+  computeClonedRaceDate,
+  sortEditions,
+} from '../utils/eventHelpers';
 
 const PUBLIC_SITE_URL = ((import.meta.env.VITE_PUBLIC_SITE_URL ?? '') as string).replace(/\/$/, '');
-
-function fmtDate(iso: string | null | undefined): string {
-  if (!iso) return '';
-  const [y, m, d] = iso.split('-').map(Number);
-  const months = ['jan', 'feb', 'mar', 'apr', 'maí', 'jún', 'júl', 'ágú', 'sep', 'okt', 'nóv', 'des'];
-  return `${d}. ${months[(m ?? 1) - 1]} ${y}`;
-}
-
-function isPastDate(dateStr: string): boolean {
-  return !!dateStr && dateStr < new Date().toISOString().slice(0, 10);
-}
-
-function bumpYearInUrl(url: string, fromYear: number | null | undefined, toYear: number): string {
-  if (!url || !fromYear) return '';
-  return url.split(String(fromYear)).join(String(toYear));
-}
-
-function suggestEditionDateForYear(prevDateStr: string | null | undefined, toYear: number): string {
-  if (!prevDateStr) return '';
-  const prev = new Date(prevDateStr + 'T00:00:00');
-  const candidate = new Date(prev);
-  candidate.setFullYear(toYear);
-  const diff = prev.getDay() - candidate.getDay();
-  candidate.setDate(candidate.getDate() + (Math.abs(diff) <= 3 ? diff : diff > 0 ? diff - 7 : diff + 7));
-  return candidate.toISOString().slice(0, 10);
-}
-
-function suggestEditionEndDateForYear(
-  prevStartStr: string | null | undefined,
-  prevEndStr: string | null | undefined,
-  newStartStr: string,
-): string {
-  if (!prevStartStr || !prevEndStr || !newStartStr) return '';
-  const durationDays = Math.round(
-    (new Date(prevEndStr + 'T00:00:00').getTime() - new Date(prevStartStr + 'T00:00:00').getTime()) / 86400000,
-  );
-  if (durationDays <= 0) return '';
-  const newEnd = new Date(newStartStr + 'T00:00:00');
-  newEnd.setDate(newEnd.getDate() + durationDays);
-  return newEnd.toISOString().slice(0, 10);
-}
-
-function computeClonedRaceDate(
-  sourceEditionDate: string | null | undefined,
-  raceDateOfRace: string | null | undefined,
-  newEditionDate: string | null | undefined,
-): string | null {
-  if (!sourceEditionDate || !raceDateOfRace || !newEditionDate) return null;
-  const offsetDays = Math.round(
-    (new Date(raceDateOfRace + 'T00:00:00').getTime() - new Date(sourceEditionDate + 'T00:00:00').getTime()) / 86400000,
-  );
-  const newDate = new Date(newEditionDate + 'T00:00:00');
-  newDate.setDate(newDate.getDate() + offsetDays);
-  return newDate.toISOString().slice(0, 10);
-}
 
 function sortRaces(a: RaceDto, b: RaceDto): number {
   if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
@@ -209,13 +163,6 @@ function getRegistrationStatusColor(status: RegistrationStatus): 'default' | 'su
   return 'warning';
 }
 
-function sortEditions(a: EventEditionDto, b: EventEditionDto): number {
-  if (a.date && b.date) return b.date.localeCompare(a.date);
-  if (a.date) return -1;
-  if (b.date) return 1;
-  if (a.year != null && b.year != null) return b.year - a.year;
-  return 0;
-}
 
 function editionLabel(ed: EventEditionDto): string {
   if (ed.title?.trim()) return ed.title;
@@ -423,6 +370,7 @@ interface SortableRaceRowProps {
   onCycleTicket: () => void;
   patchRaceInDetail: (raceId: string, patch: Partial<RaceDto>) => void;
   racePayload: (race: RaceDto, patch: Partial<RaceDto>) => object;
+  onNotify: (msg: string, severity?: 'success' | 'error') => void;
 }
 
 function cycleTooltip(values: string[], current: string) {
@@ -431,13 +379,22 @@ function cycleTooltip(values: string[], current: string) {
   return `${values.join(' → ')} (next: ${next})`;
 }
 
-function SortableRaceRow({ race, edition, isActive, staleTx, detail, onOpen, onDuplicate, onCycleStatus, onCycleTicket, patchRaceInDetail, racePayload }: SortableRaceRowProps) {
+function SortableRaceRow({ race, edition, isActive, staleTx, detail, onOpen, onDuplicate, onCycleStatus, onCycleTicket, patchRaceInDetail, racePayload, onNotify }: SortableRaceRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: race.id });
   const [copyDateAnchor, setCopyDateAnchor] = useState<HTMLElement | null>(null);
+  const [copyingDate, setCopyingDate] = useState(false);
 
   const handleCopyDate = async (date: string) => {
-    await apiFetch(`/api/v1/admin/races/${race.id}`, { method: 'PUT', body: JSON.stringify(racePayload(race, { dateOfRace: date })) });
-    patchRaceInDetail(race.id, { dateOfRace: date });
+    if (copyingDate) return;
+    setCopyingDate(true);
+    try {
+      await apiFetch(`/api/v1/admin/races/${race.id}`, { method: 'PUT', body: JSON.stringify(racePayload(race, { dateOfRace: date })) });
+      patchRaceInDetail(race.id, { dateOfRace: date });
+    } catch {
+      onNotify(`Failed to copy date to ${race.name}`, 'error');
+    } finally {
+      setCopyingDate(false);
+    }
   };
 
   const siblingDates = edition.races.filter(r => r.id !== race.id && r.dateOfRace).map(r => r.dateOfRace!);
@@ -627,12 +584,6 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
     setRaceForm({ editionId: edition.id, race: null });
   };
 
-  const handleCreateRace = async (editionId: string, input: object): Promise<string> => {
-    const result = await apiFetch<{ id: string }>(`/api/v1/admin/editions/${editionId}/races`, {
-      method: 'POST', body: JSON.stringify(input),
-    });
-    return result.id;
-  };
 
   const handleCloneEdition = (edition: EventEditionDto) => {
     const nextYear = (edition.year ?? new Date().getFullYear()) + 1;
@@ -1293,6 +1244,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                               detail={detail}
                               patchRaceInDetail={patchRaceInDetail}
                               racePayload={racePayload}
+                              onNotify={onNotify}
                             />
                           );
                         })}
@@ -1339,7 +1291,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
           setEditionDialogOpen(false);
           if (newEditionId && cloneFromEditionId) {
             const sourceEdition = detail?.editions.find(ed => ed.id === cloneFromEditionId);
-            const newEdition = { date: editingEdition?.date ?? null };
+            const newEdition = { date: editionInitialValues?.date ?? null };
             if (sourceEdition && sourceEdition.races.length > 0) {
               const results = await Promise.allSettled(
                 [...sourceEdition.races].sort(sortRaces).map(race =>
