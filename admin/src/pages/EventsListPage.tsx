@@ -58,6 +58,7 @@ import {
 import { useTrails } from '../hooks/useTrails';
 import CreateEventDialog from '../components/events/CreateEventDialog';
 import {
+  MONTHS,
   MONTHS_SHORT,
   fmtDate,
   isPastDate,

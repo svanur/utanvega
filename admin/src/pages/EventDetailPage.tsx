@@ -76,6 +76,7 @@ import {
 } from '../utils/eventForms';
 import { hashText } from '../utils/translationHash';
 import {
+  MONTHS,
   fmtDate,
   isPastDate,
   bumpYearInUrl,
@@ -128,7 +129,6 @@ function suggestSeriesLegDates(rule: import('../hooks/useEvents').ScheduleRule, 
   return dates;
 }
 
-const MONTHS = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 function formatSchedule(rule: import('../hooks/useEvents').ScheduleRule | null | undefined): string | null {
   if (!rule) return null;
