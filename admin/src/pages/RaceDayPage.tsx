@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Box, Typography, Paper, Stack, Button, Chip, Checkbox,
     TextField, CircularProgress, Tooltip, IconButton,
@@ -76,6 +77,7 @@ interface RaceDayPageProps {
 }
 
 export default function RaceDayPage({ onNotify, onNavigateToEvent, initialDate }: RaceDayPageProps) {
+    const navigate = useNavigate();
     const [date, setDate] = useState<Dayjs>(() => initialDate ? dayjs(initialDate) : dayjs());
     const [mode, setMode] = useState<Mode>(() => defaultMode(initialDate ? dayjs(initialDate) : dayjs()));
     const [editions, setEditions] = useState<RaceDayEdition[]>([]);
@@ -367,8 +369,11 @@ export default function RaceDayPage({ onNotify, onNavigateToEvent, initialDate }
                     eventEditionId: editionId,
                 }),
             });
+            setEditions(prev => prev.map(ed => ({
+                ...ed,
+                races: ed.races.map(r => r.id === race.id ? { ...r, ...patch } : r),
+            })));
             onNotify(`${race.name} updated`);
-            load();
         } catch {
             onNotify(`Failed to update ${race.name}`, 'error');
         } finally {
@@ -664,12 +669,12 @@ export default function RaceDayPage({ onNotify, onNavigateToEvent, initialDate }
                                 <Stack direction="row" alignItems="flex-start" justifyContent="space-between" gap={2} flexWrap="wrap">
                                     <Box>
                                         <Stack direction="row" alignItems="center" gap={1} flexWrap="wrap">
-                                            <Tooltip title={onNavigateToEvent ? 'Edit event' : ''} placement="top">
+                                            <Tooltip title="View event" placement="top">
                                                 <Typography
                                                     variant="h6"
                                                     fontWeight={600}
-                                                    onClick={onNavigateToEvent ? () => onNavigateToEvent(ed.eventId) : undefined}
-                                                    sx={onNavigateToEvent ? { cursor: 'pointer', '&:hover': { textDecoration: 'underline' } } : undefined}
+                                                    onClick={() => navigate(`/events/${ed.eventSlug}`)}
+                                                    sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
                                                 >
                                                     {ed.eventName}
                                                 </Typography>
@@ -772,15 +777,13 @@ export default function RaceDayPage({ onNotify, onNavigateToEvent, initialDate }
                                                 <WarningAmberIcon fontSize="small" color="error" />
                                             </Tooltip>
                                         )}
-                                        {onNavigateToEvent && (
-                                            <Button
-                                                size="small"
-                                                variant="outlined"
-                                                onClick={() => onNavigateToEvent(ed.eventId)}
-                                            >
-                                                Edit event
-                                            </Button>
-                                        )}
+                                        <Button
+                                            size="small"
+                                            variant="outlined"
+                                            onClick={() => navigate(`/events/${ed.eventSlug}`)}
+                                        >
+                                            View event
+                                        </Button>
                                     </Stack>
                                 </Stack>
                             </Box>
