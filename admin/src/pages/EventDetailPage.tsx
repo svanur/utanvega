@@ -4,6 +4,7 @@ import dayjs from 'dayjs';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   Chip,
@@ -525,6 +526,24 @@ export default function EventDetailPage({ onNotify }: EventDetailPageProps) {
     };
   };
 
+  const handleSetTrailForAllRaces = async (edition: EventEditionDto, trailId: string) => {
+    const races = edition.races.filter(r => !r.trailId);
+    if (races.length === 0) return;
+    const trail = trails.find(t => t.id === trailId);
+    const trailName = trail?.name ?? null;
+    try {
+      await Promise.all(races.map(race =>
+        apiFetch(`/api/v1/admin/races/${race.id}`, {
+          method: 'PUT', body: JSON.stringify(racePayload(race, { trailId })),
+        }),
+      ));
+      races.forEach(race => patchRaceInDetail(race.id, { trailId, trailName }));
+      onNotify(`Trail set on ${races.length} race${races.length !== 1 ? 's' : ''}`, 'success');
+    } catch {
+      onNotify('Failed to set trail', 'error');
+    }
+  };
+
   const handleCycleRaceStatus = (race: RaceDto) => {
     const next = RACE_STATUSES[(RACE_STATUSES.indexOf(race.status) + 1) % RACE_STATUSES.length]! as RaceStatus;
     patchRaceInDetail(race.id, { status: next });
@@ -853,9 +872,21 @@ export default function EventDetailPage({ onNotify }: EventDetailPageProps) {
                   <Typography variant="caption" fontWeight={600} textTransform="uppercase" letterSpacing={0.5} color="text.secondary">
                     Races
                   </Typography>
-                  <Button size="small" startIcon={<AddIcon />} onClick={() => openRaceForm(null, edition)}>
-                    Add race
-                  </Button>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    {detail?.type === 'Series' && edition.races.length > 0 && edition.races.some(r => !r.trailId) && (
+                      <Autocomplete
+                        size="small"
+                        options={trails.filter(t => t.status === 'Published' || t.status === 'EventOnly').sort((a, b) => a.name.localeCompare(b.name))}
+                        getOptionLabel={t => t.name}
+                        sx={{ width: 220 }}
+                        onChange={(_, trail) => { if (trail) void handleSetTrailForAllRaces(edition, trail.id); }}
+                        renderInput={params => <TextField {...params} label="Set trail for all legs" />}
+                      />
+                    )}
+                    <Button size="small" startIcon={<AddIcon />} onClick={() => openRaceForm(null, edition)}>
+                      Add race
+                    </Button>
+                  </Stack>
                 </Stack>
 
                 {edition.races.length === 0 ? (
