@@ -370,7 +370,12 @@ function AdminContent() {
             <FeatureFlagsPage onNotify={notify} />
           ) : currentPage === 'events' ? (
             <Routes>
-              <Route path="/events/:slug" element={<EventDetailPage onNotify={notify} />} />
+              <Route path="/events/:slug" element={
+                <EventDetailPage
+                  onNotify={notify}
+                  onNavigateToRaceManager={date => { setRaceDayInitialDate(date); setCurrentPage('race-day'); }}
+                />
+              } />
               <Route path="/events-old" element={
                 <EventList
                   onNotify={notify}

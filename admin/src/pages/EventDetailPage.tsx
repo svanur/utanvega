@@ -1,6 +1,7 @@
 import { useState, useMemo, type ReactNode } from 'react';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import dayjs from 'dayjs';
+import { TimePicker } from '@mui/x-date-pickers/TimePicker';
+import dayjs, { type Dayjs } from 'dayjs';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
   Alert,
@@ -33,13 +34,18 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import DragHandleIcon from '@mui/icons-material/DragIndicator';
+import FlagIcon from '@mui/icons-material/Flag';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 import {
   useEventDetail,
@@ -68,6 +74,7 @@ import {
   TICKET_STATUSES,
   type RaceFormState,
 } from '../utils/eventForms';
+import { hashText } from '../utils/translationHash';
 
 const PUBLIC_SITE_URL = ((import.meta.env.VITE_PUBLIC_SITE_URL ?? '') as string).replace(/\/$/, '');
 
@@ -129,6 +136,42 @@ function computeClonedRaceDate(
 function sortRaces(a: RaceDto, b: RaceDto): number {
   if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
   return a.name.localeCompare(b.name);
+}
+
+function isTxStale(isText: string | null | undefined, enText: string | null | undefined, hash: string | undefined): boolean {
+  if (!isText?.trim() || !enText?.trim() || !hash) return false;
+  return hashText(isText.trim()) !== hash;
+}
+
+function editionHasStaleTx(edition: EventEditionDto): boolean {
+  const h = edition.translationHashes ?? {};
+  return isTxStale(edition.title, edition.titleEn, h['Title'])
+    || isTxStale(edition.notes, edition.notesEn, h['Notes']);
+}
+
+const DAY_OF_WEEK_INDEX: Record<string, number> = {
+  Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6,
+};
+
+function nthWeekdayOfMonth(year: number, month: number, weekOfMonth: number, dayOfWeek: string): string {
+  const dayIdx = DAY_OF_WEEK_INDEX[dayOfWeek] ?? 0;
+  const firstOfMonth = dayjs(new Date(year, month - 1, 1));
+  const firstOccurrence = firstOfMonth.day() <= dayIdx
+    ? firstOfMonth.day(dayIdx)
+    : firstOfMonth.day(dayIdx + 7);
+  return firstOccurrence.add((weekOfMonth - 1) * 7, 'day').format('YYYY-MM-DD');
+}
+
+function suggestSeriesLegDates(rule: import('../hooks/useEvents').ScheduleRule, year: number, legCount: number): string[] {
+  if (!rule.weekOfMonth || !rule.dayOfWeek || !rule.monthStart) return [];
+  const dates: string[] = [];
+  for (let i = 0; i < legCount; i++) {
+    const month = rule.monthStart + i;
+    const actualYear = month > 12 ? year + 1 : year;
+    const actualMonth = month > 12 ? month - 12 : month;
+    dates.push(nthWeekdayOfMonth(actualYear, actualMonth, rule.weekOfMonth, rule.dayOfWeek));
+  }
+  return dates;
 }
 
 const MONTHS = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -351,13 +394,140 @@ function EditionDialog(props: EditionDialogProps) {
   );
 }
 
+// ── Sortable race row ─────────────────────────────────────────────────────────
+
+interface SortableRaceRowProps {
+  race: RaceDto;
+  edition: EventEditionDto;
+  isActive: boolean;
+  staleTx: boolean;
+  detail: EventDetailDto | null;
+  onOpen: () => void;
+  onDuplicate: () => void;
+  onCycleStatus: () => void;
+  onCycleTicket: () => void;
+  patchRaceInDetail: (raceId: string, patch: Partial<RaceDto>) => void;
+  racePayload: (race: RaceDto, patch: Partial<RaceDto>) => object;
+}
+
+function SortableRaceRow({ race, edition, isActive, staleTx, detail, onOpen, onDuplicate, onCycleStatus, onCycleTicket, patchRaceInDetail, racePayload }: SortableRaceRowProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: race.id });
+  const [copyDateAnchor, setCopyDateAnchor] = useState<HTMLElement | null>(null);
+
+  const handleCopyDate = async (date: string) => {
+    await apiFetch(`/api/v1/admin/races/${race.id}`, { method: 'PUT', body: JSON.stringify(racePayload(race, { dateOfRace: date })) });
+    patchRaceInDetail(race.id, { dateOfRace: date });
+  };
+
+  const siblingDates = edition.races.filter(r => r.id !== race.id && r.dateOfRace).map(r => r.dateOfRace!);
+  const sources = [
+    ...(edition.date ? [{ date: edition.date, label: `Parent: ${fmtDate(edition.date)}` }] : []),
+    ...siblingDates.filter(d => d !== edition.date).map(d => ({ date: d, label: `Sibling: ${fmtDate(d)}` })),
+  ];
+
+  return (
+    <TableRow
+      ref={setNodeRef}
+      hover
+      sx={{
+        cursor: 'pointer',
+        bgcolor: isActive ? 'primary.50' : undefined,
+        opacity: isDragging ? 0.5 : 1,
+        transform: CSS.Transform.toString(transform),
+        transition,
+      }}
+      onClick={onOpen}
+    >
+      <TableCell sx={{ px: 0.5, color: 'text.disabled', cursor: 'grab' }} {...attributes} {...listeners} onClick={e => e.stopPropagation()}>
+        <DragHandleIcon fontSize="small" />
+      </TableCell>
+      <TableCell>
+        <Stack direction="row" alignItems="center" spacing={0.5}>
+          <Typography variant="body2" fontWeight={600}>{race.name}</Typography>
+          {staleTx && (
+            <Tooltip title="EN translation may be outdated">
+              <Chip label="EN" size="small" color="warning" sx={{ height: 16, fontSize: '0.6rem', '& .MuiChip-label': { px: 0.75 } }} />
+            </Tooltip>
+          )}
+        </Stack>
+      </TableCell>
+      <TableCell>
+        <Typography variant="body2" color="text.secondary">{race.distanceLabel ?? '—'}</Typography>
+      </TableCell>
+      <TableCell>
+        {race.trailName
+          ? <Typography variant="body2" color="text.secondary">{race.trailName}</Typography>
+          : <Chip label="No route" size="small" color="warning" variant="outlined" sx={{ height: 18, fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }} />
+        }
+      </TableCell>
+      <TableCell onClick={e => e.stopPropagation()}>
+        {race.dateOfRace ? (
+          <Typography variant="body2">
+            {fmtDate(race.dateOfRace)}{race.startTime && ` · ${race.startTime.slice(0, 5)}`}
+          </Typography>
+        ) : (
+          <Stack direction="row" alignItems="center" spacing={0.5}>
+            <Typography variant="body2" color="warning.main">Missing</Typography>
+            {sources.length === 1 && (
+              <Tooltip title={sources[0].label}>
+                <Chip size="small" variant="outlined" color="info"
+                  label={sources[0].date === edition.date ? 'Copy parent' : 'Copy sibling'}
+                  onClick={() => void handleCopyDate(sources[0].date)}
+                  sx={{ cursor: 'pointer', height: 20, fontSize: '0.65rem' }} />
+              </Tooltip>
+            )}
+            {sources.length > 1 && (
+              <>
+                <Chip size="small" variant="outlined" color="info" label="Copy date"
+                  onClick={e => { e.stopPropagation(); setCopyDateAnchor(e.currentTarget); }}
+                  sx={{ cursor: 'pointer', height: 20, fontSize: '0.65rem' }} />
+                <Menu anchorEl={copyDateAnchor} open={!!copyDateAnchor} onClose={() => setCopyDateAnchor(null)}>
+                  {sources.map(s => (
+                    <MenuItem key={s.date} onClick={() => { void handleCopyDate(s.date); setCopyDateAnchor(null); }}>{s.label}</MenuItem>
+                  ))}
+                </Menu>
+              </>
+            )}
+          </Stack>
+        )}
+      </TableCell>
+      <TableCell>
+        <Tooltip title="Click to cycle status">
+          <Chip label={race.status} size="small" color={getRaceStatusColor(race.status)}
+            onClick={e => { e.stopPropagation(); onCycleStatus(); }} sx={{ cursor: 'pointer' }} />
+        </Tooltip>
+      </TableCell>
+      <TableCell>
+        <Tooltip title="Click to cycle ticket status">
+          <Chip label={race.ticketStatus} size="small" variant="outlined" color={getTicketStatusColor(race.ticketStatus)}
+            onClick={e => { e.stopPropagation(); onCycleTicket(); }} sx={{ cursor: 'pointer' }} />
+        </Tooltip>
+      </TableCell>
+      <TableCell>
+        <Typography variant="body2" color="text.secondary">{race.maxParticipants ?? '—'}</Typography>
+      </TableCell>
+      <TableCell align="right" onClick={e => e.stopPropagation()}>
+        <Stack direction="row" justifyContent="flex-end" spacing={0.25}>
+          <Tooltip title="Edit race">
+            <IconButton size="small" onClick={onOpen}><EditIcon fontSize="small" /></IconButton>
+          </Tooltip>
+          <Tooltip title="Duplicate race">
+            <IconButton size="small" onClick={e => { e.stopPropagation(); onDuplicate(); }}><ContentCopyIcon fontSize="small" /></IconButton>
+          </Tooltip>
+        </Stack>
+      </TableCell>
+    </TableRow>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 interface EventDetailPageProps {
   onNotify: (message: ReactNode, severity?: 'success' | 'error') => void;
+  onNavigateToRaceManager?: (date: string) => void;
 }
 
-export default function EventDetailPage({ onNotify }: EventDetailPageProps) {
+export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: EventDetailPageProps) {
   const { slug = '' } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { detail, loading, error, refresh, setDetail } = useEventDetail(slug);
@@ -376,10 +546,15 @@ export default function EventDetailPage({ onNotify }: EventDetailPageProps) {
   const [editionInitialValues, setEditionInitialValues] = useState<EditionFormState | undefined>(undefined);
   const [cloneFromEditionId, setCloneFromEditionId] = useState<string | null>(null);
 
-  // copy-date menu anchor: { raceId, el }
-  const [copyDateAnchor, setCopyDateAnchor] = useState<{ raceId: string; el: HTMLElement } | null>(null);
-
   const [deletingEditionId, setDeletingEditionId] = useState<string | null>(null);
+  const [copyRacesConfirm, setCopyRacesConfirm] = useState<{ edition: EventEditionDto; source: EventEditionDto } | null>(null);
+  const [copyingRaces, setCopyingRaces] = useState(false);
+  const [showBulkDatesDialog, setShowBulkDatesDialog] = useState(false);
+  const [bulkDatesEdition, setBulkDatesEdition] = useState<EventEditionDto | null>(null);
+  const [bulkDates, setBulkDates] = useState<Array<{ race: RaceDto; dateOfRace: string; startTime: string; prevDateOfRace?: string }>>([]);
+  const [savingBulkDates, setSavingBulkDates] = useState(false);
+  const [localRaceOrder, setLocalRaceOrder] = useState<Map<string, string[]>>(new Map());
+  const [confirmDeleteEvent, setConfirmDeleteEvent] = useState(false);
 
   const currentYear = new Date().getFullYear();
 
@@ -544,6 +719,127 @@ export default function EventDetailPage({ onNotify }: EventDetailPageProps) {
     }
   };
 
+  const handleCopyRacesFromPrevious = (edition: EventEditionDto) => {
+    if (!detail) return;
+    const allSorted = [...detail.editions].sort(sortEditions);
+    const targetIdx = allSorted.findIndex(ed => ed.id === edition.id);
+    let source: EventEditionDto | undefined;
+    for (let i = targetIdx - 1; i >= 0; i--) {
+      if (allSorted[i].races.length > 0) { source = allSorted[i]; break; }
+    }
+    if (!source) source = [...allSorted].reverse().find(ed => ed.id !== edition.id && ed.races.length > 0);
+    if (!source) return;
+    setCopyRacesConfirm({ edition, source });
+  };
+
+  const handleConfirmCopyRaces = async () => {
+    if (!copyRacesConfirm) return;
+    const { edition, source } = copyRacesConfirm;
+    setCopyRacesConfirm(null);
+    setCopyingRaces(true);
+    try {
+      await Promise.all(source.races.map(race =>
+        apiFetch(`/api/v1/admin/editions/${edition.id}/races`, {
+          method: 'POST',
+          body: JSON.stringify({
+            eventEditionId: edition.id,
+            trailId: race.trailId ?? null,
+            name: race.name,
+            distanceLabel: race.distanceLabel ?? undefined,
+            distanceLabelEn: race.distanceLabelEn ?? undefined,
+            cutoffMinutes: race.cutoffMinutes ?? null,
+            description: race.description ?? undefined,
+            status: 'Active', sortOrder: race.sortOrder, ticketStatus: 'Available',
+            maxParticipants: race.maxParticipants ?? null, itraPoints: race.itraPoints ?? null,
+            certifiedBy: race.certifiedBy ?? undefined, prizeMoney: race.prizeMoney,
+            championshipCategory: race.championshipCategory ?? undefined,
+            dateOfRace: computeClonedRaceDate(source.date, race.dateOfRace, edition.date),
+            startTime: race.startTime ? race.startTime.slice(0, 5) : null,
+          } satisfies CreateRaceInput),
+        }),
+      ));
+      const datesPreFilled = !!edition.date && !!source.date && source.races.some(r => r.dateOfRace);
+      onNotify(`Copied ${source.races.length} race${source.races.length === 1 ? '' : 's'} from "${source.title ?? source.year ?? ''}"${datesPreFilled ? ' — dates pre-filled' : ''}`, 'success');
+      await refresh();
+    } catch (err) {
+      onNotify(err instanceof Error ? err.message : 'Failed to copy races', 'error');
+    } finally {
+      setCopyingRaces(false);
+    }
+  };
+
+  const openBulkDates = (edition: EventEditionDto) => {
+    const allSorted = [...(detail?.editions ?? [])].sort(sortEditions);
+    const idx = allSorted.findIndex(ed => ed.id === edition.id);
+    let prevEdition: EventEditionDto | undefined;
+    for (let i = idx - 1; i >= 0; i--) {
+      if (allSorted[i].races.length > 0) { prevEdition = allSorted[i]; break; }
+    }
+    setBulkDatesEdition(edition);
+    setBulkDates(
+      [...edition.races].sort(sortRaces).map(race => {
+        const prevRace = prevEdition?.races.find(r => r.name === race.name);
+        return { race, dateOfRace: race.dateOfRace ?? '', startTime: race.startTime ? race.startTime.slice(0, 5) : '', prevDateOfRace: prevRace?.dateOfRace ?? undefined };
+      }),
+    );
+    setShowBulkDatesDialog(true);
+  };
+
+  const handleSaveBulkDates = async () => {
+    setSavingBulkDates(true);
+    try {
+      await Promise.all(bulkDates.map(({ race, dateOfRace, startTime }) =>
+        apiFetch(`/api/v1/admin/races/${race.id}`, {
+          method: 'PUT', body: JSON.stringify(racePayload(race, { dateOfRace: dateOfRace || null, startTime: startTime || null })),
+        }),
+      ));
+      onNotify(`Dates saved for ${bulkDates.length} race${bulkDates.length === 1 ? '' : 's'}`, 'success');
+      setShowBulkDatesDialog(false);
+      await refresh();
+    } catch (err) {
+      onNotify(err instanceof Error ? err.message : 'Failed to save dates', 'error');
+    } finally {
+      setSavingBulkDates(false);
+    }
+  };
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const handleRaceDragEnd = async (event: DragEndEvent, edition: EventEditionDto) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const sorted = [...edition.races].sort(sortRaces);
+    const oldIndex = sorted.findIndex(r => r.id === active.id);
+    const newIndex = sorted.findIndex(r => r.id === over.id);
+    const reordered = arrayMove(sorted, oldIndex, newIndex);
+    setLocalRaceOrder(prev => new Map(prev).set(edition.id, reordered.map(r => r.id)));
+    try {
+      await Promise.all(reordered.map((race, idx) =>
+        idx !== sorted.indexOf(race)
+          ? apiFetch(`/api/v1/admin/races/${race.id}`, { method: 'PUT', body: JSON.stringify(racePayload(race, { sortOrder: idx })) })
+          : Promise.resolve(),
+      ));
+      await refresh();
+      setLocalRaceOrder(prev => { const m = new Map(prev); m.delete(edition.id); return m; });
+    } catch {
+      setLocalRaceOrder(prev => { const m = new Map(prev); m.delete(edition.id); return m; });
+      onNotify('Failed to reorder races', 'error');
+    }
+  };
+
+  const handleDeleteEvent = async () => {
+    if (!detail) return;
+    if (!confirmDeleteEvent) { setConfirmDeleteEvent(true); return; }
+    try {
+      await apiFetch(`/api/v1/admin/events/${detail.id}`, { method: 'DELETE' });
+      onNotify(`"${detail.name}" deleted`);
+      navigate('/events');
+    } catch (err) {
+      onNotify(err instanceof Error ? err.message : 'Failed to delete event', 'error');
+      setConfirmDeleteEvent(false);
+    }
+  };
+
   const handleCycleRaceStatus = (race: RaceDto) => {
     const next = RACE_STATUSES[(RACE_STATUSES.indexOf(race.status) + 1) % RACE_STATUSES.length]! as RaceStatus;
     patchRaceInDetail(race.id, { status: next });
@@ -700,6 +996,16 @@ export default function EventDetailPage({ onNotify }: EventDetailPageProps) {
               onClick={() => { setEditingEdition(null); setEditionDialogOpen(true); }}>
               Add edition
             </Button>
+            <Tooltip title={confirmDeleteEvent ? 'Click again to confirm delete' : 'Delete event'}>
+              <Button size="small" color="error"
+                variant={confirmDeleteEvent ? 'contained' : 'outlined'}
+                startIcon={<DeleteIcon />}
+                onClick={() => void handleDeleteEvent()}
+                onBlur={() => setConfirmDeleteEvent(false)}
+              >
+                {confirmDeleteEvent ? 'Confirm delete' : 'Delete'}
+              </Button>
+            </Tooltip>
           </Stack>
         </Stack>
         {detail.description && (
@@ -792,6 +1098,12 @@ export default function EventDetailPage({ onNotify }: EventDetailPageProps) {
               </Box>
 
               <Stack direction="row" spacing={0.5} alignItems="center" onClick={e => e.stopPropagation()}>
+                {editionHasStaleTx(edition) && (
+                  <Tooltip title="EN translation may be outdated">
+                    <Chip label="EN" size="small" color="warning"
+                      sx={{ height: 18, fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }} />
+                  </Tooltip>
+                )}
                 <Chip
                   label={edition.registrationStatus}
                   size="small"
@@ -805,6 +1117,13 @@ export default function EventDetailPage({ onNotify }: EventDetailPageProps) {
                   variant="outlined"
                   color={raceCount === 0 && !isPast ? 'warning' : 'default'}
                 />
+                {onNavigateToRaceManager && (edition.date || edition.endDate) && (
+                  <Tooltip title={`Open in Race Manager (${edition.date ?? edition.endDate})`}>
+                    <IconButton size="small" onClick={() => onNavigateToRaceManager(edition.date ?? edition.endDate ?? '')}>
+                      <FlagIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                )}
                 <Tooltip title="Edit edition">
                   <IconButton size="small" onClick={() => { setEditingEdition(edition); setEditionDialogOpen(true); }}>
                     <EditIcon fontSize="small" />
@@ -883,6 +1202,16 @@ export default function EventDetailPage({ onNotify }: EventDetailPageProps) {
                         renderInput={params => <TextField {...params} label="Set trail for all legs" />}
                       />
                     )}
+                    {edition.races.length === 0 && detail?.editions.some(ed => ed.id !== edition.id && ed.races.length > 0) && (
+                      <Button size="small" startIcon={<ContentCopyIcon />} onClick={() => handleCopyRacesFromPrevious(edition)} disabled={copyingRaces}>
+                        Copy races
+                      </Button>
+                    )}
+                    {edition.races.length > 0 && (
+                      <Button size="small" startIcon={<CalendarMonthIcon />} onClick={() => openBulkDates(edition)}>
+                        Set dates
+                      </Button>
+                    )}
                     <Button size="small" startIcon={<AddIcon />} onClick={() => openRaceForm(null, edition)}>
                       Add race
                     </Button>
@@ -908,135 +1237,34 @@ export default function EventDetailPage({ onNotify }: EventDetailPageProps) {
                         <TableCell align="right" />
                       </TableRow>
                     </TableHead>
+                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={e => void handleRaceDragEnd(e, edition)}>
+                    <SortableContext items={(localRaceOrder.get(edition.id) ?? [...edition.races].sort(sortRaces).map(r => r.id))} strategy={verticalListSortingStrategy}>
                     <TableBody>
-                      {[...edition.races]
-                        .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name))
-                        .map(race => {
+                      {(localRaceOrder.get(edition.id)
+                        ? localRaceOrder.get(edition.id)!.map(id => edition.races.find(r => r.id === id)!).filter(Boolean)
+                        : [...edition.races].sort(sortRaces)
+                      ).map(race => {
                           const staleTx = raceHasStaleTx(race);
                           return (
-                            <TableRow
+                            <SortableRaceRow
                               key={race.id}
-                              hover
-                              sx={{
-                                cursor: 'pointer',
-                                bgcolor: raceForm?.race?.id === race.id ? 'primary.50' : undefined,
-                              }}
-                              onClick={() => openRaceForm(race, edition)}
-                            >
-                              <TableCell sx={{ px: 0.5, color: 'text.disabled' }}>
-                                <DragHandleIcon fontSize="small" />
-                              </TableCell>
-                              <TableCell>
-                                <Stack direction="row" alignItems="center" spacing={0.5}>
-                                  <Typography variant="body2" fontWeight={600}>{race.name}</Typography>
-                                  {staleTx && (
-                                    <Tooltip title="EN translation may be outdated">
-                                      <Chip label="EN" size="small" color="warning"
-                                        sx={{ height: 16, fontSize: '0.6rem', '& .MuiChip-label': { px: 0.75 } }} />
-                                    </Tooltip>
-                                  )}
-                                </Stack>
-                              </TableCell>
-                              <TableCell>
-                                <Typography variant="body2" color="text.secondary">{race.distanceLabel ?? '—'}</Typography>
-                              </TableCell>
-                              <TableCell>
-                                {race.trailName
-                                  ? <Typography variant="body2" color="text.secondary">{race.trailName}</Typography>
-                                  : <Chip label="No route" size="small" color="warning" variant="outlined"
-                                      sx={{ height: 18, fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }} />
-                                }
-                              </TableCell>
-                              <TableCell onClick={e => e.stopPropagation()}>
-                                {race.dateOfRace ? (
-                                  <Typography variant="body2">
-                                    {fmtDate(race.dateOfRace)}
-                                    {race.startTime && ` · ${race.startTime.slice(0, 5)}`}
-                                  </Typography>
-                                ) : (() => {
-                                  const siblingDates = edition.races
-                                    .filter(r => r.id !== race.id && r.dateOfRace)
-                                    .map(r => r.dateOfRace!);
-                                  const sources = [
-                                    ...(edition.date ? [{ date: edition.date, label: `Parent: ${fmtDate(edition.date)}` }] : []),
-                                    ...siblingDates.filter(d => d !== edition.date).map(d => ({ date: d, label: `Sibling: ${fmtDate(d)}` })),
-                                  ];
-                                  const handleCopyDate = async (date: string) => {
-                                    await apiFetch(`/api/v1/admin/races/${race.id}`, {
-                                      method: 'PUT', body: JSON.stringify(racePayload(race, { dateOfRace: date })),
-                                    });
-                                    patchRaceInDetail(race.id, { dateOfRace: date });
-                                  };
-                                  return (
-                                    <Stack direction="row" alignItems="center" spacing={0.5}>
-                                      <Typography variant="body2" color="warning.main">Missing</Typography>
-                                      {sources.length === 1 ? (
-                                        <Tooltip title={sources[0].label}>
-                                          <Chip size="small" variant="outlined" color="info"
-                                            label={sources[0].date === edition.date ? 'Copy parent' : 'Copy sibling'}
-                                            onClick={() => void handleCopyDate(sources[0].date)}
-                                            sx={{ cursor: 'pointer', height: 20, fontSize: '0.65rem' }} />
-                                        </Tooltip>
-                                      ) : sources.length > 1 ? (
-                                        <>
-                                          <Chip size="small" variant="outlined" color="info" label="Copy date"
-                                            onClick={e => setCopyDateAnchor({ raceId: race.id, el: e.currentTarget })}
-                                            sx={{ cursor: 'pointer', height: 20, fontSize: '0.65rem' }} />
-                                          <Menu
-                                            anchorEl={copyDateAnchor?.raceId === race.id ? copyDateAnchor.el : null}
-                                            open={copyDateAnchor?.raceId === race.id}
-                                            onClose={() => setCopyDateAnchor(null)}
-                                          >
-                                            {sources.map(s => (
-                                              <MenuItem key={s.date} onClick={() => { void handleCopyDate(s.date); setCopyDateAnchor(null); }}>
-                                                {s.label}
-                                              </MenuItem>
-                                            ))}
-                                          </Menu>
-                                        </>
-                                      ) : null}
-                                    </Stack>
-                                  );
-                                })()}
-                              </TableCell>
-                              <TableCell>
-                                <Tooltip title="Click to cycle status">
-                                  <Chip label={race.status} size="small" color={getRaceStatusColor(race.status)}
-                                    onClick={e => { e.stopPropagation(); handleCycleRaceStatus(race); }}
-                                    sx={{ cursor: 'pointer' }} />
-                                </Tooltip>
-                              </TableCell>
-                              <TableCell>
-                                <Tooltip title="Click to cycle ticket status">
-                                  <Chip label={race.ticketStatus} size="small" variant="outlined"
-                                    color={getTicketStatusColor(race.ticketStatus)}
-                                    onClick={e => { e.stopPropagation(); handleCycleTicketStatus(race); }}
-                                    sx={{ cursor: 'pointer' }} />
-                                </Tooltip>
-                              </TableCell>
-                              <TableCell>
-                                <Typography variant="body2" color="text.secondary">
-                                  {race.maxParticipants ?? '—'}
-                                </Typography>
-                              </TableCell>
-                              <TableCell align="right" onClick={e => e.stopPropagation()}>
-                                <Stack direction="row" justifyContent="flex-end" spacing={0.25}>
-                                  <Tooltip title="Edit race">
-                                    <IconButton size="small" onClick={() => openRaceForm(race, edition)}>
-                                      <EditIcon fontSize="small" />
-                                    </IconButton>
-                                  </Tooltip>
-                                  <Tooltip title="Duplicate race">
-                                    <IconButton size="small" onClick={e => { e.stopPropagation(); openDuplicateRace(race, edition); }}>
-                                      <ContentCopyIcon fontSize="small" />
-                                    </IconButton>
-                                  </Tooltip>
-                                </Stack>
-                              </TableCell>
-                            </TableRow>
+                              race={race}
+                              edition={edition}
+                              isActive={raceForm?.race?.id === race.id}
+                              onOpen={() => openRaceForm(race, edition)}
+                              onDuplicate={() => openDuplicateRace(race, edition)}
+                              onCycleStatus={() => handleCycleRaceStatus(race)}
+                              onCycleTicket={() => handleCycleTicketStatus(race)}
+                              staleTx={staleTx}
+                              detail={detail}
+                              patchRaceInDetail={patchRaceInDetail}
+                              racePayload={racePayload}
+                            />
                           );
                         })}
                     </TableBody>
+                    </SortableContext>
+                    </DndContext>
                   </Table>
                 )}
 
@@ -1119,6 +1347,86 @@ export default function EventDetailPage({ onNotify }: EventDetailPageProps) {
         }}
         onNotify={onNotify}
       />
+
+      {/* Copy races confirmation */}
+      <Dialog open={!!copyRacesConfirm} onClose={() => setCopyRacesConfirm(null)} maxWidth="sm" fullWidth>
+        <DialogTitle>Copy Races</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2">
+            Copy <strong>{copyRacesConfirm?.source.races.length} race{copyRacesConfirm?.source.races.length === 1 ? '' : 's'}</strong> from edition <strong>{copyRacesConfirm?.source.title ?? copyRacesConfirm?.source.year}</strong> into this edition?
+          </Typography>
+          <Typography variant="body2" sx={{ mt: 1.5 }} color="text.secondary">
+            Races will be cloned with statuses reset to Active/Available.
+            {copyRacesConfirm?.edition.date && copyRacesConfirm?.source.date
+              ? ' Dates will be pre-filled based on the offset from the source edition.'
+              : ' Dates will need to be set manually.'}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCopyRacesConfirm(null)}>Cancel</Button>
+          <Button variant="contained" onClick={() => void handleConfirmCopyRaces()} disabled={copyingRaces}>
+            {copyingRaces ? <CircularProgress size={20} /> : 'Copy Races'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Bulk set dates dialog */}
+      <Dialog open={showBulkDatesDialog} onClose={() => setShowBulkDatesDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Set Race Dates — {bulkDatesEdition?.title ?? bulkDatesEdition?.year}</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            {bulkDatesEdition?.date && detail?.type !== 'Series' && bulkDates.some(d => !d.dateOfRace) && (
+              <Button size="small" variant="outlined" startIcon={<CalendarMonthIcon />}
+                onClick={() => setBulkDates(prev => prev.map(d => d.dateOfRace ? d : { ...d, dateOfRace: bulkDatesEdition.date! }))}
+                sx={{ alignSelf: 'flex-start' }}
+              >
+                Fill empty dates from edition ({fmtDate(bulkDatesEdition.date)})
+              </Button>
+            )}
+            {detail?.type === 'Series' && detail.scheduleRule && bulkDatesEdition?.year &&
+              detail.scheduleRule.weekOfMonth && detail.scheduleRule.dayOfWeek && detail.scheduleRule.monthStart && (
+              <Button size="small" variant="outlined" startIcon={<CalendarMonthIcon />}
+                onClick={() => {
+                  const suggested = suggestSeriesLegDates(detail.scheduleRule!, bulkDatesEdition.year!, bulkDates.length);
+                  setBulkDates(prev => prev.map((d, i) => d.dateOfRace ? d : { ...d, dateOfRace: suggested[i] ?? d.dateOfRace }));
+                }}
+                sx={{ alignSelf: 'flex-start' }}
+              >
+                Suggest dates from schedule
+              </Button>
+            )}
+            {bulkDates.map((entry, i) => (
+              <Box key={entry.race.id}>
+                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" sx={{ mb: 0.75 }}>
+                  {entry.race.name}{entry.race.distanceLabel ? ` · ${entry.race.distanceLabel}` : ''}
+                  {entry.prevDateOfRace && <Box component="span" sx={{ ml: 1, color: 'text.disabled', fontWeight: 400 }}>prev: {fmtDate(entry.prevDateOfRace)}</Box>}
+                </Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
+                  <DatePicker
+                    label="Date"
+                    value={entry.dateOfRace ? dayjs(entry.dateOfRace) : null}
+                    onChange={(val: Dayjs | null) => setBulkDates(prev => prev.map((d, j) => j === i ? { ...d, dateOfRace: val ? val.format('YYYY-MM-DD') : '' } : d))}
+                    slotProps={{ textField: { size: 'small', fullWidth: true } }}
+                  />
+                  <TimePicker
+                    label="Start time"
+                    ampm={false}
+                    value={entry.startTime ? dayjs(`2000-01-01T${entry.startTime}`) : null}
+                    onChange={(val: Dayjs | null) => setBulkDates(prev => prev.map((d, j) => j === i ? { ...d, startTime: val ? val.format('HH:mm') : '' } : d))}
+                    slotProps={{ textField: { size: 'small', fullWidth: true } }}
+                  />
+                </Box>
+              </Box>
+            ))}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowBulkDatesDialog(false)}>Cancel</Button>
+          <Button variant="contained" onClick={() => void handleSaveBulkDates()} disabled={savingBulkDates}>
+            {savingBulkDates ? <CircularProgress size={20} /> : 'Save Dates'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
