@@ -1,4 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { TimePicker } from '@mui/x-date-pickers/TimePicker';
+import dayjs, { type Dayjs } from 'dayjs';
 import {
   Alert,
   Autocomplete,
@@ -234,9 +236,13 @@ export default function RaceDrawer({
           <TextField size="small" fullWidth label="Date" type="date" value={form.dateOfRace}
             onChange={e => set('dateOfRace', e.target.value)}
             InputLabelProps={{ shrink: true }} />
-          <TextField size="small" fullWidth label="Start time" type="time" value={form.startTime}
-            onChange={e => set('startTime', e.target.value)}
-            InputLabelProps={{ shrink: true }} />
+          <TimePicker
+            label="Start time"
+            ampm={false}
+            value={form.startTime ? dayjs(`2000-01-01T${form.startTime}`) : null}
+            onChange={(val: Dayjs | null) => set('startTime', val ? val.format('HH:mm') : '')}
+            slotProps={{ textField: { size: 'small', fullWidth: true } }}
+          />
         </FormRow>
         <FormRow>
           <TextField size="small" fullWidth label="Cutoff time (HH:mm)" value={form.cutoffTime}

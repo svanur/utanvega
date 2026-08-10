@@ -343,7 +343,22 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onNotify
         <Stack spacing={2} sx={{ mt: 1 }}>
           <Stack direction="row" spacing={1.5}>
             <TextField size="small" fullWidth label="Year" type="number" value={form.year}
-              onChange={e => set('year', e.target.value)} />
+              onChange={e => {
+                const newYear = e.target.value;
+                const oldYear = form.year;
+                setForm(prev => {
+                  const updates: Partial<EditionFormState> = { year: newYear };
+                  const ny = parseInt(newYear, 10);
+                  const oy = parseInt(oldYear, 10);
+                  if (newYear.length === 4 && !isNaN(ny) && oldYear.length === 4 && !isNaN(oy)) {
+                    if (prev.date) updates.date = prev.date.replace(/^\d{4}/, newYear);
+                    if (prev.endDate) updates.endDate = prev.endDate.replace(/^\d{4}/, newYear);
+                    if (/^\d{4}$/.test(prev.title.trim())) updates.title = newYear;
+                    if (prev.resultsUrl) updates.resultsUrl = prev.resultsUrl.replace(new RegExp(`${oy}(/?)$`), `${newYear}$1`);
+                  }
+                  return { ...prev, ...updates };
+                });
+              }} />
             <DatePicker label="Start date"
               value={form.date ? dayjs(form.date) : null}
               onChange={v => set('date', v ? v.format('YYYY-MM-DD') : '')}
