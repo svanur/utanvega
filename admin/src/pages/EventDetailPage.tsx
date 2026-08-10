@@ -1,4 +1,4 @@
-import { useState, useMemo, type ReactNode } from 'react';
+import { useState, useMemo, useEffect, type ReactNode } from 'react';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import dayjs, { type Dayjs } from 'dayjs';
@@ -571,6 +571,18 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
   const [localRaceOrder, setLocalRaceOrder] = useState<Map<string, string[]>>(new Map());
   const [confirmDeleteEvent, setConfirmDeleteEvent] = useState(false);
 
+  useEffect(() => {
+    if (!confirmDeleteEvent) return;
+    const t = setTimeout(() => setConfirmDeleteEvent(false), 3000);
+    return () => clearTimeout(t);
+  }, [confirmDeleteEvent]);
+
+  useEffect(() => {
+    if (!deletingEditionId) return;
+    const t = setTimeout(() => setDeletingEditionId(null), 3000);
+    return () => clearTimeout(t);
+  }, [deletingEditionId]);
+
   const currentYear = new Date().getFullYear();
 
   const editionsByYear = useMemo(() => {
@@ -1011,12 +1023,11 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
               onClick={() => { setEditingEdition(null); setEditionDialogOpen(true); }}>
               Add edition
             </Button>
-            <Tooltip title={confirmDeleteEvent ? 'Click again to confirm delete' : 'Delete event'}>
+            <Tooltip title={confirmDeleteEvent ? 'Click again to confirm — or wait 3 seconds to cancel' : 'Delete event'}>
               <Button size="small" color="error"
                 variant={confirmDeleteEvent ? 'contained' : 'outlined'}
                 startIcon={<DeleteIcon />}
                 onClick={() => void handleDeleteEvent()}
-                onBlur={() => setConfirmDeleteEvent(false)}
               >
                 {confirmDeleteEvent ? 'Confirm delete' : 'Delete'}
               </Button>
@@ -1149,7 +1160,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                     <ContentCopyIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
-                <Tooltip title={deletingEditionId === edition.id ? 'Click again to confirm' : 'Delete edition'}>
+                <Tooltip title={deletingEditionId === edition.id ? 'Click again to confirm — or wait 3 seconds to cancel' : 'Delete edition'}>
                   <IconButton
                     size="small"
                     color={deletingEditionId === edition.id ? 'error' : 'default'}
