@@ -8,7 +8,7 @@ import {
 import { alpha } from '@mui/material/styles';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
-import EditIcon from '@mui/icons-material/Edit';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import SearchIcon from '@mui/icons-material/Search';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
@@ -134,11 +134,11 @@ type SortField = 'event' | 'year' | 'score';
 type QuickFilter = 'critical' | 'no-date' | 'no-races' | 'no-trail' | 'no-results' | 'bad-status' | 'cancelled';
 
 interface EditionHealthProps {
-  onEditEvent?: (eventId: string) => void;
+  onViewEvent?: (eventSlug: string) => void;
   onNotify: (message: React.ReactNode, severity?: 'success' | 'error') => void;
 }
 
-export default function EditionHealth({ onEditEvent, onNotify }: EditionHealthProps) {
+export default function EditionHealth({ onViewEvent, onNotify }: EditionHealthProps) {
   const theme = useTheme();
   const [events, setEvents] = useState<EventDetailDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -398,9 +398,9 @@ export default function EditionHealth({ onEditEvent, onNotify }: EditionHealthPr
                       </Stack>
                     </TableCell>
                     <TableCell align="center" onClick={e => e.stopPropagation()}>
-                      {onEditEvent && (
-                        <IconButton size="small" onClick={() => onEditEvent(event.id)} title="Edit event">
-                          <EditIcon fontSize="small" />
+                      {onViewEvent && (
+                        <IconButton size="small" onClick={() => onViewEvent(event.slug)} title="View event">
+                          <VisibilityIcon fontSize="small" />
                         </IconButton>
                       )}
                     </TableCell>

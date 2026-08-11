@@ -9,7 +9,7 @@ import {
 import { alpha } from '@mui/material/styles';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
-import EditIcon from '@mui/icons-material/Edit';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import SearchIcon from '@mui/icons-material/Search';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import { apiFetch } from '../hooks/api';
@@ -99,11 +99,11 @@ type SortField = 'name' | 'score' | 'status' | 'type';
 type QuickFilter = 'critical' | 'perfect' | 'no-date' | 'no-location' | 'no-gpx';
 
 interface EventHealthProps {
-  onEditEvent?: (eventId: string) => void;
+  onViewEvent?: (eventSlug: string) => void;
   onNotify: (message: React.ReactNode, severity?: 'success' | 'error') => void;
 }
 
-export default function EventHealth({ onEditEvent, onNotify }: EventHealthProps) {
+export default function EventHealth({ onViewEvent, onNotify }: EventHealthProps) {
   const theme = useTheme();
   const [events, setEvents] = useState<EventSummaryDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -365,9 +365,9 @@ export default function EventHealth({ onEditEvent, onNotify }: EventHealthProps)
                   </Stack>
                 </TableCell>
                 <TableCell align="center">
-                  {onEditEvent && (
-                    <IconButton size="small" onClick={() => onEditEvent(event.id)} title="Edit event">
-                      <EditIcon fontSize="small" />
+                  {onViewEvent && (
+                    <IconButton size="small" onClick={() => onViewEvent(event.slug)} title="View event">
+                      <VisibilityIcon fontSize="small" />
                     </IconButton>
                   )}
                 </TableCell>
