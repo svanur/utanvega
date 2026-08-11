@@ -492,15 +492,21 @@ function SortableRaceRow({ race, edition, isActive, staleTx, detail, onOpen, onD
         )}
       </TableCell>
       <TableCell>
-        <Tooltip title={cycleTooltip('Race status', RACE_STATUSES, race.status)}>
+        <Tooltip title={edition.status === 'Cancelled'
+          ? 'Locked — the edition is cancelled'
+          : cycleTooltip('Race status', RACE_STATUSES, race.status)}>
           <Chip label={race.status} size="small" color={getRaceStatusColor(race.status)}
-            onClick={e => { e.stopPropagation(); onCycleStatus(); }} sx={{ cursor: 'pointer' }} />
+            onClick={edition.status === 'Cancelled' ? undefined : e => { e.stopPropagation(); onCycleStatus(); }}
+            sx={{ cursor: edition.status === 'Cancelled' ? 'default' : 'pointer' }} />
         </Tooltip>
       </TableCell>
       <TableCell>
-        <Tooltip title={cycleTooltip('Ticket status', TICKET_STATUSES, race.ticketStatus)}>
+        <Tooltip title={race.status === 'Cancelled'
+          ? 'Locked — the race is cancelled'
+          : cycleTooltip('Ticket status', TICKET_STATUSES, race.ticketStatus)}>
           <Chip label={race.ticketStatus} size="small" variant="outlined" color={getTicketStatusColor(race.ticketStatus)}
-            onClick={e => { e.stopPropagation(); onCycleTicket(); }} sx={{ cursor: 'pointer' }} />
+            onClick={race.status === 'Cancelled' ? undefined : e => { e.stopPropagation(); onCycleTicket(); }}
+            sx={{ cursor: race.status === 'Cancelled' ? 'default' : 'pointer' }} />
         </Tooltip>
       </TableCell>
       <TableCell>

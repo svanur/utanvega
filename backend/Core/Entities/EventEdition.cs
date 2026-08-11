@@ -56,6 +56,9 @@ public class EventEdition
         Status = EditionStatus.Cancelled;
         RegistrationStatus = RegistrationStatus.Closed;
         foreach (var race in Races.Where(r => r.Status != RaceStatus.Cancelled))
+        {
             race.Status = RaceStatus.Cancelled;
+            race.TicketStatus = TicketStatus.Closed;
+        }
     }
 }
