@@ -80,8 +80,11 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
     const loading = isSearching ? allYearsLoading : yearLoading;
 
     // Browsing one year reads best chronologically (Jan → Dec); a cross-year search reads best
-    // newest-first (you're usually after the most recent occurrence). Reset to that mode's
-    // default whenever search is entered or cleared, without fighting a manual column sort.
+    // newest-first (you're usually after the most recent occurrence). Deliberately resets to
+    // that mode's default — including overriding any manual column sort — whenever search is
+    // entered or cleared, since those are two distinct browsing contexts and a fresh one
+    // warrants a fresh default view. Only fires on the false↔true transition (isSearching is a
+    // derived boolean), so it does not refire on every keystroke while a search is already active.
     useEffect(() => {
         setSortField('date');
         setSortDir(isSearching ? 'desc' : 'asc');
@@ -218,7 +221,7 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                             const cancelled = row.effectiveCancelled;
                             return (
                                 <Card
-                                    key={`${row.editionId}-${row.rowDate}`}
+                                    key={row.raceId ?? row.editionId}
                                     variant="outlined"
                                     sx={{
                                         '@media (hover: hover)': { transition: 'transform 0.15s, box-shadow 0.15s', '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] } },
@@ -321,7 +324,7 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                                     const cancelled = row.effectiveCancelled;
                                     return (
                                         <TableRow
-                                            key={`${row.editionId}-${row.rowDate}`}
+                                            key={row.raceId ?? row.editionId}
                                             hover
                                             sx={{ cursor: 'pointer', ...(cancelled && { opacity: 0.6 }) }}
                                             onClick={() => navigate(`/events/${row.eventSlug}/history/${row.editionYear ?? row.editionId}`)}

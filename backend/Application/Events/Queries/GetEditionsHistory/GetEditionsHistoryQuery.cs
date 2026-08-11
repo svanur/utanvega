@@ -24,6 +24,7 @@ public record EditionHistoryRowDto(
     string? ResultsUrl,
     List<string>? ActivityTypes,
     string EventActivityType,
+    Guid? RaceId,
     string? RaceName,
     string? RaceNameEn
 );
@@ -97,7 +98,7 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
                 {
                     var raceCancelled = race.Status == RaceStatus.Cancelled;
                     if (raceCancelled && !request.IncludeCancelled) continue;
-                    rows.Add(BuildRow(ed, race.DateOfRace!.Value, [race], raceCancelled, raceName: race.Name, raceNameEn: race.NameEn));
+                    rows.Add(BuildRow(ed, race.DateOfRace!.Value, [race], raceCancelled, raceId: race.Id, raceName: race.Name, raceNameEn: race.NameEn));
                 }
             }
             else
@@ -115,7 +116,7 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
         return result;
     }
 
-    private static EditionHistoryRowDto BuildRow(EventEdition ed, DateOnly rowDate, List<Race> races, bool effectiveCancelled, DateOnly? rowEndDate = null, string? raceName = null, string? raceNameEn = null)
+    private static EditionHistoryRowDto BuildRow(EventEdition ed, DateOnly rowDate, List<Race> races, bool effectiveCancelled, DateOnly? rowEndDate = null, Guid? raceId = null, string? raceName = null, string? raceNameEn = null)
     {
         var distances = races
             .Select(r =>
@@ -155,6 +156,7 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
             ed.ResultsUrl,
             activityTypes.Count > 0 ? activityTypes : null,
             ed.Event.ActivityType.ToString(),
+            raceId,
             raceName,
             raceNameEn
         );

@@ -342,6 +342,61 @@ public class EditionsHistoryHandlerTests : IDisposable
     }
 
     [Fact]
+    public async Task History_SeriesEvent_SameDateLegs_GetDistinctRaceIds()
+    {
+        // Regression: two legs on the same date (e.g. two distances of the same series round)
+        // must remain distinguishable — the frontend keys rows by RaceId to avoid collisions
+        // that editionId+date alone can't rule out.
+        var pastYear = DateOnly.FromDateTime(DateTime.UtcNow).Year - 1;
+        var ev = CreateTestEvent("Same Date Legs Series", type: EventType.Series);
+        var edition = CreateEdition(ev.Id, new DateOnly(pastYear, 10, 1));
+        var sameDate = new DateOnly(pastYear, 10, 8);
+        var leg10k = CreateRace(edition.Id, "10K Leg", dateOfRace: sameDate, distanceLabel: "10K");
+        var leg21k = CreateRace(edition.Id, "21K Leg", dateOfRace: sameDate, distanceLabel: "21K");
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.AddRange(leg10k, leg21k);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEditionsHistoryQueryHandler(queryCtx, _memoryCache);
+        var result = await handler.Handle(new GetEditionsHistoryQuery(pastYear), CancellationToken.None);
+
+        Assert.Equal(2, result.Count);
+        Assert.Equal(2, result.Select(r => r.RaceId).Distinct().Count());
+        Assert.Contains(result, r => r.RaceId == leg10k.Id);
+        Assert.Contains(result, r => r.RaceId == leg21k.Id);
+    }
+
+    [Fact]
+    public async Task History_NonSeriesEdition_RaceIdIsNull()
+    {
+        var pastYear = DateOnly.FromDateTime(DateTime.UtcNow).Year - 1;
+        var ev = CreateTestEvent("Non Series Race Id Test");
+        var edition = CreateEdition(ev.Id, new DateOnly(pastYear, 5, 10));
+        var race = CreateRace(edition.Id, "10K");
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEditionsHistoryQueryHandler(queryCtx, _memoryCache);
+        var result = await handler.Handle(new GetEditionsHistoryQuery(pastYear), CancellationToken.None);
+
+        var row = Assert.Single(result);
+        Assert.Null(row.RaceId);
+    }
+
+    [Fact]
     public async Task History_SeriesEvent_IndividualLegCancelledStateIsPerRace_NotEditionWide()
     {
         var pastYear = DateOnly.FromDateTime(DateTime.UtcNow).Year - 1;

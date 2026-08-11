@@ -205,6 +205,7 @@ export interface EditionHistoryRow {
     resultsUrl: string | null;
     activityTypes: string[] | null;
     eventActivityType: string;
+    raceId: string | null;
     raceName: string | null;
     raceNameEn: string | null;
 }
