@@ -46,6 +46,7 @@ public class CacheInvalidator : ICacheInvalidator
     {
         _cache.Remove(CacheKeys.Events(false));
         _cache.Remove(CacheKeys.Events(true));
+        _cache.Remove(CacheKeys.EditionsHistoryYears);
 
         // Bump the version token so all cached calendar entries are effectively invalidated.
         var current = _cache.GetOrCreate(CacheKeys.EventVersion, e =>

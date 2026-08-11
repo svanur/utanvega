@@ -92,7 +92,8 @@
         "challenge": "Áskorun",
         "allTrails": "Allar leiðir",
         "allEvents": "Allir viðburðir",
-        "eventsCalendar": "Dagatal"
+        "eventsCalendar": "Dagatal",
+        "editionsHistory": "Fyrri viðburðir"
     },
     "spotlight": {
         "placeholder": "Leita að viðburðu, leiðum og stöðum...",
@@ -1320,6 +1321,14 @@
             "editionNotFound": "Útgáfa fannst ekki",
             "pastEdition": "Liðin útgáfa",
             "completed": "Lokið"
+        },
+        "editionsHistory": {
+            "title": "Fyrri viðburðir",
+            "subtitle": "Skoðaðu úrslit og upplýsingar um viðburði sem þegar hafa farið fram.",
+            "searchPlaceholder": "Leita í fyrri viðburðum...",
+            "showCancelled": "Sýna aflýst",
+            "noResults": "Engir fyrri viðburðir fundust.",
+            "resultsLink": "Úrslit"
         },
         "table": {
             "name": "Heiti",

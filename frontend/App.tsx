@@ -26,6 +26,7 @@ const RacesPage = lazy(() => import('./pages/RacesPage'));
 const RaceCalendarPage = lazy(() => import('./pages/RaceCalendarPage'));
 const CompetitionDetailPage = lazy(() => import('./pages/CompetitionDetailPage'));
 const EditionHistoryPage = lazy(() => import('./pages/EditionHistoryPage'));
+const EditionsHistoryPage = lazy(() => import('./pages/EditionsHistoryPage'));
 const WelcomePage = lazy(() => import('./pages/WelcomePage'));
 const TrailComparePage = lazy(() => import('./pages/TrailComparePage'));
 const TrailLeaderboardPage = lazy(() => import('./pages/TrailLeaderboardPage'));
@@ -178,9 +179,13 @@ export default function App() {
                         path="/events/:slug" 
                         element={<CompetitionDetailPage mode={mode} onToggleMode={handleToggleMode} />} 
                     />
-                    <Route 
-                        path="/events/:slug/history/:editionKey" 
-                        element={<EditionHistoryPage mode={mode} onToggleMode={handleToggleMode} />} 
+                    <Route
+                        path="/events/:slug/history/:editionKey"
+                        element={<EditionHistoryPage mode={mode} onToggleMode={handleToggleMode} />}
+                    />
+                    <Route
+                        path="/editions/history/:year?"
+                        element={<EditionsHistoryPage mode={mode} onToggleMode={handleToggleMode} />}
                     />
                     {/* Legacy redirects */}
                     <Route path="/races" element={<Navigate to="/events" replace />} />

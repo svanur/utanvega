@@ -150,7 +150,7 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
             .Select(ed => new EventEditionDto(
                 ed.Id,
                 ed.EventId,
-                ed.Year,
+                ed.Year ?? ed.Date?.Year,
                 ed.Date,
                 ed.EndDate,
                 ed.Title,

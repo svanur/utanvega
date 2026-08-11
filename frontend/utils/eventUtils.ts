@@ -14,6 +14,13 @@ export function isEffectivelyUnconfirmed(item: { status: string; editionStatus?:
     return item.status === 'Unconfirmed' || item.editionStatus === 'Unconfirmed';
 }
 
+// The key used in /events/:slug/history/:editionKey — prefers the actual date (most specific,
+// stable, and human-readable in a URL), falls back to year, then the raw id for dateless editions
+// with no year either.
+export function editionKeyFor(edition: { date?: string | null; year?: number | null; id: string }): string {
+    return edition.date ?? String(edition.year ?? edition.id);
+}
+
 export function getEventTypeColor(type: string): 'primary' | 'secondary' | 'success' | 'warning' | 'info' | 'error' | 'default' {
     switch (type) {
         case 'Race': return 'primary';

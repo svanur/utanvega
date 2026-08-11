@@ -188,3 +188,48 @@ export function useEventCalendar(from: string, to: string) {
     });
     return { days, loading: isPending, error: queryError instanceof Error ? queryError.message : null };
 }
+
+export interface EditionHistoryRow {
+    eventId: string;
+    eventSlug: string;
+    eventName: string;
+    eventNameEn: string | null;
+    eventType: string;
+    editionId: string;
+    editionYear: number | null;
+    rowDate: string;
+    rowEndDate: string | null;
+    locationName: string | null;
+    effectiveCancelled: boolean;
+    distances: { label: string; ticketStatus: string | null }[];
+    resultsUrl: string | null;
+    activityTypes: string[] | null;
+    eventActivityType: string;
+}
+
+export function useEditionsHistory(year: number | undefined, includeCancelled: boolean) {
+    const { data: rows = [], isPending, error: queryError } = useQuery<EditionHistoryRow[]>({
+        queryKey: ['editions-history', year, includeCancelled],
+        queryFn: () => fetch(`${API_URL}/api/v1/events/history?year=${year}&includeCancelled=${includeCancelled}`)
+            .then(res => {
+                if (!res.ok) throw new Error('Failed to fetch editions history');
+                return res.json() as Promise<EditionHistoryRow[]>;
+            }),
+        staleTime: 5 * 60 * 1000,
+        enabled: !!year,
+    });
+    return { rows, loading: isPending, error: queryError instanceof Error ? queryError.message : null };
+}
+
+export function useEditionsHistoryYears() {
+    const { data: years = [], isPending } = useQuery<number[]>({
+        queryKey: ['editions-history-years'],
+        queryFn: () => fetch(`${API_URL}/api/v1/events/history/years`)
+            .then(res => {
+                if (!res.ok) throw new Error('Failed to fetch editions history years');
+                return res.json() as Promise<number[]>;
+            }),
+        staleTime: 30 * 60 * 1000,
+    });
+    return { years, loading: isPending };
+}
