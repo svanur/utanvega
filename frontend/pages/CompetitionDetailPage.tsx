@@ -98,7 +98,7 @@ type PreparedEdition = EventEditionDto & {
 import { ACTIVITY_EMOJI } from '../constants/activityEmoji';
 import { googleCalendarUrl, outlookCalendarUrl, downloadIcs } from '../utils/calendarLinks';
 import EventDateBadge from '../components/EventDateBadge';
-import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed } from '../utils/eventUtils';
+import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, editionKeyFor } from '../utils/eventUtils';
 import { getTicketStatusColor } from '../utils/ticketStatus';
 
 type RaceDayChecklistKey = 'bib' | 'shoes' | 'gels' | 'goodMood';
@@ -1060,7 +1060,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             {pastEditions.map(edition => {
                                 const heading = edition.title?.trim() || String(edition.year);
                                 const raceCount = edition.visibleRaces.length;
-                                const editionKey = edition.date ?? String(edition.year ?? edition.id);
+                                const editionKey = editionKeyFor(edition);
                                 return (
                                     <Paper
                                         key={edition.id}

@@ -107,6 +107,7 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
             label: t('nav.events'),
             children: [
                 { label: t('nav.allEvents'), path: '/events' },
+                { label: t('nav.editionsHistory'), path: '/editions/history' },
                 { label: t('nav.eventsCalendar'), path: '/events/calendar' },
             ],
         },

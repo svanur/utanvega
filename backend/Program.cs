@@ -39,6 +39,7 @@ using Utanvega.Backend.Core.Services;
 using Utanvega.Backend.Application.Events.Queries.GetEvents;
 using Utanvega.Backend.Application.Events.Queries.GetEvent;
 using Utanvega.Backend.Application.Events.Queries.GetEventCalendar;
+using Utanvega.Backend.Application.Events.Queries.GetEditionsHistory;
 using Utanvega.Backend.Application.Events.Queries.GetRaceDayEditions;
 using Utanvega.Backend.Application.Events.Queries.GetNextRaceDay;
 using Utanvega.Backend.Application.Events.Queries.GetPrevRaceDay;
@@ -1527,6 +1528,21 @@ app.MapGet("/api/v1/events/calendar", async (IMediator mediator, DateOnly? from,
     return Results.Ok(calendar);
 })
 .WithName("GetEventCalendar");
+
+app.MapGet("/api/v1/events/history", async (IMediator mediator, int? year, bool includeCancelled = true) =>
+{
+    var targetYear = year ?? DateOnly.FromDateTime(DateTime.UtcNow).Year;
+    var history = await mediator.Send(new GetEditionsHistoryQuery(targetYear, includeCancelled));
+    return Results.Ok(history);
+})
+.WithName("GetEditionsHistory");
+
+app.MapGet("/api/v1/events/history/years", async (IMediator mediator) =>
+{
+    var years = await mediator.Send(new GetEditionsHistoryYearsQuery());
+    return Results.Ok(years);
+})
+.WithName("GetEditionsHistoryYears");
 
 app.MapGet("/api/v1/events/calendar.ics", async (IMediator mediator, IConfiguration configuration, UtanvegaDbContext context, IMemoryCache cache) =>
 {

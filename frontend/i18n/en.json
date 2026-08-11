@@ -92,7 +92,8 @@
         "challenge": "Challenge",
         "allTrails": "All Trails",
         "allEvents": "All Events",
-        "eventsCalendar": "Calendar"
+        "eventsCalendar": "Calendar",
+        "editionsHistory": "Past Events"
     },
     "spotlight": {
         "placeholder": "Search trails, locations and races...",
@@ -1319,7 +1320,18 @@
             "backToEvent": "Back to event",
             "editionNotFound": "Edition not found",
             "pastEdition": "Past edition",
-            "completed": "Completed"
+            "completed": "Completed",
+            "older": "Older",
+            "newer": "Newer"
+        },
+        "editionsHistory": {
+            "title": "Past Events",
+            "subtitle": "Browse results and details from races that have already happened.",
+            "searchPlaceholder": "Search past events...",
+            "showCancelled": "Show cancelled",
+            "noResults": "No past events found.",
+            "resultsLink": "Results",
+            "searchingAllYears": "all years"
         },
         "table": {
             "name": "Name",

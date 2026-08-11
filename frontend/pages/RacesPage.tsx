@@ -37,6 +37,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import HistoryIcon from '@mui/icons-material/History';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import ListIcon from '@mui/icons-material/List';
 import MapIcon from '@mui/icons-material/Map';
@@ -434,13 +435,22 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                             <EmojiEventsIcon sx={{ fontSize: 32, color: theme.palette.warning.main }} />
                             {t('races.title')}
                         </Typography>
-                        <Chip
-                            icon={<CalendarTodayIcon />}
-                            label={t('calendar.title')}
-                            variant="outlined"
-                            size="small"
-                            onClick={() => navigate('/events/calendar')}
-                        />
+                        <Stack direction="row" spacing={1}>
+                            <Chip
+                                icon={<CalendarTodayIcon />}
+                                label={t('calendar.title')}
+                                variant="outlined"
+                                size="small"
+                                onClick={() => navigate('/events/calendar')}
+                            />
+                            <Chip
+                                icon={<HistoryIcon />}
+                                label={t('races.editionsHistory.title', 'Past events')}
+                                variant="outlined"
+                                size="small"
+                                onClick={() => navigate('/editions/history')}
+                            />
+                        </Stack>
                     </Stack>
                     <Typography variant="body2" color="text.secondary">
                         {t('races.subtitle')}

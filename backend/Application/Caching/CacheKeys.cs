@@ -36,6 +36,13 @@ public static class CacheKeys
     public static string Calendar(int version, DateOnly from, DateOnly to) =>
         $"calendar:{version}:{from:yyyy-MM-dd}:{to:yyyy-MM-dd}";
 
+    /// <summary>Same version-tagging approach as Calendar — the year param can't be enumerated on write.</summary>
+    public static string EditionsHistory(int version, int year, bool includeCancelled) =>
+        $"editions-history:{version}:{year}:{includeCancelled}";
+
+    /// <summary>Fixed key (no per-year param) — explicitly removed by CacheInvalidator, not version-tagged.</summary>
+    public static string EditionsHistoryYears => "editions-history:years";
+
     /// <summary>Version token incremented on every event/edition/race write.</summary>
     public static string EventVersion => "event:version";
 
