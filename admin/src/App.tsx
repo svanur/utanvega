@@ -122,7 +122,6 @@ function AdminContent() {
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [selectedTrailId, setSelectedTrailId] = useState<string | null>(null);
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [raceDayInitialDate, setRaceDayInitialDate] = useState<string | undefined>(undefined);
   const [createEventIntent, setCreateEventIntent] = useState(false);
   const [searchTerm, setSearchTerm] = useState<string | null>(null);
@@ -357,9 +356,9 @@ function AdminContent() {
           ) : currentPage === 'health' ? (
             <TrailHealth onEditTrail={(id) => { setSelectedTrailId(id); setCurrentPage('trails'); }} onNotify={notify} />
           ) : currentPage === 'event-health' ? (
-            <EventHealth onEditEvent={(id) => { setSelectedEventId(id); setCurrentPage('events'); }} onNotify={notify} />
+            <EventHealth onViewEvent={(slug) => { setCurrentPage('events'); navigate(`/events/${slug}`); }} onNotify={notify} />
           ) : currentPage === 'edition-health' ? (
-            <EditionHealth onEditEvent={(id) => { setSelectedEventId(id); setCurrentPage('events'); }} onNotify={notify} />
+            <EditionHealth onViewEvent={(slug) => { setCurrentPage('events'); navigate(`/events/${slug}`); }} onNotify={notify} />
           ) : currentPage === 'map' ? (
             <TrailMapView onEditTrail={(id) => { setSelectedTrailId(id); setCurrentPage('trails'); }} />
           ) : currentPage === 'tags' ? (
@@ -402,7 +401,6 @@ function AdminContent() {
             <RaceDayPage
               onNotify={notify}
               initialDate={raceDayInitialDate}
-              onNavigateToEvent={(id) => { setSelectedEventId(id); setCurrentPage('events'); }}
             />
           ) : currentPage === 'translation-health' ? (
             <TranslationHealth onNotify={notify} />

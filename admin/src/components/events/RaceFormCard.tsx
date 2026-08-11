@@ -8,6 +8,7 @@ import {
   CircularProgress,
   Divider,
   FormControl,
+  FormHelperText,
   InputLabel,
   MenuItem,
   Select,
@@ -254,17 +255,23 @@ function RaceFormCardInner({
         <Box>
           <SectionLabel>Status &amp; tickets</SectionLabel>
           <Stack direction="row" spacing={1.5} sx={{ mb: 1.5 }}>
-            <FormControl size="small" fullWidth>
+            <FormControl size="small" fullWidth disabled={edition.status === 'Cancelled'}>
               <InputLabel>Race status</InputLabel>
               <Select value={form.status} label="Race status" onChange={e => set('status', e.target.value as typeof form.status)}>
                 {RACE_STATUSES.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
               </Select>
+              {edition.status === 'Cancelled' && (
+                <FormHelperText>Locked — the edition is cancelled</FormHelperText>
+              )}
             </FormControl>
-            <FormControl size="small" fullWidth>
+            <FormControl size="small" fullWidth disabled={form.status === 'Cancelled'}>
               <InputLabel>Ticket status</InputLabel>
               <Select value={form.ticketStatus} label="Ticket status" onChange={e => set('ticketStatus', e.target.value as typeof form.ticketStatus)}>
                 {TICKET_STATUSES.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
               </Select>
+              {form.status === 'Cancelled' && (
+                <FormHelperText>Locked — the race is cancelled</FormHelperText>
+              )}
             </FormControl>
           </Stack>
           <Stack direction="row" spacing={1.5} sx={{ mb: 1.5 }}>
@@ -324,7 +331,7 @@ function RaceFormCardInner({
               onClick={() => void handleDelete()}
               disabled={saving}
             >
-              {confirmDelete ? 'Confirm delete' : 'Delete race'}
+              {confirmDelete ? 'Confirm removal' : 'Remove race'}
             </Button>
           )}
           <Button

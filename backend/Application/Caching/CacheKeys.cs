@@ -27,7 +27,7 @@ public static class CacheKeys
 
     // Events
     public static string Events(bool includeHidden) => $"events:{includeHidden}";
-    public static string Event(string slug) => $"event:{slug}";
+    public static string Event(string slug, bool includeHidden) => $"event:{slug}:{includeHidden}";
 
     /// <summary>
     /// Calendar entries include the event version so bumping the version

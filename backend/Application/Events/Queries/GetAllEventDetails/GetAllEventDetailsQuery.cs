@@ -6,6 +6,7 @@ using Utanvega.Backend.Infrastructure.Persistence;
 
 namespace Utanvega.Backend.Application.Events.Queries.GetAllEventDetails;
 
+using Utanvega.Backend.Application.Events;
 using Utanvega.Backend.Application.Events.Queries.GetEvents;
 
 public record GetAllEventDetailsQuery : IRequest<List<EventDetailDto>>;
@@ -117,7 +118,9 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
                         .ToList(),
                     ed.CreatedAt,
                     ed.UpdatedAt,
-                    DeserHashes(ed.TranslationHashes)
+                    DeserHashes(ed.TranslationHashes),
+                    Status: ed.Status.ToString(),
+                    EffectiveCancelled: EditionStatusHelpers.ComputeEffectiveCancelled(ed.Status, ed.Races.Select(r => r.Status).ToList())
                 ))
                 .ToList(),
             ev.CreatedAt,

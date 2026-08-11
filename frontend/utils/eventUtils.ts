@@ -1,5 +1,19 @@
 type TFunc = (key: string, opts?: Record<string, unknown>) => string;
 
+// An event/edition reads as "cancelled" either because it was explicitly cancelled at that level,
+// or because its edition was cancelled race-by-race without ever using the dedicated cancel action.
+export function isEffectivelyCancelled(item: { status: string; editionEffectiveCancelled?: boolean; effectiveCancelled?: boolean }): boolean {
+    return item.status === 'Cancelled' || item.editionEffectiveCancelled === true || item.effectiveCancelled === true;
+}
+
+export function isEffectivelyUnconfirmed(item: { status: string; editionStatus?: string | null }): boolean {
+    // Intentionally two independent checks, not a fallback: Event.Unconfirmed answers "does this
+    // event/series exist at all", Edition.Unconfirmed answers "are this year's specifics locked in".
+    // A Confirmed, ongoing series can still have a not-yet-finalized upcoming edition — that edition
+    // should read as tentative even though the event itself is fully confirmed.
+    return item.status === 'Unconfirmed' || item.editionStatus === 'Unconfirmed';
+}
+
 export function getEventTypeColor(type: string): 'primary' | 'secondary' | 'success' | 'warning' | 'info' | 'error' | 'default' {
     switch (type) {
         case 'Race': return 'primary';

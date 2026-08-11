@@ -8,6 +8,7 @@ export type ActivityType = 'TrailRunning' | 'Running' | 'Cycling' | 'Hiking' | '
 export type EventStatus = 'Unconfirmed' | 'Confirmed' | 'Cancelled' | 'Hidden' | 'Unlisted';
 export type RegistrationStatus = 'NotStarted' | 'Open' | 'Closed';
 export type RaceStatus = 'Active' | 'Completed' | 'Cancelled' | 'Hidden';
+export type EditionStatus = 'Active' | 'Unconfirmed' | 'Cancelled' | 'Hidden';
 export type TicketStatus = 'Available' | 'AlmostSoldOut' | 'SoldOut' | 'Closed' | 'NotStarted' | 'Free';
 export type AlertSeverity = 'info' | 'success' | 'warning' | 'error';
 
@@ -78,6 +79,8 @@ export interface EventEditionDto {
     createdAt: string;
     updatedAt: string | null;
     translationHashes?: Record<string, string>;
+    status: EditionStatus;
+    effectiveCancelled: boolean;
 }
 
 export interface SeriesRaceDto {
@@ -125,6 +128,8 @@ export interface EventSummaryDto {
     hasFutureEdition: boolean;
     endDisplayDate: string | null;
     translationHashes?: Record<string, string>;
+    editionStatus: EditionStatus | null;
+    editionEffectiveCancelled: boolean;
 }
 
 export interface EventDetailDto extends EventSummaryDto {
@@ -209,6 +214,10 @@ export interface UpdateEditionInput {
     registrationStatus: RegistrationStatus;
     trailId?: string | null;
     translationHashes?: Record<string, string>;
+    // Optional, patch-if-provided (unlike the other fields here, which are always resent as a full
+    // snapshot): most UpdateEditionInput callers don't touch edition status and must not accidentally
+    // reset it. Only pass this when you actually intend to change the status.
+    status?: EditionStatus;
 }
 
 export interface CreateRaceInput {
@@ -335,7 +344,7 @@ export function useEvents() {
         setEvents(prev => prev.filter(event => event.id !== id));
     };
 
-    const getEvent = async (slug: string) => apiFetch<EventDetailDto>(`/api/v1/events/${slug}`);
+    const getEvent = async (slug: string) => apiFetch<EventDetailDto>(`/api/v1/admin/events/${slug}`);
 
     const createEdition = async (input: CreateEditionInput) => {
         const result = await apiFetch<{ id: string }>(`/api/v1/admin/events/${input.eventId}/editions`, {
@@ -433,7 +442,7 @@ export function useEventDetail(slug: string) {
         if (!slug) return;
         try {
             setLoading(true);
-            const data = await apiFetch<EventDetailDto>(`/api/v1/events/${slug}`);
+            const data = await apiFetch<EventDetailDto>(`/api/v1/admin/events/${slug}`);
             setDetail(data);
             setError(null);
         } catch (err) {

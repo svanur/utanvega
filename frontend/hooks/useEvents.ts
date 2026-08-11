@@ -68,6 +68,8 @@ export interface EventSummary {
     gpxPointLng: number | null;
     isMountainRace: boolean;
     endDisplayDate: string | null;
+    editionStatus: string | null;
+    editionEffectiveCancelled: boolean;
 }
 
 export interface RaceDto {
@@ -121,6 +123,8 @@ export interface EventEditionDto {
     races: RaceDto[];
     createdAt: string;
     updatedAt: string | null;
+    status: string;
+    effectiveCancelled: boolean;
 }
 
 export interface EventDetail extends EventSummary {

@@ -72,11 +72,10 @@ function defaultMode(d: Dayjs): Mode {
 
 interface RaceDayPageProps {
     onNotify: (message: string, severity?: 'success' | 'error') => void;
-    onNavigateToEvent?: (eventId: string) => void;
     initialDate?: string;
 }
 
-export default function RaceDayPage({ onNotify, onNavigateToEvent, initialDate }: RaceDayPageProps) {
+export default function RaceDayPage({ onNotify, initialDate }: RaceDayPageProps) {
     const navigate = useNavigate();
     const [date, setDate] = useState<Dayjs>(() => initialDate ? dayjs(initialDate) : dayjs());
     const [mode, setMode] = useState<Mode>(() => defaultMode(initialDate ? dayjs(initialDate) : dayjs()));

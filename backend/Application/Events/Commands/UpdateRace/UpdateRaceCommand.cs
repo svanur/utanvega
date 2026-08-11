@@ -55,6 +55,10 @@ public class UpdateRaceCommandHandler : IRequestHandler<UpdateRaceCommand, bool>
 
         Enum.TryParse<RaceStatus>(request.Status, ignoreCase: true, out var status);
         Enum.TryParse<TicketStatus>(request.TicketStatus, ignoreCase: true, out var ticketStatus);
+        if (status == RaceStatus.Cancelled)
+            // A cancelled race always reads as ticket-closed, regardless of what was submitted —
+            // mirrors how a cancelled edition always closes its own RegistrationStatus.
+            ticketStatus = TicketStatus.Closed;
         race.ActivityType = Enum.TryParse<ActivityType>(request.ActivityType, ignoreCase: true, out var at) ? at : (ActivityType?)null;
 
         race.TrailId = request.TrailId;
