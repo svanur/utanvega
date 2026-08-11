@@ -21,7 +21,7 @@ import { API_URL } from '../hooks/useTrails';
 import { haversineKm, formatDistanceKm } from '../utils/geo';
 import NearMeIcon from '@mui/icons-material/NearMe';
 import EventDateBadge from './EventDateBadge';
-import { getCountdownColor, getEventTypeColor, formatNextDate } from '../utils/eventUtils';
+import { getCountdownColor, getEventTypeColor, formatNextDate, isEffectivelyCancelled } from '../utils/eventUtils';
 import { ActivityIcons, getActivityIcon } from '../utils/activityIcon';
 import { useLocalize } from '../utils/localize';
 import { useIcelandicHolidays } from '../hooks/useIcelandicHolidays';
@@ -351,7 +351,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                         bgcolor: event.type === 'Advertisement'
                                             ? 'rgba(255, 193, 7, 0.08)'
                                             : idx % 2 === 1 ? 'action.hover' : 'transparent',
-                                        ...(event.status === 'Cancelled' && { opacity: 0.6 }),
+                                        ...(isEffectivelyCancelled(event) && { opacity: 0.6 }),
                                     }}
                                     onClick={() => navigate(`/events/${event.slug}`)}
                                     onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/events/${event.slug}`); } }}
@@ -374,7 +374,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                                 </Typography>
                                                 <Stack direction="row" alignItems="center" gap={0.5} flexWrap="wrap" justifyContent="center">
                                                     <EventDateBadge dateStr={(event.displayDate ?? event.nextEditionDate)!} endDateStr={event.endDisplayDate} />
-                                                    {event.daysUntil !== null && event.status !== 'Cancelled' && (
+                                                    {event.daysUntil !== null && !isEffectivelyCancelled(event) && (
                                                         <Chip
                                                             label={
                                                                 event.daysUntil === 0 ? t('races.today')
@@ -408,7 +408,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                                         noWrap
                                                         sx={{
                                                             maxWidth: 220,
-                                                            ...(event.status === 'Cancelled' && { textDecoration: 'line-through' }),
+                                                            ...(isEffectivelyCancelled(event) && { textDecoration: 'line-through' }),
                                                         }}
                                                     >
                                                         {loc(event.name, event.nameEn) ?? event.name}
@@ -416,7 +416,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                                     {event.type === 'Advertisement' && (
                                                         <Chip label={t('races.eventTypes.Advertisement', 'Sponsored')} size="small" color="warning" sx={{ height: 18, fontSize: '0.65rem' }} />
                                                     )}
-                                                    {event.status === 'Cancelled' && (
+                                                    {isEffectivelyCancelled(event) && (
                                                         <Chip label={t('races.statusCancelled')} size="small" color="error" sx={{ height: 18, fontSize: '0.65rem' }} />
                                                     )}
                                                 </Stack>

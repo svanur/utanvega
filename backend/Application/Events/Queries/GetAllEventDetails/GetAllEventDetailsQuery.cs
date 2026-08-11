@@ -117,7 +117,9 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
                         .ToList(),
                     ed.CreatedAt,
                     ed.UpdatedAt,
-                    DeserHashes(ed.TranslationHashes)
+                    DeserHashes(ed.TranslationHashes),
+                    Status: ed.Status.ToString(),
+                    EffectiveCancelled: EditionStatusHelpers.ComputeEffectiveCancelled(ed.Status, ed.Races.Select(r => r.Status).ToList())
                 ))
                 .ToList(),
             ev.CreatedAt,

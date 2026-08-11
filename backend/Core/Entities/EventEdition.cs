@@ -7,6 +7,14 @@ public enum RegistrationStatus
     Closed,
 }
 
+public enum EditionStatus
+{
+    Active,
+    Unconfirmed,
+    Cancelled,
+    Hidden,
+}
+
 public class EventEdition
 {
     public Guid Id { get; set; } = Guid.NewGuid();
@@ -31,6 +39,7 @@ public class EventEdition
     public string? TranslationHashes { get; set; }
 
     public RegistrationStatus RegistrationStatus { get; set; } = RegistrationStatus.NotStarted;
+    public EditionStatus Status { get; set; } = EditionStatus.Active;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }

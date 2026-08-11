@@ -223,6 +223,7 @@ public class UtanvegaDbContext : DbContext
             entity.Property(e => e.RegistrationUrl).HasMaxLength(500);
             entity.Property(e => e.ResultsUrl).HasMaxLength(500);
             entity.Property(e => e.RegistrationStatus).HasConversion<string>();
+            entity.Property(e => e.Status).HasConversion<string>();
 
             entity.HasOne(e => e.Event)
                   .WithMany(ev => ev.Editions)

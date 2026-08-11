@@ -50,6 +50,7 @@ using Utanvega.Backend.Application.Events.Commands.DeleteEvent;
 using Utanvega.Backend.Application.Events.Commands.CreateEdition;
 using Utanvega.Backend.Application.Events.Commands.UpdateEdition;
 using Utanvega.Backend.Application.Events.Commands.DeleteEdition;
+using Utanvega.Backend.Application.Events.Commands.CancelEdition;
 using Utanvega.Backend.Application.Events.Commands.CreateRace;
 using Utanvega.Backend.Application.Events.Commands.UpdateRace;
 using Utanvega.Backend.Application.Events.Commands.DeleteRace;
@@ -1740,6 +1741,13 @@ app.MapDelete("/api/v1/admin/editions/{id:guid}", [Authorize(Policy = "AdminOnly
     return success ? Results.NoContent() : Results.NotFound();
 })
 .WithName("DeleteEdition");
+
+app.MapPost("/api/v1/admin/editions/{id:guid}/cancel", [Authorize(Policy = "AdminOnly")] async (Guid id, IMediator mediator) =>
+{
+    var success = await mediator.Send(new CancelEditionCommand(id));
+    return success ? Results.NoContent() : Results.NotFound();
+})
+.WithName("CancelEdition");
 
 app.MapPost("/api/v1/admin/events/{eventId:guid}/editions/generate", [Authorize(Policy = "AdminOnly")] async (Guid eventId, GenerateEditionsForSeasonCommand command, IMediator mediator) =>
 {

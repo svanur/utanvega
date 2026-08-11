@@ -63,7 +63,7 @@ import { downloadIcs } from '../utils/calendarLinks';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
 import { getTicketStatusColor, groupDistances, isAllSoldOut } from '../utils/ticketStatus';
-import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor } from '../utils/eventUtils';
+import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed } from '../utils/eventUtils';
 import { useLocalize } from '../utils/localize';
 import { ActivityIcons, getActivityIcon } from '../utils/activityIcon';
 import LandscapeIcon from '@mui/icons-material/Landscape';
@@ -301,8 +301,8 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
 
         // Sort: Active/Upcoming first, Cancelled last; then by upcoming date, then name
         return result.sort((a, b) => {
-            const cancelledA = a.status === 'Cancelled' ? 1 : 0;
-            const cancelledB = b.status === 'Cancelled' ? 1 : 0;
+            const cancelledA = isEffectivelyCancelled(a) ? 1 : 0;
+            const cancelledB = isEffectivelyCancelled(b) ? 1 : 0;
             if (cancelledA !== cancelledB) return cancelledA - cancelledB;
 
             if (a.daysUntil !== null && b.daysUntil !== null) {
@@ -349,7 +349,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
 
     const { justRaced, upcoming } = useMemo(() => {
         const isRecentlyCompleted = (c: EventSummary) =>
-            c.daysUntil != null && c.daysUntil < 0 && c.daysUntil >= -3 && c.status !== 'Cancelled';
+            c.daysUntil != null && c.daysUntil < 0 && c.daysUntil >= -3 && !isEffectivelyCancelled(c);
         const jr = sortedFiltered.filter(isRecentlyCompleted);
         const up = sortedFiltered.filter(c => !isRecentlyCompleted(c));
         return { justRaced: jr, upcoming: up };
@@ -1216,7 +1216,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                     sx={{
                                         '@media (hover: hover)': { transition: 'transform 0.15s, box-shadow 0.15s', '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] } },
                                         ...(comp.type === 'Advertisement' && { bgcolor: 'rgba(255, 193, 7, 0.08)' }),
-                                        ...(comp.status === 'Cancelled' && { opacity: 0.65 }),
+                                        ...(isEffectivelyCancelled(comp) && { opacity: 0.65 }),
                                     }}
                                 >
                                     <CardActionArea onClick={() => navigate(`/events/${comp.slug}`)}>
@@ -1227,16 +1227,16 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                     <ActivityIcons activityTypes={comp.activityTypes} activityType={comp.activityType} />
                                                     <Box sx={{ minWidth: 0 }}>
                                                         <Stack direction="row" alignItems="center" gap={0.5} flexWrap="wrap">
-                                                            <Typography variant="subtitle1" fontWeight={700} sx={{ ...(comp.status === 'Cancelled' ? { textDecoration: 'line-through' } : {}), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', sm: 'nowrap' } }}>
+                                                            <Typography variant="subtitle1" fontWeight={700} sx={{ ...(isEffectivelyCancelled(comp) ? { textDecoration: 'line-through' } : {}), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', sm: 'nowrap' } }}>
                                                                 {loc(comp.name, comp.nameEn)}
                                                             </Typography>
                                                             {comp.type === 'Advertisement' && (
                                                                 <Chip label={t('races.eventTypes.Advertisement', 'Sponsored')} size="small" color="warning" sx={{ height: 18, fontSize: '0.65rem' }} />
                                                             )}
-                                                            {comp.status === 'Cancelled' && (
+                                                            {isEffectivelyCancelled(comp) && (
                                                                 <Chip label={t('races.statusCancelled')} size="small" color="error" sx={{ height: 18, fontSize: '0.65rem' }} />
                                                             )}
-                                                            {comp.status === 'Unconfirmed' && (
+                                                            {!isEffectivelyCancelled(comp) && isEffectivelyUnconfirmed(comp) && (
                                                                 <Chip label={t('races.statusUpcoming')} size="small" color="info" sx={{ height: 18, fontSize: '0.65rem' }} />
                                                             )}
                                                             {isFavoriteEvent(comp.slug) && (
@@ -1245,7 +1245,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                         </Stack>
                                                     </Box>
                                                 </Stack>
-                                                {comp.status !== 'Cancelled' && (
+                                                {!isEffectivelyCancelled(comp) && (
                                                     <Stack direction="row" alignItems="center" gap={0.5} sx={{ flexShrink: 0 }}>
                                                         {(comp.displayDate ?? comp.nextEditionDate) && (
                                                             <>
@@ -1278,7 +1278,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                             </Stack>
 
                                             {/* location · km away */}
-                                            {(comp.locationName || (userLocation && comp.gpxPointLat != null)) && comp.status !== 'Cancelled' && (
+                                            {(comp.locationName || (userLocation && comp.gpxPointLat != null)) && !isEffectivelyCancelled(comp) && (
                                                 <Stack direction="row" alignItems="center" gap={0.5} sx={{ mt: 0.25 }} flexWrap="wrap">
                                                     {comp.locationName && (
                                                         <>

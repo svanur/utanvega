@@ -98,7 +98,7 @@ type PreparedEdition = EventEditionDto & {
 import { ACTIVITY_EMOJI } from '../constants/activityEmoji';
 import { googleCalendarUrl, outlookCalendarUrl, downloadIcs } from '../utils/calendarLinks';
 import EventDateBadge from '../components/EventDateBadge';
-import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor } from '../utils/eventUtils';
+import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed } from '../utils/eventUtils';
 import { getTicketStatusColor } from '../utils/ticketStatus';
 
 type RaceDayChecklistKey = 'bib' | 'shoes' | 'gels' | 'goodMood';
@@ -304,9 +304,13 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     }, [event, locations]);
     const confettiFiredForEvent = useRef<string | null>(null);
 
-    const isRaceDay = event?.status !== 'Cancelled' && event?.daysUntil === 0;
-    const isRaceWeek = event?.status !== 'Cancelled' && event?.daysUntil != null && event.daysUntil >= 0 && event.daysUntil <= 7;
-    const isPostRace = event?.status !== 'Cancelled' && event?.daysUntil != null && event.daysUntil < 0 && event.daysUntil >= -3;
+    // Uses the flattened event.editionEffectiveCancelled (not primaryEdition) since primaryEdition
+    // is computed later and itself depends on isPostRace below — going through primaryEdition here
+    // would be circular.
+    const eventOrEditionCancelled = !!event && isEffectivelyCancelled({ status: event.status, effectiveCancelled: event.editionEffectiveCancelled });
+    const isRaceDay = !eventOrEditionCancelled && event?.daysUntil === 0;
+    const isRaceWeek = !eventOrEditionCancelled && event?.daysUntil != null && event.daysUntil >= 0 && event.daysUntil <= 7;
+    const isPostRace = !eventOrEditionCancelled && event?.daysUntil != null && event.daysUntil < 0 && event.daysUntil >= -3;
 
     // Ticking clock for race-day phase transitions and progress bar
     const [currentTime, setCurrentTime] = useState(() => new Date());
@@ -419,6 +423,11 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
             ?? null,
         [currentEditions, event?.nextEditionDate, event?.displayDate, isPostRace],
     );
+
+    // Prefer the richer primaryEdition object (already in scope) over the flattened EventSummary
+    // fields — it reflects exactly the edition this page is displaying.
+    const heroCancelled = !!event && isEffectivelyCancelled({ status: event.status, effectiveCancelled: primaryEdition?.effectiveCancelled });
+    const heroUnconfirmed = !!event && isEffectivelyUnconfirmed({ status: event.status, editionStatus: primaryEdition?.status });
 
     const racesWithAnchors = useMemo(() => {
         const seen = new Map<string, number>();
@@ -574,7 +583,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2, flexWrap: 'wrap' }}>
                         <Typography variant="h4" fontWeight={800} sx={{
                             display: 'flex', alignItems: 'center', gap: 1, flex: 1, minWidth: 200,
-                            ...(event.status === 'Cancelled' && { textDecoration: 'line-through', opacity: 0.7 }),
+                            ...(heroCancelled && { textDecoration: 'line-through', opacity: 0.7 }),
                         }}>
                             <EmojiEventsIcon sx={{ color: theme.palette.warning.main, flexShrink: 0 }} />
                             {loc(event.name, event.nameEn)}
@@ -606,9 +615,9 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                         },
                                     }}
                                 />
-                            ) : event.status === 'Cancelled' ? (
+                            ) : heroCancelled ? (
                                 <Chip label={t('races.statusCancelled')} color="error" sx={{ fontWeight: 700, fontSize: '1rem', px: 1.5, py: 0.5, height: 'auto', flexShrink: 0 }} />
-                            ) : (event.status === 'Upcoming' || event.status === 'Unconfirmed') ? (
+                            ) : (event.status === 'Upcoming' || heroUnconfirmed) ? (
                                 <Chip label={t('races.statusUpcoming')} color="info" sx={{ fontWeight: 700, fontSize: '1rem', px: 1.5, py: 0.5, height: 'auto', flexShrink: 0 }} />
                             ) : (
                                 <Chip
@@ -667,7 +676,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                         </Alert>
                     )}
 
-                    {event.status !== 'Cancelled' && (() => {
+                    {!heroCancelled && (() => {
                         const editionEndDate = primaryEdition?.endDate ?? event.endDisplayDate;
                         const desc = formatScheduleDescription(
                             event.scheduleRule,
@@ -683,7 +692,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                         ) : null;
                     })()}
 
-                    {(event.displayDate ?? event.nextEditionDate) && event.status !== 'Cancelled' && (
+                    {(event.displayDate ?? event.nextEditionDate) && !heroCancelled && (
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 2, flexWrap: 'wrap' }}>
                             <CalendarTodayIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
                             <Typography variant="body2" color="text.secondary" sx={{ mr: 0.5 }}>
@@ -811,7 +820,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 {t('races.organizerSite')}
                             </Button>
                         )}
-                        {isEnabled('calendar_integration', false) && (event.displayDate ?? event.nextEditionDate) && event.status !== 'Cancelled' && event.daysUntil != null && event.daysUntil >= 0 && (
+                        {isEnabled('calendar_integration', false) && (event.displayDate ?? event.nextEditionDate) && !heroCancelled && event.daysUntil != null && event.daysUntil >= 0 && (
                             <AddToCalendarButton event={event} endDate={primaryEdition?.endDate ?? event.endDisplayDate} t={t} />
                         )}
                         {isEnabled('directions_to_trailhead') && mapPin && (
@@ -969,7 +978,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                     </Stack>
                 )}
 
-                {event.status !== 'Cancelled' && event.upcomingDates && event.upcomingDates.length > 1 && (
+                {!heroCancelled && event.upcomingDates && event.upcomingDates.length > 1 && (
                     <Box sx={{ mt: 3 }}>
                         <Typography variant="h5" fontWeight={700} sx={{ mb: 1 }}>
                             {t('races.scheduleHeading')}
