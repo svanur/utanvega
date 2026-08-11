@@ -205,6 +205,8 @@ export interface EditionHistoryRow {
     resultsUrl: string | null;
     activityTypes: string[] | null;
     eventActivityType: string;
+    raceName: string | null;
+    raceNameEn: string | null;
 }
 
 export function useEditionsHistory(year: number | undefined, includeCancelled: boolean) {

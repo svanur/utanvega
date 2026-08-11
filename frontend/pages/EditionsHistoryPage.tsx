@@ -22,6 +22,7 @@ import { useEditionsHistory, useEditionsHistoryYears } from '../hooks/useEvents'
 import { ActivityIcons } from '../utils/activityIcon';
 import { groupDistances } from '../utils/ticketStatus';
 import { formatNextDate, formatDateRange } from '../utils/eventUtils';
+import { useLocalize } from '../utils/localize';
 
 type SortField = 'date' | 'name' | 'distances';
 type SortDir = 'asc' | 'desc';
@@ -35,6 +36,7 @@ type EditionsHistoryPageProps = {
 export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHistoryPageProps) {
     const { t } = useTranslation();
     const navigate = useNavigate();
+    const loc = useLocalize();
     const { year: yearParam } = useParams<{ year?: string }>();
     const theme = useTheme();
 
@@ -193,6 +195,11 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                                                                 <Chip label={t('races.statusCancelled')} size="small" color="error" sx={{ height: 18, fontSize: '0.65rem' }} />
                                                             )}
                                                         </Stack>
+                                                        {row.raceName && (
+                                                            <Typography variant="body2" color="text.secondary" noWrap>
+                                                                {loc(row.raceName, row.raceNameEn)}
+                                                            </Typography>
+                                                        )}
                                                         {row.locationName && (
                                                             <Stack direction="row" alignItems="center" gap={0.5} sx={{ mt: 0.25 }}>
                                                                 <LocationOnIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
@@ -283,6 +290,11 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                                                 <Typography variant="body2" fontWeight={600} noWrap sx={{ ...(cancelled && { textDecoration: 'line-through' }) }}>
                                                     {row.eventName}
                                                 </Typography>
+                                                {row.raceName && (
+                                                    <Typography variant="caption" color="text.secondary" display="block" noWrap>
+                                                        {loc(row.raceName, row.raceNameEn)}
+                                                    </Typography>
+                                                )}
                                                 {cancelled && (
                                                     <Chip label={t('races.statusCancelled')} size="small" color="error" sx={{ height: 18, fontSize: '0.65rem', mt: 0.25 }} />
                                                 )}

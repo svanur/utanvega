@@ -2296,4 +2296,36 @@ public class EventHandlerTests : IDisposable
         Assert.Equal("Active", editionDto.Status);
         Assert.True(editionDto.EffectiveCancelled);
     }
+
+    [Fact]
+    public async Task GetEvent_BySlug_EditionDto_Year_FallsBackToDateYear_WhenYearFieldIsNull()
+    {
+        // Regression: admins can set Date without filling in the separate Year field. The
+        // /events/:slug/history/:year route matches editions by this Year, so it must never be
+        // null when a Date is present — this previously caused "Edition not found" for such editions.
+        var ev = CreateTestEvent("No Explicit Year Detail Event");
+        ev.Slug = "no-explicit-year-detail-event";
+        var edition = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Date = new DateOnly(2025, 6, 1),
+            Year = null,
+            Status = EditionStatus.Active,
+            RegistrationStatus = RegistrationStatus.Closed,
+        };
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventQuery("no-explicit-year-detail-event"), CancellationToken.None);
+
+        var editionDto = Assert.Single(result!.Editions);
+        Assert.Equal(2025, editionDto.Year);
+    }
 }

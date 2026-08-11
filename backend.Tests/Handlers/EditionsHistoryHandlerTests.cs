@@ -291,6 +291,57 @@ public class EditionsHistoryHandlerTests : IDisposable
     }
 
     [Fact]
+    public async Task History_SeriesEvent_RowCarriesTheLegRaceName()
+    {
+        // Series rows all share the event's name, so the leg's own race name (e.g. "Leg 2")
+        // must come through separately to distinguish rows in the UI.
+        var pastYear = DateOnly.FromDateTime(DateTime.UtcNow).Year - 1;
+        var ev = CreateTestEvent("Named Legs Series", type: EventType.Series);
+        var edition = CreateEdition(ev.Id, new DateOnly(pastYear, 10, 1));
+        var leg = CreateRace(edition.Id, "Leg 2", dateOfRace: new DateOnly(pastYear, 11, 12));
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(leg);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEditionsHistoryQueryHandler(queryCtx, _memoryCache);
+        var result = await handler.Handle(new GetEditionsHistoryQuery(pastYear), CancellationToken.None);
+
+        var row = Assert.Single(result);
+        Assert.Equal("Leg 2", row.RaceName);
+    }
+
+    [Fact]
+    public async Task History_NonSeriesEdition_RaceNameIsNull()
+    {
+        // Non-series rows aggregate multiple races into one row — there is no single leg name to show.
+        var pastYear = DateOnly.FromDateTime(DateTime.UtcNow).Year - 1;
+        var ev = CreateTestEvent("Non Series Race Name Test");
+        var edition = CreateEdition(ev.Id, new DateOnly(pastYear, 5, 10));
+        var race = CreateRace(edition.Id, "10K");
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEditionsHistoryQueryHandler(queryCtx, _memoryCache);
+        var result = await handler.Handle(new GetEditionsHistoryQuery(pastYear), CancellationToken.None);
+
+        var row = Assert.Single(result);
+        Assert.Null(row.RaceName);
+    }
+
+    [Fact]
     public async Task History_SeriesEvent_IndividualLegCancelledStateIsPerRace_NotEditionWide()
     {
         var pastYear = DateOnly.FromDateTime(DateTime.UtcNow).Year - 1;
@@ -314,6 +365,115 @@ public class EditionsHistoryHandlerTests : IDisposable
         Assert.Equal(2, result.Count);
         Assert.True(result.Single(r => r.RowDate == cancelledLeg.DateOfRace).EffectiveCancelled);
         Assert.False(result.Single(r => r.RowDate == completedLeg.DateOfRace).EffectiveCancelled);
+    }
+
+    // ─── DTO field derivation ───
+
+    [Fact]
+    public async Task History_EditionYear_FallsBackToDateYear_WhenYearFieldIsNull()
+    {
+        // Regression: admins can set Date without ever filling in the separate Year field.
+        // EditionYear must still be populated (it feeds the /history/{year} URL match on
+        // the event detail page), derived from Date rather than left null.
+        var pastYear = DateOnly.FromDateTime(DateTime.UtcNow).Year - 1;
+        var ev = CreateTestEvent("No Explicit Year Race");
+        var edition = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Date = new DateOnly(pastYear, 6, 1),
+            Year = null,
+            Status = EditionStatus.Active,
+            RegistrationStatus = RegistrationStatus.Closed,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEditionsHistoryQueryHandler(queryCtx, _memoryCache);
+        var result = await handler.Handle(new GetEditionsHistoryQuery(pastYear), CancellationToken.None);
+
+        var row = Assert.Single(result);
+        Assert.Equal(pastYear, row.EditionYear);
+    }
+
+    [Fact]
+    public async Task History_Row_IncludesEventActivityType()
+    {
+        // Regression: the row's icon fallback is the event's own ActivityType — races without
+        // their own ActivityType/Trail link must not fall back to a generic "Other" icon.
+        var pastYear = DateOnly.FromDateTime(DateTime.UtcNow).Year - 1;
+        var ev = CreateTestEvent("Trail Running Race");
+        ev.ActivityType = ActivityType.TrailRunning;
+        var edition = CreateEdition(ev.Id, new DateOnly(pastYear, 6, 1));
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEditionsHistoryQueryHandler(queryCtx, _memoryCache);
+        var result = await handler.Handle(new GetEditionsHistoryQuery(pastYear), CancellationToken.None);
+
+        var row = Assert.Single(result);
+        Assert.Equal("TrailRunning", row.EventActivityType);
+    }
+
+    [Fact]
+    public async Task History_NonSeriesMultiDayEdition_RowEndDate_ReflectsEditionEndDate()
+    {
+        var pastYear = DateOnly.FromDateTime(DateTime.UtcNow).Year - 1;
+        var ev = CreateTestEvent("Multi Day Trail Event");
+        var edition = CreateEdition(ev.Id, new DateOnly(pastYear, 7, 30));
+        edition.EndDate = new DateOnly(pastYear, 8, 2);
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEditionsHistoryQueryHandler(queryCtx, _memoryCache);
+        var result = await handler.Handle(new GetEditionsHistoryQuery(pastYear), CancellationToken.None);
+
+        var row = Assert.Single(result);
+        Assert.Equal(edition.EndDate, row.RowEndDate);
+    }
+
+    [Fact]
+    public async Task History_SeriesEvent_RowEndDate_IsNull()
+    {
+        // Series legs are single-day races with no independent end date of their own.
+        var pastYear = DateOnly.FromDateTime(DateTime.UtcNow).Year - 1;
+        var ev = CreateTestEvent("Series End Date Test", type: EventType.Series);
+        var edition = CreateEdition(ev.Id, new DateOnly(pastYear, 10, 1));
+        edition.EndDate = new DateOnly(pastYear, 10, 5);
+        var leg = CreateRace(edition.Id, "Leg 1", dateOfRace: new DateOnly(pastYear, 10, 8));
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(leg);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEditionsHistoryQueryHandler(queryCtx, _memoryCache);
+        var result = await handler.Handle(new GetEditionsHistoryQuery(pastYear), CancellationToken.None);
+
+        var row = Assert.Single(result);
+        Assert.Null(row.RowEndDate);
     }
 
     // ─── Years list ───

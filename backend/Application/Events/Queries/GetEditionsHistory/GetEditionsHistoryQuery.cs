@@ -23,7 +23,9 @@ public record EditionHistoryRowDto(
     List<RaceDistanceSummaryDto> Distances,
     string? ResultsUrl,
     List<string>? ActivityTypes,
-    string EventActivityType
+    string EventActivityType,
+    string? RaceName,
+    string? RaceNameEn
 );
 
 // Not ICacheable — the key is parameterized by an arbitrary year, same reasoning as GetEventCalendarQuery
@@ -95,7 +97,7 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
                 {
                     var raceCancelled = race.Status == RaceStatus.Cancelled;
                     if (raceCancelled && !request.IncludeCancelled) continue;
-                    rows.Add(BuildRow(ed, race.DateOfRace!.Value, [race], raceCancelled));
+                    rows.Add(BuildRow(ed, race.DateOfRace!.Value, [race], raceCancelled, raceName: race.Name, raceNameEn: race.NameEn));
                 }
             }
             else
@@ -113,7 +115,7 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
         return result;
     }
 
-    private static EditionHistoryRowDto BuildRow(EventEdition ed, DateOnly rowDate, List<Race> races, bool effectiveCancelled, DateOnly? rowEndDate = null)
+    private static EditionHistoryRowDto BuildRow(EventEdition ed, DateOnly rowDate, List<Race> races, bool effectiveCancelled, DateOnly? rowEndDate = null, string? raceName = null, string? raceNameEn = null)
     {
         var distances = races
             .Select(r =>
@@ -152,7 +154,9 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
             distances,
             ed.ResultsUrl,
             activityTypes.Count > 0 ? activityTypes : null,
-            ed.Event.ActivityType.ToString()
+            ed.Event.ActivityType.ToString(),
+            raceName,
+            raceNameEn
         );
     }
 }
