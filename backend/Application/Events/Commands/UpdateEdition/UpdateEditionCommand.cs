@@ -39,6 +39,7 @@ public class UpdateEditionCommandHandler : IRequestHandler<UpdateEditionCommand,
     {
         var edition = await _context.EventEditions
             .Include(ed => ed.Event)
+            .Include(ed => ed.Races)
             .FirstOrDefaultAsync(ed => ed.Id == request.Id, cancellationToken);
 
         if (edition == null) return false;
@@ -58,12 +59,17 @@ public class UpdateEditionCommandHandler : IRequestHandler<UpdateEditionCommand,
         edition.TrailId = request.TrailId;
         // Status is patch-if-provided, not resend-full-snapshot like the other fields: several
         // existing callers (bulk edition updates, translation-sync) PUT here without knowing about
-        // Status, and must not silently reset it back to Active. Intentionally no race cascade here
-        // either, even when explicitly setting Cancelled — races are managed independently through
-        // this path. The one cascading exception is CancelEditionCommand, the only place that writes
-        // Race.Status from an edition change.
+        // Status, and must not silently reset it back to Active.
         if (!string.IsNullOrEmpty(request.Status) && Enum.TryParse<EditionStatus>(request.Status, ignoreCase: true, out var status))
-            edition.Status = status;
+        {
+            if (status == EditionStatus.Cancelled && edition.Status != EditionStatus.Cancelled)
+                // Transitioning into Cancelled always cascades to races + closes registration,
+                // regardless of which path (this generic edit, or the dedicated Cancel action)
+                // triggered it — overrides the plain RegistrationStatus set just above.
+                edition.CancelWithRaces();
+            else
+                edition.Status = status;
+        }
         if (request.TranslationHashes != null)
             edition.TranslationHashes = JsonSerializer.Serialize(request.TranslationHashes);
         edition.UpdatedAt = DateTime.UtcNow;

@@ -46,4 +46,16 @@ public class EventEdition
 
     // Navigation
     public ICollection<Race> Races { get; set; } = new List<Race>();
+
+    // Cancelling an edition always cascades: its races are force-set to Cancelled and registration
+    // is closed, regardless of which admin action (dedicated Cancel button, or the generic Status
+    // field) triggered the transition into Cancelled — there's no legitimate case for an edition to
+    // read as Cancelled while its races still look active.
+    public void CancelWithRaces()
+    {
+        Status = EditionStatus.Cancelled;
+        RegistrationStatus = RegistrationStatus.Closed;
+        foreach (var race in Races.Where(r => r.Status != RaceStatus.Cancelled))
+            race.Status = RaceStatus.Cancelled;
+    }
 }

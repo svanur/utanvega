@@ -1611,6 +1611,13 @@ app.MapGet("/api/v1/events/{slug}", async (string slug, IMediator mediator) =>
 })
 .WithName("GetEventBySlug");
 
+app.MapGet("/api/v1/admin/events/{slug}", [Authorize(Policy = "AdminOnly")] async (string slug, IMediator mediator) =>
+{
+    var ev = await mediator.Send(new GetEventQuery(slug, IncludeHidden: true));
+    return ev != null ? Results.Ok(ev) : Results.NotFound();
+})
+.WithName("GetAdminEventBySlug");
+
 // Race Day
 app.MapGet("/api/v1/admin/race-day", [Authorize(Policy = "AdminOnly")] async (IMediator mediator, DateOnly? date) =>
 {

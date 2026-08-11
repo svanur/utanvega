@@ -755,7 +755,14 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
 
                 {/* Edition count */}
                 <TableCell align="center">
-                  <Chip label={event.editionCount} size="small" variant="outlined" />
+                  <Stack direction="row" spacing={0.5} justifyContent="center" alignItems="center">
+                    <Chip label={event.editionCount} size="small" variant="outlined" />
+                    {event.editionEffectiveCancelled && (
+                      <Tooltip title="Current/upcoming edition is cancelled">
+                        <Chip label="Cancelled" size="small" color="error" />
+                      </Tooltip>
+                    )}
+                  </Stack>
                 </TableCell>
 
                 {/* Location */}

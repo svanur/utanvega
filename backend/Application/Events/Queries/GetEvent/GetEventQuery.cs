@@ -48,9 +48,9 @@ public record EventDetailDto(
     bool EditionEffectiveCancelled = false
 );
 
-public record GetEventQuery(string Slug) : IRequest<EventDetailDto?>, ICacheable
+public record GetEventQuery(string Slug, bool IncludeHidden = false) : IRequest<EventDetailDto?>, ICacheable
 {
-    public string CacheKey => CacheKeys.Event(Slug);
+    public string CacheKey => CacheKeys.Event(Slug, IncludeHidden);
     public TimeSpan CacheDuration => TimeSpan.FromHours(1);
 }
 
@@ -84,7 +84,10 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
         // Hidden editions are admin-only and must never surface in public-facing computations below.
-        var publicEditions = ev.Editions.Where(ed => ed.Status != EditionStatus.Hidden).ToList();
+        // The admin path (IncludeHidden=true) keeps the full picture, same as GetEventsQuery.
+        var publicEditions = request.IncludeHidden
+            ? ev.Editions.ToList()
+            : ev.Editions.Where(ed => ed.Status != EditionStatus.Hidden).ToList();
 
         var nextEditionDate = publicEditions
             .Where(ed => ed.Date.HasValue && ed.Date.Value >= today)

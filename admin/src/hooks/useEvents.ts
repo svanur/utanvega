@@ -344,7 +344,7 @@ export function useEvents() {
         setEvents(prev => prev.filter(event => event.id !== id));
     };
 
-    const getEvent = async (slug: string) => apiFetch<EventDetailDto>(`/api/v1/events/${slug}`);
+    const getEvent = async (slug: string) => apiFetch<EventDetailDto>(`/api/v1/admin/events/${slug}`);
 
     const createEdition = async (input: CreateEditionInput) => {
         const result = await apiFetch<{ id: string }>(`/api/v1/admin/events/${input.eventId}/editions`, {
@@ -448,7 +448,7 @@ export function useEventDetail(slug: string) {
         if (!slug) return;
         try {
             setLoading(true);
-            const data = await apiFetch<EventDetailDto>(`/api/v1/events/${slug}`);
+            const data = await apiFetch<EventDetailDto>(`/api/v1/admin/events/${slug}`);
             setDetail(data);
             setError(null);
         } catch (err) {

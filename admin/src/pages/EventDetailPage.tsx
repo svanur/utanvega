@@ -336,9 +336,9 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onNotify
               onChange={e => set('status', e.target.value as EditionStatus)}>
               {EDITION_STATUSES.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
             </Select>
-            {!isNew && (
+            {!isNew && form.status === 'Cancelled' && edition?.status !== 'Cancelled' && (
               <FormHelperText>
-                To cancel this edition and its races together, use the Cancel edition action instead.
+                Saving will also cancel this edition's races and close registration.
               </FormHelperText>
             )}
           </FormControl>
@@ -395,10 +395,10 @@ interface SortableRaceRowProps {
   onNotify: (msg: string, severity?: 'success' | 'error') => void;
 }
 
-function cycleTooltip(values: string[], current: string) {
+function cycleTooltip(label: string, values: string[], current: string) {
   const i = values.indexOf(current);
   const next = values[(i + 1) % values.length]!;
-  return `${values.join(' → ')} (next: ${next})`;
+  return `${label}: ${values.join(' → ')} (next: ${next})`;
 }
 
 function SortableRaceRow({ race, edition, isActive, staleTx, detail, onOpen, onDuplicate, onCycleStatus, onCycleTicket, patchRaceInDetail, racePayload, onNotify }: SortableRaceRowProps) {
@@ -492,13 +492,13 @@ function SortableRaceRow({ race, edition, isActive, staleTx, detail, onOpen, onD
         )}
       </TableCell>
       <TableCell>
-        <Tooltip title={cycleTooltip(RACE_STATUSES, race.status)}>
+        <Tooltip title={cycleTooltip('Race status', RACE_STATUSES, race.status)}>
           <Chip label={race.status} size="small" color={getRaceStatusColor(race.status)}
             onClick={e => { e.stopPropagation(); onCycleStatus(); }} sx={{ cursor: 'pointer' }} />
         </Tooltip>
       </TableCell>
       <TableCell>
-        <Tooltip title={cycleTooltip(TICKET_STATUSES, race.ticketStatus)}>
+        <Tooltip title={cycleTooltip('Ticket status', TICKET_STATUSES, race.ticketStatus)}>
           <Chip label={race.ticketStatus} size="small" variant="outlined" color={getTicketStatusColor(race.ticketStatus)}
             onClick={e => { e.stopPropagation(); onCycleTicket(); }} sx={{ cursor: 'pointer' }} />
         </Tooltip>
@@ -1027,7 +1027,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
           <Box>
             <Typography variant="h5" fontWeight={600} gutterBottom>{detail.name}</Typography>
             <Stack direction="row" flexWrap="wrap" gap={0.75} alignItems="center">
-              <Tooltip title={cycleTooltip(EVENT_STATUSES_CYCLE, detail.status)}>
+              <Tooltip title={cycleTooltip('Event status', EVENT_STATUSES_CYCLE, detail.status)}>
                 <Chip label={detail.status} size="small"
                   color={detail.status === 'Confirmed' ? 'success' : detail.status === 'Cancelled' ? 'error' : detail.status === 'Unconfirmed' ? 'warning' : 'default'}
                   onClick={handleCycleEventStatus}
@@ -1175,7 +1175,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                 )}
                 <Tooltip title={edition.status === 'Cancelled'
                   ? 'Cancelled — reactivate via Edit edition'
-                  : cycleTooltip(EDITION_STATUS_CYCLE, edition.status)}>
+                  : cycleTooltip('Edition status', EDITION_STATUS_CYCLE, edition.status)}>
                   <Chip
                     label={edition.status}
                     size="small"
@@ -1184,7 +1184,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                     sx={{ cursor: edition.status === 'Cancelled' ? 'default' : 'pointer' }}
                   />
                 </Tooltip>
-                <Tooltip title={cycleTooltip(['NotStarted', 'Open', 'Closed'], edition.registrationStatus)}>
+                <Tooltip title={cycleTooltip('Registration status', ['NotStarted', 'Open', 'Closed'], edition.registrationStatus)}>
                   <Chip
                     label={edition.registrationStatus}
                     size="small"
@@ -1218,8 +1218,8 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                 </Tooltip>
                 {edition.status !== 'Cancelled' && (
                   <Tooltip title={cancelingEditionId === edition.id
-                    ? `Click again to confirm — cancels ${edition.races.filter(r => r.status !== 'Cancelled').length} race${edition.races.filter(r => r.status !== 'Cancelled').length !== 1 ? 's' : ''} too (or wait 3 seconds to cancel)`
-                    : 'Cancel edition (also cancels its races)'}>
+                    ? `Click again to confirm — cancels ${edition.races.filter(r => r.status !== 'Cancelled').length} race${edition.races.filter(r => r.status !== 'Cancelled').length !== 1 ? 's' : ''} and closes registration too (or wait 3 seconds to cancel)`
+                    : 'Cancel edition (also cancels its races and closes registration)'}>
                     <IconButton
                       size="small"
                       color={cancelingEditionId === edition.id ? 'error' : 'default'}

@@ -19,9 +19,8 @@ public class CancelEditionCommandHandler : IRequestHandler<CancelEditionCommand,
         _cacheInvalidator = cacheInvalidator;
     }
 
-    // Dedicated, one-way cascading action: cancels the edition and every one of its races in a
-    // single operation. This is intentionally separate from UpdateEditionCommand (which never
-    // touches Race rows) so the cascade only ever happens through this explicit path.
+    // One-click shortcut for the same cascade UpdateEditionCommand applies when its Status field
+    // transitions to Cancelled — this just doesn't require opening the edit dialog first.
     public async Task<bool> Handle(CancelEditionCommand request, CancellationToken cancellationToken)
     {
         var edition = await _context.EventEditions
@@ -31,11 +30,8 @@ public class CancelEditionCommandHandler : IRequestHandler<CancelEditionCommand,
 
         if (edition == null) return false;
 
-        edition.Status = EditionStatus.Cancelled;
+        edition.CancelWithRaces();
         edition.UpdatedAt = DateTime.UtcNow;
-
-        foreach (var race in edition.Races.Where(r => r.Status != RaceStatus.Cancelled))
-            race.Status = RaceStatus.Cancelled;
 
         await _context.SaveChangesAsync(cancellationToken);
         _cacheInvalidator.InvalidateEvent(edition.Event.Slug);

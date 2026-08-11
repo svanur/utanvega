@@ -57,7 +57,10 @@ public class CacheInvalidator : ICacheInvalidator
             new MemoryCacheEntryOptions { Priority = CacheItemPriority.NeverRemove });
 
         if (slug is not null)
-            _cache.Remove(CacheKeys.Event(slug));
+        {
+            _cache.Remove(CacheKeys.Event(slug, false));
+            _cache.Remove(CacheKeys.Event(slug, true));
+        }
     }
 
     public void InvalidateLeaderboard(string slug)
