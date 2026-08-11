@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
@@ -79,12 +79,20 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
     const rows = isSearching ? allYearsRows : yearRows;
     const loading = isSearching ? allYearsLoading : yearLoading;
 
+    // Browsing one year reads best chronologically (Jan → Dec); a cross-year search reads best
+    // newest-first (you're usually after the most recent occurrence). Reset to that mode's
+    // default whenever search is entered or cleared, without fighting a manual column sort.
+    useEffect(() => {
+        setSortField('date');
+        setSortDir(isSearching ? 'desc' : 'asc');
+    }, [isSearching]);
+
     const handleSort = (field: SortField) => {
         if (sortField === field) {
             setSortDir(d => d === 'asc' ? 'desc' : 'asc');
         } else {
             setSortField(field);
-            setSortDir('asc');
+            setSortDir(field === 'date' ? (isSearching ? 'desc' : 'asc') : 'asc');
         }
     };
 
