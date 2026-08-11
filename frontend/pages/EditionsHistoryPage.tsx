@@ -5,7 +5,7 @@ import {
     Container, Typography, Box, Stack, TextField, InputAdornment, IconButton,
     Select, MenuItem, FormControlLabel, Checkbox, Table, TableBody, TableCell,
     TableContainer, TableHead, TableRow, TableSortLabel, Paper, Chip, Tooltip,
-    CircularProgress, useTheme, type SelectChangeEvent,
+    useTheme, type SelectChangeEvent,
     ToggleButtonGroup, ToggleButton, Card, CardActionArea, CardContent, Button,
 } from '@mui/material';
 import type { PaletteMode } from '@mui/material';
@@ -20,6 +20,7 @@ import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import Layout from '../components/Layout';
+import RunningLoader from '../components/RunningLoader';
 import { useEditionsHistory, useEditionsHistoryYears } from '../hooks/useEvents';
 import { ActivityIcons } from '../utils/activityIcon';
 import { groupDistances } from '../utils/ticketStatus';
@@ -186,7 +187,7 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                 </Box>
 
                 {loading ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}><CircularProgress /></Box>
+                    <RunningLoader />
                 ) : filteredSorted.length === 0 ? (
                     <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 6 }}>
                         {t('races.editionsHistory.noResults', 'No past events found.')}
