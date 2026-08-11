@@ -1,17 +1,22 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
     Container, Typography, Box, Stack, TextField, InputAdornment, IconButton,
     Select, MenuItem, FormControlLabel, Checkbox, Table, TableBody, TableCell,
     TableContainer, TableHead, TableRow, TableSortLabel, Paper, Chip, Tooltip,
     CircularProgress, useTheme, type SelectChangeEvent,
+    ToggleButtonGroup, ToggleButton, Card, CardActionArea, CardContent, Button,
 } from '@mui/material';
 import type { PaletteMode } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
 import HistoryIcon from '@mui/icons-material/History';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import ListIcon from '@mui/icons-material/List';
+import TableChartIcon from '@mui/icons-material/TableChart';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import Layout from '../components/Layout';
 import { useEditionsHistory, useEditionsHistoryYears } from '../hooks/useEvents';
 import { ActivityIcons } from '../utils/activityIcon';
@@ -20,6 +25,7 @@ import { formatNextDate, formatDateRange } from '../utils/eventUtils';
 
 type SortField = 'date' | 'name' | 'distances';
 type SortDir = 'asc' | 'desc';
+type ViewMode = 'list' | 'table';
 
 type EditionsHistoryPageProps = {
     mode: PaletteMode;
@@ -38,6 +44,16 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
 
     const handleYearChange = (year: number) => {
         navigate(`/editions/history/${year}`);
+    };
+
+    const [searchParams, setSearchParams] = useSearchParams();
+    const viewModeFromUrl = searchParams.get('view');
+    const viewMode: ViewMode = (viewModeFromUrl === 'list' || viewModeFromUrl === 'table')
+        ? viewModeFromUrl
+        : (() => { try { const s = localStorage.getItem('utanvega-editions-history-view-mode'); return (s === 'list' || s === 'table') ? s : 'list'; } catch { return 'list'; } })();
+    const setViewMode = (v: ViewMode) => {
+        setSearchParams(prev => { const next = new URLSearchParams(prev); next.set('view', v); return next; }, { replace: true });
+        try { localStorage.setItem('utanvega-editions-history-view-mode', v); } catch { /* */ }
     };
 
     const [search, setSearch] = useState('');
@@ -72,8 +88,8 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
     }, [rows, search, sortField, sortDir]);
 
     return (
-        <Layout mode={mode} onToggleMode={onToggleMode} maxWidth="lg">
-            <Container maxWidth="lg" sx={{ py: 3 }}>
+        <Layout mode={mode} onToggleMode={onToggleMode} maxWidth={viewMode === 'table' ? 'lg' : 'md'}>
+            <Container maxWidth={viewMode === 'table' ? 'lg' : 'md'} sx={{ py: 3 }}>
                 <Box sx={{ mb: 3 }}>
                     <Typography variant="h4" fontWeight={800} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <HistoryIcon sx={{ fontSize: 32, color: theme.palette.primary.main }} />
@@ -116,11 +132,29 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                     />
                 </Stack>
 
-                {!loading && (
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                        {t('races.editionCount', { count: filteredSorted.length })}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                    <Typography variant="body2" color="text.secondary">
+                        {!loading && t('races.editionCount', { count: filteredSorted.length })}
                     </Typography>
-                )}
+                    <ToggleButtonGroup
+                        value={viewMode}
+                        exclusive
+                        onChange={(_, value) => { if (value) setViewMode(value as ViewMode); }}
+                        size="small"
+                        aria-label={t('home.viewMode')}
+                    >
+                        <Tooltip title={t('home.listView')}>
+                            <ToggleButton value="list" aria-label={t('home.listView')}>
+                                <ListIcon fontSize="small" />
+                            </ToggleButton>
+                        </Tooltip>
+                        <Tooltip title={t('home.tableView')}>
+                            <ToggleButton value="table" aria-label={t('home.tableView')}>
+                                <TableChartIcon fontSize="small" />
+                            </ToggleButton>
+                        </Tooltip>
+                    </ToggleButtonGroup>
+                </Box>
 
                 {loading ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}><CircularProgress /></Box>
@@ -128,6 +162,81 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                     <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 6 }}>
                         {t('races.editionsHistory.noResults', 'No past events found.')}
                     </Typography>
+                ) : viewMode === 'list' ? (
+                    <Stack spacing={1.5}>
+                        {filteredSorted.map(row => {
+                            const cancelled = row.effectiveCancelled;
+                            return (
+                                <Card
+                                    key={`${row.editionId}-${row.rowDate}`}
+                                    variant="outlined"
+                                    sx={{
+                                        '@media (hover: hover)': { transition: 'transform 0.15s, box-shadow 0.15s', '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] } },
+                                        ...(cancelled && { opacity: 0.65 }),
+                                    }}
+                                >
+                                    <CardActionArea onClick={() => navigate(`/events/${row.eventSlug}/history/${row.editionYear ?? row.editionId}`)}>
+                                        <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                                            <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'flex-start' }} gap={0.5}>
+                                                <Stack direction="row" alignItems="flex-start" gap={1} sx={{ minWidth: 0, width: '100%' }}>
+                                                    <ActivityIcons activityTypes={row.activityTypes} activityType={row.activityTypes?.[0] ?? row.eventActivityType} />
+                                                    <Box sx={{ minWidth: 0 }}>
+                                                        <Stack direction="row" alignItems="center" gap={0.5} flexWrap="wrap">
+                                                            <Typography
+                                                                variant="subtitle1"
+                                                                fontWeight={700}
+                                                                sx={{ ...(cancelled && { textDecoration: 'line-through' }), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', sm: 'nowrap' } }}
+                                                            >
+                                                                {row.eventName}
+                                                            </Typography>
+                                                            {cancelled && (
+                                                                <Chip label={t('races.statusCancelled')} size="small" color="error" sx={{ height: 18, fontSize: '0.65rem' }} />
+                                                            )}
+                                                        </Stack>
+                                                        {row.locationName && (
+                                                            <Stack direction="row" alignItems="center" gap={0.5} sx={{ mt: 0.25 }}>
+                                                                <LocationOnIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
+                                                                <Typography variant="body2" color="text.secondary" noWrap>{row.locationName}</Typography>
+                                                            </Stack>
+                                                        )}
+                                                    </Box>
+                                                </Stack>
+                                                <Stack direction="row" alignItems="center" gap={0.5} sx={{ flexShrink: 0 }}>
+                                                    <CalendarTodayIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
+                                                    <Typography variant="body2" color="text.secondary" noWrap>
+                                                        {row.rowEndDate ? formatDateRange(row.rowDate, row.rowEndDate, t) : formatNextDate(row.rowDate, t)}
+                                                    </Typography>
+                                                </Stack>
+                                            </Stack>
+
+                                            {row.distances.length > 0 && (
+                                                <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.75 }}>
+                                                    {groupDistances(row.distances).map((d, i) => (
+                                                        <Chip key={i} label={d.count > 1 ? `${d.count} × ${d.label}` : d.label} size="small" variant="outlined" />
+                                                    ))}
+                                                </Stack>
+                                            )}
+
+                                            {row.resultsUrl && (
+                                                <Button
+                                                    size="small"
+                                                    variant="outlined"
+                                                    href={row.resultsUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
+                                                    onClick={e => e.stopPropagation()}
+                                                    sx={{ mt: 0.75, textTransform: 'none', fontSize: '0.8rem' }}
+                                                >
+                                                    {t('races.editionsHistory.resultsLink', 'Results')}
+                                                </Button>
+                                            )}
+                                        </CardContent>
+                                    </CardActionArea>
+                                </Card>
+                            );
+                        })}
+                    </Stack>
                 ) : (
                     <TableContainer component={Paper} elevation={1} sx={{ borderRadius: 2, overflowX: 'auto' }}>
                         <Table size="small">
