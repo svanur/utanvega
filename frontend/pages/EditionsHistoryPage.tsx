@@ -21,7 +21,7 @@ import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import Layout from '../components/Layout';
 import RunningLoader from '../components/RunningLoader';
-import { useEditionsHistory, useEditionsHistoryYears } from '../hooks/useEvents';
+import { useEditionsHistory, useEditionsHistoryAllYears, useEditionsHistoryYears } from '../hooks/useEvents';
 import { ActivityIcons } from '../utils/activityIcon';
 import { groupDistances } from '../utils/ticketStatus';
 import { formatNextDate, formatDateRange } from '../utils/eventUtils';
@@ -71,7 +71,13 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
     const [sortField, setSortField] = useState<SortField>('date');
     const [sortDir, setSortDir] = useState<SortDir>('asc');
 
-    const { rows, loading } = useEditionsHistory(activeYear, showCancelled);
+    // A non-empty search widens scope to every known year instead of just the selected one —
+    // finding something shouldn't require already knowing which year it happened in.
+    const isSearching = search.trim().length > 0;
+    const { rows: yearRows, loading: yearLoading } = useEditionsHistory(activeYear, showCancelled);
+    const { rows: allYearsRows, loading: allYearsLoading } = useEditionsHistoryAllYears(years, showCancelled, isSearching);
+    const rows = isSearching ? allYearsRows : yearRows;
+    const loading = isSearching ? allYearsLoading : yearLoading;
 
     const handleSort = (field: SortField) => {
         if (sortField === field) {
@@ -121,7 +127,7 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                         value={activeYear ?? ''}
                         onChange={(e: SelectChangeEvent<number>) => handleYearChange(Number(e.target.value))}
                         sx={{ minWidth: 100 }}
-                        disabled={years.length === 0}
+                        disabled={years.length === 0 || isSearching}
                     >
                         {years.map(y => <MenuItem key={y} value={y}>{y}</MenuItem>)}
                     </Select>
@@ -150,12 +156,13 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                     <Typography variant="body2" color="text.secondary">
                         {!loading && t('races.editionCount', { count: filteredSorted.length })}
+                        {!loading && isSearching && ` (${t('races.editionsHistory.searchingAllYears', 'all years')})`}
                     </Typography>
                     <Stack direction="row" spacing={1} alignItems="center">
                         <Stack direction="row" spacing={0.5}>
                             <IconButton
                                 size="small"
-                                disabled={!olderYear}
+                                disabled={!olderYear || isSearching}
                                 onClick={() => olderYear && handleYearChange(olderYear)}
                                 aria-label={t('races.history.older')}
                             >
@@ -163,7 +170,7 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                             </IconButton>
                             <IconButton
                                 size="small"
-                                disabled={!newerYear}
+                                disabled={!newerYear || isSearching}
                                 onClick={() => newerYear && handleYearChange(newerYear)}
                                 aria-label={t('races.history.newer')}
                             >

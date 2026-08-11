@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueries } from '@tanstack/react-query';
 import { API_URL } from './useTrails';
 
 export interface ScheduleRule {
@@ -221,6 +221,28 @@ export function useEditionsHistory(year: number | undefined, includeCancelled: b
         enabled: !!year,
     });
     return { rows, loading: isPending, error: queryError instanceof Error ? queryError.message : null };
+}
+
+// Fetches every year in `years` in parallel and merges the rows — used when a search term is
+// active, so results aren't limited to whichever year happens to be selected. Reuses the same
+// query key as useEditionsHistory, so any year the user already browsed is served from cache.
+export function useEditionsHistoryAllYears(years: number[], includeCancelled: boolean, enabled: boolean) {
+    const results = useQueries({
+        queries: years.map(year => ({
+            queryKey: ['editions-history', year, includeCancelled],
+            queryFn: () => fetch(`${API_URL}/api/v1/events/history?year=${year}&includeCancelled=${includeCancelled}`)
+                .then(res => {
+                    if (!res.ok) throw new Error('Failed to fetch editions history');
+                    return res.json() as Promise<EditionHistoryRow[]>;
+                }),
+            staleTime: 5 * 60 * 1000,
+            enabled: enabled && !!year,
+        })),
+    });
+
+    const loading = enabled && results.some(r => r.isPending);
+    const rows = enabled ? results.flatMap(r => r.data ?? []) : [];
+    return { rows, loading };
 }
 
 export function useEditionsHistoryYears() {

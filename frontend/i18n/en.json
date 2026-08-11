@@ -1330,7 +1330,8 @@
             "searchPlaceholder": "Search past events...",
             "showCancelled": "Show cancelled",
             "noResults": "No past events found.",
-            "resultsLink": "Results"
+            "resultsLink": "Results",
+            "searchingAllYears": "all years"
         },
         "table": {
             "name": "Name",
