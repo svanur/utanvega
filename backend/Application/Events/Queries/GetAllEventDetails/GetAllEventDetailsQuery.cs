@@ -6,6 +6,7 @@ using Utanvega.Backend.Infrastructure.Persistence;
 
 namespace Utanvega.Backend.Application.Events.Queries.GetAllEventDetails;
 
+using Utanvega.Backend.Application.Events;
 using Utanvega.Backend.Application.Events.Queries.GetEvents;
 
 public record GetAllEventDetailsQuery : IRequest<List<EventDetailDto>>;

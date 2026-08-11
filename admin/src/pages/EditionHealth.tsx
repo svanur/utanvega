@@ -274,7 +274,9 @@ export default function EditionHealth({ onViewEvent, onNotify }: EditionHealthPr
         <SummaryCard title="Perfect (100%)" value={perfectCount} color="#2e7d32" />
         <SummaryCard title="Critical (<50%)" value={criticalCount} color="#d32f2f"
           filter="critical" activeFilter={activeFilter} onFilter={setActiveFilter} />
-        <SummaryCard title="Cancelled" value={cancelledEditionCount} color={cancelledEditionCount > 0 ? '#d32f2f' : '#2e7d32'}
+        {/* Neutral color, unlike the red/orange tiles below — a cancelled edition isn't a data-quality
+            problem to fix, just a state worth surfacing. */}
+        <SummaryCard title="Cancelled" value={cancelledEditionCount} color="#1976d2"
           filter="cancelled" activeFilter={activeFilter} onFilter={setActiveFilter} />
         <SummaryCard title="No Date" value={noDateCount} color={noDateCount > 0 ? '#ed6c02' : '#2e7d32'}
           filter="no-date" activeFilter={activeFilter} onFilter={setActiveFilter} />

@@ -1,4 +1,4 @@
-using Utanvega.Backend.Application.Events.Queries.GetEvents;
+using Utanvega.Backend.Application.Events;
 using Utanvega.Backend.Core.Entities;
 
 namespace backend.Tests.Services;

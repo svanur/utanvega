@@ -7,6 +7,10 @@ export function isEffectivelyCancelled(item: { status: string; editionEffectiveC
 }
 
 export function isEffectivelyUnconfirmed(item: { status: string; editionStatus?: string | null }): boolean {
+    // Intentionally two independent checks, not a fallback: Event.Unconfirmed answers "does this
+    // event/series exist at all", Edition.Unconfirmed answers "are this year's specifics locked in".
+    // A Confirmed, ongoing series can still have a not-yet-finalized upcoming edition — that edition
+    // should read as tentative even though the event itself is fully confirmed.
     return item.status === 'Unconfirmed' || item.editionStatus === 'Unconfirmed';
 }
 

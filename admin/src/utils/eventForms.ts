@@ -120,9 +120,9 @@ export function getRaceStatusColor(status: RaceStatus): 'default' | 'success' | 
   return 'default';
 }
 
-export function getEditionStatusColor(status: EditionStatus): 'default' | 'success' | 'info' | 'error' {
+export function getEditionStatusColor(status: EditionStatus): 'default' | 'success' | 'warning' | 'error' {
   if (status === 'Active') return 'success';
-  if (status === 'Unconfirmed') return 'info';
+  if (status === 'Unconfirmed') return 'warning'; // matches getEventStatusColor's Unconfirmed mapping
   if (status === 'Cancelled') return 'error';
   return 'default'; // Hidden
 }

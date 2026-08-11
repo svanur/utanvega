@@ -375,11 +375,6 @@ export function useEvents() {
         await fetchEvents();
     };
 
-    const cancelEdition = async (id: string) => {
-        await apiFetch(`/api/v1/admin/editions/${id}/cancel`, { method: 'POST' });
-        await fetchEvents();
-    };
-
     const generateEditionsForSeason = async (input: GenerateEditionsForSeasonInput) => {
         const result = await apiFetch<GenerateEditionsForSeasonResult>(`/api/v1/admin/events/${input.eventId}/editions/generate`, {
             method: 'POST',
@@ -430,7 +425,6 @@ export function useEvents() {
         updateEdition,
         updateEditionSilently,
         deleteEdition,
-        cancelEdition,
         generateEditionsForSeason,
         createRace,
         updateRace,
