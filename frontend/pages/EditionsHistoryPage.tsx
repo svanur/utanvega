@@ -59,7 +59,7 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
     const [search, setSearch] = useState('');
     const [showCancelled, setShowCancelled] = useState(true);
     const [sortField, setSortField] = useState<SortField>('date');
-    const [sortDir, setSortDir] = useState<SortDir>('desc');
+    const [sortDir, setSortDir] = useState<SortDir>('asc');
 
     const { rows, loading } = useEditionsHistory(activeYear, showCancelled);
 
@@ -68,7 +68,7 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
             setSortDir(d => d === 'asc' ? 'desc' : 'asc');
         } else {
             setSortField(field);
-            setSortDir(field === 'date' ? 'desc' : 'asc');
+            setSortDir('asc');
         }
     };
 
