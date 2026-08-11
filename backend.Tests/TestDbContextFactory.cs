@@ -171,6 +171,7 @@ internal class TestDbContext : UtanvegaDbContext
             entity.Property(e => e.RegistrationUrl).HasMaxLength(500);
             entity.Property(e => e.ResultsUrl).HasMaxLength(500);
             entity.Property(e => e.RegistrationStatus).HasConversion<string>();
+            entity.Property(e => e.Status).HasConversion<string>();
             entity.Property(e => e.Date).HasConversion(
                 v => v.HasValue ? (int?)v.Value.DayNumber : null,
                 v => v.HasValue ? (DateOnly?)DateOnly.FromDayNumber(v.Value) : null);
