@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo, useEffect } from 'react';
+import React, { useState, useRef, useMemo, useEffect, lazy, Suspense } from 'react';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { 
@@ -61,7 +61,8 @@ import PaceInfo from '../components/PaceInfo';
 import LostRunner from '../components/LostRunner';
 import { useFavorites } from '../hooks/useFavorites';
 import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
-import TrailMap, { GeoJsonGeometry } from '../components/TrailMap';
+import type { GeoJsonGeometry } from '../components/TrailMap';
+const TrailMap = lazy(() => import('../components/TrailMap'));
 import ElevationChart from '../components/ElevationChart';
 import RoutePlayback from '../components/RoutePlayback';
 import ShareButtons from '../components/ShareButtons';
@@ -710,12 +711,14 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                         </Tooltip>
                     )}
                 </Box>
-                <TrailMap 
-                    slug={trail.slug} 
-                    onDataLoaded={setGeometry} 
-                    hoverPoint={hoverPoint}
-                    activityType={trail.activityType}
-                />
+                <Suspense fallback={<Box sx={{ height: 400, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><CircularProgress /></Box>}>
+                    <TrailMap
+                        slug={trail.slug}
+                        onDataLoaded={setGeometry}
+                        hoverPoint={hoverPoint}
+                        activityType={trail.activityType}
+                    />
+                </Suspense>
 
                 {geometry && (
                     <>
@@ -1125,14 +1128,16 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                     }}
                 >
                     <Box sx={{ flex: '6 1 0', minHeight: 0 }}>
-                        <TrailMap
-                            slug={trail.slug}
-                            hoverPoint={hoverPoint}
-                            activityType={trail.activityType}
-                            height="100%"
-                            mapInstanceRef={dialogMapRef}
-                            providedGeometry={geometry}
-                        />
+                        <Suspense fallback={<Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><CircularProgress /></Box>}>
+                            <TrailMap
+                                slug={trail.slug}
+                                hoverPoint={hoverPoint}
+                                activityType={trail.activityType}
+                                height="100%"
+                                mapInstanceRef={dialogMapRef}
+                                providedGeometry={geometry}
+                            />
+                        </Suspense>
                     </Box>
                     {geometry && (
                         <Box sx={{ flex: '4 1 0', minHeight: 0, overflow: 'auto', px: 2, pb: 1 }}>
