@@ -17,6 +17,8 @@ import ListIcon from '@mui/icons-material/List';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
+import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import Layout from '../components/Layout';
 import { useEditionsHistory, useEditionsHistoryYears } from '../hooks/useEvents';
 import { ActivityIcons } from '../utils/activityIcon';
@@ -47,6 +49,11 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
     const handleYearChange = (year: number) => {
         navigate(`/editions/history/${year}`);
     };
+
+    // years is sorted newest-first, so a lower index is a newer year.
+    const currentYearIndex = activeYear != null ? years.indexOf(activeYear) : -1;
+    const newerYear = currentYearIndex > 0 ? years[currentYearIndex - 1] : null;
+    const olderYear = currentYearIndex >= 0 && currentYearIndex < years.length - 1 ? years[currentYearIndex + 1] : null;
 
     const [searchParams, setSearchParams] = useSearchParams();
     const viewModeFromUrl = searchParams.get('view');
@@ -138,24 +145,44 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                     <Typography variant="body2" color="text.secondary">
                         {!loading && t('races.editionCount', { count: filteredSorted.length })}
                     </Typography>
-                    <ToggleButtonGroup
-                        value={viewMode}
-                        exclusive
-                        onChange={(_, value) => { if (value) setViewMode(value as ViewMode); }}
-                        size="small"
-                        aria-label={t('home.viewMode')}
-                    >
-                        <Tooltip title={t('home.listView')}>
-                            <ToggleButton value="list" aria-label={t('home.listView')}>
-                                <ListIcon fontSize="small" />
-                            </ToggleButton>
-                        </Tooltip>
-                        <Tooltip title={t('home.tableView')}>
-                            <ToggleButton value="table" aria-label={t('home.tableView')}>
-                                <TableChartIcon fontSize="small" />
-                            </ToggleButton>
-                        </Tooltip>
-                    </ToggleButtonGroup>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                        <Stack direction="row" spacing={0.5}>
+                            <IconButton
+                                size="small"
+                                disabled={!olderYear}
+                                onClick={() => olderYear && handleYearChange(olderYear)}
+                                aria-label={t('races.history.older', { defaultValue: 'Older' })}
+                            >
+                                <NavigateBeforeIcon />
+                            </IconButton>
+                            <IconButton
+                                size="small"
+                                disabled={!newerYear}
+                                onClick={() => newerYear && handleYearChange(newerYear)}
+                                aria-label={t('races.history.newer', { defaultValue: 'Newer' })}
+                            >
+                                <NavigateNextIcon />
+                            </IconButton>
+                        </Stack>
+                        <ToggleButtonGroup
+                            value={viewMode}
+                            exclusive
+                            onChange={(_, value) => { if (value) setViewMode(value as ViewMode); }}
+                            size="small"
+                            aria-label={t('home.viewMode')}
+                        >
+                            <Tooltip title={t('home.listView')}>
+                                <ToggleButton value="list" aria-label={t('home.listView')}>
+                                    <ListIcon fontSize="small" />
+                                </ToggleButton>
+                            </Tooltip>
+                            <Tooltip title={t('home.tableView')}>
+                                <ToggleButton value="table" aria-label={t('home.tableView')}>
+                                    <TableChartIcon fontSize="small" />
+                                </ToggleButton>
+                            </Tooltip>
+                        </ToggleButtonGroup>
+                    </Stack>
                 </Box>
 
                 {loading ? (
