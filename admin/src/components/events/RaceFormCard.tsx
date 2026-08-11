@@ -331,7 +331,7 @@ function RaceFormCardInner({
               onClick={() => void handleDelete()}
               disabled={saving}
             >
-              {confirmDelete ? 'Confirm delete' : 'Delete race'}
+              {confirmDelete ? 'Confirm removal' : 'Remove race'}
             </Button>
           )}
           <Button
