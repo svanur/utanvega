@@ -131,7 +131,7 @@ interface ScoredEdition {
 }
 
 type SortField = 'event' | 'year' | 'score';
-type QuickFilter = 'critical' | 'no-date' | 'no-races' | 'no-trail' | 'no-results' | 'bad-status';
+type QuickFilter = 'critical' | 'no-date' | 'no-races' | 'no-trail' | 'no-results' | 'bad-status' | 'cancelled';
 
 interface EditionHealthProps {
   onEditEvent?: (eventId: string) => void;
@@ -216,6 +216,7 @@ export default function EditionHealth({ onEditEvent, onNotify }: EditionHealthPr
       case 'no-trail':    result = result.filter(s => !s.hasTrail); break;
       case 'no-results':  result = result.filter(s => !s.hasResults); break;
       case 'bad-status':  result = result.filter(s => !s.hasGoodStatus); break;
+      case 'cancelled':   result = result.filter(s => s.edition.status === 'Cancelled'); break;
     }
     return [...result].sort((a, b) => {
       let cmp = 0;
@@ -228,15 +229,21 @@ export default function EditionHealth({ onEditEvent, onNotify }: EditionHealthPr
     });
   }, [scored, search, activeFilter, sortField, sortDir]);
 
+  // Cancelled editions are excluded from the health metrics below (a cancelled edition doesn't
+  // need a Results URL or closed registration — it's not happening) but still counted here, and
+  // still shown in the table when the Cancelled KPI is clicked as a filter.
+  const nonCancelled = useMemo(() => scored.filter(s => s.edition.status !== 'Cancelled'), [scored]);
+  const cancelledEditionCount = scored.length - nonCancelled.length;
+
   const totalEditions = scored.length;
-  const perfectCount = scored.filter(s => s.score === 100).length;
-  const criticalCount = scored.filter(s => s.score < 50).length;
-  const noDateCount = scored.filter(s => !s.edition.date).length;
-  const noRacesCount = scored.filter(s => s.edition.races.length === 0).length;
-  const noTrailCount = scored.filter(s => !s.hasTrail).length;
-  const noResultsCount = scored.filter(s => !s.hasResults).length;
-  const badStatusCount = scored.filter(s => !s.hasGoodStatus).length;
-  const avgScore = scored.length > 0 ? Math.round(scored.reduce((s, e) => s + e.score, 0) / scored.length) : 0;
+  const perfectCount = nonCancelled.filter(s => s.score === 100).length;
+  const criticalCount = nonCancelled.filter(s => s.score < 50).length;
+  const noDateCount = nonCancelled.filter(s => !s.edition.date).length;
+  const noRacesCount = nonCancelled.filter(s => s.edition.races.length === 0).length;
+  const noTrailCount = nonCancelled.filter(s => !s.hasTrail).length;
+  const noResultsCount = nonCancelled.filter(s => !s.hasResults).length;
+  const badStatusCount = nonCancelled.filter(s => !s.hasGoodStatus).length;
+  const avgScore = nonCancelled.length > 0 ? Math.round(nonCancelled.reduce((s, e) => s + e.score, 0) / nonCancelled.length) : 0;
 
   const handleSort = (field: SortField) => {
     if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -267,6 +274,8 @@ export default function EditionHealth({ onEditEvent, onNotify }: EditionHealthPr
         <SummaryCard title="Perfect (100%)" value={perfectCount} color="#2e7d32" />
         <SummaryCard title="Critical (<50%)" value={criticalCount} color="#d32f2f"
           filter="critical" activeFilter={activeFilter} onFilter={setActiveFilter} />
+        <SummaryCard title="Cancelled" value={cancelledEditionCount} color={cancelledEditionCount > 0 ? '#d32f2f' : '#2e7d32'}
+          filter="cancelled" activeFilter={activeFilter} onFilter={setActiveFilter} />
         <SummaryCard title="No Date" value={noDateCount} color={noDateCount > 0 ? '#ed6c02' : '#2e7d32'}
           filter="no-date" activeFilter={activeFilter} onFilter={setActiveFilter} />
         <SummaryCard title="No Races" value={noRacesCount} color={noRacesCount > 0 ? '#ed6c02' : '#2e7d32'}

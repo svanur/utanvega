@@ -1313,9 +1313,14 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                         Set dates
                       </Button>
                     )}
-                    <Button size="small" startIcon={<AddIcon />} onClick={() => openRaceForm(null, edition)}>
-                      Add race
-                    </Button>
+                    <Tooltip title={edition.status === 'Cancelled' ? 'Locked — the edition is cancelled' : ''}>
+                      <span>
+                        <Button size="small" startIcon={<AddIcon />} onClick={() => openRaceForm(null, edition)}
+                          disabled={edition.status === 'Cancelled'}>
+                          Add race
+                        </Button>
+                      </span>
+                    </Tooltip>
                   </Stack>
                 </Stack>
 
