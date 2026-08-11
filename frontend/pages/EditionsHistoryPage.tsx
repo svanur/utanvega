@@ -85,17 +85,22 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
     const filteredSorted = useMemo(() => {
         const q = search.toLowerCase().trim();
         const result = q
-            ? rows.filter(r => r.eventName.toLowerCase().includes(q) || r.locationName?.toLowerCase().includes(q))
+            ? rows.filter(r => {
+                // Prefer the active language's name, but fall back to the other one when
+                // there's no translation — an untranslated edition must still be findable.
+                const name = loc(r.eventName, r.eventNameEn);
+                return name?.toLowerCase().includes(q) || r.locationName?.toLowerCase().includes(q);
+            })
             : rows;
 
         return [...result].sort((a, b) => {
             let cmp = 0;
             if (sortField === 'date') cmp = a.rowDate.localeCompare(b.rowDate);
-            else if (sortField === 'name') cmp = a.eventName.localeCompare(b.eventName, 'is');
+            else if (sortField === 'name') cmp = (loc(a.eventName, a.eventNameEn) ?? '').localeCompare(loc(b.eventName, b.eventNameEn) ?? '', 'is');
             else if (sortField === 'distances') cmp = (a.distances[0]?.label ?? '').localeCompare(b.distances[0]?.label ?? '');
             return sortDir === 'asc' ? cmp : -cmp;
         });
-    }, [rows, search, sortField, sortDir]);
+    }, [rows, search, sortField, sortDir, loc]);
 
     return (
         <Layout mode={mode} onToggleMode={onToggleMode} maxWidth={viewMode === 'table' ? 'lg' : 'md'}>
@@ -217,7 +222,7 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                                                                 fontWeight={700}
                                                                 sx={{ ...(cancelled && { textDecoration: 'line-through' }), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', sm: 'nowrap' } }}
                                                             >
-                                                                {row.eventName}
+                                                                {loc(row.eventName, row.eventNameEn)}
                                                             </Typography>
                                                             {cancelled && (
                                                                 <Chip label={t('races.statusCancelled')} size="small" color="error" sx={{ height: 18, fontSize: '0.65rem' }} />
@@ -316,7 +321,7 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                                             </TableCell>
                                             <TableCell>
                                                 <Typography variant="body2" fontWeight={600} noWrap sx={{ ...(cancelled && { textDecoration: 'line-through' }) }}>
-                                                    {row.eventName}
+                                                    {loc(row.eventName, row.eventNameEn)}
                                                 </Typography>
                                                 {row.raceName && (
                                                     <Typography variant="caption" color="text.secondary" display="block" noWrap>
