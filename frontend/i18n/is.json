@@ -1320,7 +1320,9 @@
             "backToEvent": "Til baka",
             "editionNotFound": "Útgáfa fannst ekki",
             "pastEdition": "Liðin útgáfa",
-            "completed": "Lokið"
+            "completed": "Lokið",
+            "older": "Eldri",
+            "newer": "Nýrri"
         },
         "editionsHistory": {
             "title": "Fyrri viðburðir",

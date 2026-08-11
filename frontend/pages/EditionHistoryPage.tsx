@@ -182,7 +182,7 @@ export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistor
                             size="small"
                             disabled={!nextEdition}
                             onClick={() => nextEdition && goToEdition(nextEdition)}
-                            aria-label={t('races.history.older', { defaultValue: 'Older' })}
+                            aria-label={t('races.history.older')}
                         >
                             <NavigateBeforeIcon />
                         </IconButton>
@@ -190,7 +190,7 @@ export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistor
                             size="small"
                             disabled={!prevEdition}
                             onClick={() => prevEdition && goToEdition(prevEdition)}
-                            aria-label={t('races.history.newer', { defaultValue: 'Newer' })}
+                            aria-label={t('races.history.newer')}
                         >
                             <NavigateNextIcon />
                         </IconButton>

@@ -152,7 +152,7 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                                 size="small"
                                 disabled={!olderYear}
                                 onClick={() => olderYear && handleYearChange(olderYear)}
-                                aria-label={t('races.history.older', { defaultValue: 'Older' })}
+                                aria-label={t('races.history.older')}
                             >
                                 <NavigateBeforeIcon />
                             </IconButton>
@@ -160,7 +160,7 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                                 size="small"
                                 disabled={!newerYear}
                                 onClick={() => newerYear && handleYearChange(newerYear)}
-                                aria-label={t('races.history.newer', { defaultValue: 'Newer' })}
+                                aria-label={t('races.history.newer')}
                             >
                                 <NavigateNextIcon />
                             </IconButton>
