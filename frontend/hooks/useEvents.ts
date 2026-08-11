@@ -168,6 +168,7 @@ export interface CalendarEvent {
     raceCount: number;
     type: string;
     activityTypes: string[] | null;
+    raceName: string | null;
 }
 
 export interface CalendarDay {

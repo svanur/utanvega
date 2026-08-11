@@ -15,7 +15,8 @@ public record CalendarEventDto(
     string? EditionTitle,
     int RaceCount,
     string Type,
-    List<string>? ActivityTypes = null
+    List<string>? ActivityTypes = null,
+    string? RaceName = null
 );
 
 public record CalendarDayDto(
@@ -61,17 +62,16 @@ public class GetEventCalendarQueryHandler : IRequestHandler<GetEventCalendarQuer
                 ed.Date <= request.To &&
                 (ed.EndDate.HasValue ? ed.EndDate >= request.From : ed.Date >= request.From) &&
                 ed.Event.Status != EventStatus.Hidden &&
-                ed.Event.Status != EventStatus.Unlisted)
+                ed.Event.Status != EventStatus.Unlisted &&
+                ed.Status != EditionStatus.Cancelled)
             .ToListAsync(cancellationToken);
 
         var dayMap = new Dictionary<DateOnly, List<CalendarEventDto>>();
 
         foreach (var ed in editions)
         {
-            var startDate = ed.Date!.Value;
-            var endDate = ed.EndDate ?? startDate;
-            var activityTypes = ed.Races
-                .Where(r => r.Status != RaceStatus.Cancelled)
+            var activeRaces = ed.Races.Where(r => r.Status != RaceStatus.Cancelled && r.Status != RaceStatus.Hidden).ToList();
+            var activityTypes = activeRaces
                 .Select(r => r.ActivityType?.ToString() ?? r.Trail?.ActivityTypeId.ToString())
                 .Where(a => a != null)
                 .Distinct()
@@ -79,6 +79,36 @@ public class GetEventCalendarQueryHandler : IRequestHandler<GetEventCalendarQuer
                 .Cast<string>()
                 .ToList();
 
+            // Series events: emit one entry per race on its own date
+            if (ed.Event.Type == EventType.Series)
+            {
+                var racesWithDate = activeRaces.Where(r => r.DateOfRace.HasValue).OrderBy(r => r.DateOfRace).ToList();
+                foreach (var race in racesWithDate)
+                {
+                    var day = race.DateOfRace!.Value;
+                    if (day < request.From || day > request.To) continue;
+                    if (!dayMap.TryGetValue(day, out var raceEvents))
+                    {
+                        raceEvents = [];
+                        dayMap[day] = raceEvents;
+                    }
+                    raceEvents.Add(new CalendarEventDto(
+                        ed.Event.Name,
+                        ed.Event.NameEn,
+                        ed.Event.Slug,
+                        ed.Event.Location?.Name,
+                        ed.Title,
+                        1,
+                        ed.Event.Type.ToString(),
+                        activityTypes.Count > 0 ? activityTypes : null,
+                        race.Name
+                    ));
+                }
+                continue;
+            }
+
+            var startDate = ed.Date!.Value;
+            var endDate = ed.EndDate ?? startDate;
             var dto = new CalendarEventDto(
                 ed.Event.Name,
                 ed.Event.NameEn,

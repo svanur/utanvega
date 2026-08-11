@@ -1382,7 +1382,13 @@
         "eventCount": "{{count}} viðburðir í þessum mánuði",
         "subscribe": "Gerast áskrifandi",
         "subscribeTooltip": "Gerast áskrifandi að dagatalsfæðu",
-        "subscribeSuccess": "Slóð afrituð! Límdu hana í dagatalið þitt."
+        "subscribeSuccess": "Slóð afrituð! Límdu hana í dagatalið þitt.",
+        "upcoming": "Væntanlegir viðburðir",
+        "quietWeek": "Engir viðburðir",
+        "races": "keppni",
+        "monthView": "Mánuður",
+        "scheduleView": "Dagskrá",
+        "viewToggle": "Dagbókaryfirlit"
     },
     "welcome": {
         "tagline": "Öll hlaup á einum stað",
