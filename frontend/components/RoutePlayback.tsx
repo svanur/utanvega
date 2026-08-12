@@ -71,12 +71,12 @@ export default function RoutePlayback({ coordinates, onPointChange, onIndexChang
     // Keep speedIndexRef in sync so the rAF loop always reads the latest speed
     useEffect(() => { speedIndexRef.current = speedIndex; }, [speedIndex]);
 
-    const cancelRaf = () => {
+    const cancelRaf = useCallback(() => {
         if (rafRef.current !== null) {
             cancelAnimationFrame(rafRef.current);
             rafRef.current = null;
         }
-    };
+    }, []);
 
     const emitPoint = useCallback((idx: number) => {
         const coord = coordinates[idx];
