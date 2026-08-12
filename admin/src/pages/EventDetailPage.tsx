@@ -459,6 +459,9 @@ function SortableRaceRow({ race, edition, isActive, staleTx, detail, onOpen, onD
         <Typography variant="body2" color="text.secondary">{race.distanceLabel ?? '—'}</Typography>
       </TableCell>
       <TableCell>
+        <Typography variant="body2" color="text.secondary">{race.resultType ?? '—'}</Typography>
+      </TableCell>
+      <TableCell>
         {race.trailName
           ? <Typography variant="body2" color="text.secondary">{race.trailName}</Typography>
           : <Chip label="No route" size="small" color="warning" variant="outlined" sx={{ height: 18, fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }} />
@@ -550,6 +553,12 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
   const [raceForm, setRaceForm] = useState<{ editionId: string; race: RaceDto | null } | null>(null);
 
   const [editingEvent, setEditingEvent] = useState(false);
+
+  const linkedTrailsWithCoords = useMemo(() => {
+    if (!detail) return [];
+    const trailIds = new Set(detail.editions.flatMap(ed => ed.races.map(r => r.trailId).filter(Boolean)));
+    return trails.filter(t => trailIds.has(t.id) && t.startLatitude != null && t.startLongitude != null);
+  }, [detail, trails]);
 
   const [editionDialogOpen, setEditionDialogOpen] = useState(false);
   const [editingEdition, setEditingEdition] = useState<EventEditionDto | null>(null);
@@ -1052,6 +1061,17 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                 <Typography variant="caption" color="text.secondary">by {detail.organizerName}</Typography>
               )}
             </Stack>
+            {detail.gpxPointLat != null && detail.gpxPointLng != null && (
+              <Tooltip title="Copy coordinates">
+                <Typography
+                  variant="caption" color="text.secondary"
+                  sx={{ mt: 0.5, display: 'block', cursor: 'pointer', '&:hover': { color: 'text.primary' } }}
+                  onClick={() => void navigator.clipboard.writeText(`${detail.gpxPointLat!.toFixed(6)}, ${detail.gpxPointLng!.toFixed(6)}`)}
+                >
+                  📍 {detail.gpxPointLat.toFixed(6)}, {detail.gpxPointLng.toFixed(6)}
+                </Typography>
+              </Tooltip>
+            )}
             {formatSchedule(detail.scheduleRule) && (
               <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
                 🗓 {formatSchedule(detail.scheduleRule)}
@@ -1099,6 +1119,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
       {editingEvent && (
         <EventFormCard
           event={detail}
+          linkedTrails={linkedTrailsWithCoords}
           onClose={() => setEditingEvent(false)}
           onSaved={handleEventSaved}
           onNotify={onNotify}
@@ -1265,8 +1286,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                       <Typography variant="caption" color="text.secondary" display="block">Registration</Typography>
                       <Typography variant="body2" component="a" href={edition.registrationUrl} target="_blank" rel="noopener"
                         sx={{ color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}>
-                        {edition.registrationUrl.replace(/^https?:\/\//, '').slice(0, 40)}
-                        {edition.registrationUrl.length > 50 ? '…' : ''}
+                        {(() => { const s = edition.registrationUrl.replace(/^https?:\/\//, ''); return s.length > 40 ? s.slice(0, 40) + '…' : s; })()}
                       </Typography>
                     </Box>
                   )}
@@ -1275,7 +1295,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                       <Typography variant="caption" color="text.secondary" display="block">Results</Typography>
                       <Typography variant="body2" component="a" href={edition.resultsUrl} target="_blank" rel="noopener"
                         sx={{ color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}>
-                        {edition.resultsUrl.replace(/^https?:\/\//, '').slice(0, 40)}
+                        {(() => { const s = edition.resultsUrl.replace(/^https?:\/\//, ''); return s.length > 40 ? s.slice(0, 40) + '…' : s; })()}
                       </Typography>
                     </Box>
                   )}
@@ -1284,8 +1304,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                       <Typography variant="caption" color="text.secondary" display="block">Photo Gallery</Typography>
                       <Typography variant="body2" component="a" href={edition.photoGalleryUrl} target="_blank" rel="noopener"
                         sx={{ color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}>
-                        {edition.photoGalleryUrl.replace(/^https?:\/\//, '').slice(0, 40)}
-                        {edition.photoGalleryUrl.length > 50 ? '…' : ''}
+                        {(() => { const s = edition.photoGalleryUrl.replace(/^https?:\/\//, ''); return s.length > 40 ? s.slice(0, 40) + '…' : s; })()}
                       </Typography>
                     </Box>
                   )}
@@ -1351,6 +1370,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                         <TableCell sx={{ width: 24, px: 0.5 }} />
                         <TableCell>Name</TableCell>
                         <TableCell>Distance</TableCell>
+                        <TableCell>Result type</TableCell>
                         <TableCell>Route</TableCell>
                         <TableCell>Date / start</TableCell>
                         <TableCell>Status</TableCell>
