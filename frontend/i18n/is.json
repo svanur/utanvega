@@ -308,8 +308,8 @@
         "stats": {
             "distance": "Vegalengd",
             "elevation": "Hæð",
-            "gain": "Samtals upp",
-            "loss": "Samtals niður",
+            "gain": "Hækkun",
+            "loss": "Lækkun",
             "highPoint": "Hæst",
             "lowPoint": "Lægst"
         }
