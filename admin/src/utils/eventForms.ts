@@ -40,7 +40,7 @@ export const EDITION_STATUSES: EditionStatus[] = ['Active', 'Unconfirmed', 'Canc
 // not something to land on by clicking through a cycle.
 export const EDITION_STATUS_CYCLE: EditionStatus[] = ['Active', 'Unconfirmed', 'Hidden'];
 export const TICKET_STATUSES: TicketStatus[] = ['Free', 'NotStarted', 'Available', 'AlmostSoldOut', 'SoldOut', 'Closed'];
-export const ACTIVITY_TYPES: ActivityType[] = ['TrailRunning', 'Running', 'Cycling', 'Hiking', 'FunRun', 'ObstacleCourse', 'CrossCountryRun', 'Swim', 'Social', 'Other'];
+export const ACTIVITY_TYPES: ActivityType[] = ['TrailRunning', 'Running', 'Cycling', 'Hiking', 'FunRun', 'ObstacleCourse', 'CrossCountryRun', 'Swim', 'Canicross', 'IronMan', 'Other'];
 export const RESULT_TYPES: ResultType[] = ['Time', 'Distance', 'Laps'];
 
 export function createEmptyRaceForm(eventEditionId = '', sortOrder = 0): RaceFormState {

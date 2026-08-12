@@ -784,106 +784,111 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                         </Box>
                     )}
 
-                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mt: 2.5 }} alignItems={{ sm: 'center' }}>
-                        {!showEditionSections && primaryEdition?.registrationUrl && (
-                            <Button
-                                variant="contained"
-                                color="primary"
-                                endIcon={<OpenInNewIcon />}
-                                onClick={() => window.open(primaryEdition.registrationUrl!, '_blank', 'noopener')}
-                                sx={{ textTransform: 'none' }}
-                            >
-                                {t('races.register')}
-                            </Button>
-                        )}
-                        {!showEditionSections && primaryEdition?.resultsUrl && (
-                            <Button
-                                variant={isPostRace ? 'contained' : 'outlined'}
-                                color={isPostRace ? 'success' : 'primary'}
-                                size={isPostRace ? 'medium' : 'small'}
-                                endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
-                                onClick={() => window.open(primaryEdition.resultsUrl!, '_blank', 'noopener')}
-                                sx={{ textTransform: 'none', ...(isPostRace && { fontWeight: 700 }) }}
-                            >
-                                {isPostRace ? `🏁 ${t('races.results', { defaultValue: 'Results' })}` : t('races.results', { defaultValue: 'Results' })}
-                            </Button>
-                        )}
-                        {(primaryEdition?.photoGalleryUrl ?? event.photoGalleryUrl) && (
-                            <Button
-                                variant="outlined"
-                                size="small"
-                                endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
-                                onClick={() => window.open((primaryEdition?.photoGalleryUrl ?? event.photoGalleryUrl)!, '_blank', 'noopener')}
-                                sx={{ textTransform: 'none' }}
-                            >
-                                📷 {t('races.photoGallery', { domain: new URL((primaryEdition?.photoGalleryUrl ?? event.photoGalleryUrl)!).hostname.replace(/^www\./, ''), defaultValue: 'Photos' })}
-                            </Button>
-                        )}
-                        {event.youtubeUrl && (
-                            <Button
-                                variant="outlined"
-                                color="error"
-                                size="small"
-                                startIcon={<VideocamIcon sx={{ fontSize: 16 }} />}
-                                onClick={() => window.open(event.youtubeUrl!, '_blank', 'noopener')}
-                                sx={{ textTransform: 'none' }}
-                            >
-                                360°
-                            </Button>
-                        )}
-                        {event.organizerWebsite && (
-                            <Button
-                                variant="outlined"
-                                size="small"
-                                endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
-                                onClick={() => window.open(event.organizerWebsite!, '_blank', 'noopener')}
-                                sx={{ textTransform: 'none' }}
-                            >
-                                {t('races.organizerSite')}
-                            </Button>
-                        )}
-                        {isEnabled('calendar_integration', false) && (event.displayDate ?? event.nextEditionDate) && !heroCancelled && event.daysUntil != null && event.daysUntil >= 0 && (
-                            <AddToCalendarButton event={event} endDate={primaryEdition?.endDate ?? event.endDisplayDate} t={t} />
-                        )}
-                        {isEnabled('directions_to_trailhead') && mapPin && (
-                            <Tooltip title={t('races.directionsToEvent', 'Directions to event')} arrow>
-                                <IconButton
-                                    size="small"
-                                    component="a"
-                                    href={`https://www.google.com/maps/dir/?api=1&destination=${mapPin.lat},${mapPin.lng}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
+                    <Box sx={{ mt: 2.5 }}>
+                        {/* Row 1: action buttons */}
+                        <Stack direction="row" flexWrap="wrap" gap={1} alignItems="center">
+                            {!showEditionSections && primaryEdition?.registrationUrl && (
+                                <Button
+                                    variant="contained"
+                                    color="primary"
+                                    endIcon={<OpenInNewIcon />}
+                                    onClick={() => window.open(primaryEdition.registrationUrl!, '_blank', 'noopener')}
+                                    sx={{ textTransform: 'none' }}
                                 >
-                                    <DirectionsCarIcon fontSize="small" />
-                                </IconButton>
-                            </Tooltip>
-                        )}
-                        {event.socialLinks && event.socialLinks.length > 0 && (
-                            <Stack direction="row" spacing={0.5}>
-                                {event.socialLinks
+                                    {t('races.register')}
+                                </Button>
+                            )}
+                            {!showEditionSections && primaryEdition?.resultsUrl && (
+                                <Button
+                                    variant={isPostRace ? 'contained' : 'outlined'}
+                                    color={isPostRace ? 'success' : 'primary'}
+                                    size={isPostRace ? 'medium' : 'small'}
+                                    endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
+                                    onClick={() => window.open(primaryEdition.resultsUrl!, '_blank', 'noopener')}
+                                    sx={{ textTransform: 'none', ...(isPostRace && { fontWeight: 700 }) }}
+                                >
+                                    {isPostRace ? `🏁 ${t('races.results', { defaultValue: 'Results' })}` : t('races.results', { defaultValue: 'Results' })}
+                                </Button>
+                            )}
+                            {(primaryEdition?.photoGalleryUrl ?? event.photoGalleryUrl) && (
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
+                                    onClick={() => window.open((primaryEdition?.photoGalleryUrl ?? event.photoGalleryUrl)!, '_blank', 'noopener')}
+                                    sx={{ textTransform: 'none' }}
+                                >
+                                    📷 {t('races.photoGallery', { domain: new URL((primaryEdition?.photoGalleryUrl ?? event.photoGalleryUrl)!).hostname.replace(/^www\./, ''), defaultValue: 'Photos' })}
+                                </Button>
+                            )}
+                            {event.youtubeUrl && (
+                                <Button
+                                    variant="outlined"
+                                    color="error"
+                                    size="small"
+                                    startIcon={<VideocamIcon sx={{ fontSize: 16 }} />}
+                                    onClick={() => window.open(event.youtubeUrl!, '_blank', 'noopener')}
+                                    sx={{ textTransform: 'none' }}
+                                >
+                                    360°
+                                </Button>
+                            )}
+                            {event.organizerWebsite && (
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
+                                    onClick={() => window.open(event.organizerWebsite!, '_blank', 'noopener')}
+                                    sx={{ textTransform: 'none' }}
+                                >
+                                    {t('races.organizerSite')}
+                                </Button>
+                            )}
+                            {isEnabled('calendar_integration', false) && (event.displayDate ?? event.nextEditionDate) && !heroCancelled && event.daysUntil != null && event.daysUntil >= 0 && (
+                                <AddToCalendarButton event={event} endDate={primaryEdition?.endDate ?? event.endDisplayDate} t={t} />
+                            )}
+                        </Stack>
+
+                        {/* Row 2: icon links */}
+                        {(isEnabled('directions_to_trailhead') && mapPin) || (event.socialLinks && event.socialLinks.length > 0) ? (
+                            <Stack direction="row" spacing={0.5} sx={{ mt: 0.5 }} alignItems="center">
+                                {isEnabled('directions_to_trailhead') && mapPin && (
+                                    <Tooltip title={t('races.directionsToEvent', 'Directions to event')} arrow>
+                                        <IconButton
+                                            size="small"
+                                            component="a"
+                                            href={`https://www.google.com/maps/dir/?api=1&destination=${mapPin.lat},${mapPin.lng}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                        >
+                                            <DirectionsCarIcon fontSize="small" />
+                                        </IconButton>
+                                    </Tooltip>
+                                )}
+                                {event.socialLinks && event.socialLinks
                                     .filter((link) => /^https?:\/\//i.test(link.url))
                                     .map((link) => {
-                                    const type = link.type.toLowerCase();
-                                    let icon = <LanguageIcon />;
-                                    if (type === 'facebook') icon = <FacebookIcon />;
-                                    else if (type === 'instagram') icon = <InstagramIcon />;
-                                    else if (type === 'x' || type === 'twitter') icon = <XIcon />;
-                                    return (
-                                        <Tooltip key={`${type}-${link.url}`} title={link.type}>
-                                            <IconButton
-                                                size="small"
-                                                aria-label={link.type}
-                                                onClick={() => window.open(link.url, '_blank', 'noopener')}
-                                                sx={{ color: 'text.secondary' }}
-                                            >
-                                                {icon}
-                                            </IconButton>
-                                        </Tooltip>
-                                    );
-                                })}
+                                        const type = link.type.toLowerCase();
+                                        let icon = <LanguageIcon />;
+                                        if (type === 'facebook') icon = <FacebookIcon />;
+                                        else if (type === 'instagram') icon = <InstagramIcon />;
+                                        else if (type === 'x' || type === 'twitter') icon = <XIcon />;
+                                        return (
+                                            <Tooltip key={`${type}-${link.url}`} title={link.type}>
+                                                <IconButton
+                                                    size="small"
+                                                    aria-label={link.type}
+                                                    onClick={() => window.open(link.url, '_blank', 'noopener')}
+                                                    sx={{ color: 'text.secondary' }}
+                                                >
+                                                    {icon}
+                                                </IconButton>
+                                            </Tooltip>
+                                        );
+                                    })}
                             </Stack>
-                        )}
-                    </Stack>
+                        ) : null}
+                    </Box>
 
                     {!showEditionSections && primaryEdition && (
                         <Box sx={{ mt: 2.5 }}>

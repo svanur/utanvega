@@ -133,7 +133,7 @@ public class DifficultyCalculatorTests
     // ─── Unknown types fall back to TrailRunning thresholds ───
 
     [Theory]
-    [InlineData(ActivityType.Social)]
+    [InlineData(ActivityType.Canicross)]
     [InlineData(ActivityType.Other)]
     public void Calculate_UnknownActivityType_UsesTrailRunningThresholds(ActivityType activityType)
     {

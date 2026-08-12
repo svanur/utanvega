@@ -83,14 +83,14 @@ function cycleTooltip(label: string, values: string[], current: string) {
   const next = values[(i + 1) % values.length]!;
   return `${label}: ${values.join(' → ')} (next: ${next})`;
 }
-const ACTIVITY_TYPES: ActivityType[] = ['TrailRunning', 'Running', 'Cycling', 'Hiking', 'FunRun', 'ObstacleCourse', 'CrossCountryRun', 'Swim', 'Social', 'Other'];
+const ACTIVITY_TYPES: ActivityType[] = ['TrailRunning', 'Running', 'Cycling', 'Hiking', 'FunRun', 'ObstacleCourse', 'CrossCountryRun', 'Swim', 'Canicross', 'IronMan', 'Other'];
 const ACTIVITY_TYPE_COLORS: Record<ActivityType, 'primary' | 'secondary' | 'warning' | 'success' | 'default' | 'info' | 'error'> = {
   TrailRunning: 'success', Running: 'primary', Cycling: 'info', Hiking: 'warning', FunRun: 'secondary',
-  ObstacleCourse: 'error', CrossCountryRun: 'primary', Swim: 'info', Social: 'default', Other: 'default',
+  ObstacleCourse: 'error', CrossCountryRun: 'primary', Swim: 'info', Canicross: 'secondary', IronMan: 'primary', Other: 'default',
 };
 const ACTIVITY_ICONS: Record<string, string> = {
   TrailRunning: '🏃‍♂️', Running: '🏃', Hiking: '🥾', Cycling: '🚴', FunRun: '🎊',
-  ObstacleCourse: '🧗', CrossCountryRun: '🌾', Swim: '🏊', Social: '🎉', Other: '🏅',
+  ObstacleCourse: '🧗', CrossCountryRun: '🌾', Swim: '🏊', Canicross: '🐕', IronMan: '🏅', Other: '🏅',
 };
 const EVENT_STATUSES: EventStatus[] = ['Unconfirmed', 'Confirmed', 'Cancelled', 'Hidden', 'Unlisted'];
 // ── Helpers ───────────────────────────────────────────────────────────────────

@@ -1047,7 +1047,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
         <Stack direction="row" justifyContent="space-between" alignItems="flex-start" flexWrap="wrap" gap={1.5}>
           <Box>
             <Typography variant="h5" fontWeight={600} gutterBottom>{detail.name}</Typography>
-            <Stack direction="row" flexWrap="wrap" gap={0.75} alignItems="center">
+            <Stack direction="row" flexWrap="wrap" gap={0.75} alignItems="center" sx={{ mb: 0.5 }}>
               <Tooltip title={cycleTooltip('Event status', EVENT_STATUSES_CYCLE, detail.status)}>
                 <Chip label={detail.status} size="small"
                   color={detail.status === 'Confirmed' ? 'success' : detail.status === 'Cancelled' ? 'error' : detail.status === 'Unconfirmed' ? 'warning' : 'default'}
@@ -1057,26 +1057,28 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
               <Chip label={detail.activityType} size="small" variant="outlined" />
               <Chip label={detail.type} size="small" variant="outlined" />
               {detail.locationName && <Chip label={detail.locationName} size="small" variant="outlined" />}
+            </Stack>
+            <Stack direction="column" spacing={0.25}>
               {detail.organizerName && (
                 <Typography variant="caption" color="text.secondary">by {detail.organizerName}</Typography>
               )}
-            </Stack>
-            {detail.gpxPointLat != null && detail.gpxPointLng != null && (
-              <Tooltip title="Copy coordinates">
-                <Typography
-                  variant="caption" color="text.secondary"
-                  sx={{ mt: 0.5, display: 'block', cursor: 'pointer', '&:hover': { color: 'text.primary' } }}
-                  onClick={() => void navigator.clipboard.writeText(`${detail.gpxPointLat!.toFixed(6)}, ${detail.gpxPointLng!.toFixed(6)}`)}
-                >
-                  📍 {detail.gpxPointLat.toFixed(6)}, {detail.gpxPointLng.toFixed(6)}
+              {detail.gpxPointLat != null && detail.gpxPointLng != null && (
+                <Tooltip title="Copy coordinates">
+                  <Typography
+                    variant="caption" color="text.secondary"
+                    sx={{ cursor: 'pointer', width: 'fit-content', '&:hover': { color: 'text.primary' } }}
+                    onClick={() => void navigator.clipboard.writeText(`${detail.gpxPointLat!.toFixed(6)}, ${detail.gpxPointLng!.toFixed(6)}`)}
+                  >
+                    📍 {detail.gpxPointLat.toFixed(6)}, {detail.gpxPointLng.toFixed(6)}
+                  </Typography>
+                </Tooltip>
+              )}
+              {formatSchedule(detail.scheduleRule) && (
+                <Typography variant="caption" color="text.secondary">
+                  🗓 {formatSchedule(detail.scheduleRule)}
                 </Typography>
-              </Tooltip>
-            )}
-            {formatSchedule(detail.scheduleRule) && (
-              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                🗓 {formatSchedule(detail.scheduleRule)}
-              </Typography>
-            )}
+              )}
+            </Stack>
           </Box>
           <Stack direction="row" spacing={1} flexShrink={0}>
             {PUBLIC_SITE_URL && (
