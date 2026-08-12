@@ -437,6 +437,12 @@
         "capturingScreen": "Capturing screenshot...",
         "autoCapture": "Also auto-captured: {{items}}"
     },
+    "betaComments": {
+        "title": "Beta Feedback",
+        "subtitle": "Help us improve the new hlaupadagskra.is",
+        "intro": "We are actively developing the new website and your feedback makes a real difference. Tell us what works, what is broken, or what you would like to see.",
+        "tipHint": "For the best feedback, use the \"Send a tip\" button found on trails and event pages — it automatically captures a screenshot of exactly what you are seeing."
+    },
     "contact": {
         "title": "Contact us",
         "description": "Have a question or want to get in touch? Click below to get in contact.",
@@ -450,9 +456,9 @@
         "subscribe": "Subscribe to mailing list"
     },
     "announcement": {
-        "text": "New: Outdoor Challenge 2026 is open for registration!",
-        "href": "/challenge/2026",
-        "linkText": "Learn more"
+        "text": "New hlaupadagskra.is web is being developed. Test it with us.",
+        "href": "/pages/send-comments",
+        "linkText": "Send in your comments"
     },
     "sort": {
         "date": "Date",

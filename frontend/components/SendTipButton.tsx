@@ -16,6 +16,7 @@ import { API_URL } from '../hooks/useTrails';
 interface SendTipButtonProps {
     type: 'trail' | 'event';
     sx?: SxProps<Theme>;
+    inline?: boolean; // skip the toggle button, start open in detailed mode
 }
 
 type Mode = 'simple' | 'detailed';
@@ -55,10 +56,10 @@ async function captureScreenshot(): Promise<string | null> {
     }
 }
 
-export default function SendTipButton({ type, sx }: SendTipButtonProps) {
+export default function SendTipButton({ type, sx, inline = false }: SendTipButtonProps) {
     const { t } = useTranslation();
-    const [open, setOpen] = useState(false);
-    const [mode, setMode] = useState<Mode>('simple');
+    const [open, setOpen] = useState(inline);
+    const [mode, setMode] = useState<Mode>(inline ? 'detailed' : 'simple');
     const [message, setMessage] = useState('');
     const [category, setCategory] = useState<Category>('bug');
     const [name, setName] = useState('');
@@ -138,17 +139,19 @@ export default function SendTipButton({ type, sx }: SendTipButtonProps) {
 
     return (
         <Box sx={{ width: '100%', ...sx }}>
-            <Tooltip title={t('tip.tooltip')}>
-                <Button
-                    size="small"
-                    variant="text"
-                    onClick={() => setOpen(o => !o)}
-                    startIcon={<TipsAndUpdatesOutlinedIcon fontSize="small" />}
-                    sx={{ textTransform: 'none', color: 'text.secondary' }}
-                >
-                    {t('tip.button')}
-                </Button>
-            </Tooltip>
+            {!inline && (
+                <Tooltip title={t('tip.tooltip')}>
+                    <Button
+                        size="small"
+                        variant="text"
+                        onClick={() => setOpen(o => !o)}
+                        startIcon={<TipsAndUpdatesOutlinedIcon fontSize="small" />}
+                        sx={{ textTransform: 'none', color: 'text.secondary' }}
+                    >
+                        {t('tip.button')}
+                    </Button>
+                </Tooltip>
+            )}
 
             <Collapse in={open}>
                 <Box sx={{ mt: 1, p: 1.5, border: 1, borderColor: 'divider', borderRadius: 1, bgcolor: 'background.paper' }}>
@@ -178,7 +181,7 @@ export default function SendTipButton({ type, sx }: SendTipButtonProps) {
                                         {t('tip.modeDetailed')}
                                     </ToggleButton>
                                 </ToggleButtonGroup>
-                                <IconButton size="small" onClick={handleClose}><CloseIcon fontSize="small" /></IconButton>
+                                {!inline && <IconButton size="small" onClick={handleClose}><CloseIcon fontSize="small" /></IconButton>}
                             </Box>
 
                             {status === 'capturing' && (
