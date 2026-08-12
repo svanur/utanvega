@@ -4,6 +4,7 @@ public enum EventType
 {
     Race,
     Series,
+    Social,
     Advertisement,
     Festival,
     Other,
