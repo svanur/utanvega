@@ -10,6 +10,7 @@ export type RegistrationStatus = 'NotStarted' | 'Open' | 'Closed';
 export type RaceStatus = 'Active' | 'Completed' | 'Cancelled' | 'Hidden';
 export type EditionStatus = 'Active' | 'Unconfirmed' | 'Cancelled' | 'Hidden';
 export type TicketStatus = 'Available' | 'AlmostSoldOut' | 'SoldOut' | 'Closed' | 'NotStarted' | 'Free';
+export type ResultType = 'Time' | 'Distance' | 'Laps';
 export type AlertSeverity = 'info' | 'success' | 'warning' | 'error';
 
 export interface SocialLink {
@@ -44,6 +45,7 @@ export interface RaceDto {
     status: RaceStatus;
     sortOrder: number;
     ticketStatus: TicketStatus;
+    resultType: ResultType;
     maxParticipants: number | null;
     itraPoints: number | null;
     certifiedBy: string | null;
@@ -233,6 +235,7 @@ export interface CreateRaceInput {
     status: RaceStatus;
     sortOrder: number;
     ticketStatus: TicketStatus;
+    resultType: ResultType;
     maxParticipants?: number | null;
     itraPoints?: number | null;
     certifiedBy?: string;
@@ -257,6 +260,7 @@ export interface UpdateRaceInput {
     status: RaceStatus;
     sortOrder: number;
     ticketStatus: TicketStatus;
+    resultType: ResultType;
     maxParticipants?: number | null;
     itraPoints?: number | null;
     certifiedBy?: string;

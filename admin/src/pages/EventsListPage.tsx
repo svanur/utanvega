@@ -408,6 +408,7 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
               status: 'Active',
               sortOrder: race.sortOrder,
               ticketStatus: 'Available',
+              resultType: race.resultType,
               maxParticipants: race.maxParticipants ?? null,
               itraPoints: race.itraPoints ?? null,
               certifiedBy: race.certifiedBy ?? undefined,
@@ -466,7 +467,7 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
                 eventEditionId: ed.id,
                 trailId: generateForm.trailId || null,
                 name: generateForm.eventName || 'Race',
-                status: 'Active', sortOrder: 0, ticketStatus: 'Available',
+                status: 'Active', sortOrder: 0, ticketStatus: 'Available', resultType: 'Time',
                 itraPoints: null, prizeMoney: 0,
               }),
             ));

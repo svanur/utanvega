@@ -368,6 +368,7 @@ public class EventValidatorTests : IDisposable
         Status: "Active",
         SortOrder: 0,
         TicketStatus: "Available",
+        ResultType: "Time",
         MaxParticipants: 200,
         ItraPoints: 4,
         CertifiedBy: "ITRA",
@@ -449,6 +450,22 @@ public class EventValidatorTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateRace_InvalidResultType_Fails()
+    {
+        var cmd = ValidRaceCommand with { ResultType = "NotValid" };
+        var result = await RaceValidator().TestValidateAsync(cmd);
+        result.ShouldHaveValidationErrorFor(x => x.ResultType);
+    }
+
+    [Fact]
+    public async Task CreateRace_ValidResultType_Distance_Passes()
+    {
+        var cmd = ValidRaceCommand with { ResultType = "Distance" };
+        var result = await RaceValidator().TestValidateAsync(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.ResultType);
+    }
+
+    [Fact]
     public async Task CreateRace_UnderCancelledEdition_Fails()
     {
         var ev = new Event { Id = Guid.NewGuid(), Name = "Test Event", Slug = "test-event-car", Type = EventType.Race, Status = EventStatus.Confirmed };
@@ -496,6 +513,7 @@ public class EventValidatorTests : IDisposable
         Status: "Active",
         SortOrder: 1,
         TicketStatus: "Available",
+        ResultType: "Time",
         MaxParticipants: 100,
         ItraPoints: 2,
         CertifiedBy: null,
@@ -518,6 +536,22 @@ public class EventValidatorTests : IDisposable
         var cmd = ValidUpdateRaceCommand with { Id = Guid.Empty };
         var result = await UpdateRaceValidator().TestValidateAsync(cmd);
         result.ShouldHaveValidationErrorFor(x => x.Id);
+    }
+
+    [Fact]
+    public async Task UpdateRace_InvalidResultType_Fails()
+    {
+        var cmd = ValidUpdateRaceCommand with { ResultType = "NotValid" };
+        var result = await UpdateRaceValidator().TestValidateAsync(cmd);
+        result.ShouldHaveValidationErrorFor(x => x.ResultType);
+    }
+
+    [Fact]
+    public async Task UpdateRace_ValidResultType_Laps_Passes()
+    {
+        var cmd = ValidUpdateRaceCommand with { ResultType = "Laps" };
+        var result = await UpdateRaceValidator().TestValidateAsync(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.ResultType);
     }
 
     [Fact]

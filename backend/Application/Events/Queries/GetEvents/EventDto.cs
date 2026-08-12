@@ -97,7 +97,8 @@ public record RaceDto(
     string? TrailDifficulty = null,
     string? TrailActivityType = null,
     Dictionary<string, string>? TranslationHashes = null,
-    string? ActivityType = null
+    string? ActivityType = null,
+    string ResultType = "Time"
 );
 
 public record EventEditionDto(
