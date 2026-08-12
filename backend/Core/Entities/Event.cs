@@ -4,6 +4,7 @@ public enum EventType
 {
     Race,
     Series,
+    Social,
     Advertisement,
     Festival,
     Other,
@@ -59,6 +60,8 @@ public class Event
     public ScheduleRule? ScheduleRule { get; set; }
 
     public List<SocialLink>? SocialLinks { get; set; }
+
+    public string? PhotoGalleryUrl { get; set; }
 
     // Auditing
     public string? CreatedBy { get; set; }

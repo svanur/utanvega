@@ -1,6 +1,7 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   Chip,
@@ -10,6 +11,7 @@ import {
   FormControlLabel,
   IconButton,
   InputLabel,
+  Menu,
   MenuItem,
   Select,
   Stack,
@@ -21,8 +23,13 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 import AddIcon from '@mui/icons-material/Add';
+import ClearIcon from '@mui/icons-material/Clear';
 import DeleteIcon from '@mui/icons-material/Delete';
+import MapIcon from '@mui/icons-material/Map';
+import MyLocationIcon from '@mui/icons-material/MyLocation';
 import TranslateIcon from '@mui/icons-material/Translate';
+import { useLocations } from '../../hooks/useLocations';
+import GpxMapPicker from '../GpxMapPicker';
 import type {
   ActivityType,
   AlertSeverity,
@@ -35,12 +42,13 @@ import type {
   SocialLink,
   UpdateEventInput,
 } from '../../hooks/useEvents';
+import type { Trail } from '../../hooks/useTrails';
 import { useTranslate } from '../../hooks/useTranslate';
-import { trimToUndefined } from '../../utils/strings';
+import { trimToUndefined, parseCoordPaste } from '../../utils/strings';
 import BilingualTextField from '../BilingualTextField';
 import { BilingualLangProvider, useBilingualLang } from '../../contexts/BilingualLangContext';
 
-const EVENT_TYPES: EventType[] = ['Race', 'Series', 'Advertisement', 'Festival', 'Other'];
+const EVENT_TYPES: EventType[] = ['Race', 'Series', 'Social', 'Advertisement', 'Festival', 'Other'];
 const ACTIVITY_TYPES: ActivityType[] = ['TrailRunning', 'Running', 'Cycling', 'Hiking', 'FunRun', 'ObstacleCourse', 'CrossCountryRun', 'Swim', 'Social', 'Other'];
 const EVENT_STATUSES: EventStatus[] = ['Unconfirmed', 'Confirmed', 'Cancelled', 'Hidden', 'Unlisted'];
 const ALERT_SEVERITIES: AlertSeverity[] = ['info', 'success', 'warning', 'error'];
@@ -78,6 +86,10 @@ interface EventFormState {
   alertSeverity: AlertSeverity | '';
   schedule: ScheduleFormState;
   socialLinks: SocialLink[];
+  photoGalleryUrl: string;
+  locationId: string;
+  gpxPointLat: string;
+  gpxPointLng: string;
 }
 
 function buildScheduleForm(rule: ScheduleRule | null): ScheduleFormState {
@@ -143,6 +155,10 @@ function buildForm(event: EventDetailDto): EventFormState {
     alertSeverity: event.alertSeverity ?? '',
     schedule: buildScheduleForm(event.scheduleRule ?? null),
     socialLinks: event.socialLinks?.map(l => ({ ...l })) ?? [],
+    photoGalleryUrl: event.photoGalleryUrl ?? '',
+    locationId: event.locationId ?? '',
+    gpxPointLat: event.gpxPointLat != null ? String(event.gpxPointLat) : '',
+    gpxPointLng: event.gpxPointLng != null ? String(event.gpxPointLng) : '',
   };
 }
 
@@ -174,16 +190,42 @@ function LangToggleButton() {
 
 interface EventFormCardProps {
   event: EventDetailDto;
+  linkedTrails?: Trail[];
   onClose: () => void;
   onSaved: (updated: EventDetailDto) => void;
   onNotify: (message: ReactNode, severity?: 'success' | 'error') => void;
   onUpdateEvent: (id: string, input: Omit<UpdateEventInput, 'id'>) => Promise<void>;
 }
 
-function EventFormCardInner({ event, onClose, onSaved, onNotify, onUpdateEvent }: EventFormCardProps) {
+function TrailStartPicker({ trails, onPick }: { trails: Trail[]; onPick: (lat: number, lng: number) => void }) {
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  if (trails.length === 0) return null;
+  return (
+    <>
+      <Tooltip title="Copy start point from a trail linked to this event">
+        <IconButton size="small" onClick={e => setAnchor(e.currentTarget)}>
+          <MyLocationIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
+      <Menu anchorEl={anchor} open={Boolean(anchor)} onClose={() => setAnchor(null)}>
+        {trails.map(trail => (
+          <MenuItem key={trail.id} onClick={() => { onPick(trail.startLatitude!, trail.startLongitude!); setAnchor(null); }}>
+            {trail.name}
+          </MenuItem>
+        ))}
+      </Menu>
+    </>
+  );
+}
+
+
+function EventFormCardInner({ event, linkedTrails = [], onClose, onSaved, onNotify, onUpdateEvent }: EventFormCardProps) {
   const [form, setForm] = useState<EventFormState>(buildForm(event));
   const [saving, setSaving] = useState(false);
   const { translate, translating } = useTranslate(msg => onNotify(msg, 'error'));
+  const { locations } = useLocations();
+  const sortedLocations = useMemo(() => [...locations].sort((a, b) => a.name.localeCompare(b.name)), [locations]);
+  const [showMapPicker, setShowMapPicker] = useState(false);
 
   useEffect(() => { setForm(buildForm(event)); }, [event]);
 
@@ -230,11 +272,12 @@ function EventFormCardInner({ event, onClose, onSaved, onNotify, onUpdateEvent }
         alertMessageEn: trimToUndefined(form.alertMessageEn),
         alertSeverity: form.alertSeverity || undefined,
         organizerId: event.organizerId,
-        locationId: event.locationId,
+        locationId: form.locationId || null,
         scheduleRule: buildScheduleRule(form.schedule),
         socialLinks: socialLinks.length > 0 ? socialLinks : null,
-        gpxPointLat: event.gpxPointLat,
-        gpxPointLng: event.gpxPointLng,
+        gpxPointLat: form.gpxPointLat.trim() ? parseFloat(form.gpxPointLat) : null,
+        gpxPointLng: form.gpxPointLng.trim() ? parseFloat(form.gpxPointLng) : null,
+        photoGalleryUrl: form.photoGalleryUrl.trim() || undefined,
       };
       await onUpdateEvent(event.id, input);
       onNotify('Event saved', 'success');
@@ -275,7 +318,7 @@ function EventFormCardInner({ event, onClose, onSaved, onNotify, onUpdateEvent }
             required error={!form.name.trim()}
           />
           <BilingualTextField
-            size="small" fullWidth label="Description" multiline rows={8} sx={{ mb: 1.5 }}
+            size="small" fullWidth label="Description" multiline rows={19} sx={{ mb: 1.5 }}
             valueIs={form.description} valueEn={form.descriptionEn}
             onChangeIs={v => set('description', v)} onChangeEn={v => set('descriptionEn', v)}
           />
@@ -318,6 +361,72 @@ function EventFormCardInner({ event, onClose, onSaved, onNotify, onUpdateEvent }
             onChange={e => set('organizerWebsite', e.target.value)}
             placeholder="https://…"
           />
+          <Divider sx={{ my: 1.5 }} />
+          <SectionLabel>Photo Gallery</SectionLabel>
+          <TextField
+            size="small" fullWidth label="Photo Gallery URL" value={form.photoGalleryUrl}
+            onChange={e => set('photoGalleryUrl', e.target.value)}
+            placeholder="https://…"
+          />
+
+          <Divider sx={{ my: 1.5 }} />
+          <SectionLabel>Location</SectionLabel>
+          <Autocomplete
+            size="small"
+            options={sortedLocations}
+            value={sortedLocations.find(l => l.id === form.locationId) ?? null}
+            onChange={(_, value) => set('locationId', value?.id ?? '')}
+            getOptionLabel={o => o.name}
+            isOptionEqualToValue={(o, v) => o.id === v.id}
+            renderInput={params => <TextField {...params} label="Location" sx={{ mb: 1.5 }} />}
+          />
+
+          <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
+            <Typography variant="caption" fontWeight={600} letterSpacing={0.6} textTransform="uppercase" color="text.secondary">
+              GPX Pin
+            </Typography>
+            <Tooltip title="Pick on map">
+              <IconButton size="small" onClick={() => setShowMapPicker(true)}>
+                <MapIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <TrailStartPicker
+              trails={linkedTrails}
+              onPick={(lat, lng) => {
+                set('gpxPointLat', String(parseFloat(lat.toFixed(6))));
+                set('gpxPointLng', String(parseFloat(lng.toFixed(6))));
+              }}
+            />
+            {(form.gpxPointLat || form.gpxPointLng) && (
+              <Tooltip title="Clear pin">
+                <IconButton size="small" onClick={() => { set('gpxPointLat', ''); set('gpxPointLng', ''); }}>
+                  <ClearIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+          </Stack>
+          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
+            <TextField
+              size="small" label="Latitude" value={form.gpxPointLat}
+              onChange={e => set('gpxPointLat', e.target.value)}
+              onPaste={e => {
+                const parsed = parseCoordPaste(e.clipboardData.getData('text'));
+                if (parsed) {
+                  e.preventDefault();
+                  set('gpxPointLat', String(parseFloat(parsed.lat.toFixed(6))));
+                  set('gpxPointLng', String(parseFloat(parsed.lng.toFixed(6))));
+                }
+              }}
+              placeholder="64.1355"
+              inputProps={{ inputMode: 'decimal' }}
+            />
+            <TextField
+              size="small" label="Longitude" value={form.gpxPointLng}
+              onChange={e => set('gpxPointLng', e.target.value)}
+              placeholder="-21.8954"
+              inputProps={{ inputMode: 'decimal' }}
+            />
+          </Box>
         </Box>
       </Box>
 
@@ -515,6 +624,17 @@ function EventFormCardInner({ event, onClose, onSaved, onNotify, onUpdateEvent }
           {form.alertMessage}
         </Alert>
       )}
+
+      <GpxMapPicker
+        open={showMapPicker}
+        initialLat={form.gpxPointLat ? parseFloat(form.gpxPointLat) : null}
+        initialLng={form.gpxPointLng ? parseFloat(form.gpxPointLng) : null}
+        onConfirm={(lat, lng) => {
+          set('gpxPointLat', String(parseFloat(lat.toFixed(6))));
+          set('gpxPointLng', String(parseFloat(lng.toFixed(6))));
+        }}
+        onClose={() => setShowMapPicker(false)}
+      />
 
       {/* Footer */}
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 2 }}>

@@ -50,6 +50,7 @@ public record EventSummaryDto(
     string? RegistrationUrl = null,
     string? RegistrationStatus = null,
     string? ResultsUrl = null,
+    string? PhotoGalleryUrl = null,
     List<string>? Certifications = null,
     string? YoutubeUrl = null,
     List<string>? ChampionshipCategories = null,
@@ -97,7 +98,8 @@ public record RaceDto(
     string? TrailDifficulty = null,
     string? TrailActivityType = null,
     Dictionary<string, string>? TranslationHashes = null,
-    string? ActivityType = null
+    string? ActivityType = null,
+    string ResultType = "Time"
 );
 
 public record EventEditionDto(
@@ -110,6 +112,7 @@ public record EventEditionDto(
     string? TitleEn,
     string? RegistrationUrl,
     string? ResultsUrl,
+    string? PhotoGalleryUrl,
     string? Notes,
     string? NotesEn,
     string RegistrationStatus,

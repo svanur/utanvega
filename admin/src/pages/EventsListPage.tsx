@@ -73,10 +73,16 @@ import {
 
 const PUBLIC_SITE_URL = ((import.meta.env.VITE_PUBLIC_SITE_URL ?? '') as string).replace(/\/$/, '');
 
-const EVENT_TYPES: EventType[] = ['Race', 'Series', 'Advertisement', 'Festival', 'Other'];
+const EVENT_TYPES: EventType[] = ['Race', 'Series', 'Social', 'Advertisement', 'Festival', 'Other'];
 const EVENT_TYPE_COLORS: Record<EventType, 'primary' | 'secondary' | 'warning' | 'success' | 'default' | 'info' | 'error'> = {
-  Race: 'primary', Series: 'secondary', Advertisement: 'warning', Festival: 'info', Other: 'default',
+  Race: 'primary', Series: 'secondary', Social: 'success', Advertisement: 'warning', Festival: 'info', Other: 'default',
 };
+
+function cycleTooltip(label: string, values: string[], current: string) {
+  const i = values.indexOf(current);
+  const next = values[(i + 1) % values.length]!;
+  return `${label}: ${values.join(' → ')} (next: ${next})`;
+}
 const ACTIVITY_TYPES: ActivityType[] = ['TrailRunning', 'Running', 'Cycling', 'Hiking', 'FunRun', 'ObstacleCourse', 'CrossCountryRun', 'Swim', 'Social', 'Other'];
 const ACTIVITY_TYPE_COLORS: Record<ActivityType, 'primary' | 'secondary' | 'warning' | 'success' | 'default' | 'info' | 'error'> = {
   TrailRunning: 'success', Running: 'primary', Cycling: 'info', Hiking: 'warning', FunRun: 'secondary',
@@ -216,6 +222,8 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
   const [attentionFilter, setAttentionFilter] = useState<AttentionFilter>(null);
   const [showAttentionPanel, setShowAttentionPanel] = useState(true);
   const [cyclingStatusIds, setCyclingStatusIds] = useState<Set<string>>(new Set());
+  const [cyclingActivityIds, setCyclingActivityIds] = useState<Set<string>>(new Set());
+  const [cyclingTypeIds, setCyclingTypeIds] = useState<Set<string>>(new Set());
   const [createDialogOpen, setCreateDialogOpen] = useState(initialCreate ?? false);
   const [showBulkMissingDialog, setShowBulkMissingDialog] = useState(false);
   const [bulkMissingLoading, setBulkMissingLoading] = useState(false);
@@ -313,11 +321,12 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
       });
   }, [events, searchQuery, activityFilter, typeFilter, statusFilter, locationFilter, yearFilter, monthFilter, sortBy, sortDir, attentionFilter, todayStr, in30daysStr]);
 
-  // ── Status cycling ────────────────────────────────────────────────────────
+  // ── Status / activity / type cycling ─────────────────────────────────────
   const handleCycleStatus = async (event: EventSummaryDto) => {
     if (cyclingStatusIds.has(event.id)) return;
     if (event.status !== 'Unconfirmed' && event.status !== 'Confirmed') return;
-    const next: EventStatus = event.status === 'Unconfirmed' ? 'Confirmed' : 'Unconfirmed';
+    const i = EVENT_STATUSES.indexOf(event.status as EventStatus);
+    const next = EVENT_STATUSES[(i + 1) % EVENT_STATUSES.length]!;
     patchEventLocally(event.id, { status: next });
     setCyclingStatusIds(prev => new Set(prev).add(event.id));
     try {
@@ -332,6 +341,7 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
         locationId: event.locationId ?? null, scheduleRule: event.scheduleRule ?? null,
         socialLinks: event.socialLinks ?? null,
         gpxPointLat: event.gpxPointLat ?? null, gpxPointLng: event.gpxPointLng ?? null,
+        photoGalleryUrl: event.photoGalleryUrl ?? undefined,
         translationHashes: event.translationHashes,
       });
     } catch {
@@ -339,6 +349,64 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
       onNotify('Failed to update event status', 'error');
     } finally {
       setCyclingStatusIds(prev => { const s = new Set(prev); s.delete(event.id); return s; });
+    }
+  };
+
+  const handleCycleActivity = async (event: EventSummaryDto) => {
+    if (cyclingActivityIds.has(event.id)) return;
+    const i = ACTIVITY_TYPES.indexOf(event.activityType as ActivityType);
+    const next = ACTIVITY_TYPES[(i + 1) % ACTIVITY_TYPES.length]!;
+    patchEventLocally(event.id, { activityType: next });
+    setCyclingActivityIds(prev => new Set(prev).add(event.id));
+    try {
+      await updateEventSilently(event.id, {
+        name: event.name, nameEn: event.nameEn ?? undefined,
+        description: event.description ?? undefined, descriptionEn: event.descriptionEn ?? undefined,
+        type: event.type, activityType: next, status: event.status,
+        organizerName: event.organizerName ?? undefined, organizerNameEn: event.organizerNameEn ?? undefined,
+        organizerWebsite: event.organizerWebsite ?? undefined, organizerId: event.organizerId ?? null,
+        alertMessage: event.alertMessage ?? undefined, alertMessageEn: event.alertMessageEn ?? undefined,
+        alertSeverity: event.alertSeverity ?? undefined,
+        locationId: event.locationId ?? null, scheduleRule: event.scheduleRule ?? null,
+        socialLinks: event.socialLinks ?? null,
+        gpxPointLat: event.gpxPointLat ?? null, gpxPointLng: event.gpxPointLng ?? null,
+        photoGalleryUrl: event.photoGalleryUrl ?? undefined,
+        translationHashes: event.translationHashes,
+      });
+    } catch {
+      patchEventLocally(event.id, { activityType: event.activityType });
+      onNotify('Failed to update activity type', 'error');
+    } finally {
+      setCyclingActivityIds(prev => { const s = new Set(prev); s.delete(event.id); return s; });
+    }
+  };
+
+  const handleCycleType = async (event: EventSummaryDto) => {
+    if (cyclingTypeIds.has(event.id)) return;
+    const i = EVENT_TYPES.indexOf(event.type as EventType);
+    const next = EVENT_TYPES[(i + 1) % EVENT_TYPES.length]!;
+    patchEventLocally(event.id, { type: next });
+    setCyclingTypeIds(prev => new Set(prev).add(event.id));
+    try {
+      await updateEventSilently(event.id, {
+        name: event.name, nameEn: event.nameEn ?? undefined,
+        description: event.description ?? undefined, descriptionEn: event.descriptionEn ?? undefined,
+        type: next, activityType: event.activityType, status: event.status,
+        organizerName: event.organizerName ?? undefined, organizerNameEn: event.organizerNameEn ?? undefined,
+        organizerWebsite: event.organizerWebsite ?? undefined, organizerId: event.organizerId ?? null,
+        alertMessage: event.alertMessage ?? undefined, alertMessageEn: event.alertMessageEn ?? undefined,
+        alertSeverity: event.alertSeverity ?? undefined,
+        locationId: event.locationId ?? null, scheduleRule: event.scheduleRule ?? null,
+        socialLinks: event.socialLinks ?? null,
+        gpxPointLat: event.gpxPointLat ?? null, gpxPointLng: event.gpxPointLng ?? null,
+        photoGalleryUrl: event.photoGalleryUrl ?? undefined,
+        translationHashes: event.translationHashes,
+      });
+    } catch {
+      patchEventLocally(event.id, { type: event.type });
+      onNotify('Failed to update event type', 'error');
+    } finally {
+      setCyclingTypeIds(prev => { const s = new Set(prev); s.delete(event.id); return s; });
     }
   };
 
@@ -408,6 +476,7 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
               status: 'Active',
               sortOrder: race.sortOrder,
               ticketStatus: 'Available',
+              resultType: race.resultType,
               maxParticipants: race.maxParticipants ?? null,
               itraPoints: race.itraPoints ?? null,
               certifiedBy: race.certifiedBy ?? undefined,
@@ -466,7 +535,7 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
                 eventEditionId: ed.id,
                 trailId: generateForm.trailId || null,
                 name: generateForm.eventName || 'Race',
-                status: 'Active', sortOrder: 0, ticketStatus: 'Available',
+                status: 'Active', sortOrder: 0, ticketStatus: 'Available', resultType: 'Time',
                 itraPoints: null, prizeMoney: 0,
               }),
             ));
@@ -694,18 +763,32 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
                 </TableCell>
 
                 {/* Activity */}
-                <TableCell>
-                  <Chip
-                    label={`${ACTIVITY_ICONS[event.activityType] ?? '🏅'} ${event.activityType}`}
-                    size="small"
-                    color={ACTIVITY_TYPE_COLORS[event.activityType as ActivityType] ?? 'default'}
-                    variant="outlined"
-                  />
+                <TableCell onClick={e => e.stopPropagation()}>
+                  <Tooltip title={cyclingActivityIds.has(event.id) ? 'Updating…' : cycleTooltip('Activity', ACTIVITY_TYPES, event.activityType)}>
+                    <Chip
+                      label={`${ACTIVITY_ICONS[event.activityType] ?? '🏅'} ${event.activityType}`}
+                      size="small"
+                      color={ACTIVITY_TYPE_COLORS[event.activityType as ActivityType] ?? 'default'}
+                      variant="outlined"
+                      onClick={() => void handleCycleActivity(event)}
+                      disabled={cyclingActivityIds.has(event.id)}
+                      sx={{ cursor: 'pointer' }}
+                    />
+                  </Tooltip>
                 </TableCell>
 
                 {/* Type */}
-                <TableCell>
-                  <Chip label={event.type} size="small" color={EVENT_TYPE_COLORS[event.type as EventType] ?? 'default'} />
+                <TableCell onClick={e => e.stopPropagation()}>
+                  <Tooltip title={cyclingTypeIds.has(event.id) ? 'Updating…' : cycleTooltip('Type', EVENT_TYPES, event.type)}>
+                    <Chip
+                      label={event.type}
+                      size="small"
+                      color={EVENT_TYPE_COLORS[event.type as EventType] ?? 'default'}
+                      onClick={() => void handleCycleType(event)}
+                      disabled={cyclingTypeIds.has(event.id)}
+                      sx={{ cursor: 'pointer' }}
+                    />
+                  </Tooltip>
                 </TableCell>
 
                 {/* Schedule */}
@@ -735,20 +818,14 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
 
                 {/* Status — cycles on click */}
                 <TableCell align="center" onClick={e => e.stopPropagation()}>
-                  <Tooltip title={
-                    cyclingStatusIds.has(event.id) ? 'Updating…'
-                    : event.status === 'Unconfirmed' ? 'Click to confirm'
-                    : event.status === 'Confirmed' ? 'Click to unconfirm'
-                    : event.status
-                  }>
+                  <Tooltip title={cyclingStatusIds.has(event.id) ? 'Updating…' : cycleTooltip('Status', EVENT_STATUSES, event.status)}>
                     <Chip
                       label={event.status}
                       size="small"
                       color={getEventStatusColor(event.status)}
-                      onClick={(event.status === 'Unconfirmed' || event.status === 'Confirmed') && !cyclingStatusIds.has(event.id)
-                        ? () => void handleCycleStatus(event) : undefined}
+                      onClick={!cyclingStatusIds.has(event.id) ? () => void handleCycleStatus(event) : undefined}
                       disabled={cyclingStatusIds.has(event.id)}
-                      sx={(event.status === 'Unconfirmed' || event.status === 'Confirmed') ? { cursor: 'pointer' } : undefined}
+                      sx={{ cursor: 'pointer' }}
                     />
                   </Tooltip>
                 </TableCell>

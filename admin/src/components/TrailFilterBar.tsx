@@ -81,7 +81,6 @@ export default function TrailFilterBar({
           <MenuItem value="Published">Published</MenuItem>
           <MenuItem value="Archived">Archived</MenuItem>
           <MenuItem value="EventOnly">Event Only</MenuItem>
-          {includeArchived && <MenuItem value="Archived">Archived</MenuItem>}
         </Select>
       </FormControl>
       <FormControl size="small" sx={{ minWidth: 150 }}>

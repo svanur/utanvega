@@ -90,8 +90,8 @@
         "aboutUs": "Um okkur",
         "services": "Þjónusta",
         "challenge": "Áskorun",
-        "allTrails": "Allar leiðir",
-        "allEvents": "Allir viðburðir",
+        "allTrails": "Listi yfir leiðir",
+        "allEvents": "Næstu viðburðir",
         "eventsCalendar": "Dagatal",
         "editionsHistory": "Fyrri viðburðir"
     },
@@ -109,9 +109,11 @@
     "home": {
         "nearbyTrails": "Leiðir í nágrenninu",
         "allTrails": "Leiðir",
+        "trailsTitle": "Leiðir",
+        "trailsSubtitle": "Hér finnur þú skemmtilegar leiðir víðs vegar um Ísland. Síaðu eftir vegalengd, erfiðleika, staðsetningu og fleiru.",
         "recentlyViewed": "Nýlega skoðað",
         "trendingTrails": "Vinsælt",
-        "nextRaces": "Keppnishlaup",
+        "nextRaces": "Vegalengdir",
         "views": "{{count}} skoðanir",
         "trailMap": "Kort",
         "trailsTagged": "Leiðir merktar: {{tags}}",
@@ -427,13 +429,19 @@
         "categoryOther": "Annað",
         "name": "Nafn þitt (valkvætt)",
         "email": "Netfang þitt (valkvætt)",
-        "stepsToReproduce": "Hvernig endurtek ég þetta?",
+        "stepsToReproduce": "Hvernig endurtek ég þetta? (valkvætt)",
         "stepsPlaceholder": "1. Fara á...\n2. Smella á...\n3. Sjá villu",
         "screenshot": "Skjámynd af síðu",
         "screenshotInclude": "Með",
         "screenshotExclude": "Án",
         "capturingScreen": "Tek skjámynd...",
         "autoCapture": "Einnig safnað sjálfkrafa: {{items}}"
+    },
+    "betaComments": {
+        "title": "Beta prófanir - Endurgjöf",
+        "subtitle": "Hjálpaðu okkur að bæta nýja hlaupadagskra.is",
+        "intro": "Við erum að þróa nýjan hlaupadagskra.is vef og endurgjöf þín skiptir okkur máli. Segðu okkur hvað virkar, hvað er brotið eða hvaða nýungar þú vilt sjá.",
+        "tipHint": "Til að fá sem besta endurgjöf, notaðu þá \"Senda ábendingu\" hnappinn sem er staðsettur neðarlega á leiðar- og viðburðasíðum. Smelltu þar á 'Senda ábendingu' og fylltu svo út 'Nákvæma skýrslu' — Þá kemur sjálfkrafa skjámynd af síðunni sem þú ert að sjá. Þú getur einnig notað formið hér að neðan án skjámyndar."
     },
     "contact": {
         "title": "Hafa samband",
@@ -448,9 +456,9 @@
         "subscribe": "Skráðu þig á póstlistann"
     },
     "announcement": {
-        "text": "Nýtt: Útivistaáskorun 2026 er opin til skráningar!",
-        "href": "/challenge/2026",
-        "linkText": "Nánar"
+        "text": "Við erum á fullu að þróa nýjan hlaupadagskra.is vef. Vertu með okkur í prófunarteyminu.",
+        "href": "/pages/send-comments",
+        "linkText": "Sendu inn þínar ábendingar."
     },
     "sort": {
         "date": "Dagsetning",
@@ -1164,13 +1172,14 @@
         "editionCount": "{{count}} viðburðir",
         "register": "Skráning",
         "results": "Úrslit",
+        "photoGallery": "Myndir frá {{domain}}",
         "organizerSite": "Vefur skipuleggjanda",
         "directionsToEvent": "Leiðsögn að upphafsstað",
         "addToCalendar": "Setja í dagatal",
         "addFavorite": "Bæta í eftirlæti",
         "removeFavorite": "Fjarlægja úr eftirlætum",
         "downloadIcs": "Hlaða niður .ics (Apple/Annað)",
-        "racesHeading": "Keppnishlaup",
+        "racesHeading": "Vegalengdir",
         "scheduleHeading": "Dagsetningar",
         "noRaces": "Engin hlaup skráð enn fyrir þessa keppni.",
         "notFound": "Keppni fannst ekki",
@@ -1230,7 +1239,7 @@
         "ticketStatusLabel": "Skráningarstaða",
         "maxParticipants": "Hámarksfjöldi þátttakenda",
         "statusUpcoming": "Óstaðfest",
-        "raceDayWeather": "Veður á keppnisleiðinni",
+        "raceDayWeather": "Veður á leiðinni",
         "raceDayWeatherDesc": "Núverandi veður og 7 daga spá. Keppnisdagurinn er auðkenndur.",
         "checklistTitle": "Tékklisti fyrir keppnisdag",
         "checklistWeatherReady": "Núna: {{temperature}}°C og {{wind}} m/s vindur.",

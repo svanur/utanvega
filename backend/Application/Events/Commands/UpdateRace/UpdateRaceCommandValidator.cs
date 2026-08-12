@@ -46,6 +46,11 @@ public class UpdateRaceCommandValidator : AbstractValidator<UpdateRaceCommand>
             .Must(v => Enum.TryParse<TicketStatus>(v, ignoreCase: true, out _))
             .WithMessage($"TicketStatus must be one of: {string.Join(", ", Enum.GetNames<TicketStatus>())}.");
 
+        RuleFor(x => x.ResultType)
+            .NotEmpty()
+            .Must(v => Enum.TryParse<ResultType>(v, ignoreCase: true, out _))
+            .WithMessage($"ResultType must be one of: {string.Join(", ", Enum.GetNames<ResultType>())}.");
+
         RuleFor(x => x.SortOrder).GreaterThanOrEqualTo(0);
 
         RuleFor(x => x.ItraPoints)

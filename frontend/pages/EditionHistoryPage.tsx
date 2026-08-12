@@ -209,7 +209,7 @@ export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistor
                 >
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2, flexWrap: 'wrap' }}>
                         <Box>
-                            <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                            <Typography variant="h6" fontWeight={700} sx={{ mb: 0.5 }}>
                                 {loc(event.name, event.nameEn) ?? event.name}
                             </Typography>
                             <Typography variant="h4" fontWeight={800} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -265,16 +265,29 @@ export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistor
                                 {t('races.results', { defaultValue: 'Results' })}
                             </Button>
                         )}
+                        {edition.photoGalleryUrl && (
+                            <Button
+                                variant="outlined"
+                                size="small"
+                                endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
+                                onClick={() => window.open(edition.photoGalleryUrl!, '_blank', 'noopener')}
+                                sx={{ textTransform: 'none' }}
+                            >
+                                📷 {t('races.photoGallery', { domain: new URL(edition.photoGalleryUrl!).hostname.replace(/^www\./, ''), defaultValue: 'Photos' })}
+                            </Button>
+                        )}
                     </Stack>
                 </Paper>
 
                 {visibleRaces.length === 0 ? (
-                    <Alert severity="info">{t('races.noRaces')}</Alert>
+                    (event.type === 'Race' || event.type === 'Series') && <Alert severity="info">{t('races.noRaces')}</Alert>
                 ) : (
                     <>
-                        <Typography variant="h5" fontWeight={700} sx={{ mb: 2 }}>
-                            {t('races.racesHeading')}
-                        </Typography>
+                        {(event.type === 'Race' || event.type === 'Series') && (
+                            <Typography variant="h5" fontWeight={700} sx={{ mb: 2 }}>
+                                {t('races.racesHeading')}
+                            </Typography>
+                        )}
                         <Stack spacing={2}>
                             {visibleRaces.map(race => (
                                 <HistoryRaceCard key={race.id} race={race} t={t} />

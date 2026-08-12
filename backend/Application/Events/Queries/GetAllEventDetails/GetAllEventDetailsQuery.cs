@@ -74,6 +74,7 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
                     ed.TitleEn,
                     ed.RegistrationUrl,
                     ed.ResultsUrl,
+                    ed.PhotoGalleryUrl,
                     ed.Notes,
                     ed.NotesEn,
                     ed.RegistrationStatus.ToString(),
@@ -113,7 +114,8 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
                             r.Trail?.Difficulty.ToString(),
                             r.Trail?.ActivityTypeId.ToString(),
                             DeserHashes(r.TranslationHashes),
-                            r.ActivityType?.ToString()
+                            r.ActivityType?.ToString(),
+                            r.ResultType.ToString()
                         ))
                         .ToList(),
                     ed.CreatedAt,

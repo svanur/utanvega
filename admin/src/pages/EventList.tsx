@@ -80,6 +80,7 @@ import {
   type ActivityType,
   type RaceDto,
   type RaceStatus,
+  type ResultType,
   type RegistrationStatus,
   type ScheduleRule,
   type ScheduleType,
@@ -90,21 +91,11 @@ import { useLocations } from '../hooks/useLocations';
 import { useOrganizers } from '../hooks/useOrganizers';
 import { useTrails, type Trail } from '../hooks/useTrails';
 import { formatMinutesToHHmm, parseHHmmToMinutes, normalizeCutoffTimeInput, normalizeCutoffTimeOnBlur } from '../utils/cutoffTime';
-import { trimToUndefined } from '../utils/strings';
+import { trimToUndefined, parseCoordPaste } from '../utils/strings';
 import { hashText } from '../utils/translationHash';
 import BilingualTextField from '../components/BilingualTextField';
 import { useTranslate } from '../hooks/useTranslate';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-// Fix Leaflet default marker icons
-// @ts-expect-error – Leaflet internal
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: new URL('leaflet/dist/images/marker-icon-2x.png', import.meta.url).href,
-  iconUrl: new URL('leaflet/dist/images/marker-icon.png', import.meta.url).href,
-  shadowUrl: new URL('leaflet/dist/images/marker-shadow.png', import.meta.url).href,
-});
+import GpxMapPicker from '../components/GpxMapPicker';
 
 interface EventListProps {
   onNotify: (message: ReactNode, severity?: 'success' | 'error') => void;
@@ -189,6 +180,7 @@ interface RaceFormState {
   status: RaceStatus;
   sortOrder: string;
   ticketStatus: TicketStatus;
+  resultType: ResultType;
   maxParticipants: string;
   itraPoints: string;
   certifiedBy: string;
@@ -222,10 +214,11 @@ interface GenerateFormState {
 const DAYS: DayOfWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const MONTHS = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const MONTHS_SHORT = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const EVENT_TYPES: EventType[] = ['Race', 'Series', 'Advertisement', 'Festival', 'Other'];
+const EVENT_TYPES: EventType[] = ['Race', 'Series', 'Social', 'Advertisement', 'Festival', 'Other'];
 const EVENT_TYPE_COLORS: Record<EventType, 'primary' | 'secondary' | 'warning' | 'success' | 'default' | 'info' | 'error'> = {
   Race: 'primary',
   Series: 'secondary',
+  Social: 'success',
   Advertisement: 'warning',
   Festival: 'info',
   Other: 'default',
@@ -578,6 +571,7 @@ function createEmptyRaceForm(eventEditionId = '', sortOrder = 0): RaceFormState 
     status: 'Active',
     sortOrder: String(sortOrder),
     ticketStatus: 'Available',
+    resultType: 'Time',
     maxParticipants: '',
     itraPoints: '',
     certifiedBy: '',
@@ -687,6 +681,7 @@ function buildRaceForm(race: RaceDto): RaceFormState {
     status: race.status,
     sortOrder: race.sortOrder.toString(),
     ticketStatus: race.ticketStatus,
+    resultType: race.resultType,
     maxParticipants: race.maxParticipants?.toString() ?? '',
     itraPoints: race.itraPoints?.toString() ?? '',
     certifiedBy: race.certifiedBy ?? '',
@@ -905,91 +900,6 @@ function SortableRaceItem({ race, onEdit, onDuplicate, onDelete, onCycleTicketSt
 }
 
 // ── GPX map picker ──────────────────────────────────────────────────────────
-
-const ICELAND_CENTER: [number, number] = [64.96, -18.5];
-
-function ClickHandler({ onPick }: { onPick: (lat: number, lng: number) => void }) {
-  useMapEvents({ click: (e) => onPick(e.latlng.lat, e.latlng.lng) });
-  return null;
-}
-
-interface GpxMapPickerProps {
-  open: boolean;
-  initialLat: number | null;
-  initialLng: number | null;
-  onConfirm: (lat: number, lng: number) => void;
-  onClose: () => void;
-}
-
-function GpxMapPicker({ open, initialLat, initialLng, onConfirm, onClose }: GpxMapPickerProps) {
-  const [pin, setPin] = useState<[number, number] | null>(
-    initialLat != null && initialLng != null ? [initialLat, initialLng] : null
-  );
-
-  // Sync when dialog reopens
-  useEffect(() => {
-    if (open) {
-      setPin(initialLat != null && initialLng != null ? [initialLat, initialLng] : null);
-    }
-  }, [open, initialLat, initialLng]);
-
-  return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>Pick map pin location</DialogTitle>
-      <DialogContent sx={{ p: 0 }}>
-        <Typography variant="body2" color="text.secondary" sx={{ px: 2, py: 1 }}>
-          Click anywhere on the map to place the pin.
-        </Typography>
-        <Box sx={{ height: 460 }}>
-          <MapContainer
-            center={pin ?? ICELAND_CENTER}
-            zoom={pin ? 11 : 6}
-            style={{ height: '100%', width: '100%' }}
-            scrollWheelZoom
-          >
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            <ClickHandler onPick={(lat, lng) => setPin([lat, lng])} />
-            {pin && <Marker position={pin} />}
-          </MapContainer>
-        </Box>
-        {pin && (
-          <Typography variant="caption" color="text.secondary" sx={{ px: 2, pb: 1, display: 'block' }}>
-            {pin[0].toFixed(6)}, {pin[1].toFixed(6)}
-          </Typography>
-        )}
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button
-          variant="contained"
-          disabled={pin == null}
-          onClick={() => { if (pin) { onConfirm(pin[0], pin[1]); onClose(); } }}
-        >
-          Use this location
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-}
-
-// ── Paste-coordinate parser ──────────────────────────────────────────────────
-
-function parseCoordPaste(text: string): { lat: number; lng: number } | null {
-  // Google Maps URL: @64.1355,-21.8954,
-  const mapsMatch = text.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
-  if (mapsMatch) {
-    return { lat: parseFloat(mapsMatch[1]), lng: parseFloat(mapsMatch[2]) };
-  }
-  // Plain "lat, lng" or "lat lng"
-  const plainMatch = text.trim().match(/^(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)$/);
-  if (plainMatch) {
-    return { lat: parseFloat(plainMatch[1]), lng: parseFloat(plainMatch[2]) };
-  }
-  return null;
-}
 
 // ── Trail start-point picker ─────────────────────────────────────────────────
 
@@ -1455,6 +1365,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
         status: race.status,
         sortOrder: race.sortOrder,
         ticketStatus: next,
+        resultType: race.resultType,
         maxParticipants: race.maxParticipants ?? null,
         itraPoints: race.itraPoints ?? null,
         certifiedBy: race.certifiedBy ?? undefined,
@@ -1488,6 +1399,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
         status: next,
         sortOrder: race.sortOrder,
         ticketStatus: race.ticketStatus,
+        resultType: race.resultType,
         maxParticipants: race.maxParticipants ?? null,
         itraPoints: race.itraPoints ?? null,
         certifiedBy: race.certifiedBy ?? undefined,
@@ -1519,6 +1431,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
         status: race.status,
         sortOrder: race.sortOrder,
         ticketStatus: race.ticketStatus,
+        resultType: race.resultType,
         maxParticipants: race.maxParticipants ?? null,
         itraPoints: race.itraPoints ?? null,
         certifiedBy: race.certifiedBy ?? undefined,
@@ -1563,6 +1476,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
         status: race.status,
         sortOrder: race.sortOrder,
         ticketStatus: race.ticketStatus,
+        resultType: race.resultType,
         maxParticipants: race.maxParticipants ?? null,
         itraPoints: race.itraPoints ?? null,
         certifiedBy: race.certifiedBy ?? undefined,
@@ -1595,6 +1509,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
           status: 'Completed',
           sortOrder: race.sortOrder,
           ticketStatus: race.ticketStatus,
+          resultType: race.resultType,
           maxParticipants: race.maxParticipants ?? null,
           itraPoints: race.itraPoints ?? null,
           certifiedBy: race.certifiedBy ?? undefined,
@@ -1825,6 +1740,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
                 status: 'Active',
                 sortOrder: race.sortOrder,
                 ticketStatus: 'Available',
+                resultType: race.resultType,
                 maxParticipants: race.maxParticipants ?? null,
                 itraPoints: race.itraPoints ?? null,
                 certifiedBy: race.certifiedBy ?? undefined,
@@ -1849,6 +1765,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
               status: 'Active',
               sortOrder: 0,
               ticketStatus: 'Available',
+              resultType: 'Time',
               itraPoints: null,
               prizeMoney: 0,
             });
@@ -1929,6 +1846,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
                 status: 'Active',
                 sortOrder: 0,
                 ticketStatus: 'Available',
+                resultType: 'Time',
                 itraPoints: null,
                 prizeMoney: 0,
               }),
@@ -1991,6 +1909,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
         status: raceForm.status,
         sortOrder: raceForm.sortOrder.trim() ? Number(raceForm.sortOrder) : 0,
         ticketStatus: raceForm.ticketStatus,
+        resultType: raceForm.resultType,
         maxParticipants: raceForm.maxParticipants.trim() ? Number(raceForm.maxParticipants) : null,
         itraPoints: raceForm.itraPoints.trim() !== '' ? Number(raceForm.itraPoints) : null,
         certifiedBy: trimToUndefined(raceForm.certifiedBy),
@@ -2028,6 +1947,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
           status: input.status,
           sortOrder: input.sortOrder,
           ticketStatus: input.ticketStatus,
+          resultType: input.resultType,
           maxParticipants: input.maxParticipants,
           itraPoints: input.itraPoints,
           certifiedBy: input.certifiedBy,
@@ -2072,6 +1992,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
                 status: input.status,
                 sortOrder: isSeries ? r.sortOrder : input.sortOrder,
                 ticketStatus: input.ticketStatus,
+                resultType: input.resultType,
                 maxParticipants: input.maxParticipants,
                 itraPoints: input.itraPoints,
                 certifiedBy: input.certifiedBy,
@@ -2150,6 +2071,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
           status: 'Active',
           sortOrder: race.sortOrder,
           ticketStatus: 'Available',
+          resultType: race.resultType,
           maxParticipants: race.maxParticipants ?? null,
           itraPoints: race.itraPoints,
           certifiedBy: race.certifiedBy ?? undefined,
@@ -2239,6 +2161,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
               status: 'Active',
               sortOrder: race.sortOrder,
               ticketStatus: 'Available',
+              resultType: race.resultType,
               maxParticipants: race.maxParticipants ?? null,
               itraPoints: race.itraPoints ?? null,
               certifiedBy: race.certifiedBy ?? undefined,
@@ -2412,6 +2335,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
           status: race.status,
           sortOrder: race.sortOrder,
           ticketStatus: race.ticketStatus,
+          resultType: race.resultType,
           maxParticipants: race.maxParticipants ?? null,
           itraPoints: race.itraPoints ?? null,
           certifiedBy: race.certifiedBy ?? undefined,
@@ -2443,6 +2367,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
           status: race.status,
           sortOrder: race.sortOrder,
           ticketStatus: race.ticketStatus,
+          resultType: race.resultType,
           maxParticipants: race.maxParticipants ?? null,
           itraPoints: race.itraPoints ?? null,
           certifiedBy: race.certifiedBy ?? undefined,
@@ -2488,6 +2413,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
           status: race.status,
           sortOrder: idx,
           ticketStatus: race.ticketStatus,
+          resultType: race.resultType,
           maxParticipants: race.maxParticipants ?? null,
           itraPoints: race.itraPoints ?? null,
           certifiedBy: race.certifiedBy ?? undefined,

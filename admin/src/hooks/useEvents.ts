@@ -3,13 +3,14 @@ import { apiFetch } from './api';
 
 export type DayOfWeek = 'Sunday' | 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
 export type ScheduleType = 'Yearly' | 'Seasonal' | 'Fixed' | 'Approximate';
-export type EventType = 'Race' | 'Series' | 'Advertisement' | 'Festival' | 'Other';
+export type EventType = 'Race' | 'Series' | 'Social' | 'Advertisement' | 'Festival' | 'Other';
 export type ActivityType = 'TrailRunning' | 'Running' | 'Cycling' | 'Hiking' | 'FunRun' | 'ObstacleCourse' | 'CrossCountryRun' | 'Swim' | 'Social' | 'Other';
 export type EventStatus = 'Unconfirmed' | 'Confirmed' | 'Cancelled' | 'Hidden' | 'Unlisted';
 export type RegistrationStatus = 'NotStarted' | 'Open' | 'Closed';
 export type RaceStatus = 'Active' | 'Completed' | 'Cancelled' | 'Hidden';
 export type EditionStatus = 'Active' | 'Unconfirmed' | 'Cancelled' | 'Hidden';
 export type TicketStatus = 'Available' | 'AlmostSoldOut' | 'SoldOut' | 'Closed' | 'NotStarted' | 'Free';
+export type ResultType = 'Time' | 'Distance' | 'Laps';
 export type AlertSeverity = 'info' | 'success' | 'warning' | 'error';
 
 export interface SocialLink {
@@ -44,6 +45,7 @@ export interface RaceDto {
     status: RaceStatus;
     sortOrder: number;
     ticketStatus: TicketStatus;
+    resultType: ResultType;
     maxParticipants: number | null;
     itraPoints: number | null;
     certifiedBy: string | null;
@@ -69,6 +71,7 @@ export interface EventEditionDto {
     titleEn: string | null;
     registrationUrl: string | null;
     resultsUrl: string | null;
+    photoGalleryUrl: string | null;
     notes: string | null;
     notesEn: string | null;
     registrationStatus: RegistrationStatus;
@@ -123,6 +126,7 @@ export interface EventSummaryDto {
     seriesRaces: SeriesRaceDto[] | null;
     gpxPointLat: number | null;
     gpxPointLng: number | null;
+    photoGalleryUrl: string | null;
     isMountainRace: boolean;
     terrainType: string | null;
     hasFutureEdition: boolean;
@@ -182,6 +186,7 @@ export interface UpdateEventInput {
     socialLinks?: SocialLink[] | null;
     gpxPointLat?: number | null;
     gpxPointLng?: number | null;
+    photoGalleryUrl?: string;
     translationHashes?: Record<string, string>;
 }
 
@@ -194,6 +199,7 @@ export interface CreateEditionInput {
     titleEn?: string;
     registrationUrl?: string;
     resultsUrl?: string;
+    photoGalleryUrl?: string;
     notes?: string;
     notesEn?: string;
     registrationStatus: RegistrationStatus;
@@ -209,6 +215,7 @@ export interface UpdateEditionInput {
     titleEn?: string;
     registrationUrl?: string;
     resultsUrl?: string;
+    photoGalleryUrl?: string;
     notes?: string;
     notesEn?: string;
     registrationStatus: RegistrationStatus;
@@ -233,6 +240,7 @@ export interface CreateRaceInput {
     status: RaceStatus;
     sortOrder: number;
     ticketStatus: TicketStatus;
+    resultType: ResultType;
     maxParticipants?: number | null;
     itraPoints?: number | null;
     certifiedBy?: string;
@@ -257,6 +265,7 @@ export interface UpdateRaceInput {
     status: RaceStatus;
     sortOrder: number;
     ticketStatus: TicketStatus;
+    resultType: ResultType;
     maxParticipants?: number | null;
     itraPoints?: number | null;
     certifiedBy?: string;

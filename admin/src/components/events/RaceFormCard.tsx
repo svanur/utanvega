@@ -26,6 +26,7 @@ import { normalizeCutoffTimeOnBlur, normalizeCutoffTimeInput, parseHHmmToMinutes
 import {
   ACTIVITY_TYPES,
   RACE_STATUSES,
+  RESULT_TYPES,
   TICKET_STATUSES,
   buildRaceForm,
   buildRaceSavePayload,
@@ -294,6 +295,12 @@ function RaceFormCardInner({
             </FormControl>
             <TextField size="small" fullWidth label="ITRA points" type="number" value={form.itraPoints}
               onChange={e => set('itraPoints', e.target.value)} />
+            <FormControl size="small" fullWidth>
+              <InputLabel>Result type</InputLabel>
+              <Select value={form.resultType} label="Result type" onChange={e => set('resultType', e.target.value as typeof form.resultType)}>
+                {RESULT_TYPES.map(t => <MenuItem key={t} value={t}>{t}</MenuItem>)}
+              </Select>
+            </FormControl>
           </Stack>
           <BilingualTextField
             size="small" fullWidth label="Certified by" sx={{ mb: 1.5 }}

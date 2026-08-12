@@ -16,6 +16,7 @@ public record CreateRaceCommand(
     string Status,
     int SortOrder,
     string TicketStatus,
+    string ResultType,
     int? MaxParticipants,
     int? ItraPoints,
     string? CertifiedBy,
@@ -46,6 +47,7 @@ public class CreateRaceCommandHandler : IRequestHandler<CreateRaceCommand, Guid>
     {
         Enum.TryParse<RaceStatus>(request.Status, ignoreCase: true, out var status);
         Enum.TryParse<TicketStatus>(request.TicketStatus, ignoreCase: true, out var ticketStatus);
+        Enum.TryParse<ResultType>(request.ResultType, ignoreCase: true, out var resultType);
         var activityType = Enum.TryParse<ActivityType>(request.ActivityType, ignoreCase: true, out var at) ? at : (ActivityType?)null;
 
         var race = new Race
@@ -62,6 +64,7 @@ public class CreateRaceCommandHandler : IRequestHandler<CreateRaceCommand, Guid>
             Status = status,
             SortOrder = request.SortOrder,
             TicketStatus = ticketStatus,
+            ResultType = resultType,
             MaxParticipants = request.MaxParticipants,
             ItraPoints = request.ItraPoints,
             CertifiedBy = request.CertifiedBy,
