@@ -228,6 +228,7 @@ const EVENT_TYPES: EventType[] = ['Race', 'Series', 'Social', 'Advertisement', '
 const EVENT_TYPE_COLORS: Record<EventType, 'primary' | 'secondary' | 'warning' | 'success' | 'default' | 'info' | 'error'> = {
   Race: 'primary',
   Series: 'secondary',
+  Social: 'success',
   Advertisement: 'warning',
   Festival: 'info',
   Other: 'default',
