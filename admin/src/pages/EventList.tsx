@@ -266,7 +266,7 @@ const ACTIVITY_ICONS: Record<string, string> = {
   CrossCountryRun: '🌾',
   Swim: '🏊',
   Canicross: '🐕',
-  IronMan: '🏅',
+  IronMan: '🥇',
   Other: '🏅',
 };
 

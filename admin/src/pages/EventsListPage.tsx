@@ -90,7 +90,7 @@ const ACTIVITY_TYPE_COLORS: Record<ActivityType, 'primary' | 'secondary' | 'warn
 };
 const ACTIVITY_ICONS: Record<string, string> = {
   TrailRunning: '🏃‍♂️', Running: '🏃', Hiking: '🥾', Cycling: '🚴', FunRun: '🎊',
-  ObstacleCourse: '🧗', CrossCountryRun: '🌾', Swim: '🏊', Canicross: '🐕', IronMan: '🏅', Other: '🏅',
+  ObstacleCourse: '🧗', CrossCountryRun: '🌾', Swim: '🏊', Canicross: '🐕', IronMan: '🥇', Other: '🏅',
 };
 const EVENT_STATUSES: EventStatus[] = ['Unconfirmed', 'Confirmed', 'Cancelled', 'Hidden', 'Unlisted'];
 // ── Helpers ───────────────────────────────────────────────────────────────────
