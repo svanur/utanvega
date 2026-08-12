@@ -15,6 +15,7 @@ using Utanvega.Backend.Application.Events.Commands.GenerateEditionsForSeason;
 using Utanvega.Backend.Application.Events.Queries.GetEvents;
 using Utanvega.Backend.Application.Events.Queries.GetEvent;
 using Utanvega.Backend.Application.Events.Queries.GetEventCalendar;
+using Utanvega.Backend.Application.Events.Queries.GetAllEventDetails;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Core.Services;
 
@@ -2396,6 +2397,53 @@ public class EventHandlerTests : IDisposable
         var editionDto = Assert.Single(result!.Editions);
         Assert.Equal("Active", editionDto.Status);
         Assert.True(editionDto.EffectiveCancelled);
+    }
+
+    [Fact]
+    public async Task GetEvent_BySlug_RaceDto_ResultType_SurfacesFromEntity()
+    {
+        var ev = CreateTestEvent("Backyard Ultra Detail Event");
+        ev.Slug = "backyard-ultra-detail-event";
+        var edition = CreateTestEdition(ev.Id);
+        var race = new Race { Id = Guid.NewGuid(), EventEditionId = edition.Id, Name = "Backyard Ultra", SortOrder = 0, ResultType = ResultType.Laps };
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventQuery("backyard-ultra-detail-event"), CancellationToken.None);
+
+        var raceDto = Assert.Single(Assert.Single(result!.Editions).Races);
+        Assert.Equal("Laps", raceDto.ResultType);
+    }
+
+    [Fact]
+    public async Task GetAllEventDetails_RaceDto_ResultType_SurfacesFromEntity()
+    {
+        var ev = CreateTestEvent("Distance Race Admin Detail Event");
+        ev.Slug = "distance-race-admin-detail-event";
+        var edition = CreateTestEdition(ev.Id);
+        var race = new Race { Id = Guid.NewGuid(), EventEditionId = edition.Id, Name = "24 Hour Run", SortOrder = 0, ResultType = ResultType.Distance };
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetAllEventDetailsQueryHandler(queryCtx);
+        var result = await handler.Handle(new GetAllEventDetailsQuery(), CancellationToken.None);
+
+        var eventDetail = Assert.Single(result);
+        var raceDto = Assert.Single(Assert.Single(eventDetail.Editions).Races);
+        Assert.Equal("Distance", raceDto.ResultType);
     }
 
     [Fact]
