@@ -658,7 +658,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                         {event.organizerName && (
                             <Chip label={loc(event.organizerName, event.organizerNameEn) ?? event.organizerName} size="small" variant="outlined" />
                         )}
-                        {event.type !== 'Advertisement' && (
+                        {(event.type === 'Race' || event.type === 'Series') && (
                             <Chip
                                 label={t('races.raceCount', { count: visibleRaces.length })}
                                 size="small"
@@ -919,19 +919,21 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                     </Card>
                 )}
 
-                <Typography variant="h5" fontWeight={700} sx={{ mb: 2 }}>
-                    {t('races.racesHeading')}
-                </Typography>
+                {(event.type === 'Race' || event.type === 'Series') && (
+                    <Typography variant="h5" fontWeight={700} sx={{ mb: 2 }}>
+                        {t('races.racesHeading')}
+                    </Typography>
+                )}
 
                 {currentEditions.length === 0 && pastEditions.length === 0 ? (
-                    <Alert severity="info">{t('races.noRaces')}</Alert>
+                    (event.type === 'Race' || event.type === 'Series') && <Alert severity="info">{t('races.noRaces')}</Alert>
                 ) : showEditionSections ? (
                     <Stack spacing={3}>
                         {currentEditions.map(edition => (
                             <Paper key={edition.id} variant="outlined" sx={{ p: { xs: 2, sm: 2.5 }, borderRadius: 2.5 }}>
                                 <EditionMeta edition={edition} t={t} showHeader />
                                 {edition.visibleRaces.length === 0 ? (
-                                    <Alert severity="info" sx={{ mt: 2 }}>{t('races.noRaces')}</Alert>
+                                    (event.type === 'Race' || event.type === 'Series') && <Alert severity="info" sx={{ mt: 2 }}>{t('races.noRaces')}</Alert>
                                 ) : (
                                     <Stack spacing={2} sx={{ mt: 2 }}>
                                         {edition.visibleRaces.map(race => (
@@ -956,7 +958,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                         ))}
                     </Stack>
                 ) : visibleRaces.length === 0 && currentEditions.length === 0 ? (
-                    <Alert severity="info">{t('races.noRaces')}</Alert>
+                    (event.type === 'Race' || event.type === 'Series') && <Alert severity="info">{t('races.noRaces')}</Alert>
                 ) : (
                     <Stack spacing={2}>
                         {racesWithAnchors.map(({ race, anchor }) => (

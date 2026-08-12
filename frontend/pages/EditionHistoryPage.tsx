@@ -269,12 +269,14 @@ export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistor
                 </Paper>
 
                 {visibleRaces.length === 0 ? (
-                    <Alert severity="info">{t('races.noRaces')}</Alert>
+                    (event.type === 'Race' || event.type === 'Series') && <Alert severity="info">{t('races.noRaces')}</Alert>
                 ) : (
                     <>
-                        <Typography variant="h5" fontWeight={700} sx={{ mb: 2 }}>
-                            {t('races.racesHeading')}
-                        </Typography>
+                        {(event.type === 'Race' || event.type === 'Series') && (
+                            <Typography variant="h5" fontWeight={700} sx={{ mb: 2 }}>
+                                {t('races.racesHeading')}
+                            </Typography>
+                        )}
                         <Stack spacing={2}>
                             {visibleRaces.map(race => (
                                 <HistoryRaceCard key={race.id} race={race} t={t} />
