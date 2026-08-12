@@ -113,7 +113,7 @@
         "trailsSubtitle": "Hér finnur þú skemmtilegar leiðir víðs vegar um Ísland. Síaðu eftir vegalengd, erfiðleika, staðsetningu og fleiru.",
         "recentlyViewed": "Nýlega skoðað",
         "trendingTrails": "Vinsælt",
-        "nextRaces": "Vegalengdir",
+        "nextRaces": "Viðburðir",
         "views": "{{count}} skoðanir",
         "trailMap": "Kort",
         "trailsTagged": "Leiðir merktar: {{tags}}",
@@ -304,7 +304,15 @@
     "playback": {
         "play": "Spila leið",
         "pause": "Gera hlé",
-        "stop": "Stöðva og endurstilla"
+        "stop": "Stöðva og endurstilla",
+        "stats": {
+            "distance": "Vegalengd",
+            "elevation": "Hæð",
+            "gain": "Hækkun",
+            "loss": "Lækkun",
+            "highPoint": "Hæst",
+            "lowPoint": "Lægst"
+        }
     },
     "map": {
         "followLocation": "Fylgja staðsetningu",

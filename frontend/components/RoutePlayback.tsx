@@ -26,13 +26,11 @@ interface RoutePlaybackProps {
     onIndexChange?: (index: number | null) => void;
 }
 
+// Points advanced per second at each speed setting
 const SPEEDS = [
-    { label: '1x', interval: 80, step: 1 },
-    { label: '2x', interval: 40, step: 1 },
-    { label: '5x', interval: 16, step: 1 },
-    { label: '10x', interval: 8, step: 1 },
-    { label: '25x', interval: 8, step: 3 },
-    { label: '50x', interval: 8, step: 6 },
+    { label: 'hægt', pps: 15 },
+    { label: 'miðlungs', pps: 80 },
+    { label: 'hratt', pps: 400 },
 ];
 
 export default function RoutePlayback({ coordinates, onPointChange, onIndexChange }: RoutePlaybackProps) {
@@ -41,8 +39,12 @@ export default function RoutePlayback({ coordinates, onPointChange, onIndexChang
     const [finished, setFinished] = useState(false);
     const [speedIndex, setSpeedIndex] = useState(0);
     const [currentIndex, setCurrentIndex] = useState(0);
-    const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const rafRef = useRef<number | null>(null);
     const indexRef = useRef(0);
+    // Fractional accumulator so sub-frame advances don't lose remainder
+    const posRef = useRef(0);
+    const lastTimeRef = useRef<number | null>(null);
+    const speedIndexRef = useRef(speedIndex);
     const total = coordinates.length;
 
     const cumulativeStats = useMemo<CumulativeStats[]>(() => {
@@ -66,6 +68,16 @@ export default function RoutePlayback({ coordinates, onPointChange, onIndexChang
         return stats;
     }, [coordinates]);
 
+    // Keep speedIndexRef in sync so the rAF loop always reads the latest speed
+    useEffect(() => { speedIndexRef.current = speedIndex; }, [speedIndex]);
+
+    const cancelRaf = useCallback(() => {
+        if (rafRef.current !== null) {
+            cancelAnimationFrame(rafRef.current);
+            rafRef.current = null;
+        }
+    }, []);
+
     const emitPoint = useCallback((idx: number) => {
         const coord = coordinates[idx];
         if (coord) {
@@ -74,82 +86,83 @@ export default function RoutePlayback({ coordinates, onPointChange, onIndexChang
         }
     }, [coordinates, onPointChange, onIndexChange]);
 
+    const startRaf = useCallback((fromIndex: number) => {
+        cancelRaf();
+        posRef.current = fromIndex;
+        indexRef.current = fromIndex;
+        lastTimeRef.current = null;
+
+        const tick = (now: number) => {
+            if (lastTimeRef.current === null) lastTimeRef.current = now;
+            const elapsed = now - lastTimeRef.current;
+            lastTimeRef.current = now;
+
+            const pps = SPEEDS[speedIndexRef.current].pps;
+            posRef.current += (elapsed / 1000) * pps;
+            const next = Math.min(Math.floor(posRef.current), total - 1);
+
+            if (next !== indexRef.current) {
+                indexRef.current = next;
+                setCurrentIndex(next);
+                emitPoint(next);
+            }
+
+            if (next >= total - 1) {
+                setPlaying(false);
+                setFinished(true);
+                return;
+            }
+
+            rafRef.current = requestAnimationFrame(tick);
+        };
+
+        rafRef.current = requestAnimationFrame(tick);
+    }, [total, emitPoint]);
+
     const stop = useCallback(() => {
-        if (intervalRef.current) {
-            clearInterval(intervalRef.current);
-            intervalRef.current = null;
-        }
+        cancelRaf();
         setPlaying(false);
         setFinished(false);
         setCurrentIndex(0);
         indexRef.current = 0;
+        posRef.current = 0;
         onPointChange(null);
         onIndexChange?.(null);
     }, [onPointChange, onIndexChange]);
 
-    const finish = useCallback(() => {
-        if (intervalRef.current) {
-            clearInterval(intervalRef.current);
-            intervalRef.current = null;
-        }
-        setPlaying(false);
-        setFinished(true);
-    }, []);
-
-    const startInterval = useCallback((fromIndex: number) => {
-        if (intervalRef.current) clearInterval(intervalRef.current);
-        indexRef.current = fromIndex;
-
-        intervalRef.current = setInterval(() => {
-            const next = Math.min(indexRef.current + SPEEDS[speedIndex].step, total - 1);
-            if (next >= total - 1) {
-                indexRef.current = total - 1;
-                setCurrentIndex(total - 1);
-                emitPoint(total - 1);
-                finish();
-                return;
-            }
-            indexRef.current = next;
-            setCurrentIndex(next);
-            emitPoint(next);
-        }, SPEEDS[speedIndex].interval);
-    }, [total, speedIndex, emitPoint, finish]);
-
     const play = useCallback(() => {
         const startFrom = indexRef.current >= total - 1 ? 0 : indexRef.current;
+        posRef.current = startFrom;
         setCurrentIndex(startFrom);
         indexRef.current = startFrom;
         emitPoint(startFrom);
         setPlaying(true);
         setFinished(false);
-        startInterval(startFrom);
-    }, [total, emitPoint, startInterval]);
+        startRaf(startFrom);
+    }, [total, emitPoint, startRaf]);
 
     const pause = useCallback(() => {
-        if (intervalRef.current) {
-            clearInterval(intervalRef.current);
-            intervalRef.current = null;
-        }
+        cancelRaf();
         setPlaying(false);
     }, []);
 
-    // Update interval speed when speed changes during playback
-    // Intentionally excludes `playing` and `startInterval` to avoid restarting the interval on every render
-    useEffect(() => {
-        if (playing) {
-            startInterval(indexRef.current);
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [speedIndex]);
-
     // Cleanup on unmount
     useEffect(() => {
-        return () => {
-            if (intervalRef.current) clearInterval(intervalRef.current);
-        };
+        return () => { cancelRaf(); };
     }, []);
 
+    const showStats = playing || currentIndex > 0 || finished;
+    const stats = cumulativeStats[currentIndex];
     const progress = total > 1 ? (currentIndex / (total - 1)) * 100 : 0;
+
+    const statPills = stats ? [
+        { key: 'distance', icon: '📍', value: `${stats.distance.toFixed(1)} km` },
+        { key: 'elevation', icon: '📶', value: `${Math.round(stats.elevation)} m` },
+        { key: 'gain', icon: '↑', value: `${Math.round(stats.gain)} m` },
+        { key: 'loss', icon: '↓', value: `${Math.round(stats.loss)} m` },
+        { key: 'highPoint', icon: '⛰', value: `${Math.round(stats.highPoint)} m` },
+        { key: 'lowPoint', icon: '🏖', value: `${Math.round(stats.lowPoint)} m` },
+    ] : [];
 
     return (
         <Box sx={{ mt: 2 }}>
@@ -185,19 +198,22 @@ export default function RoutePlayback({ coordinates, onPointChange, onIndexChang
                     ))}
                 </ToggleButtonGroup>
 
-                {(playing || currentIndex > 0 || finished) && (() => {
-                    const s = cumulativeStats[currentIndex];
-                    return (
-                        <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }} component="span">
-                            {s.distance.toFixed(1)} km &nbsp;·&nbsp; {Math.round(s.elevation)} m &nbsp;·&nbsp;
-                            ↑{Math.round(s.gain)} m &nbsp;·&nbsp; ↓{Math.round(s.loss)} m &nbsp;·&nbsp;
-                            ⛰{Math.round(s.highPoint)} m &nbsp;·&nbsp; 🏝{Math.round(s.lowPoint)} m
+                {showStats && statPills.map(p => (
+                    <Box key={p.key} sx={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'center',
+                        bgcolor: 'action.hover', borderRadius: 2, px: 1.2, py: 0.4, minWidth: 52,
+                    }}>
+                        <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'text.secondary', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
+                            {p.icon} {t(`playback.stats.${p.key}`)}
                         </Typography>
-                    );
-                })()}
+                        <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.75rem', lineHeight: 1.4, fontVariantNumeric: 'tabular-nums' }}>
+                            {p.value}
+                        </Typography>
+                    </Box>
+                ))}
             </Stack>
 
-            {(playing || currentIndex > 0 || finished) && (
+            {showStats && (
                 <LinearProgress
                     variant="determinate"
                     value={progress}
