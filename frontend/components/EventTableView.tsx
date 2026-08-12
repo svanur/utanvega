@@ -272,11 +272,12 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                         <Stack direction="row" alignItems="flex-start" spacing={0.5}>
                                             <ActivityIcons activityTypes={event.activityTypes} activityType={event.activityType} />
                                             <Stack spacing={0.25}>
-                                                <Typography variant="body2" fontWeight={700} noWrap sx={{ maxWidth: 220 }}>
-                                                    {race.raceName}
-                                                </Typography>
-                                                <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 220 }}>
+                                                <Typography variant="body2" fontWeight={700} noWrap sx={{ maxWidth: 280 }}>
                                                     {loc(event.name, event.nameEn) ?? event.name}
+                                                    {' '}
+                                                    <svg width="6" height="6" viewBox="0 0 24 24" style={{ display: 'inline', verticalAlign: 'middle', marginBottom: 1, opacity: 0.5 }}><circle cx="12" cy="12" r="8" fill="currentColor" /></svg>
+                                                    {' '}
+                                                    {loc(race.raceName, race.raceNameEn) ?? race.raceName}
                                                 </Typography>
                                                 <Chip label={t(`races.eventTypes.Series`, 'Series')} size="small" color={getEventTypeColor('Series')} variant="outlined" sx={{ fontSize: '0.65rem', height: 18, alignSelf: 'flex-start' }} />
                                             </Stack>
