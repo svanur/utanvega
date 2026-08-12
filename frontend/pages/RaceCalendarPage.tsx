@@ -167,7 +167,7 @@ function ScheduleView({ days, loading, today, onEventClick, loc, t }: ScheduleVi
                         <Stack spacing={1} sx={{ flex: 1, minWidth: 0 }}>
                             {day.events.map((ev: CalendarEvent, ei: number) => (
                                 <Paper
-                                    key={ei}
+                                    key={ev.raceName ? `${ev.slug}-${ev.raceName}` : ev.slug}
                                     variant="outlined"
                                     onClick={() => onEventClick(ev.slug)}
                                     sx={{
@@ -269,11 +269,11 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
 
     // Month view data
     const { from: monthFrom, to: monthTo } = useMemo(() => getMonthRange(year, month), [year, month]);
-    const { days: monthDays, loading: monthLoading } = useEventCalendar(monthFrom, monthTo);
+    const { days: monthDays, loading: monthLoading } = useEventCalendar(monthFrom, monthTo, view === 'month');
 
     // Schedule view data — rolling 3 months from today
     const { from: schedFrom, to: schedTo } = useMemo(() => getScheduleRange(today), []);
-    const { days: schedDays, loading: schedLoading } = useEventCalendar(schedFrom, schedTo);
+    const { days: schedDays, loading: schedLoading } = useEventCalendar(schedFrom, schedTo, view === 'schedule');
 
     const { getHolidays } = useIcelandicHolidays();
 
