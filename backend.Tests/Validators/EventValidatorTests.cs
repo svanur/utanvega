@@ -416,14 +416,14 @@ public class EventValidatorTests : IDisposable
     }
 
     // ─── CreateRaceCommandValidator ───
-    // These validators now query the DB (to check the parent edition's status), so they're
-    // constructed per-test against a fresh context. Tests that don't seed a matching edition/race
-    // rely on the async rule's default behavior for a not-found row (treated as not Cancelled).
-
     private CreateRaceCommandValidator RaceValidator() => new(_factory.CreateContext());
 
-    private static CreateRaceCommand ValidRaceCommand => new(
-        EventEditionId: Guid.NewGuid(),
+    private static readonly Guid _placeholderEditionId = Guid.NewGuid();
+
+    private static CreateRaceCommand ValidRaceCommand => BaseRaceCommand(_placeholderEditionId);
+
+    private static CreateRaceCommand BaseRaceCommand(Guid editionId) => new(
+        EventEditionId: editionId,
         TrailId: null,
         Name: "55K Ultra",
         DistanceLabel: "55 km",
@@ -442,10 +442,22 @@ public class EventValidatorTests : IDisposable
         StartTime: null
     );
 
+    private async Task<Guid> SeedActiveEdition(string slug)
+    {
+        var ev = new Event { Id = Guid.NewGuid(), Name = "Test Event", Slug = slug, Type = EventType.Race, Status = EventStatus.Confirmed };
+        var edition = new EventEdition { Id = Guid.NewGuid(), EventId = ev.Id, Status = EditionStatus.Active, RegistrationStatus = RegistrationStatus.Open };
+        using var ctx = _factory.CreateContext();
+        ctx.Events.Add(ev);
+        ctx.EventEditions.Add(edition);
+        await ctx.SaveChangesAsync();
+        return edition.Id;
+    }
+
     [Fact]
     public async Task CreateRace_ValidCommand_Passes()
     {
-        var result = await RaceValidator().TestValidateAsync(ValidRaceCommand);
+        var editionId = await SeedActiveEdition($"test-event-vcp-{Guid.NewGuid():N}");
+        var result = await RaceValidator().TestValidateAsync(BaseRaceCommand(editionId));
         result.ShouldNotHaveAnyValidationErrors();
     }
 
@@ -542,6 +554,16 @@ public class EventValidatorTests : IDisposable
         }
 
         var cmd = ValidRaceCommand with { EventEditionId = edition.Id };
+        var result = await RaceValidator().TestValidateAsync(cmd);
+        result.ShouldHaveValidationErrorFor(x => x.EventEditionId);
+    }
+
+    [Fact]
+    public async Task CreateRace_NonExistentEdition_Fails()
+    {
+        // FirstOrDefaultAsync on a missing row returned default(EditionStatus) = Active (0),
+        // so the guard silently passed and the handler would have inserted a race with an invalid FK.
+        var cmd = ValidRaceCommand with { EventEditionId = Guid.NewGuid() };
         var result = await RaceValidator().TestValidateAsync(cmd);
         result.ShouldHaveValidationErrorFor(x => x.EventEditionId);
     }
