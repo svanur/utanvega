@@ -1166,6 +1166,7 @@
         "editionCount": "{{count}} editions",
         "register": "Register",
         "results": "Results",
+        "photoGallery": "Photos from {{domain}}",
         "organizerSite": "Event website",
         "directionsToEvent": "Directions to event",
         "addToCalendar": "Add to Calendar",

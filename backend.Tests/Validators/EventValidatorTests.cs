@@ -142,6 +142,14 @@ public class EventValidatorTests : IDisposable
         result.ShouldHaveAnyValidationError();
     }
 
+    [Fact]
+    public void CreateEvent_SocialType_Passes()
+    {
+        var cmd = ValidCreateEventCommand with { Type = "Social" };
+        var result = _createEventValidator.TestValidate(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.Type);
+    }
+
     // ─── UpdateEventCommandValidator ───
 
     private readonly UpdateEventCommandValidator _updateEventValidator = new();
@@ -205,6 +213,30 @@ public class EventValidatorTests : IDisposable
         };
         var result = _updateEventValidator.TestValidate(cmd);
         result.ShouldHaveAnyValidationError();
+    }
+
+    [Fact]
+    public void UpdateEvent_InvalidPhotoGalleryUrl_Fails()
+    {
+        var cmd = ValidUpdateEventCommand with { PhotoGalleryUrl = "not-a-url" };
+        var result = _updateEventValidator.TestValidate(cmd);
+        result.ShouldHaveValidationErrorFor(x => x.PhotoGalleryUrl);
+    }
+
+    [Fact]
+    public void UpdateEvent_ValidPhotoGalleryUrl_Passes()
+    {
+        var cmd = ValidUpdateEventCommand with { PhotoGalleryUrl = "https://sportmyndir.is/album/60" };
+        var result = _updateEventValidator.TestValidate(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.PhotoGalleryUrl);
+    }
+
+    [Fact]
+    public void UpdateEvent_NullPhotoGalleryUrl_Passes()
+    {
+        var cmd = ValidUpdateEventCommand with { PhotoGalleryUrl = null };
+        var result = _updateEventValidator.TestValidate(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.PhotoGalleryUrl);
     }
 
     // ─── CreateEditionCommandValidator ───
@@ -295,6 +327,22 @@ public class EventValidatorTests : IDisposable
         result.ShouldNotHaveValidationErrorFor(x => x.EndDate);
     }
 
+    [Fact]
+    public void CreateEdition_InvalidPhotoGalleryUrl_Fails()
+    {
+        var cmd = ValidCreateEditionCommand with { PhotoGalleryUrl = "not-a-url" };
+        var result = _createEditionValidator.TestValidate(cmd);
+        result.ShouldHaveValidationErrorFor(x => x.PhotoGalleryUrl);
+    }
+
+    [Fact]
+    public void CreateEdition_ValidPhotoGalleryUrl_Passes()
+    {
+        var cmd = ValidCreateEditionCommand with { PhotoGalleryUrl = "https://sportmyndir.is/album/60" };
+        var result = _createEditionValidator.TestValidate(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.PhotoGalleryUrl);
+    }
+
     // ─── UpdateEditionCommandValidator ───
 
     private readonly UpdateEditionCommandValidator _updateEditionValidator = new();
@@ -325,6 +373,22 @@ public class EventValidatorTests : IDisposable
         var cmd = ValidUpdateEditionCommand with { Id = Guid.Empty };
         var result = _updateEditionValidator.TestValidate(cmd);
         result.ShouldHaveValidationErrorFor(x => x.Id);
+    }
+
+    [Fact]
+    public void UpdateEdition_InvalidPhotoGalleryUrl_Fails()
+    {
+        var cmd = ValidUpdateEditionCommand with { PhotoGalleryUrl = "not-a-url" };
+        var result = _updateEditionValidator.TestValidate(cmd);
+        result.ShouldHaveValidationErrorFor(x => x.PhotoGalleryUrl);
+    }
+
+    [Fact]
+    public void UpdateEdition_ValidPhotoGalleryUrl_Passes()
+    {
+        var cmd = ValidUpdateEditionCommand with { PhotoGalleryUrl = "https://sportmyndir.is/album/60" };
+        var result = _updateEditionValidator.TestValidate(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.PhotoGalleryUrl);
     }
 
     [Fact]

@@ -1166,6 +1166,7 @@
         "editionCount": "{{count}} viðburðir",
         "register": "Skráning",
         "results": "Úrslit",
+        "photoGallery": "Myndir frá {{domain}}",
         "organizerSite": "Vefur skipuleggjanda",
         "directionsToEvent": "Leiðsögn að upphafsstað",
         "addToCalendar": "Setja í dagatal",

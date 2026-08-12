@@ -265,6 +265,17 @@ export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistor
                                 {t('races.results', { defaultValue: 'Results' })}
                             </Button>
                         )}
+                        {edition.photoGalleryUrl && (
+                            <Button
+                                variant="outlined"
+                                size="small"
+                                endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
+                                onClick={() => window.open(edition.photoGalleryUrl!, '_blank', 'noopener')}
+                                sx={{ textTransform: 'none' }}
+                            >
+                                📷 {t('races.photoGallery', { domain: new URL(edition.photoGalleryUrl!).hostname.replace(/^www\./, ''), defaultValue: 'Photos' })}
+                            </Button>
+                        )}
                     </Stack>
                 </Paper>
 

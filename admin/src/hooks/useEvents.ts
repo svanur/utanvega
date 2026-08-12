@@ -71,6 +71,7 @@ export interface EventEditionDto {
     titleEn: string | null;
     registrationUrl: string | null;
     resultsUrl: string | null;
+    photoGalleryUrl: string | null;
     notes: string | null;
     notesEn: string | null;
     registrationStatus: RegistrationStatus;
@@ -125,6 +126,7 @@ export interface EventSummaryDto {
     seriesRaces: SeriesRaceDto[] | null;
     gpxPointLat: number | null;
     gpxPointLng: number | null;
+    photoGalleryUrl: string | null;
     isMountainRace: boolean;
     terrainType: string | null;
     hasFutureEdition: boolean;
@@ -184,6 +186,7 @@ export interface UpdateEventInput {
     socialLinks?: SocialLink[] | null;
     gpxPointLat?: number | null;
     gpxPointLng?: number | null;
+    photoGalleryUrl?: string;
     translationHashes?: Record<string, string>;
 }
 
@@ -196,6 +199,7 @@ export interface CreateEditionInput {
     titleEn?: string;
     registrationUrl?: string;
     resultsUrl?: string;
+    photoGalleryUrl?: string;
     notes?: string;
     notesEn?: string;
     registrationStatus: RegistrationStatus;
@@ -211,6 +215,7 @@ export interface UpdateEditionInput {
     titleEn?: string;
     registrationUrl?: string;
     resultsUrl?: string;
+    photoGalleryUrl?: string;
     notes?: string;
     notesEn?: string;
     registrationStatus: RegistrationStatus;
