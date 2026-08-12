@@ -1061,6 +1061,17 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                 <Typography variant="caption" color="text.secondary">by {detail.organizerName}</Typography>
               )}
             </Stack>
+            {detail.gpxPointLat != null && detail.gpxPointLng != null && (
+              <Tooltip title="Copy coordinates">
+                <Typography
+                  variant="caption" color="text.secondary"
+                  sx={{ mt: 0.5, display: 'block', cursor: 'pointer', '&:hover': { color: 'text.primary' } }}
+                  onClick={() => void navigator.clipboard.writeText(`${detail.gpxPointLat!.toFixed(6)}, ${detail.gpxPointLng!.toFixed(6)}`)}
+                >
+                  📍 {detail.gpxPointLat.toFixed(6)}, {detail.gpxPointLng.toFixed(6)}
+                </Typography>
+              </Tooltip>
+            )}
             {formatSchedule(detail.scheduleRule) && (
               <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
                 🗓 {formatSchedule(detail.scheduleRule)}
