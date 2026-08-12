@@ -1040,7 +1040,13 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                             <Stack direction="row" alignItems="flex-start" gap={1} sx={{ minWidth: 0, width: '100%' }}>
                                                                 <ActivityIcons activityTypes={comp.activityTypes} activityType={comp.activityType} />
                                                                 <Box sx={{ minWidth: 0 }}>
-                                                                    <Typography variant="subtitle1" fontWeight={700} sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', sm: 'nowrap' } }}>{loc(race.raceName, race.raceNameEn) ?? race.raceName}</Typography>
+                                                                    <Typography variant="subtitle1" fontWeight={700} sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', sm: 'nowrap' } }}>
+                                                                        {loc(comp.name, comp.nameEn) ?? comp.name}
+                                                                        {' '}
+                                                                        <svg width="8" height="8" viewBox="0 0 24 24" style={{ display: 'inline', verticalAlign: 'middle', marginBottom: 2, opacity: 0.5 }}><circle cx="12" cy="12" r="8" fill="currentColor" /></svg>
+                                                                        {' '}
+                                                                        {loc(race.raceName, race.raceNameEn) ?? race.raceName}
+                                                                    </Typography>
                                                                 </Box>
                                                             </Stack>
                                                             <Stack direction="row" alignItems="center" gap={0.5} sx={{ flexShrink: 0 }}>
