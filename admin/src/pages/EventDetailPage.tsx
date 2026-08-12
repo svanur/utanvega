@@ -551,6 +551,12 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
 
   const [editingEvent, setEditingEvent] = useState(false);
 
+  const linkedTrailsWithCoords = useMemo(() => {
+    if (!detail) return [];
+    const trailIds = new Set(detail.editions.flatMap(ed => ed.races.map(r => r.trailId).filter(Boolean)));
+    return trails.filter(t => trailIds.has(t.id) && t.startLatitude != null && t.startLongitude != null);
+  }, [detail, trails]);
+
   const [editionDialogOpen, setEditionDialogOpen] = useState(false);
   const [editingEdition, setEditingEdition] = useState<EventEditionDto | null>(null);
   const [editionInitialValues, setEditionInitialValues] = useState<EditionFormState | undefined>(undefined);
@@ -1099,6 +1105,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
       {editingEvent && (
         <EventFormCard
           event={detail}
+          linkedTrails={linkedTrailsWithCoords}
           onClose={() => setEditingEvent(false)}
           onSaved={handleEventSaved}
           onNotify={onNotify}
