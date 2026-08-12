@@ -1316,7 +1316,7 @@
             "Advertisement": "Styrkt"
         },
         "history": {
-            "title": "Saga viðburðar",
+            "title": "Fyrri viðburðir",
             "backToEvent": "Til baka",
             "editionNotFound": "Útgáfa fannst ekki",
             "pastEdition": "Liðin útgáfa",
@@ -1385,7 +1385,8 @@
         "subscribeSuccess": "Slóð afrituð! Límdu hana í dagatalið þitt.",
         "upcoming": "Væntanlegir viðburðir",
         "quietWeek": "Engir viðburðir",
-        "races": "keppni",
+        "race": "keppni",
+        "racesPlural": "keppnir",
         "monthView": "Mánuður",
         "scheduleView": "Dagskrá",
         "viewToggle": "Dagbókaryfirlit"

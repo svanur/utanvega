@@ -1385,7 +1385,8 @@
         "subscribeSuccess": "Calendar URL copied! Paste it in your calendar app.",
         "upcoming": "Upcoming",
         "quietWeek": "No events",
-        "races": "races",
+        "race": "race",
+        "racesPlural": "races",
         "monthView": "Month",
         "scheduleView": "Schedule",
         "viewToggle": "Calendar view"

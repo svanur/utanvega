@@ -16,7 +16,8 @@ public record CalendarEventDto(
     int RaceCount,
     string Type,
     List<string>? ActivityTypes = null,
-    string? RaceName = null
+    string? RaceName = null,
+    List<string>? Distances = null
 );
 
 public record CalendarDayDto(
@@ -109,15 +110,22 @@ public class GetEventCalendarQueryHandler : IRequestHandler<GetEventCalendarQuer
 
             var startDate = ed.Date!.Value;
             var endDate = ed.EndDate ?? startDate;
+            var distances = activeRaces
+                .OrderBy(r => r.SortOrder)
+                .Where(r => r.DistanceLabel != null)
+                .Select(r => r.DistanceLabel!)
+                .ToList();
+
             var dto = new CalendarEventDto(
                 ed.Event.Name,
                 ed.Event.NameEn,
                 ed.Event.Slug,
                 ed.Event.Location?.Name,
                 ed.Title,
-                ed.Races.Count,
+                activeRaces.Count,
                 ed.Event.Type.ToString(),
-                activityTypes.Count > 0 ? activityTypes : null
+                activityTypes.Count > 0 ? activityTypes : null,
+                Distances: distances.Count > 0 ? distances : null
             );
 
             for (var day = startDate; day <= endDate; day = day.AddDays(1))

@@ -207,14 +207,25 @@ function ScheduleView({ days, loading, today, onEventClick, loc, t }: ScheduleVi
                                                     <Typography variant="caption" color="text.disabled">{ev.locationName}</Typography>
                                                 </Stack>
                                             )}
-                                            {ev.raceCount > 1 && (
-                                                <Chip
-                                                    label={`${ev.raceCount} ${t('calendar.races', { defaultValue: 'races' })}`}
-                                                    size="small"
-                                                    variant="outlined"
-                                                    sx={{ height: 18, fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}
-                                                />
-                                            )}
+                                            {ev.distances && ev.distances.length > 0
+                                                ? ev.distances.map((d, i) => (
+                                                    <Chip
+                                                        key={i}
+                                                        label={d}
+                                                        size="small"
+                                                        variant="outlined"
+                                                        sx={{ height: 18, fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}
+                                                    />
+                                                ))
+                                                : ev.raceCount > 1 && (
+                                                    <Chip
+                                                        label={`${ev.raceCount} ${ev.raceCount === 1 ? t('calendar.race', { defaultValue: 'race' }) : t('calendar.racesPlural', { defaultValue: 'races' })}`}
+                                                        size="small"
+                                                        variant="outlined"
+                                                        sx={{ height: 18, fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}
+                                                    />
+                                                )
+                                            }
                                         </Stack>
                                     </Box>
                                 </Paper>
