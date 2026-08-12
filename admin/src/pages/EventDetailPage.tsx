@@ -1286,8 +1286,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                       <Typography variant="caption" color="text.secondary" display="block">Registration</Typography>
                       <Typography variant="body2" component="a" href={edition.registrationUrl} target="_blank" rel="noopener"
                         sx={{ color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}>
-                        {edition.registrationUrl.replace(/^https?:\/\//, '').slice(0, 40)}
-                        {edition.registrationUrl.length > 50 ? '…' : ''}
+                        {(() => { const s = edition.registrationUrl.replace(/^https?:\/\//, ''); return s.length > 40 ? s.slice(0, 40) + '…' : s; })()}
                       </Typography>
                     </Box>
                   )}
@@ -1296,7 +1295,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                       <Typography variant="caption" color="text.secondary" display="block">Results</Typography>
                       <Typography variant="body2" component="a" href={edition.resultsUrl} target="_blank" rel="noopener"
                         sx={{ color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}>
-                        {edition.resultsUrl.replace(/^https?:\/\//, '').slice(0, 40)}
+                        {(() => { const s = edition.resultsUrl.replace(/^https?:\/\//, ''); return s.length > 40 ? s.slice(0, 40) + '…' : s; })()}
                       </Typography>
                     </Box>
                   )}
@@ -1305,8 +1304,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                       <Typography variant="caption" color="text.secondary" display="block">Photo Gallery</Typography>
                       <Typography variant="body2" component="a" href={edition.photoGalleryUrl} target="_blank" rel="noopener"
                         sx={{ color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}>
-                        {edition.photoGalleryUrl.replace(/^https?:\/\//, '').slice(0, 40)}
-                        {edition.photoGalleryUrl.length > 50 ? '…' : ''}
+                        {(() => { const s = edition.photoGalleryUrl.replace(/^https?:\/\//, ''); return s.length > 40 ? s.slice(0, 40) + '…' : s; })()}
                       </Typography>
                     </Box>
                   )}

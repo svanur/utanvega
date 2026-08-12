@@ -44,7 +44,7 @@ import type {
 } from '../../hooks/useEvents';
 import type { Trail } from '../../hooks/useTrails';
 import { useTranslate } from '../../hooks/useTranslate';
-import { trimToUndefined } from '../../utils/strings';
+import { trimToUndefined, parseCoordPaste } from '../../utils/strings';
 import BilingualTextField from '../BilingualTextField';
 import { BilingualLangProvider, useBilingualLang } from '../../contexts/BilingualLangContext';
 
@@ -218,13 +218,6 @@ function TrailStartPicker({ trails, onPick }: { trails: Trail[]; onPick: (lat: n
   );
 }
 
-function parseCoordPaste(text: string): { lat: number; lng: number } | null {
-  const m = text.trim().match(/^(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)$/);
-  if (!m) return null;
-  const lat = parseFloat(m[1]), lng = parseFloat(m[2]);
-  if (isNaN(lat) || isNaN(lng)) return null;
-  return { lat, lng };
-}
 
 function EventFormCardInner({ event, linkedTrails = [], onClose, onSaved, onNotify, onUpdateEvent }: EventFormCardProps) {
   const [form, setForm] = useState<EventFormState>(buildForm(event));
