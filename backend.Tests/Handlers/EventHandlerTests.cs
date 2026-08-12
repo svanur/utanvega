@@ -177,7 +177,7 @@ public class EventHandlerTests : IDisposable
                 Name: "Updated Name",
                 Description: "Updated desc",
                 Type: "Festival",
-                ActivityType: "Social",
+                ActivityType: "Canicross",
                 Status: "Cancelled",
                 OrganizerName: "New Org",
                 OrganizerWebsite: "https://new.is",

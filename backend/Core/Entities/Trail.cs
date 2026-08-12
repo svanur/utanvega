@@ -12,7 +12,8 @@ public enum ActivityType
     ObstacleCourse,
     CrossCountryRun,
     Swim,
-    Social,
+    Canicross,
+    IronMan,
     Other,
 }
 
