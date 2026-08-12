@@ -459,6 +459,9 @@ function SortableRaceRow({ race, edition, isActive, staleTx, detail, onOpen, onD
         <Typography variant="body2" color="text.secondary">{race.distanceLabel ?? '—'}</Typography>
       </TableCell>
       <TableCell>
+        <Typography variant="body2" color="text.secondary">{race.resultType ?? '—'}</Typography>
+      </TableCell>
+      <TableCell>
         {race.trailName
           ? <Typography variant="body2" color="text.secondary">{race.trailName}</Typography>
           : <Chip label="No route" size="small" color="warning" variant="outlined" sx={{ height: 18, fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }} />
@@ -1358,6 +1361,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                         <TableCell sx={{ width: 24, px: 0.5 }} />
                         <TableCell>Name</TableCell>
                         <TableCell>Distance</TableCell>
+                        <TableCell>Result type</TableCell>
                         <TableCell>Route</TableCell>
                         <TableCell>Date / start</TableCell>
                         <TableCell>Status</TableCell>
