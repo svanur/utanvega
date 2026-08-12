@@ -81,7 +81,7 @@ const getTerrainIcon = (type: string) => {
     }
 };
 
-export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, onTagClick, isHiding, isFavorited: isFavoritedProp, compact, disableGestures }) => {
+const TrailCardComponent: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, onTagClick, isHiding, isFavorited: isFavoritedProp, compact, disableGestures }) => {
     const navigate = useNavigate();
     const { t } = useTranslation();
     const loc = useLocalize();
@@ -241,9 +241,10 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
             </Box>
             )}
 
-            <Card 
-                sx={{ 
-                    overflow: 'visible', 
+            <Card
+                variant="outlined"
+                sx={{
+                    overflow: 'visible',
                     position: 'relative',
                     transform: disableGestures ? undefined : `translateX(${swipeOffset}px)`,
                     transition: disableGestures ? undefined : (swipeOffset === 0 ? 'transform 0.3s ease' : 'none'),
@@ -251,6 +252,7 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
                     flex: 1,
                     display: 'flex',
                     flexDirection: 'column',
+                    '@media (hover: hover)': { transition: 'transform 0.15s, box-shadow 0.15s', '&:hover': { transform: `translateX(${disableGestures ? 0 : swipeOffset}px) translateY(-2px)`, boxShadow: 4 } },
                 }}
                 onTouchStart={disableGestures ? undefined : handleTouchStart}
                 onTouchMove={disableGestures ? undefined : handleTouchMove}
@@ -468,3 +470,5 @@ export const TrailCard: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, o
         </Box>
     );
 };
+
+export const TrailCard = React.memo(TrailCardComponent);

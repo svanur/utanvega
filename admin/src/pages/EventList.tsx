@@ -48,27 +48,26 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import {
-  Add as AddIcon,
-  AutoAwesome as GenerateIcon,
-  PlaylistAdd as BulkAddIcon,
-  CalendarMonth as CalendarIcon,
-  Clear as ClearIcon,
-  DragIndicator as DragHandleIcon,
-  ContentCopy as CopyIcon,
-  Delete as DeleteIcon,
-  Edit as EditIcon,
-  ExpandLess as ExpandLessIcon,
-  ExpandMore as ExpandMoreIcon,
-  EmojiEvents as TrophyIcon,
-  Link as LinkIcon,
-  Map as MapIcon,
-  MyLocation as MyLocationIcon,
-  Notes as NotesIcon,
-  OpenInNew as OpenInNewIcon,
-  Search as SearchIcon,
-  Translate as TranslateIcon,
-} from '@mui/icons-material';
+import AddIcon from '@mui/icons-material/Add';
+import GenerateIcon from '@mui/icons-material/AutoAwesome';
+import BulkAddIcon from '@mui/icons-material/PlaylistAdd';
+import CalendarIcon from '@mui/icons-material/CalendarMonth';
+import ClearIcon from '@mui/icons-material/Clear';
+import DragHandleIcon from '@mui/icons-material/DragIndicator';
+import CopyIcon from '@mui/icons-material/ContentCopy';
+import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import TrophyIcon from '@mui/icons-material/EmojiEvents';
+import LinkIcon from '@mui/icons-material/Link';
+import MapIcon from '@mui/icons-material/Map';
+import MyLocationIcon from '@mui/icons-material/MyLocation';
+import NotesIcon from '@mui/icons-material/Notes';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import SearchIcon from '@mui/icons-material/Search';
+import TranslateIcon from '@mui/icons-material/Translate';
+import FlagIcon from '@mui/icons-material/Flag';
 import {
   useEvents,
   type AlertSeverity,
@@ -90,7 +89,7 @@ import {
 import { useLocations } from '../hooks/useLocations';
 import { useOrganizers } from '../hooks/useOrganizers';
 import { useTrails, type Trail } from '../hooks/useTrails';
-import { formatMinutesToHHmm, parseHHmmToMinutes } from '../utils/cutoffTime';
+import { formatMinutesToHHmm, parseHHmmToMinutes, normalizeCutoffTimeInput, normalizeCutoffTimeOnBlur } from '../utils/cutoffTime';
 import { trimToUndefined } from '../utils/strings';
 import { hashText } from '../utils/translationHash';
 import BilingualTextField from '../components/BilingualTextField';
@@ -113,6 +112,8 @@ interface EventListProps {
   onEventIdConsumed?: () => void;
   initialCreate?: boolean;
   onInitialCreateConsumed?: () => void;
+  onNavigateToRaceManager?: (date: string) => void;
+  onViewEventDetail?: (slug: string) => void;
 }
 
 interface EventFormState {
@@ -181,6 +182,7 @@ interface RaceFormState {
   name: string;
   nameEn: string;
   distanceLabel: string;
+  distanceLabelEn: string;
   cutoffTime: string;
   description: string;
   descriptionEn: string;
@@ -280,9 +282,16 @@ function ordinal(value: number): string {
   return 'th';
 }
 
+function fmtDate(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-').map(Number);
+  const months = ['jan', 'feb', 'mar', 'apr', 'maí', 'jún', 'júl', 'ágú', 'sep', 'okt', 'nóv', 'des'];
+  return `${d}. ${months[(m ?? 1) - 1]} ${y}`;
+}
+
 function formatSchedule(rule: ScheduleRule | null): string {
   if (!rule) return '—';
-  if (rule.type === 'Fixed') return rule.date ?? '—';
+  if (rule.type === 'Fixed') return fmtDate(rule.date) || '—';
 
   if (rule.type === 'Yearly') {
     if (rule.dayOfMonth != null) {
@@ -319,58 +328,6 @@ function formatTimeLabel(value: string | null | undefined): string {
   return value ? value.slice(0, 5) : '—';
 }
 
-function normalizeCutoffTimeInput(value: string): string {
-  const compact = value.replace(/\s/g, '');
-  if (compact.includes(':')) {
-    const [rawHours, rawMinutes = ''] = compact.split(':', 2);
-    const hours = rawHours.replace(/\D/g, '').slice(0, 2);
-    const minutes = rawMinutes.replace(/\D/g, '').slice(0, 2);
-    if (!hours && !minutes) return '';
-    if (!hours) return `0:${minutes}`;
-    return `${hours}:${minutes}`;
-  }
-
-  const digits = compact.replace(/\D/g, '').slice(0, 4);
-  if (!digits) return '';
-  if (digits.length <= 2) return digits;
-  if (digits.length === 3) return `${digits.slice(0, 1)}:${digits.slice(1)}`;
-  return `${digits.slice(0, 2)}:${digits.slice(2)}`;
-}
-
-function normalizeCutoffTimeOnBlur(value: string): string {
-  const compact = value.replace(/\s/g, '');
-  const colonMatch = /^(\d{1,2}):(\d{1,2})$/.exec(compact);
-  if (colonMatch) {
-    const hours = Number(colonMatch[1]);
-    const minutes = Number(colonMatch[2]);
-    if (!Number.isFinite(hours) || !Number.isFinite(minutes) || minutes > 59) {
-      return value;
-    }
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-  }
-
-  const digits = compact.replace(/\D/g, '').slice(0, 4);
-  if (!digits) return '';
-
-  let hours = 0;
-  let minutes = 0;
-
-  if (digits.length <= 2) {
-    hours = Number(digits);
-  } else if (digits.length === 3) {
-    hours = Number(digits.slice(0, 1));
-    minutes = Number(digits.slice(1));
-  } else {
-    hours = Number(digits.slice(0, 2));
-    minutes = Number(digits.slice(2));
-  }
-
-  if (!Number.isFinite(hours) || !Number.isFinite(minutes) || minutes > 59) {
-    return value;
-  }
-
-  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-}
 
 function formatDaysUntil(daysUntil: number | null): string | null {
   if (daysUntil == null) return null;
@@ -614,6 +571,7 @@ function createEmptyRaceForm(eventEditionId = '', sortOrder = 0): RaceFormState 
     name: '',
     nameEn: '',
     distanceLabel: '',
+    distanceLabelEn: '',
     cutoffTime: '',
     description: '',
     descriptionEn: '',
@@ -722,6 +680,7 @@ function buildRaceForm(race: RaceDto): RaceFormState {
     name: race.name,
     nameEn: race.nameEn ?? '',
     distanceLabel: race.distanceLabel ?? '',
+    distanceLabelEn: race.distanceLabelEn ?? '',
     cutoffTime: formatMinutesToHHmm(race.cutoffMinutes) ?? '',
     description: race.description ?? '',
     descriptionEn: race.descriptionEn ?? '',
@@ -800,15 +759,21 @@ interface SortableRaceItemProps {
   onDuplicate: () => void;
   onDelete: () => void;
   onCycleTicketStatus: () => void;
+  onCycleRaceStatus: () => void;
+  onCopyDate: (date: string) => void;
+  editionDate: string | null;
+  siblingDates: string[];
   ticketLoading: boolean;
+  raceStatusLoading: boolean;
   staleTx: boolean;
   getIcon: (trailId: string | null) => string;
   formatDateLabel: (d: string | null | undefined, fallback: string) => string;
   formatTimeLabel: (t: string | null | undefined) => string;
 }
 
-function SortableRaceItem({ race, onEdit, onDuplicate, onDelete, onCycleTicketStatus, ticketLoading, staleTx, getIcon, formatDateLabel, formatTimeLabel }: SortableRaceItemProps) {
+function SortableRaceItem({ race, onEdit, onDuplicate, onDelete, onCycleTicketStatus, onCycleRaceStatus, onCopyDate, editionDate, siblingDates, ticketLoading, raceStatusLoading, staleTx, getIcon, formatDateLabel, formatTimeLabel }: SortableRaceItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: race.id });
+  const [copyDateAnchor, setCopyDateAnchor] = useState<HTMLElement | null>(null);
 
   return (
     <ListItem
@@ -847,7 +812,9 @@ function SortableRaceItem({ race, onEdit, onDuplicate, onDelete, onCycleTicketSt
             )}
             {race.distanceLabel && <Chip label={race.distanceLabel} size="small" variant="outlined" />}
             {race.activityType && <Chip label={`${ACTIVITY_ICONS[race.activityType] ?? '🏅'} ${race.activityType}`} size="small" variant="outlined" color={ACTIVITY_TYPE_COLORS[race.activityType] ?? 'default'} />}
-            <Chip label={race.status} size="small" color={getRaceStatusColor(race.status)} />
+            <Tooltip title={raceStatusLoading ? 'Updating…' : 'Click to cycle race status'}>
+              <Chip label={race.status} size="small" color={getRaceStatusColor(race.status)} onClick={raceStatusLoading ? undefined : onCycleRaceStatus} disabled={raceStatusLoading} sx={{ cursor: raceStatusLoading ? 'default' : 'pointer' }} />
+            </Tooltip>
             <Tooltip title={ticketLoading ? 'Updating…' : 'Click to cycle ticket status'}>
               <Chip label={race.ticketStatus} size="small" color={getTicketStatusColor(race.ticketStatus)} variant="outlined" onClick={ticketLoading ? undefined : onCycleTicketStatus} disabled={ticketLoading} sx={{ cursor: ticketLoading ? 'default' : 'pointer' }} />
             </Tooltip>
@@ -862,6 +829,43 @@ function SortableRaceItem({ race, onEdit, onDuplicate, onDelete, onCycleTicketSt
                 ? `${formatDateLabel(race.dateOfRace, '')}${race.startTime ? ` • ${formatTimeLabel(race.startTime)}` : ''}`
                 : 'Date missing'}
             />
+            {!race.dateOfRace && (() => {
+              const sources: { date: string; label: string }[] = [
+                ...(editionDate ? [{ date: editionDate, label: `Parent: ${formatDateLabel(editionDate, editionDate)}` }] : []),
+                ...siblingDates.filter(d => d !== editionDate).map(d => ({ date: d, label: `Sibling: ${formatDateLabel(d, d)}` })),
+              ];
+              if (sources.length === 0) return null;
+              const onlyParent = sources.length === 1 && sources[0].date === editionDate;
+              const onlySibling = sources.length === 1 && sources[0].date !== editionDate;
+              const tooltipText = onlyParent
+                ? `Copy date from parent (${formatDateLabel(editionDate!, editionDate!)})`
+                : onlySibling
+                  ? `Copy date from sibling (${formatDateLabel(siblingDates[0], siblingDates[0])})`
+                  : 'Copy date from parent / sibling';
+              return (
+                <>
+                  <Tooltip title={tooltipText}>
+                    <Chip
+                      size="small"
+                      variant="outlined"
+                      color="info"
+                      label={onlyParent ? 'Copy date from parent' : onlySibling ? 'Copy date from sibling' : 'Copy date'}
+                      onClick={sources.length === 1
+                        ? () => onCopyDate(sources[0].date)
+                        : (e) => setCopyDateAnchor(e.currentTarget)}
+                      sx={{ cursor: 'pointer' }}
+                    />
+                  </Tooltip>
+                  <Menu anchorEl={copyDateAnchor} open={Boolean(copyDateAnchor)} onClose={() => setCopyDateAnchor(null)}>
+                    {sources.map(s => (
+                      <MenuItem key={s.date} onClick={() => { onCopyDate(s.date); setCopyDateAnchor(null); }}>
+                        {s.label}
+                      </MenuItem>
+                    ))}
+                  </Menu>
+                </>
+              );
+            })()}
             <Chip
               size="small"
               variant={race.trailId ? 'outlined' : 'filled'}
@@ -1025,7 +1029,7 @@ function TrailStartPicker({ trailsWithCoords, onPick }: TrailPickerProps) {
 
 const PUBLIC_SITE_URL = ((import.meta.env.VITE_PUBLIC_SITE_URL ?? '') as string).replace(/\/$/, '');
 
-export default function EventList({ onNotify, initialEventId, onEventIdConsumed, initialCreate, onInitialCreateConsumed }: EventListProps) {
+export default function EventList({ onNotify, initialEventId, onEventIdConsumed, initialCreate, onInitialCreateConsumed, onNavigateToRaceManager, onViewEventDetail }: EventListProps) {
   const {
     events,
     loading,
@@ -1033,10 +1037,13 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
     refresh: refreshEvents,
     createEvent,
     updateEvent,
+    updateEventSilently,
+    patchEventLocally,
     deleteEvent,
     getEvent,
     createEdition,
     updateEdition,
+    updateEditionSilently,
     deleteEdition,
     generateEditionsForSeason,
     createRace,
@@ -1086,6 +1093,14 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
   const [bulkDatesEditionYear, setBulkDatesEditionYear] = useState<number | null>(null);
   const [pendingDateShift, setPendingDateShift] = useState<{ offsetDays: number; races: RaceDto[] } | null>(null);
   const [showOlderEditions, setShowOlderEditions] = useState(false);
+  const visibleEditions = useMemo(() => {
+    if (!expandedDetail) return null;
+    const currentYear = new Date().getFullYear();
+    const sorted = [...expandedDetail.editions].sort(sortEditions);
+    const older = sorted.filter(ed => (ed.year ?? 0) < currentYear && (!(ed.endDate ?? ed.date) || isPastDate(ed.endDate ?? ed.date ?? '')));
+    const visible = showOlderEditions ? sorted : sorted.filter(ed => !older.includes(ed));
+    return { visible, hiddenCount: older.length };
+  }, [expandedDetail, showOlderEditions]);
   const [showAttentionPanel, setShowAttentionPanel] = useState(true);
   const [attentionFilter, setAttentionFilter] = useState<'noEdition' | 'seriesMissingReg' | 'pastActive' | null>(null);
   const [urlPopover, setUrlPopover] = useState<{
@@ -1101,6 +1116,8 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
     notesEn: string;
   } | null>(null);
   const [cyclingTicketIds, setCyclingTicketIds] = useState<Set<string>>(new Set());
+  const [cyclingRaceStatusIds, setCyclingRaceStatusIds] = useState<Set<string>>(new Set());
+  const [copyingDateIds, setCopyingDateIds] = useState<Set<string>>(new Set());
   const [cyclingRegIds, setCyclingRegIds] = useState<Set<string>>(new Set());
   const [cyclingStatusIds, setCyclingStatusIds] = useState<Set<string>>(new Set());
   const [copyRacesConfirm, setCopyRacesConfirm] = useState<{ edition: EventEditionDto; source: EventEditionDto } | null>(null);
@@ -1404,16 +1421,35 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
     setShowRaceDialog(true);
   };
 
+  const patchRaceInDetail = (raceId: string, patch: Partial<RaceDto>) => {
+    setExpandedDetail(prev => prev ? {
+      ...prev,
+      editions: prev.editions.map(ed => ({
+        ...ed,
+        races: ed.races.map(r => r.id === raceId ? { ...r, ...patch } : r),
+      })),
+    } : prev);
+  };
+
+  const patchEditionInDetail = (editionId: string, patch: Partial<EventEditionDto>) => {
+    setExpandedDetail(prev => prev ? {
+      ...prev,
+      editions: prev.editions.map(ed => ed.id === editionId ? { ...ed, ...patch } : ed),
+    } : prev);
+  };
+
   const handleCycleTicketStatus = async (race: RaceDto) => {
     if (cyclingTicketIds.has(race.id)) return;
     const cycle: TicketStatus[] = ['NotStarted', 'Available', 'AlmostSoldOut', 'SoldOut', 'Closed'];
     const next = cycle[(cycle.indexOf(race.ticketStatus as TicketStatus) + 1) % cycle.length] ?? 'Available';
+    patchRaceInDetail(race.id, { ticketStatus: next });
     setCyclingTicketIds(prev => new Set(prev).add(race.id));
     try {
       await updateRace(race.id, {
         trailId: race.trailId ?? null,
         name: race.name,
         distanceLabel: race.distanceLabel ?? undefined,
+        distanceLabelEn: race.distanceLabelEn ?? undefined,
         cutoffMinutes: race.cutoffMinutes ?? null,
         description: race.description ?? undefined,
         status: race.status,
@@ -1427,11 +1463,75 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
         dateOfRace: race.dateOfRace ?? null,
         startTime: race.startTime ?? null,
       });
-      await refreshExpandedEvent();
     } catch {
+      patchRaceInDetail(race.id, { ticketStatus: race.ticketStatus });
       onNotify('Failed to update ticket status', 'error');
     } finally {
       setCyclingTicketIds(prev => { const s = new Set(prev); s.delete(race.id); return s; });
+    }
+  };
+
+  const handleCycleRaceStatus = async (race: RaceDto) => {
+    if (cyclingRaceStatusIds.has(race.id)) return;
+    const cycle: RaceStatus[] = ['Active', 'Completed', 'Hidden', 'Cancelled'];
+    const next = cycle[(cycle.indexOf(race.status as RaceStatus) + 1) % cycle.length] ?? 'Active';
+    patchRaceInDetail(race.id, { status: next });
+    setCyclingRaceStatusIds(prev => new Set(prev).add(race.id));
+    try {
+      await updateRace(race.id, {
+        trailId: race.trailId ?? null,
+        name: race.name,
+        distanceLabel: race.distanceLabel ?? undefined,
+        distanceLabelEn: race.distanceLabelEn ?? undefined,
+        cutoffMinutes: race.cutoffMinutes ?? null,
+        description: race.description ?? undefined,
+        status: next,
+        sortOrder: race.sortOrder,
+        ticketStatus: race.ticketStatus,
+        maxParticipants: race.maxParticipants ?? null,
+        itraPoints: race.itraPoints ?? null,
+        certifiedBy: race.certifiedBy ?? undefined,
+        prizeMoney: race.prizeMoney,
+        championshipCategory: race.championshipCategory ?? undefined,
+        dateOfRace: race.dateOfRace ?? null,
+        startTime: race.startTime ?? null,
+      });
+    } catch {
+      patchRaceInDetail(race.id, { status: race.status });
+      onNotify('Failed to update race status', 'error');
+    } finally {
+      setCyclingRaceStatusIds(prev => { const s = new Set(prev); s.delete(race.id); return s; });
+    }
+  };
+
+  const handleCopyRaceDate = async (race: RaceDto, date: string) => {
+    if (copyingDateIds.has(race.id)) return;
+    setCopyingDateIds(prev => new Set(prev).add(race.id));
+    patchRaceInDetail(race.id, { dateOfRace: date });
+    try {
+      await updateRace(race.id, {
+        trailId: race.trailId ?? null,
+        name: race.name,
+        distanceLabel: race.distanceLabel ?? undefined,
+        distanceLabelEn: race.distanceLabelEn ?? undefined,
+        cutoffMinutes: race.cutoffMinutes ?? null,
+        description: race.description ?? undefined,
+        status: race.status,
+        sortOrder: race.sortOrder,
+        ticketStatus: race.ticketStatus,
+        maxParticipants: race.maxParticipants ?? null,
+        itraPoints: race.itraPoints ?? null,
+        certifiedBy: race.certifiedBy ?? undefined,
+        prizeMoney: race.prizeMoney,
+        championshipCategory: race.championshipCategory ?? undefined,
+        dateOfRace: date,
+        startTime: race.startTime ?? null,
+      });
+    } catch {
+      patchRaceInDetail(race.id, { dateOfRace: race.dateOfRace });
+      onNotify('Failed to copy date', 'error');
+    } finally {
+      setCopyingDateIds(prev => { const s = new Set(prev); s.delete(race.id); return s; });
     }
   };
 
@@ -1457,6 +1557,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
         trailId,
         name: race.name,
         distanceLabel: race.distanceLabel ?? undefined,
+        distanceLabelEn: race.distanceLabelEn ?? undefined,
         cutoffMinutes: race.cutoffMinutes ?? null,
         description: race.description ?? undefined,
         status: race.status,
@@ -1488,6 +1589,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
           trailId: race.trailId ?? null,
           name: race.name,
           distanceLabel: race.distanceLabel ?? undefined,
+          distanceLabelEn: race.distanceLabelEn ?? undefined,
           cutoffMinutes: race.cutoffMinutes ?? null,
           description: race.description ?? undefined,
           status: 'Completed',
@@ -1513,9 +1615,11 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
     if (cyclingStatusIds.has(event.id)) return;
     if (event.status !== 'Unconfirmed' && event.status !== 'Confirmed') return;
     const next: EventStatus = event.status === 'Unconfirmed' ? 'Confirmed' : 'Unconfirmed';
+    patchEventLocally(event.id, { status: next });
+    if (expandedEventId === event.id) setExpandedDetail(prev => prev ? { ...prev, status: next } : prev);
     setCyclingStatusIds(prev => new Set(prev).add(event.id));
     try {
-      await updateEvent(event.id, {
+      await updateEventSilently(event.id, {
         name: event.name,
         nameEn: event.nameEn ?? undefined,
         description: event.description ?? undefined,
@@ -1537,8 +1641,9 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
         gpxPointLng: event.gpxPointLng ?? null,
         translationHashes: event.translationHashes,
       });
-      if (expandedEventId === event.id) await refreshExpandedEvent();
     } catch {
+      patchEventLocally(event.id, { status: event.status });
+      if (expandedEventId === event.id) setExpandedDetail(prev => prev ? { ...prev, status: event.status as EventStatus } : prev);
       onNotify('Failed to update event status', 'error');
     } finally {
       setCyclingStatusIds(prev => { const s = new Set(prev); s.delete(event.id); return s; });
@@ -1714,6 +1819,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
                 trailId: race.trailId ?? null,
                 name: race.name,
                 distanceLabel: race.distanceLabel ?? undefined,
+                distanceLabelEn: race.distanceLabelEn ?? undefined,
                 cutoffMinutes: race.cutoffMinutes ?? null,
                 description: race.description ?? undefined,
                 status: 'Active',
@@ -1878,6 +1984,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
         name: raceForm.name.trim(),
         nameEn: trimToUndefined(raceForm.nameEn),
         distanceLabel: trimToUndefined(raceForm.distanceLabel),
+        distanceLabelEn: trimToUndefined(raceForm.distanceLabelEn),
         cutoffMinutes: parsedCutoffMinutes,
         description: trimToUndefined(raceForm.description),
         descriptionEn: trimToUndefined(raceForm.descriptionEn),
@@ -1914,6 +2021,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
           name: input.name,
           nameEn: input.nameEn,
           distanceLabel: input.distanceLabel,
+          distanceLabelEn: input.distanceLabelEn,
           cutoffMinutes: input.cutoffMinutes,
           description: input.description,
           descriptionEn: input.descriptionEn,
@@ -1958,6 +2066,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
                 trailId: input.trailId,
                 name: isSeries ? r.name : input.name,
                 distanceLabel: input.distanceLabel,
+                distanceLabelEn: input.distanceLabelEn,
                 cutoffMinutes: input.cutoffMinutes,
                 description: input.description,
                 status: input.status,
@@ -2035,6 +2144,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
           trailId: race.trailId ?? null,
           name: race.name,
           distanceLabel: race.distanceLabel ?? undefined,
+          distanceLabelEn: race.distanceLabelEn ?? undefined,
           cutoffMinutes: race.cutoffMinutes ?? null,
           description: race.description ?? undefined,
           status: 'Active',
@@ -2161,9 +2271,10 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
     if (cyclingRegIds.has(edition.id)) return;
     const cycle: RegistrationStatus[] = ['NotStarted', 'Open', 'Closed'];
     const next = cycle[(cycle.indexOf(edition.registrationStatus) + 1) % cycle.length];
+    patchEditionInDetail(edition.id, { registrationStatus: next });
     setCyclingRegIds(prev => new Set(prev).add(edition.id));
     try {
-      await updateEdition(edition.id, {
+      await updateEditionSilently(edition.id, {
         year: edition.year ?? null,
         date: edition.date ?? null,
         endDate: edition.endDate ?? null,
@@ -2177,8 +2288,8 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
         trailId: edition.trailId ?? null,
         translationHashes: edition.translationHashes,
       });
-      await refreshExpandedEvent();
     } catch (err) {
+      patchEditionInDetail(edition.id, { registrationStatus: edition.registrationStatus });
       onNotify(err instanceof Error ? err.message : 'Failed to update status', 'error');
     } finally {
       setCyclingRegIds(prev => { const s = new Set(prev); s.delete(edition.id); return s; });
@@ -2295,6 +2406,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
           trailId: race.trailId ?? null,
           name: race.name,
           distanceLabel: race.distanceLabel ?? undefined,
+          distanceLabelEn: race.distanceLabelEn ?? undefined,
           cutoffMinutes: race.cutoffMinutes ?? null,
           description: race.description ?? undefined,
           status: race.status,
@@ -2325,6 +2437,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
           trailId: race.trailId ?? null,
           name: race.name,
           distanceLabel: race.distanceLabel ?? undefined,
+          distanceLabelEn: race.distanceLabelEn ?? undefined,
           cutoffMinutes: race.cutoffMinutes ?? null,
           description: race.description ?? undefined,
           status: race.status,
@@ -2369,6 +2482,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
           trailId: race.trailId ?? null,
           name: race.name,
           distanceLabel: race.distanceLabel ?? undefined,
+          distanceLabelEn: race.distanceLabelEn ?? undefined,
           cutoffMinutes: race.cutoffMinutes ?? null,
           description: race.description ?? undefined,
           status: race.status,
@@ -2633,7 +2747,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
                   <TableCell>
                     {event.nextEditionDate ? (
                       <Box>
-                        <Typography variant="body2">{event.nextEditionDate}</Typography>
+                        <Typography variant="body2">{fmtDate(event.nextEditionDate)}</Typography>
                         {formatDaysUntil(event.daysUntil) && (event.daysUntil == null || event.daysUntil >= 0) && (
                           <Chip
                             label={formatDaysUntil(event.daysUntil)}
@@ -2682,7 +2796,14 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
                     </Tooltip>
                   </TableCell>
                   <TableCell align="center">
-                    <Chip label={event.editionCount} size="small" variant="outlined" />
+                    <Stack direction="row" spacing={0.5} justifyContent="center" alignItems="center">
+                      <Chip label={event.editionCount} size="small" variant="outlined" />
+                      {event.editionEffectiveCancelled && (
+                        <Tooltip title="Current/upcoming edition is cancelled">
+                          <Chip label="Cancelled" size="small" color="error" />
+                        </Tooltip>
+                      )}
+                    </Stack>
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" color="text.secondary">{event.locationName ?? '—'}</Typography>
@@ -2697,6 +2818,13 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
                       <Tooltip title="View on public site">
                         <IconButton size="small" component="a" href={`${PUBLIC_SITE_URL}/events/${event.slug}`} target="_blank" rel="noopener noreferrer">
                           <OpenInNewIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    {onViewEventDetail && (
+                      <Tooltip title="Editions & races">
+                        <IconButton size="small" onClick={() => onViewEventDetail(event.slug)}>
+                          <OpenInNewIcon fontSize="small" sx={{ color: 'primary.main' }} />
                         </IconButton>
                       </Tooltip>
                     )}
@@ -2824,11 +2952,8 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
                                   No editions yet. Click "Add Edition" to create the first one.
                                 </Typography>
                               ) : (() => {
-                                const currentYear = new Date().getFullYear();
-                                const sorted = [...expandedDetail.editions].sort(sortEditions);
-                                const older = sorted.filter(ed => (ed.year ?? 0) < currentYear && (!(ed.endDate ?? ed.date) || isPastDate(ed.endDate ?? ed.date ?? '')));
-                                const visible = showOlderEditions ? sorted : sorted.filter(ed => !older.includes(ed));
-                                const hiddenCount = older.length;
+                                if (!visibleEditions) return null;
+                                const { visible, hiddenCount } = visibleEditions;
                                 return (
                                 <>
                                 {visible.map((edition, idx) => (
@@ -2919,6 +3044,13 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
                                         </Box>
                                       </Box>
                                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                        {onNavigateToRaceManager && (edition.date || edition.endDate) && (
+                                          <Tooltip title={`Open in Race Manager (${edition.date ?? edition.endDate})`}>
+                                            <IconButton size="small" onClick={() => onNavigateToRaceManager(edition.date ?? edition.endDate ?? '')}>
+                                              <FlagIcon fontSize="small" />
+                                            </IconButton>
+                                          </Tooltip>
+                                        )}
                                         <Tooltip title={edition.notes ? `Notes: ${edition.notes.slice(0, 60)}${edition.notes.length > 60 ? '…' : ''}` : 'Add notes'}>
                                           <IconButton size="small" color={edition.notes ? 'primary' : 'default'} onClick={(e) => setNotesPopover({ anchorEl: e.currentTarget, edition, notes: edition.notes ?? '', notesEn: edition.notesEn ?? '' })}>
                                             <NotesIcon fontSize="small" />
@@ -3017,7 +3149,12 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
                                                     onDuplicate={() => openDuplicateRace(race)}
                                                     onDelete={() => handleDeleteRace(race)}
                                                     onCycleTicketStatus={() => handleCycleTicketStatus(race)}
+                                                    onCycleRaceStatus={() => handleCycleRaceStatus(race)}
+                                                    onCopyDate={(date) => handleCopyRaceDate(race, date)}
+                                                    editionDate={edition.date ?? null}
+                                                    siblingDates={[...new Set(edition.races.filter(r => r.id !== race.id && r.dateOfRace).map(r => r.dateOfRace!))]}
                                                     ticketLoading={cyclingTicketIds.has(race.id)}
+                                                    raceStatusLoading={cyclingRaceStatusIds.has(race.id)}
                                                     staleTx={raceHasStaleTx(race)}
                                                     getIcon={getTrailActivityIcon}
                                                     formatDateLabel={formatDateLabel}
@@ -3672,16 +3809,16 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
               required
               fullWidth
             />
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 140px' }, gap: 2 }}>
-              <Autocomplete
-                freeSolo
-                options={[...new Set(
-                  (expandedDetail?.editions ?? []).flatMap(ed => ed.races).map(r => r.distanceLabel).filter((d): d is string => !!d)
-                )].sort()}
-                value={raceForm.distanceLabel}
-                onInputChange={(_, val) => setRaceField('distanceLabel', val)}
-                renderInput={(params) => <TextField {...params} label="Distance Label" placeholder="e.g. 50K" />}
-              />
+            <BilingualTextField
+              label="Distance Label"
+              placeholder="e.g. 50K"
+              valueIs={raceForm.distanceLabel}
+              valueEn={raceForm.distanceLabelEn}
+              onChangeIs={(v) => setRaceField('distanceLabel', v)}
+              onChangeEn={(v) => setRaceField('distanceLabelEn', v)}
+              fullWidth
+            />
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 140px' }, gap: 2 }}>
               <TextField
                 label="Cutoff Time (hrs)"
                 value={raceForm.cutoffTime}

@@ -15,7 +15,9 @@ public record CalendarEventDto(
     string? EditionTitle,
     int RaceCount,
     string Type,
-    List<string>? ActivityTypes = null
+    List<string>? ActivityTypes = null,
+    string? RaceName = null,
+    List<string>? Distances = null
 );
 
 public record CalendarDayDto(
@@ -51,6 +53,7 @@ public class GetEventCalendarQueryHandler : IRequestHandler<GetEventCalendarQuer
 
         var editions = await _context.EventEditions
             .AsNoTracking()
+            .AsSplitQuery()
             .Include(ed => ed.Event)
                 .ThenInclude(ev => ev.Location)
             .Include(ed => ed.Races)
@@ -60,22 +63,57 @@ public class GetEventCalendarQueryHandler : IRequestHandler<GetEventCalendarQuer
                 ed.Date <= request.To &&
                 (ed.EndDate.HasValue ? ed.EndDate >= request.From : ed.Date >= request.From) &&
                 ed.Event.Status != EventStatus.Hidden &&
-                ed.Event.Status != EventStatus.Unlisted)
+                ed.Event.Status != EventStatus.Unlisted &&
+                ed.Status != EditionStatus.Cancelled)
             .ToListAsync(cancellationToken);
 
         var dayMap = new Dictionary<DateOnly, List<CalendarEventDto>>();
 
         foreach (var ed in editions)
         {
-            var startDate = ed.Date!.Value;
-            var endDate = ed.EndDate ?? startDate;
-            var activityTypes = ed.Races
-                .Where(r => r.Status != RaceStatus.Cancelled)
+            var activeRaces = ed.Races.Where(r => r.Status != RaceStatus.Cancelled && r.Status != RaceStatus.Hidden).ToList();
+            var activityTypes = activeRaces
                 .Select(r => r.ActivityType?.ToString() ?? r.Trail?.ActivityTypeId.ToString())
                 .Where(a => a != null)
                 .Distinct()
                 .OrderBy(a => a)
                 .Cast<string>()
+                .ToList();
+
+            // Series events: emit one entry per race on its own date
+            if (ed.Event.Type == EventType.Series)
+            {
+                var racesWithDate = activeRaces.Where(r => r.DateOfRace.HasValue).OrderBy(r => r.DateOfRace).ToList();
+                foreach (var race in racesWithDate)
+                {
+                    var day = race.DateOfRace!.Value;
+                    if (day < request.From || day > request.To) continue;
+                    if (!dayMap.TryGetValue(day, out var raceEvents))
+                    {
+                        raceEvents = [];
+                        dayMap[day] = raceEvents;
+                    }
+                    raceEvents.Add(new CalendarEventDto(
+                        ed.Event.Name,
+                        ed.Event.NameEn,
+                        ed.Event.Slug,
+                        ed.Event.Location?.Name,
+                        ed.Title,
+                        1,
+                        ed.Event.Type.ToString(),
+                        activityTypes.Count > 0 ? activityTypes : null,
+                        race.Name
+                    ));
+                }
+                continue;
+            }
+
+            var startDate = ed.Date!.Value;
+            var endDate = ed.EndDate ?? startDate;
+            var distances = activeRaces
+                .OrderBy(r => r.SortOrder)
+                .Where(r => r.DistanceLabel != null)
+                .Select(r => r.DistanceLabel!)
                 .ToList();
 
             var dto = new CalendarEventDto(
@@ -84,9 +122,10 @@ public class GetEventCalendarQueryHandler : IRequestHandler<GetEventCalendarQuer
                 ed.Event.Slug,
                 ed.Event.Location?.Name,
                 ed.Title,
-                ed.Races.Count,
+                activeRaces.Count,
                 ed.Event.Type.ToString(),
-                activityTypes.Count > 0 ? activityTypes : null
+                activityTypes.Count > 0 ? activityTypes : null,
+                Distances: distances.Count > 0 ? distances : null
             );
 
             for (var day = startDate; day <= endDate; day = day.AddDays(1))

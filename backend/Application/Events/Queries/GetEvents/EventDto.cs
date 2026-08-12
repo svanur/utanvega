@@ -14,6 +14,7 @@ public record SeriesRaceDto(
     DateOnly? DateOfRace,
     TimeOnly? StartTime,
     string? DistanceLabel,
+    string? DistanceLabelEn,
     string TicketStatus,
     string? RegistrationUrl
 );
@@ -60,7 +61,9 @@ public record EventSummaryDto(
     string? TerrainType = null,
     bool HasFutureEdition = false,
     DateOnly? EndDisplayDate = null,
-    List<string>? ActivityTypes = null
+    List<string>? ActivityTypes = null,
+    string? EditionStatus = null,
+    bool EditionEffectiveCancelled = false
 );
 
 public record RaceDto(
@@ -72,6 +75,7 @@ public record RaceDto(
     string Name,
     string? NameEn,
     string? DistanceLabel,
+    string? DistanceLabelEn,
     int? CutoffMinutes,
     string? Description,
     string? DescriptionEn,
@@ -115,5 +119,7 @@ public record EventEditionDto(
     List<RaceDto> Races,
     DateTime CreatedAt,
     DateTime? UpdatedAt,
-    Dictionary<string, string>? TranslationHashes = null
+    Dictionary<string, string>? TranslationHashes = null,
+    string Status = "Active",
+    bool EffectiveCancelled = false
 );

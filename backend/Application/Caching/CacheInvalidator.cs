@@ -32,6 +32,7 @@ public class CacheInvalidator : ICacheInvalidator
     {
         _cache.Remove(CacheKeys.LocationsAll);
         _cache.Remove(CacheKeys.LocationTree);
+        _cache.Remove(CacheKeys.LocationCentersAll);
         _cache.Remove(CacheKeys.Trails(false, true));
         _cache.Remove(CacheKeys.Trails(false, false));
         _cache.Remove(CacheKeys.Trails(true, false));
@@ -45,6 +46,7 @@ public class CacheInvalidator : ICacheInvalidator
     {
         _cache.Remove(CacheKeys.Events(false));
         _cache.Remove(CacheKeys.Events(true));
+        _cache.Remove(CacheKeys.EditionsHistoryYears);
 
         // Bump the version token so all cached calendar entries are effectively invalidated.
         var current = _cache.GetOrCreate(CacheKeys.EventVersion, e =>
@@ -56,7 +58,10 @@ public class CacheInvalidator : ICacheInvalidator
             new MemoryCacheEntryOptions { Priority = CacheItemPriority.NeverRemove });
 
         if (slug is not null)
-            _cache.Remove(CacheKeys.Event(slug));
+        {
+            _cache.Remove(CacheKeys.Event(slug, false));
+            _cache.Remove(CacheKeys.Event(slug, true));
+        }
     }
 
     public void InvalidateLeaderboard(string slug)

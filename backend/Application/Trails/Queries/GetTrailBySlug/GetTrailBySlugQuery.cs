@@ -35,6 +35,7 @@ public class GetTrailBySlugQueryHandler : IRequestHandler<GetTrailBySlugQuery, T
             .Include(t => t.TrailTags)
                 .ThenInclude(tt => tt.Tag)
             .AsNoTracking()
+            .AsSplitQuery()
             .FirstOrDefaultAsync(t => t.Slug == request.Slug && (t.Status == TrailStatus.Published || t.Status == TrailStatus.EventOnly), cancellationToken);
 
         if (trail == null)
@@ -45,6 +46,7 @@ public class GetTrailBySlugQueryHandler : IRequestHandler<GetTrailBySlugQuery, T
             .Include(r => r.EventEdition)
                 .ThenInclude(ed => ed.Event)
             .AsNoTracking()
+            .AsSplitQuery()
             .Where(r => r.TrailId == trail.Id
                 && r.Status != RaceStatus.Cancelled
                 && r.Status != RaceStatus.Hidden

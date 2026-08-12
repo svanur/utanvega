@@ -16,12 +16,14 @@ import HistoryIcon from '@mui/icons-material/History';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import BuildIcon from '@mui/icons-material/Build';
+import FlagIcon from '@mui/icons-material/Flag';
 import type { ChangeLogDto } from '../components/ChangeLogList';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import { apiFetch } from '../hooks/api';
 import type { PageKey } from '../types/PageKey';
 import type { EventSummaryDto } from '../hooks/useEvents';
 import type { Trail } from '../hooks/useTrails';
+import FeedbackIcon from '@mui/icons-material/Feedback';
 
 interface DashboardPageProps {
     onNewEvent: () => void;
@@ -50,6 +52,20 @@ interface AdminHealth {
     status: string;
     gitHash: string;
     timestampUtc: string;
+}
+
+interface FeedbackCounts {
+    total: number;
+    new: number;
+    reviewed: number;
+    closed: number;
+    avgResolutionHours: number | null;
+}
+
+interface FeedbackSummary {
+    items: unknown[];
+    total: number;
+    counts: FeedbackCounts;
 }
 
 function getTrailHealthScore(trail: Trail): number {
@@ -156,6 +172,7 @@ export default function DashboardPage({ onNewEvent, onUploadTrail, onNavigate }:
     const [changelog, setChangelog] = useState<ChangeLogDto[]>([]);
     const [changelogLoading, setChangelogLoading] = useState(true);
     const [backendHealth, setBackendHealth] = useState<AdminHealth | null>(null);
+    const [feedbackCounts, setFeedbackCounts] = useState<FeedbackCounts | null>(null);
     const [note, setNote] = useState(() => localStorage.getItem('admin_dashboard_note') ?? '');
     const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -192,6 +209,10 @@ export default function DashboardPage({ onNewEvent, onUploadTrail, onNavigate }:
 
         apiFetch<AdminHealth>('/api/v1/admin/health')
             .then(setBackendHealth)
+            .catch(() => {});
+
+        apiFetch<FeedbackSummary>('/api/v1/admin/feedback?pageSize=1')
+            .then(d => setFeedbackCounts(d.counts))
             .catch(() => {});
     }, []);
 
@@ -300,11 +321,11 @@ export default function DashboardPage({ onNewEvent, onUploadTrail, onNavigate }:
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
                     <QuickActionButton
-                        icon={<SearchIcon sx={{ fontSize: 28 }} />}
-                        label="Spotlight Search"
-                        description="Jump anywhere  (Ctrl+K)"
-                        onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
-                        color="inherit"
+                        icon={<FlagIcon sx={{ fontSize: 28 }} />}
+                        label="Race Manager"
+                        description="Setup & wrap-up race statuses"
+                        onClick={() => onNavigate('race-day')}
+                        color="secondary"
                     />
                 </Grid>
             </Grid>
@@ -533,6 +554,66 @@ export default function DashboardPage({ onNewEvent, onUploadTrail, onNavigate }:
                                 ))}
                             </List>
                         )}
+                    </Paper>
+                </Grid>
+
+                {/* Feedback */}
+                <Grid item xs={12} md={3}>
+                    <Paper elevation={2} sx={{ p: 2.5, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                        <Stack direction="row" alignItems="center" gap={1} mb={1}>
+                            <FeedbackIcon sx={{ color: 'warning.main', fontSize: 20 }} />
+                            <Typography variant="h6" fontWeight={600}>Feedback</Typography>
+                        </Stack>
+                        {feedbackCounts == null ? (
+                            <Stack gap={1}>{[1, 2, 3].map(i => <Skeleton key={i} variant="rounded" height={28} />)}</Stack>
+                        ) : (
+                            <Stack gap={1} sx={{ flexGrow: 1 }}>
+                                {feedbackCounts.new > 0 && (
+                                    <Box
+                                        component="button"
+                                        onClick={() => onNavigate('feedback')}
+                                        sx={{
+                                            display: 'flex', alignItems: 'center', gap: 1.5,
+                                            p: 1.5, borderRadius: 1, border: '1px solid', borderColor: 'warning.light',
+                                            cursor: 'pointer', background: 'none', width: '100%', textAlign: 'left',
+                                            transition: 'box-shadow 0.15s', '&:hover': { boxShadow: 2 },
+                                        }}
+                                    >
+                                        <FeedbackIcon sx={{ color: 'warning.main', flexShrink: 0 }} />
+                                        <Box flexGrow={1}>
+                                            <Typography variant="body2" fontWeight={600}>
+                                                {feedbackCounts.new} new item{feedbackCounts.new !== 1 ? 's' : ''}
+                                            </Typography>
+                                            <Typography variant="caption" color="text.secondary">Awaiting review</Typography>
+                                        </Box>
+                                        <Typography variant="caption" color="warning.dark" fontWeight={600}>→</Typography>
+                                    </Box>
+                                )}
+                                {feedbackCounts.new === 0 && (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1.5, borderRadius: 1, border: '1px solid', borderColor: 'success.light' }}>
+                                        <CheckCircleOutlineIcon sx={{ color: 'success.main', flexShrink: 0 }} />
+                                        <Typography variant="body2" fontWeight={600}>All caught up</Typography>
+                                    </Box>
+                                )}
+                                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 0.5 }}>
+                                    <Chip label={`${feedbackCounts.total} total`} size="small" variant="outlined" />
+                                    <Chip label={`${feedbackCounts.reviewed} reviewed`} size="small" color="info" variant="outlined" />
+                                    <Chip label={`${feedbackCounts.closed} closed`} size="small" variant="outlined" />
+                                </Box>
+                                {feedbackCounts.avgResolutionHours != null && (
+                                    <Typography variant="caption" color="text.secondary" sx={{ mt: 'auto', pt: 1 }}>
+                                        Avg resolution: {feedbackCounts.avgResolutionHours < 1
+                                            ? `${Math.round(feedbackCounts.avgResolutionHours * 60)}m`
+                                            : feedbackCounts.avgResolutionHours < 24
+                                                ? `${feedbackCounts.avgResolutionHours.toFixed(1)}h`
+                                                : `${Math.floor(feedbackCounts.avgResolutionHours / 24)}d`}
+                                    </Typography>
+                                )}
+                            </Stack>
+                        )}
+                        <Box mt={1.5} textAlign="right">
+                            <Button size="small" onClick={() => onNavigate('feedback')}>All feedback →</Button>
+                        </Box>
                     </Paper>
                 </Grid>
             </Grid>

@@ -14,7 +14,7 @@ public record TrailSimilarityMatch(Guid TrailId, string TrailName, double MatchP
 
 public record DetectedLocationResult(Guid Id, string Name, string Type, string Role, double DistanceMeters);
 
-public record CreateTrailFromGpxCommand(string? Name, string GpxXml, ActivityType ActivityType = ActivityType.TrailRunning) : IRequest<CreateTrailFromGpxResult>;
+public record CreateTrailFromGpxCommand(string? Name, string GpxXml, ActivityType ActivityType = ActivityType.TrailRunning, string? ActorUserId = null) : IRequest<CreateTrailFromGpxResult>;
 
 public class CreateTrailFromGpxCommandHandler : IRequestHandler<CreateTrailFromGpxCommand, CreateTrailFromGpxResult>
 {
@@ -46,7 +46,7 @@ public class CreateTrailFromGpxCommandHandler : IRequestHandler<CreateTrailFromG
         // Auto-detect and link locations by sampling the entire route
         var detectedLocations = await _locationDetector.DetectAndLinkAsync(trail, cancellationToken);
 
-        await _context.SaveChangesWithAuditAsync("system");
+        await _context.SaveChangesWithAuditAsync(request.ActorUserId);
         _cacheInvalidator.InvalidateTrail(trail.Slug);
         
         return new CreateTrailFromGpxResult(

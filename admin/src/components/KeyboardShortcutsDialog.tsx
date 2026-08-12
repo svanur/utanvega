@@ -24,19 +24,21 @@ const shortcutGroups: ShortcutGroup[] = [
     {
         title: 'Navigation  (press g, then the letter)',
         shortcuts: [
+            { keys: ['g', 'h'], description: 'Home' },
             { keys: ['g', 'e'], description: 'Events' },
             { keys: ['g', 't'], description: 'Trails' },
+            { keys: ['g', 'c'], description: 'Race Manager' },
             { keys: ['g', 'l'], description: 'Locations' },
             { keys: ['g', 'o'], description: 'Organizers' },
-            { keys: ['g', 'h'], description: 'Trail Health' },
+            { keys: ['g', 's'], description: 'Tags' },
+            { keys: ['g', 'f'], description: 'Features' },
+            { keys: ['g', 'r'], description: 'Trail Health' },
             { keys: ['g', 'v'], description: 'Event Health' },
             { keys: ['g', 'd'], description: 'Edition Health' },
-            { keys: ['g', 'i'], description: 'Translation Health' },
+            { keys: ['g', 'i'], description: 'Translations' },
+            { keys: ['g', 'b'], description: 'Feedback' },
             { keys: ['g', 'm'], description: 'Trail Map' },
-            { keys: ['g', 's'], description: 'Tags' },
             { keys: ['g', 'a'], description: 'Analytics' },
-            { keys: ['g', 'f'], description: 'Features' },
-            { keys: ['g', 'r'], description: 'Hero Themes' },
             { keys: ['g', 'n'], description: 'Sponsors' },
             { keys: ['g', 'p'], description: 'Pools' },
         ],
@@ -46,6 +48,13 @@ const shortcutGroups: ShortcutGroup[] = [
         shortcuts: [
             { keys: ['Ctrl', 'K'], description: 'Spotlight search' },
             { keys: ['/'], description: 'Focus search input' },
+        ],
+    },
+    {
+        title: 'Race Manager',
+        shortcuts: [
+            { keys: ['s'], description: 'Switch to Setup mode' },
+            { keys: ['w'], description: 'Switch to Wrap-up mode' },
         ],
     },
     {

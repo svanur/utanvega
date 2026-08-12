@@ -7,11 +7,16 @@ using Utanvega.Backend.Application.Events.Commands.CreateRace;
 using Utanvega.Backend.Application.Events.Commands.UpdateRace;
 using Utanvega.Backend.Application.Events.Commands.GenerateEditionsForSeason;
 using Utanvega.Backend.Core.Entities;
+using Utanvega.Backend.Tests;
 
 namespace backend.Tests.Validators;
 
-public class EventValidatorTests
+public class EventValidatorTests : IDisposable
 {
+    private readonly TestDbContextFactory _factory = new();
+
+    public void Dispose() => _factory.Dispose();
+
     // ─── CreateEventCommandValidator ───
 
     private readonly CreateEventCommandValidator _createEventValidator = new();
@@ -347,8 +352,11 @@ public class EventValidatorTests
     }
 
     // ─── CreateRaceCommandValidator ───
+    // These validators now query the DB (to check the parent edition's status), so they're
+    // constructed per-test against a fresh context. Tests that don't seed a matching edition/race
+    // rely on the async rule's default behavior for a not-found row (treated as not Cancelled).
 
-    private readonly CreateRaceCommandValidator _raceValidator = new();
+    private CreateRaceCommandValidator RaceValidator() => new(_factory.CreateContext());
 
     private static CreateRaceCommand ValidRaceCommand => new(
         EventEditionId: Guid.NewGuid(),
@@ -370,79 +378,113 @@ public class EventValidatorTests
     );
 
     [Fact]
-    public void CreateRace_ValidCommand_Passes()
+    public async Task CreateRace_ValidCommand_Passes()
     {
-        var result = _raceValidator.TestValidate(ValidRaceCommand);
+        var result = await RaceValidator().TestValidateAsync(ValidRaceCommand);
         result.ShouldNotHaveAnyValidationErrors();
     }
 
     [Fact]
-    public void CreateRace_EmptyEditionId_Fails()
+    public async Task CreateRace_EmptyEditionId_Fails()
     {
         var cmd = ValidRaceCommand with { EventEditionId = Guid.Empty };
-        var result = _raceValidator.TestValidate(cmd);
+        var result = await RaceValidator().TestValidateAsync(cmd);
         result.ShouldHaveValidationErrorFor(x => x.EventEditionId);
     }
 
     [Fact]
-    public void CreateRace_EmptyName_Fails()
+    public async Task CreateRace_EmptyName_Fails()
     {
         var cmd = ValidRaceCommand with { Name = "" };
-        var result = _raceValidator.TestValidate(cmd);
+        var result = await RaceValidator().TestValidateAsync(cmd);
         result.ShouldHaveValidationErrorFor(x => x.Name);
     }
 
     [Fact]
-    public void CreateRace_NegativeCutoff_Fails()
+    public async Task CreateRace_NegativeCutoff_Fails()
     {
         var cmd = ValidRaceCommand with { CutoffMinutes = -10 };
-        var result = _raceValidator.TestValidate(cmd);
+        var result = await RaceValidator().TestValidateAsync(cmd);
         result.ShouldHaveValidationErrorFor(x => x.CutoffMinutes);
     }
 
     [Fact]
-    public void CreateRace_NegativeSortOrder_Fails()
+    public async Task CreateRace_NegativeSortOrder_Fails()
     {
         var cmd = ValidRaceCommand with { SortOrder = -1 };
-        var result = _raceValidator.TestValidate(cmd);
+        var result = await RaceValidator().TestValidateAsync(cmd);
         result.ShouldHaveValidationErrorFor(x => x.SortOrder);
     }
 
     [Fact]
-    public void CreateRace_ItraPointsOutOfRange_Fails()
+    public async Task CreateRace_ItraPointsOutOfRange_Fails()
     {
         var cmd = ValidRaceCommand with { ItraPoints = 7 };
-        var result = _raceValidator.TestValidate(cmd);
+        var result = await RaceValidator().TestValidateAsync(cmd);
         result.ShouldHaveValidationErrorFor(x => x.ItraPoints);
     }
 
     [Fact]
-    public void CreateRace_NullItraPoints_Passes()
+    public async Task CreateRace_NullItraPoints_Passes()
     {
         var cmd = ValidRaceCommand with { ItraPoints = null };
-        var result = _raceValidator.TestValidate(cmd);
+        var result = await RaceValidator().TestValidateAsync(cmd);
         result.ShouldNotHaveValidationErrorFor(x => x.ItraPoints);
     }
 
     [Fact]
-    public void CreateRace_NegativePrizeMoney_Fails()
+    public async Task CreateRace_NegativePrizeMoney_Fails()
     {
         var cmd = ValidRaceCommand with { PrizeMoney = -500m };
-        var result = _raceValidator.TestValidate(cmd);
+        var result = await RaceValidator().TestValidateAsync(cmd);
         result.ShouldHaveValidationErrorFor(x => x.PrizeMoney);
     }
 
     [Fact]
-    public void CreateRace_InvalidTicketStatus_Fails()
+    public async Task CreateRace_InvalidTicketStatus_Fails()
     {
         var cmd = ValidRaceCommand with { TicketStatus = "NotValid" };
-        var result = _raceValidator.TestValidate(cmd);
+        var result = await RaceValidator().TestValidateAsync(cmd);
         result.ShouldHaveValidationErrorFor(x => x.TicketStatus);
+    }
+
+    [Fact]
+    public async Task CreateRace_UnderCancelledEdition_Fails()
+    {
+        var ev = new Event { Id = Guid.NewGuid(), Name = "Test Event", Slug = "test-event-car", Type = EventType.Race, Status = EventStatus.Confirmed };
+        var edition = new EventEdition { Id = Guid.NewGuid(), EventId = ev.Id, Status = EditionStatus.Cancelled, RegistrationStatus = RegistrationStatus.Closed };
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        var cmd = ValidRaceCommand with { EventEditionId = edition.Id };
+        var result = await RaceValidator().TestValidateAsync(cmd);
+        result.ShouldHaveValidationErrorFor(x => x.EventEditionId);
+    }
+
+    [Fact]
+    public async Task CreateRace_UnderActiveEdition_Passes()
+    {
+        var ev = new Event { Id = Guid.NewGuid(), Name = "Test Event", Slug = "test-event-rae", Type = EventType.Race, Status = EventStatus.Confirmed };
+        var edition = new EventEdition { Id = Guid.NewGuid(), EventId = ev.Id, Status = EditionStatus.Active, RegistrationStatus = RegistrationStatus.Open };
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        var cmd = ValidRaceCommand with { EventEditionId = edition.Id };
+        var result = await RaceValidator().TestValidateAsync(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.EventEditionId);
     }
 
     // ─── UpdateRaceCommandValidator ───
 
-    private readonly UpdateRaceCommandValidator _updateRaceValidator = new();
+    private UpdateRaceCommandValidator UpdateRaceValidator() => new(_factory.CreateContext());
 
     private UpdateRaceCommand ValidUpdateRaceCommand => new(
         Id: Guid.NewGuid(),
@@ -464,26 +506,69 @@ public class EventValidatorTests
     );
 
     [Fact]
-    public void UpdateRace_ValidCommand_Passes()
+    public async Task UpdateRace_ValidCommand_Passes()
     {
-        var result = _updateRaceValidator.TestValidate(ValidUpdateRaceCommand);
+        var result = await UpdateRaceValidator().TestValidateAsync(ValidUpdateRaceCommand);
         result.ShouldNotHaveAnyValidationErrors();
     }
 
     [Fact]
-    public void UpdateRace_EmptyId_Fails()
+    public async Task UpdateRace_EmptyId_Fails()
     {
         var cmd = ValidUpdateRaceCommand with { Id = Guid.Empty };
-        var result = _updateRaceValidator.TestValidate(cmd);
+        var result = await UpdateRaceValidator().TestValidateAsync(cmd);
         result.ShouldHaveValidationErrorFor(x => x.Id);
     }
 
     [Fact]
-    public void UpdateRace_NullItraPoints_Passes()
+    public async Task UpdateRace_NullItraPoints_Passes()
     {
         var cmd = ValidUpdateRaceCommand with { ItraPoints = null };
-        var result = _updateRaceValidator.TestValidate(cmd);
+        var result = await UpdateRaceValidator().TestValidateAsync(cmd);
         result.ShouldNotHaveValidationErrorFor(x => x.ItraPoints);
+    }
+
+    private async Task<(Event ev, EventEdition edition, Race race)> SeedRaceUnderEdition(EditionStatus editionStatus, RaceStatus raceStatus, string slugSuffix)
+    {
+        var ev = new Event { Id = Guid.NewGuid(), Name = "Test Event", Slug = $"test-event-{slugSuffix}", Type = EventType.Race, Status = EventStatus.Confirmed };
+        var edition = new EventEdition { Id = Guid.NewGuid(), EventId = ev.Id, Status = editionStatus, RegistrationStatus = RegistrationStatus.Closed };
+        var race = new Race { Id = Guid.NewGuid(), EventEditionId = edition.Id, Name = "Test Race", SortOrder = 0, Status = raceStatus, TicketStatus = TicketStatus.Closed };
+        using var ctx = _factory.CreateContext();
+        ctx.Events.Add(ev);
+        ctx.EventEditions.Add(edition);
+        ctx.Races.Add(race);
+        await ctx.SaveChangesAsync();
+        return (ev, edition, race);
+    }
+
+    [Fact]
+    public async Task UpdateRace_LeavingCancelled_WhileEditionCancelled_Fails()
+    {
+        var (_, _, race) = await SeedRaceUnderEdition(EditionStatus.Cancelled, RaceStatus.Cancelled, "urwlwec");
+
+        var cmd = ValidUpdateRaceCommand with { Id = race.Id, Status = "Active" };
+        var result = await UpdateRaceValidator().TestValidateAsync(cmd);
+        result.ShouldHaveValidationErrorFor(x => x.Status);
+    }
+
+    [Fact]
+    public async Task UpdateRace_StayingCancelled_WhileEditionCancelled_Passes()
+    {
+        var (_, _, race) = await SeedRaceUnderEdition(EditionStatus.Cancelled, RaceStatus.Cancelled, "ursclec");
+
+        var cmd = ValidUpdateRaceCommand with { Id = race.Id, Status = "Cancelled" };
+        var result = await UpdateRaceValidator().TestValidateAsync(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.Status);
+    }
+
+    [Fact]
+    public async Task UpdateRace_ChangingStatus_WhileEditionActive_Passes()
+    {
+        var (_, _, race) = await SeedRaceUnderEdition(EditionStatus.Active, RaceStatus.Active, "urcswea");
+
+        var cmd = ValidUpdateRaceCommand with { Id = race.Id, Status = "Completed" };
+        var result = await UpdateRaceValidator().TestValidateAsync(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.Status);
     }
 
     // ─── GenerateEditionsForSeasonCommandValidator ───

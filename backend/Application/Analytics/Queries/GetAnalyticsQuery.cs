@@ -1,11 +1,16 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Infrastructure.Persistence;
 
 namespace Utanvega.Backend.Application.Analytics.Queries;
 
-public record GetAnalyticsQuery : IRequest<AnalyticsDto>;
+public record GetAnalyticsQuery : IRequest<AnalyticsDto>, ICacheable
+{
+    public string CacheKey => CacheKeys.Analytics;
+    public TimeSpan CacheDuration => TimeSpan.FromMinutes(5);
+}
 
 public record AnalyticsDto(
     SummaryDto Summary,

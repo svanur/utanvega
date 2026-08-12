@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { apiFetch } from './api';
 
 export type DayOfWeek = 'Sunday' | 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
@@ -8,6 +8,7 @@ export type ActivityType = 'TrailRunning' | 'Running' | 'Cycling' | 'Hiking' | '
 export type EventStatus = 'Unconfirmed' | 'Confirmed' | 'Cancelled' | 'Hidden' | 'Unlisted';
 export type RegistrationStatus = 'NotStarted' | 'Open' | 'Closed';
 export type RaceStatus = 'Active' | 'Completed' | 'Cancelled' | 'Hidden';
+export type EditionStatus = 'Active' | 'Unconfirmed' | 'Cancelled' | 'Hidden';
 export type TicketStatus = 'Available' | 'AlmostSoldOut' | 'SoldOut' | 'Closed' | 'NotStarted' | 'Free';
 export type AlertSeverity = 'info' | 'success' | 'warning' | 'error';
 
@@ -36,6 +37,7 @@ export interface RaceDto {
     name: string;
     nameEn: string | null;
     distanceLabel: string | null;
+    distanceLabelEn: string | null;
     cutoffMinutes: number | null;
     description: string | null;
     descriptionEn: string | null;
@@ -77,6 +79,8 @@ export interface EventEditionDto {
     createdAt: string;
     updatedAt: string | null;
     translationHashes?: Record<string, string>;
+    status: EditionStatus;
+    effectiveCancelled: boolean;
 }
 
 export interface SeriesRaceDto {
@@ -85,6 +89,7 @@ export interface SeriesRaceDto {
     dateOfRace: string | null;
     startTime: string | null;
     distanceLabel: string | null;
+    distanceLabelEn: string | null;
     ticketStatus: string;
     registrationUrl: string | null;
 }
@@ -123,6 +128,8 @@ export interface EventSummaryDto {
     hasFutureEdition: boolean;
     endDisplayDate: string | null;
     translationHashes?: Record<string, string>;
+    editionStatus: EditionStatus | null;
+    editionEffectiveCancelled: boolean;
 }
 
 export interface EventDetailDto extends EventSummaryDto {
@@ -207,6 +214,10 @@ export interface UpdateEditionInput {
     registrationStatus: RegistrationStatus;
     trailId?: string | null;
     translationHashes?: Record<string, string>;
+    // Optional, patch-if-provided (unlike the other fields here, which are always resent as a full
+    // snapshot): most UpdateEditionInput callers don't touch edition status and must not accidentally
+    // reset it. Only pass this when you actually intend to change the status.
+    status?: EditionStatus;
 }
 
 export interface CreateRaceInput {
@@ -215,6 +226,7 @@ export interface CreateRaceInput {
     name: string;
     nameEn?: string;
     distanceLabel?: string;
+    distanceLabelEn?: string;
     cutoffMinutes?: number | null;
     description?: string;
     descriptionEn?: string;
@@ -238,6 +250,7 @@ export interface UpdateRaceInput {
     name: string;
     nameEn?: string;
     distanceLabel?: string;
+    distanceLabelEn?: string;
     cutoffMinutes?: number | null;
     description?: string;
     descriptionEn?: string;
@@ -278,14 +291,16 @@ export function useEvents() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const fetchEvents = async () => {
+    const fetchEvents = async (): Promise<EventSummaryDto[]> => {
         try {
             setLoading(true);
             const data = await apiFetch<EventSummaryDto[]>('/api/v1/admin/events');
             setEvents(data);
             setError(null);
+            return data;
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Unknown error');
+            return [];
         } finally {
             setLoading(false);
         }
@@ -295,13 +310,14 @@ export function useEvents() {
         void fetchEvents();
     }, []);
 
-    const createEvent = async (input: CreateEventInput) => {
-        const result = await apiFetch<{ id: string }>('/api/v1/admin/events', {
+    const createEvent = async (input: CreateEventInput): Promise<{ id: string; slug: string }> => {
+        const result = await apiFetch<{ id: string; slug?: string }>('/api/v1/admin/events', {
             method: 'POST',
             body: JSON.stringify(input),
         });
-        await fetchEvents();
-        return result.id;
+        const refreshed = await fetchEvents();
+        const slug = result.slug ?? refreshed.find(e => e.id === result.id)?.slug ?? result.id;
+        return { id: result.id, slug };
     };
 
     const updateEvent = async (id: string, input: Omit<UpdateEventInput, 'id'>) => {
@@ -312,12 +328,23 @@ export function useEvents() {
         await fetchEvents();
     };
 
+    const updateEventSilently = async (id: string, input: Omit<UpdateEventInput, 'id'>) => {
+        await apiFetch(`/api/v1/admin/events/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ id, ...input }),
+        });
+    };
+
+    const patchEventLocally = (id: string, patch: Partial<EventSummaryDto>) => {
+        setEvents(prev => prev.map(e => e.id === id ? { ...e, ...patch } : e));
+    };
+
     const deleteEvent = async (id: string) => {
         await apiFetch(`/api/v1/admin/events/${id}`, { method: 'DELETE' });
         setEvents(prev => prev.filter(event => event.id !== id));
     };
 
-    const getEvent = async (slug: string) => apiFetch<EventDetailDto>(`/api/v1/events/${slug}`);
+    const getEvent = async (slug: string) => apiFetch<EventDetailDto>(`/api/v1/admin/events/${slug}`);
 
     const createEdition = async (input: CreateEditionInput) => {
         const result = await apiFetch<{ id: string }>(`/api/v1/admin/events/${input.eventId}/editions`, {
@@ -334,6 +361,13 @@ export function useEvents() {
             body: JSON.stringify({ id, ...input }),
         });
         await fetchEvents();
+    };
+
+    const updateEditionSilently = async (id: string, input: Omit<UpdateEditionInput, 'id'>) => {
+        await apiFetch(`/api/v1/admin/editions/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ id, ...input }),
+        });
     };
 
     const deleteEdition = async (id: string) => {
@@ -369,6 +403,13 @@ export function useEvents() {
         await apiFetch(`/api/v1/admin/races/${id}`, { method: 'DELETE' });
     };
 
+    const reorderRaces = async (editionId: string, orderedIds: string[]) => {
+        await apiFetch(`/api/v1/admin/editions/${editionId}/races/reorder`, {
+            method: 'PUT',
+            body: JSON.stringify({ orderedIds }),
+        });
+    };
+
     return {
         events,
         loading,
@@ -376,14 +417,42 @@ export function useEvents() {
         refresh: fetchEvents,
         createEvent,
         updateEvent,
+        updateEventSilently,
+        patchEventLocally,
         deleteEvent,
         getEvent,
         createEdition,
         updateEdition,
+        updateEditionSilently,
         deleteEdition,
         generateEditionsForSeason,
         createRace,
         updateRace,
         deleteRace,
+        reorderRaces,
     };
+}
+
+export function useEventDetail(slug: string) {
+    const [detail, setDetail] = useState<EventDetailDto | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const load = useCallback(async () => {
+        if (!slug) return;
+        try {
+            setLoading(true);
+            const data = await apiFetch<EventDetailDto>(`/api/v1/admin/events/${slug}`);
+            setDetail(data);
+            setError(null);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to load event');
+        } finally {
+            setLoading(false);
+        }
+    }, [slug]);
+
+    useEffect(() => { void load(); }, [load]);
+
+    return { detail, loading, error, refresh: load, setDetail };
 }

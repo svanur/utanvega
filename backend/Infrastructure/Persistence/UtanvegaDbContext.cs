@@ -26,6 +26,7 @@ public class UtanvegaDbContext : DbContext
     public DbSet<Profile> Profiles => Set<Profile>();
     public DbSet<TrailCheckIn> TrailCheckIns => Set<TrailCheckIn>();
     public DbSet<Organizer> Organizers => Set<Organizer>();
+    public DbSet<Feedback> Feedback => Set<Feedback>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -41,7 +42,8 @@ public class UtanvegaDbContext : DbContext
             // Map NetTopologySuite Geometry to PostGIS
             // Use geometry(LineStringZ, 4326) to ensure elevation (Z) is preserved
             entity.Property(e => e.GpxData).HasColumnType("geometry(LineStringZ, 4326)");
-            
+            entity.HasIndex(e => e.GpxData).HasMethod("GIST");
+
             // Log for debugging (this will run on every context instantiation, maybe too much?)
             // Console.WriteLine("[DEBUG_LOG] UtanvegaDbContext: GpxData configured as geometry(LineStringZ, 4326)");
             
@@ -68,7 +70,8 @@ public class UtanvegaDbContext : DbContext
             entity.HasIndex(e => e.Slug).IsUnique();
             
             entity.Property(e => e.Center).HasColumnType("geometry(Point, 4326)"); // Using 4326 (WGS 84) for PostGIS
-            
+            entity.HasIndex(e => e.Center).HasMethod("GIST");
+
             entity.Property(e => e.Type).HasConversion<string>();
 
             // Self-referencing relationship
@@ -102,6 +105,7 @@ public class UtanvegaDbContext : DbContext
             entity.Property(e => e.TimestampUtc).IsRequired();
             entity.HasIndex(e => e.EntityId);
             entity.HasIndex(e => e.EntityName);
+            entity.HasIndex(e => e.TimestampUtc);
         });
 
         modelBuilder.Entity<Tag>(entity =>
@@ -219,6 +223,7 @@ public class UtanvegaDbContext : DbContext
             entity.Property(e => e.RegistrationUrl).HasMaxLength(500);
             entity.Property(e => e.ResultsUrl).HasMaxLength(500);
             entity.Property(e => e.RegistrationStatus).HasConversion<string>();
+            entity.Property(e => e.Status).HasConversion<string>();
 
             entity.HasOne(e => e.Event)
                   .WithMany(ev => ev.Editions)
@@ -239,6 +244,7 @@ public class UtanvegaDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
             entity.Property(e => e.DistanceLabel).HasMaxLength(50);
+            entity.Property(e => e.DistanceLabelEn).HasMaxLength(50);
             entity.Property(e => e.CertifiedBy).HasMaxLength(100);
             entity.Property(e => e.ChampionshipCategory).HasMaxLength(200);
             entity.Property(e => e.PrizeMoney).HasPrecision(10, 2);
@@ -284,6 +290,7 @@ public class UtanvegaDbContext : DbContext
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => e.LogDate);
             entity.HasIndex(e => e.CreatedAt);
+            entity.HasIndex(e => new { e.TrailSlug, e.IsPublic });
         });
 
         modelBuilder.Entity<Profile>(entity =>
@@ -296,6 +303,28 @@ public class UtanvegaDbContext : DbContext
             entity.Property(e => e.AvatarUrl).HasColumnName("AvatarUrl");
             entity.Property(e => e.CreatedAt).HasColumnName("CreatedAt");
             entity.Property(e => e.UpdatedAt).HasColumnName("UpdatedAt");
+        });
+
+        modelBuilder.Entity<Feedback>(entity =>
+        {
+            entity.ToTable("Feedback");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.FeedbackNumber).UseIdentityAlwaysColumn();
+            entity.HasIndex(e => e.FeedbackNumber).IsUnique();
+            entity.Property(e => e.PageUrl).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.Message).IsRequired().HasMaxLength(2000);
+            entity.Property(e => e.Category).HasMaxLength(50);
+            entity.Property(e => e.Name).HasMaxLength(200);
+            entity.Property(e => e.Email).HasMaxLength(200);
+            entity.Property(e => e.StepsToReproduce).HasMaxLength(2000);
+            entity.Property(e => e.BrowserInfo).HasColumnType("jsonb");
+            entity.Property(e => e.ScreenshotUrl).HasColumnType("text");
+            entity.Property(e => e.Status).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.ClosedAt);
+            entity.Property(e => e.Priority).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.AdminComment).HasMaxLength(2000);
+            entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => e.CreatedAt);
         });
 
         modelBuilder.Entity<TrailCheckIn>(entity =>

@@ -12,7 +12,7 @@ namespace Utanvega.Backend.Application.Trails.Commands.BulkCreateTrailsFromGpx;
 
 public record GpxFileInfo(string? Name, string GpxXml);
 
-public record BulkCreateTrailsFromGpxCommand(List<GpxFileInfo> Files) : IRequest<List<Guid>>;
+public record BulkCreateTrailsFromGpxCommand(List<GpxFileInfo> Files, string? ActorUserId = null) : IRequest<List<Guid>>;
 
 public class BulkCreateTrailsFromGpxCommandHandler : IRequestHandler<BulkCreateTrailsFromGpxCommand, List<Guid>>
 {
@@ -65,7 +65,7 @@ public class BulkCreateTrailsFromGpxCommandHandler : IRequestHandler<BulkCreateT
             }
         }
 
-        await _context.SaveChangesWithAuditAsync("system");
+        await _context.SaveChangesWithAuditAsync(request.ActorUserId);
         _cacheInvalidator.InvalidateTrail();
 
         return resultIds;

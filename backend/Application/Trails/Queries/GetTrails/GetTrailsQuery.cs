@@ -69,6 +69,8 @@ public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailD
     public async Task<List<TrailDto>> Handle(GetTrailsQuery request, CancellationToken cancellationToken)
     {
         var query = _context.Trails
+            .AsNoTracking()
+            .AsSplitQuery()
             .Include(t => t.TrailLocations)
                 .ThenInclude(tl => tl.Location)
             .Include(t => t.TrailTags)

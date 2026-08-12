@@ -1,5 +1,6 @@
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Chip, Button, Box, Checkbox, TableSortLabel, Tooltip, IconButton, Paper, Autocomplete, TextField } from '@mui/material';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import DownloadIcon from '@mui/icons-material/Download';
 import MapIcon from '@mui/icons-material/Map';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -13,9 +14,10 @@ import type { Trail } from '../hooks/useTrails';
 import type { LocationDto } from '../hooks/useLocations';
 import type { TagDto } from '../hooks/useTags';
 import { InlineEditText, InlineEditSelect } from './InlineEditCell';
-import { useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 
 const SITE_URL = import.meta.env.VITE_SITE_URL?.trim() || 'https://utanvega.vercel.app';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 interface TrailTableProps {
   trails: Trail[];
@@ -109,11 +111,11 @@ export default function TrailTable({
               key={trail.id}
               trail={trail}
               selected={selectedIds.includes(trail.id)}
-              onSelect={() => onSelectOne(trail.id)}
-              onViewMap={() => onViewMap({ id: trail.id, name: trail.name })}
-              onEdit={() => onEdit(trail.id)}
-              onDelete={() => onDelete({ id: trail.id, name: trail.name })}
-              onRestore={() => onRestore(trail)}
+              onSelectOne={onSelectOne}
+              onViewMap={onViewMap}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onRestore={onRestore}
               onUpdateStatus={onUpdateStatus}
               onPatchTrail={onPatchTrail}
               allLocations={allLocations}
@@ -178,11 +180,11 @@ function DifficultyChip({ difficulty }: { difficulty: string }) {
 interface TrailRowProps {
   trail: Trail;
   selected: boolean;
-  onSelect: () => void;
-  onViewMap: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
-  onRestore: () => void;
+  onSelectOne: (id: string) => void;
+  onViewMap: (trail: { id: string; name: string }) => void;
+  onEdit: (trailId: string) => void;
+  onDelete: (trail: { id: string; name: string }) => void;
+  onRestore: (trail: Trail) => void;
   onUpdateStatus: (trailId: string, status: string) => void;
   onPatchTrail: (trailId: string, field: string, value: string) => Promise<void>;
   allLocations: LocationDto[];
@@ -215,20 +217,28 @@ const activityOptions = [
   { value: 'Cycling', label: 'Cycling' },
 ];
 
-function TrailRow({ trail, selected, onSelect, onViewMap, onEdit, onDelete, onRestore, onUpdateStatus: _onUpdateStatus, onPatchTrail, allLocations, onAddLocation, onRemoveLocation, allTags, onAddTag, onRemoveTag }: TrailRowProps) {
+function TrailRowComponent({ trail, selected, onSelectOne, onViewMap, onEdit, onDelete, onRestore, onUpdateStatus: _onUpdateStatus, onPatchTrail, allLocations, onAddLocation, onRemoveLocation, allTags, onAddTag, onRemoveTag }: TrailRowProps) {
   const [showAddLocation, setShowAddLocation] = useState(false);
   const [showAddTag, setShowAddTag] = useState(false);
-  const linkedIds = new Set(trail.locations?.map(l => l.id) ?? []);
-  const availableLocations = allLocations.filter(l => !linkedIds.has(l.id));
-  const linkedTagSlugs = new Set(trail.tags?.map(t => t.slug) ?? []);
-  const availableTags = allTags.filter(t => !linkedTagSlugs.has(t.slug));
+
+  const linkedIds = useMemo(() => new Set(trail.locations?.map(l => l.id) ?? []), [trail.locations]);
+  const availableLocations = useMemo(() => allLocations.filter(l => !linkedIds.has(l.id)), [allLocations, linkedIds]);
+  const linkedTagSlugs = useMemo(() => new Set(trail.tags?.map(t => t.slug) ?? []), [trail.tags]);
+  const availableTags = useMemo(() => allTags.filter(t => !linkedTagSlugs.has(t.slug)), [allTags, linkedTagSlugs]);
+
+  const handleSelect = useCallback(() => onSelectOne(trail.id), [onSelectOne, trail.id]);
+  const handleViewMap = useCallback(() => onViewMap({ id: trail.id, name: trail.name }), [onViewMap, trail.id, trail.name]);
+  const handleEdit = useCallback(() => onEdit(trail.id), [onEdit, trail.id]);
+  const handleDelete = useCallback(() => onDelete({ id: trail.id, name: trail.name }), [onDelete, trail.id, trail.name]);
+  const handleRestore = useCallback(() => onRestore(trail), [onRestore, trail]);
+
   return (
     <TableRow
       selected={selected}
       sx={{ opacity: trail.status === 'Archived' ? 0.6 : 1, bgcolor: trail.status === 'Archived' ? 'action.hover' : 'inherit' }}
     >
       <TableCell padding="checkbox">
-        <Checkbox checked={selected} onChange={onSelect} />
+        <Checkbox checked={selected} onChange={handleSelect} />
       </TableCell>
       <TableCell component="th" scope="row">
         <InlineEditText
@@ -398,6 +408,17 @@ function TrailRow({ trail, selected, onSelect, onViewMap, onEdit, onDelete, onRe
               <OpenInNewIcon fontSize="small" />
             </IconButton>
           </Tooltip>
+          <Tooltip title="Download GPX">
+            <IconButton
+              size="small"
+              component="a"
+              href={`${API_URL}/api/v1/trails/${trail.slug}/gpx`}
+              download={`${trail.slug}.gpx`}
+              aria-label={`Download GPX for ${trail.name}`}
+            >
+              <DownloadIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
           {trail.youtubeUrl && /^https?:\/\//i.test(trail.youtubeUrl) && (
             <Tooltip title="360° video">
               <IconButton size="small" component="a" href={trail.youtubeUrl} target="_blank" rel="noopener noreferrer" aria-label={`360° video for ${trail.name}`}>
@@ -408,16 +429,18 @@ function TrailRow({ trail, selected, onSelect, onViewMap, onEdit, onDelete, onRe
         </Box>
       </TableCell>
       <TableCell align="right">
-        <Button size="small" startIcon={<MapIcon />} onClick={onViewMap}>Map</Button>
+        <Button size="small" startIcon={<MapIcon />} onClick={handleViewMap}>Map</Button>
         {trail.status === 'Archived' ? (
-          <Button size="small" color="success" startIcon={<RestoreIcon />} onClick={onRestore}>Restore</Button>
+          <Button size="small" color="success" startIcon={<RestoreIcon />} onClick={handleRestore}>Restore</Button>
         ) : (
           <>
-            <Button size="small" startIcon={<EditIcon />} onClick={onEdit}>Edit</Button>
-            <Button size="small" color="error" startIcon={<DeleteIcon />} onClick={onDelete}>Delete</Button>
+            <Button size="small" startIcon={<EditIcon />} onClick={handleEdit}>Edit</Button>
+            <Button size="small" color="error" startIcon={<DeleteIcon />} onClick={handleDelete}>Delete</Button>
           </>
         )}
       </TableCell>
     </TableRow>
   );
 }
+
+const TrailRow = memo(TrailRowComponent);

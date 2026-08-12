@@ -1,6 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Box, TextField, Typography, Paper, Autocomplete, InputAdornment, IconButton, Divider, Table, TableBody, TableRow, TableCell, Alert, Tooltip, Button, Chip } from '@mui/material';
-import { KeyboardArrowUp, KeyboardArrowDown, CompareArrows, ContentCopy, Check, ImageOutlined, RestartAlt } from '@mui/icons-material';
+import KeyboardArrowUp from '@mui/icons-material/KeyboardArrowUp';
+import KeyboardArrowDown from '@mui/icons-material/KeyboardArrowDown';
+import CompareArrows from '@mui/icons-material/CompareArrows';
+import ContentCopy from '@mui/icons-material/ContentCopy';
+import Check from '@mui/icons-material/Check';
+import ImageOutlined from '@mui/icons-material/ImageOutlined';
+import RestartAlt from '@mui/icons-material/RestartAlt';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { API_URL } from '../hooks/useTrails';

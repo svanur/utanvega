@@ -63,6 +63,8 @@ namespace Utanvega.Backend.Migrations
 
                     b.HasIndex("EntityName");
 
+                    b.HasIndex("TimestampUtc");
+
                     b.ToTable("ChangeLogs");
                 });
 
@@ -201,6 +203,10 @@ namespace Utanvega.Backend.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("Title")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
@@ -260,6 +266,85 @@ namespace Utanvega.Backend.Migrations
                     b.ToTable("FeatureFlags");
                 });
 
+            modelBuilder.Entity("Utanvega.Backend.Core.Entities.Feedback", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AdminComment")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("BrowserInfo")
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("Category")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTimeOffset?>("ClosedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("FeedbackNumber")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityAlwaysColumn(b.Property<int>("FeedbackNumber"));
+
+                    b.Property<int?>("GitHubIssue")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("PageUrl")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("ScreenshotUrl")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("StepsToReproduce")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("FeedbackNumber")
+                        .IsUnique();
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("Feedback", (string)null);
+                });
+
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.Location", b =>
                 {
                     b.Property<Guid>("Id")
@@ -314,6 +399,10 @@ namespace Utanvega.Backend.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Center");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("Center"), "GIST");
 
                     b.HasIndex("ParentId");
 
@@ -441,6 +530,10 @@ namespace Utanvega.Backend.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("DistanceLabel")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("DistanceLabelEn")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
@@ -613,6 +706,10 @@ namespace Utanvega.Backend.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("GpxData");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("GpxData"), "GIST");
 
                     b.HasIndex("Slug")
                         .IsUnique();
@@ -797,6 +894,8 @@ namespace Utanvega.Backend.Migrations
                     b.HasIndex("LogDate");
 
                     b.HasIndex("UserId");
+
+                    b.HasIndex("TrailSlug", "IsPublic");
 
                     b.HasIndex("UserId", "TrailSlug", "LogDate")
                         .IsUnique();

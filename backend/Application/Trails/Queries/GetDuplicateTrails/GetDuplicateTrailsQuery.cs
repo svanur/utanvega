@@ -21,70 +21,81 @@ public class GetDuplicateTrailsQueryHandler : IRequestHandler<GetDuplicateTrails
 
     public async Task<List<DuplicatePair>> Handle(GetDuplicateTrailsQuery request, CancellationToken cancellationToken)
     {
-        var trails = await _context.Trails
-            .Where(t => t.GpxData != null && t.Status != Core.Entities.TrailStatus.Archived)
-            .Select(t => new { t.Id, t.Name, t.GpxData, t.Length })
+        var lengthFloor = request.Threshold - 20;
+
+        // Let PostGIS find spatially-close candidate pairs server-side (bounding-box overlap via
+        // `&&`, accelerated by the GiST index on GpxData) instead of pulling every trail's
+        // geometry into memory and comparing all O(n^2) pairs in .NET.
+        // EF Core's SqlQuery<T>(FormattableString) parameterizes interpolated values ($1, $2, …)
+        // — this is NOT raw string concatenation and is safe from SQL injection.
+        var candidates = await _context.Database
+            .SqlQuery<CandidatePairRow>($"""
+                SELECT a."Id" AS "AId", a."Name" AS "AName", a."Length" AS "ALength",
+                       b."Id" AS "BId", b."Name" AS "BName", b."Length" AS "BLength"
+                FROM "Trails" a
+                JOIN "Trails" b ON a."Id" < b."Id"
+                WHERE a."GpxData" IS NOT NULL AND b."GpxData" IS NOT NULL
+                  AND a."Status" != 'Archived' AND b."Status" != 'Archived'
+                  AND a."GpxData" && b."GpxData"
+                  AND (a."Length" <= 0 OR b."Length" <= 0
+                       OR (LEAST(a."Length", b."Length") / GREATEST(a."Length", b."Length") * 100) >= {lengthFloor})
+            """)
             .ToListAsync(cancellationToken);
 
-        _logger.LogInformation("Duplicate check: {TrailCount} trails, threshold={Threshold}%", trails.Count, request.Threshold);
+        _logger.LogInformation("Duplicate check: {CandidateCount} spatial candidate pairs, threshold={Threshold}%", candidates.Count, request.Threshold);
+
+        if (candidates.Count == 0) return [];
+
+        // Only fetch full geometries for trails that actually appear in a candidate pair.
+        var trailIds = candidates.Select(c => c.AId).Concat(candidates.Select(c => c.BId)).Distinct().ToList();
+        var geometries = await _context.Trails
+            .Where(t => trailIds.Contains(t.Id))
+            .Select(t => new { t.Id, t.GpxData })
+            .ToDictionaryAsync(t => t.Id, t => t.GpxData, cancellationToken);
 
         var duplicates = new List<DuplicatePair>();
-        var seen = new HashSet<string>();
 
-        for (int i = 0; i < trails.Count; i++)
+        foreach (var c in candidates)
         {
-            for (int j = i + 1; j < trails.Count; j++)
+            if (!geometries.TryGetValue(c.AId, out var aGpx) || aGpx == null) continue;
+            if (!geometries.TryGetValue(c.BId, out var bGpx) || bGpx == null) continue;
+
+            var buffer = aGpx.Buffer(0.0002); // ~20m buffer
+            if (!bGpx.Intersects(buffer)) continue;
+
+            var aLength = aGpx.Length;
+            var bLength = bGpx.Length;
+            if (aLength == 0 || bLength == 0) continue;
+
+            // Calculate how much of B lies within A's buffer
+            var bInA = bGpx.Intersection(buffer);
+            var bInAPercent = (bInA.Length / bLength) * 100;
+
+            // Calculate how much of A lies within B's buffer
+            var bufferB = bGpx.Buffer(0.0002);
+            var aInB = aGpx.Intersection(bufferB);
+            var aInBPercent = (aInB.Length / aLength) * 100;
+
+            // Use the minimum of both directions — both trails must overlap
+            var match = Math.Min(bInAPercent, aInBPercent);
+
+            if (match >= request.Threshold)
             {
-                var a = trails[i];
-                var b = trails[j];
-
-                if (a.GpxData == null || b.GpxData == null) continue;
-
-                // Quick pre-check: if trail lengths differ by >50%, skip expensive geometry ops
-                if (a.Length > 0 && b.Length > 0)
-                {
-                    var lengthRatio = Math.Min(a.Length, b.Length) / Math.Max(a.Length, b.Length) * 100;
-                    if (lengthRatio < request.Threshold - 20) continue;
-                }
-
-                // Quick pre-check: skip if bounding boxes don't overlap
-                if (!a.GpxData.EnvelopeInternal.Intersects(b.GpxData.EnvelopeInternal)) continue;
-
-                var buffer = a.GpxData.Buffer(0.0002); // ~20m buffer
-                if (!b.GpxData.Intersects(buffer)) continue;
-
-                var aLength = a.GpxData.Length;
-                var bLength = b.GpxData.Length;
-                if (aLength == 0 || bLength == 0) continue;
-
-                // Calculate how much of B lies within A's buffer
-                var bInA = b.GpxData.Intersection(buffer);
-                var bInAPercent = (bInA.Length / bLength) * 100;
-
-                // Calculate how much of A lies within B's buffer
-                var bufferB = b.GpxData.Buffer(0.0002);
-                var aInB = a.GpxData.Intersection(bufferB);
-                var aInBPercent = (aInB.Length / aLength) * 100;
-
-                // Use the minimum of both directions — both trails must overlap
-                var match = Math.Min(bInAPercent, aInBPercent);
-
-                if (match >= request.Threshold)
-                {
-                    var key = $"{a.Id}-{b.Id}";
-                    if (seen.Add(key))
-                    {
-                        duplicates.Add(new DuplicatePair(
-                            a.Id, a.Name,
-                            b.Id, b.Name,
-                            Math.Round(match, 0)
-                        ));
-                    }
-                }
+                duplicates.Add(new DuplicatePair(c.AId, c.AName, c.BId, c.BName, Math.Round(match, 0)));
             }
         }
 
         _logger.LogInformation("Found {DuplicateCount} duplicate pairs", duplicates.Count);
         return duplicates.OrderByDescending(d => d.MatchPercentage).ToList();
     }
+}
+
+internal class CandidatePairRow
+{
+    public Guid AId { get; set; }
+    public string AName { get; set; } = "";
+    public double ALength { get; set; }
+    public Guid BId { get; set; }
+    public string BName { get; set; } = "";
+    public double BLength { get; set; }
 }

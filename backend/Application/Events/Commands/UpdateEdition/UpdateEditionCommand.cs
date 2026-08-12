@@ -20,7 +20,8 @@ public record UpdateEditionCommand(
     Guid? TrailId,
     string? TitleEn = null,
     string? NotesEn = null,
-    Dictionary<string, string>? TranslationHashes = null
+    Dictionary<string, string>? TranslationHashes = null,
+    string? Status = null
 ) : IRequest<bool>;
 
 public class UpdateEditionCommandHandler : IRequestHandler<UpdateEditionCommand, bool>
@@ -38,6 +39,7 @@ public class UpdateEditionCommandHandler : IRequestHandler<UpdateEditionCommand,
     {
         var edition = await _context.EventEditions
             .Include(ed => ed.Event)
+            .Include(ed => ed.Races)
             .FirstOrDefaultAsync(ed => ed.Id == request.Id, cancellationToken);
 
         if (edition == null) return false;
@@ -55,6 +57,19 @@ public class UpdateEditionCommandHandler : IRequestHandler<UpdateEditionCommand,
         edition.NotesEn = request.NotesEn;
         edition.RegistrationStatus = regStatus;
         edition.TrailId = request.TrailId;
+        // Status is patch-if-provided, not resend-full-snapshot like the other fields: several
+        // existing callers (bulk edition updates, translation-sync) PUT here without knowing about
+        // Status, and must not silently reset it back to Active.
+        if (!string.IsNullOrEmpty(request.Status) && Enum.TryParse<EditionStatus>(request.Status, ignoreCase: true, out var status))
+        {
+            if (status == EditionStatus.Cancelled && edition.Status != EditionStatus.Cancelled)
+                // Transitioning into Cancelled always cascades to races + closes registration,
+                // regardless of which path (this generic edit, or the dedicated Cancel action)
+                // triggered it — overrides the plain RegistrationStatus set just above.
+                edition.CancelWithRaces();
+            else
+                edition.Status = status;
+        }
         if (request.TranslationHashes != null)
             edition.TranslationHashes = JsonSerializer.Serialize(request.TranslationHashes);
         edition.UpdatedAt = DateTime.UtcNow;

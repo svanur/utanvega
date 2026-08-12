@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Infrastructure.Persistence;
 
@@ -45,7 +46,15 @@ public class RecordTrailViewCommandHandler : IRequestHandler<RecordTrailViewComm
             IpHash = request.IpHash,
         });
 
-        await _context.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: "23505" })
+        {
+            // Concurrent request already recorded this view — treat as success.
+        }
+
         return true;
     }
 }

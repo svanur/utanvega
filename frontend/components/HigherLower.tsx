@@ -2,13 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 import {
     Box, Typography, Button, Stack, Paper, Chip, Fade, useTheme
 } from '@mui/material';
-import {
-    ArrowUpward as HigherIcon,
-    ArrowDownward as LowerIcon,
-    Replay as ReplayIcon,
-    EmojiEvents as TrophyIcon,
-    DragHandle as SameIcon,
-} from '@mui/icons-material';
+import HigherIcon from '@mui/icons-material/ArrowUpward';
+import LowerIcon from '@mui/icons-material/ArrowDownward';
+import ReplayIcon from '@mui/icons-material/Replay';
+import TrophyIcon from '@mui/icons-material/EmojiEvents';
+import SameIcon from '@mui/icons-material/DragHandle';
 import { useTranslation } from 'react-i18next';
 import confetti from 'canvas-confetti';
 import type { Trail } from '../hooks/useTrails';
@@ -360,12 +358,13 @@ export default function HigherLower() {
                         {t('higherLower.higher')}
                     </Button>
                     <Button
-                        variant="outlined"
+                        variant="contained"
+                        color="info"
                         startIcon={<SameIcon />}
                         onClick={() => handleGuess('same')}
-                        sx={{ borderRadius: 2, textTransform: 'none', minWidth: 80 }}
+                        sx={{ borderRadius: 2, flex: 1, maxWidth: 160, textTransform: 'none' }}
                     >
-                        ≈
+                        {t('higherLower.same')}
                     </Button>
                     <Button
                         variant="contained"

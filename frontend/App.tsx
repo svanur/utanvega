@@ -4,7 +4,6 @@ import type { PaletteMode } from '@mui/material';
 import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
 import { createAppTheme } from './theme';
 import ErrorBoundary from './components/ErrorBoundary';
-import HomePage from './pages/HomePage';
 import { useEasterEggs } from './hooks/useEasterEggs';
 import { EasterEggs } from './components/EasterEggs';
 import SpotlightSearch from './components/SpotlightSearch';
@@ -14,6 +13,7 @@ import InstallBanner from './components/InstallBanner';
 import { AuthProvider } from './hooks/useAuth';
 
 // Lazy-loaded pages (not needed on initial load)
+const HomePage = lazy(() => import('./pages/HomePage'));
 const TrailDetailsPage = lazy(() => import('./pages/TrailDetailsPage'));
 const LocationsPage = lazy(() => import('./pages/LocationsPage'));
 const LocationDetailsPage = lazy(() => import('./pages/LocationDetailsPage'));
@@ -26,6 +26,7 @@ const RacesPage = lazy(() => import('./pages/RacesPage'));
 const RaceCalendarPage = lazy(() => import('./pages/RaceCalendarPage'));
 const CompetitionDetailPage = lazy(() => import('./pages/CompetitionDetailPage'));
 const EditionHistoryPage = lazy(() => import('./pages/EditionHistoryPage'));
+const EditionsHistoryPage = lazy(() => import('./pages/EditionsHistoryPage'));
 const WelcomePage = lazy(() => import('./pages/WelcomePage'));
 const TrailComparePage = lazy(() => import('./pages/TrailComparePage'));
 const TrailLeaderboardPage = lazy(() => import('./pages/TrailLeaderboardPage'));
@@ -34,7 +35,8 @@ const MyProfileSettingsPage = lazy(() => import('./pages/MyProfileSettingsPage')
 const MyTrailsPage = lazy(() => import('./pages/MyTrailsPage'));
 const MyTrailDetailsPage = lazy(() => import('./pages/MyTrailDetailsPage'));
 const ScratchCardPage = lazy(() => import('./pages/ScratchCardPage'));
-const RunningTripPage = lazy(() => import('./pages/RunningTripPage'));
+const RunningTripsPage = lazy(() => import('./pages/RunningTripsPage'));
+const RunningTrip2026Switzerland = lazy(() => import('./pages/RunningTrip2026Switzerland'));
 const ServicesPage = lazy(() => import('./pages/ServicesPage'));
 const ChallengePage = lazy(() => import('./pages/ChallengePage'));
 const AnnualReportPage = lazy(() => import('./pages/AnnualReportPage'));
@@ -91,7 +93,7 @@ export default function App() {
     };
 
     const { activeEgg, clearEgg } = useEasterEggs();
-    const { isEnabled, loaded } = useFeatureFlags();
+    const { isEnabled } = useFeatureFlags();
     const loginEnabled = useLoginEnabled();
 
     return (
@@ -99,12 +101,9 @@ export default function App() {
             <CssBaseline />
             <ErrorBoundary>
                 <AuthProvider>
-                    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                    <BrowserRouter>
                         <ScrollToContent />
                         <Suspense fallback={<PageLoader />}>
-                {!loaded ? (
-                    <PageLoader />
-                ) : (
                 <Routes>
                     <Route
                         path="/"
@@ -180,9 +179,13 @@ export default function App() {
                         path="/events/:slug" 
                         element={<CompetitionDetailPage mode={mode} onToggleMode={handleToggleMode} />} 
                     />
-                    <Route 
-                        path="/events/:slug/history/:editionKey" 
-                        element={<EditionHistoryPage mode={mode} onToggleMode={handleToggleMode} />} 
+                    <Route
+                        path="/events/:slug/history/:editionKey"
+                        element={<EditionHistoryPage mode={mode} onToggleMode={handleToggleMode} />}
+                    />
+                    <Route
+                        path="/editions/history/:year?"
+                        element={<EditionsHistoryPage mode={mode} onToggleMode={handleToggleMode} />}
                     />
                     {/* Legacy redirects */}
                     <Route path="/races" element={<Navigate to="/events" replace />} />
@@ -220,8 +223,9 @@ export default function App() {
                         path="/my/trails/:slug"
                         element={<MyTrailDetailsPage mode={mode} onToggleMode={handleToggleMode} />}
                     />}
-                    <Route path="/shop/skafkort/2025" element={<ScratchCardPage mode={mode} onToggleMode={handleToggleMode} />} />
-                    <Route path="/shop/hlaupaferd" element={<RunningTripPage mode={mode} onToggleMode={handleToggleMode} />} />
+                    <Route path="/shop/scratch-card/2025" element={<ScratchCardPage mode={mode} onToggleMode={handleToggleMode} />} />
+                    <Route path="/shop/running-trip" element={<RunningTripsPage mode={mode} onToggleMode={handleToggleMode} />} />
+                    <Route path="/shop/running-trip/2026/switzerland" element={<RunningTrip2026Switzerland mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="/services" element={<ServicesPage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="/challenge/2026" element={<ChallengePage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="/about-us" element={<Navigate to="/about" replace />} />
@@ -232,7 +236,6 @@ export default function App() {
                     <Route path="/faq" element={<FaqPage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
-                )}
                 </Suspense>
                 {isEnabled('spotlight_search') && <SpotlightSearch />}
                 <InstallBanner />

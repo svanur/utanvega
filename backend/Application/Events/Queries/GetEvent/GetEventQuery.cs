@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Utanvega.Backend.Application.Caching;
+using Utanvega.Backend.Application.Events;
 using Utanvega.Backend.Application.Events.Queries.GetEvents;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Core.Services;
@@ -43,12 +44,14 @@ public record EventDetailDto(
     double? GpxPointLat = null,
     double? GpxPointLng = null,
     Dictionary<string, string>? TranslationHashes = null,
-    List<string>? ActivityTypes = null
+    List<string>? ActivityTypes = null,
+    string? EditionStatus = null,
+    bool EditionEffectiveCancelled = false
 );
 
-public record GetEventQuery(string Slug) : IRequest<EventDetailDto?>, ICacheable
+public record GetEventQuery(string Slug, bool IncludeHidden = false) : IRequest<EventDetailDto?>, ICacheable
 {
-    public string CacheKey => CacheKeys.Event(Slug);
+    public string CacheKey => CacheKeys.Event(Slug, IncludeHidden);
     public TimeSpan CacheDuration => TimeSpan.FromHours(1);
 }
 
@@ -67,6 +70,7 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
     {
         var ev = await _context.Events
             .AsNoTracking()
+            .AsSplitQuery()
             .Include(e => e.Location)
             .Include(e => e.Organizer)
             .Include(e => e.Editions)
@@ -80,7 +84,13 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
-        var nextEditionDate = ev.Editions
+        // Hidden editions are admin-only and must never surface in public-facing computations below.
+        // The admin path (IncludeHidden=true) keeps the full picture, same as GetEventsQuery.
+        var publicEditions = request.IncludeHidden
+            ? ev.Editions.ToList()
+            : ev.Editions.Where(ed => ed.Status != EditionStatus.Hidden).ToList();
+
+        var nextEditionDate = publicEditions
             .Where(ed => ed.Date.HasValue && ed.Date.Value >= today)
             .OrderBy(ed => ed.Date)
             .Select(ed => ed.Date)
@@ -90,13 +100,13 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
             ?? (ev.ScheduleRule != null ? _scheduleEngine.GetNextOccurrence(ev.ScheduleRule, today) : null);
 
         // An edition is "ongoing" when it has started (Date <= today) but not yet ended (EndDate ?? Date >= today)
-        var ongoingEdition = ev.Editions.FirstOrDefault(ed =>
+        var ongoingEdition = publicEditions.FirstOrDefault(ed =>
             ed.Date.HasValue && ed.Date.Value <= today &&
             (ed.EndDate ?? ed.Date).HasValue && (ed.EndDate ?? ed.Date)!.Value >= today);
 
         // Check for recently-past editions (up to 3 days ago)
         // so events with schedule rules still show as "recently completed"
-        var mostRecentPast = ev.Editions
+        var mostRecentPast = publicEditions
             .Where(ed => (ed.EndDate ?? ed.Date).HasValue && (ed.EndDate ?? ed.Date)!.Value < today)
             .OrderByDescending(ed => ed.EndDate ?? ed.Date)
             .Select(ed => ed.EndDate ?? ed.Date)
@@ -135,12 +145,12 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
             ? _scheduleEngine.GetOccurrencesInRange(ev.ScheduleRule, today, today.AddMonths(12))
             : new List<DateOnly>();
 
-        var editions = ev.Editions
+        var editions = publicEditions
             .OrderByDescending(ed => ed.Date ?? DateOnly.MinValue)
             .Select(ed => new EventEditionDto(
                 ed.Id,
                 ed.EventId,
-                ed.Year,
+                ed.Year ?? ed.Date?.Year,
                 ed.Date,
                 ed.EndDate,
                 ed.Title,
@@ -164,6 +174,7 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
                         r.Name,
                         r.NameEn,
                         r.DistanceLabel,
+                        r.DistanceLabelEn,
                         r.CutoffMinutes,
                         r.Description,
                         r.DescriptionEn,
@@ -189,14 +200,16 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
                     ))
                     .ToList(),
                 ed.CreatedAt,
-                ed.UpdatedAt
+                ed.UpdatedAt,
+                Status: ed.Status.ToString(),
+                EffectiveCancelled: EditionStatusHelpers.ComputeEffectiveCancelled(ed.Status, ed.Races.Select(r => r.Status).ToList())
             ))
             .ToList();
 
         var relevantEdition = ongoingEdition
             ?? (recentlyCompleted
-                ? ev.Editions.FirstOrDefault(ed => (ed.EndDate ?? ed.Date) == mostRecentPast)
-                : ev.Editions
+                ? publicEditions.FirstOrDefault(ed => (ed.EndDate ?? ed.Date) == mostRecentPast)
+                : publicEditions
                     .Where(ed => ed.Date.HasValue && ed.Date.Value >= today)
                     .OrderBy(ed => ed.Date)
                     .FirstOrDefault());
@@ -225,7 +238,7 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
             .Select(r => r.Trail?.YoutubeUrl)
             .FirstOrDefault(u => !string.IsNullOrWhiteSpace(u));
 
-        var activityTypes = ev.Editions
+        var activityTypes = publicEditions
             .SelectMany(ed => ed.Races)
             .Where(r => r.Status != RaceStatus.Cancelled)
             .Select(r => (r.ActivityType?.ToString() ?? r.Trail?.ActivityTypeId.ToString()))
@@ -270,7 +283,10 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
             ev.GpxPointLat,
             ev.GpxPointLng,
             TranslationHashes: null,
-            ActivityTypes: activityTypes.Count > 0 ? activityTypes : null
+            ActivityTypes: activityTypes.Count > 0 ? activityTypes : null,
+            EditionStatus: relevantEdition?.Status.ToString(),
+            EditionEffectiveCancelled: relevantEdition != null
+                && EditionStatusHelpers.ComputeEffectiveCancelled(relevantEdition.Status, relevantEdition.Races.Select(r => r.Status).ToList())
         );
     }
 }

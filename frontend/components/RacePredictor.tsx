@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Box, TextField, Typography, Paper, Chip, Table, TableBody, TableRow, TableCell, TableHead, InputAdornment, IconButton } from '@mui/material';
-import { KeyboardArrowUp, KeyboardArrowDown, RestartAlt } from '@mui/icons-material';
+import KeyboardArrowUp from '@mui/icons-material/KeyboardArrowUp';
+import KeyboardArrowDown from '@mui/icons-material/KeyboardArrowDown';
+import RestartAlt from '@mui/icons-material/RestartAlt';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import TimeSlider from './TimeSlider';

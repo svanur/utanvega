@@ -28,10 +28,10 @@
     "profile": {
         "title": "Prófíll",
         "publicProfileSettings": "Stillingar opinbers prófíls",
-        "publicProfileSettingsDescription": "Stjórna nafni og mynd sem birtast á opinberum afrekaskrám.",
+        "publicProfileSettingsDescription": "Stjórna nafni og mynd sem birtast á opnum síðum á hlaupadagskra.is.",
         "openPublicProfileSettings": "Breyta opinberum prófíl",
         "displayNameTitle": "Opinbert hlaupanafn",
-        "displayNameDescription": "Þetta nafn birtist á opinberum afrekaskrám.",
+        "displayNameDescription": "Þetta nafn birtist á opnum síðum vefsins.",
         "displayNameLabel": "Birtingarnafn",
         "displayNameHelper": "Veldu nafnið sem aðrir sjá.",
         "avatarPreview": "Forskoðun myndar",
@@ -92,10 +92,11 @@
         "challenge": "Áskorun",
         "allTrails": "Allar leiðir",
         "allEvents": "Allir viðburðir",
-        "eventsCalendar": "Dagatal"
+        "eventsCalendar": "Dagatal",
+        "editionsHistory": "Fyrri viðburðir"
     },
     "spotlight": {
-        "placeholder": "Leita að leiðum, stöðum og keppnum...",
+        "placeholder": "Leita að viðburðu, leiðum og stöðum...",
         "trailsSection": "Leiðir",
         "locationsSection": "Staðir",
         "racesSection": "Viðburðir",
@@ -116,9 +117,9 @@
         "trailsTagged": "Leiðir merktar: {{tags}}",
         "noTrailsMatch": "Engar leiðir passa við leitarskilyrði",
         "noTrailsFound": "Engar leiðir fundust.",
-        "clearFilters": "Hreinsa síun",
+        "clearFilters": "Hreinsa síur",
         "randomTrail": "Handahófsleið 🎲",
-        "enableShake": "Virkja hristingu fyrir handahófsleið",
+        "enableShake": "Virkja hristingu fyrir leið af handahófi",
         "enableLocation": "Leyfa staðsetningu til að raða eftir fjarlægð",
         "locationDenied": "Staðsetning lokuð — leyfa í stillingum vafrans",
         "viewMode": "Birting",
@@ -156,6 +157,7 @@
         "noGpsData": "Engin GPS gögn tiltæk fyrir þessa leið.",
         "wereYouLookingFor": "Varstu kannski að leita að einni af þessum?",
         "racesOnTrail": "Tengdir viðburðir",
+        "associatedEvent": "Tengdur viðburður",
         "climbRatio": "Klifurhlutfall",
         "video360": "360° Myndband",
         "role": {
@@ -238,7 +240,7 @@
         "searchPlaceholder": "Leita eftir nafni eða lýsingu...",
         "clearSearch": "hreinsa leit",
         "advancedSearch": "síur",
-        "advancedFilters": "Ítarleg síun",
+        "advancedFilters": "Ítarlegar síur",
         "trailLength": "Lengd leiðar",
         "elevationGain": "Hækkun",
         "elevationLoss": "Lækkun",
@@ -255,7 +257,7 @@
         "showFavoritesOnly": "Sýna eingöngu eftirlæti",
         "showOfflineOnly": "Sýna eingöngu án nets",
         "tags": "Merki",
-        "resetFilters": "Endurstilla síun",
+        "resetFilters": "Hreinsa síur",
         "closeFilters": "Loka",
         "terrainType": {
             "Mountainous": "Fjalllendi / Fjallahlaup",
@@ -351,6 +353,7 @@
         "trailPage": "Leið",
         "gpxFile": "GPX skrá",
         "scanTrail": "Skannaðu til að opna þessa leið í símanum.",
+        "scanEvent": "Skannaðu til að opna þennan viðburð í símanum.",
         "scanGpx": "Skannaðu til að hlaða niður GPX skránni. Síminn mun bjóða upp á að opna hana í Garmin Connect, Coros, Suunto eða öðrum GPS forritum.",
         "downloadGpx": "Hlaða niður GPX",
         "copyLink": "Afrita hlekk",
@@ -414,7 +417,23 @@
         "tooltip": "Leggðu til leiðréttingu, viðbótarupplýsingar eða aðrar ábendingar",
         "placeholder": "Leggðu til leiðréttingu, viðbótarupplýsingar eða aðrar ábendingar...",
         "sent": "Takk! Ábendingin þín hefur verið send.",
-        "error": "Eitthvað fór úrskeiðis. Vinsamlegast reyndu aftur."
+        "error": "Eitthvað fór úrskeiðis. Vinsamlegast reyndu aftur.",
+        "modeSimple": "Stutt ábending",
+        "modeDetailed": "Nákvæm skýrsla",
+        "category": "Flokkur",
+        "categoryBug": "Villa",
+        "categorySuggestion": "Tillaga",
+        "categoryQuestion": "Spurning",
+        "categoryOther": "Annað",
+        "name": "Nafn þitt (valkvætt)",
+        "email": "Netfang þitt (valkvætt)",
+        "stepsToReproduce": "Hvernig endurtek ég þetta?",
+        "stepsPlaceholder": "1. Fara á...\n2. Smella á...\n3. Sjá villu",
+        "screenshot": "Skjámynd af síðu",
+        "screenshotInclude": "Með",
+        "screenshotExclude": "Án",
+        "capturingScreen": "Tek skjámynd...",
+        "autoCapture": "Einnig safnað sjálfkrafa: {{items}}"
     },
     "contact": {
         "title": "Hafa samband",
@@ -542,6 +561,17 @@
         "description": "Falleg A2 veggspjaldsmynd með 42 utanvegahlaupum um allt Ísland, hvert með einstaka mynd falin á bak við silfurlaga skaflag. Hannað af ARRA Design Studio — handgert og pakkað á Íslandi. Fullkomið gjöf fyrir hlaupara og náttúruunnendur.",
         "order": "Panta með tölvupósti"
     },
+    "runningTrips": {
+        "title": "Hlaupaferðir",
+        "intro": "Við skipuleggjum hlaupaferðir erlendis. Ferðirnar leiða Óskar Þór, Tómas G. eða Svanur frá hlaupadagskra.is.",
+        "statusOpen": "Skráning opin",
+        "statusUpcoming": "Væntanleg",
+        "statusCompleted": "Lokið",
+        "trip2026Switzerland": {
+            "label": "2026 — Sviss",
+            "dates": "3.– 9. september 2026"
+        }
+    },
     "runningTrip": {
         "title": "Hlaupaferð til Sviss 2026",
         "subtitle": "Hlaupaferð til Kandersteg, Svissnesku Alpunum — 3.–9. september 2026",
@@ -603,7 +633,7 @@
         "feature2": { "title": "Uppgötva", "desc": "Finndu falin dýr á völdum stöðum" },
         "feature3": { "title": "Vinna", "desc": "Taktu þátt í verðlaunadreifingum frá samstarfsaðilum" },
         "howTitle": "Hvernig tekur þú þátt",
-        "step1": "Skráðu þig í áskoruna á vefsíðunni",
+        "step1": "Skráðu þig í áskorunina á vefsíðunni",
         "step2": "Veldu staði til að heimsækja gangandi, hlaupandi eða á hjóli",
         "step3": "Skráðu mætingu með GPS eða QR kóða á hverjum stað",
         "step4": "Safnaðu stigum, klifraðu upp stigatöfluna og taktu þátt í verðlaunadreifingum",
@@ -669,7 +699,7 @@
     },
     "about": {
         "title": "Um Hlaupadagskra.is",
-        "description": "Á hlaupadagskra.is er nú að finna heildarlista allra staðfestra og óstaðfestra hlaupa á Íslandi. Grunn hugmyndin er að taka saman í einföldum lista allar lykilupplýsingar úr öllum viðburðum sem kalla má hlaupaviðburði hvort sem þeir eru löggild keppnishlaup á götu, ITRA utanvegahlaup eða bara skipulögð styrtarhlaup fyrir góðan málstað.\n\nHlaupin eru flokkuð niður, vísað er á frekari upplýsingasíður, skráningarsíður og samfélagsmiðla eftir því sem  við á. Þessi fyrsta útgáfa síðunnar er ekki frábær en þó að minnsta kosti með tæmandi með upplýsingar um alla hlaupatengda viðburði árið sem eru ógnar margir.\n\nMarkmiðið okkar með hlaupadagskra.is er uppfylla ósk hlaupara að sjá öll hlaup yfir árið á einum stað og getað leitað og filterað á aðgengilegan máta. Hlaup eru merkt “staðfest, skráning hafin” og slíkt ef viðburðarhaldarar hafa tilkynnt slíkt en “Óstaðfest” eða “ þangað til það liggur fyrir rétt tímasetning eða hlaup verður ekki haldið.",
+        "description": "Á hlaupadagskra.is er að finna heildarlista allra staðfestra og óstaðfestra hlaupa á Íslandi. Grunn hugmyndin er að taka saman í einföldum lista allar lykilupplýsingar úr öllum viðburðum sem kalla má hlaupaviðburði hvort sem þeir eru löggild keppnishlaup á götu, ITRA utanvegahlaup eða bara skipulögð styrtarhlaup fyrir góðan málstað.\n\nHlaupin eru flokkuð niður, vísað er á frekari upplýsingasíður, skráningarsíður og samfélagsmiðla eftir því sem  við á. Þetta er önnur útgáfa vefsins okkar með umtalsverðum breytingum frá því sem áður var. Við stefnum á að vera áfram með alla hlaupatengda viðburði á hverju ári, sem eru ógnar margir. Einnig höfum við bætt við leiðasafni sem hægt er að leita í t.d. út frá fjarlægð frá þinni staðsetningu.\n\nMarkmiðið okkar með hlaupadagskra.is er uppfylla ósk hlaupara að sjá öll hlaup yfir árið á einum stað og getað leitað og síað á aðgengilegan máta. Hlaup eru merkt “staðfest, skráning hafin” og slíkt ef viðburðarhaldarar hafa tilkynnt slíkt en “Óstaðfest” eða “ þangað til það liggur fyrir rétt tímasetning eða hlaup verður ekki haldið.",
         "authorTitle": "Um okkur",
         "authorDescription": "Vefnum er haldið uppi af þremur hlaupurum af hlaupaástríðu án beinnar tengingar við tiltekin fyrirtæki eða viðburði og því er stuðningur hlaupasamfélagsins mikilvægur.",
         "authorSignature": "Óskar Þór, Svanur Þór og Tómas G.",
@@ -864,9 +894,10 @@
         "noGamesEnabled": "Enginn leikur er virkur að svo stöddu."
     },
     "higherLower": {
-        "question": "Er hægri leiðin með meiri eða minni {{stat}}?",
+        "question": "Er seinni leiðin með meiri eða minni {{stat}}?",
         "higher": "Meiri",
         "lower": "Minni",
+        "same": "Jafnt",
         "gameOver": "Leik lokið!",
         "streak": "{{count}} rétt í röð!",
         "bestStreak": "Besta röð: {{count}}",
@@ -902,7 +933,7 @@
         "noToolsEnabled": "Engin hjálpartól eru virk.",
         "paceCalc": {
             "title": "Hraðareiknir",
-            "desc": "Reiknaðu hraða, vegalengdar eða tíma — með leiðréttingu fyrir utanvegabrautir.",
+            "desc": "Reiknaðu hraða, vegalengd eða tíma — með leiðréttingu fyrir utanvegabrautir.",
             "subtitle": "Sláðu inn tvö gildi til að reikna það þriðja.",
             "pace": "Hraði (mín/{{unit}})",
             "distance": "Vegalengd ({{unit}})",
@@ -1003,8 +1034,8 @@
         },
         "paceChart": {
             "title": "Hraðatafla",
-            "desc": "Hraðatafla frá 2 upp í 9 pace — fullkomin til að skipuleggja keppni.",
-            "subtitle": "Finndu tíma í ákveðinni vegalengd, athugaðu svo aðra dálka til að sjá tíma á sama hraða. Fullkomið til að skipuleggja hlaupin þín.",
+            "desc": "Hraðatafla frá 2 upp í 9 pace — fullkomin til að skipuleggja keppni eða æfingar.",
+            "subtitle": "Finndu tíma í ákveðinni vegalengd, athugaðu svo aðra dálka til að sjá tíma á sama hraða. Frábær tafla til að skipuleggja hlaupin þín.",
             "search": "Maraþontími eða 1km hraði",
             "searchHelp": "t.d. 3:30:00 (maraþon) eða 5:00 (1K hraði)",
             "note": "Hér eru allir kílómetrar jafnir — allir  á sama hraða. Finndu markmiðið, skipuleggðu æfingar og sláðu í gegn í hlaupinu þínu.",
@@ -1083,6 +1114,13 @@
             "examples": {
                 "m60_5k":    "Karl 60, 5K á 22:00",
                 "f45_half":  "Kona 45, Hálfmaraþon á 1:50:00"
+            },
+            "ageTable": {
+                "title": "Jafngildur tími eftir aldri",
+                "subtitle": "Hvaða tíma þyrfti hlaupari til að jafna {{pct}}% frammistöðu þína?",
+                "age": "Aldur",
+                "equivalentTime": "Jafngildur tími",
+                "yourAge": "Þú"
             }
         }
     },
@@ -1129,6 +1167,8 @@
         "organizerSite": "Vefur skipuleggjanda",
         "directionsToEvent": "Leiðsögn að upphafsstað",
         "addToCalendar": "Setja í dagatal",
+        "addFavorite": "Bæta í eftirlæti",
+        "removeFavorite": "Fjarlægja úr eftirlætum",
         "downloadIcs": "Hlaða niður .ics (Apple/Annað)",
         "racesHeading": "Keppnishlaup",
         "scheduleHeading": "Dagsetningar",
@@ -1250,6 +1290,7 @@
             "month": "Mánuður",
             "allMonths": "Allir",
             "weekendOnly": "Aðeins um helgar",
+            "favoritesOnly": "Sýna eingöngu eftirlæti",
             "reset": "Hreinsa síur",
             "noResults": "Engir viðburðir passa við valdar síur",
             "activeCount_one": "{{count}} sía virk",
@@ -1275,11 +1316,22 @@
             "Advertisement": "Styrkt"
         },
         "history": {
-            "title": "Saga viðburðar",
+            "title": "Fyrri viðburðir",
             "backToEvent": "Til baka",
             "editionNotFound": "Útgáfa fannst ekki",
             "pastEdition": "Liðin útgáfa",
-            "completed": "Lokið"
+            "completed": "Lokið",
+            "older": "Eldri",
+            "newer": "Nýrri"
+        },
+        "editionsHistory": {
+            "title": "Fyrri viðburðir",
+            "subtitle": "Skoðaðu úrslit og upplýsingar um viðburði sem þegar hafa farið fram.",
+            "searchPlaceholder": "Leita í fyrri viðburðum...",
+            "showCancelled": "Sýna aflýst",
+            "noResults": "Engir fyrri viðburðir fundust.",
+            "resultsLink": "Úrslit",
+            "searchingAllYears": "öll ár"
         },
         "table": {
             "name": "Heiti",
@@ -1330,28 +1382,35 @@
         "eventCount": "{{count}} viðburðir í þessum mánuði",
         "subscribe": "Gerast áskrifandi",
         "subscribeTooltip": "Gerast áskrifandi að dagatalsfæðu",
-        "subscribeSuccess": "Slóð afrituð! Límdu hana í dagatalið þitt."
+        "subscribeSuccess": "Slóð afrituð! Límdu hana í dagatalið þitt.",
+        "upcoming": "Væntanlegir viðburðir",
+        "quietWeek": "Engir viðburðir",
+        "race": "keppni",
+        "racesPlural": "keppnir",
+        "monthView": "Mánuður",
+        "scheduleView": "Dagskrá",
+        "viewToggle": "Dagbókaryfirlit"
     },
     "welcome": {
         "tagline": "Öll hlaup á einum stað",
         "discoverMore": "Sjá meira",
-        "startExploring": "Já! Kíkjum á þetta",
+        "startExploring": "Já! Ég er til í þetta",
         "whatCanYouDo": "Hvað er hægt að gera hér?",
         "readyToRun": "Tilbúin(n) að leggja af stað?",
-        "readyToRunDesc": "Vertu hluti af íslenska útivistarsamfélaginu og finndu næstu ævintýraleið.",
+        "readyToRunDesc": "Vertu hluti af íslenska hlaupasamfélaginu með okkur á hlaupadagskra.is.",
         "races": {
             "title": "🏆 Viðburðir",
-            "desc": "Hér finnur þú alla viðburði ársins, niðurtalningu að 'þínu' hlaupi, viðburðadagatal og veðurspá á keppnisdegi. Spáðu fyrir um tímann þinn, áður en þú tekur þig til.",
+            "desc": "Hér finnur þú alla viðburði ársins, niðurtalningu að næsta keppnishlaupi, viðburðadagatal og veðurspá á keppnisdegi. Þú getur einnig spáð fyrir um tímann þinn í næsta götu- eða utanvegahlaupi.",
             "cta": "Sjá viðburði"
         },
         "trails": {
             "title": "🏔️ Uppgötvaðu leiðir",
-            "desc": "Skoðaðu {{count}} valdar leiðir víðsvegar um Ísland. Síaðu eftir vegalengd, hæðarbreytingu og tegund — og finndu uppáhalds leiðina þína.",
+            "desc": "Skoðaðu {{count}} valdar leiðir víðsvegar um Ísland. Síaðu eftir vegalengd, hæðarbreytingu og tegund. Finndu þannig uppáhalds leiðina þína.",
             "cta": "Skoða leiðir"
         },
         "locations": {
             "title": "📍 Kannaðu staðsetningar",
-            "desc": "Sjáðu leiðir flokkaðar eftir svæðum. Frá borgarhlaupaleiðum í Reykjavík til afskekktra hálendisleiða — kannaðu Ísland á kortinu.",
+            "desc": "Sjáðu leiðir flokkaðar eftir svæðum. Frá hlaupaleiðum á höfuðborgarsvæðinu sem og á landsbyggðinni — kannaðu Ísland á kortinu.",
             "cta": "Sjá staðsetningar"
         },
         "tools": {
@@ -1361,7 +1420,7 @@
         },
         "share": {
             "title": "🔗 Deila og tengjast",
-            "desc": "Deildu leiðum og staðsetningum með vinum í gegnum beina hlekki. Vistaðu eftirlæti, fylgstu með hvað þú hefur kannað og byggðu upp leiðasafnið þitt.",
+            "desc": "Deildu viðburðum, leiðum og staðsetningum með vinum í gegnum beina hlekki. Vistaðu eftirlæti, fylgstu með hvenær næsta keppnishlaup er og deildu með vinum.",
             "cta": "Byrja hér"
         },
         "stats": {

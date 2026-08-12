@@ -35,7 +35,7 @@ import { useEventBySlug } from '../hooks/useEvents';
 import type { EventEditionDto, RaceDto } from '../hooks/useEvents';
 import { useLocalize } from '../utils/localize';
 import { splitMinutes } from '../utils/cutoffTime';
-import { formatNextDate, formatRaceDateTime } from '../utils/eventUtils';
+import { formatNextDate, formatDateRange, formatRaceDateTime, editionKeyFor } from '../utils/eventUtils';
 import { getTicketStatusColor } from '../utils/ticketStatus';
 
 type EditionHistoryPageProps = {
@@ -96,7 +96,6 @@ export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistor
         [edition, sortedEditions],
     );
 
-    const editionKeyFor = (ed: EventEditionDto) => ed.date ?? String(ed.year ?? ed.id);
     const prevEdition = currentIndex > 0 ? sortedEditions[currentIndex - 1] : null;
     const nextEdition = currentIndex >= 0 && currentIndex < sortedEditions.length - 1
         ? sortedEditions[currentIndex + 1] : null;
@@ -115,9 +114,9 @@ export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistor
         const diff = e.changedTouches[0].clientX - touchStartX.current;
         touchStartX.current = null;
         if (Math.abs(diff) < 60) return;
-        // Swipe right → newer (prev), swipe left → older (next)
-        if (diff > 0 && prevEdition) goToEdition(prevEdition);
-        else if (diff < 0 && nextEdition) goToEdition(nextEdition);
+        // Swipe left → forward in time (newer), swipe right → back in time (older)
+        if (diff < 0 && prevEdition) goToEdition(prevEdition);
+        else if (diff > 0 && nextEdition) goToEdition(nextEdition);
     }, [prevEdition, nextEdition, goToEdition]);
 
     if (loading) {
@@ -181,17 +180,17 @@ export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistor
                     <Stack direction="row" spacing={0.5}>
                         <IconButton
                             size="small"
-                            disabled={!prevEdition}
-                            onClick={() => prevEdition && goToEdition(prevEdition)}
-                            aria-label={t('races.history.newer', { defaultValue: 'Newer' })}
+                            disabled={!nextEdition}
+                            onClick={() => nextEdition && goToEdition(nextEdition)}
+                            aria-label={t('races.history.older')}
                         >
                             <NavigateBeforeIcon />
                         </IconButton>
                         <IconButton
                             size="small"
-                            disabled={!nextEdition}
-                            onClick={() => nextEdition && goToEdition(nextEdition)}
-                            aria-label={t('races.history.older', { defaultValue: 'Older' })}
+                            disabled={!prevEdition}
+                            onClick={() => prevEdition && goToEdition(prevEdition)}
+                            aria-label={t('races.history.newer')}
                         >
                             <NavigateNextIcon />
                         </IconButton>
@@ -233,7 +232,7 @@ export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistor
                         {edition.date && (
                             <Chip
                                 icon={<CalendarTodayIcon />}
-                                label={formatNextDate(edition.date, t)}
+                                label={formatDateRange(edition.date, edition.endDate, t)}
                                 size="small"
                                 variant="outlined"
                             />
@@ -264,17 +263,6 @@ export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistor
                                 sx={{ textTransform: 'none' }}
                             >
                                 {t('races.results', { defaultValue: 'Results' })}
-                            </Button>
-                        )}
-                        {edition.registrationUrl && (
-                            <Button
-                                variant="outlined"
-                                size="small"
-                                endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
-                                onClick={() => window.open(edition.registrationUrl!, '_blank', 'noopener')}
-                                sx={{ textTransform: 'none' }}
-                            >
-                                {t('races.register')}
                             </Button>
                         )}
                     </Stack>

@@ -92,7 +92,8 @@
         "challenge": "Challenge",
         "allTrails": "All Trails",
         "allEvents": "All Events",
-        "eventsCalendar": "Calendar"
+        "eventsCalendar": "Calendar",
+        "editionsHistory": "Past Events"
     },
     "spotlight": {
         "placeholder": "Search trails, locations and races...",
@@ -155,7 +156,8 @@
         "loadingMap": "Loading Map...",
         "noGpsData": "No GPS data available for this trail.",
         "wereYouLookingFor": "Were you looking for one of these?",
-        "racesOnTrail": "Associated races",
+        "racesOnTrail": "Associated events",
+        "associatedEvent": "Associated Event",
         "climbRatio": "Climb ratio",
         "video360": "360° Video",
         "role": {
@@ -351,6 +353,7 @@
         "trailPage": "Trail Page",
         "gpxFile": "GPX File",
         "scanTrail": "Scan to open this trail on your phone.",
+        "scanEvent": "Scan to open this event on your phone.",
         "scanGpx": "Scan to download the GPX file. Your phone will offer to open it in Garmin Connect, Coros, Suunto, or other GPS apps.",
         "downloadGpx": "Download GPX",
         "copyLink": "Copy page link",
@@ -414,7 +417,23 @@
         "tooltip": "Suggest a correction, additional info, or other feedback",
         "placeholder": "Suggest a correction, additional information, or other feedback...",
         "sent": "Thank you! Your tip has been sent.",
-        "error": "Something went wrong. Please try again."
+        "error": "Something went wrong. Please try again.",
+        "modeSimple": "Quick tip",
+        "modeDetailed": "Detailed report",
+        "category": "Category",
+        "categoryBug": "Bug",
+        "categorySuggestion": "Suggestion",
+        "categoryQuestion": "Question",
+        "categoryOther": "Other",
+        "name": "Your name (optional)",
+        "email": "Your email (optional)",
+        "stepsToReproduce": "Steps to reproduce",
+        "stepsPlaceholder": "1. Go to...\n2. Click on...\n3. See error",
+        "screenshot": "Page screenshot",
+        "screenshotInclude": "Include",
+        "screenshotExclude": "Excluded",
+        "capturingScreen": "Capturing screenshot...",
+        "autoCapture": "Also auto-captured: {{items}}"
     },
     "contact": {
         "title": "Contact us",
@@ -541,6 +560,17 @@
         "shipping": "Shipping",
         "description": "A decorative A2 wall poster featuring 42 trail running events across Iceland, each hiding a unique illustration behind a silver scratch panel. Designed by ARRA Design Studio — handcrafted and packaged in Iceland. The perfect gift for runners, nature enthusiasts, and goal-setters.",
         "order": "Order by email"
+    },
+    "runningTrips": {
+        "title": "Running Trips",
+        "intro": "We organise small-group guided trail running trips abroad. Each trip is led by Óskar Þór, Tómas G. or Svanur from hlaupadagskra.is.",
+        "statusOpen": "Registration open",
+        "statusUpcoming": "Upcoming",
+        "statusCompleted": "Completed",
+        "trip2026Switzerland": {
+            "label": "2026 — Switzerland",
+            "dates": "September 3rd – 9th, 2026"
+        }
     },
     "runningTrip": {
         "title": "Running Trip to Switzerland 2026",
@@ -864,9 +894,10 @@
         "noGamesEnabled": "No games are currently enabled."
     },
     "higherLower": {
-        "question": "Does the right trail have higher or lower {{stat}}?",
+        "question": "Does the latter trail have higher or lower {{stat}}?",
         "higher": "Higher",
         "lower": "Lower",
+        "same": "Same",
         "gameOver": "Game Over!",
         "streak": "{{count}} correct in a row!",
         "bestStreak": "Best streak: {{count}}",
@@ -1083,6 +1114,13 @@
             "examples": {
                 "m60_5k":    "Male 60, 5K in 22:00",
                 "f45_half":  "Female 45, Half marathon in 1:50:00"
+            },
+            "ageTable": {
+                "title": "Equivalent times by age",
+                "subtitle": "What time would a runner of each age need to match your {{pct}}% effort?",
+                "age": "Age",
+                "equivalentTime": "Equivalent time",
+                "yourAge": "You"
             }
         }
     },
@@ -1129,6 +1167,8 @@
         "organizerSite": "Event website",
         "directionsToEvent": "Directions to event",
         "addToCalendar": "Add to Calendar",
+        "addFavorite": "Add Favorite",
+        "removeFavorite": "Remove Favorite",
         "downloadIcs": "Download .ics (Apple/Other)",
         "racesHeading": "Races",
         "scheduleHeading": "Upcoming dates",
@@ -1199,17 +1239,17 @@
         "checklistShoes": "Shoes and socks set",
         "checklistFuel": "Fuel/hydration packed",
         "checklistGoodMoodReady": "Good mood ready 😄",
-        "raceDayShareCta": "I'm racing today 💥",
-        "raceDayShareText": "I'm racing {{raceName}} today 💥",
+        "raceDayShareCta": "I'm participating today 💥",
+        "raceDayShareText": "I'm participating in '{{raceName}}' today 💥",
         "raceDayShareRaceCta": "I am competing 💥",
-        "raceDayShareRaceText": "Today I am racing {{competitionName}} - {{raceName}} 💥",
+        "raceDayShareRaceText": "Today I am participating in {{competitionName}} - {{raceName}} 💥",
         "shareCard": {
-            "button": "I'm racing! 💥",
+            "button": "I'm participating! 💥",
             "racingToday": "It's race day!",
             "racingSoon": "I'm participating in this race!",
             "countdown_one": "{{count}} day to go!",
             "countdown_other": "{{count}} days to go!",
-            "shareText": "I'm racing {{eventName}}! 💥",
+            "shareText": "I'm participating in {{eventName}}! 💥",
             "share": "Share",
             "download": "Save Image",
             "copiedToClipboard": "Image copied to clipboard!",
@@ -1250,6 +1290,7 @@
             "month": "Month",
             "allMonths": "All",
             "weekendOnly": "Weekend only",
+            "favoritesOnly": "Show favorites only",
             "reset": "Reset filters",
             "noResults": "No events match the selected filters",
             "activeCount_one": "{{count}} filter active",
@@ -1279,7 +1320,18 @@
             "backToEvent": "Back to event",
             "editionNotFound": "Edition not found",
             "pastEdition": "Past edition",
-            "completed": "Completed"
+            "completed": "Completed",
+            "older": "Older",
+            "newer": "Newer"
+        },
+        "editionsHistory": {
+            "title": "Past Events",
+            "subtitle": "Browse results and details from races that have already happened.",
+            "searchPlaceholder": "Search past events...",
+            "showCancelled": "Show cancelled",
+            "noResults": "No past events found.",
+            "resultsLink": "Results",
+            "searchingAllYears": "all years"
         },
         "table": {
             "name": "Name",
@@ -1330,7 +1382,14 @@
         "eventCount": "{{count}} events this month",
         "subscribe": "Subscribe",
         "subscribeTooltip": "Subscribe to live calendar feed",
-        "subscribeSuccess": "Calendar URL copied! Paste it in your calendar app."
+        "subscribeSuccess": "Calendar URL copied! Paste it in your calendar app.",
+        "upcoming": "Upcoming",
+        "quietWeek": "No events",
+        "race": "race",
+        "racesPlural": "races",
+        "monthView": "Month",
+        "scheduleView": "Schedule",
+        "viewToggle": "Calendar view"
     },
     "welcome": {
         "tagline": "Discover the best trails for running, hiking & cycling in Iceland",

@@ -15,9 +15,10 @@ public enum BulkTrailActionType
 }
 
 public record BulkTrailActionCommand(
-    List<Guid> Ids, 
-    BulkTrailActionType Action, 
-    string? Value = null) : IRequest<int>;
+    List<Guid> Ids,
+    BulkTrailActionType Action,
+    string? Value = null,
+    string? ActorUserId = null) : IRequest<int>;
 
 public class BulkTrailActionCommandHandler : IRequestHandler<BulkTrailActionCommand, int>
 {
@@ -71,7 +72,7 @@ public class BulkTrailActionCommandHandler : IRequestHandler<BulkTrailActionComm
             trail.UpdatedAt = DateTime.UtcNow;
         }
 
-        await _context.SaveChangesWithAuditAsync("system");
+        await _context.SaveChangesWithAuditAsync(request.ActorUserId);
         _cacheInvalidator.InvalidateTrail();
         
         return trails.Count;

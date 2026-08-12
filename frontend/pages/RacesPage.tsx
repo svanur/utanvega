@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useState, useRef, useEffect } from 'react';
+import { lazy, Suspense, useMemo, useCallback, useState, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -37,6 +37,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import HistoryIcon from '@mui/icons-material/History';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import ListIcon from '@mui/icons-material/List';
 import MapIcon from '@mui/icons-material/Map';
@@ -62,8 +63,8 @@ import { useEvents, type EventSummary, type SeriesRaceDto } from '../hooks/useEv
 import { downloadIcs } from '../utils/calendarLinks';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
-import { getTicketStatusColor, groupDistances } from '../utils/ticketStatus';
-import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor } from '../utils/eventUtils';
+import { getTicketStatusColor, groupDistances, isAllSoldOut } from '../utils/ticketStatus';
+import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed } from '../utils/eventUtils';
 import { useLocalize } from '../utils/localize';
 import { ActivityIcons, getActivityIcon } from '../utils/activityIcon';
 import LandscapeIcon from '@mui/icons-material/Landscape';
@@ -74,6 +75,11 @@ import CelebrationIcon from '@mui/icons-material/Celebration';
 import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
 import GrassIcon from '@mui/icons-material/Grass';
 import { haversineKm, formatDistanceKm } from '../utils/geo';
+import { useIcelandicHolidays } from '../hooks/useIcelandicHolidays';
+import { useFavoriteEvents } from '../hooks/useFavoriteEvents';
+import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
+import EventQRShare from '../components/EventQRShare';
 
 const EventTableView = lazy(() => import('../components/EventTableView'));
 const EventMapView = lazy(() => import('../components/EventMapView'));
@@ -99,6 +105,7 @@ interface EventFilters {
     championships: string[];
     weekendOnly: boolean;
     mountainRaceOnly: boolean;
+    favoritesOnly: boolean;
 }
 
 const DEFAULT_FILTERS: EventFilters = {
@@ -112,6 +119,7 @@ const DEFAULT_FILTERS: EventFilters = {
     championships: [],
     weekendOnly: false,
     mountainRaceOnly: false,
+    favoritesOnly: false,
 };
 
 const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
@@ -127,6 +135,8 @@ const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
 export default function RacesPage({ mode, onToggleMode, showQuote = false }: RacesPageProps) {
     const { t } = useTranslation();
     const loc = useLocalize();
+    const { getHolidays } = useIcelandicHolidays();
+    const { favoriteEvents, toggleFavoriteEvent, isFavoriteEvent } = useFavoriteEvents();
     const { events, loading, error, refresh } = useEvents();
     const { isEnabled } = useFeatureFlags();
     const navigate = useNavigate();
@@ -135,6 +145,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
     const [showFilters, setShowFilters] = useState(false);
     const [filters, setFilters] = useState<EventFilters>(DEFAULT_FILTERS);
     const [shareEventId, setShareEventId] = useState<string | null>(null);
+    const [shareEventSlug, setShareEventSlug] = useState<string | null>(null);
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
     const [locationLoading, setLocationLoading] = useState(false);
     const [locationDenied, setLocationDenied] = useState(false);
@@ -225,7 +236,8 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         filters.certifications.length +
         filters.championships.length +
         (filters.weekendOnly ? 1 : 0) +
-        (filters.mountainRaceOnly ? 1 : 0),
+        (filters.mountainRaceOnly ? 1 : 0) +
+        (filters.favoritesOnly ? 1 : 0),
     [filters]);
 
     const filterOptions = useMemo(() => {
@@ -238,64 +250,60 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         return { activityTypes, eventTypes, locations, certifications, championships };
     }, [events]);
 
+    const monthNames = t('races.months', { returnObjects: true }) as string[];
+
+    // Pill visibility: derived from all events (not filtered) so pills don't disappear
+    const pillMeta = useMemo(() => {
+        const visible = events.filter(e => e.status !== 'Hidden' && e.status !== 'Unlisted');
+        return {
+            hasTrailRun: visible.some(e => e.activityType === 'TrailRunning'),
+            hasRun: visible.some(e => e.activityType === 'Running'),
+            hasItra: visible.some(e => e.itraPoints && e.itraPoints.length > 0),
+        };
+    }, [events]);
+
+    const toggleActivity = useCallback((type: string) =>
+        setFilters(f => ({
+            ...f,
+            activityTypes: f.activityTypes.includes(type)
+                ? f.activityTypes.filter(x => x !== type)
+                : [...f.activityTypes, type],
+        })), []);
+
+    const toggleMonth = useCallback((idx: number) =>
+        setFilters(f => ({
+            ...f,
+            months: f.months.includes(idx) ? f.months.filter(m => m !== idx) : [...f.months, idx],
+        })), []);
+
+    // Shared filter steps used by both `filtered` and `monthsWithEvents`.
+    // Add new filter types here — both consumers pick them up automatically.
+    const applyFilters = useCallback((base: EventSummary[], f: EventFilters, q: string, skipMonth = false): EventSummary[] => {
+        let result = base;
+        if (q) result = result.filter(c => c.name.toLowerCase().includes(q) || c.locationName?.toLowerCase().includes(q) || c.organizerName?.toLowerCase().includes(q));
+        if (f.locations.length > 0) result = result.filter(c => c.locationName && f.locations.includes(c.locationName));
+        if (!skipMonth && f.months.length > 0) result = result.filter(c => { const d = c.displayDate ?? c.nextEditionDate; return !!d && f.months.includes(new Date(d + 'T00:00:00').getMonth()); });
+        if (f.activityTypes.length > 0) result = result.filter(c => f.activityTypes.includes(c.activityType));
+        if (f.eventTypes.length > 0) result = result.filter(c => f.eventTypes.includes(c.type));
+        if (f.itraAny) result = result.filter(c => c.itraPoints && c.itraPoints.length > 0);
+        else if (f.itraPoints.length > 0) result = result.filter(c => c.itraPoints?.some(p => f.itraPoints.includes(p)));
+        if (f.certifications.length > 0) result = result.filter(c => c.certifications?.some(cert => f.certifications.includes(cert)));
+        if (f.championships.length > 0) result = result.filter(c => c.championshipCategories?.some(ch => f.championships.includes(ch)));
+        if (f.weekendOnly) result = result.filter(c => { const d = c.displayDate ?? c.nextEditionDate; if (!d) return false; const day = new Date(d + 'T00:00:00').getDay(); return day === 0 || day === 6; });
+        if (f.mountainRaceOnly) result = result.filter(c => c.isMountainRace === true);
+        if (f.favoritesOnly) result = result.filter(c => favoriteEvents.includes(c.slug));
+        return result;
+    }, [favoriteEvents]);
+
     const filtered = useMemo(() => {
         const q = search.toLowerCase().trim();
-        let result = events.filter(c => c.status !== 'Hidden' && c.status !== 'Unlisted');
-
-        if (q) {
-            result = result.filter(c =>
-                c.name.toLowerCase().includes(q) ||
-                (c.locationName?.toLowerCase().includes(q)) ||
-                (c.organizerName?.toLowerCase().includes(q))
-            );
-        }
-
-        if (filters.locations.length > 0) {
-            result = result.filter(c => c.locationName && filters.locations.includes(c.locationName));
-        }
-
-        if (filters.months.length > 0) {
-            result = result.filter(c => {
-                const d = c.displayDate ?? c.nextEditionDate;
-                if (!d) return false;
-                return filters.months.includes(new Date(d + 'T00:00:00').getMonth());
-            });
-        }
-
-        if (filters.activityTypes.length > 0) {
-            result = result.filter(c => filters.activityTypes.includes(c.activityType));
-        }
-        if (filters.eventTypes.length > 0) {
-            result = result.filter(c => filters.eventTypes.includes(c.type));
-        }
-        if (filters.itraAny) {
-            result = result.filter(c => c.itraPoints && c.itraPoints.length > 0);
-        } else if (filters.itraPoints.length > 0) {
-            result = result.filter(c => c.itraPoints?.some(p => filters.itraPoints.includes(p)));
-        }
-        if (filters.certifications.length > 0) {
-            result = result.filter(c => c.certifications?.some(cert => filters.certifications.includes(cert)));
-        }
-        if (filters.championships.length > 0) {
-            result = result.filter(c => c.championshipCategories?.some(ch => filters.championships.includes(ch)));
-        }
-        if (filters.weekendOnly) {
-            result = result.filter(c => {
-                const d = c.displayDate ?? c.nextEditionDate;
-                if (!d) return false;
-                const day = new Date(d + 'T00:00:00').getDay();
-                return day === 0 || day === 6;
-            });
-        }
-
-        if (filters.mountainRaceOnly) {
-            result = result.filter(c => c.isMountainRace === true);
-        }
+        const visible = events.filter(c => c.status !== 'Hidden' && c.status !== 'Unlisted');
+        const result = applyFilters(visible, filters, q);
 
         // Sort: Active/Upcoming first, Cancelled last; then by upcoming date, then name
-        result.sort((a, b) => {
-            const cancelledA = a.status === 'Cancelled' ? 1 : 0;
-            const cancelledB = b.status === 'Cancelled' ? 1 : 0;
+        return result.sort((a, b) => {
+            const cancelledA = isEffectivelyCancelled(a) ? 1 : 0;
+            const cancelledB = isEffectivelyCancelled(b) ? 1 : 0;
             if (cancelledA !== cancelledB) return cancelledA - cancelledB;
 
             if (a.daysUntil !== null && b.daysUntil !== null) {
@@ -308,9 +316,16 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
             if (b.daysUntil !== null) return 1;
             return (loc(a.name, a.nameEn) ?? a.name).localeCompare(loc(b.name, b.nameEn) ?? b.name, 'is');
         });
+    }, [events, search, filters, loc, applyFilters]);
 
-        return result;
-    }, [events, search, filters, loc]);
+    // Month pills reflect all active filters except month — so selecting "Trail Run"
+    // collapses months with no trail runs, but active month pills don't fight each other.
+    const monthsWithEvents = useMemo(() => {
+        const q = search.toLowerCase().trim();
+        const visible = events.filter(e => e.status !== 'Hidden' && e.status !== 'Unlisted');
+        const result = applyFilters(visible, filters, q, true);
+        return new Set(result.map(e => e.displayDate ?? e.nextEditionDate).filter(Boolean).map(d => new Date(d! + 'T00:00:00').getMonth()));
+    }, [events, search, filters, applyFilters]);
 
     const sortedFiltered = useMemo(() => {
         if (sortBy === 'distance' && userLocation) {
@@ -335,7 +350,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
 
     const { justRaced, upcoming } = useMemo(() => {
         const isRecentlyCompleted = (c: EventSummary) =>
-            c.daysUntil != null && c.daysUntil < 0 && c.daysUntil >= -3 && c.status !== 'Cancelled';
+            c.daysUntil != null && c.daysUntil < 0 && c.daysUntil >= -3 && !isEffectivelyCancelled(c);
         const jr = sortedFiltered.filter(isRecentlyCompleted);
         const up = sortedFiltered.filter(c => !isRecentlyCompleted(c));
         return { justRaced: jr, upcoming: up };
@@ -420,13 +435,22 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                             <EmojiEventsIcon sx={{ fontSize: 32, color: theme.palette.warning.main }} />
                             {t('races.title')}
                         </Typography>
-                        <Chip
-                            icon={<CalendarTodayIcon />}
-                            label={t('calendar.title')}
-                            variant="outlined"
-                            size="small"
-                            onClick={() => navigate('/events/calendar')}
-                        />
+                        <Stack direction="row" spacing={1}>
+                            <Chip
+                                icon={<CalendarTodayIcon />}
+                                label={t('calendar.title')}
+                                variant="outlined"
+                                size="small"
+                                onClick={() => navigate('/events/calendar')}
+                            />
+                            <Chip
+                                icon={<HistoryIcon />}
+                                label={t('races.editionsHistory.title', 'Past events')}
+                                variant="outlined"
+                                size="small"
+                                onClick={() => navigate('/editions/history')}
+                            />
+                        </Stack>
                     </Stack>
                     <Typography variant="body2" color="text.secondary">
                         {t('races.subtitle')}
@@ -687,6 +711,18 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                 }
                                 label={<Typography variant="body2">{t('races.filters.weekendOnly')}</Typography>}
                             />
+                            <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        size="small"
+                                        checked={filters.favoritesOnly}
+                                        onChange={e => setFilters(f => ({ ...f, favoritesOnly: e.target.checked }))}
+                                        icon={<StarBorderIcon fontSize="small" />}
+                                        checkedIcon={<StarIcon fontSize="small" sx={{ color: 'warning.main' }} />}
+                                    />
+                                }
+                                label={<Typography variant="body2">{t('races.filters.favoritesOnly')}</Typography>}
+                            />
                             <Chip
                                 label={`⛰ ${t('races.mountainRace', 'Mountain race')}`}
                                 size="small"
@@ -709,6 +745,70 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                         </Box>
                     </Box>
                 </Collapse>
+
+                {/* Quick-filter pills */}
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1.5 }}>
+                    {pillMeta.hasTrailRun && (
+                        <Chip
+                            icon={<LandscapeIcon fontSize="small" />}
+                            label={t('races.activityTypes.TrailRunning', 'Trail Run')}
+                            size="small"
+                            variant={filters.activityTypes.includes('TrailRunning') ? 'filled' : 'outlined'}
+                            color={filters.activityTypes.includes('TrailRunning') ? 'primary' : 'default'}
+                            onClick={() => toggleActivity('TrailRunning')}
+                        />
+                    )}
+                    {pillMeta.hasRun && (
+                        <Chip
+                            icon={<DirectionsRunIcon fontSize="small" />}
+                            label={t('races.activityTypes.Running', 'Run')}
+                            size="small"
+                            variant={filters.activityTypes.includes('Running') ? 'filled' : 'outlined'}
+                            color={filters.activityTypes.includes('Running') ? 'primary' : 'default'}
+                            onClick={() => toggleActivity('Running')}
+                        />
+                    )}
+                    {pillMeta.hasItra && (
+                        <Chip
+                            label="ITRA"
+                            size="small"
+                            variant={filters.itraAny ? 'filled' : 'outlined'}
+                            color={filters.itraAny ? 'warning' : 'default'}
+                            onClick={() => setFilters(f => ({ ...f, itraAny: !f.itraAny, itraPoints: [] }))}
+                            sx={{ fontWeight: 600 }}
+                        />
+                    )}
+                    <Chip
+                        label={t('races.filters.weekendOnly')}
+                        size="small"
+                        variant={filters.weekendOnly ? 'filled' : 'outlined'}
+                        color={filters.weekendOnly ? 'secondary' : 'default'}
+                        onClick={() => setFilters(f => ({ ...f, weekendOnly: !f.weekendOnly }))}
+                    />
+                    {Array.from({ length: 12 }, (_, idx) => idx)
+                        .filter(idx => monthsWithEvents.has(idx))
+                        .map(idx => (
+                            <Chip
+                                key={idx}
+                                label={monthNames[idx].slice(0, 3)}
+                                size="small"
+                                variant={filters.months.includes(idx) ? 'filled' : 'outlined'}
+                                color={filters.months.includes(idx) ? 'primary' : 'default'}
+                                onClick={() => toggleMonth(idx)}
+                            />
+                        ))
+                    }
+                    {activeFilterCount > 0 && (
+                        <Chip
+                            label={t('races.filters.reset')}
+                            size="small"
+                            variant="outlined"
+                            color="error"
+                            icon={<CloseIcon fontSize="small" />}
+                            onClick={() => setFilters(DEFAULT_FILTERS)}
+                        />
+                    )}
+                </Box>
 
                 {/* View toggle + result count */}
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -787,9 +887,9 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                 revealWidth={0}
                                             >
                                             <Card
+                                                variant="outlined"
                                                 sx={{
-                                                    transition: 'transform 0.15s, box-shadow 0.15s',
-                                                    '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] },
+                                                    '@media (hover: hover)': { transition: 'transform 0.15s, box-shadow 0.15s', '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] } },
                                                     borderLeft: `4px solid ${theme.palette.success.main}`,
                                                 }}
                                             >
@@ -850,15 +950,48 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                             )}
                             
                         <Stack spacing={2}>
-                            {flattenedUpcoming.map((row, idx) => {
+                            {(() => {
+                                let lastHolidayDate: string | null = null;
+                                return flattenedUpcoming.map((row, idx) => {
+                                const rowDate = row.kind === 'series-race'
+                                    ? row.race.dateOfRace
+                                    : (row.comp.displayDate ?? row.comp.nextEditionDate);
+                                const holidays = rowDate ? getHolidays(rowDate) : [];
+                                const holidayBanner = holidays.length > 0 && rowDate !== lastHolidayDate ? (() => {
+                                    lastHolidayDate = rowDate!;
+                                    const d = new Date(rowDate! + 'T00:00:00');
+                                    const months = t('races.months', { returnObjects: true }) as string[];
+                                    const dateLabel = `${d.getDate()}. ${months[d.getMonth()]}`;
+                                    return (
+                                        <Box
+                                            key={`holiday-${rowDate}`}
+                                            sx={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 1,
+                                                px: 1.5,
+                                                py: 0.75,
+                                                borderRadius: 1,
+                                                bgcolor: alpha(theme.palette.warning.main, 0.12),
+                                                mb: 1,
+                                            }}
+                                        >
+                                            <CelebrationIcon sx={{ fontSize: 15, color: 'warning.dark' }} />
+                                            <Typography variant="caption" fontWeight={700} sx={{ color: 'warning.dark' }}>
+                                                {dateLabel} — {holidays.map(h => loc(h.name, h.nameEn) ?? h.name).join(' · ')}
+                                            </Typography>
+                                        </Box>
+                                    );
+                                })() : null;
                                 if (row.kind === 'series-race') {
                                     const { comp, race } = row;
                                     const raceDaysUntil = race.dateOfRace
                                         ? Math.round((new Date(race.dateOfRace + 'T00:00:00').getTime() - Date.now()) / 86400000)
                                         : null;
                                     return (
+                                        <Box key={`${comp.id}-${race.raceId}`}>
+                                        {holidayBanner}
                                         <SwipeableCard
-                                            key={`${comp.id}-${race.raceId}`}
                                             onSwipeRight={race.registrationUrl && raceDaysUntil != null && raceDaysUntil >= 0
                                                 ? () => setShareEventId(comp.id)
                                                 : undefined
@@ -899,7 +1032,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                             }
                                             revealWidth={120}
                                         >
-                                            <Card sx={{ transition: 'transform 0.15s, box-shadow 0.15s', '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] } }}>
+                                            <Card variant="outlined" sx={{ '@media (hover: hover)': { transition: 'transform 0.15s, box-shadow 0.15s', '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] } } }}>
                                                 <CardActionArea onClick={() => navigate(`/events/${comp.slug}`)}>
                                                     <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
                                                         {/* Name + countdown */}
@@ -964,20 +1097,47 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                 </CardActionArea>
                                             </Card>
                                         </SwipeableCard>
+                                        </Box>
                                     );
                                 }
                                 const comp = row.comp;
                                 return (
+                                <Box key={comp.id}>
+                                {holidayBanner}
                                 <SwipeableCard
-                                    key={comp.id}
                                     peek={idx === 0 && showSwipeHint}
-                                    onSwipeRight={comp.status !== 'Cancelled' && comp.daysUntil != null && comp.daysUntil >= 0
-                                        ? () => setShareEventId(comp.id)
-                                        : undefined
+                                    onSwipeRight={() => {
+                                        toggleFavoriteEvent(comp.slug);
+                                        if ('vibrate' in navigator) navigator.vibrate(10);
+                                    }}
+                                    rightActions={
+                                        <Box
+                                            sx={{
+                                                width: '100%',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                bgcolor: isFavoriteEvent(comp.slug) ? 'warning.dark' : 'warning.main',
+                                                color: 'white',
+                                                gap: 0.5,
+                                                fontSize: '0.7rem',
+                                                fontWeight: 600,
+                                            }}
+                                        >
+                                            {isFavoriteEvent(comp.slug)
+                                                ? <StarIcon sx={{ fontSize: 18 }} />
+                                                : <StarBorderIcon sx={{ fontSize: 18 }} />
+                                            }
+                                            {isFavoriteEvent(comp.slug)
+                                                ? t('races.removeFavorite')
+                                                : t('races.addFavorite')
+                                            }
+                                        </Box>
                                     }
                                     leftActions={
                                         <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-                                            {comp.registrationUrl && comp.daysUntil != null && comp.daysUntil >= 0 && (
+                                            {comp.registrationUrl && comp.daysUntil != null && comp.daysUntil >= 0 && !isAllSoldOut(comp.distances) && (
                                                 <Box
                                                     component="a"
                                                     href={comp.registrationUrl}
@@ -1034,16 +1194,39 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                     {t('races.addToCalendar', 'Calendar')}
                                                 </Box>
                                             )}
+                                            <Box
+                                                onClick={(e: React.MouseEvent) => {
+                                                    e.stopPropagation();
+                                                    setShareEventSlug(comp.slug);
+                                                }}
+                                                sx={{
+                                                    flex: 1,
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    bgcolor: 'info.main',
+                                                    color: 'white',
+                                                    cursor: 'pointer',
+                                                    gap: 0.5,
+                                                    px: 1,
+                                                    fontSize: '0.7rem',
+                                                    fontWeight: 600,
+                                                }}
+                                            >
+                                                <ShareIcon sx={{ fontSize: 18 }} />
+                                                {t('trailCard.share')}
+                                            </Box>
                                         </Box>
                                     }
-                                    revealWidth={120}
+                                    revealWidth={168}
                                 >
                                 <Card
+                                    variant="outlined"
                                     sx={{
-                                        transition: 'transform 0.15s, box-shadow 0.15s',
-                                        '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] },
+                                        '@media (hover: hover)': { transition: 'transform 0.15s, box-shadow 0.15s', '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] } },
                                         ...(comp.type === 'Advertisement' && { bgcolor: 'rgba(255, 193, 7, 0.08)' }),
-                                        ...(comp.status === 'Cancelled' && { opacity: 0.65 }),
+                                        ...(isEffectivelyCancelled(comp) && { opacity: 0.65 }),
                                     }}
                                 >
                                     <CardActionArea onClick={() => navigate(`/events/${comp.slug}`)}>
@@ -1054,22 +1237,25 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                     <ActivityIcons activityTypes={comp.activityTypes} activityType={comp.activityType} />
                                                     <Box sx={{ minWidth: 0 }}>
                                                         <Stack direction="row" alignItems="center" gap={0.5} flexWrap="wrap">
-                                                            <Typography variant="subtitle1" fontWeight={700} sx={{ ...(comp.status === 'Cancelled' ? { textDecoration: 'line-through' } : {}), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', sm: 'nowrap' } }}>
+                                                            <Typography variant="subtitle1" fontWeight={700} sx={{ ...(isEffectivelyCancelled(comp) ? { textDecoration: 'line-through' } : {}), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', sm: 'nowrap' } }}>
                                                                 {loc(comp.name, comp.nameEn)}
                                                             </Typography>
                                                             {comp.type === 'Advertisement' && (
                                                                 <Chip label={t('races.eventTypes.Advertisement', 'Sponsored')} size="small" color="warning" sx={{ height: 18, fontSize: '0.65rem' }} />
                                                             )}
-                                                            {comp.status === 'Cancelled' && (
+                                                            {isEffectivelyCancelled(comp) && (
                                                                 <Chip label={t('races.statusCancelled')} size="small" color="error" sx={{ height: 18, fontSize: '0.65rem' }} />
                                                             )}
-                                                            {comp.status === 'Unconfirmed' && (
+                                                            {!isEffectivelyCancelled(comp) && isEffectivelyUnconfirmed(comp) && (
                                                                 <Chip label={t('races.statusUpcoming')} size="small" color="info" sx={{ height: 18, fontSize: '0.65rem' }} />
+                                                            )}
+                                                            {isFavoriteEvent(comp.slug) && (
+                                                                <StarIcon sx={{ fontSize: 16, color: 'warning.main', flexShrink: 0 }} />
                                                             )}
                                                         </Stack>
                                                     </Box>
                                                 </Stack>
-                                                {comp.status !== 'Cancelled' && (
+                                                {!isEffectivelyCancelled(comp) && (
                                                     <Stack direction="row" alignItems="center" gap={0.5} sx={{ flexShrink: 0 }}>
                                                         {(comp.displayDate ?? comp.nextEditionDate) && (
                                                             <>
@@ -1102,7 +1288,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                             </Stack>
 
                                             {/* location · km away */}
-                                            {(comp.locationName || (userLocation && comp.gpxPointLat != null)) && comp.status !== 'Cancelled' && (
+                                            {(comp.locationName || (userLocation && comp.gpxPointLat != null)) && !isEffectivelyCancelled(comp) && (
                                                 <Stack direction="row" alignItems="center" gap={0.5} sx={{ mt: 0.25 }} flexWrap="wrap">
                                                     {comp.locationName && (
                                                         <>
@@ -1153,7 +1339,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                             {/* Row 4: actions */}
                                             {(comp.registrationUrl || comp.youtubeUrl) && (
                                                 <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.75 }}>
-                                                    {comp.registrationUrl && comp.daysUntil != null && comp.daysUntil >= 0 && (
+                                                    {comp.registrationUrl && comp.daysUntil != null && comp.daysUntil >= 0 && !isAllSoldOut(comp.distances) && (
                                                         <Button size="small" variant="outlined" href={comp.registrationUrl} target="_blank" rel="noopener noreferrer" endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.8rem' }}>
                                                             {t('races.register', 'Register')}
                                                         </Button>
@@ -1175,8 +1361,10 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                     </CardActionArea>
                                 </Card>
                                 </SwipeableCard>
+                                </Box>
                                 );
-                            })}
+                                });
+                            })()}
                         </Stack>
                         </>
                     )
@@ -1219,6 +1407,20 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                             date={ev.displayDate ?? ev.nextEditionDate}
                             daysUntil={ev.daysUntil}
                             activityType={ev.activityType}
+                        />
+                    );
+                })()}
+
+                {/* Swipe-left QR share dialog for event cards */}
+                {shareEventSlug && (() => {
+                    const ev = upcoming.find(e => e.slug === shareEventSlug);
+                    if (!ev) return null;
+                    return (
+                        <EventQRShare
+                            slug={ev.slug}
+                            eventName={loc(ev.name, ev.nameEn) ?? ev.name}
+                            open
+                            onClose={() => setShareEventSlug(null)}
                         />
                     );
                 })()}

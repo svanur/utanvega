@@ -7,6 +7,7 @@ using Utanvega.Backend.Application.Events.Commands.DeleteEvent;
 using Utanvega.Backend.Application.Events.Commands.CreateEdition;
 using Utanvega.Backend.Application.Events.Commands.UpdateEdition;
 using Utanvega.Backend.Application.Events.Commands.DeleteEdition;
+using Utanvega.Backend.Application.Events.Commands.CancelEdition;
 using Utanvega.Backend.Application.Events.Commands.CreateRace;
 using Utanvega.Backend.Application.Events.Commands.UpdateRace;
 using Utanvega.Backend.Application.Events.Commands.DeleteRace;
@@ -1869,5 +1870,462 @@ public class EventHandlerTests : IDisposable
         var dto = Assert.Single(result);
         Assert.Equal(0, dto.DaysUntil);
         Assert.Equal(endDate, dto.EndDisplayDate);
+    }
+
+    // ─── CancelEditionCommand ───
+
+    [Fact]
+    public async Task CancelEdition_CascadesToRacesAndClosesRegistration()
+    {
+        var ev = CreateTestEvent();
+        var edition = CreateTestEdition(ev.Id);
+        edition.RegistrationStatus = RegistrationStatus.Open;
+        var race = new Race { Id = Guid.NewGuid(), EventEditionId = edition.Id, Name = "10K", SortOrder = 0, Status = RaceStatus.Active, TicketStatus = TicketStatus.Available };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new CancelEditionCommandHandler(ctx, _cacheInvalidator);
+            var result = await handler.Handle(new CancelEditionCommand(edition.Id), CancellationToken.None);
+            Assert.True(result);
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var updatedEdition = ctx.EventEditions.Find(edition.Id);
+            var updatedRace = ctx.Races.Find(race.Id);
+            Assert.Equal(EditionStatus.Cancelled, updatedEdition!.Status);
+            Assert.Equal(RegistrationStatus.Closed, updatedEdition.RegistrationStatus);
+            Assert.Equal(RaceStatus.Cancelled, updatedRace!.Status);
+            Assert.Equal(TicketStatus.Closed, updatedRace.TicketStatus);
+        }
+    }
+
+    [Fact]
+    public async Task CancelEdition_NonExistentEdition_ReturnsFalse()
+    {
+        using var ctx = _factory.CreateContext();
+        var handler = new CancelEditionCommandHandler(ctx, _cacheInvalidator);
+        var result = await handler.Handle(new CancelEditionCommand(Guid.NewGuid()), CancellationToken.None);
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task CancelEdition_LeavesAlreadyCancelledRaceUntouched()
+    {
+        var ev = CreateTestEvent();
+        var edition = CreateTestEdition(ev.Id);
+        var race = new Race { Id = Guid.NewGuid(), EventEditionId = edition.Id, Name = "10K", SortOrder = 0, Status = RaceStatus.Cancelled, TicketStatus = TicketStatus.NotStarted };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new CancelEditionCommandHandler(ctx, _cacheInvalidator);
+            await handler.Handle(new CancelEditionCommand(edition.Id), CancellationToken.None);
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var updatedRace = ctx.Races.Find(race.Id);
+            Assert.Equal(TicketStatus.NotStarted, updatedRace!.TicketStatus);
+        }
+    }
+
+    // ─── UpdateEditionCommand — Status field ───
+
+    private UpdateEditionCommand BuildUpdateEditionCommand(EventEdition edition, string? status) => new(
+        Id: edition.Id,
+        Year: edition.Year,
+        Date: edition.Date,
+        EndDate: edition.EndDate,
+        Title: edition.Title,
+        RegistrationUrl: edition.RegistrationUrl,
+        ResultsUrl: edition.ResultsUrl,
+        Notes: edition.Notes,
+        RegistrationStatus: edition.RegistrationStatus.ToString(),
+        TrailId: edition.TrailId,
+        Status: status
+    );
+
+    [Fact]
+    public async Task UpdateEdition_OmittingStatus_LeavesStatusUnchanged()
+    {
+        var ev = CreateTestEvent();
+        var edition = CreateTestEdition(ev.Id);
+        edition.Status = EditionStatus.Hidden;
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new UpdateEditionCommandHandler(ctx, _cacheInvalidator);
+            await handler.Handle(BuildUpdateEditionCommand(edition, status: null), CancellationToken.None);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        Assert.Equal(EditionStatus.Hidden, verifyCtx.EventEditions.Find(edition.Id)!.Status);
+    }
+
+    [Fact]
+    public async Task UpdateEdition_SettingStatusToCancelled_CascadesToRaces()
+    {
+        var ev = CreateTestEvent();
+        var edition = CreateTestEdition(ev.Id);
+        edition.RegistrationStatus = RegistrationStatus.Open;
+        var race = new Race { Id = Guid.NewGuid(), EventEditionId = edition.Id, Name = "10K", SortOrder = 0, Status = RaceStatus.Active, TicketStatus = TicketStatus.Available };
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new UpdateEditionCommandHandler(ctx, _cacheInvalidator);
+            await handler.Handle(BuildUpdateEditionCommand(edition, status: "Cancelled"), CancellationToken.None);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        Assert.Equal(EditionStatus.Cancelled, verifyCtx.EventEditions.Find(edition.Id)!.Status);
+        Assert.Equal(RegistrationStatus.Closed, verifyCtx.EventEditions.Find(edition.Id)!.RegistrationStatus);
+        Assert.Equal(RaceStatus.Cancelled, verifyCtx.Races.Find(race.Id)!.Status);
+    }
+
+    [Fact]
+    public async Task UpdateEdition_SettingStatusToHidden_DoesNotCascadeRaces()
+    {
+        var ev = CreateTestEvent();
+        var edition = CreateTestEdition(ev.Id);
+        var race = new Race { Id = Guid.NewGuid(), EventEditionId = edition.Id, Name = "10K", SortOrder = 0, Status = RaceStatus.Active, TicketStatus = TicketStatus.Available };
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new UpdateEditionCommandHandler(ctx, _cacheInvalidator);
+            await handler.Handle(BuildUpdateEditionCommand(edition, status: "Hidden"), CancellationToken.None);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        Assert.Equal(EditionStatus.Hidden, verifyCtx.EventEditions.Find(edition.Id)!.Status);
+        Assert.Equal(RaceStatus.Active, verifyCtx.Races.Find(race.Id)!.Status);
+    }
+
+    [Fact]
+    public async Task UpdateEdition_ReactivatingCancelled_DoesNotReactivateRaces()
+    {
+        var ev = CreateTestEvent();
+        var edition = CreateTestEdition(ev.Id);
+        edition.Status = EditionStatus.Cancelled;
+        edition.RegistrationStatus = RegistrationStatus.Closed;
+        var race = new Race { Id = Guid.NewGuid(), EventEditionId = edition.Id, Name = "10K", SortOrder = 0, Status = RaceStatus.Cancelled, TicketStatus = TicketStatus.Closed };
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new UpdateEditionCommandHandler(ctx, _cacheInvalidator);
+            await handler.Handle(BuildUpdateEditionCommand(edition, status: "Active"), CancellationToken.None);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        Assert.Equal(EditionStatus.Active, verifyCtx.EventEditions.Find(edition.Id)!.Status);
+        Assert.Equal(RaceStatus.Cancelled, verifyCtx.Races.Find(race.Id)!.Status);
+    }
+
+    // ─── UpdateRaceCommand — TicketStatus forced on Cancelled ───
+
+    [Fact]
+    public async Task UpdateRace_SettingStatusToCancelled_ForcesTicketStatusClosed()
+    {
+        var ev = CreateTestEvent();
+        var edition = CreateTestEdition(ev.Id);
+        var race = new Race { Id = Guid.NewGuid(), EventEditionId = edition.Id, Name = "10K", SortOrder = 0, Status = RaceStatus.Active, TicketStatus = TicketStatus.Available };
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new UpdateRaceCommandHandler(ctx, _cacheInvalidator);
+            await handler.Handle(new UpdateRaceCommand(
+                Id: race.Id, TrailId: null, Name: race.Name, DistanceLabel: null, CutoffMinutes: null,
+                Description: null, Status: "Cancelled", SortOrder: 0, TicketStatus: "SoldOut",
+                MaxParticipants: null, ItraPoints: null, CertifiedBy: null, PrizeMoney: 0,
+                ChampionshipCategory: null, DateOfRace: null, StartTime: null
+            ), CancellationToken.None);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        var updated = verifyCtx.Races.Find(race.Id);
+        Assert.Equal(RaceStatus.Cancelled, updated!.Status);
+        Assert.Equal(TicketStatus.Closed, updated.TicketStatus);
+    }
+
+    [Fact]
+    public async Task UpdateRace_NonCancelledStatus_RespectsSubmittedTicketStatus()
+    {
+        var ev = CreateTestEvent();
+        var edition = CreateTestEdition(ev.Id);
+        var race = new Race { Id = Guid.NewGuid(), EventEditionId = edition.Id, Name = "10K", SortOrder = 0, Status = RaceStatus.Active, TicketStatus = TicketStatus.Available };
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new UpdateRaceCommandHandler(ctx, _cacheInvalidator);
+            await handler.Handle(new UpdateRaceCommand(
+                Id: race.Id, TrailId: null, Name: race.Name, DistanceLabel: null, CutoffMinutes: null,
+                Description: null, Status: "Active", SortOrder: 0, TicketStatus: "SoldOut",
+                MaxParticipants: null, ItraPoints: null, CertifiedBy: null, PrizeMoney: 0,
+                ChampionshipCategory: null, DateOfRace: null, StartTime: null
+            ), CancellationToken.None);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        Assert.Equal(TicketStatus.SoldOut, verifyCtx.Races.Find(race.Id)!.TicketStatus);
+    }
+
+    // ─── GetEventsQuery / GetEventQuery — Hidden edition exclusion + rollup fields ───
+
+    [Fact]
+    public async Task GetEvents_ExcludesHiddenEdition_WhenNotIncludeHidden()
+    {
+        var ev = CreateTestEvent("Public Event");
+        ev.Slug = "public-event-heh";
+        var edition = CreateTestEdition(ev.Id);
+        edition.Status = EditionStatus.Hidden;
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(IncludeHidden: false), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.Null(dto.EditionStatus);
+        Assert.False(dto.EditionEffectiveCancelled);
+        Assert.Equal(0, dto.EditionCount);
+    }
+
+    [Fact]
+    public async Task GetEvents_IncludesHiddenEdition_WhenIncludeHiddenTrue()
+    {
+        var ev = CreateTestEvent("Admin Event");
+        ev.Slug = "admin-event-heh";
+        var edition = CreateTestEdition(ev.Id);
+        edition.Date = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(30);
+        edition.Status = EditionStatus.Hidden;
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(IncludeHidden: true), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.Equal("Hidden", dto.EditionStatus);
+        Assert.Equal(1, dto.EditionCount);
+    }
+
+    [Fact]
+    public async Task GetEvents_EditionEffectiveCancelled_TrueWhenAllRacesCancelled()
+    {
+        var ev = CreateTestEvent("Attrition Event");
+        ev.Slug = "attrition-event";
+        var edition = CreateTestEdition(ev.Id);
+        edition.Date = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(30);
+        var race = new Race { Id = Guid.NewGuid(), EventEditionId = edition.Id, Name = "10K", SortOrder = 0, Status = RaceStatus.Cancelled, TicketStatus = TicketStatus.Closed };
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.Equal("Active", dto.EditionStatus);
+        Assert.True(dto.EditionEffectiveCancelled);
+    }
+
+    [Fact]
+    public async Task GetEvent_BySlug_ExcludesHiddenEdition_FromEditionsList_WhenNotIncludeHidden()
+    {
+        var ev = CreateTestEvent("Multi Edition Event");
+        ev.Slug = "multi-edition-event";
+        var visibleEdition = CreateTestEdition(ev.Id, 2025);
+        var hiddenEdition = CreateTestEdition(ev.Id, 2026);
+        hiddenEdition.Id = Guid.NewGuid();
+        hiddenEdition.Status = EditionStatus.Hidden;
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.AddRange(visibleEdition, hiddenEdition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventQuery("multi-edition-event"), CancellationToken.None);
+
+        var edition = Assert.Single(result!.Editions);
+        Assert.Equal(visibleEdition.Id, edition.Id);
+    }
+
+    [Fact]
+    public async Task GetEvent_BySlug_IncludesHiddenEdition_WhenIncludeHiddenTrue()
+    {
+        var ev = CreateTestEvent("Admin Multi Edition Event");
+        ev.Slug = "admin-multi-edition-event";
+        var visibleEdition = CreateTestEdition(ev.Id, 2025);
+        var hiddenEdition = CreateTestEdition(ev.Id, 2026);
+        hiddenEdition.Id = Guid.NewGuid();
+        hiddenEdition.Status = EditionStatus.Hidden;
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.AddRange(visibleEdition, hiddenEdition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventQuery("admin-multi-edition-event", IncludeHidden: true), CancellationToken.None);
+
+        Assert.Equal(2, result!.Editions.Count);
+    }
+
+    [Fact]
+    public async Task GetEvent_BySlug_TopLevelEditionStatus_ReflectsRelevantEdition()
+    {
+        // Regression test: the flattened EditionStatus/EditionEffectiveCancelled fields on
+        // EventDetailDto must be populated — this was previously only wired up on the list
+        // endpoint (GetEventsQuery), leaving the single-event admin edit page unable to see them.
+        var ev = CreateTestEvent("Cancelled Detail Event");
+        ev.Slug = "cancelled-detail-event";
+        var edition = CreateTestEdition(ev.Id);
+        edition.Date = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(30);
+        edition.Status = EditionStatus.Cancelled;
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventQuery("cancelled-detail-event"), CancellationToken.None);
+
+        Assert.Equal("Cancelled", result!.EditionStatus);
+        Assert.True(result.EditionEffectiveCancelled);
+    }
+
+    [Fact]
+    public async Task GetEvent_BySlug_EditionDto_EffectiveCancelled_TrueWhenAllRacesCancelled()
+    {
+        var ev = CreateTestEvent("Race Attrition Detail Event");
+        ev.Slug = "race-attrition-detail-event";
+        var edition = CreateTestEdition(ev.Id);
+        var race = new Race { Id = Guid.NewGuid(), EventEditionId = edition.Id, Name = "10K", SortOrder = 0, Status = RaceStatus.Cancelled, TicketStatus = TicketStatus.Closed };
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventQuery("race-attrition-detail-event"), CancellationToken.None);
+
+        var editionDto = Assert.Single(result!.Editions);
+        Assert.Equal("Active", editionDto.Status);
+        Assert.True(editionDto.EffectiveCancelled);
+    }
+
+    [Fact]
+    public async Task GetEvent_BySlug_EditionDto_Year_FallsBackToDateYear_WhenYearFieldIsNull()
+    {
+        // Regression: admins can set Date without filling in the separate Year field. The
+        // /events/:slug/history/:year route matches editions by this Year, so it must never be
+        // null when a Date is present — this previously caused "Edition not found" for such editions.
+        var ev = CreateTestEvent("No Explicit Year Detail Event");
+        ev.Slug = "no-explicit-year-detail-event";
+        var edition = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Date = new DateOnly(2025, 6, 1),
+            Year = null,
+            Status = EditionStatus.Active,
+            RegistrationStatus = RegistrationStatus.Closed,
+        };
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventQuery("no-explicit-year-detail-event"), CancellationToken.None);
+
+        var editionDto = Assert.Single(result!.Editions);
+        Assert.Equal(2025, editionDto.Year);
     }
 }

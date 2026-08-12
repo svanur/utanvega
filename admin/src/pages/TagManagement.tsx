@@ -4,7 +4,11 @@ import {
   TableHead, TableRow, IconButton, Button, TextField, Chip, Dialog,
   DialogTitle, DialogContent, DialogActions, CircularProgress, InputAdornment,
 } from '@mui/material';
-import { Delete as DeleteIcon, Edit as EditIcon, Add as AddIcon, Search as SearchIcon, Clear as ClearIcon } from '@mui/icons-material';
+import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
+import AddIcon from '@mui/icons-material/Add';
+import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
 import { useTags, TagDto } from '../hooks/useTags';
 import { apiFetch } from '../hooks/api';
 import BilingualTextField from '../components/BilingualTextField';

@@ -16,6 +16,7 @@ public class GetUserTrailActivitiesHandler : IRequestHandler<GetUserTrailActivit
     public async Task<GetUserTrailActivitiesResponse> Handle(GetUserTrailActivitiesQuery request, CancellationToken cancellationToken)
     {
         var activities = await _dbContext.UserTrailActivities
+            .AsNoTracking()
             .Where(a => a.UserId == request.UserId)
             .OrderByDescending(a => a.CreatedAt)
             .Select(a => new UserTrailActivityDto(
