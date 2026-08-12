@@ -1316,7 +1316,7 @@
             "Advertisement": "Styrkt"
         },
         "history": {
-            "title": "Saga viðburðar",
+            "title": "Fyrri viðburðir",
             "backToEvent": "Til baka",
             "editionNotFound": "Útgáfa fannst ekki",
             "pastEdition": "Liðin útgáfa",
@@ -1382,7 +1382,14 @@
         "eventCount": "{{count}} viðburðir í þessum mánuði",
         "subscribe": "Gerast áskrifandi",
         "subscribeTooltip": "Gerast áskrifandi að dagatalsfæðu",
-        "subscribeSuccess": "Slóð afrituð! Límdu hana í dagatalið þitt."
+        "subscribeSuccess": "Slóð afrituð! Límdu hana í dagatalið þitt.",
+        "upcoming": "Væntanlegir viðburðir",
+        "quietWeek": "Engir viðburðir",
+        "race": "keppni",
+        "racesPlural": "keppnir",
+        "monthView": "Mánuður",
+        "scheduleView": "Dagskrá",
+        "viewToggle": "Dagbókaryfirlit"
     },
     "welcome": {
         "tagline": "Öll hlaup á einum stað",

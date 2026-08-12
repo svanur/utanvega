@@ -168,6 +168,8 @@ export interface CalendarEvent {
     raceCount: number;
     type: string;
     activityTypes: string[] | null;
+    raceName: string | null;
+    distances: string[] | null;
 }
 
 export interface CalendarDay {
@@ -175,7 +177,7 @@ export interface CalendarDay {
     events: CalendarEvent[];
 }
 
-export function useEventCalendar(from: string, to: string) {
+export function useEventCalendar(from: string, to: string, enabled = true) {
     const { data: days = [], isPending, error: queryError } = useQuery<CalendarDay[]>({
         queryKey: ['event-calendar', from, to],
         queryFn: () => fetch(`${API_URL}/api/v1/events/calendar?from=${from}&to=${to}`)
@@ -184,7 +186,7 @@ export function useEventCalendar(from: string, to: string) {
                 return res.json() as Promise<CalendarDay[]>;
             }),
         staleTime: 5 * 60 * 1000,
-        enabled: !!from && !!to,
+        enabled: enabled && !!from && !!to,
     });
     return { days, loading: isPending, error: queryError instanceof Error ? queryError.message : null };
 }
