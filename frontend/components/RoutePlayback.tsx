@@ -28,9 +28,9 @@ interface RoutePlaybackProps {
 
 // Points advanced per second at each speed setting
 const SPEEDS = [
-    { label: 'slow', pps: 15 },
-    { label: 'medium', pps: 80 },
-    { label: 'fast', pps: 400 },
+    { label: 'hægt', pps: 15 },
+    { label: 'miðlungs', pps: 80 },
+    { label: 'hratt', pps: 400 },
 ];
 
 export default function RoutePlayback({ coordinates, onPointChange, onIndexChange }: RoutePlaybackProps) {
@@ -151,7 +151,18 @@ export default function RoutePlayback({ coordinates, onPointChange, onIndexChang
         return () => { cancelRaf(); };
     }, []);
 
+    const showStats = playing || currentIndex > 0 || finished;
+    const stats = cumulativeStats[currentIndex];
     const progress = total > 1 ? (currentIndex / (total - 1)) * 100 : 0;
+
+    const statPills = stats ? [
+        { key: 'distance', icon: '📍', value: `${stats.distance.toFixed(1)} km` },
+        { key: 'elevation', icon: '📶', value: `${Math.round(stats.elevation)} m` },
+        { key: 'gain', icon: '↑', value: `${Math.round(stats.gain)} m` },
+        { key: 'loss', icon: '↓', value: `${Math.round(stats.loss)} m` },
+        { key: 'highPoint', icon: '⛰', value: `${Math.round(stats.highPoint)} m` },
+        { key: 'lowPoint', icon: '🏖', value: `${Math.round(stats.lowPoint)} m` },
+    ] : [];
 
     return (
         <Box sx={{ mt: 2 }}>
@@ -187,19 +198,22 @@ export default function RoutePlayback({ coordinates, onPointChange, onIndexChang
                     ))}
                 </ToggleButtonGroup>
 
-                {(playing || currentIndex > 0 || finished) && (() => {
-                    const s = cumulativeStats[currentIndex];
-                    return (
-                        <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }} component="span">
-                            {s.distance.toFixed(1)} km &nbsp;·&nbsp; {Math.round(s.elevation)} m &nbsp;·&nbsp;
-                            ↑{Math.round(s.gain)} m &nbsp;·&nbsp; ↓{Math.round(s.loss)} m &nbsp;·&nbsp;
-                            ⛰{Math.round(s.highPoint)} m &nbsp;·&nbsp; 🏝{Math.round(s.lowPoint)} m
+                {showStats && statPills.map(p => (
+                    <Box key={p.key} sx={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'center',
+                        bgcolor: 'action.hover', borderRadius: 2, px: 1.2, py: 0.4, minWidth: 52,
+                    }}>
+                        <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'text.secondary', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
+                            {p.icon} {t(`playback.stats.${p.key}`)}
                         </Typography>
-                    );
-                })()}
+                        <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.75rem', lineHeight: 1.4, fontVariantNumeric: 'tabular-nums' }}>
+                            {p.value}
+                        </Typography>
+                    </Box>
+                ))}
             </Stack>
 
-            {(playing || currentIndex > 0 || finished) && (
+            {showStats && (
                 <LinearProgress
                     variant="determinate"
                     value={progress}
