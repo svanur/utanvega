@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
+import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import {
     Container,
@@ -69,7 +70,7 @@ interface ScheduleViewProps {
     today: Date;
     onEventClick: (slug: string) => void;
     loc: (is: string, en: string | null) => string | null;
-    t: (key: string, opts?: object) => string;
+    t: TFunction;
 }
 
 function ScheduleView({ days, loading, today, onEventClick, loc, t }: ScheduleViewProps) {
