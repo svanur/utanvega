@@ -90,8 +90,8 @@
         "aboutUs": "About us",
         "services": "Services",
         "challenge": "Challenge",
-        "allTrails": "All Trails",
-        "allEvents": "All Events",
+        "allTrails": "Trails list",
+        "allEvents": "Next Events",
         "eventsCalendar": "Calendar",
         "editionsHistory": "Past Events"
     },
