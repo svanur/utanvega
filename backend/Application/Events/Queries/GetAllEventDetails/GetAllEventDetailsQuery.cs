@@ -74,6 +74,7 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
                     ed.TitleEn,
                     ed.RegistrationUrl,
                     ed.ResultsUrl,
+                    ed.PhotoGalleryUrl,
                     ed.Notes,
                     ed.NotesEn,
                     ed.RegistrationStatus.ToString(),

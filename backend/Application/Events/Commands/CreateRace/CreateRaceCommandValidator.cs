@@ -13,12 +13,13 @@ public class CreateRaceCommandValidator : AbstractValidator<CreateRaceCommand>
             .NotEmpty()
             .MustAsync(async (editionId, ct) =>
             {
-                var editionStatus = await context.EventEditions
+                var edition = await context.EventEditions
                     .Where(ed => ed.Id == editionId)
-                    .Select(ed => ed.Status)
+                    .Select(ed => (EditionStatus?)ed.Status)
                     .FirstOrDefaultAsync(ct);
 
-                return editionStatus != EditionStatus.Cancelled;
+                // edition is null → doesn't exist; treat as invalid (FK would fail)
+                return edition != null && edition != EditionStatus.Cancelled;
             })
             .WithMessage("Cannot add a race to a cancelled edition — reactivate the edition first.");
 

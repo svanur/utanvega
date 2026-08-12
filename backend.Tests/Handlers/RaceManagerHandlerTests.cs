@@ -103,6 +103,31 @@ public class RaceManagerHandlerTests : IDisposable
         Assert.Equal(EventStatus.Confirmed, (await verify.Events.FindAsync(ev.Id))!.Status);
     }
 
+    [Fact]
+    public async Task PatchEventStatus_AcceptsCaseInsensitiveStatus()
+    {
+        // Regression: ignoreCase was missing, so "confirmed" silently returned false
+        // even though the event existed.
+        using var db = _factory.CreateContext();
+        var ev = new Event
+        {
+            Id = Guid.NewGuid(),
+            Name = "My Race",
+            Slug = $"my-race-ci-{Guid.NewGuid():N}",
+            Type = EventType.Race,
+            Status = EventStatus.Unconfirmed,
+        };
+        db.Events.Add(ev);
+        await db.SaveChangesAsync();
+
+        var handler = new PatchEventStatusCommandHandler(_factory.CreateContext());
+        var result = await handler.Handle(new PatchEventStatusCommand(ev.Id, "confirmed"), CancellationToken.None);
+
+        Assert.True(result);
+        using var verify = _factory.CreateContext();
+        Assert.Equal(EventStatus.Confirmed, (await verify.Events.FindAsync(ev.Id))!.Status);
+    }
+
     // ── GetRaceDayEditions ────────────────────────────────────────────────────
 
     [Fact]

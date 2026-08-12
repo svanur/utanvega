@@ -57,6 +57,7 @@ export interface EventSummary {
     registrationUrl: string | null;
     registrationStatus: string | null;
     resultsUrl: string | null;
+    photoGalleryUrl: string | null;
     certifications: string[] | null;
     youtubeUrl: string | null;
     championshipCategories: string[] | null;
@@ -114,6 +115,7 @@ export interface EventEditionDto {
     titleEn: string | null;
     registrationUrl: string | null;
     resultsUrl: string | null;
+    photoGalleryUrl: string | null;
     notes: string | null;
     notesEn: string | null;
     registrationStatus: string | null;
@@ -205,6 +207,7 @@ export interface EditionHistoryRow {
     effectiveCancelled: boolean;
     distances: { label: string; ticketStatus: string | null }[];
     resultsUrl: string | null;
+    photoGalleryUrl: string | null;
     activityTypes: string[] | null;
     eventActivityType: string;
     raceId: string | null;

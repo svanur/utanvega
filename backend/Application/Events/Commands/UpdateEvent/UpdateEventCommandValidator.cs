@@ -38,6 +38,12 @@ public class UpdateEventCommandValidator : AbstractValidator<UpdateEventCommand>
             .WithMessage("OrganizerWebsite must be a valid URL.")
             .When(x => !string.IsNullOrEmpty(x.OrganizerWebsite));
 
+        RuleFor(x => x.PhotoGalleryUrl)
+            .MaximumLength(500)
+            .Must(url => Uri.TryCreate(url, UriKind.Absolute, out _))
+            .WithMessage("PhotoGalleryUrl must be a valid URL.")
+            .When(x => !string.IsNullOrEmpty(x.PhotoGalleryUrl));
+
         RuleFor(x => x.Description)
             .MaximumLength(5000)
             .When(x => x.Description is not null);

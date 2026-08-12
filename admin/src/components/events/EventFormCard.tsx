@@ -78,6 +78,7 @@ interface EventFormState {
   alertSeverity: AlertSeverity | '';
   schedule: ScheduleFormState;
   socialLinks: SocialLink[];
+  photoGalleryUrl: string;
 }
 
 function buildScheduleForm(rule: ScheduleRule | null): ScheduleFormState {
@@ -143,6 +144,7 @@ function buildForm(event: EventDetailDto): EventFormState {
     alertSeverity: event.alertSeverity ?? '',
     schedule: buildScheduleForm(event.scheduleRule ?? null),
     socialLinks: event.socialLinks?.map(l => ({ ...l })) ?? [],
+    photoGalleryUrl: event.photoGalleryUrl ?? '',
   };
 }
 
@@ -235,6 +237,7 @@ function EventFormCardInner({ event, onClose, onSaved, onNotify, onUpdateEvent }
         socialLinks: socialLinks.length > 0 ? socialLinks : null,
         gpxPointLat: event.gpxPointLat,
         gpxPointLng: event.gpxPointLng,
+        photoGalleryUrl: form.photoGalleryUrl.trim() || undefined,
       };
       await onUpdateEvent(event.id, input);
       onNotify('Event saved', 'success');
@@ -275,7 +278,7 @@ function EventFormCardInner({ event, onClose, onSaved, onNotify, onUpdateEvent }
             required error={!form.name.trim()}
           />
           <BilingualTextField
-            size="small" fullWidth label="Description" multiline rows={8} sx={{ mb: 1.5 }}
+            size="small" fullWidth label="Description" multiline rows={12} sx={{ mb: 1.5 }}
             valueIs={form.description} valueEn={form.descriptionEn}
             onChangeIs={v => set('description', v)} onChangeEn={v => set('descriptionEn', v)}
           />
@@ -316,6 +319,13 @@ function EventFormCardInner({ event, onClose, onSaved, onNotify, onUpdateEvent }
           <TextField
             size="small" fullWidth label="Organizer website" value={form.organizerWebsite}
             onChange={e => set('organizerWebsite', e.target.value)}
+            placeholder="https://…"
+          />
+          <Divider sx={{ my: 1.5 }} />
+          <SectionLabel>Photo Gallery</SectionLabel>
+          <TextField
+            size="small" fullWidth label="Photo Gallery URL" value={form.photoGalleryUrl}
+            onChange={e => set('photoGalleryUrl', e.target.value)}
             placeholder="https://…"
           />
         </Box>

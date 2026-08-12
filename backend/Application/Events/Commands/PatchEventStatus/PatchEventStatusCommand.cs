@@ -23,7 +23,7 @@ public class PatchEventStatusCommandHandler : IRequestHandler<PatchEventStatusCo
 
         if (ev is null) return false;
 
-        if (!Enum.TryParse<EventStatus>(request.Status, out var status)) return false;
+        if (!Enum.TryParse<EventStatus>(request.Status, ignoreCase: true, out var status)) return false;
 
         ev.Status = status;
         await _context.SaveChangesWithAuditAsync(request.ActorUserId);

@@ -61,6 +61,8 @@ public class Event
 
     public List<SocialLink>? SocialLinks { get; set; }
 
+    public string? PhotoGalleryUrl { get; set; }
+
     // Auditing
     public string? CreatedBy { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

@@ -187,6 +187,7 @@ interface EditionFormState {
   titleEn: string;
   registrationUrl: string;
   resultsUrl: string;
+  photoGalleryUrl: string;
   notes: string;
   notesEn: string;
   registrationStatus: RegistrationStatus;
@@ -198,7 +199,7 @@ function emptyEditionForm(): EditionFormState {
   return {
     year: String(new Date().getFullYear()),
     date: '', endDate: '', title: '', titleEn: '',
-    registrationUrl: '', resultsUrl: '', notes: '', notesEn: '',
+    registrationUrl: '', resultsUrl: '', photoGalleryUrl: '', notes: '', notesEn: '',
     registrationStatus: 'NotStarted', trailId: '',
     status: 'Active',
   };
@@ -209,7 +210,7 @@ function buildEditionForm(ed: EventEditionDto): EditionFormState {
     year: ed.year?.toString() ?? '',
     date: ed.date ?? '', endDate: ed.endDate ?? '',
     title: ed.title ?? '', titleEn: ed.titleEn ?? '',
-    registrationUrl: ed.registrationUrl ?? '', resultsUrl: ed.resultsUrl ?? '',
+    registrationUrl: ed.registrationUrl ?? '', resultsUrl: ed.resultsUrl ?? '', photoGalleryUrl: ed.photoGalleryUrl ?? '',
     notes: ed.notes ?? '', notesEn: ed.notesEn ?? '',
     registrationStatus: ed.registrationStatus, trailId: ed.trailId ?? '',
     status: ed.status,
@@ -258,6 +259,7 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onNotify
       titleEn: form.titleEn.trim() || undefined,
       registrationUrl: form.registrationUrl.trim() || undefined,
       resultsUrl: form.resultsUrl.trim() || undefined,
+      photoGalleryUrl: form.photoGalleryUrl.trim() || undefined,
       notes: form.notes.trim() || undefined,
       notesEn: form.notesEn.trim() || undefined,
       registrationStatus: form.registrationStatus,
@@ -353,6 +355,8 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onNotify
             onChange={e => set('registrationUrl', e.target.value)} />
           <TextField size="small" fullWidth label="Results URL" value={form.resultsUrl}
             onChange={e => set('resultsUrl', e.target.value)} />
+          <TextField size="small" fullWidth label="Photo Gallery URL" value={form.photoGalleryUrl}
+            onChange={e => set('photoGalleryUrl', e.target.value)} />
           <BilingualTextField
             size="small" fullWidth label="Notes" multiline rows={2}
             valueIs={form.notes} valueEn={form.notesEn}
@@ -633,6 +637,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
       titleEn: '',
       registrationUrl: bumpYearInUrl(edition.registrationUrl ?? '', edition.year, nextYear),
       resultsUrl: bumpYearInUrl(edition.resultsUrl ?? '', edition.year, nextYear),
+      photoGalleryUrl: '',
       notes: '',
       notesEn: '',
       registrationStatus: suggestedDate && isPastDate(suggestedDate) ? 'Closed' : 'NotStarted',
@@ -1271,6 +1276,16 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                       <Typography variant="body2" component="a" href={edition.resultsUrl} target="_blank" rel="noopener"
                         sx={{ color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}>
                         {edition.resultsUrl.replace(/^https?:\/\//, '').slice(0, 40)}
+                      </Typography>
+                    </Box>
+                  )}
+                  {edition.photoGalleryUrl && (
+                    <Box>
+                      <Typography variant="caption" color="text.secondary" display="block">Photo Gallery</Typography>
+                      <Typography variant="body2" component="a" href={edition.photoGalleryUrl} target="_blank" rel="noopener"
+                        sx={{ color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}>
+                        {edition.photoGalleryUrl.replace(/^https?:\/\//, '').slice(0, 40)}
+                        {edition.photoGalleryUrl.length > 50 ? '…' : ''}
                       </Typography>
                     </Box>
                   )}

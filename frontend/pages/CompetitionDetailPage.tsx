@@ -258,6 +258,17 @@ function EditionMeta({
                             {t('races.results', { defaultValue: 'Results' })}
                         </Button>
                     )}
+                    {edition.photoGalleryUrl && (
+                        <Button
+                            variant="outlined"
+                            size="small"
+                            endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
+                            onClick={() => window.open(edition.photoGalleryUrl!, '_blank', 'noopener')}
+                            sx={{ textTransform: 'none' }}
+                        >
+                            📷 {t('races.photoGallery', { domain: new URL(edition.photoGalleryUrl!).hostname.replace(/^www\./, ''), defaultValue: 'Photos' })}
+                        </Button>
+                    )}
                 </Stack>
             )}
         </Box>
@@ -797,6 +808,17 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 {isPostRace ? `🏁 ${t('races.results', { defaultValue: 'Results' })}` : t('races.results', { defaultValue: 'Results' })}
                             </Button>
                         )}
+                        {(primaryEdition?.photoGalleryUrl ?? event.photoGalleryUrl) && (
+                            <Button
+                                variant="outlined"
+                                size="small"
+                                endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
+                                onClick={() => window.open((primaryEdition?.photoGalleryUrl ?? event.photoGalleryUrl)!, '_blank', 'noopener')}
+                                sx={{ textTransform: 'none' }}
+                            >
+                                📷 {t('races.photoGallery', { domain: new URL((primaryEdition?.photoGalleryUrl ?? event.photoGalleryUrl)!).hostname.replace(/^www\./, ''), defaultValue: 'Photos' })}
+                            </Button>
+                        )}
                         {event.youtubeUrl && (
                             <Button
                                 variant="outlined"
@@ -1110,6 +1132,17 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         window.open(edition.resultsUrl!, '_blank', 'noopener');
+                                                    }}
+                                                />
+                                            )}
+                                            {edition.photoGalleryUrl && (
+                                                <Chip
+                                                    label={`📷 ${t('races.photoGallery', { domain: new URL(edition.photoGalleryUrl!).hostname.replace(/^www\./, ''), defaultValue: 'Photos' })}`}
+                                                    size="small"
+                                                    variant="outlined"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        window.open(edition.photoGalleryUrl!, '_blank', 'noopener');
                                                     }}
                                                 />
                                             )}

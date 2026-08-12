@@ -46,7 +46,8 @@ public record EventDetailDto(
     Dictionary<string, string>? TranslationHashes = null,
     List<string>? ActivityTypes = null,
     string? EditionStatus = null,
-    bool EditionEffectiveCancelled = false
+    bool EditionEffectiveCancelled = false,
+    string? PhotoGalleryUrl = null
 );
 
 public record GetEventQuery(string Slug, bool IncludeHidden = false) : IRequest<EventDetailDto?>, ICacheable
@@ -157,6 +158,7 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
                 ed.TitleEn,
                 ed.RegistrationUrl,
                 ed.ResultsUrl,
+                ed.PhotoGalleryUrl,
                 ed.Notes,
                 ed.NotesEn,
                 ed.RegistrationStatus.ToString(),
@@ -287,7 +289,8 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
             ActivityTypes: activityTypes.Count > 0 ? activityTypes : null,
             EditionStatus: relevantEdition?.Status.ToString(),
             EditionEffectiveCancelled: relevantEdition != null
-                && EditionStatusHelpers.ComputeEffectiveCancelled(relevantEdition.Status, relevantEdition.Races.Select(r => r.Status).ToList())
+                && EditionStatusHelpers.ComputeEffectiveCancelled(relevantEdition.Status, relevantEdition.Races.Select(r => r.Status).ToList()),
+            PhotoGalleryUrl: ev.PhotoGalleryUrl
         );
     }
 }
