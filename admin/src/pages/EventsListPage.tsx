@@ -324,6 +324,7 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
   // ── Status / activity / type cycling ─────────────────────────────────────
   const handleCycleStatus = async (event: EventSummaryDto) => {
     if (cyclingStatusIds.has(event.id)) return;
+    if (event.status !== 'Unconfirmed' && event.status !== 'Confirmed') return;
     const i = EVENT_STATUSES.indexOf(event.status as EventStatus);
     const next = EVENT_STATUSES[(i + 1) % EVENT_STATUSES.length]!;
     patchEventLocally(event.id, { status: next });
@@ -340,6 +341,7 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
         locationId: event.locationId ?? null, scheduleRule: event.scheduleRule ?? null,
         socialLinks: event.socialLinks ?? null,
         gpxPointLat: event.gpxPointLat ?? null, gpxPointLng: event.gpxPointLng ?? null,
+        photoGalleryUrl: event.photoGalleryUrl ?? undefined,
         translationHashes: event.translationHashes,
       });
     } catch {
@@ -368,6 +370,7 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
         locationId: event.locationId ?? null, scheduleRule: event.scheduleRule ?? null,
         socialLinks: event.socialLinks ?? null,
         gpxPointLat: event.gpxPointLat ?? null, gpxPointLng: event.gpxPointLng ?? null,
+        photoGalleryUrl: event.photoGalleryUrl ?? undefined,
         translationHashes: event.translationHashes,
       });
     } catch {
@@ -396,6 +399,7 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
         locationId: event.locationId ?? null, scheduleRule: event.scheduleRule ?? null,
         socialLinks: event.socialLinks ?? null,
         gpxPointLat: event.gpxPointLat ?? null, gpxPointLng: event.gpxPointLng ?? null,
+        photoGalleryUrl: event.photoGalleryUrl ?? undefined,
         translationHashes: event.translationHashes,
       });
     } catch {
