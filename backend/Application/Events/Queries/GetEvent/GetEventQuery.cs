@@ -196,7 +196,8 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
                         r.Trail?.Difficulty.ToString(),
                         r.Trail?.ActivityTypeId.ToString(),
                         TranslationHashes: null,
-                        ActivityType: r.ActivityType?.ToString()
+                        ActivityType: r.ActivityType?.ToString(),
+                        ResultType: r.ResultType.ToString()
                     ))
                     .ToList(),
                 ed.CreatedAt,

@@ -17,6 +17,7 @@ public record UpdateRaceCommand(
     string Status,
     int SortOrder,
     string TicketStatus,
+    string ResultType,
     int? MaxParticipants,
     int? ItraPoints,
     string? CertifiedBy,
@@ -55,6 +56,7 @@ public class UpdateRaceCommandHandler : IRequestHandler<UpdateRaceCommand, bool>
 
         Enum.TryParse<RaceStatus>(request.Status, ignoreCase: true, out var status);
         Enum.TryParse<TicketStatus>(request.TicketStatus, ignoreCase: true, out var ticketStatus);
+        Enum.TryParse<ResultType>(request.ResultType, ignoreCase: true, out var resultType);
         if (status == RaceStatus.Cancelled)
             // A cancelled race always reads as ticket-closed, regardless of what was submitted —
             // mirrors how a cancelled edition always closes its own RegistrationStatus.
@@ -72,6 +74,7 @@ public class UpdateRaceCommandHandler : IRequestHandler<UpdateRaceCommand, bool>
         race.Status = status;
         race.SortOrder = request.SortOrder;
         race.TicketStatus = ticketStatus;
+        race.ResultType = resultType;
         race.MaxParticipants = request.MaxParticipants;
         race.ItraPoints = request.ItraPoints;
         race.CertifiedBy = request.CertifiedBy;

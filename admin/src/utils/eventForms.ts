@@ -1,4 +1,4 @@
-import type { ActivityType, EditionStatus, RaceDto, RaceStatus, TicketStatus } from '../hooks/useEvents';
+import type { ActivityType, EditionStatus, RaceDto, RaceStatus, ResultType, TicketStatus } from '../hooks/useEvents';
 import { formatMinutesToHHmm, normalizeCutoffTimeOnBlur, parseHHmmToMinutes } from './cutoffTime';
 import { trimToUndefined } from './strings';
 import { hashText } from './translationHash';
@@ -17,6 +17,7 @@ export interface RaceFormState {
   status: RaceStatus;
   sortOrder: string;
   ticketStatus: TicketStatus;
+  resultType: ResultType;
   maxParticipants: string;
   itraPoints: string;
   certifiedBy: string;
@@ -40,6 +41,7 @@ export const EDITION_STATUSES: EditionStatus[] = ['Active', 'Unconfirmed', 'Canc
 export const EDITION_STATUS_CYCLE: EditionStatus[] = ['Active', 'Unconfirmed', 'Hidden'];
 export const TICKET_STATUSES: TicketStatus[] = ['Free', 'NotStarted', 'Available', 'AlmostSoldOut', 'SoldOut', 'Closed'];
 export const ACTIVITY_TYPES: ActivityType[] = ['TrailRunning', 'Running', 'Cycling', 'Hiking', 'FunRun', 'ObstacleCourse', 'CrossCountryRun', 'Swim', 'Social', 'Other'];
+export const RESULT_TYPES: ResultType[] = ['Time', 'Distance', 'Laps'];
 
 export function createEmptyRaceForm(eventEditionId = '', sortOrder = 0): RaceFormState {
   return {
@@ -56,6 +58,7 @@ export function createEmptyRaceForm(eventEditionId = '', sortOrder = 0): RaceFor
     status: 'Active',
     sortOrder: String(sortOrder),
     ticketStatus: 'Available',
+    resultType: 'Time',
     maxParticipants: '',
     itraPoints: '',
     certifiedBy: '',
@@ -83,6 +86,7 @@ export function buildRaceForm(race: RaceDto): RaceFormState {
     status: race.status,
     sortOrder: race.sortOrder.toString(),
     ticketStatus: race.ticketStatus,
+    resultType: race.resultType,
     maxParticipants: race.maxParticipants?.toString() ?? '',
     itraPoints: race.itraPoints?.toString() ?? '',
     certifiedBy: race.certifiedBy ?? '',
@@ -148,6 +152,7 @@ export interface RaceSavePayload {
   status: RaceStatus;
   sortOrder: number;
   ticketStatus: TicketStatus;
+  resultType: ResultType;
   maxParticipants: number | null;
   itraPoints: number | null;
   certifiedBy?: string;
@@ -189,6 +194,7 @@ export function buildRaceSavePayload(form: RaceFormState): RaceSavePayload {
     status: form.status,
     sortOrder: form.sortOrder.trim() ? Number(form.sortOrder) : 0,
     ticketStatus: form.ticketStatus,
+    resultType: form.resultType,
     maxParticipants: form.maxParticipants.trim() ? Number(form.maxParticipants) : null,
     itraPoints: form.itraPoints.trim() !== '' ? Number(form.itraPoints) : null,
     certifiedBy: trimToUndefined(form.certifiedBy),

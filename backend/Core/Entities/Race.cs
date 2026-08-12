@@ -18,6 +18,13 @@ public enum TicketStatus
     Free,
 }
 
+public enum ResultType
+{
+    Time,
+    Distance,
+    Laps,
+}
+
 public class Race
 {
     public Guid Id { get; set; } = Guid.NewGuid();
@@ -39,6 +46,7 @@ public class Race
     public int SortOrder { get; set; }
 
     public TicketStatus TicketStatus { get; set; } = TicketStatus.Available;
+    public ResultType ResultType { get; set; } = ResultType.Time;
     public int? MaxParticipants { get; set; }
 
     public int? ItraPoints { get; set; }

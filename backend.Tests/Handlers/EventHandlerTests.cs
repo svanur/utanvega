@@ -434,6 +434,7 @@ public class EventHandlerTests : IDisposable
             Status: "Active",
             SortOrder: 0,
             TicketStatus: "Available",
+            ResultType: "Time",
             MaxParticipants: 200,
             ItraPoints: 4,
             CertifiedBy: "ITRA",
@@ -490,6 +491,7 @@ public class EventHandlerTests : IDisposable
                 Status: "Active",
                 SortOrder: 2,
                 TicketStatus: "SoldOut",
+                ResultType: "Time",
                 MaxParticipants: 100,
                 ItraPoints: 1,
                 CertifiedBy: null,
@@ -526,6 +528,7 @@ public class EventHandlerTests : IDisposable
             Status: "Active",
             SortOrder: 0,
             TicketStatus: "Available",
+            ResultType: "Time",
             MaxParticipants: null,
             ItraPoints: 0,
             CertifiedBy: null,
@@ -562,6 +565,7 @@ public class EventHandlerTests : IDisposable
             Status: "Active",
             SortOrder: 0,
             TicketStatus: "Available",
+            ResultType: "Time",
             MaxParticipants: null,
             ItraPoints: null,
             CertifiedBy: null,
@@ -612,6 +616,7 @@ public class EventHandlerTests : IDisposable
                 Status: "Active",
                 SortOrder: 0,
                 TicketStatus: "Available",
+                ResultType: "Time",
                 MaxParticipants: null,
                 ItraPoints: null,
                 CertifiedBy: null,
@@ -629,6 +634,101 @@ public class EventHandlerTests : IDisposable
         {
             var updated = ctx.Races.Find(race.Id);
             Assert.Equal(ActivityType.Swim, updated!.ActivityType);
+        }
+    }
+
+    [Fact]
+    public async Task Create_Race_WithResultType_SavesCorrectly()
+    {
+        var ev = CreateTestEvent();
+        var edition = CreateTestEdition(ev.Id);
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var raceCtx = _factory.CreateContext();
+        var handler = new CreateRaceCommandHandler(raceCtx, _cacheInvalidator);
+        var id = await handler.Handle(new CreateRaceCommand(
+            EventEditionId: edition.Id,
+            TrailId: null,
+            Name: "24 Hour Run",
+            DistanceLabel: "How far can you go",
+            CutoffMinutes: 1440,
+            Description: null,
+            Status: "Active",
+            SortOrder: 0,
+            TicketStatus: "Available",
+            ResultType: "Distance",
+            MaxParticipants: null,
+            ItraPoints: null,
+            CertifiedBy: null,
+            PrizeMoney: 0,
+            ChampionshipCategory: null,
+            DateOfRace: null,
+            StartTime: null
+        ), CancellationToken.None);
+
+        using var verifyCtx = _factory.CreateContext();
+        var race = verifyCtx.Races.Find(id);
+        Assert.NotNull(race);
+        Assert.Equal(ResultType.Distance, race!.ResultType);
+    }
+
+    [Fact]
+    public async Task Update_Race_ResultType_SavesCorrectly()
+    {
+        var ev = CreateTestEvent();
+        var edition = CreateTestEdition(ev.Id);
+        var race = new Race
+        {
+            Id = Guid.NewGuid(),
+            EventEditionId = edition.Id,
+            Name = "Backyard Ultra",
+            SortOrder = 0,
+            ResultType = ResultType.Time,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new UpdateRaceCommandHandler(ctx, _cacheInvalidator);
+            var result = await handler.Handle(new UpdateRaceCommand(
+                Id: race.Id,
+                TrailId: null,
+                Name: "Backyard Ultra",
+                DistanceLabel: "Last man standing",
+                CutoffMinutes: null,
+                Description: null,
+                Status: "Active",
+                SortOrder: 0,
+                TicketStatus: "Available",
+                ResultType: "Laps",
+                MaxParticipants: null,
+                ItraPoints: null,
+                CertifiedBy: null,
+                PrizeMoney: 0,
+                ChampionshipCategory: null,
+                DateOfRace: null,
+                StartTime: null
+            ), CancellationToken.None);
+
+            Assert.True(result);
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var updated = ctx.Races.Find(race.Id);
+            Assert.Equal(ResultType.Laps, updated!.ResultType);
         }
     }
 
@@ -667,6 +767,7 @@ public class EventHandlerTests : IDisposable
                 Status: "Active",
                 SortOrder: 0,
                 TicketStatus: "Available",
+                ResultType: "Time",
                 MaxParticipants: null,
                 ItraPoints: null,
                 CertifiedBy: null,
@@ -2084,7 +2185,7 @@ public class EventHandlerTests : IDisposable
             var handler = new UpdateRaceCommandHandler(ctx, _cacheInvalidator);
             await handler.Handle(new UpdateRaceCommand(
                 Id: race.Id, TrailId: null, Name: race.Name, DistanceLabel: null, CutoffMinutes: null,
-                Description: null, Status: "Cancelled", SortOrder: 0, TicketStatus: "SoldOut",
+                Description: null, Status: "Cancelled", SortOrder: 0, TicketStatus: "SoldOut", ResultType: "Time",
                 MaxParticipants: null, ItraPoints: null, CertifiedBy: null, PrizeMoney: 0,
                 ChampionshipCategory: null, DateOfRace: null, StartTime: null
             ), CancellationToken.None);
@@ -2115,7 +2216,7 @@ public class EventHandlerTests : IDisposable
             var handler = new UpdateRaceCommandHandler(ctx, _cacheInvalidator);
             await handler.Handle(new UpdateRaceCommand(
                 Id: race.Id, TrailId: null, Name: race.Name, DistanceLabel: null, CutoffMinutes: null,
-                Description: null, Status: "Active", SortOrder: 0, TicketStatus: "SoldOut",
+                Description: null, Status: "Active", SortOrder: 0, TicketStatus: "SoldOut", ResultType: "Time",
                 MaxParticipants: null, ItraPoints: null, CertifiedBy: null, PrizeMoney: 0,
                 ChampionshipCategory: null, DateOfRace: null, StartTime: null
             ), CancellationToken.None);

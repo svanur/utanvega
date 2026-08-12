@@ -197,6 +197,7 @@ internal class TestDbContext : UtanvegaDbContext
                 v => (decimal)v);
             entity.Property(e => e.Status).HasConversion<string>();
             entity.Property(e => e.TicketStatus).HasConversion<string>();
+            entity.Property(e => e.ResultType).HasConversion<string>();
             entity.Property(e => e.DateOfRace).HasConversion(
                 v => v.HasValue ? (int?)v.Value.DayNumber : null,
                 v => v.HasValue ? (DateOnly?)DateOnly.FromDayNumber(v.Value) : null);
