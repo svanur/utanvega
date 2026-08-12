@@ -304,7 +304,15 @@
     "playback": {
         "play": "Play route",
         "pause": "Pause",
-        "stop": "Stop and reset"
+        "stop": "Stop and reset",
+        "stats": {
+            "distance": "Distance",
+            "elevation": "Elevation",
+            "gain": "Ascent",
+            "loss": "Descent",
+            "highPoint": "Highest",
+            "lowPoint": "Lowest"
+        }
     },
     "map": {
         "followLocation": "Follow my location",
