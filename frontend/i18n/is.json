@@ -456,9 +456,9 @@
         "subscribe": "Skráðu þig á póstlistann"
     },
     "announcement": {
-        "text": "Nýr hlaupadagskra.is vefur er hér í þróun. Vertu með í prófunarteyminu.",
+        "text": "Við erum á fullu að þróa nýjan hlaupadagskra.is vef. Vertu með okkur í prófunarteyminu.",
         "href": "/pages/send-comments",
-        "linkText": "Sendu inn þínar ábendingar"
+        "linkText": "Sendu inn þínar ábendingar."
     },
     "sort": {
         "date": "Dagsetning",
