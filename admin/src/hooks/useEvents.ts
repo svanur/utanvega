@@ -3,7 +3,7 @@ import { apiFetch } from './api';
 
 export type DayOfWeek = 'Sunday' | 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
 export type ScheduleType = 'Yearly' | 'Seasonal' | 'Fixed' | 'Approximate';
-export type EventType = 'Race' | 'Series' | 'Advertisement' | 'Festival' | 'Other';
+export type EventType = 'Race' | 'Series' | 'Social' | 'Advertisement' | 'Festival' | 'Other';
 export type ActivityType = 'TrailRunning' | 'Running' | 'Cycling' | 'Hiking' | 'FunRun' | 'ObstacleCourse' | 'CrossCountryRun' | 'Swim' | 'Social' | 'Other';
 export type EventStatus = 'Unconfirmed' | 'Confirmed' | 'Cancelled' | 'Hidden' | 'Unlisted';
 export type RegistrationStatus = 'NotStarted' | 'Open' | 'Closed';
