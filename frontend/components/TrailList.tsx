@@ -437,6 +437,15 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
     if (loading) {
         return (
             <Container maxWidth="md" sx={{ mt: 2 }}>
+                <Box sx={{ mb: 3 }}>
+                    <Typography variant="h4" fontWeight={800} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <LandscapeIcon sx={{ fontSize: 32, color: 'success.main' }} />
+                        {t('home.trailsTitle')}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                        {t('home.trailsSubtitle')}
+                    </Typography>
+                </Box>
                 {Array.from({ length: 5 }).map((_, i) => (
                     <Card key={i} sx={{ mb: 2 }}>
                         <CardContent>
@@ -540,6 +549,17 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                     )}
                 </Box>
             </Fade>
+            {/* Page heading */}
+            <Box sx={{ mb: 3 }}>
+                <Typography variant="h4" fontWeight={800} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <LandscapeIcon sx={{ fontSize: 32, color: 'success.main' }} />
+                    {t('home.trailsTitle')}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                    {t('home.trailsSubtitle')}
+                </Typography>
+            </Box>
+
             <Box mb={2}>
                 <TextField
                     fullWidth

@@ -109,6 +109,8 @@
     "home": {
         "nearbyTrails": "Nearby Trails",
         "allTrails": "Trails",
+        "trailsTitle": "Trails",
+        "trailsSubtitle": "Explore trail running routes across Iceland. Filter by distance, difficulty, location and more.",
         "recentlyViewed": "Recently Viewed",
         "trendingTrails": "Trending 🔥",
         "nextRaces": "Next Races 🏆",
