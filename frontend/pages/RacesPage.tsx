@@ -814,11 +814,17 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                 </MenuItem>
                             </Select>
                         )}
-                        <Tooltip title={t('races.editionsHistory.title', 'Past events')}>
-                            <IconButton size="small" onClick={() => navigate('/editions/history')}>
-                                <HistoryIcon fontSize="small" />
-                            </IconButton>
-                        </Tooltip>
+                        <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<HistoryIcon fontSize="small" />}
+                            onClick={() => navigate('/editions/history')}
+                            sx={{ whiteSpace: 'nowrap', fontSize: '0.75rem', minWidth: 0 }}
+                        >
+                            <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                                {t('races.editionsHistory.title', 'Past events')}
+                            </Box>
+                        </Button>
                         <ToggleButtonGroup
                             value={viewMode}
                             exclusive
