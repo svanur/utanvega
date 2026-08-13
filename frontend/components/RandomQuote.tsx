@@ -19,41 +19,36 @@ export default function RandomQuote() {
     };
 
     return (
-        <Collapse in={isVisible} unmountOnExit>
+        <Collapse in={isVisible} unmountOnExit sx={{ display: { xs: 'none', sm: 'block' } }}>
             <Paper elevation={4} sx={{ py: { xs: 1.5, sm: 2 }, pl: { xs: 3, sm: 4 }, pr: { xs: 1.5, sm: 2 }, mb: 4 }}>
-                <Stack spacing={2} sx={{ position: 'relative' }}>
-                    <IconButton 
-                        onClick={handleClose} 
-                        sx={{ position: 'absolute', top: -8, right: -8 }}
-                        aria-label="close"
-                    >
-                        <CloseIcon />
-                    </IconButton>
-                    <Box>
-                        <Typography variant="h6" component="h1" fontWeight={700} gutterBottom>
+                <Box sx={{ position: 'relative' }}>
+                    <Stack direction="row" alignItems="center" sx={{ position: 'absolute', top: -8, right: -8 }}>
+                        <FormControlLabel
+                            control={
+                                <Checkbox
+                                    size="small"
+                                    checked={dontShowAgain}
+                                    onChange={(e) => setDontShowAgain(e.target.checked)}
+                                />
+                            }
+                            label={<Typography variant="caption">{t('header.dontShowAgain')}</Typography>}
+                            sx={{ mr: 0 }}
+                        />
+                        <IconButton onClick={handleClose} aria-label="close">
+                            <CloseIcon />
+                        </IconButton>
+                    </Stack>
+                    <Box sx={{ pr: 14 }}>
+                        <Typography variant="body1" component="h1" fontWeight={700} gutterBottom>
                             {quote.text}
                         </Typography>
                         {quote.author && (
-                            <Typography variant="subtitle1" color="text.secondary" sx={{ fontStyle: 'italic', mt: -1 }}>
+                            <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
                                 — {quote.author}
                             </Typography>
                         )}
                     </Box>
-
-                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
-                        <Button variant="contained" onClick={handleClose}>{t('header.close')}</Button>
-                        <FormControlLabel
-                            control={
-                                <Checkbox 
-                                    size="small" 
-                                    checked={dontShowAgain} 
-                                    onChange={(e) => setDontShowAgain(e.target.checked)} 
-                                />
-                            }
-                            label={<Typography variant="caption">{t('header.dontShowAgain')}</Typography>}
-                        />
-                    </Stack>
-                </Stack>
+                </Box>
             </Paper>
         </Collapse>
     );

@@ -406,13 +406,13 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
             {showQuote && isEnabled('random_quote') && <RandomQuote />}
             <Container
                 maxWidth={viewMode === 'table' ? 'lg' : 'md'}
-                sx={{ py: 3 }}
+                sx={{ pt: 1, pb: 3 }}
                 onTouchStart={handlePullStart}
                 onTouchMove={handlePullMove}
                 onTouchEnd={handlePullEnd}
             >
                 {/* Pull-to-refresh indicator */}
-                <Fade in={pullOffset > 10}>
+                <Fade in={pullOffset > 10} unmountOnExit>
                     <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1, height: 32, alignItems: 'center' }}>
                         {refreshing ? (
                             <CircularProgress size={24} />
@@ -430,28 +430,10 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                 </Fade>
                 {/* Header */}
                 <Box sx={{ mb: 3 }}>
-                    <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
-                        <Typography variant="h4" fontWeight={800} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <EmojiEventsIcon sx={{ fontSize: 32, color: theme.palette.warning.main }} />
-                            {t('races.title')}
-                        </Typography>
-                        <Stack direction="row" spacing={1}>
-                            <Chip
-                                icon={<CalendarTodayIcon />}
-                                label={t('calendar.title')}
-                                variant="outlined"
-                                size="small"
-                                onClick={() => navigate('/events/calendar')}
-                            />
-                            <Chip
-                                icon={<HistoryIcon />}
-                                label={t('races.editionsHistory.title', 'Past events')}
-                                variant="outlined"
-                                size="small"
-                                onClick={() => navigate('/editions/history')}
-                            />
-                        </Stack>
-                    </Stack>
+                    <Typography variant="h5" fontWeight={800} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <EmojiEventsIcon sx={{ fontSize: 26, color: theme.palette.warning.main }} />
+                        {t('races.title')}
+                    </Typography>
                     <Typography variant="body2" color="text.secondary">
                         {t('races.subtitle')}
                     </Typography>
@@ -746,8 +728,8 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                     </Box>
                 </Collapse>
 
-                {/* Quick-filter pills */}
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1.5 }}>
+                {/* Quick-filter pills — hidden on mobile, use Filters button instead */}
+                <Box sx={{ display: { xs: 'none', sm: 'flex' }, flexWrap: 'wrap', gap: 0.75, mb: 1.5 }}>
                     {pillMeta.hasTrailRun && (
                         <Chip
                             icon={<LandscapeIcon fontSize="small" />}
@@ -832,29 +814,39 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                 </MenuItem>
                             </Select>
                         )}
+                        <Tooltip title={t('races.editionsHistory.title', 'Past events')}>
+                            <IconButton size="small" onClick={() => navigate('/editions/history')}>
+                                <HistoryIcon fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
                         <ToggleButtonGroup
-                        value={viewMode}
-                        exclusive
-                        onChange={(_, value) => { if (value) setViewMode(value as ViewMode); }}
-                        size="small"
-                        aria-label={t('home.viewMode')}
-                    >
-                        <Tooltip title={t('home.listView')}>
-                            <ToggleButton value="list" aria-label={t('home.listView')}>
-                                <ListIcon fontSize="small" />
-                            </ToggleButton>
+                            value={viewMode}
+                            exclusive
+                            onChange={(_, value) => { if (value) setViewMode(value as ViewMode); }}
+                            size="small"
+                            aria-label={t('home.viewMode')}
+                        >
+                            <Tooltip title={t('home.listView')}>
+                                <ToggleButton value="list" aria-label={t('home.listView')}>
+                                    <ListIcon fontSize="small" />
+                                </ToggleButton>
+                            </Tooltip>
+                            <Tooltip title={t('home.mapView')}>
+                                <ToggleButton value="map" aria-label={t('home.mapView')}>
+                                    <MapIcon fontSize="small" />
+                                </ToggleButton>
+                            </Tooltip>
+                            <Tooltip title={t('home.tableView')}>
+                                <ToggleButton value="table" aria-label={t('home.tableView')}>
+                                    <TableChartIcon fontSize="small" />
+                                </ToggleButton>
+                            </Tooltip>
+                        </ToggleButtonGroup>
+                        <Tooltip title={t('calendar.title')}>
+                            <IconButton size="small" onClick={() => navigate('/events/calendar')}>
+                                <CalendarTodayIcon fontSize="small" />
+                            </IconButton>
                         </Tooltip>
-                        <Tooltip title={t('home.mapView')}>
-                            <ToggleButton value="map" aria-label={t('home.mapView')}>
-                                <MapIcon fontSize="small" />
-                            </ToggleButton>
-                        </Tooltip>
-                        <Tooltip title={t('home.tableView')}>
-                            <ToggleButton value="table" aria-label={t('home.tableView')}>
-                                <TableChartIcon fontSize="small" />
-                            </ToggleButton>
-                        </Tooltip>
-                    </ToggleButtonGroup>
                     </Stack>
                 </Box>
 
