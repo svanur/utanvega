@@ -944,7 +944,7 @@
         "guessTitle": "Which trail has this elevation profile?"
     },
     "tools": {
-        "title": "Tools",
+        "title": "Running Tools",
         "noToolsEnabled": "No tools are currently enabled.",
         "subtitle": "Calculators and tools to help you train smarter and race better",
         "paceCalc": {
