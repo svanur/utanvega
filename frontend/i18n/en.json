@@ -1106,6 +1106,8 @@
             "title": "Age Grading",
             "desc": "See how your finish time compares to the world standard for your age and gender.",
             "subtitle": "Compare your performance against the world standard for your age and gender",
+            "whatIsThis": "What is age grading?",
+            "explainer": "Age grading answers a simple question: how good was that run, really — given your age? A 45-minute 10K means something very different at age 25 than at age 65.\n\nThe tool converts your finish time into a percentage of the world record for your age and gender. A score of 60% means your time is 60% as fast as the best ever recorded performance for someone your age. It is a fair, apples-to-apples way to compare across ages and genders — useful for tracking your own progress as you get older, or for comparing times with training partners of different ages.\n\nEnter your age, pick a distance, type your finish time and you will instantly see your age-graded score and which performance tier you fall into.",
             "male": "Male",
             "female": "Female",
             "age": "Age",

@@ -1106,6 +1106,8 @@
             "title": "Aldursleiðrétting",
             "desc": "Sjáðu hvernig lokatími þinn er í samanburði við heimsklassa árangur fyrir þinn aldur og kyn.",
             "subtitle": "Berðu frammistöðu þína saman við heimsklassa árangur fyrir þinn aldur og kyn",
+            "whatIsThis": "Hvað er aldursleiðrétting?",
+            "explainer": "Aldursleiðrétting svarar einni einfaldri spurningu: hversu góður var tíminn minn  miðað við aldur? 45 mínútur á 10 km þýðir eitthvað allt annað fyrir 25 ára en þann sem er 65 ára.\n\nTólið umbreytir lokatíma þínum í hlutfall af heimsmetstíma fyrir þinn aldur og kyn. 60% þýðir að tími þinn er 60% eins hraður og besti árangur sem þekkist hjá einhverjum á þínum aldri. Þetta er sanngjarnt samanburðarform — hagnýtt til að fylgjast með eigin framförum eftir því sem þú verður eldri, eða til að bera saman tíma með æfingafélögum á mismunandi aldri.\n\nSláðu inn aldur þinn, veldu vegalengd, skrifaðu lokatímann og þú færð strax aldursleiðréttar niðurstöður og hvaða frammistöðuflokki þú lendir í.",
             "male": "Karl",
             "female": "Kona",
             "age": "Aldur",

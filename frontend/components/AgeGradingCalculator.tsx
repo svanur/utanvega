@@ -3,7 +3,7 @@ import {
     Box, TextField, Typography, Paper, ToggleButton, ToggleButtonGroup,
     MenuItem, Select, FormControl, InputLabel, Divider, Alert, Tooltip,
     IconButton, InputAdornment, Chip, Table, TableBody, TableCell,
-    TableContainer, TableHead, TableRow,
+    TableContainer, TableHead, TableRow, Collapse, Link,
 } from '@mui/material';
 import KeyboardArrowUp from '@mui/icons-material/KeyboardArrowUp';
 import KeyboardArrowDown from '@mui/icons-material/KeyboardArrowDown';
@@ -23,6 +23,7 @@ export default function AgeGradingCalculator() {
     const { t } = useTranslation();
     const [searchParams, setSearchParams] = useSearchParams();
 
+    const [showExplainer, setShowExplainer] = useState(false);
     const [gender, setGender] = useState<Gender>(() => (searchParams.get('gender') as Gender) ?? 'male');
     const [age, setAge] = useState(() => searchParams.get('age') ?? '');
     const [distanceKey, setDistanceKey] = useState(() => searchParams.get('dist') ?? '5K');
@@ -75,7 +76,10 @@ export default function AgeGradingCalculator() {
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="body2" color="text.secondary">
-                    {t('tools.ageGrading.subtitle')}
+                    {t('tools.ageGrading.subtitle')}{' '}
+                    <Link component="button" variant="body2" onClick={() => setShowExplainer(v => !v)} sx={{ verticalAlign: 'baseline' }}>
+                        {t('tools.ageGrading.whatIsThis')}
+                    </Link>
                 </Typography>
                 <IconButton
                     size="small"
@@ -86,6 +90,15 @@ export default function AgeGradingCalculator() {
                     <RestartAlt fontSize="small" />
                 </IconButton>
             </Box>
+            <Collapse in={showExplainer}>
+                <Paper variant="outlined" sx={{ p: 2, bgcolor: 'action.hover' }}>
+                    {t('tools.ageGrading.explainer').split('\n\n').map((para, i) => (
+                        <Typography key={i} variant="body2" color="text.secondary" sx={{ mb: i < 2 ? 1.5 : 0 }}>
+                            {para}
+                        </Typography>
+                    ))}
+                </Paper>
+            </Collapse>
 
             {/* Gender */}
             <ToggleButtonGroup
