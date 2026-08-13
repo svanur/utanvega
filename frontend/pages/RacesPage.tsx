@@ -36,7 +36,7 @@ import { useNavigate } from 'react-router-dom';
 import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import HistoryIcon from '@mui/icons-material/History';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import ListIcon from '@mui/icons-material/List';
@@ -844,7 +844,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                         </ToggleButtonGroup>
                         <Tooltip title={t('calendar.title')}>
                             <IconButton size="small" onClick={() => navigate('/events/calendar')}>
-                                <CalendarTodayIcon fontSize="small" />
+                                <CalendarMonthIcon fontSize="small" />
                             </IconButton>
                         </Tooltip>
                     </Stack>
@@ -1044,7 +1044,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                             <Stack direction="row" alignItems="center" gap={0.5} sx={{ flexShrink: 0 }}>
                                                                 {race.dateOfRace && (
                                                                     <>
-                                                                        <CalendarTodayIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
+                                                                        <CalendarMonthIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
                                                                         <Typography variant="body2" color="text.secondary" noWrap>{formatNextDate(race.dateOfRace, t)}</Typography>
                                                                         <EventDateBadge dateStr={race.dateOfRace} />
                                                                     </>
@@ -1257,7 +1257,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                     <Stack direction="row" alignItems="center" gap={0.5} sx={{ flexShrink: 0 }}>
                                                         {(comp.displayDate ?? comp.nextEditionDate) && (
                                                             <>
-                                                                <CalendarTodayIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
+                                                                <CalendarMonthIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
                                                                 <Typography variant="body2" color="text.secondary" noWrap>
                                                                     {formatDateRange((comp.displayDate ?? comp.nextEditionDate)!, comp.endDisplayDate, t)}
                                                                 </Typography>
