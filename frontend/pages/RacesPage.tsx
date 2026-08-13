@@ -793,11 +793,11 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                 </Box>
 
                 {/* View toggle + result count */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                    <Typography variant="body2" color="text.secondary">
-                        {t('races.editionCount', { count: filtered.length })}
-                    </Typography>
-                    <Stack direction="row" spacing={1} alignItems="center">
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                    {t('races.editionCount', { count: filtered.length })}
+                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
+                    <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
                         {viewMode === 'list' && (
                             <Select
                                 value={sortBy}
