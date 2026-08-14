@@ -1,4 +1,5 @@
 import { lazy, Suspense, useMemo, useCallback, useState, useRef, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { usePageTitle } from '../hooks/usePageTitle';
@@ -61,6 +62,7 @@ import RaceShareCard from '../components/RaceShareCard';
 import RaceFinishCard from '../components/RaceFinishCard';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import { useEvents, type EventSummary, type SeriesRaceDto } from '../hooks/useEvents';
+import { API_URL } from '../hooks/useTrails';
 import { downloadIcs } from '../utils/calendarLinks';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
@@ -140,6 +142,15 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
     const { getHolidays } = useIcelandicHolidays();
     const { favoriteEvents, toggleFavoriteEvent, isFavoriteEvent } = useFavoriteEvents();
     const { events, loading, error, refresh } = useEvents();
+    const queryClient = useQueryClient();
+    const prefetchEvent = useCallback((slug: string) => {
+        queryClient.prefetchQuery({
+            queryKey: ['event', slug],
+            queryFn: () => fetch(`${API_URL}/api/v1/events/${encodeURIComponent(slug)}`)
+                .then(res => res.ok ? res.json() : null),
+            staleTime: 15 * 60 * 1000,
+        });
+    }, [queryClient]);
     const { isEnabled } = useFeatureFlags();
     const navigate = useNavigate();
     const theme = useTheme();
@@ -884,7 +895,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                     borderLeft: `4px solid ${theme.palette.success.main}`,
                                                 }}
                                             >
-                                                <CardActionArea onClick={() => navigate(`/events/${comp.slug}`)}>
+                                                <CardActionArea onClick={() => navigate(`/events/${comp.slug}`)} onMouseEnter={() => prefetchEvent(comp.slug)}>
                                                     <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
                                                         <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: { xs: 0.5, sm: 1 } }}>
                                                             <Box sx={{ minWidth: 0, width: '100%' }}>
@@ -1024,7 +1035,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                             revealWidth={120}
                                         >
                                             <Card variant="outlined" sx={{ '@media (hover: hover)': { transition: 'transform 0.15s, box-shadow 0.15s', '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] } } }}>
-                                                <CardActionArea onClick={() => navigate(`/events/${comp.slug}`)}>
+                                                <CardActionArea onClick={() => navigate(`/events/${comp.slug}`)} onMouseEnter={() => prefetchEvent(comp.slug)}>
                                                     <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
                                                         {/* Name + countdown */}
                                                         <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'flex-start' }} justifyContent="space-between" gap={0.5}>
@@ -1229,7 +1240,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                         ...(isEffectivelyCancelled(comp) && { opacity: 0.65 }),
                                     }}
                                 >
-                                    <CardActionArea onClick={() => navigate(`/events/${comp.slug}`)}>
+                                    <CardActionArea onClick={() => navigate(`/events/${comp.slug}`)} onMouseEnter={() => prefetchEvent(comp.slug)}>
                                         <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
                                             {/* Row 1: activity icon + name + status chips + countdown */}
                                             <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'flex-start' }} justifyContent="space-between" gap={0.5}>

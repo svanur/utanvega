@@ -157,7 +157,8 @@ export function useTrails(disableGeolocation = false) {
             writeTrailsCache(data);
             return data;
         },
-        staleTime: 5 * 60 * 1000,
+        staleTime: 15 * 60 * 1000,
+        gcTime: 30 * 60 * 1000,
         initialData: readTrailsCache,
         initialDataUpdatedAt: 0,
     });
