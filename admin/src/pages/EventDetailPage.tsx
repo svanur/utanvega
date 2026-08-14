@@ -691,13 +691,14 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
     await apiFetch(`/api/v1/admin/events/${id}`, {
       method: 'PUT', body: JSON.stringify({ id, ...input }),
     });
-    await refresh();
   };
 
   const handleEventSaved = (updated: EventDetailDto) => {
-    void refresh();
-    // header will re-render on next refresh; detail already patched optimistically in EventFormCard
-    void updated;
+    if (updated.slug !== slug) {
+      navigate(`/events/${updated.slug}`, { replace: true });
+    } else {
+      void refresh();
+    }
   };
 
   const patchRaceInDetail = (raceId: string, patch: Partial<RaceDto>) =>

@@ -168,6 +168,7 @@ export interface CreateEventInput {
 export interface UpdateEventInput {
     id: string;
     name: string;
+    slug?: string;
     nameEn?: string;
     description?: string;
     descriptionEn?: string;

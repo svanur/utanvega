@@ -25,6 +25,8 @@ import dayjs from 'dayjs';
 import AddIcon from '@mui/icons-material/Add';
 import ClearIcon from '@mui/icons-material/Clear';
 import DeleteIcon from '@mui/icons-material/Delete';
+import LockIcon from '@mui/icons-material/Lock';
+import LockOpenIcon from '@mui/icons-material/LockOpen';
 import MapIcon from '@mui/icons-material/Map';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
 import TranslateIcon from '@mui/icons-material/Translate';
@@ -73,6 +75,7 @@ interface ScheduleFormState {
 
 interface EventFormState {
   name: string;
+  slug: string;
   nameEn: string;
   description: string;
   descriptionEn: string;
@@ -143,6 +146,7 @@ function buildScheduleRule(s: ScheduleFormState): ScheduleRule | null {
 function buildForm(event: EventDetailDto): EventFormState {
   return {
     name: event.name,
+    slug: event.slug,
     nameEn: event.nameEn ?? '',
     description: event.description ?? '',
     descriptionEn: event.descriptionEn ?? '',
@@ -225,6 +229,7 @@ function TrailStartPicker({ trails, onPick }: { trails: Trail[]; onPick: (lat: n
 function EventFormCardInner({ event, linkedTrails = [], onClose, onSaved, onNotify, onUpdateEvent }: EventFormCardProps) {
   const [form, setForm] = useState<EventFormState>(buildForm(event));
   const [saving, setSaving] = useState(false);
+  const [slugUnlocked, setSlugUnlocked] = useState(false);
   const { translate, translating } = useTranslate(msg => onNotify(msg, 'error'));
   const { locations } = useLocations();
   const sortedLocations = useMemo(() => [...locations].sort((a, b) => a.name.localeCompare(b.name)), [locations]);
@@ -263,6 +268,7 @@ function EventFormCardInner({ event, linkedTrails = [], onClose, onSaved, onNoti
       const socialLinks = form.socialLinks.filter(l => l.type.trim() && l.url.trim());
       const input: Omit<UpdateEventInput, 'id'> = {
         name: form.name.trim(),
+        slug: form.slug.trim() || undefined,
         nameEn: trimToUndefined(form.nameEn),
         description: trimToUndefined(form.description),
         descriptionEn: trimToUndefined(form.descriptionEn),
@@ -285,7 +291,7 @@ function EventFormCardInner({ event, linkedTrails = [], onClose, onSaved, onNoti
       };
       await onUpdateEvent(event.id, input);
       onNotify('Event saved', 'success');
-      onSaved({ ...event, ...input, id: event.id, slug: event.slug });
+      onSaved({ ...event, ...input, id: event.id, slug: form.slug.trim() || event.slug });
       onClose();
     } catch (err) {
       onNotify(err instanceof Error ? err.message : 'Failed to save event', 'error');
@@ -321,8 +327,24 @@ function EventFormCardInner({ event, linkedTrails = [], onClose, onSaved, onNoti
             onChangeIs={v => set('name', v)} onChangeEn={v => set('nameEn', v)}
             required error={!form.name.trim()}
           />
+          <TextField
+            size="small" fullWidth label="Slug" value={form.slug}
+            onChange={e => set('slug', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+            sx={{ mb: 1.5 }}
+            disabled={!slugUnlocked}
+            helperText={slugUnlocked ? 'Changing the slug breaks existing bookmarks and shared links.' : 'Lowercase letters, numbers and hyphens only'}
+            InputProps={{
+              endAdornment: (
+                <Tooltip title={slugUnlocked ? 'Lock slug' : 'Changing the slug will break any existing bookmarks or shared links to this event. Click to unlock.'}>
+                  <IconButton size="small" onClick={() => setSlugUnlocked(v => !v)} color={slugUnlocked ? 'warning' : 'default'}>
+                    {slugUnlocked ? <LockOpenIcon fontSize="small" /> : <LockIcon fontSize="small" />}
+                  </IconButton>
+                </Tooltip>
+              ),
+            }}
+          />
           <BilingualTextField
-            size="small" fullWidth label="Description" multiline rows={21} sx={{ mb: 1.5 }}
+            size="small" fullWidth label="Description" multiline rows={18} sx={{ mb: 1.5 }}
             valueIs={form.description} valueEn={form.descriptionEn}
             onChangeIs={v => set('description', v)} onChangeEn={v => set('descriptionEn', v)}
           />

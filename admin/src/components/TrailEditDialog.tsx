@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Box, Typography, Alert, CircularProgress, MenuItem, Paper, Chip, Tabs, Tab, Autocomplete, Checkbox } from '@mui/material';
+import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Box, Typography, Alert, CircularProgress, MenuItem, Paper, Chip, Tabs, Tab, Autocomplete, Checkbox, IconButton, Tooltip } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import HistoryIcon from '@mui/icons-material/History';
+import LockIcon from '@mui/icons-material/Lock';
+import LockOpenIcon from '@mui/icons-material/LockOpen';
 import MapIcon from '@mui/icons-material/Map';
 import TagIcon from '@mui/icons-material/LocalOffer';
 import CheckBoxOutlineBlank from '@mui/icons-material/CheckBoxOutlineBlank';
@@ -131,6 +133,7 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [slugUnlocked, setSlugUnlocked] = useState(false);
     const { locations: allLocations } = useLocations();
     const { tags: allTags } = useTags();
 
@@ -403,7 +406,21 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
                                 onChangeIs={(v) => handleChange('name', v)}
                                 onChangeEn={(v) => setTrail(prev => prev ? { ...prev, nameEn: v } : null)}
                             />
-                            <TextField label="Slug" fullWidth value={trail.slug} onChange={(e) => handleChange('slug', e.target.value)} />
+                            <TextField
+                                label="Slug" fullWidth value={trail.slug}
+                                onChange={(e) => handleChange('slug', e.target.value)}
+                                disabled={!slugUnlocked}
+                                helperText={slugUnlocked ? 'Changing the slug breaks existing bookmarks and shared links.' : undefined}
+                                InputProps={{
+                                    endAdornment: (
+                                        <Tooltip title={slugUnlocked ? 'Lock slug' : 'Changing the slug will break any existing bookmarks or shared links to this trail. Click to unlock.'}>
+                                            <IconButton size="small" onClick={() => setSlugUnlocked(v => !v)} color={slugUnlocked ? 'warning' : 'default'}>
+                                                {slugUnlocked ? <LockOpenIcon fontSize="small" /> : <LockIcon fontSize="small" />}
+                                            </IconButton>
+                                        </Tooltip>
+                                    ),
+                                }}
+                            />
                             <BilingualTextField
                                 label="Description"
                                 multiline
