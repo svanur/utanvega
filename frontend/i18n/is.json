@@ -1398,17 +1398,17 @@
             "distanceToStart": "Fjarlægð að upphafsstað"
         },
         "registrationStatus": {
-            "Open": "Opin",
-            "Closed": "Lokuð",
-            "NotStarted": "Væntanlegt"
+            "Open": "Skráning: Opin",
+            "Closed": "Skráning: Lokuð",
+            "NotStarted": "Skráning: Væntanlegt"
         },
         "ticketStatus": {
-            "Free": "Frítt",
-            "NotStarted": "Bráðum í sölu",
-            "Available": "Laust",
-            "AlmostSoldOut": "Næstum uppselt",
-            "SoldOut": "Uppselt",
-            "Closed": "Lokað"
+            "Free": "Skráning: Frítt",
+            "NotStarted": "Skráning: Bráðum í sölu",
+            "Available": "Skráning: Laust",
+            "AlmostSoldOut": "Skráning: Næstum uppselt",
+            "SoldOut": "Skráning: Uppselt",
+            "Closed": "Skráning: Lokuð"
         }
     },
     "calendar": {

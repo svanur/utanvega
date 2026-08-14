@@ -1398,17 +1398,17 @@
             "distanceToStart": "Distance to the start location"
         },
         "registrationStatus": {
-            "Open": "Open",
-            "Closed": "Closed",
-            "NotStarted": "Coming Soon"
+            "Open": "Registration: Open",
+            "Closed": "Registration: Closed",
+            "NotStarted": "Registration: Coming Soon"
         },
         "ticketStatus": {
-            "Free": "Free",
-            "NotStarted": "Coming Soon",
-            "Available": "Available",
-            "AlmostSoldOut": "Almost Full",
-            "SoldOut": "Sold Out",
-            "Closed": "Closed"
+            "Free": "Registration: Free",
+            "NotStarted": "Registration: Coming Soon",
+            "Available": "Registration: Available",
+            "AlmostSoldOut": "Registration: Almost Full",
+            "SoldOut": "Registration: Sold Out",
+            "Closed": "Registration: Closed"
         }
     },
     "calendar": {
