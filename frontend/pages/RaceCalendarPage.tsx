@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
+import { usePageTitle } from '../hooks/usePageTitle';
 import {
     Container,
     Typography,
@@ -22,6 +23,13 @@ import {
     ToggleButtonGroup,
     ToggleButton,
     Divider,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Button,
+    TextField,
+    InputAdornment,
 } from '@mui/material';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -31,6 +39,9 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import ViewListIcon from '@mui/icons-material/ViewList';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import CheckIcon from '@mui/icons-material/Check';
 import Layout from '../components/Layout';
 import RunningLoader from '../components/RunningLoader';
 import { useEventCalendar, CalendarDay, CalendarEvent } from '../hooks/useEvents';
@@ -243,6 +254,7 @@ function ScheduleView({ days, loading, today, onEventClick, loc, t }: ScheduleVi
 
 export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPageProps) {
     const { t } = useTranslation();
+    usePageTitle(t('calendar.title'));
     const loc = useLocalize();
     const theme = useTheme();
     const navigate = useNavigate();
@@ -282,6 +294,8 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
     const [selectedDay, setSelectedDay] = useState<CalendarDay | null>(null);
     const [todayFlash, setTodayFlash] = useState(false);
     const [subscribeSnackbar, setSubscribeSnackbar] = useState('');
+    const [subscribeDialogOpen, setSubscribeDialogOpen] = useState(false);
+    const [urlCopied, setUrlCopied] = useState(false);
     const todayRef = useRef<HTMLDivElement>(null);
     const touchStartX = useRef<number | null>(null);
 
@@ -354,23 +368,14 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
                         />
                     )}
                     {isEnabled('calendar_integration', false) && (
-                        <Tooltip title={t('calendar.subscribeTooltip', { defaultValue: 'Subscribe to live calendar feed' })}>
-                            <Chip
-                                icon={<CalendarMonthIcon />}
-                                label={t('calendar.subscribe', { defaultValue: 'Subscribe' })}
-                                size="small"
-                                color="primary"
-                                variant="outlined"
-                                onClick={() => {
-                                    const icsUrl = `${API_URL}/api/v1/events/calendar.ics`;
-                                    const webcalUrl = icsUrl.replace(/^https?:/, 'webcal:');
-                                    if (!navigator.clipboard) { window.location.href = webcalUrl; return; }
-                                    navigator.clipboard.writeText(icsUrl)
-                                        .then(() => setSubscribeSnackbar(t('calendar.subscribeSuccess', { defaultValue: 'Calendar URL copied! Paste it in your calendar app.' })))
-                                        .catch(() => { window.location.href = webcalUrl; });
-                                }}
-                            />
-                        </Tooltip>
+                        <Chip
+                            icon={<CalendarMonthIcon />}
+                            label={t('calendar.subscribe', { defaultValue: 'Subscribe' })}
+                            size="small"
+                            color="primary"
+                            variant="outlined"
+                            onClick={() => setSubscribeDialogOpen(true)}
+                        />
                     )}
                 </Stack>
 
@@ -607,6 +612,84 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
                         {subscribeSnackbar}
                     </Alert>
                 </Snackbar>
+
+                {/* Calendar subscribe dialog */}
+                <Dialog
+                    open={subscribeDialogOpen}
+                    onClose={() => { setSubscribeDialogOpen(false); setUrlCopied(false); }}
+                    maxWidth="sm"
+                    fullWidth
+                >
+                    <DialogTitle sx={{ pb: 1 }}>
+                        <Stack direction="row" alignItems="center" gap={1}>
+                            <CalendarMonthIcon color="primary" />
+                            {t('calendar.subscribeDialog.title', 'Subscribe to race calendar')}
+                        </Stack>
+                    </DialogTitle>
+                    <DialogContent>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                            {t('calendar.subscribeDialog.description', 'Add a live calendar feed to your calendar app. It updates automatically whenever races are added or changed — no need to check back.')}
+                        </Typography>
+
+                        {/* URL field */}
+                        <TextField
+                            fullWidth
+                            size="small"
+                            value={`${API_URL}/api/v1/events/calendar.ics`}
+                            InputProps={{
+                                readOnly: true,
+                                endAdornment: (
+                                        <InputAdornment position="end">
+                                            <Tooltip title={urlCopied ? t('calendar.subscribeDialog.copied', 'Copied!') : t('calendar.subscribeDialog.copyUrl', 'Copy URL')}>
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => {
+                                                        navigator.clipboard.writeText(`${API_URL}/api/v1/events/calendar.ics`).then(() => {
+                                                            setUrlCopied(true);
+                                                            setTimeout(() => setUrlCopied(false), 3000);
+                                                        });
+                                                    }}
+                                                >
+                                                    {urlCopied ? <CheckIcon fontSize="small" color="success" /> : <ContentCopyIcon fontSize="small" />}
+                                                </IconButton>
+                                            </Tooltip>
+                                        </InputAdornment>
+                                    ),
+                            }}
+                            sx={{ mb: 2.5, fontFamily: 'monospace' }}
+                        />
+
+                        {/* Platform instructions */}
+                        <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                            {t('calendar.subscribeDialog.howTo', 'How to add it')}
+                        </Typography>
+                        <Stack spacing={1} sx={{ mt: 1 }}>
+                            {[
+                                { app: 'Google Calendar', steps: t('calendar.subscribeDialog.google', 'Open Google Calendar → Other calendars (+) → From URL → paste the URL above.') },
+                                { app: 'Apple Calendar', steps: t('calendar.subscribeDialog.apple', 'Open Calendar → File → New Calendar Subscription → paste the URL above.') },
+                                { app: 'Outlook', steps: t('calendar.subscribeDialog.outlook', 'Open Outlook → Add calendar → Subscribe from web → paste the URL above.') },
+                            ].map(({ app, steps }) => (
+                                <Box key={app} sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1 }}>
+                                    <Typography variant="body2" fontWeight={600}>{app}</Typography>
+                                    <Typography variant="body2" color="text.secondary">{steps}</Typography>
+                                </Box>
+                            ))}
+                        </Stack>
+                    </DialogContent>
+                    <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
+                        <Button
+                            variant="outlined"
+                            startIcon={<OpenInNewIcon />}
+                            href={`${API_URL}/api/v1/events/calendar.ics`.replace(/^https?:/, 'webcal:')}
+                            onClick={() => setSubscribeDialogOpen(false)}
+                        >
+                            {t('calendar.subscribeDialog.openInApp', 'Open in calendar app')}
+                        </Button>
+                        <Button onClick={() => { setSubscribeDialogOpen(false); setUrlCopied(false); }}>
+                            {t('common.cancel')}
+                        </Button>
+                    </DialogActions>
+                </Dialog>
             </Container>
         </Layout>
     );

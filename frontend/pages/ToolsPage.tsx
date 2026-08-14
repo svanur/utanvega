@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type { PaletteMode } from '@mui/material';
 import { Box, Tabs, Tab, Typography, Card, CardActionArea, CardContent, IconButton } from '@mui/material';
 import { useTranslation } from 'react-i18next';
+import { usePageTitle } from '../hooks/usePageTitle';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import Layout from '../components/Layout';
@@ -30,6 +31,7 @@ interface ToolDef {
 
 export default function ToolsPage({ mode, onToggleMode }: { mode: PaletteMode; onToggleMode: () => void }) {
     const { t } = useTranslation();
+    usePageTitle(t('tools.title'));
     const { isEnabled } = useFeatureFlags();
     const { toolKey } = useParams<{ toolKey?: string }>();
     const navigate = useNavigate();

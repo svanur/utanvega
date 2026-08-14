@@ -167,7 +167,6 @@ export default function DynamicHeader({ weather, isDark, children }: DynamicHead
             elevation={0}
             sx={{
                 background: gradient,
-                position: 'relative',
                 transition: 'background 2s ease',
             }}
         >

@@ -1,5 +1,6 @@
 import { useMemo, useRef, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { usePageTitle } from '../hooks/usePageTitle';
 import {
     Container,
     Typography,
@@ -118,6 +119,7 @@ type LocationsPageProps = {
 
 export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps) {
     const { t } = useTranslation();
+    usePageTitle(t('nav.locations'));
     const localize = useLocalize();
     const { locations, loading, error } = useLocations();
     const { trails } = useTrails();

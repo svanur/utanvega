@@ -81,6 +81,7 @@
         "switchToIcelandic": "Skipta yfir á íslensku",
         "events": "Viðburðir",
         "fun": "Gaman",
+        "tagline": "Öll hlaup á einum stað",
         "onlineStore": "Verslun",
         "tools": "Tól",
         "scratchCard": "Skafkort",
@@ -944,7 +945,7 @@
         "guessTitle": "Hvaða leið er með þetta hæðarsnið?"
     },
     "tools": {
-        "title": "Tól",
+        "title": "Hlaupatól",
         "subtitle": "Reiknivélar og tól til að hjálpa þér að æfa og keppa betur.",
         "noToolsEnabled": "Engin hjálpartól eru virk.",
         "paceCalc": {
@@ -1106,6 +1107,8 @@
             "title": "Aldursleiðrétting",
             "desc": "Sjáðu hvernig lokatími þinn er í samanburði við heimsklassa árangur fyrir þinn aldur og kyn.",
             "subtitle": "Berðu frammistöðu þína saman við heimsklassa árangur fyrir þinn aldur og kyn",
+            "whatIsThis": "Hvað er aldursleiðrétting?",
+            "explainer": "Aldursleiðrétting svarar einni einfaldri spurningu: hversu góður var tíminn minn  miðað við aldur? 45 mínútur á 10 km þýðir eitthvað allt annað fyrir 25 ára en þann sem er 65 ára.\n\nTólið umbreytir lokatíma þínum í hlutfall af heimsmetstíma fyrir þinn aldur og kyn. 60% þýðir að tími þinn er 60% eins hraður og besti árangur sem þekkist hjá einhverjum á þínum aldri. Þetta er sanngjarnt samanburðarform — hagnýtt til að fylgjast með eigin framförum eftir því sem þú verður eldri, eða til að bera saman tíma með æfingafélögum á mismunandi aldri.\n\nSláðu inn aldur þinn, veldu vegalengd, skrifaðu lokatímann og þú færð strax aldursleiðréttar niðurstöður og hvaða frammistöðuflokki þú lendir í.",
             "male": "Karl",
             "female": "Kona",
             "age": "Aldur",
@@ -1330,7 +1333,7 @@
             "Championship": "Meistaramót",
             "Fun": "Skemmtun",
             "Festival": "Hátíð",
-            "Advertisement": "Styrkt"
+            "Advertisement": "Kostað"
         },
         "history": {
             "title": "Fyrri viðburðir",
@@ -1400,6 +1403,17 @@
         "subscribe": "Gerast áskrifandi",
         "subscribeTooltip": "Gerast áskrifandi að dagatalsfæðu",
         "subscribeSuccess": "Slóð afrituð! Límdu hana í dagatalið þitt.",
+        "subscribeDialog": {
+            "title": "Gerast áskrifandi að hlaupadagatali",
+            "description": "Bættu við 'lifandi viðburðum' af hlaupadagskra.is í dagatalið þitt. Það uppfærist sjálfkrafa þegar hlaupum er bætt við eða viðburðir uppfærðir — engin þörf á að breyta neinu.",
+            "copyUrl": "Afrita slóð",
+            "copied": "Afritað!",
+            "howTo": "Hvernig á að bæta því við",
+            "google": "Opnaðu Google Calendar → Önnur dagatal (+) → Af slóð → límdu slóðina að ofan.",
+            "apple": "Opnaðu Calendar → Skrá → Ný dagatalsskráning → límdu slóðina að ofan.",
+            "outlook": "Opnaðu Outlook → Bæta við dagatali → Gerast áskrifandi af vef → límdu slóðina að ofan.",
+            "openInApp": "Opna í dagatalsforrita"
+        },
         "upcoming": "Væntanlegir viðburðir",
         "quietWeek": "Engir viðburðir",
         "race": "keppni",

@@ -29,6 +29,7 @@ import MapIcon from '@mui/icons-material/Map';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
 import TranslateIcon from '@mui/icons-material/Translate';
 import { useLocations } from '../../hooks/useLocations';
+import { useOrganizers } from '../../hooks/useOrganizers';
 import GpxMapPicker from '../GpxMapPicker';
 import type {
   ActivityType,
@@ -78,6 +79,7 @@ interface EventFormState {
   type: EventType;
   activityType: ActivityType;
   status: EventStatus;
+  organizerId: string;
   organizerName: string;
   organizerNameEn: string;
   organizerWebsite: string;
@@ -147,6 +149,7 @@ function buildForm(event: EventDetailDto): EventFormState {
     type: event.type,
     activityType: event.activityType,
     status: event.status,
+    organizerId: event.organizerId ?? '',
     organizerName: event.organizerName ?? '',
     organizerNameEn: event.organizerNameEn ?? '',
     organizerWebsite: event.organizerWebsite ?? '',
@@ -225,6 +228,7 @@ function EventFormCardInner({ event, linkedTrails = [], onClose, onSaved, onNoti
   const { translate, translating } = useTranslate(msg => onNotify(msg, 'error'));
   const { locations } = useLocations();
   const sortedLocations = useMemo(() => [...locations].sort((a, b) => a.name.localeCompare(b.name)), [locations]);
+  const { organizers } = useOrganizers();
   const [showMapPicker, setShowMapPicker] = useState(false);
 
   useEffect(() => { setForm(buildForm(event)); }, [event]);
@@ -271,7 +275,7 @@ function EventFormCardInner({ event, linkedTrails = [], onClose, onSaved, onNoti
         alertMessage: trimToUndefined(form.alertMessage),
         alertMessageEn: trimToUndefined(form.alertMessageEn),
         alertSeverity: form.alertSeverity || undefined,
-        organizerId: event.organizerId,
+        organizerId: form.organizerId || null,
         locationId: form.locationId || null,
         scheduleRule: buildScheduleRule(form.schedule),
         socialLinks: socialLinks.length > 0 ? socialLinks : null,
@@ -318,7 +322,7 @@ function EventFormCardInner({ event, linkedTrails = [], onClose, onSaved, onNoti
             required error={!form.name.trim()}
           />
           <BilingualTextField
-            size="small" fullWidth label="Description" multiline rows={19} sx={{ mb: 1.5 }}
+            size="small" fullWidth label="Description" multiline rows={21} sx={{ mb: 1.5 }}
             valueIs={form.description} valueEn={form.descriptionEn}
             onChangeIs={v => set('description', v)} onChangeEn={v => set('descriptionEn', v)}
           />
@@ -351,15 +355,25 @@ function EventFormCardInner({ event, linkedTrails = [], onClose, onSaved, onNoti
           <Divider sx={{ my: 1.5 }} />
 
           <SectionLabel>Organizer</SectionLabel>
-          <BilingualTextField
-            size="small" fullWidth label="Organizer name" sx={{ mb: 1.5 }}
-            valueIs={form.organizerName} valueEn={form.organizerNameEn}
-            onChangeIs={v => set('organizerName', v)} onChangeEn={v => set('organizerNameEn', v)}
+          <Autocomplete
+            size="small"
+            options={organizers}
+            value={organizers.find(o => o.id === form.organizerId) ?? null}
+            onChange={(_, value) => {
+              set('organizerId', value?.id ?? '');
+              set('organizerName', value?.name ?? '');
+              set('organizerWebsite', value?.website ?? '');
+            }}
+            getOptionLabel={o => o.name}
+            isOptionEqualToValue={(o, v) => o.id === v.id}
+            renderInput={params => <TextField {...params} label="Organizer" placeholder="Search organizers…" />}
+            sx={{ mb: 1.5 }}
           />
           <TextField
-            size="small" fullWidth label="Organizer website" value={form.organizerWebsite}
+            size="small" fullWidth label="Organizer website (override)" value={form.organizerWebsite}
             onChange={e => set('organizerWebsite', e.target.value)}
             placeholder="https://…"
+            helperText="Leave blank to use the organizer's website"
           />
           <Divider sx={{ my: 1.5 }} />
           <SectionLabel>Photo Gallery</SectionLabel>

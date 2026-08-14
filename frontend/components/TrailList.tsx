@@ -434,17 +434,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
         return Array.from(tagMap.values()).sort((a, b) => (loc(a.name, a.nameEn) ?? a.name).localeCompare(loc(b.name, b.nameEn) ?? b.name));
     }, [trails, loc]);
 
-    const trailsHeading = (
-        <Box sx={{ mb: 3 }}>
-            <Typography variant="h4" fontWeight={800} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <LandscapeIcon sx={{ fontSize: 32, color: 'success.main' }} />
-                {t('home.trailsTitle')}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-                {t('home.trailsSubtitle')}
-            </Typography>
-        </Box>
-    );
+    const trailsHeading = null;
 
     if (loading) {
         return (
@@ -513,7 +503,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
         <Container 
             maxWidth={viewMode === 'table' ? 'lg' : 'md'} 
             sx={{ 
-                py: 2, 
+                pt: 1, pb: 2,
                 position: 'relative',
                 transform: `translateY(${pullOffset / 2}px)`,
                 transition: touchStart === null ? 'transform 0.3s ease-out' : 'none'
