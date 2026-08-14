@@ -17,7 +17,8 @@ public record CalendarEventDto(
     string Type,
     List<string>? ActivityTypes = null,
     string? RaceName = null,
-    List<string>? Distances = null
+    List<string>? Distances = null,
+    bool EffectiveCancelled = false
 );
 
 public record CalendarDayDto(
@@ -63,15 +64,17 @@ public class GetEventCalendarQueryHandler : IRequestHandler<GetEventCalendarQuer
                 ed.Date <= request.To &&
                 (ed.EndDate.HasValue ? ed.EndDate >= request.From : ed.Date >= request.From) &&
                 ed.Event.Status != EventStatus.Hidden &&
-                ed.Event.Status != EventStatus.Unlisted &&
-                ed.Status != EditionStatus.Cancelled)
+                ed.Event.Status != EventStatus.Unlisted)
             .ToListAsync(cancellationToken);
 
         var dayMap = new Dictionary<DateOnly, List<CalendarEventDto>>();
 
         foreach (var ed in editions)
         {
-            var activeRaces = ed.Races.Where(r => r.Status != RaceStatus.Cancelled && r.Status != RaceStatus.Hidden).ToList();
+            var allRaces = ed.Races.Where(r => r.Status != RaceStatus.Hidden).ToList();
+            var activeRaces = allRaces.Where(r => r.Status != RaceStatus.Cancelled).ToList();
+            var effectiveCancelled = ed.Event.Status == EventStatus.Cancelled
+                || EditionStatusHelpers.ComputeEffectiveCancelled(ed.Status, allRaces.Select(r => r.Status).ToList());
             var activityTypes = activeRaces
                 .Select(r => r.ActivityType?.ToString() ?? r.Trail?.ActivityTypeId.ToString())
                 .Where(a => a != null)
@@ -102,7 +105,8 @@ public class GetEventCalendarQueryHandler : IRequestHandler<GetEventCalendarQuer
                         1,
                         ed.Event.Type.ToString(),
                         activityTypes.Count > 0 ? activityTypes : null,
-                        race.Name
+                        race.Name,
+                        EffectiveCancelled: effectiveCancelled
                     ));
                 }
                 continue;
@@ -125,7 +129,8 @@ public class GetEventCalendarQueryHandler : IRequestHandler<GetEventCalendarQuer
                 activeRaces.Count,
                 ed.Event.Type.ToString(),
                 activityTypes.Count > 0 ? activityTypes : null,
-                Distances: distances.Count > 0 ? distances : null
+                Distances: distances.Count > 0 ? distances : null,
+                EffectiveCancelled: effectiveCancelled
             );
 
             for (var day = startDate; day <= endDate; day = day.AddDays(1))

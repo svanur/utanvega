@@ -67,6 +67,11 @@ export default function EventDayBanner() {
                                                 · {event.locationName}
                                             </Typography>
                                         )}
+                                        {event.effectiveCancelled && (
+                                            <Typography component="span" variant="inherit" sx={{ ml: 0.5, color: 'error.main', fontWeight: 600 }}>
+                                                · {t('eventDayBanner.cancelled')}
+                                            </Typography>
+                                        )}
                                     </span>
                                 }
                                 component={RouterLink}
@@ -74,7 +79,7 @@ export default function EventDayBanner() {
                                 clickable
                                 size="small"
                                 variant="outlined"
-                                sx={{ fontSize: '0.75rem' }}
+                                sx={{ fontSize: '0.75rem', opacity: event.effectiveCancelled ? 0.7 : 1 }}
                             />
                         ))}
                         {day.overflow > 0 && (

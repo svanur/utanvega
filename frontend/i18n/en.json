@@ -1624,7 +1624,8 @@
         "friday": "Friday",
         "saturday": "Saturday",
         "sunday": "Sunday",
-        "overflow": "and {{count}} more →"
+        "overflow": "and {{count}} more →",
+        "cancelled": "Cancelled"
     },
     "promos": {
         "runningTrip": {
