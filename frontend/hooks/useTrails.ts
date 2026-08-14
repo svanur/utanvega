@@ -93,6 +93,7 @@ export const DEFAULT_FILTERS: FilterState = {
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 const TRAILS_CACHE_KEY = 'utanvega-trails-v1';
+const TRAILS_CACHE_TS_KEY = 'utanvega-trails-v1-ts';
 
 function readTrailsCache(): Trail[] | undefined {
     try {
@@ -105,9 +106,18 @@ function readTrailsCache(): Trail[] | undefined {
     }
 }
 
+function readTrailsCacheTimestamp(): number {
+    try {
+        return Number(localStorage.getItem(TRAILS_CACHE_TS_KEY)) || 0;
+    } catch {
+        return 0;
+    }
+}
+
 function writeTrailsCache(trails: Trail[]): void {
     try {
         localStorage.setItem(TRAILS_CACHE_KEY, JSON.stringify(trails));
+        localStorage.setItem(TRAILS_CACHE_TS_KEY, String(Date.now()));
     } catch {
         // Ignore write failures (storage full, private mode, etc.)
     }
@@ -160,7 +170,7 @@ export function useTrails(disableGeolocation = false) {
         staleTime: 15 * 60 * 1000,
         gcTime: 30 * 60 * 1000,
         initialData: readTrailsCache,
-        initialDataUpdatedAt: 0,
+        initialDataUpdatedAt: readTrailsCacheTimestamp,
     });
 
     const refreshing = isFetching && !loading;
