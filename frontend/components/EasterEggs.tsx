@@ -416,7 +416,7 @@ function Originals({ onComplete }: { onComplete: () => void }) {
 // ==================== ÚT AÐ HLAUPA ====================
 
 const PODCAST_IMG = 'https://i.scdn.co/image/ab6765630000ba8a877d2cca1e23c998f2b8b6a3';
-const UTAD_QUOTES = ['Ekki trufla mig á threshold! 🔥', 'Ekki festast á hjólinu! 🚴'];
+const UTAD_QUOTES = ['Ekki trufla mig á threshold! 🔥', 'Ekki festast á hjólinu! 🚴', 'Beint á Strava 📲', 'Ég er á Zone 2 😤'];
 
 function UtadHlaupa({ onComplete }: { onComplete: () => void }) {
     const [quote] = useState(() => UTAD_QUOTES[Math.floor(Math.random() * UTAD_QUOTES.length)]);
@@ -471,8 +471,8 @@ function UtadHlaupa({ onComplete }: { onComplete: () => void }) {
                     to   { opacity: 1; transform: translateX(0); }
                 }
                 .ee-pod-card img {
-                    width: 48px;
-                    height: 48px;
+                    width: clamp(36px, 8vw, 48px);
+                    height: clamp(36px, 8vw, 48px);
                     border-radius: 8px;
                     object-fit: cover;
                 }
@@ -585,16 +585,13 @@ function UtadHlaupa({ onComplete }: { onComplete: () => void }) {
                     padding: 1px 5px;
                 }
                 .ee-runner-emoji {
-                    font-size: 52px;
+                    font-size: clamp(36px, 8vw, 52px);
                     line-height: 1;
                     filter: drop-shadow(0 2px 6px rgba(0,0,0,0.4));
                     transform: scaleX(-1);
                 }
                 .ee-thorsteinn .ee-runner-emoji {
-                    font-size: 58px;
-                }
-                /* Speed blur on Þorsteinn */
-                .ee-thorsteinn .ee-runner-emoji {
+                    font-size: clamp(40px, 9vw, 58px);
                     filter: drop-shadow(0 2px 6px rgba(0,0,0,0.4)) drop-shadow(-6px 0 8px rgba(255,160,0,0.5));
                 }
                 /* Quote */
@@ -603,13 +600,14 @@ function UtadHlaupa({ onComplete }: { onComplete: () => void }) {
                     bottom: 14%;
                     left: 50%;
                     transform: translateX(-50%);
-                    font-size: clamp(15px, 2.5vw, 26px);
+                    font-size: clamp(13px, 2.5vw, 26px);
                     font-weight: 700;
                     font-style: italic;
                     color: #fff;
                     font-family: system-ui, sans-serif;
                     text-shadow: 0 2px 8px rgba(0,0,0,0.7);
-                    white-space: nowrap;
+                    white-space: normal;
+                    max-width: 88vw;
                     animation: ee-pod-quote-in 0.6s ease-out forwards;
                     text-align: center;
                 }
