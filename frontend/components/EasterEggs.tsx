@@ -413,6 +413,260 @@ function Originals({ onComplete }: { onComplete: () => void }) {
     );
 }
 
+// ==================== ÚT AÐ HLAUPA ====================
+
+const PODCAST_IMG = 'https://i.scdn.co/image/ab6765630000ba8a877d2cca1e23c998f2b8b6a3';
+const UTAD_QUOTES = ['Ekki trufla mig á threshold! 🔥', 'Ekki festast á hjólinu! 🚴'];
+
+function UtadHlaupa({ onComplete }: { onComplete: () => void }) {
+    const [quote] = useState(() => UTAD_QUOTES[Math.floor(Math.random() * UTAD_QUOTES.length)]);
+    const [showQuote, setShowQuote] = useState(false);
+
+    useEffect(() => {
+        document.body.classList.add('ee-utadahlaupa-active');
+
+        const audio = new Audio('/audio/utadahlaupa.mp3');
+        audio.volume = 0.6;
+        audio.play().catch(() => { /* autoplay blocked — silently skip */ });
+
+        const t1 = setTimeout(() => setShowQuote(true), 6000);
+        const t2 = setTimeout(onComplete, 11000);
+        return () => {
+            audio.pause();
+            audio.currentTime = 0;
+            document.body.classList.remove('ee-utadahlaupa-active');
+            clearTimeout(t1);
+            clearTimeout(t2);
+        };
+    }, [onComplete]);
+
+    return (
+        <div className="ee-pod-overlay">
+            <style>{`
+                .ee-pod-overlay {
+                    position: fixed;
+                    inset: 0;
+                    z-index: 99999;
+                    pointer-events: none;
+                    overflow: hidden;
+                }
+                /* Podcast card */
+                .ee-pod-card {
+                    position: absolute;
+                    top: 20px;
+                    right: 20px;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    background: rgba(0,0,0,0.82);
+                    border-radius: 12px;
+                    padding: 8px 14px 8px 8px;
+                    backdrop-filter: blur(6px);
+                    animation: ee-pod-card-in 0.5s ease-out forwards;
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+                    z-index: 1;
+                }
+                @keyframes ee-pod-card-in {
+                    from { opacity: 0; transform: translateX(40px); }
+                    to   { opacity: 1; transform: translateX(0); }
+                }
+                .ee-pod-card img {
+                    width: 48px;
+                    height: 48px;
+                    border-radius: 8px;
+                    object-fit: cover;
+                }
+                .ee-pod-card-text {
+                    display: flex;
+                    flex-direction: column;
+                }
+                .ee-pod-card-label {
+                    font-size: 10px;
+                    color: rgba(255,255,255,0.5);
+                    font-family: system-ui, sans-serif;
+                    letter-spacing: 1.5px;
+                    text-transform: uppercase;
+                }
+                .ee-pod-card-title {
+                    font-size: 14px;
+                    font-weight: 700;
+                    color: #fff;
+                    font-family: system-ui, sans-serif;
+                }
+                .ee-pod-card-dot {
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 50%;
+                    background: #1DB954;
+                    animation: ee-pod-dot-pulse 1.2s ease-in-out infinite;
+                    flex-shrink: 0;
+                }
+                @keyframes ee-pod-dot-pulse {
+                    0%, 100% { transform: scale(1); opacity: 1; }
+                    50% { transform: scale(1.4); opacity: 0.7; }
+                }
+                /* Hide sponsor and promo strips while egg is active */
+                body.ee-utadahlaupa-active [data-sponsor-strip],
+                body.ee-utadahlaupa-active [data-promo-strip] {
+                    visibility: hidden;
+                }
+                /* Yellow top splash — Út að hlaupa brand colors */
+                .ee-pod-top {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 38%;
+                    background: linear-gradient(to bottom, rgba(255,210,0,0.88) 0%, rgba(255,210,0,0.5) 60%, transparent 100%);
+                }
+                /* Dark stage behind runners — covers bottom ads */
+                .ee-pod-stage {
+                    position: absolute;
+                    bottom: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 38%;
+                    background: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.75) 30%, rgba(0,0,0,0.85) 100%);
+                }
+                /* Runners track */
+                .ee-pod-track {
+                    position: absolute;
+                    bottom: 42%;
+                    left: 0;
+                    width: 100%;
+                }
+                /* Marteinn — slow and steady */
+                .ee-marteinn {
+                    position: absolute;
+                    bottom: 0;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    animation: ee-marteinn-run 11s linear forwards;
+                }
+                @keyframes ee-marteinn-run {
+                    0%   { left: -120px; }
+                    100% { left: 80vw; }
+                }
+                /* Þorsteinn — fast, laps twice. Total 11s.
+                   Lap 1: enters at 1.5s (13.6%), done at 4s (36.4%) — 2.5s crossing
+                   Lap 2: enters at 5.5s (50%), done at 8s (72.7%) — 2.5s crossing */
+                .ee-thorsteinn {
+                    position: absolute;
+                    bottom: 0;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    animation: ee-thorsteinn-run 11s linear forwards;
+                }
+                @keyframes ee-thorsteinn-run {
+                    /* Lap 1: enters at 1.5s (13%), done at 5s (45%) — 3.5s crossing */
+                    0%     { left: -120px; opacity: 0; }
+                    13%    { left: -120px; opacity: 1; }
+                    45%    { left: calc(100vw + 120px); opacity: 1; }
+                    /* Instant reset */
+                    45.1%  { left: -120px; opacity: 0; }
+                    53%    { left: -120px; opacity: 0; }
+                    /* Lap 2: enters at 6s (54%), done at 9.5s (86%) — 3.5s crossing */
+                    54%    { left: -120px; opacity: 1; }
+                    86%    { left: calc(100vw + 120px); opacity: 1; }
+                    100%   { left: calc(100vw + 120px); opacity: 0; }
+                }
+                .ee-runner-name {
+                    font-size: 12px;
+                    font-weight: 700;
+                    color: #fff;
+                    font-family: system-ui, sans-serif;
+                    text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+                    white-space: nowrap;
+                    margin-bottom: 2px;
+                    background: rgba(0,0,0,0.45);
+                    border-radius: 4px;
+                    padding: 1px 5px;
+                }
+                .ee-runner-emoji {
+                    font-size: 52px;
+                    line-height: 1;
+                    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.4));
+                    transform: scaleX(-1);
+                }
+                .ee-thorsteinn .ee-runner-emoji {
+                    font-size: 58px;
+                }
+                /* Speed blur on Þorsteinn */
+                .ee-thorsteinn .ee-runner-emoji {
+                    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.4)) drop-shadow(-6px 0 8px rgba(255,160,0,0.5));
+                }
+                /* Quote */
+                .ee-pod-quote {
+                    position: absolute;
+                    bottom: 14%;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    font-size: clamp(15px, 2.5vw, 26px);
+                    font-weight: 700;
+                    font-style: italic;
+                    color: #fff;
+                    font-family: system-ui, sans-serif;
+                    text-shadow: 0 2px 8px rgba(0,0,0,0.7);
+                    white-space: nowrap;
+                    animation: ee-pod-quote-in 0.6s ease-out forwards;
+                    text-align: center;
+                }
+                @keyframes ee-pod-quote-in {
+                    from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+                    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+                }
+                /* Dust puffs under Marteinn */
+                .ee-dust {
+                    position: absolute;
+                    bottom: -8px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    font-size: 18px;
+                    animation: ee-dust-puff 0.6s ease-out infinite;
+                }
+                @keyframes ee-dust-puff {
+                    0%   { opacity: 0.7; transform: translateX(-50%) scale(0.5); }
+                    100% { opacity: 0; transform: translateX(-50%) scale(1.5) translateY(-8px); }
+                }
+            `}</style>
+
+            {/* Podcast "now playing" card */}
+            <div className="ee-pod-card">
+                <img src={PODCAST_IMG} alt="Út að hlaupa podcast" />
+                <div className="ee-pod-card-text">
+                    <span className="ee-pod-card-label">🎙 Í gangi</span>
+                    <span className="ee-pod-card-title">Út að hlaupa</span>
+                </div>
+                <div className="ee-pod-card-dot" />
+            </div>
+
+            {/* Yellow top splash */}
+            <div className="ee-pod-top" />
+
+            {/* Dark stage to cover bottom ads */}
+            <div className="ee-pod-stage" />
+
+            {/* Running track */}
+            <div className="ee-pod-track">
+                <div className="ee-marteinn">
+                    <div className="ee-runner-name">Marteinn</div>
+                    <div className="ee-runner-emoji">🏃</div>
+                    <div className="ee-dust">💨</div>
+                </div>
+                <div className="ee-thorsteinn">
+                    <div className="ee-runner-name">Þorsteinn ⚡</div>
+                    <div className="ee-runner-emoji">🏃</div>
+                </div>
+            </div>
+
+            {/* Random quote */}
+            {showQuote && <div className="ee-pod-quote">"{quote}"</div>}
+        </div>
+    );
+}
+
 // ==================== MAIN COMPONENT ====================
 
 export function EasterEggs({ activeEgg, onComplete }: Props) {
@@ -424,6 +678,7 @@ export function EasterEggs({ activeEgg, onComplete }: Props) {
             {activeEgg === 'ultra' && <UltraNight onComplete={onComplete} />}
             {activeEgg === 'matrix' && <MatrixRain onComplete={onComplete} />}
             {activeEgg === 'originals' && <Originals onComplete={onComplete} />}
+            {activeEgg === 'utadahlaupa' && <UtadHlaupa onComplete={onComplete} />}
         </>,
         document.body
     );

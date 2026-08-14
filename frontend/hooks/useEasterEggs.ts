@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
-export type EasterEgg = 'konami' | 'ultra' | 'matrix' | 'originals' | null;
+export type EasterEgg = 'konami' | 'ultra' | 'matrix' | 'originals' | 'utadahlaupa' | null;
 
 const KONAMI_CODE = [
     'ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown',

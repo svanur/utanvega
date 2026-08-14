@@ -150,13 +150,20 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
         } catch { /* storage unavailable */ }
         return 'list';
     });
-    // Easter egg: "hin upprunalegu" in search triggers The Originals
+    // Easter eggs triggered by search query
     const originalsTriggered = React.useRef(false);
+    const utadahlaupa = React.useRef(false);
     React.useEffect(() => {
-        if (searchQuery.toLowerCase().trim() === 'hin upprunalegu' && !originalsTriggered.current) {
+        const q = searchQuery.toLowerCase().trim();
+        if (q === 'hin upprunalegu' && !originalsTriggered.current) {
             originalsTriggered.current = true;
             window.dispatchEvent(new CustomEvent('easter-egg', { detail: { egg: 'originals' } }));
             setTimeout(() => { originalsTriggered.current = false; }, 10000);
+        }
+        if (q === 'út að hlaupa' && !utadahlaupa.current) {
+            utadahlaupa.current = true;
+            window.dispatchEvent(new CustomEvent('easter-egg', { detail: { egg: 'utadahlaupa' } }));
+            setTimeout(() => { utadahlaupa.current = false; }, 10000);
         }
     }, [searchQuery]);
     const [hidingSlugs, setHidingSlugs] = React.useState<string[]>([]);
@@ -1245,7 +1252,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
             </Box>
 
             {viewMode === 'list' ? (
-                filteredTrails.length === 0 ? (
+                filteredTrails.length === 0 && searchQuery.toLowerCase().trim() !== 'út að hlaupa' ? (
                     <EmptyFilterState
                         hasActiveFilters={!!(searchQuery || filters.lengthBuckets.length > 0 || filters.elevationGainBuckets.length > 0 || filters.elevationLossBuckets.length > 0 || filters.distanceBuckets.length > 0 || filters.difficulties.length > 0 || filters.trailTypes.length > 0 || filters.locationSlugs.length > 0 || filters.selectedActivityTypes.length > 0 || filters.favoritesOnly)}
                         onClearFilters={() => { resetFilters(); setSelectedLocationItems([]); setSearchQuery(''); }}

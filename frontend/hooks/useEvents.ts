@@ -135,6 +135,7 @@ export interface EventDetail extends EventSummary {
 }
 
 const EVENTS_CACHE_KEY = 'utanvega-events-v1';
+const EVENTS_CACHE_TS_KEY = 'utanvega-events-v1-ts';
 
 function readEventsCache(): EventSummary[] | undefined {
     try {
@@ -147,9 +148,18 @@ function readEventsCache(): EventSummary[] | undefined {
     }
 }
 
+function readEventsCacheTimestamp(): number {
+    try {
+        return Number(localStorage.getItem(EVENTS_CACHE_TS_KEY)) || 0;
+    } catch {
+        return 0;
+    }
+}
+
 function writeEventsCache(events: EventSummary[]): void {
     try {
         localStorage.setItem(EVENTS_CACHE_KEY, JSON.stringify(events));
+        localStorage.setItem(EVENTS_CACHE_TS_KEY, String(Date.now()));
     } catch { /* storage full or private mode */ }
 }
 
@@ -166,7 +176,7 @@ export function useEvents() {
         staleTime: 15 * 60 * 1000,
         gcTime: 30 * 60 * 1000,
         initialData: readEventsCache,
-        initialDataUpdatedAt: 0,
+        initialDataUpdatedAt: readEventsCacheTimestamp,
     });
     return { events, loading: isPending, error: queryError instanceof Error ? queryError.message : null, refresh: refetch };
 }
