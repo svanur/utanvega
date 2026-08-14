@@ -1,6 +1,7 @@
 import { lazy, Suspense, useMemo, useCallback, useState, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { usePageTitle } from '../hooks/usePageTitle';
 import {
     Container,
     Typography,
@@ -135,6 +136,7 @@ const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
 export default function RacesPage({ mode, onToggleMode, showQuote = false }: RacesPageProps) {
     const { t } = useTranslation();
     const loc = useLocalize();
+    usePageTitle(t('nav.events'));
     const { getHolidays } = useIcelandicHolidays();
     const { favoriteEvents, toggleFavoriteEvent, isFavoriteEvent } = useFavoriteEvents();
     const { events, loading, error, refresh } = useEvents();

@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
+import { usePageTitle } from '../hooks/usePageTitle';
 import {
     Container,
     Typography,
@@ -243,6 +244,7 @@ function ScheduleView({ days, loading, today, onEventClick, loc, t }: ScheduleVi
 
 export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPageProps) {
     const { t } = useTranslation();
+    usePageTitle(t('calendar.title'));
     const loc = useLocalize();
     const theme = useTheme();
     const navigate = useNavigate();

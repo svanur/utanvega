@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { usePageTitle } from '../hooks/usePageTitle';
+import { useTranslation } from 'react-i18next';
 import RandomQuote from '../components/RandomQuote';
 import Layout from '../components/Layout';
 import { TrailList } from '../components/TrailList';
@@ -15,6 +17,8 @@ type HomePageProps = {
 
 export default function HomePage({ mode, onToggleMode, tagSlug, showQuote = false }: HomePageProps) {
     const { isEnabled } = useFeatureFlags();
+    const { t } = useTranslation();
+    usePageTitle(t('nav.trails'));
     const [viewMode, setViewMode] = useState(() => {
         try { return localStorage.getItem('utanvega-view-mode') || 'list'; } catch { return 'list'; }
     });

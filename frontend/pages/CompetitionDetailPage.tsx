@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { usePageTitle } from '../hooks/usePageTitle';
 import {
     Container,
     Typography,
@@ -280,6 +281,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     const { t } = useTranslation();
     const loc = useLocalize();
     const { event, loading, error } = useEventBySlug(slug);
+    usePageTitle(event ? (loc(event.name, event.nameEn) ?? event.name) : undefined);
     const { events, loading: eventsLoading } = useEvents();
     const navigate = useNavigate();
     const theme = useTheme();

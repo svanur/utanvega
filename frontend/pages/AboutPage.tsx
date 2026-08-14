@@ -1,6 +1,7 @@
 import { Avatar, Box, Chip, Typography, Paper, Divider, Stack } from '@mui/material';
 import type { PaletteMode } from '@mui/material';
 import { useTranslation } from 'react-i18next';
+import { usePageTitle } from '../hooks/usePageTitle';
 import Timeline from '@mui/lab/Timeline';
 import TimelineItem from '@mui/lab/TimelineItem';
 import TimelineSeparator from '@mui/lab/TimelineSeparator';
@@ -55,6 +56,7 @@ const changelog = [
 
 export default function AboutPage({ mode, onToggleMode }: AboutPageProps) {
     const { t } = useTranslation();
+    usePageTitle(t('nav.about'));
 
     return (
         <Layout mode={mode} onToggleMode={onToggleMode}>
