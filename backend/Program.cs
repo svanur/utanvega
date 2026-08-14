@@ -514,9 +514,10 @@ if (app.Environment.IsDevelopment())
     }
 }
 
-app.MapGet("/api/v1/trails", async (IMediator mediator) =>
+app.MapGet("/api/v1/trails", async (IMediator mediator, HttpContext ctx) =>
 {
     var trails = await mediator.Send(new GetTrailsQuery(IncludeArchived: false, PublishedOnly: true));
+    ctx.Response.Headers.CacheControl = "public, max-age=300, stale-while-revalidate=60";
     return Results.Ok(trails);
 })
 .WithName("GetPublicTrails");
@@ -1507,9 +1508,11 @@ app.MapDelete("/api/v1/admin/features/{id:guid}", [Authorize(Policy = "AdminOnly
 // ============ Event Endpoints ============
 
 // Public
-app.MapGet("/api/v1/events", async (IMediator mediator, bool includeHidden = false) =>
+app.MapGet("/api/v1/events", async (IMediator mediator, HttpContext ctx, bool includeHidden = false) =>
 {
     var events = await mediator.Send(new GetEventsQuery(includeHidden));
+    if (!includeHidden)
+        ctx.Response.Headers.CacheControl = "public, max-age=300, stale-while-revalidate=60";
     return Results.Ok(events);
 })
 .WithName("GetPublicEvents");

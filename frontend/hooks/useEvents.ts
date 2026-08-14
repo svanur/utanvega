@@ -134,15 +134,39 @@ export interface EventDetail extends EventSummary {
     editions: EventEditionDto[];
 }
 
+const EVENTS_CACHE_KEY = 'utanvega-events-v1';
+
+function readEventsCache(): EventSummary[] | undefined {
+    try {
+        const raw = localStorage.getItem(EVENTS_CACHE_KEY);
+        if (!raw) return undefined;
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? (parsed as EventSummary[]) : undefined;
+    } catch {
+        return undefined;
+    }
+}
+
+function writeEventsCache(events: EventSummary[]): void {
+    try {
+        localStorage.setItem(EVENTS_CACHE_KEY, JSON.stringify(events));
+    } catch { /* storage full or private mode */ }
+}
+
 export function useEvents() {
     const { data: events = [], isPending, error: queryError, refetch } = useQuery<EventSummary[]>({
         queryKey: ['events'],
-        queryFn: () => fetch(`${API_URL}/api/v1/events`)
-            .then(res => {
-                if (!res.ok) throw new Error('Failed to fetch events');
-                return res.json() as Promise<EventSummary[]>;
-            }),
-        staleTime: 5 * 60 * 1000,
+        queryFn: async () => {
+            const res = await fetch(`${API_URL}/api/v1/events`);
+            if (!res.ok) throw new Error('Failed to fetch events');
+            const data = await res.json() as EventSummary[];
+            writeEventsCache(data);
+            return data;
+        },
+        staleTime: 15 * 60 * 1000,
+        gcTime: 30 * 60 * 1000,
+        initialData: readEventsCache,
+        initialDataUpdatedAt: 0,
     });
     return { events, loading: isPending, error: queryError instanceof Error ? queryError.message : null, refresh: refetch };
 }
