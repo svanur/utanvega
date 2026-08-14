@@ -1044,8 +1044,8 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                 {race.dateOfRace && (
                                                                     <>
                                                                         <CalendarMonthIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
-                                                                        <Typography variant="body2" color="text.secondary" noWrap>{formatNextDate(race.dateOfRace, t)}</Typography>
                                                                         <EventDateBadge dateStr={race.dateOfRace} />
+                                                                        <Typography variant="body2" color="text.secondary" noWrap>{formatNextDate(race.dateOfRace, t)}</Typography>
                                                                     </>
                                                                 )}
                                                                 {raceDaysUntil != null && (
@@ -1259,11 +1259,11 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                     <Stack direction="row" alignItems="center" gap={0.5} sx={{ flexShrink: 0 }}>
                                                         {(comp.displayDate ?? comp.nextEditionDate) && (
                                                             <>
+                                                                <EventDateBadge dateStr={(comp.displayDate ?? comp.nextEditionDate)!} endDateStr={comp.endDisplayDate} />
                                                                 <CalendarMonthIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
                                                                 <Typography variant="body2" color="text.secondary" noWrap>
                                                                     {formatDateRange((comp.displayDate ?? comp.nextEditionDate)!, comp.endDisplayDate, t)}
                                                                 </Typography>
-                                                                <EventDateBadge dateStr={(comp.displayDate ?? comp.nextEditionDate)!} endDateStr={comp.endDisplayDate} />
                                                             </>
                                                         )}
                                                         {comp.daysUntil != null && (
