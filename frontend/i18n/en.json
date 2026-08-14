@@ -724,7 +724,25 @@
         "missionTagline": "All runs in one place, all year round",
         "missionDescription": "Our goal with hlaupadagskra.is is to fulfill the desire of runners to see all races throughout the year in one place and be able to search and filter in an accessible way. Races are marked “confirmed, registration open” and such if the event organizers have announced such but “Unconfirmed” or “until there is a correct timing or the race will not be held.",
         "missionTags": ["Events", "Road races", "Trail races", "Trail discovery"],
-        "changelogTitle": "Changelog",
+        "historyTitle": "History",
+        "milestones": {
+            "v2_launch": {
+                "title": "hlaupadagskra.is 2.0",
+                "description": "Version 2 launches with a full events system, race calendar, trail-to-race links, and much more."
+            },
+            "scratchcard": {
+                "title": "Trail Run Scratch Card",
+                "description": "A scratch card for Icelandic trail runs — check off the trails you've completed."
+            },
+            "runs360": {
+                "title": "360° Runs Iceland",
+                "description": "The 360° video project launches — experience Icelandic running trails in 360 degrees."
+            },
+            "launch": {
+                "title": "hlaupadagskra.is launches",
+                "description": "Hlaupadagskra.is goes live with a comprehensive list of running events in Iceland."
+            }
+        },
         "changelog": {
             "v2_5": {
                 "title": "Races & competitions",

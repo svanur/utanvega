@@ -724,7 +724,25 @@
         "missionTagline": "Öll hlaup á einum stað allt árið",
         "missionDescription": "Markmiðið okkar með hlaupadagskra.is er uppfylla ósk hlaupara að sjá öll hlaup yfir árið á einum stað og getað leitað á aðgengilegan máta. Hlaup eru merkt “staðfest, skráning hafin” og slíkt ef viðburðarhaldarar hafa tilkynnt slíkt en “Óstaðfest” eða “ þangað til það liggur fyrir rétt tímasetning eða hlaup verður ekki haldið.",
         "missionTags": ["Viðburðir", "Götuhlaup", "Utanvegahlaup", "Hlaupaleiðir"],
-        "changelogTitle": "Breytingasaga",
+        "historyTitle": "Sagan",
+        "milestones": {
+            "v2_launch": {
+                "title": "hlaupadagskra.is 2.0",
+                "description": "Önnur útgáfa vefsins fer í loftið með viðburðakerfi, dagatali, hlaupaleiðum, tengdum keppnum og mörgum fleiri nýungum."
+            },
+            "scratchcard": {
+                "title": "Hlaupaleiðaskafkortið",
+                "description": "Skafkort fyrir utanvegakeppnir á Íslandi — skafðu af þær leiðir sem þú hefur lokið."
+            },
+            "runs360": {
+                "title": "360° Runs Iceland",
+                "description": "360° myndbandaverkefnið fer í loftið — upplifðu íslenskar hlaupaleiðir í 360 gráður."
+            },
+            "launch": {
+                "title": "hlaupadagskra.is opnar",
+                "description": "Hlaupadagskra.is fer í loftið með heildarlista yfir hlaup á Íslandi."
+            }
+        },
         "changelog": {
             "v2_5": {
                 "title": "Viðburðir",
