@@ -5,6 +5,7 @@ import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from '
 import { createAppTheme } from './theme';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useEasterEggs } from './hooks/useEasterEggs';
+import { useKeepWarm } from './hooks/useKeepWarm';
 import { EasterEggs } from './components/EasterEggs';
 import SpotlightSearch from './components/SpotlightSearch';
 import { useFeatureFlags } from './hooks/useFeatureFlags';
@@ -96,6 +97,7 @@ export default function App() {
     const { activeEgg, clearEgg } = useEasterEggs();
     const { isEnabled } = useFeatureFlags();
     const loginEnabled = useLoginEnabled();
+    useKeepWarm();
 
     return (
         <ThemeProvider theme={theme}>
