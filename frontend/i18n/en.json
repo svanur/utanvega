@@ -1403,6 +1403,17 @@
         "subscribe": "Subscribe",
         "subscribeTooltip": "Subscribe to live calendar feed",
         "subscribeSuccess": "Calendar URL copied! Paste it in your calendar app.",
+        "subscribeDialog": {
+            "title": "Subscribe to race calendar",
+            "description": "Add a live calendar feed to your calendar app. It updates automatically whenever races are added or changed — no need to check back.",
+            "copyUrl": "Copy URL",
+            "copied": "Copied!",
+            "howTo": "How to add it",
+            "google": "Open Google Calendar → Other calendars (+) → From URL → paste the URL above.",
+            "apple": "Open Calendar app → File → New Calendar Subscription → paste the URL above.",
+            "outlook": "Open Outlook → Add calendar → Subscribe from web → paste the URL above.",
+            "openInApp": "Open in calendar app"
+        },
         "upcoming": "Upcoming",
         "quietWeek": "No events",
         "race": "race",

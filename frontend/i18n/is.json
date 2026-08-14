@@ -1403,6 +1403,17 @@
         "subscribe": "Gerast áskrifandi",
         "subscribeTooltip": "Gerast áskrifandi að dagatalsfæðu",
         "subscribeSuccess": "Slóð afrituð! Límdu hana í dagatalið þitt.",
+        "subscribeDialog": {
+            "title": "Gerast áskrifandi að hlaupadagatali",
+            "description": "Bættu við 'lifandi viðburðum' af hlaupadagskra.is í dagatalið þitt. Það uppfærist sjálfkrafa þegar hlaupum er bætt við eða viðburðir uppfærðir — engin þörf á að breyta neinu.",
+            "copyUrl": "Afrita slóð",
+            "copied": "Afritað!",
+            "howTo": "Hvernig á að bæta því við",
+            "google": "Opnaðu Google Calendar → Önnur dagatal (+) → Af slóð → límdu slóðina að ofan.",
+            "apple": "Opnaðu Calendar → Skrá → Ný dagatalsskráning → límdu slóðina að ofan.",
+            "outlook": "Opnaðu Outlook → Bæta við dagatali → Gerast áskrifandi af vef → límdu slóðina að ofan.",
+            "openInApp": "Opna í dagatalsforrita"
+        },
         "upcoming": "Væntanlegir viðburðir",
         "quietWeek": "Engir viðburðir",
         "race": "keppni",
