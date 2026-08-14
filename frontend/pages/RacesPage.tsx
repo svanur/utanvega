@@ -147,7 +147,10 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         queryClient.prefetchQuery({
             queryKey: ['event', slug],
             queryFn: () => fetch(`${API_URL}/api/v1/events/${encodeURIComponent(slug)}`)
-                .then(res => res.ok ? res.json() : null),
+                .then(res => {
+                    if (!res.ok) throw new Error('Failed to fetch event');
+                    return res.json();
+                }),
             staleTime: 15 * 60 * 1000,
         });
     }, [queryClient]);
