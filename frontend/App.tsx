@@ -58,11 +58,7 @@ function PageLoader() {
 function ScrollToContent() {
     const { pathname } = useLocation();
     useEffect(() => {
-        const id = setTimeout(() => {
-            const el = document.getElementById('main-content');
-            if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY, behavior: 'smooth' });
-        }, 50);
-        return () => clearTimeout(id);
+        window.scrollTo({ top: 0, behavior: 'instant' });
     }, [pathname]);
     return null;
 }
