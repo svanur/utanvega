@@ -81,6 +81,7 @@ import {
   type RaceFormState,
 } from '../utils/eventForms';
 import { hashText } from '../utils/translationHash';
+import { formatMinutesToHHmm } from '../utils/cutoffTime';
 import {
   MONTHS,
   fmtDate,
@@ -472,7 +473,7 @@ function SortableRaceRow({ race, edition, isActive, staleTx, detail, onOpen, onD
       <TableCell onClick={e => e.stopPropagation()}>
         {race.dateOfRace ? (
           <Typography variant="body2">
-            {fmtDate(race.dateOfRace)}{race.startTime && ` · ${race.startTime.slice(0, 5)}`}
+            {fmtDate(race.dateOfRace)}{race.startTime && ` · ${race.startTime.slice(0, 5)}`}{race.cutoffMinutes != null && ` · ${formatMinutesToHHmm(race.cutoffMinutes)}`}
           </Typography>
         ) : (
           <Stack direction="row" alignItems="center" spacing={0.5}>
@@ -1378,7 +1379,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                         <TableCell>Distance</TableCell>
                         <TableCell>Result type</TableCell>
                         <TableCell>Route</TableCell>
-                        <TableCell>Date / start</TableCell>
+                        <TableCell>Date / Start / Limit</TableCell>
                         <TableCell>Status</TableCell>
                         <TableCell>Tickets</TableCell>
                         <TableCell>Max</TableCell>

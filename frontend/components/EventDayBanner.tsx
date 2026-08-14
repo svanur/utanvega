@@ -62,6 +62,11 @@ export default function EventDayBanner() {
                                 label={
                                     <span>
                                         {loc(event.name, event.nameEn) ?? event.name}
+                                        {event.dateRange && (
+                                            <Typography component="span" variant="inherit" sx={{ opacity: 0.6, ml: 0.5 }}>
+                                                · {event.dateRange}
+                                            </Typography>
+                                        )}
                                         {event.locationName && (
                                             <Typography component="span" variant="inherit" sx={{ opacity: 0.6, ml: 0.5 }}>
                                                 · {event.locationName}

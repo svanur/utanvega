@@ -18,7 +18,8 @@ public record CalendarEventDto(
     List<string>? ActivityTypes = null,
     string? RaceName = null,
     List<string>? Distances = null,
-    bool EffectiveCancelled = false
+    bool EffectiveCancelled = false,
+    string? EndDate = null
 );
 
 public record CalendarDayDto(
@@ -130,7 +131,8 @@ public class GetEventCalendarQueryHandler : IRequestHandler<GetEventCalendarQuer
                 ed.Event.Type.ToString(),
                 activityTypes.Count > 0 ? activityTypes : null,
                 Distances: distances.Count > 0 ? distances : null,
-                EffectiveCancelled: effectiveCancelled
+                EffectiveCancelled: effectiveCancelled,
+                EndDate: endDate > startDate ? endDate.ToString("yyyy-MM-dd") : null
             );
 
             for (var day = startDate; day <= endDate; day = day.AddDays(1))
