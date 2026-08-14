@@ -54,6 +54,7 @@ import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import Layout from '../components/Layout';
 import PartnerLinks from '../components/PartnerLinks';
 import RandomQuote from '../components/RandomQuote';
+import HeroBanner from '../components/HeroBanner';
 import RunningLoader from '../components/RunningLoader';
 import EventDateBadge from '../components/EventDateBadge';
 import SwipeableCard from '../components/SwipeableCard';
@@ -404,8 +405,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
     }
 
     return (
-        <Layout mode={mode} onToggleMode={onToggleMode} maxWidth={viewMode === 'table' ? 'lg' : 'md'} bottomContent={<PartnerLinks />}>
-            {showQuote && isEnabled('random_quote') && <RandomQuote />}
+        <Layout mode={mode} onToggleMode={onToggleMode} maxWidth={viewMode === 'table' ? 'lg' : 'md'} bottomContent={<PartnerLinks />} heroBanner={showQuote && isEnabled('hero_banner') ? <HeroBanner /> : undefined}>
             <Container
                 maxWidth={viewMode === 'table' ? 'lg' : 'md'}
                 sx={{ pt: 1, pb: 3 }}

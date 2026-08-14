@@ -483,6 +483,9 @@
         "close": "Loka",
         "dontShowAgain": "Ekki sýna aftur"
     },
+    "hero": {
+        "photoCredit": "Ljósmynd"
+    },
     "error": {
         "title": "Eitthvað fór úrskeiðis",
         "message": "Óvænt villa kom upp. Vinsamlegast reyndu að endurhlaða síðunni.",

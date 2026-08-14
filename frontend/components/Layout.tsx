@@ -49,6 +49,7 @@ type LayoutProps = PropsWithChildren<{
     onToggleMode: () => void;
     maxWidth?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | false;
     bottomContent?: ReactNode;
+    heroBanner?: ReactNode;
 }>;
 
 function openExternal(href: string) {
@@ -79,7 +80,7 @@ function ScrollToTopButton() {
     );
 }
 
-export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', bottomContent }: LayoutProps) {
+export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', bottomContent, heroBanner }: LayoutProps) {
     const navigate = useNavigate();
     const { t } = useTranslation();
     const theme = useTheme();
@@ -306,6 +307,11 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
             {isEnabled('announcement_banner') && <AnnouncementBanner />}
             <SponsorStrip position="top" />
 
+            {heroBanner && (
+                <Container maxWidth={maxWidth} sx={{ pt: 3, pb: 0 }}>
+                    {heroBanner}
+                </Container>
+            )}
             <Container maxWidth={maxWidth} sx={{ py: 4, flex: 1 }}>
                 {isEnabled('hero_band') && heroTheme && <Box sx={{ mb: 3 }}><HeroBand theme={heroTheme} isDark={mode === 'dark'} /></Box>}
                 <PromoStrip position="top" />
