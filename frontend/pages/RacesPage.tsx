@@ -1097,6 +1097,9 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                 </Button>
                                                             </Box>
                                                         )}
+                                                        <Typography variant="caption" color="primary" sx={{ mt: 0.75, display: 'block', fontWeight: 500, textAlign: 'right' }}>
+                                                            {t('common.viewDetails')} →
+                                                        </Typography>
                                                     </CardContent>
                                                 </CardActionArea>
                                             </Card>
@@ -1361,6 +1364,9 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                     {loc(comp.description, comp.descriptionEn)}
                                                 </Typography>
                                             )}
+                                            <Typography variant="caption" color="primary" sx={{ mt: 0.75, display: 'block', fontWeight: 500, textAlign: 'right' }}>
+                                                {t('common.viewDetails')} →
+                                            </Typography>
                                         </CardContent>
                                     </CardActionArea>
                                 </Card>
