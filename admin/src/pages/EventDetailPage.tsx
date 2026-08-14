@@ -435,7 +435,9 @@ function SortableRaceRow({ race, edition, isActive, staleTx, detail, onOpen, onD
       hover
       sx={{
         cursor: 'pointer',
-        bgcolor: isActive ? 'primary.50' : undefined,
+        bgcolor: isActive ? 'action.selected' : undefined,
+        borderLeft: isActive ? '3px solid' : '3px solid transparent',
+        borderLeftColor: isActive ? 'primary.main' : 'transparent',
         opacity: isDragging ? 0.5 : 1,
         transform: CSS.Transform.toString(transform),
         transition,
