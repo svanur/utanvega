@@ -1,6 +1,7 @@
 import React, { useState, useRef, useMemo, useEffect, lazy, Suspense } from 'react';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { usePageTitle } from '../hooks/usePageTitle';
 import { 
     Box, 
     Typography, 
@@ -145,6 +146,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     const { t } = useTranslation();
     const localize = useLocalize();
     const { trail, loading, error } = useTrailBySlug(slug);
+    usePageTitle(trail?.name);
     const { weather, loading: weatherLoading, error: weatherError } = useTrailWeather(slug);
     const { isEnabled } = useFeatureFlags();
     const loginEnabled = useLoginEnabled();

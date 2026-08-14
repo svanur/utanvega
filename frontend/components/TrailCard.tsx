@@ -448,6 +448,11 @@ const TrailCardComponent: React.FC<TrailCardProps> = ({ trail, onToggleFavorite,
                             <ElevationSparkline profile={trail.elevationProfile} width="100%" height={36} />
                         </Box>
                     )}
+                    {!compact && (
+                        <Typography variant="caption" color="primary" sx={{ mt: 1, display: 'block', fontWeight: 500, textAlign: 'right' }}>
+                            {t('common.viewDetails')} →
+                        </Typography>
+                    )}
                     </CardContent>
                 </CardActionArea>
             </Card>

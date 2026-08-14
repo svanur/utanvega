@@ -1,6 +1,7 @@
 import { lazy, Suspense, useMemo, useCallback, useState, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { usePageTitle } from '../hooks/usePageTitle';
 import {
     Container,
     Typography,
@@ -36,7 +37,7 @@ import { useNavigate } from 'react-router-dom';
 import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import HistoryIcon from '@mui/icons-material/History';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import ListIcon from '@mui/icons-material/List';
@@ -135,6 +136,7 @@ const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
 export default function RacesPage({ mode, onToggleMode, showQuote = false }: RacesPageProps) {
     const { t } = useTranslation();
     const loc = useLocalize();
+    usePageTitle(t('nav.events'));
     const { getHolidays } = useIcelandicHolidays();
     const { favoriteEvents, toggleFavoriteEvent, isFavoriteEvent } = useFavoriteEvents();
     const { events, loading, error, refresh } = useEvents();
@@ -406,13 +408,13 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
             {showQuote && isEnabled('random_quote') && <RandomQuote />}
             <Container
                 maxWidth={viewMode === 'table' ? 'lg' : 'md'}
-                sx={{ py: 3 }}
+                sx={{ pt: 1, pb: 3 }}
                 onTouchStart={handlePullStart}
                 onTouchMove={handlePullMove}
                 onTouchEnd={handlePullEnd}
             >
                 {/* Pull-to-refresh indicator */}
-                <Fade in={pullOffset > 10}>
+                <Fade in={pullOffset > 10} unmountOnExit>
                     <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1, height: 32, alignItems: 'center' }}>
                         {refreshing ? (
                             <CircularProgress size={24} />
@@ -428,35 +430,6 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                         )}
                     </Box>
                 </Fade>
-                {/* Header */}
-                <Box sx={{ mb: 3 }}>
-                    <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
-                        <Typography variant="h4" fontWeight={800} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <EmojiEventsIcon sx={{ fontSize: 32, color: theme.palette.warning.main }} />
-                            {t('races.title')}
-                        </Typography>
-                        <Stack direction="row" spacing={1}>
-                            <Chip
-                                icon={<CalendarTodayIcon />}
-                                label={t('calendar.title')}
-                                variant="outlined"
-                                size="small"
-                                onClick={() => navigate('/events/calendar')}
-                            />
-                            <Chip
-                                icon={<HistoryIcon />}
-                                label={t('races.editionsHistory.title', 'Past events')}
-                                variant="outlined"
-                                size="small"
-                                onClick={() => navigate('/editions/history')}
-                            />
-                        </Stack>
-                    </Stack>
-                    <Typography variant="body2" color="text.secondary">
-                        {t('races.subtitle')}
-                    </Typography>
-                </Box>
-
                 {/* Search + filter icon */}
                 <TextField
                     placeholder={t('races.searchPlaceholder')}
@@ -746,8 +719,8 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                     </Box>
                 </Collapse>
 
-                {/* Quick-filter pills */}
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1.5 }}>
+                {/* Quick-filter pills — hidden on mobile, use Filters button instead */}
+                <Box sx={{ display: { xs: 'none', sm: 'flex' }, flexWrap: 'wrap', gap: 0.75, mb: 1.5 }}>
                     {pillMeta.hasTrailRun && (
                         <Chip
                             icon={<LandscapeIcon fontSize="small" />}
@@ -811,11 +784,14 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                 </Box>
 
                 {/* View toggle + result count */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                    <Typography variant="body2" color="text.secondary">
-                        {t('races.editionCount', { count: filtered.length })}
+                <Box mb={2} display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1}>
+                    <Typography variant="h5" fontWeight="bold">
+                        {t('nav.events')}
+                        <Typography component="span" variant="subtitle1" color="text.secondary" sx={{ ml: 1, fontWeight: 'normal' }}>
+                            ({filtered.length})
+                        </Typography>
                     </Typography>
-                    <Stack direction="row" spacing={1} alignItems="center">
+                    <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
                         {viewMode === 'list' && (
                             <Select
                                 value={sortBy}
@@ -832,32 +808,47 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                 </MenuItem>
                             </Select>
                         )}
+                        <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<HistoryIcon fontSize="small" />}
+                            onClick={() => navigate('/editions/history')}
+                            sx={{ whiteSpace: 'nowrap', fontSize: '0.75rem', minWidth: 0 }}
+                        >
+                            <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                                {t('races.editionsHistory.title', 'Past events')}
+                            </Box>
+                        </Button>
                         <ToggleButtonGroup
-                        value={viewMode}
-                        exclusive
-                        onChange={(_, value) => { if (value) setViewMode(value as ViewMode); }}
-                        size="small"
-                        aria-label={t('home.viewMode')}
-                    >
-                        <Tooltip title={t('home.listView')}>
-                            <ToggleButton value="list" aria-label={t('home.listView')}>
-                                <ListIcon fontSize="small" />
-                            </ToggleButton>
+                            value={viewMode}
+                            exclusive
+                            onChange={(_, value) => { if (value) setViewMode(value as ViewMode); }}
+                            size="small"
+                            aria-label={t('home.viewMode')}
+                        >
+                            <Tooltip title={t('home.listView')}>
+                                <ToggleButton value="list" aria-label={t('home.listView')}>
+                                    <ListIcon fontSize="small" />
+                                </ToggleButton>
+                            </Tooltip>
+                            <Tooltip title={t('home.mapView')}>
+                                <ToggleButton value="map" aria-label={t('home.mapView')}>
+                                    <MapIcon fontSize="small" />
+                                </ToggleButton>
+                            </Tooltip>
+                            <Tooltip title={t('home.tableView')}>
+                                <ToggleButton value="table" aria-label={t('home.tableView')}>
+                                    <TableChartIcon fontSize="small" />
+                                </ToggleButton>
+                            </Tooltip>
+                        </ToggleButtonGroup>
+                        <Tooltip title={t('calendar.title')}>
+                            <IconButton size="small" onClick={() => navigate('/events/calendar')}>
+                                <CalendarMonthIcon fontSize="small" />
+                            </IconButton>
                         </Tooltip>
-                        <Tooltip title={t('home.mapView')}>
-                            <ToggleButton value="map" aria-label={t('home.mapView')}>
-                                <MapIcon fontSize="small" />
-                            </ToggleButton>
-                        </Tooltip>
-                        <Tooltip title={t('home.tableView')}>
-                            <ToggleButton value="table" aria-label={t('home.tableView')}>
-                                <TableChartIcon fontSize="small" />
-                            </ToggleButton>
-                        </Tooltip>
-                    </ToggleButtonGroup>
                     </Stack>
                 </Box>
-
                 {/* Views */}
                 {viewMode === 'list' ? (
                     filtered.length === 0 ? (
@@ -1052,9 +1043,9 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                             <Stack direction="row" alignItems="center" gap={0.5} sx={{ flexShrink: 0 }}>
                                                                 {race.dateOfRace && (
                                                                     <>
-                                                                        <CalendarTodayIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
-                                                                        <Typography variant="body2" color="text.secondary" noWrap>{formatNextDate(race.dateOfRace, t)}</Typography>
+                                                                        <CalendarMonthIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
                                                                         <EventDateBadge dateStr={race.dateOfRace} />
+                                                                        <Typography variant="body2" color="text.secondary" noWrap>{formatNextDate(race.dateOfRace, t)}</Typography>
                                                                     </>
                                                                 )}
                                                                 {raceDaysUntil != null && (
@@ -1099,6 +1090,9 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                 </Button>
                                                             </Box>
                                                         )}
+                                                        <Typography variant="caption" color="primary" sx={{ mt: 0.75, display: 'block', fontWeight: 500, textAlign: 'right' }}>
+                                                            {t('common.viewDetails')} →
+                                                        </Typography>
                                                     </CardContent>
                                                 </CardActionArea>
                                             </Card>
@@ -1265,11 +1259,11 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                     <Stack direction="row" alignItems="center" gap={0.5} sx={{ flexShrink: 0 }}>
                                                         {(comp.displayDate ?? comp.nextEditionDate) && (
                                                             <>
-                                                                <CalendarTodayIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
+                                                                <EventDateBadge dateStr={(comp.displayDate ?? comp.nextEditionDate)!} endDateStr={comp.endDisplayDate} />
+                                                                <CalendarMonthIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
                                                                 <Typography variant="body2" color="text.secondary" noWrap>
                                                                     {formatDateRange((comp.displayDate ?? comp.nextEditionDate)!, comp.endDisplayDate, t)}
                                                                 </Typography>
-                                                                <EventDateBadge dateStr={(comp.displayDate ?? comp.nextEditionDate)!} endDateStr={comp.endDisplayDate} />
                                                             </>
                                                         )}
                                                         {comp.daysUntil != null && (
@@ -1363,6 +1357,9 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                     {loc(comp.description, comp.descriptionEn)}
                                                 </Typography>
                                             )}
+                                            <Typography variant="caption" color="primary" sx={{ mt: 0.75, display: 'block', fontWeight: 500, textAlign: 'right' }}>
+                                                {t('common.viewDetails')} →
+                                            </Typography>
                                         </CardContent>
                                     </CardActionArea>
                                 </Card>

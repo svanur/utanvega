@@ -11,6 +11,7 @@ import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined';
 import SearchIcon from '@mui/icons-material/Search';
 import MenuIcon from '@mui/icons-material/Menu';
 import GetAppIcon from '@mui/icons-material/GetApp';
+import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
@@ -117,14 +118,6 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
         ...(isEnabled('tools_page')
             ? [{ key: 'tools', label: t('nav.tools'), path: '/tools' }]
             : []),
-        {
-            key: 'shop',
-            label: t('nav.onlineStore'),
-            children: [
-                { label: t('nav.scratchCard'), path: '/shop/scratch-card/2025' },
-                { label: t('nav.runningTrip'), path: '/shop/running-trip' },
-            ],
-        },
         { key: 'services', label: t('nav.services'), path: '/services' },
         {
             key: 'about',
@@ -155,16 +148,18 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
         <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
             <DynamicHeader weather={weather} isDark={mode === 'dark'}>
                 <Toolbar sx={{ gap: 1 }}>
-                    <ButtonBase
-                        onClick={() => navigate('/')}
-                        sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'flex-start', borderRadius: 1 }}
-                        aria-label="Go to hlaupadagskra.is"
-                    >
-                        <img src="/images/hlaupadagskra.avif" alt="" style={{ height: 32, width: 'auto' }} />
-                        <Typography variant="h6" component="div">
-                            Hlaupadagskra.is
-                        </Typography>
-                    </ButtonBase>
+                    <Tooltip title={t('nav.tagline')} placement="bottom-start">
+                        <ButtonBase
+                            onClick={() => navigate('/')}
+                            sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'flex-start', borderRadius: 1 }}
+                            aria-label="Go to hlaupadagskra.is"
+                        >
+                            <img src="/images/hlaupadagskra.avif" alt="" style={{ height: 32, width: 'auto' }} />
+                            <Typography variant="h6" component="div">
+                                Hlaupadagskra.is
+                            </Typography>
+                        </ButtonBase>
+                    </Tooltip>
 
                     {isMobile ? (
                         <>
@@ -286,6 +281,17 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
                             </IconButton>
                         </Tooltip>
                     )}
+
+                    <Tooltip title={t('nav.onlineStore')}>
+                        <IconButton
+                            color="inherit"
+                            size="small"
+                            aria-label={t('nav.onlineStore')}
+                            onClick={() => window.open('https://verslun.hlaupadagskra.is', '_blank', 'noopener,noreferrer')}
+                        >
+                            <ShoppingBagIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
 
                     <Tooltip title={mode === 'light' ? t('nav.darkMode') : t('nav.lightMode')}>
                         <IconButton color="inherit" onClick={onToggleMode} size="small" aria-label="toggle dark mode">

@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { useTranslation } from 'react-i18next';
+import { usePageTitle } from '../hooks/usePageTitle';
 import { Link } from 'react-router-dom';
 import Layout from '../components/Layout';
 import PaceModelTable from '../components/PaceModelTable';
@@ -21,6 +22,7 @@ interface FaqItem {
 
 export default function FaqPage({ mode, onToggleMode }: FaqPageProps) {
     const { t } = useTranslation();
+    usePageTitle(t('nav.faq'));
 
     const items: FaqItem[] = [
         { key: 'estimatedTime', content: <PaceModelTable /> },

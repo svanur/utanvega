@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { usePageTitle } from '../hooks/usePageTitle';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
     Container, Typography, Box, Stack, TextField, InputAdornment, IconButton,
@@ -38,6 +39,7 @@ type EditionsHistoryPageProps = {
 
 export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHistoryPageProps) {
     const { t } = useTranslation();
+    usePageTitle(t('races.editionsHistory.title'));
     const navigate = useNavigate();
     const loc = useLocalize();
     const { year: yearParam } = useParams<{ year?: string }>();
