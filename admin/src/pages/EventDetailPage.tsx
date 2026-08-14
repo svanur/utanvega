@@ -322,7 +322,7 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onNotify
               value={form.date ? dayjs(form.date) : null}
               onChange={v => set('date', v ? v.format('YYYY-MM-DD') : '')}
               slotProps={{ textField: { size: 'small', fullWidth: true } }} />
-            <DatePicker label="End date"
+            <DatePicker label="End date (multi-day)"
               value={form.endDate ? dayjs(form.endDate) : null}
               onChange={v => set('endDate', v ? v.format('YYYY-MM-DD') : '')}
               slotProps={{ textField: { size: 'small', fullWidth: true } }} />
@@ -734,6 +734,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
       championshipCategoryEn: r.championshipCategoryEn,
       dateOfRace: r.dateOfRace,
       startTime: r.startTime,
+      resultType: r.resultType,
       activityType: r.activityType,
     };
   };

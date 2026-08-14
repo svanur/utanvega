@@ -17,6 +17,7 @@ import {
   Typography,
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import dayjs from 'dayjs';
 import TranslateIcon from '@mui/icons-material/Translate';
 import type { EventEditionDto, RaceDto } from '../../hooks/useEvents';
@@ -128,8 +129,8 @@ function RaceFormCardInner({
     const normalizedCutoff = normalizeCutoffTimeOnBlur(form.cutoffTime);
     if (normalizedCutoff !== form.cutoffTime) set('cutoffTime', normalizedCutoff);
     const cutoffMinutes = parseHHmmToMinutes(normalizedCutoff);
-    if (normalizedCutoff.trim() && cutoffMinutes == null) { onNotify('Cutoff time must be in HH:mm format', 'error'); return; }
-    if (cutoffMinutes === 0) { onNotify('Cutoff time cannot be 00:00. Clear the field to remove it.', 'error'); return; }
+    if (normalizedCutoff.trim() && cutoffMinutes == null) { onNotify('Time limit must be in HH:mm format', 'error'); return; }
+    if (cutoffMinutes === 0) { onNotify('Time limit cannot be 00:00. Clear the field to remove it.', 'error'); return; }
 
     const payload = buildRaceSavePayload({ ...form, cutoffTime: normalizedCutoff });
     setSaving(true);
@@ -233,14 +234,15 @@ function RaceFormCardInner({
               onChange={v => set('dateOfRace', v ? v.format('YYYY-MM-DD') : '')}
               slotProps={{ textField: { size: 'small', fullWidth: true } }}
             />
-            <TextField size="small" fullWidth label="Start time" type="time" value={form.startTime}
-              onChange={e => set('startTime', e.target.value)} InputLabelProps={{ shrink: true }} />
+            <TimePicker
+              label="Start time"
+              ampm={false}
+              value={form.startTime ? dayjs(`2000-01-01T${form.startTime}`) : null}
+              onChange={(val: dayjs.Dayjs | null) => set('startTime', val ? val.format('HH:mm') : '')}
+              slotProps={{ textField: { size: 'small', fullWidth: true } }}
+            />
           </Stack>
           <Stack direction="row" spacing={1.5} sx={{ mb: 1.5 }}>
-            <TextField size="small" fullWidth label="Cutoff time (HH:mm)" value={form.cutoffTime}
-              onChange={e => set('cutoffTime', normalizeCutoffTimeInput(e.target.value))}
-              onBlur={e => set('cutoffTime', normalizeCutoffTimeOnBlur(e.target.value))}
-              placeholder="e.g. 12:00" />
             <Autocomplete
               size="small" fullWidth
               options={sortedTrails}
@@ -249,6 +251,10 @@ function RaceFormCardInner({
               onChange={(_, v) => set('trailId', v?.id ?? '')}
               renderInput={params => <TextField {...params} label="Trail" />}
             />
+            <TextField size="small" fullWidth label="Time limit (HH:mm)" value={form.cutoffTime}
+              onChange={e => set('cutoffTime', normalizeCutoffTimeInput(e.target.value))}
+              onBlur={e => set('cutoffTime', normalizeCutoffTimeOnBlur(e.target.value))}
+              placeholder="e.g. 12:00" />
           </Stack>
         </Box>
 
