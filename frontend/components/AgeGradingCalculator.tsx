@@ -92,8 +92,8 @@ export default function AgeGradingCalculator() {
             </Box>
             <Collapse in={showExplainer}>
                 <Paper variant="outlined" sx={{ p: 2, bgcolor: 'action.hover' }}>
-                    {t('tools.ageGrading.explainer').split('\n\n').map((para, i) => (
-                        <Typography key={i} variant="body2" color="text.secondary" sx={{ mb: i < 2 ? 1.5 : 0 }}>
+                    {t('tools.ageGrading.explainer').split('\n\n').map((para, i, arr) => (
+                        <Typography key={i} variant="body2" color="text.secondary" sx={{ mb: i < arr.length - 1 ? 1.5 : 0 }}>
                             {para}
                         </Typography>
                     ))}

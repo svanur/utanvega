@@ -287,7 +287,7 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
                             color="inherit"
                             size="small"
                             aria-label={t('nav.onlineStore')}
-                            onClick={() => window.open('http://verslun.hlaupadagskra.is', '_blank', 'noopener,noreferrer')}
+                            onClick={() => window.open('https://verslun.hlaupadagskra.is', '_blank', 'noopener,noreferrer')}
                         >
                             <ShoppingBagIcon fontSize="small" />
                         </IconButton>

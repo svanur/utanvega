@@ -636,10 +636,9 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
                             fullWidth
                             size="small"
                             value={`${API_URL}/api/v1/events/calendar.ics`}
-                            slotProps={{
-                                input: {
-                                    readOnly: true,
-                                    endAdornment: (
+                            InputProps={{
+                                readOnly: true,
+                                endAdornment: (
                                         <InputAdornment position="end">
                                             <Tooltip title={urlCopied ? t('calendar.subscribeDialog.copied', 'Copied!') : t('calendar.subscribeDialog.copyUrl', 'Copy URL')}>
                                                 <IconButton
@@ -656,7 +655,6 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
                                             </Tooltip>
                                         </InputAdornment>
                                     ),
-                                },
                             }}
                             sx={{ mb: 2.5, fontFamily: 'monospace' }}
                         />
