@@ -428,17 +428,6 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                         )}
                     </Box>
                 </Fade>
-                {/* Header */}
-                <Box sx={{ mb: 3 }}>
-                    <Typography variant="h5" fontWeight={800} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <EmojiEventsIcon sx={{ fontSize: 26, color: theme.palette.warning.main }} />
-                        {t('races.title')}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                        {t('races.subtitle')}
-                    </Typography>
-                </Box>
-
                 {/* Search + filter icon */}
                 <TextField
                     placeholder={t('races.searchPlaceholder')}
@@ -793,10 +782,13 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                 </Box>
 
                 {/* View toggle + result count */}
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                    {t('races.editionCount', { count: filtered.length })}
-                </Typography>
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
+                <Box mb={2} display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1}>
+                    <Typography variant="h5" fontWeight="bold">
+                        {t('nav.events')}
+                        <Typography component="span" variant="subtitle1" color="text.secondary" sx={{ ml: 1, fontWeight: 'normal' }}>
+                            ({filtered.length})
+                        </Typography>
+                    </Typography>
                     <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
                         {viewMode === 'list' && (
                             <Select
@@ -855,7 +847,6 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                         </Tooltip>
                     </Stack>
                 </Box>
-
                 {/* Views */}
                 {viewMode === 'list' ? (
                     filtered.length === 0 ? (

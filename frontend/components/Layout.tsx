@@ -148,16 +148,18 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
         <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
             <DynamicHeader weather={weather} isDark={mode === 'dark'}>
                 <Toolbar sx={{ gap: 1 }}>
-                    <ButtonBase
-                        onClick={() => navigate('/')}
-                        sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'flex-start', borderRadius: 1 }}
-                        aria-label="Go to hlaupadagskra.is"
-                    >
-                        <img src="/images/hlaupadagskra.avif" alt="" style={{ height: 32, width: 'auto' }} />
-                        <Typography variant="h6" component="div">
-                            Hlaupadagskra.is
-                        </Typography>
-                    </ButtonBase>
+                    <Tooltip title={t('nav.tagline')} placement="bottom-start">
+                        <ButtonBase
+                            onClick={() => navigate('/')}
+                            sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'flex-start', borderRadius: 1 }}
+                            aria-label="Go to hlaupadagskra.is"
+                        >
+                            <img src="/images/hlaupadagskra.avif" alt="" style={{ height: 32, width: 'auto' }} />
+                            <Typography variant="h6" component="div">
+                                Hlaupadagskra.is
+                            </Typography>
+                        </ButtonBase>
+                    </Tooltip>
 
                     {isMobile ? (
                         <>
