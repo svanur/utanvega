@@ -68,3 +68,25 @@ export function formatMinutesToHHmm(value: number | null | undefined): string | 
   const { hours, minutes } = splitMinutes(value);
   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
 }
+
+// Arrow-key handler for HH:mm time limit fields — increments hours or minutes
+// depending on cursor position, without capping hours at 23.
+export function timeLimitArrowKey(
+  e: React.KeyboardEvent<HTMLInputElement>,
+  value: string,
+  onChange: (v: string) => void,
+) {
+  if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+  e.preventDefault();
+  const [hStr = '0', mStr = '0'] = (value || '00:00').split(':');
+  let h = parseInt(hStr, 10) || 0;
+  let m = parseInt(mStr, 10) || 0;
+  const cursor = (e.currentTarget).selectionStart ?? 0;
+  const delta = e.key === 'ArrowUp' ? 1 : -1;
+  if (cursor < 3) {
+    h = Math.max(0, h + delta);
+  } else {
+    m = ((m + delta) + 60) % 60;
+  }
+  onChange(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+}

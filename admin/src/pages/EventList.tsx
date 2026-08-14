@@ -90,7 +90,7 @@ import {
 import { useLocations } from '../hooks/useLocations';
 import { useOrganizers } from '../hooks/useOrganizers';
 import { useTrails, type Trail } from '../hooks/useTrails';
-import { formatMinutesToHHmm, parseHHmmToMinutes, normalizeCutoffTimeInput, normalizeCutoffTimeOnBlur } from '../utils/cutoffTime';
+import { formatMinutesToHHmm, parseHHmmToMinutes, normalizeCutoffTimeInput, normalizeCutoffTimeOnBlur, timeLimitArrowKey } from '../utils/cutoffTime';
 import { trimToUndefined, parseCoordPaste } from '../utils/strings';
 import { hashText } from '../utils/translationHash';
 import BilingualTextField from '../components/BilingualTextField';
@@ -3757,6 +3757,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
                     setRaceField('cutoffTime', normalized);
                   }
                 }}
+                onKeyDown={e => timeLimitArrowKey(e as React.KeyboardEvent<HTMLInputElement>, raceForm.cutoffTime, v => setRaceField('cutoffTime', v))}
                 placeholder="Type 0400 or 04:00"
                 helperText="Accepted formats: 0400 or 04:00 (stored as minutes)"
                 inputProps={{ inputMode: 'numeric' }}

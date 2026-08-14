@@ -23,7 +23,7 @@ import TranslateIcon from '@mui/icons-material/Translate';
 import type { EventEditionDto, RaceDto } from '../../hooks/useEvents';
 import type { Trail } from '../../hooks/useTrails';
 import { useTranslate } from '../../hooks/useTranslate';
-import { normalizeCutoffTimeOnBlur, normalizeCutoffTimeInput, parseHHmmToMinutes } from '../../utils/cutoffTime';
+import { normalizeCutoffTimeOnBlur, normalizeCutoffTimeInput, parseHHmmToMinutes, timeLimitArrowKey } from '../../utils/cutoffTime';
 import {
   ACTIVITY_TYPES,
   RACE_STATUSES,
@@ -254,6 +254,7 @@ function RaceFormCardInner({
             <TextField size="small" fullWidth label="Time limit (HH:mm)" value={form.cutoffTime}
               onChange={e => set('cutoffTime', normalizeCutoffTimeInput(e.target.value))}
               onBlur={e => set('cutoffTime', normalizeCutoffTimeOnBlur(e.target.value))}
+              onKeyDown={e => timeLimitArrowKey(e as React.KeyboardEvent<HTMLInputElement>, form.cutoffTime, v => set('cutoffTime', v))}
               placeholder="e.g. 12:00" />
           </Stack>
         </Box>

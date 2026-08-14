@@ -1405,7 +1405,7 @@
         "ticketStatus": {
             "Free": "Skráning: Frítt",
             "NotStarted": "Skráning: Bráðum í sölu",
-            "Available": "Skráning: Laust",
+            "Available": "Skráning: Í sölu",
             "AlmostSoldOut": "Skráning: Næstum uppselt",
             "SoldOut": "Skráning: Uppselt",
             "Closed": "Skráning: Lokuð"
