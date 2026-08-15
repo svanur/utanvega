@@ -29,6 +29,7 @@ import { useHeaderWeather } from '../hooks/useHeaderWeather';
 import { useInstallPrompt } from '../hooks/useInstallPrompt';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { useLoginEnabled } from '../hooks/useLoginEnabled';
+import { trackStoreIconClick } from '../utils/analytics';
 
 interface NavChild {
     label: string;
@@ -288,7 +289,7 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
                             color="inherit"
                             size="small"
                             aria-label={t('nav.onlineStore')}
-                            onClick={() => window.open('https://verslun.hlaupadagskra.is', '_blank', 'noopener,noreferrer')}
+                            onClick={() => { trackStoreIconClick(); window.open('https://verslun.hlaupadagskra.is', '_blank', 'noopener,noreferrer'); }}
                         >
                             <ShoppingBagIcon fontSize="small" />
                         </IconButton>

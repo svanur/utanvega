@@ -68,6 +68,7 @@ import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
 import { getTicketStatusColor, groupDistances, isAllSoldOut } from '../utils/ticketStatus';
 import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed } from '../utils/eventUtils';
+import { trackViewModeChange } from '../utils/analytics';
 import { useLocalize } from '../utils/localize';
 import { ActivityIcons, getActivityIcon } from '../utils/activityIcon';
 import LandscapeIcon from '@mui/icons-material/Landscape';
@@ -241,6 +242,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
     const setViewMode = (v: ViewMode) => {
         setSearchParams(prev => { const next = new URLSearchParams(prev); next.set('view', v); return next; }, { replace: true });
         try { localStorage.setItem('utanvega-events-view-mode', v); } catch { /* */ }
+        trackViewModeChange('events', v);
     };
 
     const activeFilterCount = useMemo(() =>
