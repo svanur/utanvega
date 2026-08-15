@@ -90,7 +90,7 @@ import {
 import { useLocations } from '../hooks/useLocations';
 import { useOrganizers } from '../hooks/useOrganizers';
 import { useTrails, type Trail } from '../hooks/useTrails';
-import { formatMinutesToHHmm, parseHHmmToMinutes, normalizeCutoffTimeInput, normalizeCutoffTimeOnBlur } from '../utils/cutoffTime';
+import { formatMinutesToHHmm, parseHHmmToMinutes, normalizeCutoffTimeInput, normalizeCutoffTimeOnBlur, timeLimitArrowKey } from '../utils/cutoffTime';
 import { trimToUndefined, parseCoordPaste } from '../utils/strings';
 import { hashText } from '../utils/translationHash';
 import BilingualTextField from '../components/BilingualTextField';
@@ -1885,11 +1885,11 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
     const normalizedCutoffTime = normalizeCutoffTimeOnBlur(raceForm.cutoffTime);
     const parsedCutoffMinutes = parseHHmmToMinutes(normalizedCutoffTime);
     if (normalizedCutoffTime.trim() && parsedCutoffMinutes == null) {
-      onNotify('Cutoff Time must be in HH:mm format', 'error');
+      onNotify('Time limit must be in HH:mm format', 'error');
       return;
     }
     if (parsedCutoffMinutes === 0) {
-      onNotify('Cutoff Time cannot be 00:00. Clear the field if you want no cutoff.', 'error');
+      onNotify('Time limit cannot be 00:00. Clear the field to remove it.', 'error');
       return;
     }
     if (normalizedCutoffTime !== raceForm.cutoffTime) {
@@ -3748,7 +3748,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
             />
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 140px' }, gap: 2 }}>
               <TextField
-                label="Cutoff Time (hrs)"
+                label="Time limit (HH:mm)"
                 value={raceForm.cutoffTime}
                 onChange={(event) => setRaceField('cutoffTime', normalizeCutoffTimeInput(event.target.value))}
                 onBlur={() => {
@@ -3757,6 +3757,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
                     setRaceField('cutoffTime', normalized);
                   }
                 }}
+                onKeyDown={e => timeLimitArrowKey(e as React.KeyboardEvent<HTMLInputElement>, raceForm.cutoffTime, v => setRaceField('cutoffTime', v))}
                 placeholder="Type 0400 or 04:00"
                 helperText="Accepted formats: 0400 or 04:00 (stored as minutes)"
                 inputProps={{ inputMode: 'numeric' }}

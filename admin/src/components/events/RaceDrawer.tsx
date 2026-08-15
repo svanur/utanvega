@@ -23,7 +23,7 @@ import TranslateIcon from '@mui/icons-material/Translate';
 import type { EventEditionDto, RaceDto } from '../../hooks/useEvents';
 import type { Trail } from '../../hooks/useTrails';
 import { useTranslate } from '../../hooks/useTranslate';
-import { normalizeCutoffTimeOnBlur, normalizeCutoffTimeInput, parseHHmmToMinutes } from '../../utils/cutoffTime';
+import { normalizeCutoffTimeOnBlur, normalizeCutoffTimeInput, parseHHmmToMinutes, timeLimitArrowKey } from '../../utils/cutoffTime';
 import {
   ACTIVITY_TYPES,
   RACE_STATUSES,
@@ -136,11 +136,11 @@ export default function RaceDrawer({
 
     const cutoffMinutes = parseHHmmToMinutes(normalizedCutoff);
     if (normalizedCutoff.trim() && cutoffMinutes == null) {
-      onNotify('Cutoff time must be in HH:mm format', 'error');
+      onNotify('Time limit must be in HH:mm format', 'error');
       return;
     }
     if (cutoffMinutes === 0) {
-      onNotify('Cutoff time cannot be 00:00. Clear the field to remove it.', 'error');
+      onNotify('Time limit cannot be 00:00. Clear the field to remove it.', 'error');
       return;
     }
 
@@ -245,10 +245,6 @@ export default function RaceDrawer({
           />
         </FormRow>
         <FormRow>
-          <TextField size="small" fullWidth label="Cutoff time (HH:mm)" value={form.cutoffTime}
-            onChange={e => set('cutoffTime', normalizeCutoffTimeInput(e.target.value))}
-            onBlur={e => set('cutoffTime', normalizeCutoffTimeOnBlur(e.target.value))}
-            placeholder="e.g. 12:00" />
           <Autocomplete
             size="small"
             fullWidth
@@ -258,6 +254,11 @@ export default function RaceDrawer({
             onChange={(_, v) => set('trailId', v?.id ?? '')}
             renderInput={params => <TextField {...params} label="Trail" />}
           />
+          <TextField size="small" fullWidth label="Time limit (HH:mm)" value={form.cutoffTime}
+            onChange={e => set('cutoffTime', normalizeCutoffTimeInput(e.target.value))}
+            onBlur={e => set('cutoffTime', normalizeCutoffTimeOnBlur(e.target.value))}
+            onKeyDown={e => timeLimitArrowKey(e as React.KeyboardEvent<HTMLInputElement>, form.cutoffTime, v => set('cutoffTime', v))}
+            placeholder="e.g. 12:00" />
         </FormRow>
 
         <Divider sx={{ my: 2 }} />

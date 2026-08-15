@@ -206,6 +206,8 @@ export interface CalendarEvent {
     activityTypes: string[] | null;
     raceName: string | null;
     distances: string[] | null;
+    effectiveCancelled: boolean;
+    endDate: string | null;
 }
 
 export interface CalendarDay {

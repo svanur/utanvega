@@ -1,3 +1,4 @@
+
 export function normalizeCutoffTimeInput(value: string): string {
   const compact = value.replace(/\s/g, '');
   if (compact.includes(':')) {
@@ -67,4 +68,31 @@ export function formatMinutesToHHmm(value: number | null | undefined): string | 
   if (value == null || !Number.isFinite(value) || value < 0) return null;
   const { hours, minutes } = splitMinutes(value);
   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+}
+
+// Arrow-key handler for HH:mm time limit fields — increments hours or minutes
+// depending on cursor position, without capping hours at 23.
+// Note: React will overwrite the DOM value after the onChange state update,
+// which resets the cursor to the end — there is no clean workaround for this
+// in a controlled input without restructuring the field.
+export function timeLimitArrowKey(
+  e: React.KeyboardEvent<HTMLInputElement>,
+  value: string,
+  onChange: (v: string) => void,
+) {
+  if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+  e.preventDefault();
+  const input = e.currentTarget;
+  const cursor = input.selectionStart ?? 0;
+  const inHours = cursor < 3;
+  const [hStr = '0', mStr = '0'] = (value || '00:00').split(':');
+  let h = parseInt(hStr, 10) || 0;
+  let m = parseInt(mStr, 10) || 0;
+  const delta = e.key === 'ArrowUp' ? 1 : -1;
+  if (inHours) {
+    h = Math.max(0, h + delta);
+  } else {
+    m = ((m + delta) + 60) % 60;
+  }
+  onChange(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
 }

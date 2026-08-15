@@ -1,4 +1,4 @@
-import { Avatar, Box, Chip, Typography, Paper, Divider, Stack } from '@mui/material';
+import { Box, Chip, Typography, Paper, Divider, Stack } from '@mui/material';
 import type { PaletteMode } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { usePageTitle } from '../hooks/usePageTitle';
@@ -12,17 +12,9 @@ import TimelineDot from '@mui/lab/TimelineDot';
 import GroupsIcon from '@mui/icons-material/Groups';
 import TimelineIcon from '@mui/icons-material/Timeline';
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
-import FavoriteIcon from '@mui/icons-material/Favorite';
-import MapIcon from '@mui/icons-material/Map';
-import TuneIcon from '@mui/icons-material/Tune';
-import BuildIcon from '@mui/icons-material/Build';
-import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
-import SearchIcon from '@mui/icons-material/Search';
+import YouTubeIcon from '@mui/icons-material/YouTube';
 import CasinoIcon from '@mui/icons-material/Casino';
-import PhoneIphoneIcon from '@mui/icons-material/PhoneIphone';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
-import WbSunnyIcon from '@mui/icons-material/WbSunny';
 import Layout from '../components/Layout';
 
 interface AboutPageProps {
@@ -30,28 +22,11 @@ interface AboutPageProps {
     onToggleMode: () => void;
 }
 
-import ManageSearchIcon from '@mui/icons-material/ManageSearch';
-import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
-import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
-
-const changelog = [
-    { version: '2.5', date: '2026-04', key: 'v2_5', icon: <EmojiEventsIcon />, color: 'primary' as const },
-    { version: '2.4', date: '2026-04', key: 'v2_4', icon: <AutoAwesomeIcon />, color: 'secondary' as const },
-    { version: '2.3', date: '2026-04', key: 'v2_3', icon: <DirectionsCarIcon />, color: 'primary' as const },
-    { version: '2.2', date: '2025-12', key: 'v2_2', icon: <ManageSearchIcon />, color: 'secondary' as const },
-    { version: '2.1', date: '2025-12', key: 'v2_1', icon: <WbSunnyIcon />, color: 'primary' as const },
-    { version: '2.0', date: '2025-11', key: 'v2_0', icon: <TrendingUpIcon />, color: 'secondary' as const },
-    { version: '1.9', date: '2025-10', key: 'v1_9', icon: <DirectionsRunIcon />, color: 'primary' as const },
-    { version: '1.8', date: '2025-09', key: 'v1_8', icon: <CasinoIcon />, color: 'primary' as const },
-    { version: '1.7', date: '2025-08', key: 'v1_7', icon: <PhoneIphoneIcon />, color: 'secondary' as const },
-    { version: '1.6', date: '2025-07', key: 'v1_6', icon: <SearchIcon />, color: 'primary' as const },
-    { version: '1.5', date: '2025-06', key: 'v1_5', icon: <AutoFixHighIcon />, color: 'primary' as const },
-    { version: '1.4', date: '2025-05', key: 'v1_4', icon: <BuildIcon />, color: 'secondary' as const },
-    { version: '1.3', date: '2025-04', key: 'v1_3', icon: <TuneIcon />, color: 'primary' as const },
-    { version: '1.2', date: '2025-03', key: 'v1_2', icon: <MapIcon />, color: 'secondary' as const },
-    { version: '1.1', date: '2025-02', key: 'v1_1', icon: <FavoriteIcon />, color: 'primary' as const },
-    { version: '1.0', date: '2025-01', key: 'v1_0', icon: <RocketLaunchIcon />, color: 'secondary' as const },
+const milestones = [
+    { date: '2026', key: 'v2_launch', icon: <TrendingUpIcon />, color: 'primary' as const },
+    { date: '2025', key: 'scratchcard', icon: <CasinoIcon />, color: 'secondary' as const },
+    { date: '2024', key: 'runs360', icon: <YouTubeIcon />, color: 'primary' as const },
+    { date: '2023', key: 'launch', icon: <RocketLaunchIcon />, color: 'secondary' as const },
 ];
 
 export default function AboutPage({ mode, onToggleMode }: AboutPageProps) {
@@ -60,11 +35,57 @@ export default function AboutPage({ mode, onToggleMode }: AboutPageProps) {
 
     return (
         <Layout mode={mode} onToggleMode={onToggleMode}>
+            {/* Hero banner */}
+            <Box
+                sx={{
+                    position: 'relative',
+                    maxWidth: 720,
+                    mx: 'auto',
+                    width: '100%',
+                    height: { xs: 180, sm: 260, md: 320 },
+                    borderRadius: 3,
+                    overflow: 'hidden',
+                    mb: 4,
+                }}
+            >
+                <Box
+                    component="img"
+                    src="/images/hlaupabraedur.jpg"
+                    alt="Hlaupabrœðr"
+                    sx={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        objectPosition: 'center 30%',
+                        display: 'block',
+                    }}
+                />
+                <Box
+                    sx={{
+                        position: 'absolute',
+                        inset: 0,
+                        background: 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.15) 60%, transparent 100%)',
+                    }}
+                />
+                <Box
+                    sx={{
+                        position: 'absolute',
+                        bottom: { xs: 20, sm: 28 },
+                        left: { xs: 20, sm: 32 },
+                    }}
+                >
+                    <Typography
+                        variant="h4"
+                        fontWeight="bold"
+                        sx={{ color: '#fff', textShadow: '0 2px 8px rgba(0,0,0,0.5)', lineHeight: 1.2 }}
+                    >
+                        {t('about.title')}
+                    </Typography>
+                </Box>
+            </Box>
+
             <Box sx={{ maxWidth: 720, mx: 'auto' }}>
                 {/* About section */}
-                <Typography variant="h4" fontWeight="bold" gutterBottom>
-                    {t('about.title')}
-                </Typography>
                 <Typography variant="body1" color="text.secondary" sx={{ mb: 3, whiteSpace: 'pre-wrap' }}>
                     {t('about.description')}
                 </Typography>
@@ -72,10 +93,11 @@ export default function AboutPage({ mode, onToggleMode }: AboutPageProps) {
                 {/* Author */}
                 <Paper variant="outlined" sx={{ p: 3, mb: 4, borderRadius: 2 }}>
                     <Stack direction="row" alignItems="center" spacing={2}>
-                        <Avatar
-                            src="/images/svanur-utanvega.jpg"
-                            alt="Svanur"
-                            sx={{ width: 80, height: 80 }}
+                        <Box
+                            component="img"
+                            src="/images/hlaupadagskra.avif"
+                            alt="hlaupadagskra.is"
+                            sx={{ width: 80, height: 80, borderRadius: 2, objectFit: 'contain' }}
                         />
                         <Box>
                             <Typography variant="h6" fontWeight="bold">
@@ -131,18 +153,18 @@ export default function AboutPage({ mode, onToggleMode }: AboutPageProps) {
                 <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
                     <TimelineIcon color="primary" />
                     <Typography variant="h5" fontWeight="bold">
-                        {t('about.changelogTitle')}
+                        {t('about.historyTitle')}
                     </Typography>
                 </Stack>
 
                 <Timeline position="alternate">
-                    {changelog.map((entry, index) => (
+                    {milestones.map((entry, index) => (
                         <TimelineItem key={entry.key}>
                             <TimelineOppositeContent
                                 sx={{ m: 'auto 0', color: 'text.secondary' }}
                             >
                                 <Typography variant="body2">
-                                    v{entry.version} · {entry.date}
+                                    {entry.date}
                                 </Typography>
                             </TimelineOppositeContent>
                             <TimelineSeparator>
@@ -150,14 +172,14 @@ export default function AboutPage({ mode, onToggleMode }: AboutPageProps) {
                                 <TimelineDot color={entry.color}>
                                     {entry.icon}
                                 </TimelineDot>
-                                <TimelineConnector sx={index === changelog.length - 1 ? { bgcolor: 'transparent' } : undefined} />
+                                <TimelineConnector sx={index === milestones.length - 1 ? { bgcolor: 'transparent' } : undefined} />
                             </TimelineSeparator>
                             <TimelineContent sx={{ py: '12px', px: 2 }}>
                                 <Typography variant="h6" component="span">
-                                    {t(`about.changelog.${entry.key}.title`)}
+                                    {t(`about.milestones.${entry.key}.title`)}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
-                                    {t(`about.changelog.${entry.key}.description`)}
+                                    {t(`about.milestones.${entry.key}.description`)}
                                 </Typography>
                             </TimelineContent>
                         </TimelineItem>
