@@ -8,6 +8,8 @@ using Utanvega.Backend.Infrastructure.Persistence;
 
 namespace Utanvega.Backend.Application.Events.Queries.GetEvents;
 
+internal record TrailSummary(double Length, string? YoutubeUrl, Core.Entities.TerrainType? TerrainType, Core.Entities.ActivityType ActivityTypeId);
+
 public record GetEventsQuery(bool IncludeHidden = false) : IRequest<List<EventSummaryDto>>, ICacheable
 {
     public string CacheKey => CacheKeys.Events(IncludeHidden);
@@ -34,7 +36,6 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
             .Include(e => e.Organizer)
             .Include(e => e.Editions)
                 .ThenInclude(ed => ed.Races)
-                    .ThenInclude(r => r.Trail)
             .AsQueryable();
 
         if (!request.IncludeHidden)
@@ -43,6 +44,28 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
         var events = await query
             .OrderBy(e => e.Name)
             .ToListAsync(cancellationToken);
+
+        // Fetch only the trail fields needed for list view — avoids loading GpxData and ElevationProfile.
+        var trailIds = events
+            .SelectMany(e => e.Editions)
+            .SelectMany(ed => ed.Races)
+            .Where(r => r.TrailId.HasValue)
+            .Select(r => r.TrailId!.Value)
+            .Distinct()
+            .ToHashSet();
+
+        var trailSummaries = trailIds.Count > 0
+            ? await _context.Trails
+                .AsNoTracking()
+                .Where(t => trailIds.Contains(t.Id))
+                .Select(t => new { t.Id, t.Length, t.YoutubeUrl, t.TerrainType, t.ActivityTypeId })
+                .ToDictionaryAsync(t => t.Id, cancellationToken)
+            : [];
+
+        TrailSummary? GetTrail(Guid? trailId) =>
+            trailId.HasValue && trailSummaries.TryGetValue(trailId.Value, out var ts)
+                ? new TrailSummary(ts.Length, ts.YoutubeUrl, ts.TerrainType, ts.ActivityTypeId)
+                : null;
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var oneYearAhead = today.AddYears(1);
@@ -123,10 +146,11 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
 
             var distances = relevantRaces?
                 .Select(r => {
+                    var trail = GetTrail(r.TrailId);
                     var label = !string.IsNullOrWhiteSpace(r.DistanceLabel)
                         ? r.DistanceLabel
-                        : r.Trail != null && r.Trail.Length > 0
-                            ? $"{r.Trail.Length / 1000.0:0.#} km"
+                        : trail != null && trail.Length > 0
+                            ? $"{trail.Length / 1000.0:0.#} km"
                             : null;
                     return label != null
                         ? new RaceDistanceSummaryDto(label, r.TicketStatus.ToString())
@@ -158,7 +182,7 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 .ToList();
 
             var youtubeUrl = relevantRaces?
-                .Select(r => r.Trail?.YoutubeUrl)
+                .Select(r => GetTrail(r.TrailId)?.YoutubeUrl)
                 .FirstOrDefault(u => !string.IsNullOrWhiteSpace(u));
 
             List<SeriesRaceDto>? seriesRaces = null;
@@ -177,7 +201,7 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                             r.DateOfRace,
                             r.StartTime,
                             !string.IsNullOrWhiteSpace(r.DistanceLabel) ? r.DistanceLabel
-                                : r.Trail != null && r.Trail.Length > 0 ? $"{r.Trail.Length / 1000.0:0.#} km"
+                                : GetTrail(r.TrailId) is { Length: > 0 } st ? $"{st.Length / 1000.0:0.#} km"
                                 : null,
                             r.DistanceLabelEn,
                             r.TicketStatus.ToString(),
@@ -189,11 +213,11 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
 
             var isMountainRace = editionsForCalc
                 .SelectMany(ed => ed.Races)
-                .Any(r => r.Trail?.TerrainType == Core.Entities.TerrainType.Mountainous);
+                .Any(r => GetTrail(r.TrailId)?.TerrainType == Core.Entities.TerrainType.Mountainous);
 
             var terrainType = editionsForCalc
                 .SelectMany(ed => ed.Races)
-                .Select(r => r.Trail?.TerrainType)
+                .Select(r => GetTrail(r.TrailId)?.TerrainType)
                 .Where(t => t != null)
                 .GroupBy(t => t)
                 .OrderByDescending(g => g.Count())
@@ -204,7 +228,7 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
             var activityTypes = editionsForCalc
                 .SelectMany(ed => ed.Races)
                 .Where(r => r.Status != RaceStatus.Cancelled)
-                .Select(r => (r.ActivityType?.ToString() ?? r.Trail?.ActivityTypeId.ToString()))
+                .Select(r => (r.ActivityType?.ToString() ?? GetTrail(r.TrailId)?.ActivityTypeId.ToString()))
                 .Where(a => a != null)
                 .Distinct()
                 .OrderBy(a => a)
