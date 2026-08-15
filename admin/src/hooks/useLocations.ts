@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from './api';
 
 export type LocationType = 'Country' | 'Area' | 'Region' | 'Municipality' | 'Place' | 'Other';
@@ -21,35 +21,30 @@ export interface LocationDto {
     translationHashes?: Record<string, string>;
 }
 
-export function useLocations(parentId: string | null = null, search: string | null = null) {
-    const [locations, setLocations] = useState<LocationDto[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+export function locationsQueryKey(parentId: string | null, search: string | null) {
+    return ['admin', 'locations', { parentId, search }] as const;
+}
 
-    const fetchLocations = async () => {
-        try {
-            setLoading(true);
+export function useLocations(parentId: string | null = null, search: string | null = null) {
+    const queryClient = useQueryClient();
+    const queryKey = locationsQueryKey(parentId, search);
+
+    const { data: locations = [], isLoading: loading, error: queryError } = useQuery({
+        queryKey,
+        queryFn: () => {
             let url = `/api/v1/admin/locations`;
             const params = new URLSearchParams();
             if (parentId) params.append('parentId', parentId);
             if (search) params.append('search', search);
-            
             const queryString = params.toString();
             if (queryString) url += `?${queryString}`;
+            return apiFetch<LocationDto[]>(url);
+        },
+        staleTime: 60_000,
+    });
 
-            const data = await apiFetch<LocationDto[]>(url);
-            setLocations(data);
-            setError(null);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Unknown error');
-        } finally {
-            setLoading(false);
-        }
-    };
+    const error = queryError instanceof Error ? queryError.message : queryError ? 'Unknown error' : null;
+    const refresh = () => queryClient.invalidateQueries({ queryKey });
 
-    useEffect(() => {
-        fetchLocations();
-    }, [parentId, search]); // eslint-disable-line react-hooks/exhaustive-deps -- only run on mount and when params change
-
-    return { locations, loading, error, refresh: fetchLocations };
+    return { locations, loading, error, refresh };
 }

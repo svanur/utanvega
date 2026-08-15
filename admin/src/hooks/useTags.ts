@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from './api';
 
 export interface TagDto {
@@ -11,23 +11,18 @@ export interface TagDto {
     translationHashes?: Record<string, string>;
 }
 
+const TAGS_QUERY_KEY = ['admin', 'tags'] as const;
+
 export function useTags() {
-    const [tags, setTags] = useState<TagDto[]>([]);
-    const [loading, setLoading] = useState(true);
+    const queryClient = useQueryClient();
 
-    const fetchTags = async () => {
-        try {
-            setLoading(true);
-            const data = await apiFetch<TagDto[]>('/api/v1/admin/tags');
-            setTags(data);
-        } catch (err) {
-            console.error('Failed to load tags', err);
-        } finally {
-            setLoading(false);
-        }
-    };
+    const { data: tags = [], isLoading: loading } = useQuery({
+        queryKey: TAGS_QUERY_KEY,
+        queryFn: () => apiFetch<TagDto[]>('/api/v1/admin/tags'),
+        staleTime: 120_000,
+    });
 
-    useEffect(() => { fetchTags(); }, []);
+    const refresh = () => queryClient.invalidateQueries({ queryKey: TAGS_QUERY_KEY });
 
-    return { tags, loading, refresh: fetchTags };
+    return { tags, loading, refresh };
 }
