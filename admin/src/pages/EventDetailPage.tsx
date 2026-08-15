@@ -737,7 +737,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
       championshipCategoryEn: r.championshipCategoryEn,
       dateOfRace: r.dateOfRace,
       startTime: r.startTime,
-      resultType: r.resultType,
+      resultType: r.resultType ?? 'Time',
       activityType: r.activityType,
     };
   };
