@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Box, Typography, Paper, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, TableSortLabel, Chip, LinearProgress, Card,
@@ -12,6 +12,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import SearchIcon from '@mui/icons-material/Search';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../hooks/api';
 import type { EventDetailDto, EventEditionDto, RaceDto } from '../hooks/useEvents';
 
@@ -140,27 +141,16 @@ interface EditionHealthProps {
 
 export default function EditionHealth({ onViewEvent, onNotify }: EditionHealthProps) {
   const theme = useTheme();
-  const [events, setEvents] = useState<EventDetailDto[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: events = [], isLoading: loading } = useQuery({
+    queryKey: ['admin', 'event-details'],
+    queryFn: () => apiFetch<EventDetailDto[]>('/api/v1/admin/events/details'),
+    staleTime: 60_000,
+  });
   const [sortField, setSortField] = useState<SortField>('score');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState<QuickFilter | null>(null);
   const [expandedEditions, setExpandedEditions] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const data = await apiFetch<EventDetailDto[]>('/api/v1/admin/events/details');
-        setEvents(data);
-      } catch {
-        onNotify('Failed to load edition data', 'error');
-      } finally {
-        setLoading(false);
-      }
-    })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const scored = useMemo<ScoredEdition[]>(() => {
     const result: ScoredEdition[] = [];

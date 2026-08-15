@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     Paper, Button, Typography, Box, CircularProgress, IconButton, Chip,
@@ -60,7 +60,7 @@ const typeColors: Record<string, 'error' | 'warning' | 'info' | 'success' | 'pri
     Other: 'secondary',
 };
 
-function LocationTreeRow({ node, depth, onEdit, onDelete, expanded, toggleExpand }: {
+const LocationTreeRow = React.memo(function LocationTreeRow({ node, depth, onEdit, onDelete, expanded, toggleExpand }: {
     node: TreeNode;
     depth: number;
     onEdit: (loc: LocationDto) => void;
@@ -148,7 +148,7 @@ function LocationTreeRow({ node, depth, onEdit, onDelete, expanded, toggleExpand
             ))}
         </>
     );
-}
+});
 
 export function LocationList({ onNotify }: LocationListProps) {
     const { locations, loading, error: _error, refresh } = useLocations();
@@ -182,26 +182,26 @@ export function LocationList({ onNotify }: LocationListProps) {
 
     const isSearching = searchQuery.trim().length > 0;
 
-    const toggleExpand = (id: string) => {
+    const toggleExpand = useCallback((id: string) => {
         setExpanded(prev => {
             const next = new Set(prev);
             if (next.has(id)) next.delete(id); else next.add(id);
             return next;
         });
-    };
+    }, []);
 
-    const expandAll = () => {
+    const expandAll = useCallback(() => {
         setExpanded(new Set(locations.filter(l => l.childrenCount > 0).map(l => l.id)));
-    };
+    }, [locations]);
 
-    const collapseAll = () => setExpanded(new Set());
+    const collapseAll = useCallback(() => setExpanded(new Set()), []);
 
-    const handleEdit = (location: LocationDto) => {
+    const handleEdit = useCallback((location: LocationDto) => {
         setSelectedLocation(location);
         setDialogOpen(true);
-    };
+    }, []);
 
-    const handleDelete = async (id: string) => {
+    const handleDelete = useCallback(async (id: string) => {
         if (!window.confirm('Are you sure you want to delete this location?')) return;
         try {
             await apiFetch(`/api/v1/admin/locations/${id}`, { method: 'DELETE' });
@@ -210,7 +210,7 @@ export function LocationList({ onNotify }: LocationListProps) {
         } catch (err) {
             onNotify(err instanceof Error ? err.message : 'Failed to delete location', 'error');
         }
-    };
+    }, [onNotify, refresh]);
 
     if (loading && !locations.length) {
         return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>;

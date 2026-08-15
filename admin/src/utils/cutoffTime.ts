@@ -85,7 +85,8 @@ export function timeLimitArrowKey(
   const input = e.currentTarget;
   const cursor = input.selectionStart ?? 0;
   const inHours = cursor < 3;
-  const [hStr = '0', mStr = '0'] = (value || '00:00').split(':');
+  const normalized = value?.includes(':') ? value : normalizeCutoffTimeOnBlur(value ?? '');
+  const [hStr = '0', mStr = '0'] = (normalized || '00:00').split(':');
   let h = parseInt(hStr, 10) || 0;
   let m = parseInt(mStr, 10) || 0;
   const delta = e.key === 'ArrowUp' ? 1 : -1;

@@ -120,20 +120,12 @@ export default function RaceDayPage({ onNotify, initialDate }: RaceDayPageProps)
         return () => window.removeEventListener('keydown', handler);
     }, []);
 
-    const load = useCallback(() => {
+    // Fetches only the editions for the selected date (used after mutations too).
+    const loadEditions = useCallback(() => {
         setLoading(true);
-        setSelectedRaceIds(new Set());
-        setNextRaceDate(null);
-        setPrevRaceDate(null);
-        Promise.all([
-            apiFetch<RaceDayEdition[]>(`/api/v1/admin/race-day?date=${dateStr}`),
-            apiFetch<string | null>(`/api/v1/admin/next-race-day?after=${dateStr}`),
-            apiFetch<string | null>(`/api/v1/admin/prev-race-day?before=${dateStr}`),
-        ])
-            .then(([data, next, prev]) => {
+        apiFetch<RaceDayEdition[]>(`/api/v1/admin/race-day?date=${dateStr}`)
+            .then(data => {
                 setEditions(data);
-                setNextRaceDate(next);
-                setPrevRaceDate(prev);
                 const urls: Record<string, string> = {};
                 const names: Record<string, { name: string; nameEn: string }> = {};
                 const regUrls: Record<string, string> = {};
@@ -149,6 +141,25 @@ export default function RaceDayPage({ onNotify, initialDate }: RaceDayPageProps)
             .catch(() => onNotify('Failed to load race day data', 'error'))
             .finally(() => setLoading(false));
     }, [dateStr, onNotify]);
+
+    // Fetches adjacent race dates — only needed when the date changes, not after mutations.
+    const loadPrevNext = useCallback(() => {
+        setNextRaceDate(null);
+        setPrevRaceDate(null);
+        Promise.all([
+            apiFetch<string | null>(`/api/v1/admin/next-race-day?after=${dateStr}`),
+            apiFetch<string | null>(`/api/v1/admin/prev-race-day?before=${dateStr}`),
+        ]).then(([next, prev]) => {
+            setNextRaceDate(next);
+            setPrevRaceDate(prev);
+        });
+    }, [dateStr]);
+
+    const load = useCallback(() => {
+        setSelectedRaceIds(new Set());
+        loadEditions();
+        loadPrevNext();
+    }, [loadEditions, loadPrevNext]);
 
     useEffect(() => { load(); }, [load]);
 
@@ -197,6 +208,7 @@ export default function RaceDayPage({ onNotify, initialDate }: RaceDayPageProps)
                         status: p.status ?? race.status,
                         sortOrder: race.sortOrder,
                         ticketStatus: p.ticketStatus ?? race.ticketStatus,
+                        resultType: race.resultType ?? 'Time',
                         maxParticipants: null, itraPoints: null, certifiedBy: null,
                         prizeMoney: 0, championshipCategory: null, dateOfRace: null,
                         startTime: race.startTime, activityType: race.activityType, trailId: null,
@@ -209,7 +221,10 @@ export default function RaceDayPage({ onNotify, initialDate }: RaceDayPageProps)
         setSavingRaces(new Set());
         if (fail === 0) onNotify(successMsg(ok));
         else onNotify(`${ok} succeeded, ${fail} failed`, 'error');
-        load();
+        setEditions(prev => prev.map(ed => ({
+            ...ed,
+            races: ed.races.map(r => ids.includes(r.id) ? { ...r, ...patch(r) } as RaceDayRace : r),
+        })));
     };
 
     // ── Shared bulk edition helper ────────────────────────────────────────────
@@ -238,7 +253,10 @@ export default function RaceDayPage({ onNotify, initialDate }: RaceDayPageProps)
         setBulkEditions(false);
         if (fail === 0) onNotify(successMsg(ok));
         else onNotify(`${ok} succeeded, ${fail} failed`, 'error');
-        load();
+        setEditions(prev => prev.map(ed => {
+            if (!eds.some(e => e.id === ed.id)) return ed;
+            return { ...ed, ...patch(ed) };
+        }));
     };
 
     // ── Wrap-up bulk actions ──────────────────────────────────────────────────
@@ -290,7 +308,9 @@ export default function RaceDayPage({ onNotify, initialDate }: RaceDayPageProps)
         setBulkEvents(false);
         if (fail === 0) onNotify(`${ok} event${ok > 1 ? 's' : ''} confirmed`);
         else onNotify(`${ok} succeeded, ${fail} failed`, 'error');
-        load();
+        setEditions(prev => prev.map(ed =>
+            unconfirmed.some(u => u.eventId === ed.eventId) ? { ...ed, eventStatus: 'Confirmed' } : ed
+        ));
     };
 
     // ── Individual field updates ──────────────────────────────────────────────
@@ -310,7 +330,7 @@ export default function RaceDayPage({ onNotify, initialDate }: RaceDayPageProps)
                 }),
             });
             onNotify('Results URL saved');
-            load();
+            setEditions(prev => prev.map(ed => ed.id === editionId ? { ...ed, resultsUrl: url || null } : ed));
         } catch {
             onNotify('Failed to save results URL', 'error');
         } finally {
@@ -334,7 +354,7 @@ export default function RaceDayPage({ onNotify, initialDate }: RaceDayPageProps)
                 }),
             });
             onNotify('Registration URL saved');
-            load();
+            setEditions(prev => prev.map(ed => ed.id === editionId ? { ...ed, registrationUrl: url || null } : ed));
         } catch {
             onNotify('Failed to save registration URL', 'error');
         } finally {
@@ -396,7 +416,7 @@ export default function RaceDayPage({ onNotify, initialDate }: RaceDayPageProps)
                 }),
             });
             onNotify('Edition updated');
-            load();
+            setEditions(prev => prev.map(e => e.id === ed.id ? { ...e, ...patch } : e));
         } catch {
             onNotify('Failed to update edition', 'error');
         } finally {
@@ -412,7 +432,7 @@ export default function RaceDayPage({ onNotify, initialDate }: RaceDayPageProps)
                 body: JSON.stringify({ id: ed.eventId, status }),
             });
             onNotify('Event status updated');
-            load();
+            setEditions(prev => prev.map(e => e.eventId === ed.eventId ? { ...e, eventStatus: status } : e));
         } catch {
             onNotify('Failed to update event status', 'error');
         } finally {

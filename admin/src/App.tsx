@@ -352,7 +352,7 @@ function AdminContent() {
               onNavigate={setCurrentPage}
             />
           ) : currentPage === 'trails' ? (
-            <TrailList key={`${refreshTrigger}-${selectedTrailId}-${searchTerm}`} onNotify={notify} initialTrailId={selectedTrailId} initialSearch={searchTerm} />
+            <TrailList key={`${refreshTrigger}-${selectedTrailId}`} onNotify={notify} initialTrailId={selectedTrailId} initialSearch={searchTerm} />
           ) : currentPage === 'health' ? (
             <TrailHealth onEditTrail={(id) => { setSelectedTrailId(id); setCurrentPage('trails'); }} onNotify={notify} />
           ) : currentPage === 'event-health' ? (

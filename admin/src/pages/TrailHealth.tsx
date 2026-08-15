@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Box, Typography, Paper, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, TableSortLabel, Chip, LinearProgress, Card,
@@ -17,32 +17,10 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import CalculateIcon from '@mui/icons-material/Calculate';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../hooks/api';
+import { useTrails, trailsQueryKey, type Trail } from '../hooks/useTrails';
 
-interface LocationInfo {
-  name: string;
-  slug: string;
-  order: number;
-  role: string;
-}
-
-interface TrailDto {
-  id: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  length: number;
-  elevationGain: number;
-  elevationLoss: number;
-  status: string;
-  activityType: string;
-  trailType: string;
-  difficulty: string;
-  startLatitude: number | null;
-  startLongitude: number | null;
-  locations: LocationInfo[];
-  terrainType?: string | null;
-}
 
 interface HealthCheck {
   label: string;
@@ -58,7 +36,7 @@ interface DuplicatePair {
   matchPercentage: number;
 }
 
-function getHealthChecks(trail: TrailDto): HealthCheck[] {
+function getHealthChecks(trail: Trail): HealthCheck[] {
   return [
     {
       label: 'Description',
@@ -102,7 +80,7 @@ function getHealthChecks(trail: TrailDto): HealthCheck[] {
   ];
 }
 
-function getHealthScore(trail: TrailDto): number {
+function getHealthScore(trail: Trail): number {
   const checks = getHealthChecks(trail);
   return Math.round((checks.filter(c => c.passed).length / checks.length) * 100);
 }
@@ -127,13 +105,17 @@ interface TrailHealthProps {
 }
 
 export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps) {
-  const [trails, setTrails] = useState<TrailDto[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const { trails, loading } = useTrails(false);
+  const { data: duplicates = [], isLoading: dupsLoading } = useQuery({
+    queryKey: ['admin', 'trail-duplicates'],
+    queryFn: () => apiFetch<DuplicatePair[]>('/api/v1/admin/trails/duplicates?threshold=90'),
+    staleTime: 5 * 60_000,
+  });
+
   const [sortField, setSortField] = useState<SortField>('score');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [search, setSearch] = useState('');
-  const [duplicates, setDuplicates] = useState<DuplicatePair[]>([]);
-  const [dupsLoading, setDupsLoading] = useState(true);
   const [dupsExpanded, setDupsExpanded] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [detecting, setDetecting] = useState(false);
@@ -147,12 +129,17 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
   const [elevationDialogOpen, setElevationDialogOpen] = useState(false);
   const [recalcDialogOpen, setRecalcDialogOpen] = useState(false);
 
+  const invalidateTrails = () => queryClient.invalidateQueries({ queryKey: trailsQueryKey(false) });
+
   const handleDeleteDuplicate = async (trailId: string, trailName: string) => {
     if (!confirm(`Delete "${trailName}"? This will soft-delete the trail.`)) return;
     try {
       setDeletingId(trailId);
       await apiFetch(`/api/v1/admin/trails/${trailId}`, { method: 'DELETE' });
-      setDuplicates(prev => prev.filter(d => d.trailAId !== trailId && d.trailBId !== trailId));
+      queryClient.setQueryData<DuplicatePair[]>(['admin', 'trail-duplicates'], prev =>
+        prev ? prev.filter(d => d.trailAId !== trailId && d.trailBId !== trailId) : prev
+      );
+      invalidateTrails();
       onNotify(`"${trailName}" deleted`);
     } catch (_err) {
       onNotify('Failed to delete trail', 'error');
@@ -166,9 +153,7 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
     try {
       const result = await apiFetch<{ total: number; updated: number }>('/api/v1/admin/trails/detect-types', { method: 'POST' });
       onNotify(`Trail types re-detected: ${result.updated} of ${result.total} trails updated`);
-      // Refresh trail data to show updated types
-      const data = await apiFetch<TrailDto[]>('/api/v1/admin/trails?includeArchived=false');
-      setTrails(data);
+      invalidateTrails();
     } catch (_err) {
       onNotify('Failed to detect trail types', 'error');
     } finally {
@@ -193,8 +178,7 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
     try {
       const result = await apiFetch<{ total: number; updated: number; skipped: number }>('/api/v1/admin/trails/detect-terrain-types', { method: 'POST' });
       onNotify(`Terrain types detected: ${result.updated} of ${result.total} trails updated (${result.skipped} skipped)`);
-      const data = await apiFetch<TrailDto[]>('/api/v1/admin/trails?includeArchived=false');
-      setTrails(data);
+      invalidateTrails();
     } catch (_err) {
       onNotify('Failed to detect terrain types', 'error');
     } finally {
@@ -207,8 +191,7 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
     try {
       const data = await apiFetch<{ count: number }>('/api/v1/admin/trails/recalculate-all-difficulties', { method: 'POST' });
       onNotify(`Recalculated difficulty for ${data.count} trails`);
-      const trails = await apiFetch<TrailDto[]>('/api/v1/admin/trails?includeArchived=false');
-      setTrails(trails);
+      invalidateTrails();
     } catch (_err) {
       onNotify('Failed to recalculate difficulties', 'error');
     } finally {
@@ -221,8 +204,7 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
     try {
       const result = await apiFetch<{ total: number; updated: number }>('/api/v1/admin/trails/detect-locations', { method: 'POST' });
       onNotify(`Locations re-detected: ${result.updated} of ${result.total} trails updated`);
-      const data = await apiFetch<TrailDto[]>('/api/v1/admin/trails?includeArchived=false');
-      setTrails(data);
+      invalidateTrails();
     } catch (_err) {
       onNotify('Failed to detect locations', 'error');
     } finally {
@@ -230,29 +212,6 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
     }
   };
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const data = await apiFetch<TrailDto[]>('/api/v1/admin/trails?includeArchived=false');
-        setTrails(data);
-      } catch (_err) {
-        onNotify('Failed to load trails', 'error');
-      } finally {
-        setLoading(false);
-      }
-    })();
-    (async () => {
-      try {
-        const data = await apiFetch<DuplicatePair[]>('/api/v1/admin/trails/duplicates?threshold=90');
-        setDuplicates(data);
-      } catch (_err) {
-        console.error('Failed to load duplicates');
-      } finally {
-        setDupsLoading(false);
-      }
-    })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- onNotify callback reference changes on every render
-  }, []);
 
   const scored = useMemo(() =>
     trails.map(t => ({ trail: t, score: getHealthScore(t), checks: getHealthChecks(t) })),
