@@ -43,8 +43,13 @@ export interface BannerDay {
     overflow: number;
 }
 
+const IS_MONTHS = ['jan', 'feb', 'mar', 'apr', 'maí', 'jún', 'júl', 'ágú', 'sep', 'okt', 'nóv', 'des'];
+
 function fmtDayMonth(dateStr: string, locale: string): string {
     const d = new Date(dateStr + 'T00:00:00');
+    if (locale === 'is') {
+        return `${d.getDate()}. ${IS_MONTHS[d.getMonth()]}`;
+    }
     return d.toLocaleDateString(locale, { day: 'numeric', month: 'short' });
 }
 

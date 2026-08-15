@@ -1,3 +1,4 @@
+
 export function normalizeCutoffTimeInput(value: string): string {
   const compact = value.replace(/\s/g, '');
   if (compact.includes(':')) {
@@ -71,6 +72,7 @@ export function formatMinutesToHHmm(value: number | null | undefined): string | 
 
 // Arrow-key handler for HH:mm time limit fields — increments hours or minutes
 // depending on cursor position, without capping hours at 23.
+// Uses flushSync so the DOM is updated before we restore the selection range.
 export function timeLimitArrowKey(
   e: React.KeyboardEvent<HTMLInputElement>,
   value: string,
@@ -78,15 +80,24 @@ export function timeLimitArrowKey(
 ) {
   if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
   e.preventDefault();
+  const input = e.currentTarget;
+  const cursor = input.selectionStart ?? 0;
+  const inHours = cursor < 3;
   const [hStr = '0', mStr = '0'] = (value || '00:00').split(':');
   let h = parseInt(hStr, 10) || 0;
   let m = parseInt(mStr, 10) || 0;
-  const cursor = (e.currentTarget).selectionStart ?? 0;
   const delta = e.key === 'ArrowUp' ? 1 : -1;
-  if (cursor < 3) {
+  if (inHours) {
     h = Math.max(0, h + delta);
   } else {
     m = ((m + delta) + 60) % 60;
   }
-  onChange(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+  const newValue = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  const [segStart, segEnd] = inHours ? [0, 2] : [3, 5];
+  // Set the DOM value and cursor synchronously before React's reconciliation,
+  // so the cursor position is already correct when React processes the state update.
+  // Since the DOM value matches what onChange will produce, React won't overwrite it.
+  input.value = newValue;
+  input.setSelectionRange(segStart, segEnd);
+  onChange(newValue);
 }
