@@ -134,10 +134,11 @@ export default function SpotlightSearch() {
         if (racesEnabled) {
             fetches.push(cachedEvents ? Promise.resolve(cachedEvents) : fetch(`${API_URL}/api/v1/events`).then(r => r.json()));
         }
-        Promise.all(fetches).then(([trailData, locationData, competitionData]) => {
-            setTrails(trailData as Trail[]);
-            if (locationsEnabled && locationData) setLocations(locationData as Location[]);
-            if (racesEnabled && competitionData) setCompetitions((competitionData as EventSummary[]).filter(e => e.status !== 'Hidden' && e.status !== 'Unlisted'));
+        Promise.all(fetches).then((results) => {
+            let idx = 0;
+            setTrails(results[idx++] as Trail[]);
+            if (locationsEnabled) setLocations(results[idx++] as Location[]);
+            if (racesEnabled) setCompetitions((results[idx++] as EventSummary[]).filter(e => e.status !== 'Hidden' && e.status !== 'Unlisted'));
             setLoaded(true);
         }).catch(() => {
             setLoaded(true);

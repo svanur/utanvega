@@ -119,7 +119,7 @@ public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailD
                 .Where(t => trailIdsWithGpx.Contains(t.Id) && t.GpxData != null)
                 .Select(t => new { t.Id, t.GpxData })
                 .ToListAsync(cancellationToken))
-                .ToDictionary(t => t.Id, t => (LineString?)t.GpxData)
+                .ToDictionary(t => t.Id, t => t.GpxData as LineString)
             : new Dictionary<Guid, LineString?>();
 
         Dictionary<Guid, int> viewCounts;
