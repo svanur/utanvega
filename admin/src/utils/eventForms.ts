@@ -86,7 +86,7 @@ export function buildRaceForm(race: RaceDto): RaceFormState {
     status: race.status,
     sortOrder: race.sortOrder.toString(),
     ticketStatus: race.ticketStatus,
-    resultType: race.resultType,
+    resultType: race.resultType ?? 'Time',
     maxParticipants: race.maxParticipants?.toString() ?? '',
     itraPoints: race.itraPoints?.toString() ?? '',
     certifiedBy: race.certifiedBy ?? '',

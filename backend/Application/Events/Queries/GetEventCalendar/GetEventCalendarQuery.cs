@@ -59,7 +59,6 @@ public class GetEventCalendarQueryHandler : IRequestHandler<GetEventCalendarQuer
             .Include(ed => ed.Event)
                 .ThenInclude(ev => ev.Location)
             .Include(ed => ed.Races)
-                .ThenInclude(r => r.Trail)
             .Where(ed =>
                 ed.Date.HasValue &&
                 ed.Date <= request.To &&
@@ -67,6 +66,19 @@ public class GetEventCalendarQueryHandler : IRequestHandler<GetEventCalendarQuer
                 ed.Event.Status != EventStatus.Hidden &&
                 ed.Event.Status != EventStatus.Unlisted)
             .ToListAsync(cancellationToken);
+
+        var trailIds = editions
+            .SelectMany(ed => ed.Races)
+            .Where(r => r.TrailId.HasValue)
+            .Select(r => r.TrailId!.Value)
+            .Distinct().ToHashSet();
+
+        var trailActivityTypes = trailIds.Count > 0
+            ? await _context.Trails.AsNoTracking()
+                .Where(t => trailIds.Contains(t.Id))
+                .Select(t => new { t.Id, t.ActivityTypeId })
+                .ToDictionaryAsync(t => t.Id, t => t.ActivityTypeId, cancellationToken)
+            : [];
 
         var dayMap = new Dictionary<DateOnly, List<CalendarEventDto>>();
 
@@ -77,7 +89,7 @@ public class GetEventCalendarQueryHandler : IRequestHandler<GetEventCalendarQuer
             var effectiveCancelled = ed.Event.Status == EventStatus.Cancelled
                 || EditionStatusHelpers.ComputeEffectiveCancelled(ed.Status, allRaces.Select(r => r.Status).ToList());
             var activityTypes = activeRaces
-                .Select(r => r.ActivityType?.ToString() ?? r.Trail?.ActivityTypeId.ToString())
+                .Select(r => r.ActivityType?.ToString() ?? (r.TrailId.HasValue && trailActivityTypes.TryGetValue(r.TrailId.Value, out var at) ? at.ToString() : null))
                 .Where(a => a != null)
                 .Distinct()
                 .OrderBy(a => a)

@@ -39,6 +39,8 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
     private readonly UtanvegaDbContext _context;
     private readonly IMemoryCache _cache;
 
+    private record TrailHistoryData(double Length, Core.Entities.ActivityType ActivityTypeId);
+
     public GetEditionsHistoryQueryHandler(UtanvegaDbContext context, IMemoryCache cache)
     {
         _context = context;
@@ -69,7 +71,6 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
             .Include(ed => ed.Event)
                 .ThenInclude(ev => ev.Location)
             .Include(ed => ed.Races)
-                .ThenInclude(r => r.Trail)
             .Where(ed =>
                 ed.Status != EditionStatus.Hidden &&
                 ed.Event.Status != EventStatus.Hidden &&
@@ -77,6 +78,20 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
                 ((ed.Date.HasValue && ed.Date.Value >= yearStart && ed.Date.Value <= yearEnd) ||
                  (!ed.Date.HasValue && ed.Year == request.Year)))
             .ToListAsync(cancellationToken);
+
+        var trailIds = editions
+            .SelectMany(ed => ed.Races)
+            .Where(r => r.TrailId.HasValue)
+            .Select(r => r.TrailId!.Value)
+            .Distinct().ToHashSet();
+
+        var trailData = trailIds.Count > 0
+            ? (await _context.Trails.AsNoTracking()
+                .Where(t => trailIds.Contains(t.Id))
+                .Select(t => new { t.Id, t.Length, t.ActivityTypeId })
+                .ToListAsync(cancellationToken))
+                .ToDictionary(t => t.Id, t => new TrailHistoryData(t.Length, t.ActivityTypeId))
+            : new Dictionary<Guid, TrailHistoryData>();
 
         var rows = new List<EditionHistoryRowDto>();
 
@@ -99,7 +114,7 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
                 {
                     var raceCancelled = race.Status == RaceStatus.Cancelled;
                     if (raceCancelled && !request.IncludeCancelled) continue;
-                    rows.Add(BuildRow(ed, race.DateOfRace!.Value, [race], raceCancelled, raceId: race.Id, raceName: race.Name, raceNameEn: race.NameEn));
+                    rows.Add(BuildRow(ed, race.DateOfRace!.Value, [race], raceCancelled, trailData, raceId: race.Id, raceName: race.Name, raceNameEn: race.NameEn));
                 }
             }
             else
@@ -108,7 +123,7 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
                 var editionCancelled = EditionStatusHelpers.ComputeEffectiveCancelled(ed.Status, raceStatuses);
                 if (editionCancelled && !request.IncludeCancelled) continue;
                 var rowDate = ed.Date ?? effectiveEnd ?? new DateOnly(request.Year, 1, 1);
-                rows.Add(BuildRow(ed, rowDate, visibleRaces, editionCancelled, ed.EndDate));
+                rows.Add(BuildRow(ed, rowDate, visibleRaces, editionCancelled, trailData, ed.EndDate));
             }
         }
 
@@ -117,15 +132,16 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
         return result;
     }
 
-    private static EditionHistoryRowDto BuildRow(EventEdition ed, DateOnly rowDate, List<Race> races, bool effectiveCancelled, DateOnly? rowEndDate = null, Guid? raceId = null, string? raceName = null, string? raceNameEn = null)
+    private static EditionHistoryRowDto BuildRow(EventEdition ed, DateOnly rowDate, List<Race> races, bool effectiveCancelled, Dictionary<Guid, TrailHistoryData> trailData, DateOnly? rowEndDate = null, Guid? raceId = null, string? raceName = null, string? raceNameEn = null)
     {
         var distances = races
             .Select(r =>
             {
+                var trail = r.TrailId.HasValue && trailData.TryGetValue(r.TrailId.Value, out var t) ? t : null;
                 var label = !string.IsNullOrWhiteSpace(r.DistanceLabel)
                     ? r.DistanceLabel
-                    : r.Trail != null && r.Trail.Length > 0
-                        ? $"{r.Trail.Length / 1000.0:0.#} km"
+                    : trail != null && trail.Length > 0
+                        ? $"{trail.Length / 1000.0:0.#} km"
                         : null;
                 return label != null ? new RaceDistanceSummaryDto(label, r.TicketStatus.ToString()) : null;
             })
@@ -134,7 +150,7 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
             .ToList();
 
         var activityTypes = races
-            .Select(r => r.ActivityType?.ToString() ?? r.Trail?.ActivityTypeId.ToString())
+            .Select(r => r.ActivityType?.ToString() ?? (r.TrailId.HasValue && trailData.TryGetValue(r.TrailId.Value, out var t) ? t.ActivityTypeId.ToString() : null))
             .Where(a => a != null)
             .Distinct()
             .OrderBy(a => a)

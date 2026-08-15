@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
     Dialog,
     InputBase,
@@ -84,6 +85,7 @@ export default function SpotlightSearch() {
     const navigate = useNavigate();
     const { t, i18n } = useTranslation();
     const loc = useLocalize();
+    const queryClient = useQueryClient();
     const { isEnabled } = useFeatureFlags();
     const racesEnabled = isEnabled('races_page');
     const locationsEnabled = isEnabled('locations_page');
@@ -105,27 +107,43 @@ export default function SpotlightSearch() {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
-    // Fetch data on first open
+    // Load data on first open — use the React Query cache if already populated,
+    // otherwise fetch. This avoids redundant network requests when the user has
+    // already visited the trails or events pages.
     useEffect(() => {
         if (!open || loaded) return;
+
+        const cachedTrails = queryClient.getQueryData<Trail[]>(['trails']);
+        const cachedEvents = queryClient.getQueryData<EventSummary[]>(['events']);
+        const cachedLocations = queryClient.getQueryData<Location[]>(['locations']);
+
+        if (cachedTrails && (!racesEnabled || cachedEvents) && (!locationsEnabled || cachedLocations)) {
+            setTrails(cachedTrails);
+            if (locationsEnabled && cachedLocations) setLocations(cachedLocations);
+            if (racesEnabled && cachedEvents) setCompetitions(cachedEvents.filter(e => e.status !== 'Hidden' && e.status !== 'Unlisted'));
+            setLoaded(true);
+            return;
+        }
+
         const fetches: Promise<unknown>[] = [
-            fetch(`${API_URL}/api/v1/trails`).then(r => r.json()),
+            cachedTrails ? Promise.resolve(cachedTrails) : fetch(`${API_URL}/api/v1/trails`).then(r => r.json()),
         ];
         if (locationsEnabled) {
-            fetches.push(fetch(`${API_URL}/api/v1/locations`).then(r => r.json()));
+            fetches.push(cachedLocations ? Promise.resolve(cachedLocations) : fetch(`${API_URL}/api/v1/locations`).then(r => r.json()));
         }
         if (racesEnabled) {
-            fetches.push(fetch(`${API_URL}/api/v1/events`).then(r => r.json()));
+            fetches.push(cachedEvents ? Promise.resolve(cachedEvents) : fetch(`${API_URL}/api/v1/events`).then(r => r.json()));
         }
-        Promise.all(fetches).then(([trailData, locationData, competitionData]) => {
-            setTrails(trailData as Trail[]);
-            if (locationsEnabled && locationData) setLocations(locationData as Location[]);
-            if (racesEnabled && competitionData) setCompetitions((competitionData as EventSummary[]).filter(comp => comp.status !== 'Hidden' && comp.status !== 'Unlisted'));
+        Promise.all(fetches).then((results) => {
+            let idx = 0;
+            setTrails(results[idx++] as Trail[]);
+            if (locationsEnabled) setLocations(results[idx++] as Location[]);
+            if (racesEnabled) setCompetitions((results[idx++] as EventSummary[]).filter(e => e.status !== 'Hidden' && e.status !== 'Unlisted'));
             setLoaded(true);
         }).catch(() => {
             setLoaded(true);
         });
-    }, [open, loaded, racesEnabled, locationsEnabled]);
+    }, [open, loaded, racesEnabled, locationsEnabled, queryClient]);
 
     const results = useMemo((): SearchResult[] => {
         if (!query.trim()) return [];

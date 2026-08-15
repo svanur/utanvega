@@ -51,8 +51,14 @@ public class UpdateTrailCommandHandler : IRequestHandler<UpdateTrailCommand, boo
             .Include(t => t.TrailLocations)
             .Include(t => t.TrailTags)
             .FirstOrDefaultAsync(t => t.Id == request.Id, cancellationToken);
-        
+
         if (trail == null) return false;
+
+        // GpxData and ElevationProfile are never modified here — exclude them from
+        // the change-tracker snapshot so EF skips diffing and updating these large columns.
+        var entry = _context.Entry(trail);
+        entry.Property(t => t.GpxData).IsModified = false;
+        entry.Property(t => t.ElevationProfile).IsModified = false;
 
         var oldSlug = trail.Slug;
         trail.Name = request.Name;

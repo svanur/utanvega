@@ -68,26 +68,59 @@ public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailD
 
     public async Task<List<TrailDto>> Handle(GetTrailsQuery request, CancellationToken cancellationToken)
     {
-        var query = _context.Trails
+        var baseQuery = _context.Trails
             .AsNoTracking()
-            .AsSplitQuery()
-            .Include(t => t.TrailLocations)
-                .ThenInclude(tl => tl.Location)
-            .Include(t => t.TrailTags)
-                .ThenInclude(tt => tt.Tag)
             .AsQueryable();
 
         if (!request.IncludeArchived)
-        {
-            query = query.Where(t => t.Status != TrailStatus.Archived);
-        }
+            baseQuery = baseQuery.Where(t => t.Status != TrailStatus.Archived);
 
         if (request.PublishedOnly)
-        {
-            query = query.Where(t => t.Status == TrailStatus.Published);
-        }
+            baseQuery = baseQuery.Where(t => t.Status == TrailStatus.Published);
 
-        var trails = await query.ToListAsync(cancellationToken);
+        // Project in SQL — excludes GpxData (full geometry) and ElevationProfile,
+        // which are large columns not needed for the list view.
+        var trails = await baseQuery
+            .Select(t => new
+            {
+                t.Id,
+                t.Name,
+                t.Slug,
+                t.Description,
+                t.DescriptionEn,
+                t.NameEn,
+                t.Length,
+                t.ElevationGain,
+                t.ElevationLoss,
+                t.Status,
+                t.ActivityTypeId,
+                t.Type,
+                t.Difficulty,
+                t.YoutubeUrl,
+                t.UpdatedAt,
+                t.TerrainType,
+                t.TranslationHashes,
+                HasGpx = t.GpxData != null,
+                Locations = t.TrailLocations
+                    .OrderBy(tl => tl.Order)
+                    .Select(tl => new LocationInfoDto(tl.LocationId, tl.Location.Name, tl.Location.NameEn, tl.Location.Slug, tl.Order, tl.Role.ToString(), tl.Location.Center != null ? (double?)tl.Location.Center.Y : null, tl.Location.Center != null ? (double?)tl.Location.Center.X : null))
+                    .ToList(),
+                Tags = t.TrailTags
+                    .Select(tt => new TagInfoDto(tt.Tag.Name, tt.Tag.NameEn, tt.Tag.Slug, tt.Tag.Color))
+                    .ToList(),
+            })
+            .ToListAsync(cancellationToken);
+
+        // GpxData is typed as Geometry (base class) — EF can't translate a (LineString) cast to SQL.
+        // Load just the start point for trails that have GPX data in a separate focused query.
+        var trailIdsWithGpx = trails.Where(t => t.HasGpx).Select(t => t.Id).ToHashSet();
+        var startCoords = trailIdsWithGpx.Count > 0
+            ? (await _context.Trails.AsNoTracking()
+                .Where(t => trailIdsWithGpx.Contains(t.Id) && t.GpxData != null)
+                .Select(t => new { t.Id, t.GpxData })
+                .ToListAsync(cancellationToken))
+                .ToDictionary(t => t.Id, t => t.GpxData as LineString)
+            : new Dictionary<Guid, LineString?>();
 
         Dictionary<Guid, int> viewCounts;
         try
@@ -115,15 +148,10 @@ public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailD
             t.ActivityTypeId.ToString(),
             t.Type.ToString(),
             t.Difficulty.ToString(),
-            (t.GpxData as LineString)?.StartPoint.Y,
-            (t.GpxData as LineString)?.StartPoint.X,
-            t.TrailLocations
-                .OrderBy(tl => tl.Order)
-                .Select(tl => new LocationInfoDto(tl.LocationId, tl.Location.Name, tl.Location.NameEn, tl.Location.Slug, tl.Order, tl.Role.ToString(), tl.Location.Center?.Y, tl.Location.Center?.X))
-                .ToList(),
-            t.TrailTags
-                .Select(tt => new TagInfoDto(tt.Tag.Name, tt.Tag.NameEn, tt.Tag.Slug, tt.Tag.Color))
-                .ToList(),
+            startCoords.TryGetValue(t.Id, out var ls) ? ls?.StartPoint.Y : null,
+            startCoords.TryGetValue(t.Id, out var ls2) ? ls2?.StartPoint.X : null,
+            t.Locations,
+            t.Tags,
             viewCounts.GetValueOrDefault(t.Id, 0),
             YoutubeUrl: t.YoutubeUrl,
             ElevationProfile: null,

@@ -89,6 +89,7 @@
         "runs360": "360° Runs",
         "annualReport": "Annual Report 2025",
         "aboutUs": "About us",
+        "media": "Media",
         "services": "Services",
         "challenge": "Challenge",
         "allTrails": "Trails list",
@@ -658,6 +659,23 @@
         "prizes": "Participants who complete one or more challenges enter draws throughout the summer and until September 6. Additional prizes are drawn on social media — share your participation with #útivistaáskorun.",
         "sponsors": "Partners",
         "register": "Register for the challenge"
+    },
+    "media": {
+        "title": "Media",
+        "description": "Hlaupadagskra.is in the media",
+        "article": {
+            "source": "Morgunblaðið",
+            "imageAlt": "Newspaper article from Morgunblaðið about Hlaupadagskra.is",
+            "title": "Interview in Morgunblaðið",
+            "description": "An interview with the founder of Hlaupadagskra.is, published in Morgunblaðið.",
+            "openInNewTab": "Open in new tab"
+        },
+        "podcast": {
+            "source": "Spotify",
+            "title": "Podcast interview",
+            "description": "A podcast episode featuring Hlaupadagskra.is — listen on Spotify.",
+            "openInSpotify": "Open in Spotify"
+        }
     },
     "aboutUs": {
         "title": "About Hlaupadagskra.is",
