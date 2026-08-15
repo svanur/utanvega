@@ -41,6 +41,7 @@ interface RaceDayRace {
     activityType: string | null;
     startTime: string | null;
     cutoffMinutes: number | null;
+    resultType: string | null;
 }
 
 interface RaceDayEdition {
