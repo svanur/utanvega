@@ -28,6 +28,7 @@ const loadingMessages = {
         'Þessi æfing skiptir máli.',
         'Ég er hér...',
         'Mæting er bæting...',
+        'Við stöndum þétt saman...',
         'Stöðugleiki skiptir máli...',
         'Hlusta á líkamann...',
         'Eitt skref í einu.',
