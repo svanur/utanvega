@@ -15,6 +15,8 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
 {
     private readonly UtanvegaDbContext _context;
 
+    private record TrailDetail(string? Name, string? Slug, double Length, double ElevationGain, Core.Entities.TerrainType? TerrainType, Core.Entities.Difficulty Difficulty, Core.Entities.ActivityType ActivityTypeId, string? YoutubeUrl);
+
     public GetAllEventDetailsQueryHandler(UtanvegaDbContext context)
     {
         _context = context;
@@ -28,12 +30,25 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
             .Include(e => e.Location)
             .Include(e => e.Organizer)
             .Include(e => e.Editions)
-                .ThenInclude(ed => ed.Trail)
-            .Include(e => e.Editions)
                 .ThenInclude(ed => ed.Races)
-                    .ThenInclude(r => r.Trail)
             .OrderBy(e => e.Name)
             .ToListAsync(cancellationToken);
+
+        var trailIds = events
+            .SelectMany(e => e.Editions)
+            .SelectMany(ed => ed.Races.Select(r => r.TrailId).Append(ed.TrailId))
+            .Where(id => id.HasValue).Select(id => id!.Value)
+            .Distinct().ToHashSet();
+
+        var trailDetails = trailIds.Count > 0
+            ? (await _context.Trails.AsNoTracking()
+                .Where(t => trailIds.Contains(t.Id))
+                .Select(t => new { t.Id, t.Name, t.Slug, t.Length, t.ElevationGain, t.TerrainType, t.Difficulty, t.ActivityTypeId, t.YoutubeUrl })
+                .ToListAsync(cancellationToken))
+                .ToDictionary(t => t.Id, t => new TrailDetail(t.Name, t.Slug, t.Length, t.ElevationGain, t.TerrainType, t.Difficulty, t.ActivityTypeId, t.YoutubeUrl))
+            : new Dictionary<Guid, TrailDetail>();
+
+        TrailDetail? GetTrail(Guid? id) => id.HasValue && trailDetails.TryGetValue(id.Value, out var td) ? td : null;
 
         static Dictionary<string, string>? DeserHashes(string? json) =>
             json == null ? null : JsonSerializer.Deserialize<Dictionary<string, string>>(json);
@@ -79,16 +94,16 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
                     ed.NotesEn,
                     ed.RegistrationStatus.ToString(),
                     ed.TrailId,
-                    ed.Trail?.Name,
-                    ed.Trail?.Slug,
+                    GetTrail(ed.TrailId)?.Name,
+                    GetTrail(ed.TrailId)?.Slug,
                     ed.Races
                         .OrderBy(r => r.SortOrder)
                         .Select(r => new RaceDto(
                             r.Id,
                             r.EventEditionId,
                             r.TrailId,
-                            r.Trail?.Name,
-                            r.Trail?.Slug,
+                            GetTrail(r.TrailId)?.Name,
+                            GetTrail(r.TrailId)?.Slug,
                             r.Name,
                             r.NameEn,
                             r.DistanceLabel,
@@ -108,11 +123,11 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
                             r.ChampionshipCategoryEn,
                             r.DateOfRace,
                             r.StartTime,
-                            r.Trail?.Length,
-                            r.Trail?.ElevationGain,
-                            r.Trail?.TerrainType?.ToString(),
-                            r.Trail?.Difficulty.ToString(),
-                            r.Trail?.ActivityTypeId.ToString(),
+                            GetTrail(r.TrailId)?.Length,
+                            GetTrail(r.TrailId)?.ElevationGain,
+                            GetTrail(r.TrailId)?.TerrainType?.ToString(),
+                            GetTrail(r.TrailId)?.Difficulty.ToString(),
+                            GetTrail(r.TrailId)?.ActivityTypeId.ToString(),
                             DeserHashes(r.TranslationHashes),
                             r.ActivityType?.ToString(),
                             r.ResultType.ToString()

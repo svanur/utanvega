@@ -19,6 +19,7 @@ const TrailDetailsPage = lazy(() => import('./pages/TrailDetailsPage'));
 const LocationsPage = lazy(() => import('./pages/LocationsPage'));
 const LocationDetailsPage = lazy(() => import('./pages/LocationDetailsPage'));
 const AboutPage = lazy(() => import('./pages/AboutPage'));
+const MediaPage = lazy(() => import('./pages/MediaPage'));
 const DisclaimerPage = lazy(() => import('./pages/DisclaimerPage'));
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
 const FunPage = lazy(() => import('./pages/FunPage'));
@@ -136,9 +137,13 @@ export default function App() {
                         path="/locations/:slug" 
                         element={<LocationDetailsPage mode={mode} onToggleMode={handleToggleMode} />} 
                     />}
-                    <Route 
-                        path="/about" 
-                        element={<AboutPage mode={mode} onToggleMode={handleToggleMode} />} 
+                    <Route
+                        path="/about"
+                        element={<AboutPage mode={mode} onToggleMode={handleToggleMode} />}
+                    />
+                    <Route
+                        path="/media"
+                        element={<MediaPage mode={mode} onToggleMode={handleToggleMode} />}
                     />
                     <Route 
                         path="/disclaimer" 

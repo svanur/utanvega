@@ -89,6 +89,7 @@
         "runs360": "360° Hlaup",
         "annualReport": "Ársskýrsla 2025",
         "aboutUs": "Um okkur",
+        "media": "Fjölmiðlar",
         "services": "Þjónusta",
         "challenge": "Áskorun",
         "allTrails": "Listi yfir leiðir",
@@ -658,6 +659,23 @@
         "prizes": "Þátttakendur sem ljúka einni eða fleiri áskorunum taka þátt í verðlaupadreifingum allt sumarið og til 6. september. Viðbótarverðlaun eru dreifð á samfélagsmiðlum — deildu þátttöku þinni með #útivistaáskorun.",
         "sponsors": "Samstarfsaðilar",
         "register": "Skrá sig í áskoruna"
+    },
+    "media": {
+        "title": "Fjölmiðlar",
+        "description": "Hlaupadagskra.is í fjölmiðlum",
+        "article": {
+            "source": "Morgunblaðið",
+            "imageAlt": "Blaðagrein úr Morgunblaðinu um Hlaupadagskrá.is",
+            "title": "Viðtal í Morgunblaðinu",
+            "description": "Viðtal við stofnanda Hlaupadagskrár.is, birt í Morgunblaðinu.",
+            "openInNewTab": "Opna í nýjum flipa"
+        },
+        "podcast": {
+            "source": "Spotify",
+            "title": "Podcast viðtal",
+            "description": "Podcast þáttur með Hlaupadagskrá.is — hlustaðu á Spotify.",
+            "openInSpotify": "Opna í Spotify"
+        }
     },
     "aboutUs": {
         "title": "Um hlaupadagskra.is",

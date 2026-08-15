@@ -61,7 +61,6 @@ public class GetRaceDayEditionsQueryHandler : IRequestHandler<GetRaceDayEditions
             .AsSplitQuery()
             .Include(ed => ed.Event)
             .Include(ed => ed.Races)
-                .ThenInclude(r => r.Trail)
             .Where(ed =>
                 ed.Date.HasValue &&
                 ed.Date <= request.Date &&
@@ -69,6 +68,19 @@ public class GetRaceDayEditionsQueryHandler : IRequestHandler<GetRaceDayEditions
                 ed.Event.Status != EventStatus.Hidden)
             .OrderBy(ed => ed.Event.Name)
             .ToListAsync(cancellationToken);
+
+        var trailIds = editions
+            .SelectMany(ed => ed.Races)
+            .Where(r => r.TrailId.HasValue)
+            .Select(r => r.TrailId!.Value)
+            .Distinct().ToHashSet();
+
+        var trailNames = trailIds.Count > 0
+            ? await _context.Trails.AsNoTracking()
+                .Where(t => trailIds.Contains(t.Id))
+                .Select(t => new { t.Id, t.Name })
+                .ToDictionaryAsync(t => t.Id, t => t.Name, cancellationToken)
+            : [];
 
         return editions.Select(ed => new RaceDayEditionDto(
             ed.Id,
@@ -104,7 +116,7 @@ public class GetRaceDayEditionsQueryHandler : IRequestHandler<GetRaceDayEditions
                     r.DateOfRace,
                     r.StartTime,
                     r.TrailId,
-                    r.Trail?.Name
+                    r.TrailId.HasValue && trailNames.TryGetValue(r.TrailId.Value, out var tn) ? tn : null
                 ))
                 .ToList()
         )).ToList();

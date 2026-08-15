@@ -61,6 +61,8 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
     private readonly UtanvegaDbContext _context;
     private readonly IScheduleRuleEngine _scheduleEngine;
 
+    private record TrailDetail(string? Name, string? Slug, double Length, double ElevationGain, Core.Entities.TerrainType? TerrainType, Core.Entities.Difficulty Difficulty, Core.Entities.ActivityType ActivityTypeId, string? YoutubeUrl);
+
     public GetEventQueryHandler(UtanvegaDbContext context, IScheduleRuleEngine scheduleEngine)
     {
         _context = context;
@@ -75,13 +77,26 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
             .Include(e => e.Location)
             .Include(e => e.Organizer)
             .Include(e => e.Editions)
-                .ThenInclude(ed => ed.Trail)
-            .Include(e => e.Editions)
                 .ThenInclude(ed => ed.Races)
-                    .ThenInclude(r => r.Trail)
             .FirstOrDefaultAsync(e => e.Slug == request.Slug, cancellationToken);
 
         if (ev == null) return null;
+
+        // Collect all trail IDs from editions (ed.TrailId) and races (r.TrailId)
+        var trailIds = ev.Editions
+            .SelectMany(ed => ed.Races.Select(r => r.TrailId).Append(ed.TrailId))
+            .Where(id => id.HasValue).Select(id => id!.Value)
+            .Distinct().ToHashSet();
+
+        var trailDetails = trailIds.Count > 0
+            ? (await _context.Trails.AsNoTracking()
+                .Where(t => trailIds.Contains(t.Id))
+                .Select(t => new { t.Id, t.Name, t.Slug, t.Length, t.ElevationGain, t.TerrainType, t.Difficulty, t.ActivityTypeId, t.YoutubeUrl })
+                .ToListAsync(cancellationToken))
+                .ToDictionary(t => t.Id, t => new TrailDetail(t.Name, t.Slug, t.Length, t.ElevationGain, t.TerrainType, t.Difficulty, t.ActivityTypeId, t.YoutubeUrl))
+            : new Dictionary<Guid, TrailDetail>();
+
+        TrailDetail? GetTrail(Guid? id) => id.HasValue && trailDetails.TryGetValue(id.Value, out var td) ? td : null;
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
@@ -163,16 +178,16 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
                 ed.NotesEn,
                 ed.RegistrationStatus.ToString(),
                 ed.TrailId,
-                ed.Trail?.Name,
-                ed.Trail?.Slug,
+                GetTrail(ed.TrailId)?.Name,
+                GetTrail(ed.TrailId)?.Slug,
                 ed.Races
                     .OrderBy(r => r.SortOrder)
                     .Select(r => new RaceDto(
                         r.Id,
                         r.EventEditionId,
                         r.TrailId,
-                        r.Trail?.Name,
-                        r.Trail?.Slug,
+                        GetTrail(r.TrailId)?.Name,
+                        GetTrail(r.TrailId)?.Slug,
                         r.Name,
                         r.NameEn,
                         r.DistanceLabel,
@@ -192,11 +207,11 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
                         r.ChampionshipCategoryEn,
                         r.DateOfRace,
                         r.StartTime,
-                        r.Trail?.Length,
-                        r.Trail?.ElevationGain,
-                        r.Trail?.TerrainType?.ToString(),
-                        r.Trail?.Difficulty.ToString(),
-                        r.Trail?.ActivityTypeId.ToString(),
+                        GetTrail(r.TrailId)?.Length,
+                        GetTrail(r.TrailId)?.ElevationGain,
+                        GetTrail(r.TrailId)?.TerrainType?.ToString(),
+                        GetTrail(r.TrailId)?.Difficulty.ToString(),
+                        GetTrail(r.TrailId)?.ActivityTypeId.ToString(),
                         TranslationHashes: null,
                         ActivityType: r.ActivityType?.ToString(),
                         ResultType: r.ResultType.ToString()
@@ -238,13 +253,13 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
             .Distinct().OrderBy(p => p).ToList();
 
         var youtubeUrl = relevantRaces?
-            .Select(r => r.Trail?.YoutubeUrl)
+            .Select(r => GetTrail(r.TrailId)?.YoutubeUrl)
             .FirstOrDefault(u => !string.IsNullOrWhiteSpace(u));
 
         var activityTypes = publicEditions
             .SelectMany(ed => ed.Races)
             .Where(r => r.Status != RaceStatus.Cancelled)
-            .Select(r => (r.ActivityType?.ToString() ?? r.Trail?.ActivityTypeId.ToString()))
+            .Select(r => (r.ActivityType?.ToString() ?? GetTrail(r.TrailId)?.ActivityTypeId.ToString()))
             .Where(a => a != null)
             .Distinct()
             .OrderBy(a => a)

@@ -26,7 +26,7 @@ const milestones = [
     { date: '2026', key: 'v2_launch', icon: <TrendingUpIcon />, color: 'primary' as const },
     { date: '2025', key: 'scratchcard', icon: <CasinoIcon />, color: 'secondary' as const },
     { date: '2024', key: 'runs360', icon: <YouTubeIcon />, color: 'primary' as const },
-    { date: '2023', key: 'launch', icon: <RocketLaunchIcon />, color: 'secondary' as const },
+    { date: '2024', key: 'launch', icon: <RocketLaunchIcon />, color: 'secondary' as const },
 ];
 
 export default function AboutPage({ mode, onToggleMode }: AboutPageProps) {
