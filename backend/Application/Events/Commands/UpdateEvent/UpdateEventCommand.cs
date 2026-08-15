@@ -10,6 +10,7 @@ namespace Utanvega.Backend.Application.Events.Commands.UpdateEvent;
 public record UpdateEventCommand(
     Guid Id,
     string Name,
+    string? Slug,
     string? Description,
     string Type,
     string ActivityType,
@@ -54,7 +55,10 @@ public class UpdateEventCommandHandler : IRequestHandler<UpdateEventCommand, boo
         Enum.TryParse<ActivityType>(request.ActivityType, ignoreCase: true, out var activityType);
         Enum.TryParse<EventStatus>(request.Status, ignoreCase: true, out var status);
 
+        var oldSlug = ev.Slug;
         ev.Name = request.Name;
+        if (!string.IsNullOrWhiteSpace(request.Slug))
+            ev.Slug = request.Slug.Trim().ToLowerInvariant();
         ev.NameEn = request.NameEn;
         ev.Description = request.Description;
         ev.DescriptionEn = request.DescriptionEn;
@@ -80,6 +84,8 @@ public class UpdateEventCommandHandler : IRequestHandler<UpdateEventCommand, boo
 
         await _context.SaveChangesAsync(cancellationToken);
         _cacheInvalidator.InvalidateEvent(ev.Slug);
+        if (oldSlug != ev.Slug)
+            _cacheInvalidator.InvalidateEvent(oldSlug);
         return true;
     }
 }

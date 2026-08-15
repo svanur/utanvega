@@ -81,6 +81,7 @@ import {
   type RaceFormState,
 } from '../utils/eventForms';
 import { hashText } from '../utils/translationHash';
+import { formatMinutesToHHmm } from '../utils/cutoffTime';
 import {
   MONTHS,
   fmtDate,
@@ -322,7 +323,7 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onNotify
               value={form.date ? dayjs(form.date) : null}
               onChange={v => set('date', v ? v.format('YYYY-MM-DD') : '')}
               slotProps={{ textField: { size: 'small', fullWidth: true } }} />
-            <DatePicker label="End date"
+            <DatePicker label="End date (multi-day)"
               value={form.endDate ? dayjs(form.endDate) : null}
               onChange={v => set('endDate', v ? v.format('YYYY-MM-DD') : '')}
               slotProps={{ textField: { size: 'small', fullWidth: true } }} />
@@ -435,7 +436,9 @@ function SortableRaceRow({ race, edition, isActive, staleTx, detail, onOpen, onD
       hover
       sx={{
         cursor: 'pointer',
-        bgcolor: isActive ? 'primary.50' : undefined,
+        bgcolor: isActive ? 'action.selected' : undefined,
+        borderLeft: isActive ? '3px solid' : '3px solid transparent',
+        borderLeftColor: isActive ? 'primary.main' : 'transparent',
         opacity: isDragging ? 0.5 : 1,
         transform: CSS.Transform.toString(transform),
         transition,
@@ -470,7 +473,7 @@ function SortableRaceRow({ race, edition, isActive, staleTx, detail, onOpen, onD
       <TableCell onClick={e => e.stopPropagation()}>
         {race.dateOfRace ? (
           <Typography variant="body2">
-            {fmtDate(race.dateOfRace)}{race.startTime && ` · ${race.startTime.slice(0, 5)}`}
+            {fmtDate(race.dateOfRace)}{race.startTime && ` · ${race.startTime.slice(0, 5)}`}{race.cutoffMinutes != null && ` · ${formatMinutesToHHmm(race.cutoffMinutes)}`}
           </Typography>
         ) : (
           <Stack direction="row" alignItems="center" spacing={0.5}>
@@ -691,13 +694,14 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
     await apiFetch(`/api/v1/admin/events/${id}`, {
       method: 'PUT', body: JSON.stringify({ id, ...input }),
     });
-    await refresh();
   };
 
   const handleEventSaved = (updated: EventDetailDto) => {
-    void refresh();
-    // header will re-render on next refresh; detail already patched optimistically in EventFormCard
-    void updated;
+    if (updated.slug !== slug) {
+      navigate(`/events/${updated.slug}`, { replace: true });
+    } else {
+      void refresh();
+    }
   };
 
   const patchRaceInDetail = (raceId: string, patch: Partial<RaceDto>) =>
@@ -733,6 +737,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
       championshipCategoryEn: r.championshipCategoryEn,
       dateOfRace: r.dateOfRace,
       startTime: r.startTime,
+      resultType: r.resultType,
       activityType: r.activityType,
     };
   };
@@ -1374,7 +1379,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                         <TableCell>Distance</TableCell>
                         <TableCell>Result type</TableCell>
                         <TableCell>Route</TableCell>
-                        <TableCell>Date / start</TableCell>
+                        <TableCell>Date / Start / Limit</TableCell>
                         <TableCell>Status</TableCell>
                         <TableCell>Tickets</TableCell>
                         <TableCell>Max</TableCell>

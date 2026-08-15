@@ -351,6 +351,14 @@ function Originals({ onComplete }: { onComplete: () => void }) {
                     background: rgba(0, 0, 0, 0.9);
                     opacity: 0;
                 }
+                .ee-originals-intro {
+                    color: rgba(255, 255, 255, 0.75);
+                    font-family: 'Georgia', 'Times New Roman', serif;
+                    font-size: clamp(14px, 2vw, 22px);
+                    font-style: italic;
+                    letter-spacing: 0.05em;
+                    margin-bottom: 8px;
+                }
                 .ee-originals-title {
                     color: #d4a847;
                     font-family: 'Georgia', 'Times New Roman', serif;
@@ -407,6 +415,7 @@ function Originals({ onComplete }: { onComplete: () => void }) {
                     {p.char}
                 </div>
             ))}
+            <div className="ee-originals-intro">Sjáiði! Þarna eru...</div>
             <div className="ee-originals-title">✦ Hin upprunalegu ✦</div>
             <div className="ee-originals-sub">the originals</div>
         </div>
