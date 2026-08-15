@@ -376,7 +376,7 @@ export default function FeedbackPage({ onNotify }: { onNotify: (msg: string, sev
                                             </Tooltip>
                                         </TableCell>
                                         <TableCell sx={{ maxWidth: 260 }}>
-                                            <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={item.message}>
                                                 {item.message}
                                             </Typography>
                                         </TableCell>
