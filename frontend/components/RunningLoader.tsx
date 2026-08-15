@@ -44,6 +44,7 @@ const loadingMessages = {
         'Ég vel samúð fram yfir gagnrýni.',
         'Ég er að gera mitt besta.',
         'Framfarir geta verið hljóðlátar.',
+        'Leggjumst í grasið og jarðtenjum.'
     ],
     en: [
         'Loading trails...',
@@ -73,7 +74,12 @@ const loadingMessages = {
         "Progress can be quiet.",
         "I am allowed to slow down.",
         "I carry strength I don’t always see.",
-        "Same place, different pace."
+        "Same place, different pace.",
+        "Your Garmin isn't mean, it's just honest.",
+        "Balanced HRV is hotter than a fast mile.",
+        "You don't stretch enough.",
+        "Take rest day and touch some grass.",
+        "Mental health is fitness too"
     ],
 };
 
