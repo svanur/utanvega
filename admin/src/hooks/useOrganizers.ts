@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from './api';
 
 export interface OrganizerDto {
@@ -31,27 +31,20 @@ export interface UpdateOrganizerInput extends CreateOrganizerInput {
     id: string;
 }
 
+const ORGANIZERS_QUERY_KEY = ['admin', 'organizers'] as const;
+
 export function useOrganizers() {
-    const [organizers, setOrganizers] = useState<OrganizerDto[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const queryClient = useQueryClient();
 
-    const fetchOrganizers = useCallback(async () => {
-        try {
-            setLoading(true);
-            const data = await apiFetch<OrganizerDto[]>('/api/v1/admin/organizers');
-            setOrganizers(data);
-            setError(null);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Unknown error');
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+    const { data: organizers = [], isLoading: loading, error: queryError } = useQuery({
+        queryKey: ORGANIZERS_QUERY_KEY,
+        queryFn: () => apiFetch<OrganizerDto[]>('/api/v1/admin/organizers'),
+        staleTime: 120_000,
+    });
 
-    useEffect(() => {
-        fetchOrganizers();
-    }, [fetchOrganizers]);
+    const error = queryError instanceof Error ? queryError.message : queryError ? 'Unknown error' : null;
+
+    const invalidate = () => queryClient.invalidateQueries({ queryKey: ORGANIZERS_QUERY_KEY });
 
     const createOrganizer = async (input: CreateOrganizerInput): Promise<string> => {
         const result = await apiFetch<{ id: string }>('/api/v1/admin/organizers', {
@@ -59,7 +52,7 @@ export function useOrganizers() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(input),
         });
-        await fetchOrganizers();
+        await invalidate();
         return result.id;
     };
 
@@ -69,13 +62,13 @@ export function useOrganizers() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(input),
         });
-        await fetchOrganizers();
+        await invalidate();
     };
 
     const deleteOrganizer = async (id: string): Promise<void> => {
         await apiFetch(`/api/v1/admin/organizers/${id}`, { method: 'DELETE' });
-        await fetchOrganizers();
+        await invalidate();
     };
 
-    return { organizers, loading, error, refresh: fetchOrganizers, createOrganizer, updateOrganizer, deleteOrganizer };
+    return { organizers, loading, error, refresh: invalidate, createOrganizer, updateOrganizer, deleteOrganizer };
 }

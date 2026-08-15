@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from './api';
 
 export type DayOfWeek = 'Sunday' | 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
@@ -296,38 +297,41 @@ export interface GenerateEditionsForSeasonResult {
     racesCreated: number;
 }
 
+export const EVENTS_QUERY_KEY = ['admin', 'events'] as const;
+
 export function useEvents() {
-    const [events, setEvents] = useState<EventSummaryDto[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const queryClient = useQueryClient();
 
-    const fetchEvents = async (): Promise<EventSummaryDto[]> => {
-        try {
-            setLoading(true);
-            const data = await apiFetch<EventSummaryDto[]>('/api/v1/admin/events');
-            setEvents(data);
-            setError(null);
-            return data;
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Unknown error');
-            return [];
-        } finally {
-            setLoading(false);
-        }
-    };
+    const { data: events = [], isLoading: loading, error: queryError } = useQuery({
+        queryKey: EVENTS_QUERY_KEY,
+        queryFn: () => apiFetch<EventSummaryDto[]>('/api/v1/admin/events'),
+        staleTime: 30_000,
+    });
 
-    useEffect(() => {
-        void fetchEvents();
-    }, []);
+    const error = queryError instanceof Error ? queryError.message : queryError ? 'Unknown error' : null;
+
+    const invalidate = useCallback(
+        () => queryClient.invalidateQueries({ queryKey: EVENTS_QUERY_KEY }),
+        [queryClient]
+    );
 
     const createEvent = async (input: CreateEventInput): Promise<{ id: string; slug: string }> => {
         const result = await apiFetch<{ id: string; slug?: string }>('/api/v1/admin/events', {
             method: 'POST',
             body: JSON.stringify(input),
         });
-        const refreshed = await fetchEvents();
-        const slug = result.slug ?? refreshed.find(e => e.id === result.id)?.slug ?? result.id;
-        return { id: result.id, slug };
+        if (result.slug) {
+            await invalidate();
+            return { id: result.id, slug: result.slug };
+        }
+        // invalidateQueries only refetches queries with active observers, so it can't be
+        // relied on to have refreshed the cache by the time we read it back here. Force a
+        // fresh fetch instead when the API didn't already give us the slug directly.
+        const fresh = await queryClient.fetchQuery({
+            queryKey: EVENTS_QUERY_KEY,
+            queryFn: () => apiFetch<EventSummaryDto[]>('/api/v1/admin/events'),
+        });
+        return { id: result.id, slug: fresh.find(e => e.id === result.id)?.slug ?? result.id };
     };
 
     const updateEvent = async (id: string, input: Omit<UpdateEventInput, 'id'>) => {
@@ -335,7 +339,7 @@ export function useEvents() {
             method: 'PUT',
             body: JSON.stringify({ id, ...input }),
         });
-        await fetchEvents();
+        await invalidate();
     };
 
     const updateEventSilently = async (id: string, input: Omit<UpdateEventInput, 'id'>) => {
@@ -346,12 +350,16 @@ export function useEvents() {
     };
 
     const patchEventLocally = (id: string, patch: Partial<EventSummaryDto>) => {
-        setEvents(prev => prev.map(e => e.id === id ? { ...e, ...patch } : e));
+        queryClient.setQueryData<EventSummaryDto[]>(EVENTS_QUERY_KEY, prev =>
+            prev ? prev.map(e => e.id === id ? { ...e, ...patch } : e) : prev
+        );
     };
 
     const deleteEvent = async (id: string) => {
         await apiFetch(`/api/v1/admin/events/${id}`, { method: 'DELETE' });
-        setEvents(prev => prev.filter(event => event.id !== id));
+        queryClient.setQueryData<EventSummaryDto[]>(EVENTS_QUERY_KEY, prev =>
+            prev ? prev.filter(e => e.id !== id) : prev
+        );
     };
 
     const getEvent = async (slug: string) => apiFetch<EventDetailDto>(`/api/v1/admin/events/${slug}`);
@@ -361,7 +369,7 @@ export function useEvents() {
             method: 'POST',
             body: JSON.stringify(input),
         });
-        await fetchEvents();
+        await invalidate();
         return result.id;
     };
 
@@ -370,7 +378,7 @@ export function useEvents() {
             method: 'PUT',
             body: JSON.stringify({ id, ...input }),
         });
-        await fetchEvents();
+        await invalidate();
     };
 
     const updateEditionSilently = async (id: string, input: Omit<UpdateEditionInput, 'id'>) => {
@@ -382,7 +390,7 @@ export function useEvents() {
 
     const deleteEdition = async (id: string) => {
         await apiFetch(`/api/v1/admin/editions/${id}`, { method: 'DELETE' });
-        await fetchEvents();
+        await invalidate();
     };
 
     const generateEditionsForSeason = async (input: GenerateEditionsForSeasonInput) => {
@@ -390,7 +398,7 @@ export function useEvents() {
             method: 'POST',
             body: JSON.stringify(input),
         });
-        await fetchEvents();
+        await invalidate();
         return result;
     };
 
@@ -424,7 +432,7 @@ export function useEvents() {
         events,
         loading,
         error,
-        refresh: fetchEvents,
+        refresh: invalidate,
         createEvent,
         updateEvent,
         updateEventSilently,
@@ -444,25 +452,53 @@ export function useEvents() {
 }
 
 export function useEventDetail(slug: string) {
-    const [detail, setDetail] = useState<EventDetailDto | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const queryKey = useMemo(() => ['admin', 'event', slug] as const, [slug]);
 
-    const load = useCallback(async () => {
-        if (!slug) return;
-        try {
-            setLoading(true);
-            const data = await apiFetch<EventDetailDto>(`/api/v1/admin/events/${slug}`);
-            setDetail(data);
-            setError(null);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to load event');
-        } finally {
-            setLoading(false);
-        }
-    }, [slug]);
+    const { data: detail = null, isLoading: loading, error: queryError, refetch } = useQuery({
+        queryKey,
+        queryFn: () => apiFetch<EventDetailDto>(`/api/v1/admin/events/${slug}`),
+        enabled: !!slug,
+        staleTime: 30_000,
+    });
 
-    useEffect(() => { void load(); }, [load]);
+    const queryClient = useQueryClient();
 
-    return { detail, loading, error, refresh: load, setDetail };
+    const error = queryError instanceof Error ? queryError.message : queryError ? 'Failed to load event' : null;
+
+    const setDetail = useCallback((updater: EventDetailDto | null | ((prev: EventDetailDto | null) => EventDetailDto | null)) => {
+        queryClient.setQueryData<EventDetailDto | null>(queryKey, prev => {
+            if (typeof updater === 'function') return updater(prev ?? null);
+            return updater;
+        });
+    }, [queryClient, queryKey]);
+
+    const refresh = useCallback(() => { void refetch(); }, [refetch]);
+
+    return { detail, loading, error, refresh, setDetail };
+}
+
+export function useEventMutations() {
+    const queryClient = useQueryClient();
+
+    const invalidateEvents = () => queryClient.invalidateQueries({ queryKey: EVENTS_QUERY_KEY });
+
+    const createEvent = useMutation({
+        mutationFn: (input: CreateEventInput) =>
+            apiFetch<{ id: string; slug?: string }>('/api/v1/admin/events', {
+                method: 'POST',
+                body: JSON.stringify(input),
+            }),
+        onSuccess: () => invalidateEvents(),
+    });
+
+    const updateEvent = useMutation({
+        mutationFn: ({ id, input }: { id: string; input: Omit<UpdateEventInput, 'id'> }) =>
+            apiFetch(`/api/v1/admin/events/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify({ id, ...input }),
+            }),
+        onSuccess: () => invalidateEvents(),
+    });
+
+    return { createEvent, updateEvent };
 }

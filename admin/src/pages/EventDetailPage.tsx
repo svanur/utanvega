@@ -694,6 +694,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
     await apiFetch(`/api/v1/admin/events/${id}`, {
       method: 'PUT', body: JSON.stringify({ id, ...input }),
     });
+    void refresh();
   };
 
   const handleEventSaved = (updated: EventDetailDto) => {

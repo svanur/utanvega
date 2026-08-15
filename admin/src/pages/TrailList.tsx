@@ -38,6 +38,10 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
   }, []);
 
   const [search, setSearch] = useState(initialSearch || '');
+
+  useEffect(() => {
+    if (initialSearch != null) setSearch(initialSearch);
+  }, [initialSearch]);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [activityFilter, setActivityFilter] = useState<string>('all');

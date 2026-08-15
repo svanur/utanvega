@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Box, Typography, Paper, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, TableSortLabel, Chip, LinearProgress, Card,
@@ -12,8 +12,9 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import SearchIcon from '@mui/icons-material/Search';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
+import { useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../hooks/api';
-import type { EventSummaryDto } from '../hooks/useEvents';
+import { useEvents, EVENTS_QUERY_KEY, type EventSummaryDto } from '../hooks/useEvents';
 
 interface HealthCheck {
   label: string;
@@ -105,28 +106,14 @@ interface EventHealthProps {
 
 export default function EventHealth({ onViewEvent, onNotify }: EventHealthProps) {
   const theme = useTheme();
-  const [events, setEvents] = useState<EventSummaryDto[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const { events, loading } = useEvents();
   const [sortField, setSortField] = useState<SortField>('score');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [search, setSearch] = useState('');
   const [detectingGpx, setDetectingGpx] = useState(false);
   const [gpxDialogOpen, setGpxDialogOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<QuickFilter | null>(null);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const data = await apiFetch<EventSummaryDto[]>('/api/v1/admin/events');
-        setEvents(data);
-      } catch (_err) {
-        onNotify('Failed to load events', 'error');
-      } finally {
-        setLoading(false);
-      }
-    })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- onNotify callback reference changes on every render
-  }, []);
 
   const handleDetectGpx = async () => {
     setDetectingGpx(true);
@@ -138,8 +125,7 @@ export default function EventHealth({ onViewEvent, onNotify }: EventHealthProps)
           ? `No GPX found — ${result.skipped} event${result.skipped !== 1 ? 's' : ''} had no linked trail with GPX data`
           : 'All events already have a GPX pin';
       onNotify(msg);
-      const data = await apiFetch<EventSummaryDto[]>('/api/v1/admin/events');
-      setEvents(data);
+      queryClient.invalidateQueries({ queryKey: EVENTS_QUERY_KEY });
     } catch (_err) {
       onNotify('Failed to detect GPX points', 'error');
     } finally {

@@ -74,6 +74,7 @@ import SmartPresets from './SmartPresets';
 import { getActivePresets } from '../utils/filterPresets';
 import TrailSlotMachine from './TrailSlotMachine';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
+import { trackViewModeChange } from '../utils/analytics';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { useEvents } from '../hooks/useEvents';
@@ -1210,7 +1211,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                     <ToggleButtonGroup
                         value={viewMode}
                         exclusive
-                        onChange={(_, value) => { if (value) { const v = value as ViewMode; setViewMode(v); try { localStorage.setItem('utanvega-view-mode', v); } catch {/* */} onViewModeChange?.(v); } }}
+                        onChange={(_, value) => { if (value) { const v = value as ViewMode; setViewMode(v); try { localStorage.setItem('utanvega-view-mode', v); } catch {/* */} onViewModeChange?.(v); trackViewModeChange('trails', v); } }}
                         size="small"
                         aria-label={t('home.viewMode')}
                     >
