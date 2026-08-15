@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from './api';
 
@@ -320,10 +320,18 @@ export function useEvents() {
             method: 'POST',
             body: JSON.stringify(input),
         });
-        await invalidate();
-        const cached = queryClient.getQueryData<EventSummaryDto[]>(EVENTS_QUERY_KEY);
-        const slug = result.slug ?? cached?.find(e => e.id === result.id)?.slug ?? result.id;
-        return { id: result.id, slug };
+        if (result.slug) {
+            await invalidate();
+            return { id: result.id, slug: result.slug };
+        }
+        // invalidateQueries only refetches queries with active observers, so it can't be
+        // relied on to have refreshed the cache by the time we read it back here. Force a
+        // fresh fetch instead when the API didn't already give us the slug directly.
+        const fresh = await queryClient.fetchQuery({
+            queryKey: EVENTS_QUERY_KEY,
+            queryFn: () => apiFetch<EventSummaryDto[]>('/api/v1/admin/events'),
+        });
+        return { id: result.id, slug: fresh.find(e => e.id === result.id)?.slug ?? result.id };
     };
 
     const updateEvent = async (id: string, input: Omit<UpdateEventInput, 'id'>) => {
@@ -444,7 +452,7 @@ export function useEvents() {
 }
 
 export function useEventDetail(slug: string) {
-    const queryKey = ['admin', 'event', slug] as const;
+    const queryKey = useMemo(() => ['admin', 'event', slug] as const, [slug]);
 
     const { data: detail = null, isLoading: loading, error: queryError, refetch } = useQuery({
         queryKey,
@@ -462,7 +470,7 @@ export function useEventDetail(slug: string) {
             if (typeof updater === 'function') return updater(prev ?? null);
             return updater;
         });
-    }, [queryClient, queryKey]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [queryClient, queryKey]);
 
     const refresh = useCallback(() => { void refetch(); }, [refetch]);
 
