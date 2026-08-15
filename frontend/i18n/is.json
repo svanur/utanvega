@@ -662,11 +662,13 @@
     },
     "media": {
         "title": "Fjölmiðlar",
+        "description": "Hlaupadagskra.is í fjölmiðlum",
         "article": {
             "source": "Morgunblaðið",
             "imageAlt": "Blaðagrein úr Morgunblaðinu um Hlaupadagskrá.is",
             "title": "Viðtal í Morgunblaðinu",
-            "description": "Viðtal við stofnanda Hlaupadagskrár.is, birt í Morgunblaðinu."
+            "description": "Viðtal við stofnanda Hlaupadagskrár.is, birt í Morgunblaðinu.",
+            "openInNewTab": "Opna í nýjum flipa"
         },
         "podcast": {
             "source": "Spotify",

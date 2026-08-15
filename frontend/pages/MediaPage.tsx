@@ -18,8 +18,11 @@ export default function MediaPage({ mode, onToggleMode }: MediaPageProps) {
     return (
         <Layout mode={mode} onToggleMode={onToggleMode}>
             <Box sx={{ maxWidth: 720, mx: 'auto' }}>
-                <Typography variant="h4" fontWeight="bold" sx={{ mb: 3 }}>
+                <Typography variant="h4" fontWeight="bold" sx={{ mb: 1 }}>
                     {t('media.title')}
+                </Typography>
+                <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                    {t('media.description')}
                 </Typography>
 
                 <Stack spacing={3}>
@@ -62,11 +65,19 @@ export default function MediaPage({ mode, onToggleMode }: MediaPageProps) {
                     {/* Newspaper article */}
                     <Paper variant="outlined" sx={{ borderRadius: 2, overflow: 'hidden' }}>
                         <Box
-                            component="img"
-                            src="/images/hlaupadagskra-bladagrein.avif"
-                            alt={t('media.article.imageAlt')}
-                            sx={{ width: '100%', display: 'block', maxHeight: 480, objectFit: 'cover', objectPosition: 'top' }}
-                        />
+                            component="a"
+                            href="/images/hlaupadagskra-bladagrein.avif"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            sx={{ display: 'block' }}
+                        >
+                            <Box
+                                component="img"
+                                src="/images/hlaupadagskra-bladagrein.avif"
+                                alt={t('media.article.imageAlt')}
+                                sx={{ width: '100%', display: 'block', maxHeight: 480, objectFit: 'cover', objectPosition: 'top', cursor: 'zoom-in' }}
+                            />
+                        </Box>
                         <Box sx={{ p: 3 }}>
                             <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
                                 <ArticleIcon fontSize="small" color="primary" />
@@ -75,9 +86,17 @@ export default function MediaPage({ mode, onToggleMode }: MediaPageProps) {
                             <Typography variant="h6" fontWeight="bold" sx={{ mb: 0.5 }}>
                                 {t('media.article.title')}
                             </Typography>
-                            <Typography variant="body2" color="text.secondary">
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
                                 {t('media.article.description')}
                             </Typography>
+                            <Link
+                                href="/images/hlaupadagskra-bladagrein.avif"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                variant="body2"
+                            >
+                                {t('media.article.openInNewTab')}
+                            </Link>
                         </Box>
                     </Paper>
                 </Stack>

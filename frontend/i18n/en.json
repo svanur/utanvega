@@ -662,11 +662,13 @@
     },
     "media": {
         "title": "Media",
+        "description": "Hlaupadagskra.is in the media",
         "article": {
             "source": "Morgunblaðið",
             "imageAlt": "Newspaper article from Morgunblaðið about Hlaupadagskra.is",
             "title": "Interview in Morgunblaðið",
-            "description": "An interview with the founder of Hlaupadagskra.is, published in Morgunblaðið."
+            "description": "An interview with the founder of Hlaupadagskra.is, published in Morgunblaðið.",
+            "openInNewTab": "Open in new tab"
         },
         "podcast": {
             "source": "Spotify",
