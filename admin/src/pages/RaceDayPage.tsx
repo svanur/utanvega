@@ -197,6 +197,7 @@ export default function RaceDayPage({ onNotify, initialDate }: RaceDayPageProps)
                         status: p.status ?? race.status,
                         sortOrder: race.sortOrder,
                         ticketStatus: p.ticketStatus ?? race.ticketStatus,
+                        resultType: race.resultType ?? 'Time',
                         maxParticipants: null, itraPoints: null, certifiedBy: null,
                         prizeMoney: 0, championshipCategory: null, dateOfRace: null,
                         startTime: race.startTime, activityType: race.activityType, trailId: null,
