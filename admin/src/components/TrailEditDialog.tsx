@@ -149,8 +149,8 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
     const [selectedEditionToLink, setSelectedEditionToLink] = useState<LinkableEdition | null>(null);
 
     useEffect(() => {
-        setSlugUnlocked(false);
         if (open && trailId) {
+            setSlugUnlocked(false);
             const fetchData = async () => {
                 try {
                     setLoading(true);

@@ -72,7 +72,9 @@ export function formatMinutesToHHmm(value: number | null | undefined): string | 
 
 // Arrow-key handler for HH:mm time limit fields — increments hours or minutes
 // depending on cursor position, without capping hours at 23.
-// Uses flushSync so the DOM is updated before we restore the selection range.
+// Note: React will overwrite the DOM value after the onChange state update,
+// which resets the cursor to the end — there is no clean workaround for this
+// in a controlled input without restructuring the field.
 export function timeLimitArrowKey(
   e: React.KeyboardEvent<HTMLInputElement>,
   value: string,
@@ -92,12 +94,5 @@ export function timeLimitArrowKey(
   } else {
     m = ((m + delta) + 60) % 60;
   }
-  const newValue = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-  const [segStart, segEnd] = inHours ? [0, 2] : [3, 5];
-  // Set the DOM value and cursor synchronously before React's reconciliation,
-  // so the cursor position is already correct when React processes the state update.
-  // Since the DOM value matches what onChange will produce, React won't overwrite it.
-  input.value = newValue;
-  input.setSelectionRange(segStart, segEnd);
-  onChange(newValue);
+  onChange(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
 }
