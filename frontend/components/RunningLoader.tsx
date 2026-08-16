@@ -46,7 +46,8 @@ const loadingMessages = {
         'Framfarir geta verið hljóðlátar.',
         'Leggjumst í grasið og jarðtenjum.',
         'Ást er ...að fara í fjallgöngu saman.',
-        'Ást er ...að fara út að hlaupa saman.'
+        'Ást er ...að fara út að hlaupa saman.',
+        'Anda inn ...anda út'
     ],
     en: [
         'Loading trails...',
@@ -83,7 +84,8 @@ const loadingMessages = {
         "Take rest day and touch some grass.",
         "Mental health is fitness too",
         'Love is ...go hiking together.',
-        'Love is ...go running together.'
+        'Love is ...go running together.',
+        'Breathe in ...breathe out.'
     ],
 };
 
