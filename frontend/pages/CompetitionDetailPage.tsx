@@ -1393,7 +1393,7 @@ function RaceCard({
                         && isEnabled('resale_tickets', false)
                         && (() => { const at = race.activityType ?? activityType ?? null; return at === 'Running' || at === 'TrailRunning'; })() && (
                         <Link
-                            href={t('races.table.resaleHref', {})}
+                            href={t('races.table.resaleHref', { defaultValue: 'https://www.facebook.com/groups/1146319782540776' })}
                             target="_blank"
                             rel="noopener noreferrer"
                             variant="body2"

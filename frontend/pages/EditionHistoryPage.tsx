@@ -36,6 +36,7 @@ import type { EventEditionDto, RaceDto } from '../hooks/useEvents';
 import { useLocalize } from '../utils/localize';
 import { splitMinutes } from '../utils/cutoffTime';
 import { formatNextDate, formatDateRange, formatRaceDateTime, editionKeyFor } from '../utils/eventUtils';
+import { getTicketStatusColor } from '../utils/ticketStatus';
 
 type EditionHistoryPageProps = {
     mode: PaletteMode;
@@ -369,6 +370,15 @@ function HistoryRaceCard({
                     {race.cutoffMinutes != null && (
                         <Tooltip title={t('races.cutoffTime', { defaultValue: 'Time limit' })}>
                             <Chip icon={<TimerIcon />} label={formatCutoff(race.cutoffMinutes, t)} size="small" variant="outlined" color="warning" />
+                        </Tooltip>
+                    )}
+                    {race.ticketStatus && (
+                        <Tooltip title={t('races.ticketStatus', { defaultValue: 'Registration status' })}>
+                            <Chip
+                                label={t(`races.ticketStatus.${race.ticketStatus}`, { defaultValue: race.ticketStatus })}
+                                size="small"
+                                color={getTicketStatusColor(race.ticketStatus)}
+                            />
                         </Tooltip>
                     )}
                     {race.maxParticipants != null && (
