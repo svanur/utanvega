@@ -36,6 +36,8 @@ import FeedbackIcon from '@mui/icons-material/Feedback';
 
 // Lazy-loaded pages (only the active page's chunk needs to load)
 const TrailList = lazy(() => import('./pages/TrailList'));
+const TrailsListPage = lazy(() => import('./pages/TrailsListPage'));
+const TrailDetailPage = lazy(() => import('./pages/TrailDetailPage'));
 const LocationList = lazy(() => import('./pages/LocationList').then(m => ({ default: m.LocationList })));
 const TrailHealth = lazy(() => import('./pages/TrailHealth'));
 const EventHealth = lazy(() => import('./pages/EventHealth'));
@@ -95,6 +97,7 @@ const PAGE_PATHS: Record<PageKey, string> = {
 
 function pathToPage(pathname: string): PageKey {
   if (pathname.startsWith('/events-old') || pathname.startsWith('/events')) return 'events';
+  if (pathname.startsWith('/trails-old') || pathname.startsWith('/trails')) return 'trails';
   const entry = Object.entries(PAGE_PATHS).find(([, path]) => path === pathname);
   return (entry?.[0] as PageKey) ?? 'dashboard';
 }
@@ -121,7 +124,6 @@ function AdminContent() {
   const [drawerOpen, setDrawerOpen] = useState(true);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [selectedTrailId, setSelectedTrailId] = useState<string | null>(null);
   const [raceDayInitialDate, setRaceDayInitialDate] = useState<string | undefined>(undefined);
   const [createEventIntent, setCreateEventIntent] = useState(false);
   const [searchTerm, setSearchTerm] = useState<string | null>(null);
@@ -170,10 +172,10 @@ function AdminContent() {
       notify(
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
           <Typography variant="body2">Trail '{trail.name}' uploaded successfully.{locationMsg}</Typography>
-          <Link 
+          <Link
             component="button"
-            onClick={() => setSelectedTrailId(trail.id)}
-            color="inherit" 
+            onClick={() => navigate(`/trails/${trail.slug}`)}
+            color="inherit"
             sx={{ fontWeight: 'bold', textDecoration: 'underline', verticalAlign: 'baseline', fontSize: 'inherit', p: 0 }}
           >
             View Trail
@@ -352,15 +354,19 @@ function AdminContent() {
               onNavigate={setCurrentPage}
             />
           ) : currentPage === 'trails' ? (
-            <TrailList key={`${refreshTrigger}-${selectedTrailId}`} onNotify={notify} initialTrailId={selectedTrailId} initialSearch={searchTerm} />
+            <Routes>
+              <Route path="/trails/:idOrSlug" element={<TrailDetailPage onNotify={notify} />} />
+              <Route path="/trails-old" element={<TrailList key={refreshTrigger} onNotify={notify} initialSearch={searchTerm} />} />
+              <Route path="/trails" element={<TrailsListPage onNotify={notify} initialSearch={searchTerm} />} />
+            </Routes>
           ) : currentPage === 'health' ? (
-            <TrailHealth onEditTrail={(id) => { setSelectedTrailId(id); setCurrentPage('trails'); }} onNotify={notify} />
+            <TrailHealth onEditTrail={(id) => navigate(`/trails/${id}`)} onNotify={notify} />
           ) : currentPage === 'event-health' ? (
             <EventHealth onViewEvent={(slug) => { setCurrentPage('events'); navigate(`/events/${slug}`); }} onNotify={notify} />
           ) : currentPage === 'edition-health' ? (
             <EditionHealth onViewEvent={(slug) => { setCurrentPage('events'); navigate(`/events/${slug}`); }} onNotify={notify} />
           ) : currentPage === 'map' ? (
-            <TrailMapView onEditTrail={(id) => { setSelectedTrailId(id); setCurrentPage('trails'); }} />
+            <TrailMapView onEditTrail={(id) => navigate(`/trails/${id}`)} />
           ) : currentPage === 'tags' ? (
             <TagManagement onNotify={notify} />
           ) : currentPage === 'analytics' ? (
@@ -440,9 +446,10 @@ function AdminContent() {
         </Container>
       </Box>
       <AdminSpotlightSearch
-        onEditTrail={(id) => { setSelectedTrailId(id); setSearchTerm(null); setCurrentPage('trails'); }}
+        onEditTrail={(id) => navigate(`/trails/${id}`)}
+        onEditEvent={(slug) => navigate(`/events/${slug}`)}
         onNavigate={(page) => setCurrentPage(page as PageKey)}
-        onFilterTrails={(term) => { setSearchTerm(term); setSelectedTrailId(null); setCurrentPage('trails'); }}
+        onFilterTrails={(term) => { setSearchTerm(term); setCurrentPage('trails'); }}
       />
       <KeyboardShortcutsDialog open={showShortcuts} onClose={() => setShowShortcuts(false)} />
     </Box>

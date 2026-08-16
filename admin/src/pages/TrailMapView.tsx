@@ -110,7 +110,7 @@ export default function TrailMapView({ onEditTrail }: TrailMapViewProps) {
         >
           <MenuItem value="all">All Statuses</MenuItem>
           <MenuItem value="Published">Published</MenuItem>
-          <MenuItem value="Draft">Draft</MenuItem>
+          <MenuItem value="Draft">Hidden</MenuItem>
           <MenuItem value="Flagged">Flagged</MenuItem>
           <MenuItem value="Archived">Archived</MenuItem>
         </TextField>
@@ -201,7 +201,7 @@ export default function TrailMapView({ onEditTrail }: TrailMapViewProps) {
                       <Typography
                         variant="caption"
                         sx={{ mt: 1, display: 'block', cursor: 'pointer', color: 'primary.main', fontWeight: 'bold' }}
-                        onClick={() => onEditTrail(trail.id)}
+                        onClick={() => onEditTrail(trail.slug)}
                       >
                         ✏️ Edit Trail
                       </Typography>

@@ -1,14 +1,14 @@
-import { Typography, CircularProgress, Alert, Box, Link, Stack, Button, Chip } from '@mui/material';
+import { Typography, CircularProgress, Alert, Box, Stack, Button, Chip } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import BuildIcon from '@mui/icons-material/Build';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import AddIcon from '@mui/icons-material/Add';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTrails, Trail } from '../hooks/useTrails';
 import { useTags } from '../hooks/useTags';
 import { useLocations } from '../hooks/useLocations';
 import { apiFetch } from '../hooks/api';
-import TrailEditDialog from '../components/TrailEditDialog';
 import TrailToolsPanel from '../components/TrailToolsPanel';
 import TrailFilterBar from '../components/TrailFilterBar';
 import TrailTable from '../components/TrailTable';
@@ -16,13 +16,13 @@ import { TrailMapDialog, DeleteTrailDialog, BulkUploadDialog } from '../componen
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
-export default function TrailList({ onNotify, initialTrailId, initialSearch }: { onNotify: (message: React.ReactNode, severity?: 'success' | 'error') => void, initialTrailId?: string | null, initialSearch?: string | null }) {
+export default function TrailsListPage({ onNotify, initialSearch }: { onNotify: (message: React.ReactNode, severity?: 'success' | 'error') => void, initialSearch?: string | null }) {
+  const navigate = useNavigate();
   const [includeArchived, setIncludeArchived] = useState(false);
   const { trails, setTrails, loading, error, refresh } = useTrails(includeArchived);
   const { tags } = useTags();
   const { locations: allLocations } = useLocations();
   const [selectedTrailMap, setSelectedTrailMap] = useState<Trail | null>(null);
-  const [selectedTrailEdit, setSelectedTrailEdit] = useState<string | null>(initialTrailId || null);
   const [trailToDelete, setTrailToDelete] = useState<{ id: string, name: string, slug?: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
@@ -50,6 +50,7 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
   const [monthFilter, setMonthFilter] = useState<string>('all');
   const [orderBy, setOrderBy] = useState<string>('updatedAt');
   const [order, setOrder] = useState<'asc' | 'desc'>('desc');
+  const [needsReviewOnly, setNeedsReviewOnly] = useState(false);
 
   const locationOptions = useMemo(() => {
     const names = new Set<string>();
@@ -67,8 +68,8 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
   const filteredAndSortedTrails = useMemo(() => {
     return trails
       .filter((trail) => {
-        const matchesSearch = 
-          trail.name.toLowerCase().includes(search.toLowerCase()) || 
+        const matchesSearch =
+          trail.name.toLowerCase().includes(search.toLowerCase()) ||
           trail.slug.toLowerCase().includes(search.toLowerCase()) ||
           (trail.description?.toLowerCase().includes(search.toLowerCase()) ?? false);
         const matchesStatus = statusFilter === 'all' || trail.status === statusFilter;
@@ -79,7 +80,8 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
           || trail.locations?.some(l => l.name === locationFilter);
         const matchesYear = yearFilter === 'all' || (trail.updatedAt ?? '').slice(0, 4) === yearFilter;
         const matchesMonth = monthFilter === 'all' || (trail.updatedAt ?? '').slice(5, 7) === monthFilter;
-        return matchesSearch && matchesStatus && matchesType && matchesActivity && matchesLocation && matchesYear && matchesMonth;
+        const matchesReview = !needsReviewOnly || trail.needsReview === true;
+        return matchesSearch && matchesStatus && matchesType && matchesActivity && matchesLocation && matchesYear && matchesMonth && matchesReview;
       })
       .sort((a, b) => {
         const isAsc = order === 'asc';
@@ -98,7 +100,7 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
 
         return isAsc ? comparison : -comparison;
       });
-  }, [trails, search, statusFilter, typeFilter, activityFilter, locationFilter, yearFilter, monthFilter, orderBy, order]);
+  }, [trails, search, statusFilter, typeFilter, activityFilter, locationFilter, yearFilter, monthFilter, orderBy, order, needsReviewOnly]);
 
   const handleRequestSort = (property: string) => {
     const isAsc = orderBy === property && order === 'asc';
@@ -117,6 +119,7 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
     setOrderBy('updatedAt');
     setOrder('desc');
     setIncludeArchived(false);
+    setNeedsReviewOnly(false);
   };
 
   const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -166,8 +169,8 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
 
   const handleBulkAction = async (action: 'Delete' | 'UpdateStatus', value?: string) => {
     if (selectedIds.length === 0) return;
-    
-    const confirmMessage = action === 'Delete' 
+
+    const confirmMessage = action === 'Delete'
         ? `Are you sure you want to delete ${selectedIds.length} trails?`
         : `Are you sure you want to update status for ${selectedIds.length} trails?`;
 
@@ -255,6 +258,7 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
     try {
       await apiFetch(`/api/v1/admin/trails/${trailId}/locations`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ locationId, role }),
       });
       const loc = allLocations.find(l => l.id === locationId);
@@ -386,8 +390,8 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
         yearOptions={yearOptions}
         months={MONTHS}
         includeArchived={includeArchived}
-        needsReviewOnly={false}
-        onNeedsReviewOnlyChange={() => { /* legacy page: review bookmark lives on the new pages */ }}
+        needsReviewOnly={needsReviewOnly}
+        onNeedsReviewOnlyChange={setNeedsReviewOnly}
         onResetFilters={handleResetFilters}
       />
 
@@ -400,7 +404,11 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
         onSelectAll={handleSelectAll}
         onSelectOne={handleSelectOne}
         onViewMap={(t) => setSelectedTrailMap(trails.find(x => x.id === t.id) ?? null)}
-        onEdit={setSelectedTrailEdit}
+        onEdit={(trailId) => {
+          const t = trails.find(x => x.id === trailId);
+          navigate(`/trails/${t?.slug ?? trailId}`);
+        }}
+        onRowClick={(t) => navigate(`/trails/${t.slug}`)}
         onDelete={setTrailToDelete}
         onRestore={handleRestore}
         onUpdateStatus={handleUpdateStatus}
@@ -415,35 +423,9 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
 
       <TrailMapDialog trail={selectedTrailMap} onClose={() => setSelectedTrailMap(null)} />
 
-      <TrailEditDialog 
-        open={Boolean(selectedTrailEdit)} 
-        trailId={selectedTrailEdit} 
-        onClose={() => setSelectedTrailEdit(null)} 
-        onSaveSuccess={(trail) => {
-            if (trail) {
-              onNotify(
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Typography variant="body2">Trail '{trail.name}' updated successfully.</Typography>
-                      <Link 
-                        component="button"
-                        onClick={() => setSelectedTrailEdit(trail.id)}
-                        color="inherit" 
-                        sx={{ fontWeight: 'bold', textDecoration: 'underline', verticalAlign: 'baseline', fontSize: 'inherit', p: 0 }}
-                      >
-                        View Trail
-                      </Link>
-                </Box>
-              );
-            } else {
-              onNotify('Trail updated successfully');
-            }
-            refresh();
-        }}
-      />
-
-      <BulkUploadDialog 
-        open={showBulkUpload} 
-        onClose={() => setShowBulkUpload(false)} 
+      <BulkUploadDialog
+        open={showBulkUpload}
+        onClose={() => setShowBulkUpload(false)}
         onUploadSuccess={refresh}
         onNotify={onNotify}
       />

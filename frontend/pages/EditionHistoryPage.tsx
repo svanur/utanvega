@@ -50,12 +50,6 @@ function formatCutoff(minutes: number, t: (key: string, opts?: Record<string, un
 }
 
 
-function getRegistrationStatusColor(status: string | null | undefined): 'success' | 'warning' | 'default' {
-    if (status === 'Open') return 'success';
-    if (status === 'NotStarted') return 'warning';
-    return 'default';
-}
-
 export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistoryPageProps) {
     const { slug, editionKey } = useParams<{ slug: string; editionKey: string }>();
     const { t } = useTranslation();
@@ -227,22 +221,19 @@ export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistor
 
                     <Stack direction="row" spacing={1} sx={{ mt: 1.5, flexWrap: 'wrap', gap: 0.5 }}>
                         {edition.year && (
-                            <Chip label={String(edition.year)} size="small" variant="outlined" color="primary" />
+                            <Tooltip title={t('races.history.year', { defaultValue: 'Year' })}>
+                                <Chip label={String(edition.year)} size="small" variant="outlined" color="primary" />
+                            </Tooltip>
                         )}
                         {edition.date && (
-                            <Chip
-                                icon={<CalendarTodayIcon />}
-                                label={formatDateRange(edition.date, edition.endDate, t)}
-                                size="small"
-                                variant="outlined"
-                            />
-                        )}
-                        {edition.registrationStatus && (
-                            <Chip
-                                label={edition.registrationStatus}
-                                size="small"
-                                color={getRegistrationStatusColor(edition.registrationStatus)}
-                            />
+                            <Tooltip title={t('races.history.eventDate', { defaultValue: 'Event date' })}>
+                                <Chip
+                                    icon={<CalendarTodayIcon />}
+                                    label={formatDateRange(edition.date, edition.endDate, t)}
+                                    size="small"
+                                    variant="outlined"
+                                />
+                            </Tooltip>
                         )}
                     </Stack>
 
@@ -317,20 +308,31 @@ function HistoryRaceCard({
             ...(race.status === 'Cancelled' && { opacity: 0.6 }),
         }}>
             <CardContent sx={{ p: { xs: 2, sm: 2.5 }, '&:last-child': { pb: { xs: 2, sm: 2.5 } } }}>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: { xs: 0.5, sm: 1 }, justifyContent: 'space-between' }}>
-                    <Typography variant="h6" fontWeight={700} sx={{
-                        display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap',
-                        ...(race.status === 'Cancelled' && { textDecoration: 'line-through' }),
-                    }}>
-                        <DirectionsRunIcon sx={{ fontSize: 20, color: theme.palette.primary.main }} />
-                        {loc(race.name, race.nameEn) ?? race.name}
-                        {race.status === 'Cancelled' && (
-                            <Chip label={t('races.statusCancelled')} size="small" color="error" sx={{ ml: 0.5, fontWeight: 600 }} />
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: { xs: 0.5, sm: 1 }, justifyContent: 'space-between' }}>
+                    <Box>
+                        <Typography variant="h6" fontWeight={700} sx={{
+                            display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap',
+                            ...(race.status === 'Cancelled' && { textDecoration: 'line-through' }),
+                        }}>
+                            <DirectionsRunIcon sx={{ fontSize: 20, color: theme.palette.primary.main }} />
+                            {loc(race.name, race.nameEn) ?? race.name}
+                            {race.status === 'Cancelled' && (
+                                <Chip label={t('races.statusCancelled')} size="small" color="error" sx={{ ml: 0.5, fontWeight: 600 }} />
+                            )}
+                            {(race.status === 'Completed') && (
+                                <Chip label={t('races.history.completed', { defaultValue: 'Completed' })} size="small" color="success" sx={{ ml: 0.5 }} />
+                            )}
+                        </Typography>
+                        {race.trailName && (
+                            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+                                {race.trailSlug ? (
+                                    <RouterLink to={`/trails/${race.trailSlug}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                                        {race.trailName}
+                                    </RouterLink>
+                                ) : race.trailName}
+                            </Typography>
                         )}
-                        {(race.status === 'Completed') && (
-                            <Chip label={t('races.history.completed', { defaultValue: 'Completed' })} size="small" color="success" sx={{ ml: 0.5 }} />
-                        )}
-                    </Typography>
+                    </Box>
                     {race.trailSlug && (
                         <Button
                             component={RouterLink}
@@ -346,25 +348,43 @@ function HistoryRaceCard({
 
                 <Stack direction="row" spacing={1} sx={{ mt: 0.5, flexWrap: 'wrap', gap: 0.5 }}>
                     {race.distanceLabel && (
-                        <Chip icon={<StraightenIcon />} label={race.distanceLabel} size="small" color="primary" variant="outlined" />
+                        <Tooltip title={t('races.raceDistance', { defaultValue: 'Race distance' })}>
+                            <Chip icon={<StraightenIcon />} label={race.distanceLabel} size="small" color="primary" variant="outlined" />
+                        </Tooltip>
                     )}
                     {raceDateTime && (
-                        <Chip icon={<CalendarTodayIcon />} label={raceDateTime} size="small" variant="outlined" />
+                        <Tooltip title={t('races.raceDateTime', { defaultValue: 'Date & start time' })}>
+                            <Chip icon={<CalendarTodayIcon />} label={raceDateTime} size="small" variant="outlined" />
+                        </Tooltip>
                     )}
                     {race.trailDistanceMeters && (
-                        <Chip label={`${(race.trailDistanceMeters / 1000).toFixed(1)} km`} size="small" variant="outlined" />
+                        <Tooltip title={t('races.trailDistance', { defaultValue: 'Trail distance' })}>
+                            <Chip label={`${(race.trailDistanceMeters / 1000).toFixed(1)} km`} size="small" variant="outlined" />
+                        </Tooltip>
                     )}
                     {race.trailElevationGain && (
-                        <Chip icon={<TerrainIcon />} label={`↑ ${Math.round(race.trailElevationGain)} m`} size="small" variant="outlined" />
+                        <Tooltip title={t('races.elevationGain', { defaultValue: 'Elevation gain' })}>
+                            <Chip icon={<TerrainIcon />} label={`↑ ${Math.round(race.trailElevationGain)} m`} size="small" variant="outlined" />
+                        </Tooltip>
                     )}
                     {race.cutoffMinutes != null && (
-                        <Chip icon={<TimerIcon />} label={formatCutoff(race.cutoffMinutes, t)} size="small" variant="outlined" color="warning" />
+                        <Tooltip title={t('races.cutoffTime', { defaultValue: 'Time limit' })}>
+                            <Chip icon={<TimerIcon />} label={formatCutoff(race.cutoffMinutes, t)} size="small" variant="outlined" color="warning" />
+                        </Tooltip>
                     )}
                     {race.ticketStatus && (
-                        <Chip label={race.ticketStatus} size="small" color={getTicketStatusColor(race.ticketStatus)} />
+                        <Tooltip title={t('races.ticketStatus', { defaultValue: 'Registration status' })}>
+                            <Chip
+                                label={t(`races.ticketStatus.${race.ticketStatus}`, { defaultValue: race.ticketStatus })}
+                                size="small"
+                                color={getTicketStatusColor(race.ticketStatus)}
+                            />
+                        </Tooltip>
                     )}
                     {race.maxParticipants != null && (
-                        <Chip label={`👥 ${race.maxParticipants}`} size="small" variant="outlined" />
+                        <Tooltip title={t('races.maxParticipants', { defaultValue: 'Max participants' })}>
+                            <Chip label={`👥 ${race.maxParticipants}`} size="small" variant="outlined" />
+                        </Tooltip>
                     )}
                     {race.itraPoints != null && (
                         <Tooltip title={`ITRA ${race.itraPoints}`}>

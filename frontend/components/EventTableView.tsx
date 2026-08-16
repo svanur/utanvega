@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     TableSortLabel, Paper, Typography, Chip, IconButton, Tooltip, Stack,
-    Collapse, Box, Skeleton, Button, alpha, useTheme,
+    Collapse, Box, Skeleton, Button, alpha, useTheme, Link,
 } from '@mui/material';
 import { getTicketStatusColor, groupDistances, isAllSoldOut } from '../utils/ticketStatus';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
@@ -25,6 +25,7 @@ import { getCountdownColor, getEventTypeColor, formatNextDate, isEffectivelyCanc
 import { ActivityIcons, getActivityIcon } from '../utils/activityIcon';
 import { useLocalize } from '../utils/localize';
 import { useIcelandicHolidays } from '../hooks/useIcelandicHolidays';
+import { useFeatureFlags } from '../hooks/useFeatureFlags';
 
 
 
@@ -571,7 +572,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                                         </Typography>
                                                         <Stack direction="row" flexWrap="wrap" gap={1}>
                                                             {races.map(race => (
-                                                                <RaceChipCard key={race.id} race={race} editionDate={nextEdition?.date ?? null} />
+                                                                <RaceChipCard key={race.id} race={race} editionDate={nextEdition?.date ?? null} eventActivityType={event.activityType} />
                                                             ))}
                                                         </Stack>
                                                     </Stack>
@@ -602,10 +603,13 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
 };
 
 // Compact race card shown inside the expanded row
-function RaceChipCard({ race, editionDate }: { race: RaceDto; editionDate?: string | null }) {
+function RaceChipCard({ race, editionDate, eventActivityType }: { race: RaceDto; editionDate?: string | null; eventActivityType?: string }) {
     const { t, i18n } = useTranslation();
     const loc = useLocalize();
     const navigate = useNavigate();
+    const { isEnabled } = useFeatureFlags();
+    const resolvedActivityType = race.activityType ?? eventActivityType ?? null;
+    const isResaleActivityType = resolvedActivityType === 'Running' || resolvedActivityType === 'TrailRunning';
     const cutoffHours = race.cutoffMinutes ? Math.floor(race.cutoffMinutes / 60) : null;
     const cutoffMins = race.cutoffMinutes ? race.cutoffMinutes % 60 : null;
     const hasTrail = !!race.trailSlug;
@@ -628,6 +632,11 @@ function RaceChipCard({ race, editionDate }: { race: RaceDto; editionDate?: stri
             <Stack spacing={0.5}>
                 <Typography variant="body2" fontWeight={600} noWrap>
                     {loc(race.name, race.nameEn) ?? race.name}
+                    {race.trailName && (
+                        <Box component="span" sx={{ fontWeight: 400, color: 'text.secondary' }}>
+                            {' · '}{race.trailName}
+                        </Box>
+                    )}
                 </Typography>
                 {formattedDate && (
                     <Typography variant="caption" color="text.secondary">
@@ -666,30 +675,13 @@ function RaceChipCard({ race, editionDate }: { race: RaceDto; editionDate?: stri
                 )}
                 <Stack direction="row" flexWrap="wrap" gap={0.5} alignItems="center">
                     {race.distanceLabel && (
-                        <Chip
-                            icon={<StraightenIcon sx={{ fontSize: 14 }} />}
-                            label={race.distanceLabel}
-                            size="small"
-                            variant="outlined"
-                            sx={{ height: 22, fontSize: '0.7rem' }}
-                        />
-                    )}
-                    {race.ticketStatus && race.ticketStatus !== 'Available' && (
-                        <Chip
-                            label={race.ticketStatus === 'SoldOut' ? t('races.table.soldOut', 'Sold Out')
-                                : race.ticketStatus === 'AlmostSoldOut' ? t('races.table.almostSoldOut', 'Almost Full')
-                                : race.ticketStatus}
-                            size="small"
-                            color={getTicketStatusColor(race.ticketStatus)}
-                            sx={{ height: 22, fontSize: '0.7rem' }}
-                        />
-                    )}
-                    {race.itraPoints != null && (
-                        <Tooltip title={`ITRA ${race.itraPoints}`}>
-                            <img
-                                src={`/images/itra-${race.itraPoints}.png`}
-                                alt={`ITRA ${race.itraPoints}`}
-                                style={{ height: 20, verticalAlign: 'middle' }}
+                        <Tooltip title={t('races.raceDistance', 'Race distance')}>
+                            <Chip
+                                icon={<StraightenIcon sx={{ fontSize: 14 }} />}
+                                label={race.distanceLabel}
+                                size="small"
+                                variant="outlined"
+                                sx={{ height: 22, fontSize: '0.7rem' }}
                             />
                         </Tooltip>
                     )}
@@ -703,6 +695,39 @@ function RaceChipCard({ race, editionDate }: { race: RaceDto; editionDate?: stri
                                 sx={{ height: 22, fontSize: '0.7rem' }}
                             />
                         </Tooltip>
+                    )}
+                    {race.itraPoints != null && (
+                        <Tooltip title={`ITRA ${race.itraPoints}`}>
+                            <img
+                                src={`/images/itra-${race.itraPoints}.png`}
+                                alt={`ITRA ${race.itraPoints}`}
+                                style={{ height: 20, verticalAlign: 'middle' }}
+                            />
+                        </Tooltip>
+                    )}
+                    {race.ticketStatus && race.ticketStatus !== 'Available' && (
+                        <Tooltip title={t('races.ticketStatusLabel', 'Registration status')}>
+                            <Chip
+                                label={t(`races.ticketStatus.${race.ticketStatus}`, race.ticketStatus)}
+                                size="small"
+                                color={getTicketStatusColor(race.ticketStatus)}
+                                sx={{ height: 22, fontSize: '0.7rem' }}
+                            />
+                        </Tooltip>
+                    )}
+                    {race.ticketStatus === 'SoldOut'
+                        && isEnabled('resale_tickets', false)
+                        && isResaleActivityType && (
+                        <Link
+                            href={t('races.table.resaleHref')}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            variant="caption"
+                            sx={{ height: 22, lineHeight: '22px', fontSize: '0.7rem' }}
+                            onClick={e => e.stopPropagation()}
+                        >
+                            {t('races.table.resaleLink', 'Ticket resale')}
+                        </Link>
                     )}
                 </Stack>
             </Stack>

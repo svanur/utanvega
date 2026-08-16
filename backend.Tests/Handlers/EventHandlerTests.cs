@@ -175,6 +175,7 @@ public class EventHandlerTests : IDisposable
             var result = await handler.Handle(new UpdateEventCommand(
                 Id: ev.Id,
                 Name: "Updated Name",
+                Slug: null, // null leaves the existing slug untouched
                 Description: "Updated desc",
                 Type: "Festival",
                 ActivityType: "Canicross",
@@ -212,6 +213,7 @@ public class EventHandlerTests : IDisposable
         var result = await handler.Handle(new UpdateEventCommand(
             Id: Guid.NewGuid(),
             Name: "Nothing",
+            Slug: null,
             Description: null,
             Type: "Race",
             ActivityType: "TrailRunning",
@@ -2444,6 +2446,92 @@ public class EventHandlerTests : IDisposable
         var eventDetail = Assert.Single(result);
         var raceDto = Assert.Single(Assert.Single(eventDetail.Editions).Races);
         Assert.Equal("Distance", raceDto.ResultType);
+    }
+
+    // ─── Race trail links vs trail visibility ───
+    //
+    // Archiving or hiding a trail does not unlink the races that use it, but the public trail
+    // page only serves Published/EventOnly. Handing out the slug anyway would render a
+    // "View trail" link that 404s, so the public projection must withhold it.
+
+    private async Task<RaceDto> GetRaceDtoForTrail(TrailStatus trailStatus, string slug, bool includeHidden = false)
+    {
+        var trail = new Trail
+        {
+            Id = Guid.NewGuid(),
+            Name = "Linked Trail",
+            Slug = $"linked-trail-{Guid.NewGuid():N}",
+            Length = 21000,
+            ElevationGain = 500,
+            ElevationLoss = 500,
+            ActivityTypeId = ActivityType.TrailRunning,
+            Status = trailStatus,
+            Type = TrailType.PointToPoint,
+            Difficulty = Difficulty.Hard,
+            Visibility = Visibility.Public,
+        };
+        var ev = CreateTestEvent($"Trail Link Event {slug}");
+        ev.Slug = slug;
+        var edition = CreateTestEdition(ev.Id);
+        var race = new Race
+        {
+            Id = Guid.NewGuid(),
+            EventEditionId = edition.Id,
+            TrailId = trail.Id,
+            Name = "Linked Race",
+            SortOrder = 0,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Trails.Add(trail);
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventQuery(slug, IncludeHidden: includeHidden), CancellationToken.None);
+        return Assert.Single(Assert.Single(result!.Editions).Races);
+    }
+
+    [Theory]
+    [InlineData(TrailStatus.Published)]
+    [InlineData(TrailStatus.EventOnly)]
+    public async Task GetEvent_BySlug_RaceDto_ExposesTrailSlug_WhenTrailIsPubliclyVisible(TrailStatus status)
+    {
+        var raceDto = await GetRaceDtoForTrail(status, $"trail-link-visible-{status}".ToLowerInvariant());
+        Assert.NotNull(raceDto.TrailSlug);
+    }
+
+    [Theory]
+    [InlineData(TrailStatus.Draft)]
+    [InlineData(TrailStatus.Archived)]
+    [InlineData(TrailStatus.Flagged)]
+    public async Task GetEvent_BySlug_RaceDto_WithholdsTrailSlug_WhenTrailIsNotPubliclyVisible(TrailStatus status)
+    {
+        var raceDto = await GetRaceDtoForTrail(status, $"trail-link-hidden-{status}".ToLowerInvariant());
+        Assert.Null(raceDto.TrailSlug);
+    }
+
+    [Fact]
+    public async Task GetEvent_BySlug_RaceDto_KeepsTrailNameAndDistance_WhenTrailIsArchived()
+    {
+        // Only the link is withheld — the race's own descriptive data stays accurate.
+        var raceDto = await GetRaceDtoForTrail(TrailStatus.Archived, "trail-link-archived-keeps-data");
+        Assert.Null(raceDto.TrailSlug);
+        Assert.Equal("Linked Trail", raceDto.TrailName);
+        Assert.Equal(21000, raceDto.TrailDistanceMeters);
+    }
+
+    [Fact]
+    public async Task GetEvent_BySlug_RaceDto_ExposesTrailSlug_ForAdmin_EvenWhenArchived()
+    {
+        // Admin (IncludeHidden) still needs the link to navigate to the trail.
+        var raceDto = await GetRaceDtoForTrail(TrailStatus.Archived, "trail-link-archived-admin", includeHidden: true);
+        Assert.NotNull(raceDto.TrailSlug);
     }
 
     [Fact]

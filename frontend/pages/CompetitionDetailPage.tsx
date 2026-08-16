@@ -27,6 +27,7 @@ import {
     alpha,
     Menu,
     MenuItem,
+    Link,
 } from '@mui/material';
 import FacebookIcon from '@mui/icons-material/Facebook';
 import InstagramIcon from '@mui/icons-material/Instagram';
@@ -1238,6 +1239,7 @@ function RaceCard({
 }) {
     const theme = useTheme();
     const loc = useLocalize();
+    const { isEnabled } = useFeatureFlags();
     const raceDateTime = formatRaceDateTime(race.dateOfRace, race.startTime, t);
 
     // Race phase: determine if race is in progress (started but not finished)
@@ -1263,28 +1265,39 @@ function RaceCard({
             ...(racePhase === 'in-progress' && { borderColor: theme.palette.success.main, borderWidth: 2 }),
         }}>
             <CardContent sx={{ p: { xs: 2, sm: 2.5 }, '&:last-child': { pb: { xs: 2, sm: 2.5 } } }}>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: { xs: 0.5, sm: 1 }, justifyContent: 'space-between' }}>
-                    <Typography variant="h6" fontWeight={700} sx={{
-                        display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap',
-                        ...(race.status === 'Cancelled' && { textDecoration: 'line-through' }),
-                    }}>
-                        <Box component="span" sx={{ fontSize: 20, color: 'primary.main', display: 'flex' }}>
-                            {getActivityIcon(race.activityType ?? race.trailActivityType ?? activityType ?? 'TrailRunning')}
-                        </Box>
-                        {loc(race.name, race.nameEn)}
-                        {race.status === 'Cancelled' && (
-                            <Chip label={t('races.statusCancelled')} size="small" color="error" sx={{ ml: 0.5, fontWeight: 600 }} />
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: { xs: 0.5, sm: 1 }, justifyContent: 'space-between' }}>
+                    <Box>
+                        <Typography variant="h6" fontWeight={700} sx={{
+                            display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap',
+                            ...(race.status === 'Cancelled' && { textDecoration: 'line-through' }),
+                        }}>
+                            <Box component="span" sx={{ fontSize: 20, color: 'primary.main', display: 'flex' }}>
+                                {getActivityIcon(race.activityType ?? race.trailActivityType ?? activityType ?? 'TrailRunning')}
+                            </Box>
+                            {loc(race.name, race.nameEn)}
+                            {race.status === 'Cancelled' && (
+                                <Chip label={t('races.statusCancelled')} size="small" color="error" sx={{ ml: 0.5, fontWeight: 600 }} />
+                            )}
+                            {race.status === 'Upcoming' && (
+                                <Chip label={t('races.statusUpcoming')} size="small" color="info" sx={{ ml: 0.5, fontWeight: 600 }} />
+                            )}
+                            {racePhase === 'in-progress' && (
+                                <Chip label={t('races.inProgress', { defaultValue: '🏃 In progress' })} size="small" color="success" sx={{ ml: 0.5, fontWeight: 600 }} />
+                            )}
+                            {racePhase === 'finished' && daysUntil === 0 && (
+                                <Chip label={t('races.raceFinished', { defaultValue: '🏁 Finished' })} size="small" color="default" sx={{ ml: 0.5, fontWeight: 600 }} />
+                            )}
+                        </Typography>
+                        {race.trailName && (
+                            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+                                {race.trailSlug ? (
+                                    <RouterLink to={`/trails/${race.trailSlug}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                                        {race.trailName}
+                                    </RouterLink>
+                                ) : race.trailName}
+                            </Typography>
                         )}
-                        {race.status === 'Upcoming' && (
-                            <Chip label={t('races.statusUpcoming')} size="small" color="info" sx={{ ml: 0.5, fontWeight: 600 }} />
-                        )}
-                        {racePhase === 'in-progress' && (
-                            <Chip label={t('races.inProgress', { defaultValue: '🏃 In progress' })} size="small" color="success" sx={{ ml: 0.5, fontWeight: 600 }} />
-                        )}
-                        {racePhase === 'finished' && daysUntil === 0 && (
-                            <Chip label={t('races.raceFinished', { defaultValue: '🏁 Finished' })} size="small" color="default" sx={{ ml: 0.5, fontWeight: 600 }} />
-                        )}
-                    </Typography>
+                    </Box>
                     {(race.trailSlug || showShareCard || showFinishCard) && (
                         <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0, flexWrap: 'wrap' }}>
                             {showPredict && race.trailSlug && (
@@ -1375,6 +1388,19 @@ function RaceCard({
                         <Tooltip title={t('races.ticketStatusLabel', { defaultValue: 'Registration status' })}>
                             <Chip label={t(`races.ticketStatus.${race.ticketStatus}`, { defaultValue: race.ticketStatus })} size="small" color={getTicketStatusColor(race.ticketStatus)} />
                         </Tooltip>
+                    )}
+                    {race.ticketStatus === 'SoldOut'
+                        && isEnabled('resale_tickets', false)
+                        && (() => { const at = race.activityType ?? activityType ?? null; return at === 'Running' || at === 'TrailRunning'; })() && (
+                        <Link
+                            href={t('races.table.resaleHref', { defaultValue: 'https://www.facebook.com/groups/1146319782540776' })}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            variant="body2"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            {t('races.table.resaleLink', { defaultValue: 'Ticket resale' })}
+                        </Link>
                     )}
                     {race.maxParticipants != null && (
                         <Tooltip title={t('races.maxParticipants', { defaultValue: 'Max participants' })}>

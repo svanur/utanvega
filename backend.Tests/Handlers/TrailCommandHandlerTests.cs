@@ -2,6 +2,7 @@ using Moq;
 using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Application.Trails.Commands.UpdateTrail;
 using Utanvega.Backend.Application.Trails.Commands.DeleteTrail;
+using Utanvega.Backend.Application.Trails.Commands.PatchTrail;
 using Utanvega.Backend.Core.Entities;
 
 namespace Utanvega.Backend.Tests.Handlers;
@@ -208,6 +209,87 @@ public class TrailCommandHandlerTests : IDisposable
         {
             // Trail should still exist in DB (soft delete)
             Assert.Equal(1, ctx.Trails.Count());
+        }
+    }
+
+    // ─── PatchTrailCommandHandler: NeedsReview ───
+
+    [Theory]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    public async Task Patch_NeedsReview_TogglesFlag(bool initial, bool target)
+    {
+        var trail = CreateTestTrail();
+        trail.NeedsReview = initial;
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Trails.Add(trail);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new PatchTrailCommandHandler(ctx, _cacheInvalidator);
+            var result = await handler.Handle(
+                new PatchTrailCommand(trail.Id, NeedsReview: target), CancellationToken.None);
+            Assert.True(result);
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            Assert.Equal(target, ctx.Trails.First().NeedsReview);
+        }
+    }
+
+    [Fact]
+    public async Task Patch_NeedsReview_DoesNotChangeStatus()
+    {
+        // The whole point of NeedsReview is that it is independent of visibility — marking a
+        // published trail for review must not take it off the public site.
+        var trail = CreateTestTrail(status: TrailStatus.Published);
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Trails.Add(trail);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new PatchTrailCommandHandler(ctx, _cacheInvalidator);
+            await handler.Handle(new PatchTrailCommand(trail.Id, NeedsReview: true), CancellationToken.None);
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var patched = ctx.Trails.First();
+            Assert.True(patched.NeedsReview);
+            Assert.Equal(TrailStatus.Published, patched.Status);
+        }
+    }
+
+    [Fact]
+    public async Task Patch_WithoutNeedsReview_LeavesFlagUntouched()
+    {
+        // null means "not supplied" — patching an unrelated field must not clear the bookmark.
+        var trail = CreateTestTrail();
+        trail.NeedsReview = true;
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Trails.Add(trail);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new PatchTrailCommandHandler(ctx, _cacheInvalidator);
+            await handler.Handle(new PatchTrailCommand(trail.Id, Name: "Renamed"), CancellationToken.None);
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var patched = ctx.Trails.First();
+            Assert.Equal("Renamed", patched.Name);
+            Assert.True(patched.NeedsReview);
         }
     }
 }

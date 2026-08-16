@@ -54,7 +54,8 @@ public record TrailDto(
     string? TerrainType = null,
     string? NameEn = null,
     string? DescriptionEn = null,
-    Dictionary<string, string>? TranslationHashes = null
+    Dictionary<string, string>? TranslationHashes = null,
+    bool NeedsReview = false
 );
 
 public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailDto>>
@@ -100,6 +101,7 @@ public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailD
                 t.UpdatedAt,
                 t.TerrainType,
                 t.TranslationHashes,
+                t.NeedsReview,
                 HasGpx = t.GpxData != null,
                 Locations = t.TrailLocations
                     .OrderBy(tl => tl.Order)
@@ -159,7 +161,8 @@ public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailD
             TerrainType: t.TerrainType?.ToString(),
             NameEn: t.NameEn,
             DescriptionEn: t.DescriptionEn,
-            TranslationHashes: t.TranslationHashes == null ? null : JsonSerializer.Deserialize<Dictionary<string, string>>(t.TranslationHashes)
+            TranslationHashes: t.TranslationHashes == null ? null : JsonSerializer.Deserialize<Dictionary<string, string>>(t.TranslationHashes),
+            NeedsReview: t.NeedsReview
         )).ToList();
 
         return result;
