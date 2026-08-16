@@ -595,7 +595,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                 variant={tag.color ? 'filled' : 'outlined'}
                             />
                         ))}
-                        {isEnabled('share_trail') && <ShareButtons title={trail.name} />}
+                        {isEnabled('share_trail') && <ShareButtons title={trail.name} slug={trail.slug} />}
                         {isEnabled('qr_code') && <QRCodeShare slug={trail.slug} trailName={trail.name} />}
                         {isEnabled('download_trail') && (
                         <Tooltip title={t('trail.downloadGpx')} arrow>

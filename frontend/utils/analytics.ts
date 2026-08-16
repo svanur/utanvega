@@ -16,8 +16,8 @@ export function trackStoreIconClick() {
     track('Store Icon Click');
 }
 
-export function trackTrailShareClick() {
-    track('Trail Share Click');
+export function trackTrailShareClick(slug?: string) {
+    track('Trail Share Click', slug ? { slug } : {});
 }
 
 export function trackTrailQRClick(slug: string) {
