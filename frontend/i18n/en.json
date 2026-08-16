@@ -1404,6 +1404,8 @@
             "soldOut": "Sold Out",
             "almostSoldOut": "Almost Full",
             "cutoff": "Time Limit",
+            "resaleLink": "Ticket resale group",
+            "resaleHref": "https://www.facebook.com/groups/1146319782540776",
             "certifications": "Credentials"
         },
         "nearMe": {
