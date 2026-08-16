@@ -632,6 +632,11 @@ function RaceChipCard({ race, editionDate, eventActivityType }: { race: RaceDto;
             <Stack spacing={0.5}>
                 <Typography variant="body2" fontWeight={600} noWrap>
                     {loc(race.name, race.nameEn) ?? race.name}
+                    {race.trailName && (
+                        <Box component="span" sx={{ fontWeight: 400, color: 'text.secondary' }}>
+                            {' · '}{race.trailName}
+                        </Box>
+                    )}
                 </Typography>
                 {formattedDate && (
                     <Typography variant="caption" color="text.secondary">
