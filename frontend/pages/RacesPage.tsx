@@ -33,6 +33,7 @@ import {
     Fade,
     Select,
     MenuItem,
+    Link,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import SearchIcon from '@mui/icons-material/Search';
@@ -1350,6 +1351,23 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                         </Tooltip>
                                                     ))}
                                                 </Stack>
+                                            )}
+
+                                            {/* Resale link */}
+                                            {isEnabled('resale_tickets', false)
+                                                && (comp.activityType === 'Running' || comp.activityType === 'TrailRunning')
+                                                && comp.distances?.some(d => d.ticketStatus === 'SoldOut') && (
+                                                <Box sx={{ mt: 0.75 }}>
+                                                    <Link
+                                                        href={t('races.table.resaleHref')}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        variant="body2"
+                                                        onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                                                    >
+                                                        {t('races.table.resaleLink', 'Ticket resale')}
+                                                    </Link>
+                                                </Box>
                                             )}
 
                                             {/* Row 4: actions */}
