@@ -670,13 +670,15 @@ function RaceChipCard({ race, editionDate, eventActivityType }: { race: RaceDto;
                 )}
                 <Stack direction="row" flexWrap="wrap" gap={0.5} alignItems="center">
                     {race.distanceLabel && (
-                        <Chip
-                            icon={<StraightenIcon sx={{ fontSize: 14 }} />}
-                            label={race.distanceLabel}
-                            size="small"
-                            variant="outlined"
-                            sx={{ height: 22, fontSize: '0.7rem' }}
-                        />
+                        <Tooltip title={t('races.raceDistance', 'Race distance')}>
+                            <Chip
+                                icon={<StraightenIcon sx={{ fontSize: 14 }} />}
+                                label={race.distanceLabel}
+                                size="small"
+                                variant="outlined"
+                                sx={{ height: 22, fontSize: '0.7rem' }}
+                            />
+                        </Tooltip>
                     )}
                     {cutoffHours != null && (
                         <Tooltip title={t('races.table.cutoff', 'Cutoff time')}>
@@ -690,14 +692,16 @@ function RaceChipCard({ race, editionDate, eventActivityType }: { race: RaceDto;
                         </Tooltip>
                     )}
                     {race.ticketStatus && race.ticketStatus !== 'Available' && (
-                        <Chip
-                            label={race.ticketStatus === 'SoldOut' ? t('races.table.soldOut', 'Sold Out')
-                                : race.ticketStatus === 'AlmostSoldOut' ? t('races.table.almostSoldOut', 'Almost Full')
-                                : race.ticketStatus}
-                            size="small"
-                            color={getTicketStatusColor(race.ticketStatus)}
-                            sx={{ height: 22, fontSize: '0.7rem' }}
-                        />
+                        <Tooltip title={t('races.ticketStatusLabel', 'Registration status')}>
+                            <Chip
+                                label={race.ticketStatus === 'SoldOut' ? t('races.table.soldOut', 'Sold Out')
+                                    : race.ticketStatus === 'AlmostSoldOut' ? t('races.table.almostSoldOut', 'Almost Full')
+                                    : race.ticketStatus}
+                                size="small"
+                                color={getTicketStatusColor(race.ticketStatus)}
+                                sx={{ height: 22, fontSize: '0.7rem' }}
+                            />
+                        </Tooltip>
                     )}
                     {race.ticketStatus === 'SoldOut'
                         && isEnabled('resale_tickets', false)
