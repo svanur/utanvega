@@ -691,6 +691,15 @@ function RaceChipCard({ race, editionDate, eventActivityType }: { race: RaceDto;
                             />
                         </Tooltip>
                     )}
+                    {race.itraPoints != null && (
+                        <Tooltip title={`ITRA ${race.itraPoints}`}>
+                            <img
+                                src={`/images/itra-${race.itraPoints}.png`}
+                                alt={`ITRA ${race.itraPoints}`}
+                                style={{ height: 20, verticalAlign: 'middle' }}
+                            />
+                        </Tooltip>
+                    )}
                     {race.ticketStatus && race.ticketStatus !== 'Available' && (
                         <Tooltip title={t('races.ticketStatusLabel', 'Registration status')}>
                             <Chip
@@ -714,15 +723,6 @@ function RaceChipCard({ race, editionDate, eventActivityType }: { race: RaceDto;
                         >
                             {t('races.table.resaleLink', 'Ticket resale')}
                         </Link>
-                    )}
-                    {race.itraPoints != null && (
-                        <Tooltip title={`ITRA ${race.itraPoints}`}>
-                            <img
-                                src={`/images/itra-${race.itraPoints}.png`}
-                                alt={`ITRA ${race.itraPoints}`}
-                                style={{ height: 20, verticalAlign: 'middle' }}
-                            />
-                        </Tooltip>
                     )}
                 </Stack>
             </Stack>
