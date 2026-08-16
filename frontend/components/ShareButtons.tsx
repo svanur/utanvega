@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { trackTrailShareClick } from '../utils/analytics';
 import { 
     IconButton, 
     Tooltip, 
@@ -22,9 +23,10 @@ interface ShareButtonsProps {
     url?: string;
     shareText?: string;
     buttonLabel?: string;
+    slug?: string;
 }
 
-export default function ShareButtons({ title, url, shareText, buttonLabel }: ShareButtonsProps) {
+export default function ShareButtons({ title, url, shareText, buttonLabel, slug }: ShareButtonsProps) {
     const { t } = useTranslation();
     const [openSnackbar, setOpenSnackbar] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
@@ -92,6 +94,7 @@ export default function ShareButtons({ title, url, shareText, buttonLabel }: Sha
     };
 
     const handleOpenMenu = (event: React.MouseEvent<HTMLElement>) => {
+        trackTrailShareClick(slug);
         setAnchorEl(event.currentTarget);
     };
 

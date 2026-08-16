@@ -45,7 +45,9 @@ import {
   TRAIL_TERRAIN_TYPES as terrainTypes,
 } from '../../utils/trailOptions';
 
-let eventDetailsCache: EventDetailDto[] | null = null;
+let eventDetailsCachePromise: Promise<EventDetailDto[]> | null = null;
+let eventDetailsCacheTime = 0;
+const EVENT_DETAILS_CACHE_TTL = 5 * 60 * 1000;
 
 type LinkableEdition = {
   id: string;
@@ -139,8 +141,12 @@ function TrailFormCardInner({ trail: initialTrail, onClose, onSaved, onNotify }:
     const fetchLinkableRaces = async () => {
       try {
         setRacesLoading(true);
-        const eventDetails = eventDetailsCache ?? await apiFetch<EventDetailDto[]>('/api/v1/admin/events/details');
-        if (!eventDetailsCache) eventDetailsCache = eventDetails;
+        if (!eventDetailsCachePromise || Date.now() - eventDetailsCacheTime > EVENT_DETAILS_CACHE_TTL) {
+          eventDetailsCacheTime = Date.now();
+          eventDetailsCachePromise = apiFetch<EventDetailDto[]>('/api/v1/admin/events/details');
+          eventDetailsCachePromise.catch(() => { eventDetailsCachePromise = null; });
+        }
+        const eventDetails = await eventDetailsCachePromise;
         setAllEvents(eventDetails.map(d => ({
           id: d.id, name: d.name, slug: d.slug, description: d.description, type: d.type,
           activityType: d.activityType, status: d.status, organizerName: d.organizerName,

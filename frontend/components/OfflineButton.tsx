@@ -1,4 +1,5 @@
 import { Box, CircularProgress, IconButton, Snackbar, Tooltip } from '@mui/material';
+import { trackTrailOfflineSave } from '../utils/analytics';
 import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
 import OfflinePinIcon from '@mui/icons-material/OfflinePin';
 import { useTranslation } from 'react-i18next';
@@ -23,6 +24,7 @@ export default function OfflineButton({ slug, trailName }: OfflineButtonProps) {
                 await removeTrailOffline(slug);
                 setSnackbar(t('offline.removed'));
             } else {
+                trackTrailOfflineSave(slug);
                 await saveTrailOffline(slug);
                 setSnackbar(t('offline.savedSuccess', { name: trailName }));
             }

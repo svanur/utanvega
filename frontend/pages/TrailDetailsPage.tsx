@@ -1,4 +1,5 @@
 import React, { useState, useRef, useMemo, useEffect, lazy, Suspense } from 'react';
+import { trackTrailGpxDownload, trackTrailCompareClick, trackTrailPredictorClick, trackTrailDirectionsClick } from '../utils/analytics';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { usePageTitle } from '../hooks/usePageTitle';
@@ -594,7 +595,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                 variant={tag.color ? 'filled' : 'outlined'}
                             />
                         ))}
-                        {isEnabled('share_trail') && <ShareButtons title={trail.name} />}
+                        {isEnabled('share_trail') && <ShareButtons title={trail.name} slug={trail.slug} />}
                         {isEnabled('qr_code') && <QRCodeShare slug={trail.slug} trailName={trail.name} />}
                         {isEnabled('download_trail') && (
                         <Tooltip title={t('trail.downloadGpx')} arrow>
@@ -603,6 +604,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                 component="a"
                                 href={`${API_URL}/api/v1/trails/${trail.slug}/gpx`}
                                 download
+                                onClick={() => trackTrailGpxDownload(trail.slug)}
                             >
                                 <FileDownloadIcon fontSize="small" />
                             </IconButton>
@@ -612,7 +614,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                         <Tooltip title={t('compare.compareButton')} arrow>
                             <IconButton
                                 size="small"
-                                onClick={() => navigate(`/compare?a=${trail.slug}`)}
+                                onClick={() => { trackTrailCompareClick(trail.slug); navigate(`/compare?a=${trail.slug}`); }}
                             >
                                 <CompareArrowsIcon fontSize="small" />
                             </IconButton>
@@ -622,7 +624,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                         <Tooltip title={t('tools.trailPredictor.title')} arrow>
                             <IconButton
                                 size="small"
-                                onClick={() => navigate(`/tools/trail-predictor?trail=${encodeURIComponent(trail.slug)}`)}
+                                onClick={() => { trackTrailPredictorClick(trail.slug); navigate(`/tools/trail-predictor?trail=${encodeURIComponent(trail.slug)}`); }}
                             >
                                 <QueryStatsIcon fontSize="small" />
                             </IconButton>
@@ -637,6 +639,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                     href={`https://www.google.com/maps/dir/?api=1&destination=${geometry.coordinates[0][1]},${geometry.coordinates[0][0]}`}
                                     target="_blank"
                                     rel="noopener"
+                                    onClick={() => trackTrailDirectionsClick(trail.slug)}
                                 >
                                     <DirectionsCarIcon fontSize="small" />
                                 </IconButton>
