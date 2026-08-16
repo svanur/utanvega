@@ -1,7 +1,8 @@
-import { Paper, TextField, InputAdornment, MenuItem, Select, FormControl, InputLabel, Tooltip, IconButton } from '@mui/material';
+import { Paper, TextField, InputAdornment, MenuItem, Select, FormControl, InputLabel, Tooltip, IconButton, Chip } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 import FilterAltOffIcon from '@mui/icons-material/FilterAltOff';
+import BookmarkIcon from '@mui/icons-material/Bookmark';
 
 interface TrailFilterBarProps {
   search: string;
@@ -22,6 +23,8 @@ interface TrailFilterBarProps {
   yearOptions: string[];
   months: string[];
   includeArchived: boolean;
+  needsReviewOnly: boolean;
+  onNeedsReviewOnlyChange: (value: boolean) => void;
   onResetFilters: () => void;
 }
 
@@ -44,6 +47,8 @@ export default function TrailFilterBar({
   yearOptions,
   months,
   includeArchived,
+  needsReviewOnly,
+  onNeedsReviewOnlyChange,
   onResetFilters,
 }: TrailFilterBarProps) {
   return (
@@ -77,10 +82,10 @@ export default function TrailFilterBar({
           onChange={(e) => onStatusFilterChange(e.target.value)}
         >
           <MenuItem value="all">All Statuses</MenuItem>
-          <MenuItem value="Draft">Draft</MenuItem>
+          <MenuItem value="Draft">Hidden</MenuItem>
           <MenuItem value="Published">Published</MenuItem>
-          <MenuItem value="Archived">Archived</MenuItem>
           <MenuItem value="EventOnly">Event Only</MenuItem>
+          <MenuItem value="Archived">Archived</MenuItem>
         </Select>
       </FormControl>
       <FormControl size="small" sx={{ minWidth: 150 }}>
@@ -138,6 +143,17 @@ export default function TrailFilterBar({
           {months.map((m, i) => <MenuItem key={i} value={String(i + 1).padStart(2, '0')}>{m}</MenuItem>)}
         </Select>
       </FormControl>
+      <Tooltip title="Show only trails marked for review">
+        <Chip
+          icon={<BookmarkIcon />}
+          label="Needs review"
+          size="small"
+          color={needsReviewOnly ? 'warning' : 'default'}
+          variant={needsReviewOnly ? 'filled' : 'outlined'}
+          onClick={() => onNeedsReviewOnlyChange(!needsReviewOnly)}
+          sx={{ cursor: 'pointer' }}
+        />
+      </Tooltip>
       <Tooltip title="Reset all filters">
         <IconButton onClick={onResetFilters}>
           <FilterAltOffIcon />

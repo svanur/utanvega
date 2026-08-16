@@ -15,6 +15,7 @@ import { MapContainer, TileLayer, Polyline, CircleMarker, useMap } from 'react-l
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { apiFetch } from '../hooks/api';
+import type { TrailDetail } from '../hooks/useTrails';
 import { useLocations } from '../hooks/useLocations';
 import { useTags } from '../hooks/useTags';
 import { useTranslate } from '../hooks/useTranslate';
@@ -23,42 +24,6 @@ import type { EventDetailDto, EventEditionDto, EventSummaryDto, RaceDto } from '
 import ChangeLogList from './ChangeLogList';
 import { generateSlug } from '../utils/slugify';
 import { hashText } from '../utils/translationHash';
-
-type TrailLocationInfo = {
-    locationId: string;
-    role: 'Start' | 'End' | 'BelongsTo' | 'PassingThrough';
-    order: number;
-};
-
-type TrailTagInfo = {
-    tagId: string;
-    name: string;
-    slug: string;
-    color: string | null;
-};
-
-type TrailDetail = {
-    id: string;
-    name: string;
-    nameEn: string | null;
-    slug: string;
-    description: string;
-    descriptionEn: string | null;
-    activityType: string;
-    status: string;
-    type: string;
-    difficulty: string;
-    visibility: string;
-    length: number;
-    elevationGain: number;
-    elevationLoss: number;
-    youtubeUrl?: string | null;
-    terrainType?: string | null;
-    maxAltitude?: number | null;
-    translationHashes?: Record<string, string> | null;
-    locations: TrailLocationInfo[];
-    tags: TrailTagInfo[];
-};
 
 type LinkableEdition = {
     id: string;
@@ -93,9 +58,8 @@ const activityTypes = [
 ];
 
 const trailStatuses = [
-    { value: 'Draft', label: 'Draft' },
+    { value: 'Draft', label: 'Hidden' },
     { value: 'Published', label: 'Published' },
-    { value: 'Flagged', label: 'Flagged' },
     { value: 'Archived', label: 'Archived' },
     { value: 'EventOnly', label: 'Event Only' },
 ];

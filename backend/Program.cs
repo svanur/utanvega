@@ -772,6 +772,7 @@ app.MapGet("/api/v1/admin/trails/{idOrSlug}", [Authorize(Policy = "AdminOnly")] 
         trail.ElevationGain,
         trail.ElevationLoss,
         trail.YoutubeUrl,
+        trail.NeedsReview,
         TerrainType = trail.TerrainType?.ToString(),
         TranslationHashes = trail.TranslationHashes == null ? null : System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(trail.TranslationHashes),
         MaxAltitude = trail.ElevationProfile != null && trail.ElevationProfile.Length > 0 ? trail.ElevationProfile.Max() : (double?)null,
@@ -785,6 +786,38 @@ app.MapGet("/api/v1/admin/trails/{idOrSlug}", [Authorize(Policy = "AdminOnly")] 
     });
 })
 .WithName("GetAdminTrail");
+
+app.MapGet("/api/v1/admin/trails/{idOrSlug}/races", [Authorize(Policy = "AdminOnly")] async (string idOrSlug, UtanvegaDbContext context) =>
+{
+    var isGuid = Guid.TryParse(idOrSlug, out var id);
+    var trailQuery = context.Trails.AsNoTracking();
+    var trail = isGuid
+        ? await trailQuery.FirstOrDefaultAsync(t => t.Id == id)
+        : await trailQuery.FirstOrDefaultAsync(t => t.Slug == idOrSlug);
+
+    if (trail == null) return Results.NotFound();
+
+    var races = await context.Races
+        .Include(r => r.EventEdition).ThenInclude(ed => ed.Event)
+        .AsNoTracking()
+        .Where(r => r.TrailId == trail.Id)
+        .OrderByDescending(r => r.EventEdition.Date)
+        .Select(r => new
+        {
+            r.Id,
+            RaceName = r.Name,
+            EventName = r.EventEdition.Event.Name,
+            EventSlug = r.EventEdition.Event.Slug,
+            EditionId = r.EventEdition.Id,
+            EditionDate = r.EventEdition.Date,
+            EditionYear = r.EventEdition.Year,
+            EditionTitle = r.EventEdition.Title,
+        })
+        .ToListAsync();
+
+    return Results.Ok(races);
+})
+.WithName("GetAdminTrailRaces");
 
 app.MapPut("/api/v1/admin/trails/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, UpdateTrailCommand command, IMediator mediator, HttpContext httpContext) =>
 {

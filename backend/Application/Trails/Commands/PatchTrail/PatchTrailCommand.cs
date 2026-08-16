@@ -12,7 +12,8 @@ public record PatchTrailCommand(
     string? Description = null,
     string? ActivityType = null,
     string? Difficulty = null,
-    string? Status = null
+    string? Status = null,
+    bool? NeedsReview = null
 ) : IRequest<bool>;
 
 public class PatchTrailCommandHandler : IRequestHandler<PatchTrailCommand, bool>
@@ -47,6 +48,9 @@ public class PatchTrailCommandHandler : IRequestHandler<PatchTrailCommand, bool>
 
         if (request.Status is not null && Enum.TryParse<TrailStatus>(request.Status, out var status))
             trail.Status = status;
+
+        if (request.NeedsReview is not null)
+            trail.NeedsReview = request.NeedsReview.Value;
 
         trail.UpdatedAt = DateTime.UtcNow;
 

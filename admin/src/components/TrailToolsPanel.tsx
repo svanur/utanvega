@@ -68,7 +68,7 @@ export default function TrailToolsPanel({
                   <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                     <Button size="small" variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={() => onBulkAction('Delete')} disabled={bulkActioning}>Delete</Button>
                     <Button size="small" variant="outlined" onClick={() => onBulkAction('UpdateStatus', 'Published')} disabled={bulkActioning}>Publish</Button>
-                    <Button size="small" variant="outlined" onClick={() => onBulkAction('UpdateStatus', 'Draft')} disabled={bulkActioning}>Draft</Button>
+                    <Button size="small" variant="outlined" onClick={() => onBulkAction('UpdateStatus', 'Draft')} disabled={bulkActioning}>Hidden</Button>
                     <Button size="small" variant="outlined" onClick={() => onBulkAction('UpdateStatus', 'Archived')} disabled={bulkActioning}>Archive</Button>
                   </Stack>
                   {tags.length > 0 && (
@@ -109,7 +109,7 @@ export default function TrailToolsPanel({
           <Typography variant="body2" fontWeight={600}>{selectedIds.length} selected</Typography>
           <Button size="small" variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={() => onBulkAction('Delete')} disabled={bulkActioning}>Delete</Button>
           <Button size="small" variant="outlined" onClick={() => onBulkAction('UpdateStatus', 'Published')} disabled={bulkActioning}>Publish</Button>
-          <Button size="small" variant="outlined" onClick={() => onBulkAction('UpdateStatus', 'Draft')} disabled={bulkActioning}>Draft</Button>
+          <Button size="small" variant="outlined" onClick={() => onBulkAction('UpdateStatus', 'Draft')} disabled={bulkActioning}>Hidden</Button>
           <Button size="small" variant="outlined" onClick={() => onBulkAction('UpdateStatus', 'Archived')} disabled={bulkActioning}>Archive</Button>
         </Paper>
       )}

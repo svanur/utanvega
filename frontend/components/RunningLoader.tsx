@@ -44,7 +44,10 @@ const loadingMessages = {
         'Ég vel samúð fram yfir gagnrýni.',
         'Ég er að gera mitt besta.',
         'Framfarir geta verið hljóðlátar.',
-        'Leggjumst í grasið og jarðtenjum.'
+        'Leggjumst í grasið og jarðtenjum.',
+        'Ást er ...að fara í fjallgöngu saman.',
+        'Ást er ...að fara út að hlaupa saman.',
+        'Anda inn ...anda út'
     ],
     en: [
         'Loading trails...',
@@ -79,7 +82,10 @@ const loadingMessages = {
         "Balanced HRV is hotter than a fast mile.",
         "You don't stretch enough.",
         "Take rest day and touch some grass.",
-        "Mental health is fitness too"
+        "Mental health is fitness too",
+        'Love is ...go hiking together.',
+        'Love is ...go running together.',
+        'Breathe in ...breathe out.'
     ],
 };
 

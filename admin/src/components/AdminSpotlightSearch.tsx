@@ -13,10 +13,12 @@ import {
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import DashboardIcon from '@mui/icons-material/Dashboard';
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import KeyboardReturnIcon from '@mui/icons-material/KeyboardReturn';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { apiFetch } from '../hooks/api';
+import type { EventSummaryDto } from '../hooks/useEvents';
 
 interface Trail {
     id: string;
@@ -35,7 +37,7 @@ interface Location {
 }
 
 interface SearchResult {
-    type: 'trail' | 'location';
+    type: 'trail' | 'location' | 'event';
     id: string;
     name: string;
     slug: string;
@@ -44,6 +46,7 @@ interface SearchResult {
 
 interface AdminSpotlightSearchProps {
     onEditTrail: (id: string) => void;
+    onEditEvent: (slug: string) => void;
     onNavigate: (page: string) => void;
     onFilterTrails: (search: string) => void;
 }
@@ -69,11 +72,12 @@ function scoreMatch(query: string, name: string, slug: string): number {
     return 0;
 }
 
-export default function AdminSpotlightSearch({ onEditTrail, onNavigate, onFilterTrails }: AdminSpotlightSearchProps) {
+export default function AdminSpotlightSearch({ onEditTrail, onEditEvent, onNavigate, onFilterTrails }: AdminSpotlightSearchProps) {
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
     const [activeIndex, setActiveIndex] = useState(0);
     const [trails, setTrails] = useState<Trail[]>([]);
+    const [events, setEvents] = useState<EventSummaryDto[]>([]);
     const [locations, setLocations] = useState<Location[]>([]);
     const [loaded, setLoaded] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -94,9 +98,11 @@ export default function AdminSpotlightSearch({ onEditTrail, onNavigate, onFilter
         if (!open || loaded) return;
         Promise.all([
             apiFetch<Trail[]>('/api/v1/admin/trails'),
+            apiFetch<EventSummaryDto[]>('/api/v1/admin/events'),
             apiFetch<Location[]>('/api/v1/locations'),
-        ]).then(([trailData, locationData]) => {
+        ]).then(([trailData, eventData, locationData]) => {
             setTrails(trailData);
+            setEvents(eventData);
             setLocations(locationData);
             setLoaded(true);
         }).catch(() => {
@@ -120,6 +126,18 @@ export default function AdminSpotlightSearch({ onEditTrail, onNavigate, onFilter
             .filter(r => r.score > 0)
             .sort((a, b) => b.score - a.score);
 
+        const eventResults: (SearchResult & { score: number })[] = events
+            .map(event => ({
+                type: 'event' as const,
+                id: event.id,
+                name: event.name,
+                slug: event.slug,
+                subtitle: `/${event.slug} · ${event.status} · ${event.type}`,
+                score: scoreMatch(q, event.name, event.slug),
+            }))
+            .filter(r => r.score > 0)
+            .sort((a, b) => b.score - a.score);
+
         const locationResults: (SearchResult & { score: number })[] = locations
             .map(loc => ({
                 type: 'location' as const,
@@ -132,8 +150,8 @@ export default function AdminSpotlightSearch({ onEditTrail, onNavigate, onFilter
             .filter(r => r.score > 0)
             .sort((a, b) => b.score - a.score);
 
-        return [...trailResults.slice(0, 7), ...locationResults.slice(0, 3)];
-    }, [query, trails, locations]);
+        return [...trailResults.slice(0, 5), ...eventResults.slice(0, 5), ...locationResults.slice(0, 3)];
+    }, [query, trails, events, locations]);
 
     const handleQueryChange = useCallback((value: string) => {
         setQuery(value);
@@ -144,11 +162,13 @@ export default function AdminSpotlightSearch({ onEditTrail, onNavigate, onFilter
         setOpen(false);
         setQuery('');
         if (result.type === 'trail') {
-            onEditTrail(result.id);
+            onEditTrail(result.slug);
+        } else if (result.type === 'event') {
+            onEditEvent(result.slug);
         } else {
             onNavigate('locations');
         }
-    }, [onEditTrail, onNavigate]);
+    }, [onEditTrail, onEditEvent, onNavigate]);
 
     const handleFilterTrails = useCallback(() => {
         const term = query.trim();
@@ -188,6 +208,7 @@ export default function AdminSpotlightSearch({ onEditTrail, onNavigate, onFilter
     };
 
     const trailResults = results.filter(r => r.type === 'trail');
+    const eventResults = results.filter(r => r.type === 'event');
     const locationResults = results.filter(r => r.type === 'location');
 
     return (
@@ -216,7 +237,7 @@ export default function AdminSpotlightSearch({ onEditTrail, onNavigate, onFilter
                     inputRef={inputRef}
                     autoFocus
                     fullWidth
-                    placeholder="Search trails and locations..."
+                    placeholder="Search trails, events and locations..."
                     value={query}
                     onChange={e => handleQueryChange(e.target.value)}
                     onKeyDown={handleKeyDown}
@@ -263,7 +284,42 @@ export default function AdminSpotlightSearch({ onEditTrail, onNavigate, onFilter
                         </>
                     )}
 
-                    {trailResults.length > 0 && locationResults.length > 0 && <Divider />}
+                    {trailResults.length > 0 && eventResults.length > 0 && <Divider />}
+
+                    {eventResults.length > 0 && (
+                        <>
+                            <Typography variant="caption" sx={{ px: 2, pt: 1, pb: 0.5, display: 'block', color: 'text.secondary', fontWeight: 600 }}>
+                                Events
+                            </Typography>
+                            {eventResults.map((result, i) => {
+                                const globalIndex = trailResults.length + i;
+                                return (
+                                    <ListItemButton
+                                        key={`event-${result.id}`}
+                                        data-index={globalIndex}
+                                        selected={activeIndex === globalIndex}
+                                        onClick={() => handleSelect(result)}
+                                        sx={{ py: 0.5 }}
+                                    >
+                                        <ListItemIcon sx={{ minWidth: 36 }}>
+                                            <EmojiEventsIcon fontSize="small" />
+                                        </ListItemIcon>
+                                        <ListItemText
+                                            primary={result.name}
+                                            secondary={result.subtitle}
+                                            primaryTypographyProps={{ noWrap: true }}
+                                            secondaryTypographyProps={{ noWrap: true, variant: 'caption', fontFamily: 'monospace' }}
+                                        />
+                                        {activeIndex === globalIndex && (
+                                            <KeyboardReturnIcon fontSize="small" sx={{ color: 'text.secondary', ml: 1 }} />
+                                        )}
+                                    </ListItemButton>
+                                );
+                            })}
+                        </>
+                    )}
+
+                    {(trailResults.length > 0 || eventResults.length > 0) && locationResults.length > 0 && <Divider />}
 
                     {locationResults.length > 0 && (
                         <>
@@ -271,7 +327,7 @@ export default function AdminSpotlightSearch({ onEditTrail, onNavigate, onFilter
                                 Locations
                             </Typography>
                             {locationResults.map((result, i) => {
-                                const globalIndex = trailResults.length + i;
+                                const globalIndex = trailResults.length + eventResults.length + i;
                                 return (
                                     <ListItemButton
                                         key={`loc-${result.id}`}
@@ -347,7 +403,7 @@ export default function AdminSpotlightSearch({ onEditTrail, onNavigate, onFilter
                 </List>
             ) : (
                 <Box sx={{ p: 3, textAlign: 'center' }}>
-                    <Typography color="text.secondary" variant="body2">Start typing to search trails and locations</Typography>
+                    <Typography color="text.secondary" variant="body2">Start typing to search trails, events and locations</Typography>
                 </Box>
             )}
         </Dialog>
