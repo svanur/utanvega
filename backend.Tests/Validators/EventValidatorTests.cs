@@ -157,6 +157,7 @@ public class EventValidatorTests : IDisposable
     private UpdateEventCommand ValidUpdateEventCommand => new(
         Id: Guid.NewGuid(),
         Name: "Updated Name",
+        Slug: null,
         Description: null,
         Type: "Race",
         ActivityType: "TrailRunning",

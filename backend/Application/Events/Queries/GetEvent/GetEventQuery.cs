@@ -91,9 +91,19 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
         var trailDetails = trailIds.Count > 0
             ? (await _context.Trails.AsNoTracking()
                 .Where(t => trailIds.Contains(t.Id))
-                .Select(t => new { t.Id, t.Name, t.Slug, t.Length, t.ElevationGain, t.TerrainType, t.Difficulty, t.ActivityTypeId, t.YoutubeUrl })
+                .Select(t => new { t.Id, t.Name, t.Slug, t.Status, t.Length, t.ElevationGain, t.TerrainType, t.Difficulty, t.ActivityTypeId, t.YoutubeUrl })
                 .ToListAsync(cancellationToken))
-                .ToDictionary(t => t.Id, t => new TrailDetail(t.Name, t.Slug, t.Length, t.ElevationGain, t.TerrainType, t.Difficulty, t.ActivityTypeId, t.YoutubeUrl))
+                .ToDictionary(t => t.Id, t =>
+                {
+                    // A race can stay linked to a trail that has since been archived or hidden
+                    // (archiving does not unlink races). The public trail page only serves
+                    // Published/EventOnly, so handing out the slug would render a link that 404s.
+                    // Drop just the slug — name, distance and elevation are still accurate.
+                    var linkable = request.IncludeHidden
+                        || t.Status == TrailStatus.Published
+                        || t.Status == TrailStatus.EventOnly;
+                    return new TrailDetail(t.Name, linkable ? t.Slug : null, t.Length, t.ElevationGain, t.TerrainType, t.Difficulty, t.ActivityTypeId, t.YoutubeUrl);
+                })
             : new Dictionary<Guid, TrailDetail>();
 
         TrailDetail? GetTrail(Guid? id) => id.HasValue && trailDetails.TryGetValue(id.Value, out var td) ? td : null;
