@@ -57,7 +57,7 @@ export function InlineEditText({ value, onSave, variant = 'body2', fontWeight, m
     if (editing) {
         return (
             <ClickAwayListener onClickAway={handleSave}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Box data-inline-edit sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                     <TextField
                         inputRef={inputRef}
                         value={editValue}
@@ -95,6 +95,7 @@ export function InlineEditText({ value, onSave, variant = 'body2', fontWeight, m
 
     return (
         <Box
+            data-inline-edit
             onClick={() => setEditing(true)}
             sx={{
                 cursor: 'pointer',
@@ -164,7 +165,7 @@ export function InlineEditSelect({ value, options, onSave, renderDisplay }: Inli
     if (editing) {
         return (
             <ClickAwayListener onClickAway={() => setEditing(false)}>
-                <Box sx={{ minWidth: 100 }}>
+                <Box data-inline-edit sx={{ minWidth: 100 }}>
                     <Select
                         value={value}
                         onChange={(e) => handleChange(e.target.value)}
@@ -190,6 +191,7 @@ export function InlineEditSelect({ value, options, onSave, renderDisplay }: Inli
 
     return (
         <Box
+            data-inline-edit
             onClick={() => setEditing(true)}
             sx={{
                 cursor: 'pointer',

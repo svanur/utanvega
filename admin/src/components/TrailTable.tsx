@@ -10,7 +10,8 @@ import LoopIcon from '@mui/icons-material/Loop';
 import UndoIcon from '@mui/icons-material/Undo';
 import AddIcon from '@mui/icons-material/Add';
 import VideocamIcon from '@mui/icons-material/Videocam';
-import type { Trail } from '../hooks/useTrails';
+import BookmarkIcon from '@mui/icons-material/Bookmark';
+import { trailStatusLabel, type Trail } from '../hooks/useTrails';
 import type { LocationDto } from '../hooks/useLocations';
 import type { TagDto } from '../hooks/useTags';
 import { InlineEditText, InlineEditSelect } from './InlineEditCell';
@@ -29,7 +30,7 @@ interface TrailTableProps {
   onSelectOne: (id: string) => void;
   onViewMap: (trail: { id: string; name: string }) => void;
   onEdit: (trailId: string) => void;
-  onDelete: (trail: { id: string; name: string }) => void;
+  onDelete: (trail: { id: string; name: string; slug: string }) => void;
   onRestore: (trail: Trail) => void;
   onUpdateStatus: (trailId: string, status: string) => void;
   onPatchTrail: (trailId: string, field: string, value: string) => Promise<void>;
@@ -39,6 +40,8 @@ interface TrailTableProps {
   allTags: TagDto[];
   onAddTag: (trailId: string, tagId: string) => Promise<void>;
   onRemoveTag: (trailId: string, tagId: string) => Promise<void>;
+  /** Optional: makes the whole row clickable. Inline-edit controls keep working. */
+  onRowClick?: (trail: Trail) => void;
 }
 
 export default function TrailTable({
@@ -61,6 +64,7 @@ export default function TrailTable({
   allTags,
   onAddTag,
   onRemoveTag,
+  onRowClick,
 }: TrailTableProps) {
   return (
     <TableContainer component={Paper}>
@@ -124,6 +128,7 @@ export default function TrailTable({
               allTags={allTags}
               onAddTag={onAddTag}
               onRemoveTag={onRemoveTag}
+              onRowClick={onRowClick}
             />
           ))}
           {trails.length === 0 && (
@@ -183,7 +188,7 @@ interface TrailRowProps {
   onSelectOne: (id: string) => void;
   onViewMap: (trail: { id: string; name: string }) => void;
   onEdit: (trailId: string) => void;
-  onDelete: (trail: { id: string; name: string }) => void;
+  onDelete: (trail: { id: string; name: string; slug: string }) => void;
   onRestore: (trail: Trail) => void;
   onUpdateStatus: (trailId: string, status: string) => void;
   onPatchTrail: (trailId: string, field: string, value: string) => Promise<void>;
@@ -193,15 +198,16 @@ interface TrailRowProps {
   allTags: TagDto[];
   onAddTag: (trailId: string, tagId: string) => Promise<void>;
   onRemoveTag: (trailId: string, tagId: string) => Promise<void>;
+  onRowClick?: (trail: Trail) => void;
 }
 
-const statusOptions = [
-  { value: 'Draft', label: 'Draft' },
-  { value: 'Published', label: 'Published' },
-  { value: 'Flagged', label: 'Flagged' },
-  { value: 'Archived', label: 'Archived' },
-  { value: 'EventOnly', label: 'Event Only' },
-];
+// Anything matching this inside a row is a control the admin came to interact with, so a click
+// on it must not also navigate away. `[data-inline-edit]` covers the InlineEdit* cells, whose
+// display mode is a plain Box rather than a real button.
+const ROW_INTERACTIVE_SELECTOR = 'a, button, input, textarea, select, [role="button"], [role="combobox"], .MuiChip-root, [data-inline-edit]';
+
+const statusOptions = ['Draft', 'Published', 'EventOnly', 'Archived']
+  .map(value => ({ value, label: trailStatusLabel(value) }));
 
 const difficultyOptions = [
   { value: 'Easy', label: 'Easy' },
@@ -217,7 +223,7 @@ const activityOptions = [
   { value: 'Cycling', label: 'Cycling' },
 ];
 
-function TrailRowComponent({ trail, selected, onSelectOne, onViewMap, onEdit, onDelete, onRestore, onUpdateStatus: _onUpdateStatus, onPatchTrail, allLocations, onAddLocation, onRemoveLocation, allTags, onAddTag, onRemoveTag }: TrailRowProps) {
+function TrailRowComponent({ trail, selected, onSelectOne, onViewMap, onEdit, onDelete, onRestore, onUpdateStatus: _onUpdateStatus, onPatchTrail, allLocations, onAddLocation, onRemoveLocation, allTags, onAddTag, onRemoveTag, onRowClick }: TrailRowProps) {
   const [showAddLocation, setShowAddLocation] = useState(false);
   const [showAddTag, setShowAddTag] = useState(false);
 
@@ -229,23 +235,44 @@ function TrailRowComponent({ trail, selected, onSelectOne, onViewMap, onEdit, on
   const handleSelect = useCallback(() => onSelectOne(trail.id), [onSelectOne, trail.id]);
   const handleViewMap = useCallback(() => onViewMap({ id: trail.id, name: trail.name }), [onViewMap, trail.id, trail.name]);
   const handleEdit = useCallback(() => onEdit(trail.id), [onEdit, trail.id]);
-  const handleDelete = useCallback(() => onDelete({ id: trail.id, name: trail.name }), [onDelete, trail.id, trail.name]);
+  const handleDelete = useCallback(() => onDelete({ id: trail.id, name: trail.name, slug: trail.slug }), [onDelete, trail.id, trail.name, trail.slug]);
   const handleRestore = useCallback(() => onRestore(trail), [onRestore, trail]);
+
+  const handleRowClick = useCallback((e: React.MouseEvent<HTMLElement>) => {
+    if (!onRowClick) return;
+    // Ignore clicks that landed on a control, and clicks that were really a text selection.
+    if ((e.target as HTMLElement).closest(ROW_INTERACTIVE_SELECTOR)) return;
+    if (window.getSelection()?.toString()) return;
+    onRowClick(trail);
+  }, [onRowClick, trail]);
 
   return (
     <TableRow
       selected={selected}
-      sx={{ opacity: trail.status === 'Archived' ? 0.6 : 1, bgcolor: trail.status === 'Archived' ? 'action.hover' : 'inherit' }}
+      hover={!!onRowClick}
+      onClick={handleRowClick}
+      sx={{
+        opacity: trail.status === 'Archived' ? 0.6 : 1,
+        bgcolor: trail.status === 'Archived' ? 'action.hover' : 'inherit',
+        ...(onRowClick && { cursor: 'pointer' }),
+      }}
     >
       <TableCell padding="checkbox">
         <Checkbox checked={selected} onChange={handleSelect} />
       </TableCell>
       <TableCell component="th" scope="row">
-        <InlineEditText
-          value={trail.name}
-          onSave={(v) => onPatchTrail(trail.id, 'name', v)}
-          fontWeight="bold"
-        />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          {trail.needsReview && (
+            <Tooltip title="Marked for review">
+              <BookmarkIcon color="warning" sx={{ fontSize: 16, flexShrink: 0 }} />
+            </Tooltip>
+          )}
+          <InlineEditText
+            value={trail.name}
+            onSave={(v) => onPatchTrail(trail.id, 'name', v)}
+            fontWeight="bold"
+          />
+        </Box>
         <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block', maxWidth: 300, fontFamily: 'monospace', opacity: 0.7 }}>
           /{trail.slug}
         </Typography>
@@ -393,7 +420,7 @@ function TrailRowComponent({ trail, selected, onSelectOne, onViewMap, onEdit, on
             onSave={(v) => onPatchTrail(trail.id, 'status', v)}
             renderDisplay={(v) => (
               <Chip
-                label={v === 'EventOnly' ? 'Event Only' : v}
+                label={trailStatusLabel(v)}
                 color={v === 'Published' ? 'success' : v === 'Flagged' ? 'warning' : v === 'EventOnly' ? 'info' : 'default'}
                 size="small"
               />

@@ -1,6 +1,7 @@
-import { MapContainer, TileLayer, Polyline, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Polyline, CircleMarker, useMap } from 'react-leaflet';
 import { Box, Typography } from '@mui/material';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { useEffect, useState } from 'react';
 import { apiFetch } from '../hooks/api';
 
@@ -9,17 +10,21 @@ type GeoJsonGeometry = {
     coordinates: [number, number][];
 };
 
-function ChangeView({ bounds }: { bounds: [number, number][] }) {
+function ChangeView({ bounds, padded }: { bounds: [number, number][]; padded: boolean }) {
     const map = useMap();
     useEffect(() => {
+        // The container's real size isn't known until the surrounding flex/grid layout
+        // settles, which can happen after Leaflet's own initial size measurement — without
+        // this the tile grid gets computed against a stale size (partial tiles, wrong bounds).
+        map.invalidateSize();
         if (bounds.length > 0) {
-            map.fitBounds(bounds as L.LatLngBoundsExpression);
+            map.fitBounds(bounds as L.LatLngBoundsExpression, padded ? { padding: [30, 30] } : undefined);
         }
-    }, [bounds, map]);
+    }, [bounds, padded, map]);
     return null;
 }
 
-export default function TrailMap({ trailId, trailName: _trailName }: { trailId: string, trailName: string }) {
+export default function TrailMap({ trailId, trailName: _trailName, showMarkers = true, height = 400 }: { trailId: string, trailName: string, showMarkers?: boolean, height?: number }) {
     const [geometry, setGeometry] = useState<GeoJsonGeometry | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -43,20 +48,24 @@ export default function TrailMap({ trailId, trailName: _trailName }: { trailId: 
 
     // Convert GeoJSON [lon, lat] to Leaflet [lat, lon]
     const positions = geometry.coordinates.map(coord => [coord[1], coord[0]] as [number, number]);
+    const start = showMarkers && positions.length > 0 ? positions[0] : null;
+    const end = showMarkers && positions.length > 0 ? positions[positions.length - 1] : null;
 
     return (
-        <Box sx={{ height: 400, width: '100%', mt: 2, borderRadius: 2, overflow: 'hidden', border: '1px solid #ccc' }}>
-            <MapContainer 
-                center={[64.1265, -21.8174]} 
-                zoom={13} 
+        <Box sx={{ height, width: '100%', mt: 2, borderRadius: 2, overflow: 'hidden', border: '1px solid #ccc' }}>
+            <MapContainer
+                center={[64.1265, -21.8174]}
+                zoom={13}
                 style={{ height: '100%', width: '100%' }}
             >
                 <TileLayer
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
-                <Polyline positions={positions} color="red" />
-                <ChangeView bounds={positions} />
+                <Polyline positions={positions} color={showMarkers ? '#1976d2' : 'red'} weight={showMarkers ? 4 : 3} />
+                {start && <CircleMarker center={start} radius={8} pathOptions={{ color: '#2e7d32', fillColor: '#4caf50', fillOpacity: 1 }} />}
+                {end && <CircleMarker center={end} radius={8} pathOptions={{ color: '#c62828', fillColor: '#ef5350', fillOpacity: 1 }} />}
+                <ChangeView bounds={positions} padded={showMarkers} />
             </MapContainer>
         </Box>
     );

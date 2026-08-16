@@ -1,10 +1,17 @@
-import { Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Button, Typography } from '@mui/material';
+import { lazy, Suspense } from 'react';
+import { Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Button, Typography, Box, CircularProgress } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import TrailMap from './TrailMap';
 import GpxBulkUpload from './GpxBulkUpload';
+import type { Trail } from '../hooks/useTrails';
+
+// Leaflet + react-leaflet are a heavy dependency (~150KB) that most trail-list visits never
+// need — only load them once the map dialog is actually opened, not as part of the
+// /trails list page's initial bundle.
+const TrailMap = lazy(() => import('./TrailMap'));
+const QUICK_VIEW_MAP_HEIGHT = 200;
 
 interface TrailMapDialogProps {
-  trail: { id: string; name: string } | null;
+  trail: Trail | null;
   onClose: () => void;
 }
 
@@ -18,14 +25,22 @@ export function TrailMapDialog({ trail, onClose }: TrailMapDialogProps) {
         </IconButton>
       </DialogTitle>
       <DialogContent dividers>
-        {trail && <TrailMap trailId={trail.id} trailName={trail.name} />}
+        {trail && (
+          <Suspense fallback={
+            <Box sx={{ height: QUICK_VIEW_MAP_HEIGHT, mt: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <CircularProgress size={24} />
+            </Box>
+          }>
+            <TrailMap trailId={trail.id} trailName={trail.name} height={QUICK_VIEW_MAP_HEIGHT} />
+          </Suspense>
+        )}
       </DialogContent>
     </Dialog>
   );
 }
 
 interface DeleteTrailDialogProps {
-  trail: { id: string; name: string } | null;
+  trail: { id: string; name: string; slug?: string } | null;
   deleting: boolean;
   onClose: () => void;
   onConfirm: () => void;
@@ -36,7 +51,29 @@ export function DeleteTrailDialog({ trail, deleting, onClose, onConfirm }: Delet
     <Dialog open={Boolean(trail)} onClose={onClose}>
       <DialogTitle>Delete Trail?</DialogTitle>
       <DialogContent>
-        Are you sure you want to delete <strong>{trail?.name}</strong>? This action cannot be undone.
+        <Typography variant="body2" sx={{ mb: 1.5 }}>
+          Delete <strong>{trail?.name}</strong>?
+        </Typography>
+        <Typography variant="body2" color="text.secondary" component="div">
+          <Box component="ul" sx={{ pl: 2.5, my: 0 }}>
+            <li>
+              The trail is <strong>archived, not erased</strong> — you'll still find it under{' '}
+              <strong>Show Archived</strong>.
+            </li>
+            <li>
+              Its web address changes from <code>/{trail?.slug}</code> to{' '}
+              <code>/{trail?.slug}-deleted-1a2b3c4d</code>. The trail's name stays the same.
+            </li>
+            <li>
+              That frees up <code>/{trail?.slug}</code> for another trail to use.
+            </li>
+            <li>
+              Restoring brings the trail back on the new address. To put it back on{' '}
+              <code>/{trail?.slug}</code>, edit the trail and set the address yourself — that works{' '}
+              <strong>as long as no other trail has claimed it meanwhile</strong>.
+            </li>
+          </Box>
+        </Typography>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} disabled={deleting}>Cancel</Button>

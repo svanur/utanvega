@@ -31,7 +31,8 @@ public record UpdateTrailCommand(
     string? TerrainType = null,
     string? NameEn = null,
     string? DescriptionEn = null,
-    Dictionary<string, string>? TranslationHashes = null
+    Dictionary<string, string>? TranslationHashes = null,
+    bool? NeedsReview = null
 ) : IRequest<bool>;
 
 public class UpdateTrailCommandHandler : IRequestHandler<UpdateTrailCommand, bool>
@@ -114,6 +115,11 @@ public class UpdateTrailCommandHandler : IRequestHandler<UpdateTrailCommand, boo
         {
             trail.TerrainType = null;
         }
+
+        // Null means "not supplied" — the edit form doesn't own this flag, so leave it alone
+        // rather than clearing a bookmark set from the detail page.
+        if (request.NeedsReview is not null)
+            trail.NeedsReview = request.NeedsReview.Value;
 
         trail.UpdatedBy = request.UpdatedBy;
         trail.UpdatedAt = DateTime.UtcNow;

@@ -83,7 +83,11 @@ public class Trail
     public Geometry? GpxData { get; set; }
     
     public string? YoutubeUrl { get; set; }
-    
+
+    // Admin-only bookmark: "come back and look at this". Deliberately independent of Status
+    // so a trail can be marked for review without changing whether the public site shows it.
+    public bool NeedsReview { get; set; }
+
     public string? CreatedBy { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public string? UpdatedBy { get; set; }
