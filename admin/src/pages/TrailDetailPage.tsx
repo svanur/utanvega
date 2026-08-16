@@ -277,6 +277,7 @@ export default function TrailDetailPage({ onNotify }: { onNotify: (message: Reac
     try {
       await apiFetch(`/api/v1/admin/trails/${trail.id}/locations`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ locationId, role: 'BelongsTo' }),
       });
       setDetail(prev => prev ? {

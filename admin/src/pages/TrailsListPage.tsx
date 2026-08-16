@@ -258,6 +258,7 @@ export default function TrailsListPage({ onNotify, initialSearch }: { onNotify: 
     try {
       await apiFetch(`/api/v1/admin/trails/${trailId}/locations`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ locationId, role }),
       });
       const loc = allLocations.find(l => l.id === locationId);

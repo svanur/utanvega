@@ -193,7 +193,7 @@ function TrailFormCardInner({ trail: initialTrail, onClose, onSaved, onNotify }:
   const handleChange = (field: keyof TrailDetail, value: string) => {
     setTrail(prev => {
       const next = { ...prev, [field]: value };
-      if (field === 'name') next.slug = generateSlug(value);
+      if (field === 'name' && !slugUnlocked) next.slug = generateSlug(value);
       return next;
     });
   };
