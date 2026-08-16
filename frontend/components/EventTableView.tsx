@@ -678,6 +678,17 @@ function RaceChipCard({ race, editionDate, eventActivityType }: { race: RaceDto;
                             sx={{ height: 22, fontSize: '0.7rem' }}
                         />
                     )}
+                    {cutoffHours != null && (
+                        <Tooltip title={t('races.table.cutoff', 'Cutoff time')}>
+                            <Chip
+                                icon={<TimerIcon sx={{ fontSize: 14 }} />}
+                                label={cutoffMins ? `${cutoffHours}h${cutoffMins}m` : `${cutoffHours}h`}
+                                size="small"
+                                variant="outlined"
+                                sx={{ height: 22, fontSize: '0.7rem' }}
+                            />
+                        </Tooltip>
+                    )}
                     {race.ticketStatus && race.ticketStatus !== 'Available' && (
                         <Chip
                             label={race.ticketStatus === 'SoldOut' ? t('races.table.soldOut', 'Sold Out')
@@ -708,17 +719,6 @@ function RaceChipCard({ race, editionDate, eventActivityType }: { race: RaceDto;
                                 src={`/images/itra-${race.itraPoints}.png`}
                                 alt={`ITRA ${race.itraPoints}`}
                                 style={{ height: 20, verticalAlign: 'middle' }}
-                            />
-                        </Tooltip>
-                    )}
-                    {cutoffHours != null && (
-                        <Tooltip title={t('races.table.cutoff', 'Cutoff time')}>
-                            <Chip
-                                icon={<TimerIcon sx={{ fontSize: 14 }} />}
-                                label={cutoffMins ? `${cutoffHours}h${cutoffMins}m` : `${cutoffHours}h`}
-                                size="small"
-                                variant="outlined"
-                                sx={{ height: 22, fontSize: '0.7rem' }}
                             />
                         </Tooltip>
                     )}
