@@ -694,9 +694,7 @@ function RaceChipCard({ race, editionDate, eventActivityType }: { race: RaceDto;
                     {race.ticketStatus && race.ticketStatus !== 'Available' && (
                         <Tooltip title={t('races.ticketStatusLabel', 'Registration status')}>
                             <Chip
-                                label={race.ticketStatus === 'SoldOut' ? t('races.table.soldOut', 'Sold Out')
-                                    : race.ticketStatus === 'AlmostSoldOut' ? t('races.table.almostSoldOut', 'Almost Full')
-                                    : race.ticketStatus}
+                                label={t(`races.ticketStatus.${race.ticketStatus}`, race.ticketStatus)}
                                 size="small"
                                 color={getTicketStatusColor(race.ticketStatus)}
                                 sx={{ height: 22, fontSize: '0.7rem' }}
