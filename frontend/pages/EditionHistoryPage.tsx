@@ -36,7 +36,6 @@ import type { EventEditionDto, RaceDto } from '../hooks/useEvents';
 import { useLocalize } from '../utils/localize';
 import { splitMinutes } from '../utils/cutoffTime';
 import { formatNextDate, formatDateRange, formatRaceDateTime, editionKeyFor } from '../utils/eventUtils';
-import { getTicketStatusColor } from '../utils/ticketStatus';
 
 type EditionHistoryPageProps = {
     mode: PaletteMode;
@@ -49,12 +48,6 @@ function formatCutoff(minutes: number, t: (key: string, opts?: Record<string, un
     return `${h}h ${m}m`;
 }
 
-
-function getRegistrationStatusColor(status: string | null | undefined): 'success' | 'warning' | 'default' {
-    if (status === 'Open') return 'success';
-    if (status === 'NotStarted') return 'warning';
-    return 'default';
-}
 
 export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistoryPageProps) {
     const { slug, editionKey } = useParams<{ slug: string; editionKey: string }>();
@@ -227,22 +220,19 @@ export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistor
 
                     <Stack direction="row" spacing={1} sx={{ mt: 1.5, flexWrap: 'wrap', gap: 0.5 }}>
                         {edition.year && (
-                            <Chip label={String(edition.year)} size="small" variant="outlined" color="primary" />
+                            <Tooltip title={t('races.history.year', { defaultValue: 'Year' })}>
+                                <Chip label={String(edition.year)} size="small" variant="outlined" color="primary" />
+                            </Tooltip>
                         )}
                         {edition.date && (
-                            <Chip
-                                icon={<CalendarTodayIcon />}
-                                label={formatDateRange(edition.date, edition.endDate, t)}
-                                size="small"
-                                variant="outlined"
-                            />
-                        )}
-                        {edition.registrationStatus && (
-                            <Chip
-                                label={edition.registrationStatus}
-                                size="small"
-                                color={getRegistrationStatusColor(edition.registrationStatus)}
-                            />
+                            <Tooltip title={t('races.history.eventDate', { defaultValue: 'Event date' })}>
+                                <Chip
+                                    icon={<CalendarTodayIcon />}
+                                    label={formatDateRange(edition.date, edition.endDate, t)}
+                                    size="small"
+                                    variant="outlined"
+                                />
+                            </Tooltip>
                         )}
                     </Stack>
 
@@ -379,11 +369,6 @@ function HistoryRaceCard({
                     {race.cutoffMinutes != null && (
                         <Tooltip title={t('races.cutoffTime', { defaultValue: 'Time limit' })}>
                             <Chip icon={<TimerIcon />} label={formatCutoff(race.cutoffMinutes, t)} size="small" variant="outlined" color="warning" />
-                        </Tooltip>
-                    )}
-                    {race.ticketStatus && (
-                        <Tooltip title={t('races.ticketStatusLabel', { defaultValue: 'Registration status' })}>
-                            <Chip label={t(`races.ticketStatus.${race.ticketStatus}`, { defaultValue: race.ticketStatus })} size="small" color={getTicketStatusColor(race.ticketStatus)} />
                         </Tooltip>
                     )}
                     {race.maxParticipants != null && (
