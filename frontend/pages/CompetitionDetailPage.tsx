@@ -27,6 +27,7 @@ import {
     alpha,
     Menu,
     MenuItem,
+    Link,
 } from '@mui/material';
 import FacebookIcon from '@mui/icons-material/Facebook';
 import InstagramIcon from '@mui/icons-material/Instagram';
@@ -1238,6 +1239,7 @@ function RaceCard({
 }) {
     const theme = useTheme();
     const loc = useLocalize();
+    const { isEnabled } = useFeatureFlags();
     const raceDateTime = formatRaceDateTime(race.dateOfRace, race.startTime, t);
 
     // Race phase: determine if race is in progress (started but not finished)
@@ -1375,6 +1377,19 @@ function RaceCard({
                         <Tooltip title={t('races.ticketStatusLabel', { defaultValue: 'Registration status' })}>
                             <Chip label={t(`races.ticketStatus.${race.ticketStatus}`, { defaultValue: race.ticketStatus })} size="small" color={getTicketStatusColor(race.ticketStatus)} />
                         </Tooltip>
+                    )}
+                    {race.ticketStatus === 'SoldOut'
+                        && isEnabled('resale_tickets', false)
+                        && (() => { const at = race.activityType ?? activityType ?? null; return at === 'Running' || at === 'TrailRunning'; })() && (
+                        <Link
+                            href={t('races.table.resaleHref', {})}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            variant="body2"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            {t('races.table.resaleLink', { defaultValue: 'Ticket resale' })}
+                        </Link>
                     )}
                     {race.maxParticipants != null && (
                         <Tooltip title={t('races.maxParticipants', { defaultValue: 'Max participants' })}>
