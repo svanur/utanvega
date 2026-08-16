@@ -505,7 +505,14 @@ export default function TrailDetailPage({ onNotify }: { onNotify: (message: Reac
             {trail.status === 'Archived' ? (
               <Tooltip title="Restore this trail to Hidden">
                 <Button size="small" variant="outlined" startIcon={<RestoreIcon />}
-                  onClick={() => void handlePatchField('status', 'Draft')}>
+                  onClick={async () => {
+                    try {
+                      await handlePatchField('status', 'Draft');
+                      onNotify('Trail restored');
+                    } catch (err) {
+                      onNotify(err instanceof Error ? err.message : 'Failed to restore trail', 'error');
+                    }
+                  }}>
                   Restore
                 </Button>
               </Tooltip>

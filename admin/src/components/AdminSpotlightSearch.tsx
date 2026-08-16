@@ -45,7 +45,7 @@ interface SearchResult {
 }
 
 interface AdminSpotlightSearchProps {
-    onEditTrail: (id: string) => void;
+    onEditTrail: (slug: string) => void;
     onEditEvent: (slug: string) => void;
     onNavigate: (page: string) => void;
     onFilterTrails: (search: string) => void;

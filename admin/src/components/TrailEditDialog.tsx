@@ -24,6 +24,13 @@ import type { EventDetailDto, EventEditionDto, EventSummaryDto, RaceDto } from '
 import ChangeLogList from './ChangeLogList';
 import { generateSlug } from '../utils/slugify';
 import { hashText } from '../utils/translationHash';
+import {
+    TRAIL_ACTIVITY_TYPES as activityTypes,
+    TRAIL_DIFFICULTIES as difficulties,
+    TRAIL_TYPES as trailTypes,
+    TRAIL_VISIBILITIES as visibilities,
+    TRAIL_TERRAIN_TYPES as terrainTypes,
+} from '../utils/trailOptions';
 
 type LinkableEdition = {
     id: string;
@@ -50,13 +57,6 @@ function buildEditionLabel(edition: Pick<EventEditionDto, 'title' | 'year' | 'da
     return 'Untitled edition';
 }
 
-const activityTypes = [
-    { value: 'TrailRunning', label: 'Trail Run' },
-    { value: 'Running', label: 'Road Run' },
-    { value: 'Cycling', label: 'Cycling' },
-    { value: 'Hiking', label: 'Hike' },
-];
-
 const trailStatuses = [
     { value: 'Draft', label: 'Hidden' },
     { value: 'Published', label: 'Published' },
@@ -64,32 +64,6 @@ const trailStatuses = [
     { value: 'EventOnly', label: 'Event Only' },
 ];
 
-const difficulties = [
-    { value: 'Easy', label: 'Easy' },
-    { value: 'Moderate', label: 'Moderate' },
-    { value: 'Hard', label: 'Hard' },
-    { value: 'Expert', label: 'Expert' },
-    { value: 'Extreme', label: 'Extreme' },
-];
-
-const trailTypes = [
-    { value: 'OutAndBack', label: 'Out and Back' },
-    { value: 'Loop', label: 'Loop' },
-    { value: 'PointToPoint', label: 'Point to Point' },
-];
-
-const visibilities = [
-    { value: 'Public', label: 'Public' },
-    { value: 'Friends', label: 'Friends' },
-    { value: 'Private', label: 'Private' },
-];
-
-const terrainTypes = [
-    { value: '', label: 'None' },
-    { value: 'Mountainous', label: 'Mountainous' },
-    { value: 'Hilly', label: 'Hilly' },
-    { value: 'Flat', label: 'Flat' },
-];
 
 export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess }: { open: boolean, trailId: string | null, onClose: () => void, onSaveSuccess: (trail?: { id: string, slug: string, name: string }) => void }) {
     const [trail, setTrail] = useState<TrailDetail | null>(null);
