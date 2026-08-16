@@ -1265,28 +1265,39 @@ function RaceCard({
             ...(racePhase === 'in-progress' && { borderColor: theme.palette.success.main, borderWidth: 2 }),
         }}>
             <CardContent sx={{ p: { xs: 2, sm: 2.5 }, '&:last-child': { pb: { xs: 2, sm: 2.5 } } }}>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: { xs: 0.5, sm: 1 }, justifyContent: 'space-between' }}>
-                    <Typography variant="h6" fontWeight={700} sx={{
-                        display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap',
-                        ...(race.status === 'Cancelled' && { textDecoration: 'line-through' }),
-                    }}>
-                        <Box component="span" sx={{ fontSize: 20, color: 'primary.main', display: 'flex' }}>
-                            {getActivityIcon(race.activityType ?? race.trailActivityType ?? activityType ?? 'TrailRunning')}
-                        </Box>
-                        {loc(race.name, race.nameEn)}
-                        {race.status === 'Cancelled' && (
-                            <Chip label={t('races.statusCancelled')} size="small" color="error" sx={{ ml: 0.5, fontWeight: 600 }} />
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: { xs: 0.5, sm: 1 }, justifyContent: 'space-between' }}>
+                    <Box>
+                        <Typography variant="h6" fontWeight={700} sx={{
+                            display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap',
+                            ...(race.status === 'Cancelled' && { textDecoration: 'line-through' }),
+                        }}>
+                            <Box component="span" sx={{ fontSize: 20, color: 'primary.main', display: 'flex' }}>
+                                {getActivityIcon(race.activityType ?? race.trailActivityType ?? activityType ?? 'TrailRunning')}
+                            </Box>
+                            {loc(race.name, race.nameEn)}
+                            {race.status === 'Cancelled' && (
+                                <Chip label={t('races.statusCancelled')} size="small" color="error" sx={{ ml: 0.5, fontWeight: 600 }} />
+                            )}
+                            {race.status === 'Upcoming' && (
+                                <Chip label={t('races.statusUpcoming')} size="small" color="info" sx={{ ml: 0.5, fontWeight: 600 }} />
+                            )}
+                            {racePhase === 'in-progress' && (
+                                <Chip label={t('races.inProgress', { defaultValue: '🏃 In progress' })} size="small" color="success" sx={{ ml: 0.5, fontWeight: 600 }} />
+                            )}
+                            {racePhase === 'finished' && daysUntil === 0 && (
+                                <Chip label={t('races.raceFinished', { defaultValue: '🏁 Finished' })} size="small" color="default" sx={{ ml: 0.5, fontWeight: 600 }} />
+                            )}
+                        </Typography>
+                        {race.trailName && (
+                            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+                                {race.trailSlug ? (
+                                    <RouterLink to={`/trails/${race.trailSlug}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                                        {race.trailName}
+                                    </RouterLink>
+                                ) : race.trailName}
+                            </Typography>
                         )}
-                        {race.status === 'Upcoming' && (
-                            <Chip label={t('races.statusUpcoming')} size="small" color="info" sx={{ ml: 0.5, fontWeight: 600 }} />
-                        )}
-                        {racePhase === 'in-progress' && (
-                            <Chip label={t('races.inProgress', { defaultValue: '🏃 In progress' })} size="small" color="success" sx={{ ml: 0.5, fontWeight: 600 }} />
-                        )}
-                        {racePhase === 'finished' && daysUntil === 0 && (
-                            <Chip label={t('races.raceFinished', { defaultValue: '🏁 Finished' })} size="small" color="default" sx={{ ml: 0.5, fontWeight: 600 }} />
-                        )}
-                    </Typography>
+                    </Box>
                     {(race.trailSlug || showShareCard || showFinishCard) && (
                         <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0, flexWrap: 'wrap' }}>
                             {showPredict && race.trailSlug && (
