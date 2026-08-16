@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { trackTrailShareClick } from '../utils/analytics';
 import { 
     IconButton, 
     Tooltip, 
@@ -92,6 +93,7 @@ export default function ShareButtons({ title, url, shareText, buttonLabel }: Sha
     };
 
     const handleOpenMenu = (event: React.MouseEvent<HTMLElement>) => {
+        trackTrailShareClick();
         setAnchorEl(event.currentTarget);
     };
 

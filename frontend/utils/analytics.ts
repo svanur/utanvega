@@ -15,3 +15,31 @@ export function trackViewModeChange(page: ViewModePage, mode: ViewMode) {
 export function trackStoreIconClick() {
     track('Store Icon Click');
 }
+
+export function trackTrailShareClick() {
+    track('Trail Share Click');
+}
+
+export function trackTrailQRClick(slug: string) {
+    track('Trail QR Click', { slug });
+}
+
+export function trackTrailGpxDownload(slug: string) {
+    track('Trail GPX Download', { slug });
+}
+
+export function trackTrailCompareClick(slug: string) {
+    track('Trail Compare Click', { slug });
+}
+
+export function trackTrailPredictorClick(slug: string) {
+    track('Trail Predictor Click', { slug });
+}
+
+export function trackTrailOfflineSave(slug: string) {
+    track('Trail Offline Save', { slug });
+}
+
+export function trackTrailDirectionsClick(slug: string) {
+    track('Trail Directions Click', { slug });
+}
