@@ -1,4 +1,4 @@
-import { Box, Chip, Link, Skeleton, Stack, Typography } from '@mui/material';
+import { Box, Chip, Link, Stack, Typography } from '@mui/material';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
 import { Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -12,15 +12,7 @@ export default function EventDayBanner() {
     const loc = useLocalize();
     const { days, loading } = useEventDayBanner();
 
-    if (loading) {
-        return (
-            <Box sx={{ mb: 2 }}>
-                <Skeleton variant="rounded" height={48} />
-            </Box>
-        );
-    }
-
-    if (days.length === 0) return null;
+    if (loading || days.length === 0) return null;
 
     return (
         <Box
