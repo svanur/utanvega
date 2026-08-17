@@ -596,7 +596,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2, flexWrap: 'wrap' }}>
                         <Typography variant="h4" fontWeight={800} sx={{
                             display: 'flex', alignItems: 'center', gap: 1, flex: 1, minWidth: 200,
-                            ...(heroCancelled && { textDecoration: 'line-through', opacity: 0.7 }),
+                            ...(event.status === 'Cancelled' && { textDecoration: 'line-through', opacity: 0.7 }),
                         }}>
                             <Box component="span" sx={{ display: 'flex', color: 'text.secondary', flexShrink: 0, '& svg': { fontSize: '2rem' } }}>
                                 {getActivityIcon(event.activityType)}
