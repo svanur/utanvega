@@ -1276,6 +1276,7 @@
         "scheduleApproximate": "Venjulega haldið í {{month}}",
         "scheduleApproximateRange": "Venjulega haldið í {{monthStart}}–{{monthEnd}}",
         "statusCancelled": "Aflýst",
+        "newYear": "{{year}} hefst",
         "certifiedBy": "Vottað af",
         "championshipCategory": "Keppnisflokkur",
         "raceDistance": "Vegalengdarmerki",

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useCallback, useState, useRef, useEffect } from 'react';
+import { lazy, Suspense, useMemo, useCallback, useState, useRef, useEffect, Fragment } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -77,6 +77,7 @@ import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
 import HikingIcon from '@mui/icons-material/Hiking';
 import DirectionsBikeIcon from '@mui/icons-material/DirectionsBike';
 import CelebrationIcon from '@mui/icons-material/Celebration';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
 import GrassIcon from '@mui/icons-material/Grass';
 import { haversineKm, formatDistanceKm } from '../utils/geo';
@@ -960,10 +961,53 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                         <Stack spacing={2}>
                             {(() => {
                                 let lastHolidayDate: string | null = null;
+                                let lastYear: string | null = null;
                                 return flattenedUpcoming.map((row, idx) => {
                                 const rowDate = row.kind === 'series-race'
                                     ? row.race.dateOfRace
                                     : (row.comp.displayDate ?? row.comp.nextEditionDate);
+                                const rowYear = rowDate ? rowDate.slice(0, 4) : null;
+                                const yearDivider = rowYear && rowYear !== lastYear ? (() => {
+                                    lastYear = rowYear;
+                                    const newYearDate = `${rowYear}-01-01`;
+                                    const newYearHolidays = getHolidays(newYearDate);
+                                    const months = t('races.months', { returnObjects: true }) as string[];
+                                    const showNewYearBanner = rowDate !== newYearDate && newYearHolidays.length > 0;
+                                    return (
+                                        <Fragment key={`year-${rowYear}`}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, my: 1 }}>
+                                                <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
+                                                <Stack direction="row" alignItems="center" gap={0.5}>
+                                                    <AutoAwesomeIcon sx={{ fontSize: 13, color: 'primary.main' }} />
+                                                    <Typography variant="caption" fontWeight={700} color="primary">
+                                                        {t('races.newYear', { year: rowYear })}
+                                                    </Typography>
+                                                    <AutoAwesomeIcon sx={{ fontSize: 13, color: 'primary.main' }} />
+                                                </Stack>
+                                                <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
+                                            </Box>
+                                            {showNewYearBanner && (
+                                                <Box
+                                                    sx={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: 1,
+                                                        px: 1.5,
+                                                        py: 0.75,
+                                                        borderRadius: 1,
+                                                        bgcolor: alpha(theme.palette.warning.main, 0.12),
+                                                        mb: 1,
+                                                    }}
+                                                >
+                                                    <CelebrationIcon sx={{ fontSize: 15, color: 'warning.dark' }} />
+                                                    <Typography variant="caption" fontWeight={700} sx={{ color: 'warning.dark' }}>
+                                                        {'1. ' + months[0]} — {newYearHolidays.map(h => loc(h.name, h.nameEn) ?? h.name).join(' · ')}
+                                                    </Typography>
+                                                </Box>
+                                            )}
+                                        </Fragment>
+                                    );
+                                })() : null;
                                 const holidays = rowDate ? getHolidays(rowDate) : [];
                                 const holidayBanner = holidays.length > 0 && rowDate !== lastHolidayDate ? (() => {
                                     lastHolidayDate = rowDate!;
@@ -998,6 +1042,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                         : null;
                                     return (
                                         <Box key={`${comp.id}-${race.raceId}`}>
+                                        {yearDivider}
                                         {holidayBanner}
                                         <SwipeableCard
                                             onSwipeRight={race.registrationUrl && raceDaysUntil != null && raceDaysUntil >= 0

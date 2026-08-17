@@ -16,6 +16,7 @@ import TimerIcon from '@mui/icons-material/Timer';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import CelebrationIcon from '@mui/icons-material/Celebration';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import type { EventSummary, EventDetail, RaceDto, SeriesRaceDto } from '../hooks/useEvents';
 import { API_URL } from '../hooks/useTrails';
 import { haversineKm, formatDistanceKm } from '../utils/geo';
@@ -201,10 +202,50 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                 <TableBody>
                     {(() => {
                         let lastHolidayDate: string | null = null;
+                        let lastYear: string | null = null;
                         return sortedRows.map((row, idx) => {
                         const rowDate = row.kind === 'series-race'
                             ? row.race.dateOfRace
                             : (row.event.displayDate ?? row.event.nextEditionDate);
+                        const rowYear = rowDate ? rowDate.slice(0, 4) : null;
+                        const yearDivider = rowYear && rowYear !== lastYear ? (() => {
+                            lastYear = rowYear;
+                            const newYearDate = `${rowYear}-01-01`;
+                            const newYearHolidays = getHolidays(newYearDate);
+                            const months = t('races.months', { returnObjects: true }) as string[];
+                            const showNewYearBanner = rowDate !== newYearDate && newYearHolidays.length > 0;
+                            return (
+                                <React.Fragment key={`year-${rowYear}`}>
+                                    <TableRow>
+                                        <TableCell colSpan={totalColumns} sx={{ py: 1, px: 2, border: 0 }}>
+                                            <Stack direction="row" alignItems="center" gap={1}>
+                                                <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
+                                                <Stack direction="row" alignItems="center" gap={0.5}>
+                                                    <AutoAwesomeIcon sx={{ fontSize: 13, color: 'primary.main' }} />
+                                                    <Typography variant="caption" fontWeight={700} color="primary">
+                                                        {t('races.newYear', { year: rowYear })}
+                                                    </Typography>
+                                                    <AutoAwesomeIcon sx={{ fontSize: 13, color: 'primary.main' }} />
+                                                </Stack>
+                                                <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
+                                            </Stack>
+                                        </TableCell>
+                                    </TableRow>
+                                    {showNewYearBanner && (
+                                        <TableRow sx={{ bgcolor: alpha(theme.palette.warning.main, 0.12) }}>
+                                            <TableCell colSpan={totalColumns} sx={{ py: 0.5, px: 2, borderBottom: 0 }}>
+                                                <Stack direction="row" alignItems="center" gap={1}>
+                                                    <CelebrationIcon sx={{ fontSize: 15, color: 'warning.dark' }} />
+                                                    <Typography variant="caption" fontWeight={700} sx={{ color: 'warning.dark', letterSpacing: 0.3 }}>
+                                                        {'1. ' + months[0]} — {newYearHolidays.map(h => loc(h.name, h.nameEn) ?? h.name).join(' · ')}
+                                                    </Typography>
+                                                </Stack>
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </React.Fragment>
+                            );
+                        })() : null;
                         const holidays = rowDate ? getHolidays(rowDate) : [];
                         const holidaySeparator = holidays.length > 0 && rowDate !== lastHolidayDate ? (() => {
                             lastHolidayDate = rowDate!;
@@ -231,6 +272,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                 : null;
                             return (
                                 <React.Fragment key={`${event.id}-${race.raceId}`}>
+                                    {yearDivider}
                                     {holidaySeparator}
                                     <TableRow
                                         hover

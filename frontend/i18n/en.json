@@ -1276,6 +1276,7 @@
         "scheduleApproximate": "Usually held in {{month}}",
         "scheduleApproximateRange": "Usually held in {{monthStart}}–{{monthEnd}}",
         "statusCancelled": "Cancelled",
+        "newYear": "{{year}} begins",
         "certifiedBy": "Certified by",
         "championshipCategory": "Championship category",
         "raceDistance": "Race distance",
