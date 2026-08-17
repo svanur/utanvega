@@ -21,8 +21,7 @@ import Layout from '../components/Layout';
 import RunningLoader from '../components/RunningLoader';
 import LostRunner from '../components/LostRunner';
 import ShareButtons from '../components/ShareButtons';
-import { useOrganizerBySlug } from '../hooks/useOrganizers';
-import { useEvents } from '../hooks/useEvents';
+import { useOrganizerBySlug, type OrganizerEventSummary } from '../hooks/useOrganizers';
 import { useLocalize } from '../utils/localize';
 import { formatDateRange } from '../utils/eventUtils';
 
@@ -36,21 +35,19 @@ export default function OrganizerDetailPage({ mode, onToggleMode }: OrganizerDet
     const loc = useLocalize();
     const { slug } = useParams<{ slug: string }>();
 
-    const { organizer, loading: orgLoading, error: orgError } = useOrganizerBySlug(slug);
-    const { events, loading: eventsLoading } = useEvents();
+    const { organizer, loading, error: orgError } = useOrganizerBySlug(slug);
 
-    const organizerEvents = useMemo(() => {
-        if (!organizer || !events) return [];
-        return events
-            .filter(e => e.organizerId === organizer.id)
-            .sort((a, b) => {
-                const dateA = a.displayDate ?? a.nextEditionDate ?? '';
-                const dateB = b.displayDate ?? b.nextEditionDate ?? '';
-                return dateA.localeCompare(dateB);
-            });
-    }, [organizer, events]);
-
-    const loading = orgLoading || eventsLoading;
+    const organizerEvents = useMemo<OrganizerEventSummary[]>(() => {
+        if (!organizer) return [];
+        return [...organizer.events].sort((a, b) => {
+            const dateA = a.nextEditionDate ?? '';
+            const dateB = b.nextEditionDate ?? '';
+            if (!dateA && !dateB) return 0;
+            if (!dateA) return 1;
+            if (!dateB) return -1;
+            return dateA.localeCompare(dateB);
+        });
+    }, [organizer]);
 
     if (loading) {
         return (
@@ -143,7 +140,7 @@ export default function OrganizerDetailPage({ mode, onToggleMode }: OrganizerDet
                         {organizerEvents.map(event => {
                             const name = loc(event.name, event.nameEn);
                             const description = loc(event.description, event.descriptionEn);
-                            const date = event.displayDate ?? event.nextEditionDate;
+                            const date = event.nextEditionDate;
                             return (
                                 <Card key={event.id} variant="outlined" sx={{ borderRadius: 2 }}>
                                     <CardActionArea component="a" href={`/events/${event.slug}`}>

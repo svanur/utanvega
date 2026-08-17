@@ -1,5 +1,17 @@
 namespace Utanvega.Backend.Application.Organizers;
 
+public record OrganizerEventSummaryDto(
+    Guid Id,
+    string Name,
+    string? NameEn,
+    string Slug,
+    string? Description,
+    string? DescriptionEn,
+    string ActivityType,
+    DateOnly? NextEditionDate,
+    DateOnly? EndDisplayDate
+);
+
 public record OrganizerPublicDto(
     Guid Id,
     string Name,
@@ -7,7 +19,8 @@ public record OrganizerPublicDto(
     string? Website,
     string? Description,
     string? DescriptionEn,
-    string? ContactName
+    string? ContactName,
+    List<OrganizerEventSummaryDto> Events
 );
 
 public record OrganizerDto(

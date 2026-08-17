@@ -1,6 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
 import { API_URL } from './useTrails';
 
+export interface OrganizerEventSummary {
+    id: string;
+    name: string;
+    nameEn: string | null;
+    slug: string;
+    description: string | null;
+    descriptionEn: string | null;
+    activityType: string;
+    nextEditionDate: string | null;
+    endDisplayDate: string | null;
+}
+
 export interface OrganizerPublic {
     id: string;
     name: string;
@@ -9,6 +21,7 @@ export interface OrganizerPublic {
     description: string | null;
     descriptionEn: string | null;
     contactName: string | null;
+    events: OrganizerEventSummary[];
 }
 
 export function useOrganizerBySlug(slug: string | undefined) {

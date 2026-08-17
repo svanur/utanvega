@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Utanvega.Backend.Application.Caching;
+using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Infrastructure.Persistence;
 
 namespace Utanvega.Backend.Application.Organizers;
@@ -22,10 +23,47 @@ public class GetOrganizerBySlugQueryHandler : IRequestHandler<GetOrganizerBySlug
 
     public async Task<OrganizerPublicDto?> Handle(GetOrganizerBySlugQuery request, CancellationToken cancellationToken)
     {
-        return await _context.Organizers
+        var organizer = await _context.Organizers
             .AsNoTracking()
             .Where(o => o.Slug == request.Slug)
-            .Select(o => new OrganizerPublicDto(o.Id, o.Name, o.Slug, o.Website, o.Description, o.DescriptionEn, o.ContactName))
+            .Select(o => new { o.Id, o.Name, o.Slug, o.Website, o.Description, o.DescriptionEn, o.ContactName })
             .FirstOrDefaultAsync(cancellationToken);
+
+        if (organizer is null) return null;
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        var events = await _context.Events
+            .AsNoTracking()
+            .Where(e => e.OrganizerId == organizer.Id
+                && e.Status != EventStatus.Hidden
+                && e.Status != EventStatus.Unlisted)
+            .OrderBy(e => e.Name)
+            .Select(e => new OrganizerEventSummaryDto(
+                e.Id,
+                e.Name,
+                e.NameEn,
+                e.Slug,
+                e.Description,
+                e.DescriptionEn,
+                e.ActivityType.ToString(),
+                e.Editions
+                    .Where(ed => ed.Date >= today)
+                    .OrderBy(ed => ed.Date)
+                    .Select(ed => (DateOnly?)ed.Date)
+                    .FirstOrDefault(),
+                e.Editions
+                    .Where(ed => ed.Date >= today)
+                    .OrderBy(ed => ed.Date)
+                    .Select(ed => ed.EndDate)
+                    .FirstOrDefault()
+            ))
+            .ToListAsync(cancellationToken);
+
+        return new OrganizerPublicDto(
+            organizer.Id, organizer.Name, organizer.Slug, organizer.Website,
+            organizer.Description, organizer.DescriptionEn, organizer.ContactName,
+            events
+        );
     }
 }
