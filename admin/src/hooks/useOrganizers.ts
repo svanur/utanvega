@@ -72,6 +72,7 @@ export function useOrganizers() {
     const deleteOrganizer = async (id: string): Promise<void> => {
         await apiFetch(`/api/v1/admin/organizers/${id}`, { method: 'DELETE' });
         await invalidate();
+        await queryClient.invalidateQueries({ queryKey: ['admin', 'events'] });
     };
 
     return { organizers, loading, error, refresh: invalidate, createOrganizer, updateOrganizer, deleteOrganizer };

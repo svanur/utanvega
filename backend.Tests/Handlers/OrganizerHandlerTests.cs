@@ -196,6 +196,46 @@ public class OrganizerHandlerTests : IDisposable
     }
 
     [Fact]
+    public async Task Delete_Organizer_ClearsOrganizerNameOnLinkedEvents()
+    {
+        Guid orgId;
+        Guid eventId;
+        using (var ctx = _factory.CreateContext())
+        {
+            var orgHandler = new CreateOrganizerCommandHandler(ctx);
+            (orgId, _) = await orgHandler.Handle(new CreateOrganizerCommand(
+                Name: "Acme Running", Kennitala: null, Phone: null, Email: null,
+                Website: null, Description: null, ContactName: null
+            ), CancellationToken.None);
+
+            var ev = new Event
+            {
+                Name = "Acme Race", Slug = "acme-race",
+                Type = EventType.Race, Status = EventStatus.Confirmed,
+                OrganizerId = orgId,
+                OrganizerName = "Acme Running",
+                OrganizerWebsite = "https://acme.is",
+            };
+            ctx.Events.Add(ev);
+            await ctx.SaveChangesAsync();
+            eventId = ev.Id;
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new DeleteOrganizerCommandHandler(ctx);
+            await handler.Handle(new DeleteOrganizerCommand(orgId), CancellationToken.None);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        var updated = await verifyCtx.Events.FindAsync(eventId);
+        Assert.NotNull(updated);
+        Assert.Null(updated!.OrganizerId);
+        Assert.Null(updated.OrganizerName);
+        Assert.Null(updated.OrganizerWebsite);
+    }
+
+    [Fact]
     public async Task Delete_Organizer_Returns_False_ForUnknownId()
     {
         using var ctx = _factory.CreateContext();
