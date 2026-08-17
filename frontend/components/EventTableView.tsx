@@ -44,13 +44,6 @@ type TableRow =
 
 
 
-function getRegistrationStatusColor(status: string): 'success' | 'error' | 'default' {
-    switch (status) {
-        case 'Open': return 'success';
-        case 'Closed': return 'error';
-        default: return 'default';
-    }
-}
 
 const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation }) => {
     const { t, i18n } = useTranslation();
@@ -187,13 +180,13 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                         ))}
                         <TableCell>{t('races.table.distances', 'Distances')}</TableCell>
                         <TableCell>
-                            <TableSortLabel active={sortField === 'distance'} direction={sortField === 'distance' ? sortDir : 'asc'} onClick={() => handleSort('distance')}>
-                                {t('trail.kmAway', 'km away')}
+                            <TableSortLabel active={sortField === 'locationName'} direction={sortField === 'locationName' ? sortDir : 'asc'} onClick={() => handleSort('locationName')}>
+                                {t('trail.location', 'Location')}
                             </TableSortLabel>
                         </TableCell>
                         <TableCell>
-                            <TableSortLabel active={sortField === 'locationName'} direction={sortField === 'locationName' ? sortDir : 'asc'} onClick={() => handleSort('locationName')}>
-                                {t('trail.location', 'Location')}
+                            <TableSortLabel active={sortField === 'distance'} direction={sortField === 'distance' ? sortDir : 'asc'} onClick={() => handleSort('distance')}>
+                                {t('trail.distanceToTrailhead', 'Distance to trailhead')}
                             </TableSortLabel>
                         </TableCell>
                         <TableCell align="center">{t('races.table.links', 'Links')}</TableCell>
@@ -333,6 +326,16 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                             <Typography variant="body2" color="text.secondary">—</Typography>
                                         )}
                                     </TableCell>
+                                    <TableCell>
+                                        {event.locationName ? (
+                                            <Stack direction="row" alignItems="center" spacing={0.5}>
+                                                <LocationOnIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
+                                                <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 130 }}>{event.locationName}</Typography>
+                                            </Stack>
+                                        ) : (
+                                            <Typography variant="body2" color="text.secondary">—</Typography>
+                                        )}
+                                    </TableCell>
                                     {(() => {
                                         const km = getDistanceKm(event);
                                         return (
@@ -350,16 +353,6 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                             </TableCell>
                                         );
                                     })()}
-                                    <TableCell>
-                                        {event.locationName ? (
-                                            <Stack direction="row" alignItems="center" spacing={0.5}>
-                                                <LocationOnIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
-                                                <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 130 }}>{event.locationName}</Typography>
-                                            </Stack>
-                                        ) : (
-                                            <Typography variant="body2" color="text.secondary">—</Typography>
-                                        )}
-                                    </TableCell>
                                     <TableCell align="center">
                                         {race.registrationUrl && raceDaysUntil !== null && raceDaysUntil >= 0 ? (
                                             <Button size="small" variant="outlined" href={race.registrationUrl} target="_blank" rel="noopener noreferrer" endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
@@ -494,6 +487,20 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                     </TableCell>
 
 
+                                    {/* Location */}
+                                    <TableCell>
+                                        {event.locationName ? (
+                                            <Stack direction="row" alignItems="center" spacing={0.5}>
+                                                <LocationOnIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
+                                                <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 130 }}>
+                                                    {event.locationName}
+                                                </Typography>
+                                            </Stack>
+                                        ) : (
+                                            <Typography variant="body2" color="text.secondary">—</Typography>
+                                        )}
+                                    </TableCell>
+
                                     {/* Distance to user */}
                                     {(() => {
                                         const km = getDistanceKm(event);
@@ -513,20 +520,6 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                         );
                                     })()}
 
-                                    {/* Location */}
-                                    <TableCell>
-                                        {event.locationName ? (
-                                            <Stack direction="row" alignItems="center" spacing={0.5}>
-                                                <LocationOnIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
-                                                <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 130 }}>
-                                                    {event.locationName}
-                                                </Typography>
-                                            </Stack>
-                                        ) : (
-                                            <Typography variant="body2" color="text.secondary">—</Typography>
-                                        )}
-                                    </TableCell>
-
                                     {/* Links */}
                                     <TableCell align="center">
                                         <Stack alignItems="center" spacing={0.5}>
@@ -539,27 +532,18 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                                         variant="outlined"
                                                     />
                                                 ) : (
-                                                    <>
-                                                        <Button
-                                                            size="small"
-                                                            variant="outlined"
-                                                            href={event.registrationUrl}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
-                                                            onClick={(e) => e.stopPropagation()}
-                                                            sx={{ textTransform: 'none', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
-                                                        >
-                                                            {t('races.register', 'Register')}
-                                                        </Button>
-                                                        {event.registrationStatus && (
-                                                            <Chip
-                                                                label={t(`races.registrationStatus.${event.registrationStatus}`, event.registrationStatus)}
-                                                                size="small"
-                                                                color={getRegistrationStatusColor(event.registrationStatus)}
-                                                            />
-                                                        )}
-                                                    </>
+                                                    <Button
+                                                        size="small"
+                                                        variant="outlined"
+                                                        href={event.registrationUrl}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        sx={{ textTransform: 'none', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+                                                    >
+                                                        {t('races.register', 'Register')}
+                                                    </Button>
                                                 )
                                             ) : event.resultsUrl && event.daysUntil != null && event.daysUntil < 0 ? (
                                                 <Button
@@ -577,18 +561,20 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                                 </Button>
                                             ) : null}
                                             {event.youtubeUrl && (
-                                                <Tooltip title="360° / YouTube">
-                                                    <IconButton
-                                                        size="small"
-                                                        href={event.youtubeUrl}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        color="error"
-                                                    >
-                                                        <VideocamIcon fontSize="small" />
-                                                    </IconButton>
-                                                </Tooltip>
+                                                <Button
+                                                    size="small"
+                                                    variant="outlined"
+                                                    color="error"
+                                                    href={event.youtubeUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    startIcon={<VideocamIcon sx={{ fontSize: 14 }} />}
+                                                    endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    sx={{ textTransform: 'none', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+                                                >
+                                                    360°
+                                                </Button>
                                             )}
                                             {!event.registrationUrl && !event.resultsUrl && !event.youtubeUrl && (
                                                 <Typography variant="body2" color="text.secondary">—</Typography>
