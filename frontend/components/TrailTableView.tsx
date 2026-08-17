@@ -10,6 +10,7 @@ import StarBorderIcon from '@mui/icons-material/StarBorder';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import NearMeIcon from '@mui/icons-material/NearMe';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import AllInclusiveIcon from '@mui/icons-material/AllInclusive';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
@@ -29,7 +30,7 @@ interface TrailTableViewProps {
     userLocation: { lat: number; lng: number } | null;
 }
 
-type SortField = 'name' | 'length' | 'elevationGain' | 'difficulty' | 'activityType' | 'distance' | 'location' | 'duration';
+type SortField = 'name' | 'length' | 'elevationGain' | 'elevationLoss' | 'difficulty' | 'activityType' | 'distance' | 'location' | 'duration';
 type SortDir = 'asc' | 'desc';
 
 const DIFFICULTY_ORDER: Record<string, number> = { Easy: 0, Moderate: 1, Hard: 2, Expert: 3, Extreme: 4 };
@@ -98,6 +99,8 @@ const TrailTableView: React.FC<TrailTableViewProps> = ({ trails, favorites, onTo
                     return dir * (a.length - b.length);
                 case 'elevationGain':
                     return dir * (a.elevationGain - b.elevationGain);
+                case 'elevationLoss':
+                    return dir * (a.elevationLoss - b.elevationLoss);
                 case 'difficulty': {
                     const da = DIFFICULTY_ORDER[a.difficulty] ?? 99;
                     const db = DIFFICULTY_ORDER[b.difficulty] ?? 99;
@@ -130,6 +133,7 @@ const TrailTableView: React.FC<TrailTableViewProps> = ({ trails, favorites, onTo
         { field: 'name', label: t('trail.name', 'Name') },
         { field: 'length', label: t('trail.distance'), align: 'right' },
         { field: 'elevationGain', label: t('trail.gain'), align: 'right' },
+        { field: 'elevationLoss', label: t('trail.loss'), align: 'right' },
     ];
 
     return (
@@ -244,6 +248,12 @@ const TrailTableView: React.FC<TrailTableViewProps> = ({ trails, favorites, onTo
                                     </Stack>
                                 </TableCell>
                                 <TableCell align="right">
+                                    <Stack direction="row" alignItems="center" justifyContent="flex-end" spacing={0.25}>
+                                        <TrendingDownIcon sx={{ fontSize: 13, color: 'error.main' }} />
+                                        <Typography variant="body2">{Math.round(trail.elevationLoss)} m</Typography>
+                                    </Stack>
+                                </TableCell>
+                                <TableCell align="right">
                                     <Typography variant="body2" color="text.secondary" noWrap>
                                         {estimateDuration(trail.length, trail.elevationGain, trail.activityType) ?? '—'}
                                     </Typography>
@@ -275,7 +285,7 @@ const TrailTableView: React.FC<TrailTableViewProps> = ({ trails, favorites, onTo
                     })}
                     {sortedTrails.length === 0 && (
                         <TableRow>
-                            <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                            <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
                                 <Typography color="text.secondary">{t('home.noTrailsFound', 'No trails found')}</Typography>
                             </TableCell>
                         </TableRow>
