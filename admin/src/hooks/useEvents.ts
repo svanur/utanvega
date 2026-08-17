@@ -112,6 +112,7 @@ export interface EventSummaryDto {
     organizerNameEn: string | null;
     organizerWebsite: string | null;
     organizerId: string | null;
+    organizerSlug: string | null;
     alertMessage: string | null;
     alertMessageEn: string | null;
     alertSeverity: AlertSeverity | null;

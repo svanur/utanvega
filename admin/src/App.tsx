@@ -52,6 +52,7 @@ const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const HeroThemesPage = lazy(() => import('./pages/HeroThemesPage'));
 const SponsorsPage = lazy(() => import('./pages/SponsorsPage'));
 const OrganizersPage = lazy(() => import('./pages/OrganizersPage'));
+const OrganizerDetailPage = lazy(() => import('./pages/OrganizerDetailPage'));
 const PoolsPage = lazy(() => import('./pages/PoolsPage'));
 const TranslationHealth = lazy(() => import('./pages/TranslationHealth'));
 const RaceDayPage = lazy(() => import('./pages/RaceDayPage'));
@@ -98,6 +99,7 @@ const PAGE_PATHS: Record<PageKey, string> = {
 function pathToPage(pathname: string): PageKey {
   if (pathname.startsWith('/events-old') || pathname.startsWith('/events')) return 'events';
   if (pathname.startsWith('/trails-old') || pathname.startsWith('/trails')) return 'trails';
+  if (pathname.startsWith('/organizers')) return 'organizers';
   const entry = Object.entries(PAGE_PATHS).find(([, path]) => path === pathname);
   return (entry?.[0] as PageKey) ?? 'dashboard';
 }
@@ -402,7 +404,10 @@ function AdminContent() {
           ) : currentPage === 'pools' ? (
             <PoolsPage />
           ) : currentPage === 'organizers' ? (
-            <OrganizersPage onNotify={notify} />
+            <Routes>
+              <Route path="/organizers/:slug" element={<OrganizerDetailPage onNotify={notify} />} />
+              <Route path="/organizers" element={<OrganizersPage onNotify={notify} />} />
+            </Routes>
           ) : currentPage === 'race-day' ? (
             <RaceDayPage
               onNotify={notify}

@@ -20,6 +20,14 @@ public class DeleteOrganizerCommandHandler : IRequestHandler<DeleteOrganizerComm
         var organizer = await _context.Organizers.FirstOrDefaultAsync(o => o.Id == request.Id, cancellationToken);
         if (organizer is null) return false;
 
+        await _context.Events
+            .Where(e => e.OrganizerId == request.Id)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(e => e.OrganizerName, (string?)null)
+                .SetProperty(e => e.OrganizerNameEn, (string?)null)
+                .SetProperty(e => e.OrganizerWebsite, (string?)null),
+                cancellationToken);
+
         _context.Organizers.Remove(organizer);
         await _context.SaveChangesAsync(cancellationToken);
         return true;

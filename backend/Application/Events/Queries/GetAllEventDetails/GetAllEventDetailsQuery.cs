@@ -142,7 +142,8 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
                 .ToList(),
             ev.CreatedAt,
             ev.UpdatedAt,
-            TranslationHashes: DeserHashes(ev.TranslationHashes)
+            TranslationHashes: DeserHashes(ev.TranslationHashes),
+            OrganizerSlug: ev.Organizer != null ? ev.Organizer.Slug : null
         )).ToList();
     }
 }

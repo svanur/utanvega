@@ -4,6 +4,7 @@ public class Organizer
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get; set; } = string.Empty;
+    public string Slug { get; set; } = string.Empty;
     public string? Kennitala { get; set; }
     public string? Phone { get; set; }
     public string? Email { get; set; }

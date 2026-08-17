@@ -64,6 +64,11 @@ public class CacheInvalidator : ICacheInvalidator
         }
     }
 
+    public void InvalidateOrganizer(string slug)
+    {
+        _cache.Remove(CacheKeys.Organizer(slug));
+    }
+
     public void InvalidateLeaderboard(string slug)
     {
         var normalizedSlug = slug.Trim().ToLowerInvariant();

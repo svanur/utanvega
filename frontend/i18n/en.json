@@ -1653,5 +1653,12 @@
             "dates": "3–9 September 2026",
             "cta": "Book your spot"
         }
+    },
+    "organizerPage": {
+        "website": "Organizer website",
+        "contact": "Contact",
+        "events": "Events",
+        "noEvents": "No events found",
+        "notFound": "Organizer not found"
     }
 }

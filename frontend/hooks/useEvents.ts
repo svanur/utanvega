@@ -39,9 +39,11 @@ export interface EventSummary {
     activityType: string;
     activityTypes: string[] | null;
     status: string;
+    organizerId: string | null;
     organizerName: string | null;
     organizerNameEn: string | null;
     organizerWebsite: string | null;
+    organizerSlug: string | null;
     alertMessage: string | null;
     alertMessageEn: string | null;
     alertSeverity: string | null;

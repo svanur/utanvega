@@ -670,7 +670,16 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             <Chip icon={<LocationOnIcon />} label={event.locationName} size="small" variant="outlined" />
                         )}
                         {event.organizerName && (
-                            <Chip label={loc(event.organizerName, event.organizerNameEn) ?? event.organizerName} size="small" variant="outlined" />
+                            event.organizerSlug
+                                ? <Chip
+                                    label={loc(event.organizerName, event.organizerNameEn) ?? event.organizerName}
+                                    size="small"
+                                    variant="outlined"
+                                    component="a"
+                                    href={`/organizers/${event.organizerSlug}`}
+                                    clickable
+                                  />
+                                : <Chip label={loc(event.organizerName, event.organizerNameEn) ?? event.organizerName} size="small" variant="outlined" />
                         )}
                         {(event.type === 'Race' || event.type === 'Series') && (
                             <Chip

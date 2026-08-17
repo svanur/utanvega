@@ -162,6 +162,18 @@ internal class TestDbContext : UtanvegaDbContext
                   .WithMany()
                   .HasForeignKey(e => e.LocationId)
                   .OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(e => e.Organizer)
+                  .WithMany(o => o.Events)
+                  .HasForeignKey(e => e.OrganizerId)
+                  .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<Core.Entities.Organizer>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Slug).IsRequired().HasMaxLength(200);
+            entity.HasIndex(e => e.Slug).IsUnique();
         });
 
         modelBuilder.Entity<Core.Entities.EventEdition>(entity =>
