@@ -128,7 +128,6 @@ const TrailTableView: React.FC<TrailTableViewProps> = ({ trails, favorites, onTo
 
     const columns: { field: SortField; label: string; align?: 'left' | 'right' | 'center' }[] = [
         { field: 'name', label: t('trail.name', 'Name') },
-        { field: 'distance', label: t('trail.kmAway', 'km away'), align: 'right' },
         { field: 'length', label: t('trail.distance'), align: 'right' },
         { field: 'elevationGain', label: t('trail.gain'), align: 'right' },
     ];
@@ -158,6 +157,11 @@ const TrailTableView: React.FC<TrailTableViewProps> = ({ trails, favorites, onTo
                         <TableCell>
                             <TableSortLabel active={sortField === 'location'} direction={sortField === 'location' ? sortDir : 'asc'} onClick={() => handleSort('location')}>
                                 {t('trail.location', 'Location')}
+                            </TableSortLabel>
+                        </TableCell>
+                        <TableCell align="right">
+                            <TableSortLabel active={sortField === 'distance'} direction={sortField === 'distance' ? sortDir : 'asc'} onClick={() => handleSort('distance')}>
+                                {t('trail.distanceToTrailhead', 'Distance to trailhead')}
                             </TableSortLabel>
                         </TableCell>
                     </TableRow>
@@ -231,16 +235,6 @@ const TrailTableView: React.FC<TrailTableViewProps> = ({ trails, favorites, onTo
                                     </Stack>
                                 </TableCell>
                                 <TableCell align="right">
-                                    {distKm != null && distKm !== Infinity ? (
-                                        <Stack direction="row" alignItems="center" justifyContent="flex-end" spacing={0.25}>
-                                            <NearMeIcon sx={{ fontSize: 13, color: 'primary.main' }} />
-                                            <Typography variant="body2" noWrap>{formatDistanceKm(distKm)}</Typography>
-                                        </Stack>
-                                    ) : (
-                                        <Typography variant="body2" color="text.secondary">—</Typography>
-                                    )}
-                                </TableCell>
-                                <TableCell align="right">
                                     <Typography variant="body2">{(trail.length / 1000).toFixed(1)} km</Typography>
                                 </TableCell>
                                 <TableCell align="right">
@@ -261,6 +255,16 @@ const TrailTableView: React.FC<TrailTableViewProps> = ({ trails, favorites, onTo
                                             <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 140 }}>
                                                 {primaryLocation}
                                             </Typography>
+                                        </Stack>
+                                    ) : (
+                                        <Typography variant="body2" color="text.secondary">—</Typography>
+                                    )}
+                                </TableCell>
+                                <TableCell align="right">
+                                    {distKm != null && distKm !== Infinity ? (
+                                        <Stack direction="row" alignItems="center" justifyContent="flex-end" spacing={0.25}>
+                                            <NearMeIcon sx={{ fontSize: 13, color: 'primary.main' }} />
+                                            <Typography variant="body2" noWrap>{formatDistanceKm(distKm)}</Typography>
                                         </Stack>
                                     ) : (
                                         <Typography variant="body2" color="text.secondary">—</Typography>

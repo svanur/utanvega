@@ -147,6 +147,7 @@
         "activity": "Tegund",
         "location": "Staðsetning",
         "kmAway": "km í burtu",
+        "distanceToTrailhead": "Fjarlægð frá mér",
         "routeMap": "Leiðarkort",
         "fullscreenMap": "Heilskjár kort",
         "closeFullscreen": "Loka heilskjá",

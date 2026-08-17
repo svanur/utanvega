@@ -147,6 +147,7 @@
         "activity": "Activity",
         "location": "Location",
         "kmAway": "km away",
+        "distanceToTrailhead": "Distance to trailhead",
         "routeMap": "Route Map",
         "fullscreenMap": "Fullscreen map",
         "closeFullscreen": "Close fullscreen",
