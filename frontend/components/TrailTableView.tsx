@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -79,6 +79,14 @@ const TrailTableView: React.FC<TrailTableViewProps> = ({ trails, favorites, onTo
     const navigate = useNavigate();
     const [sortField, setSortField] = useState<SortField>(userLocation ? 'distance' : 'name');
     const [sortDir, setSortDir] = useState<SortDir>('asc');
+    const locationSortApplied = useRef(!!userLocation);
+    useEffect(() => {
+        if (userLocation && !locationSortApplied.current) {
+            locationSortApplied.current = true;
+            setSortField('distance');
+            setSortDir('asc');
+        }
+    }, [userLocation]);
 
     const handleSort = (field: SortField) => {
         if (sortField === field) {
