@@ -281,7 +281,8 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 ActivityTypes: activityTypes.Count > 0 ? activityTypes : null,
                 EditionStatus: relevantEdition?.Status.ToString(),
                 EditionEffectiveCancelled: relevantEdition != null
-                    && EditionStatusHelpers.ComputeEffectiveCancelled(relevantEdition.Status, relevantEdition.Races.Select(r => r.Status).ToList())
+                    && EditionStatusHelpers.ComputeEffectiveCancelled(relevantEdition.Status, relevantEdition.Races.Select(r => r.Status).ToList()),
+                OrganizerSlug: e.Organizer != null ? e.Organizer.Slug : null
             );
         }).ToList();
     }

@@ -1747,6 +1747,13 @@ app.MapGet("/api/v1/organizers", async (IMediator mediator) =>
 })
 .WithName("GetOrganizers");
 
+app.MapGet("/api/v1/organizers/{slug}", async (string slug, IMediator mediator) =>
+{
+    var organizer = await mediator.Send(new GetOrganizerBySlugQuery(slug));
+    return organizer is null ? Results.NotFound() : Results.Ok(organizer);
+})
+.WithName("GetOrganizerBySlug");
+
 // Admin Organizer CRUD
 app.MapGet("/api/v1/admin/organizers", [Authorize(Policy = "AdminOnly")] async (IMediator mediator) =>
 {
@@ -1757,8 +1764,8 @@ app.MapGet("/api/v1/admin/organizers", [Authorize(Policy = "AdminOnly")] async (
 
 app.MapPost("/api/v1/admin/organizers", [Authorize(Policy = "AdminOnly")] async (CreateOrganizerCommand command, IMediator mediator) =>
 {
-    var id = await mediator.Send(command);
-    return Results.Created($"/api/v1/organizers/{id}", new { id });
+    var (id, slug) = await mediator.Send(command);
+    return Results.Created($"/api/v1/organizers/{slug}", new { id, slug });
 })
 .WithName("CreateOrganizer");
 

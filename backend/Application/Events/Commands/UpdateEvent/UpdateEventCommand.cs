@@ -56,6 +56,7 @@ public class UpdateEventCommandHandler : IRequestHandler<UpdateEventCommand, boo
         Enum.TryParse<EventStatus>(request.Status, ignoreCase: true, out var status);
 
         var oldSlug = ev.Slug;
+        var oldOrganizerId = ev.OrganizerId;
         ev.Name = request.Name;
         if (!string.IsNullOrWhiteSpace(request.Slug))
             ev.Slug = request.Slug.Trim().ToLowerInvariant();
@@ -86,6 +87,26 @@ public class UpdateEventCommandHandler : IRequestHandler<UpdateEventCommand, boo
         _cacheInvalidator.InvalidateEvent(ev.Slug);
         if (oldSlug != ev.Slug)
             _cacheInvalidator.InvalidateEvent(oldSlug);
+
+        if (oldOrganizerId != request.OrganizerId)
+        {
+            var affectedOrgIds = new[] { oldOrganizerId, request.OrganizerId }
+                .Where(id => id.HasValue)
+                .Select(id => id!.Value)
+                .Distinct()
+                .ToList();
+
+            if (affectedOrgIds.Count > 0)
+            {
+                var slugs = await _context.Organizers
+                    .Where(o => affectedOrgIds.Contains(o.Id))
+                    .Select(o => o.Slug)
+                    .ToListAsync(cancellationToken);
+                foreach (var orgSlug in slugs)
+                    _cacheInvalidator.InvalidateOrganizer(orgSlug);
+            }
+        }
+
         return true;
     }
 }

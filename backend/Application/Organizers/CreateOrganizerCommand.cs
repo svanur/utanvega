@@ -1,5 +1,6 @@
 using MediatR;
 using Utanvega.Backend.Core.Entities;
+using Utanvega.Backend.Core.Services;
 using Utanvega.Backend.Infrastructure.Persistence;
 
 namespace Utanvega.Backend.Application.Organizers;
@@ -13,9 +14,9 @@ public record CreateOrganizerCommand(
     string? Description,
     string? ContactName,
     string? DescriptionEn = null
-) : IRequest<Guid>;
+) : IRequest<(Guid Id, string Slug)>;
 
-public class CreateOrganizerCommandHandler : IRequestHandler<CreateOrganizerCommand, Guid>
+public class CreateOrganizerCommandHandler : IRequestHandler<CreateOrganizerCommand, (Guid Id, string Slug)>
 {
     private readonly UtanvegaDbContext _context;
 
@@ -24,11 +25,12 @@ public class CreateOrganizerCommandHandler : IRequestHandler<CreateOrganizerComm
         _context = context;
     }
 
-    public async Task<Guid> Handle(CreateOrganizerCommand request, CancellationToken cancellationToken)
+    public async Task<(Guid Id, string Slug)> Handle(CreateOrganizerCommand request, CancellationToken cancellationToken)
     {
         var organizer = new Organizer
         {
             Name = request.Name,
+            Slug = SlugGenerator.Generate(request.Name),
             Kennitala = request.Kennitala,
             Phone = request.Phone,
             Email = request.Email,
@@ -41,6 +43,6 @@ public class CreateOrganizerCommandHandler : IRequestHandler<CreateOrganizerComm
         _context.Organizers.Add(organizer);
         await _context.SaveChangesAsync(cancellationToken);
 
-        return organizer.Id;
+        return (organizer.Id, organizer.Slug);
     }
 }
