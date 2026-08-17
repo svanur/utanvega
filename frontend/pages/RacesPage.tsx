@@ -80,6 +80,8 @@ import CelebrationIcon from '@mui/icons-material/Celebration';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
 import GrassIcon from '@mui/icons-material/Grass';
+import PoolIcon from '@mui/icons-material/Pool';
+import PetsIcon from '@mui/icons-material/Pets';
 import { haversineKm, formatDistanceKm } from '../utils/geo';
 import { useIcelandicHolidays } from '../hooks/useIcelandicHolidays';
 import { useFavoriteEvents } from '../hooks/useFavoriteEvents';
@@ -136,6 +138,9 @@ const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
     FunRun: <CelebrationIcon fontSize="small" />,
     ObstacleCourse: <FitnessCenterIcon fontSize="small" />,
     CrossCountryRun: <GrassIcon fontSize="small" />,
+    Swim: <PoolIcon fontSize="small" />,
+    Canicross: <PetsIcon fontSize="small" />,
+    IronMan: <FitnessCenterIcon fontSize="small" />,
 };
 
 export default function RacesPage({ mode, onToggleMode, showQuote = false }: RacesPageProps) {
