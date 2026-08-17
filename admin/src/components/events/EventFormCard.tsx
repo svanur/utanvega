@@ -307,12 +307,23 @@ function EventFormCardInner({ event, linkedTrails = [], onClose, onSaved, onNoti
     <Box sx={{ border: '2px solid', borderColor: 'primary.main', borderRadius: 2, p: 2.5, bgcolor: 'background.paper', mt: 1.5, mb: 2 }}>
 
       {/* Header */}
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
         <Typography variant="subtitle1" fontWeight={600}>Edit event</Typography>
         <Stack direction="row" spacing={1} alignItems="center">
           <LangToggleButton />
           <Typography variant="caption" color="text.secondary">{event.slug}</Typography>
         </Stack>
+      </Stack>
+      <Stack direction="row" justifyContent="flex-end" spacing={1} sx={{ mb: 2 }}>
+        <Button size="small" onClick={onClose} disabled={saving}>Cancel</Button>
+        <Button
+          size="small" variant="contained"
+          onClick={() => void handleSave()}
+          disabled={saving || !form.name.trim()}
+          startIcon={saving ? <CircularProgress size={14} /> : undefined}
+        >
+          {saving ? 'Saving…' : 'Save event'}
+        </Button>
       </Stack>
 
       {/* Row 1: two-column */}
