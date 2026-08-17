@@ -721,10 +721,10 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             <Typography variant="body2" color="text.secondary" sx={{ mr: 0.5 }}>
                                 {t(event.daysUntil != null && event.daysUntil < 0 ? 'races.lastRace' : 'races.nextRace')}
                             </Typography>
-                            <Typography variant="body1" fontWeight={600}>
+                            <EventDateBadge dateStr={(event.displayDate ?? event.nextEditionDate)!} endDateStr={primaryEdition?.endDate ?? event.endDisplayDate} />
+                            <Typography variant="body1">
                                 {formatDateRange((event.displayDate ?? event.nextEditionDate)!, primaryEdition?.endDate ?? event.endDisplayDate, t)}
                             </Typography>
-                            <EventDateBadge dateStr={(event.displayDate ?? event.nextEditionDate)!} endDateStr={primaryEdition?.endDate ?? event.endDisplayDate} />
                         </Box>
                     )}
 
