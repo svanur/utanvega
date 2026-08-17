@@ -173,7 +173,7 @@ const TrailTableView: React.FC<TrailTableViewProps> = ({ trails, favorites, onTo
                         </TableCell>
                         <TableCell align="right">
                             <TableSortLabel active={sortField === 'distance'} direction={sortField === 'distance' ? sortDir : 'asc'} onClick={() => handleSort('distance')}>
-                                {t('trail.distanceToTrailhead', 'Distance to trailhead')}
+                                {t('trail.nearMe', 'Near me')}
                             </TableSortLabel>
                         </TableCell>
                     </TableRow>

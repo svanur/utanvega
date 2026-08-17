@@ -186,7 +186,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                         </TableCell>
                         <TableCell>
                             <TableSortLabel active={sortField === 'distance'} direction={sortField === 'distance' ? sortDir : 'asc'} onClick={() => handleSort('distance')}>
-                                {t('trail.distanceToTrailhead', 'Distance to trailhead')}
+                                {t('trail.nearMe', 'Near me')}
                             </TableSortLabel>
                         </TableCell>
                         <TableCell align="center">{t('races.table.links', 'Links')}</TableCell>

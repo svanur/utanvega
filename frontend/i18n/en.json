@@ -148,6 +148,7 @@
         "location": "Location",
         "kmAway": "km away",
         "distanceToTrailhead": "Distance to trailhead",
+        "nearMe": "Near me",
         "routeMap": "Route Map",
         "fullscreenMap": "Fullscreen map",
         "closeFullscreen": "Close fullscreen",
