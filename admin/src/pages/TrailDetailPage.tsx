@@ -24,6 +24,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import DownloadIcon from '@mui/icons-material/Download';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import AddIcon from '@mui/icons-material/Add';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
@@ -43,6 +44,7 @@ import TrailActionDialog, { type TrailAction } from '../components/trails/TrailA
 import { InlineEditSelect, InlineEditText } from '../components/InlineEditCell';
 
 const PUBLIC_SITE_URL = ((import.meta.env.VITE_PUBLIC_SITE_URL ?? '') as string).replace(/\/$/, '');
+const API_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8080';
 const MAP_HEIGHT = 220;
 
 // Visibility states only. 'Flagged' is gone — "needs a look" is now the needsReview
@@ -495,6 +497,16 @@ export default function TrailDetailPage({ onNotify }: { onNotify: (message: Reac
                 </span>
               </Tooltip>
             )}
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<DownloadIcon />}
+              component="a"
+              href={`${API_URL}/api/v1/trails/${trail.slug}/gpx`}
+              download={`${trail.slug}.gpx`}
+            >
+              GPX
+            </Button>
             <Button size="small"
               variant={editingTrail ? 'contained' : 'outlined'}
               startIcon={<EditIcon />}
