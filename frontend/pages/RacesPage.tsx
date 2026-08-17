@@ -1424,7 +1424,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                         </Button>
                                                     )}
                                                     {comp.youtubeUrl && (
-                                                        <Button size="small" variant="outlined" color="error" href={comp.youtubeUrl} target="_blank" rel="noopener noreferrer" startIcon={<VideocamIcon sx={{ fontSize: 14 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.8rem' }}>
+                                                        <Button size="small" variant="outlined" color="error" href={comp.youtubeUrl} target="_blank" rel="noopener noreferrer" startIcon={<VideocamIcon sx={{ fontSize: 14 }} />} endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.8rem' }}>
                                                             360°
                                                         </Button>
                                                     )}
