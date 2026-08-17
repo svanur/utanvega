@@ -134,7 +134,7 @@
     },
     "trail": {
         "name": "Name",
-        "backToTrails": "Back to Trails",
+        "backToTrails": "Back to trails",
         "notFound": "Trail not found",
         "tick": "Mark as ticked",
         "ticked": "Ticked",
