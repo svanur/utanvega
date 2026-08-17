@@ -116,6 +116,7 @@
         "recentlyViewed": "Nýlega skoðað",
         "trendingTrails": "Vinsælt",
         "nextRaces": "Viðburðir",
+        "nextEvents": "Næstu viðburðir",
         "views": "{{count}} skoðanir",
         "trailMap": "Kort",
         "trailsTagged": "Leiðir merktar: {{tags}}",

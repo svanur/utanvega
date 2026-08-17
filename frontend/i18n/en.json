@@ -116,6 +116,7 @@
         "recentlyViewed": "Recently Viewed",
         "trendingTrails": "Trending 🔥",
         "nextRaces": "Next Races 🏆",
+        "nextEvents": "Next Events",
         "views": "{{count}} views",
         "trailMap": "Trail Map",
         "trailsTagged": "Trails tagged: {{tags}}",
