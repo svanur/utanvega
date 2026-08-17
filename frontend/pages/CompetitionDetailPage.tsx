@@ -34,7 +34,6 @@ import InstagramIcon from '@mui/icons-material/Instagram';
 import LanguageIcon from '@mui/icons-material/Language';
 import XIcon from '@mui/icons-material/X';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
-import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
@@ -599,7 +598,9 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             display: 'flex', alignItems: 'center', gap: 1, flex: 1, minWidth: 200,
                             ...(heroCancelled && { textDecoration: 'line-through', opacity: 0.7 }),
                         }}>
-                            <EmojiEventsIcon sx={{ color: theme.palette.warning.main, flexShrink: 0 }} />
+                            <Box component="span" sx={{ display: 'flex', color: 'text.secondary', flexShrink: 0, '& svg': { fontSize: '2rem' } }}>
+                                {getActivityIcon(event.activityType)}
+                            </Box>
                             {loc(event.name, event.nameEn)}
                         </Typography>
                         <Stack direction="row" spacing={1} alignItems="center">
