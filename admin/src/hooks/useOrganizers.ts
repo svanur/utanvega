@@ -4,6 +4,7 @@ import { apiFetch } from './api';
 export interface OrganizerDto {
     id: string;
     name: string;
+    slug: string;
     kennitala: string | null;
     phone: string | null;
     email: string | null;
@@ -11,6 +12,7 @@ export interface OrganizerDto {
     description: string | null;
     descriptionEn: string | null;
     contactName: string | null;
+    eventCount: number;
     createdAt: string;
     updatedAt: string | null;
     translationHashes?: Record<string, string>;
@@ -29,6 +31,7 @@ export interface CreateOrganizerInput {
 
 export interface UpdateOrganizerInput extends CreateOrganizerInput {
     id: string;
+    slug?: string;
 }
 
 const ORGANIZERS_QUERY_KEY = ['admin', 'organizers'] as const;
@@ -46,14 +49,14 @@ export function useOrganizers() {
 
     const invalidate = () => queryClient.invalidateQueries({ queryKey: ORGANIZERS_QUERY_KEY });
 
-    const createOrganizer = async (input: CreateOrganizerInput): Promise<string> => {
-        const result = await apiFetch<{ id: string }>('/api/v1/admin/organizers', {
+    const createOrganizer = async (input: CreateOrganizerInput): Promise<{ id: string; slug: string }> => {
+        const result = await apiFetch<{ id: string; slug: string }>('/api/v1/admin/organizers', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(input),
         });
         await invalidate();
-        return result.id;
+        return result;
     };
 
     const updateOrganizer = async (input: UpdateOrganizerInput): Promise<void> => {
@@ -63,6 +66,7 @@ export function useOrganizers() {
             body: JSON.stringify(input),
         });
         await invalidate();
+        await queryClient.invalidateQueries({ queryKey: ['admin', 'events'] });
     };
 
     const deleteOrganizer = async (id: string): Promise<void> => {

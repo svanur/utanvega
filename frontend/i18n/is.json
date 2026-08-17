@@ -1653,5 +1653,12 @@
             "dates": "3.–9. september 2026",
             "cta": "Panta sæti"
         }
+    },
+    "organizerPage": {
+        "website": "Vefur skipuleggjanda",
+        "contact": "Tengiliður",
+        "events": "Viðburðir",
+        "noEvents": "Engir viðburðir fundust",
+        "notFound": "Skipuleggjandi fannst ekki"
     }
 }

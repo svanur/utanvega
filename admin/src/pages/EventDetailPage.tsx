@@ -1065,8 +1065,15 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
               {detail.locationName && <Chip label={detail.locationName} size="small" variant="outlined" />}
             </Stack>
             <Stack direction="column" spacing={0.25}>
-              {detail.organizerName && (
-                <Typography variant="caption" color="text.secondary">by {detail.organizerName}</Typography>
+              {detail.organizerName && detail.organizerSlug && (
+                <Chip
+                  label={detail.organizerName}
+                  size="small"
+                  variant="outlined"
+                  component={RouterLink}
+                  to={`/organizers/${detail.organizerSlug}`}
+                  clickable
+                />
               )}
               {detail.gpxPointLat != null && detail.gpxPointLng != null && (
                 <Tooltip title="Copy coordinates">

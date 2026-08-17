@@ -64,7 +64,8 @@ public record EventSummaryDto(
     DateOnly? EndDisplayDate = null,
     List<string>? ActivityTypes = null,
     string? EditionStatus = null,
-    bool EditionEffectiveCancelled = false
+    bool EditionEffectiveCancelled = false,
+    string? OrganizerSlug = null
 );
 
 public record RaceDto(
