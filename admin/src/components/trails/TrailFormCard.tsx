@@ -28,6 +28,7 @@ import CheckBoxIcon from '@mui/icons-material/CheckBox';
 import RaceIcon from '@mui/icons-material/EmojiEvents';
 import TranslateIcon from '@mui/icons-material/Translate';
 import { apiFetch } from '../../hooks/api';
+import { usePageShortcuts } from '../../hooks/usePageShortcuts';
 import { useInvalidateTrailData, type TrailDetail } from '../../hooks/useTrails';
 import { useLocations } from '../../hooks/useLocations';
 import { useTags } from '../../hooks/useTags';
@@ -172,6 +173,12 @@ function TrailFormCardInner({ trail: initialTrail, onClose, onSaved, onNotify }:
     fetchLinkableRaces();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  usePageShortcuts([
+    { key: 's', handler: () => { if (!saving) void handleSave(); } },
+    { key: 's', ctrl: true, allowInInput: true, handler: () => { if (!saving) void handleSave(); } },
+    { key: 'Escape', allowInInput: true, handler: () => { if (!saving) onClose(); } },
+  ]);
 
   const handleChange = (field: keyof TrailDetail, value: string) => {
     setTrail(prev => {

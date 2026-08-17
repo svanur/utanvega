@@ -33,6 +33,7 @@ import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
 import ArchiveIcon from '@mui/icons-material/Archive';
 import RestoreIcon from '@mui/icons-material/Restore';
 import { useTrailDetail, useTrailRaces, useInvalidateTrailData, trailStatusLabel, type TrailDetail, type TrailLinkedRace } from '../hooks/useTrails';
+import { usePageShortcuts } from '../hooks/usePageShortcuts';
 import { useLocations } from '../hooks/useLocations';
 import { useTags } from '../hooks/useTags';
 import { apiFetch } from '../hooks/api';
@@ -225,6 +226,13 @@ export default function TrailDetailPage({ onNotify }: { onNotify: (message: Reac
   const [showAddLocation, setShowAddLocation] = useState(false);
   const [showAddTag, setShowAddTag] = useState(false);
   const [statusLegendOpen, setStatusLegendOpen] = useState(false);
+
+  usePageShortcuts([
+    { key: 'u', handler: () => navigate(-1) },
+    { key: 'e', handler: () => setEditingTrail(v => !v) },
+    { key: 'v', handler: () => { if (isPubliclyVisible && PUBLIC_SITE_URL) window.open(`${PUBLIC_SITE_URL}/trails/${trail.slug}`, '_blank'); } },
+    { key: 'Escape', allowInInput: true, handler: () => setEditingTrail(false) },
+  ]);
 
   // Canonicalize the URL to the slug once the trail loads (some entry points only have the id on hand).
   useEffect(() => {

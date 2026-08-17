@@ -40,6 +40,7 @@ import SaveIcon from '@mui/icons-material/Save';
 
 import { useOrganizers } from '../hooks/useOrganizers';
 import { useEvents, type EventSummaryDto } from '../hooks/useEvents';
+import { usePageShortcuts } from '../hooks/usePageShortcuts';
 import { trimToUndefined } from '../utils/strings';
 import BilingualTextField from '../components/BilingualTextField';
 import { useTranslate } from '../hooks/useTranslate';
@@ -189,6 +190,15 @@ export default function OrganizerDetailPage({ onNotify }: Props) {
     const set = (field: keyof FormState, value: string) =>
         setForm(prev => ({ ...prev, [field]: value }));
 
+    usePageShortcuts([
+        { key: 'u', handler: () => navigate(-1) },
+        { key: 'e', handler: () => editing ? setEditing(false) : openEdit() },
+        { key: 'v', handler: () => { if (SITE_URL && organizer?.slug) window.open(`${SITE_URL}/organizers/${organizer.slug}`, '_blank'); } },
+        { key: 's', handler: () => { if (editing && !saving) void handleSave(); } },
+        { key: 's', ctrl: true, allowInInput: true, handler: () => { if (editing && !saving) void handleSave(); } },
+        { key: 'Escape', allowInInput: true, handler: () => { if (!saving) setEditing(false); } },
+    ]);
+
     if (loading) {
         return (
             <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}>
@@ -322,7 +332,15 @@ export default function OrganizerDetailPage({ onNotify }: Props) {
             {/* Inline edit form */}
             {editing && (
                 <Box sx={{ bgcolor: 'background.paper', border: '1px solid', borderColor: 'primary.main', borderRadius: 2, p: 2.5, mb: 3 }}>
-                    <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>Edit organizer</Typography>
+                    <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
+                        <Typography variant="subtitle1" fontWeight={600}>Edit organizer</Typography>
+                        <Stack direction="row" spacing={1}>
+                            <Button size="small" onClick={() => setEditing(false)} disabled={saving}>Cancel</Button>
+                            <Button size="small" variant="contained" startIcon={saving ? <CircularProgress size={14} color="inherit" /> : <SaveIcon />} onClick={() => void handleSave()} disabled={saving || !form.name.trim()}>
+                                Save
+                            </Button>
+                        </Stack>
+                    </Stack>
                     <Stack spacing={2}>
                         <TextField
                             label="Name"

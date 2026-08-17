@@ -47,6 +47,7 @@ import type {
 } from '../../hooks/useEvents';
 import type { Trail } from '../../hooks/useTrails';
 import { useTranslate } from '../../hooks/useTranslate';
+import { usePageShortcuts } from '../../hooks/usePageShortcuts';
 import { trimToUndefined, parseCoordPaste } from '../../utils/strings';
 import BilingualTextField from '../BilingualTextField';
 import { BilingualLangProvider, useBilingualLang } from '../../contexts/BilingualLangContext';
@@ -299,6 +300,12 @@ function EventFormCardInner({ event, linkedTrails = [], onClose, onSaved, onNoti
       setSaving(false);
     }
   };
+
+  usePageShortcuts([
+    { key: 's', handler: () => { if (!saving) void handleSave(); } },
+    { key: 's', ctrl: true, allowInInput: true, handler: () => { if (!saving) void handleSave(); } },
+    { key: 'Escape', allowInInput: true, handler: () => { if (!saving) onClose(); } },
+  ]);
 
   const canTranslate = !!(form.name.trim() || form.description.trim() || form.organizerName.trim() || form.alertMessage.trim());
   const s = form.schedule;
