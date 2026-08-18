@@ -400,10 +400,7 @@ export default function TrailList({ onNotify, initialTrailId, initialSearch }: {
         onSelectAll={handleSelectAll}
         onSelectOne={handleSelectOne}
         onViewMap={(t) => setSelectedTrailMap(trails.find(x => x.id === t.id) ?? null)}
-        onEdit={setSelectedTrailEdit}
-        onDelete={setTrailToDelete}
         onRestore={handleRestore}
-        onUpdateStatus={handleUpdateStatus}
         onPatchTrail={handlePatchTrail}
         allLocations={allLocations}
         onAddLocation={handleAddLocation}
