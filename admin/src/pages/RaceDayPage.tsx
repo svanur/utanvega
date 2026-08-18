@@ -51,6 +51,7 @@ interface RaceDayEdition {
     eventSlug: string;
     eventType: string;
     eventStatus: string;
+    editionStatus: string;
     date: string | null;
     endDate: string | null;
     title: string | null;
@@ -273,6 +274,13 @@ export default function RaceDayPage({ onNotify, initialDate }: RaceDayPageProps)
             editions.filter(ed => ed.registrationStatus !== 'Closed'),
             () => ({ registrationStatus: 'Closed' }),
             n => `Registration closed for ${n} edition${n > 1 ? 's' : ''}`
+        );
+
+    const markEditionsCompleted = () =>
+        bulkUpdateEditions(
+            editions.filter(ed => ed.editionStatus !== 'Completed' && ed.editionStatus !== 'Cancelled'),
+            () => ({ status: 'Completed', registrationStatus: 'Closed' }),
+            n => `${n} edition${n > 1 ? 's' : ''} marked as Completed`
         );
 
     // ── Setup bulk actions ────────────────────────────────────────────────────
@@ -651,6 +659,16 @@ export default function RaceDayPage({ onNotify, initialDate }: RaceDayPageProps)
                                 onClick={closeAllRegistrations}
                             >
                                 Close All Registrations
+                            </Button>
+                            <Button
+                                variant="outlined"
+                                size="small"
+                                color="info"
+                                disabled={isBusy || editions.every(ed => ed.editionStatus === 'Completed' || ed.editionStatus === 'Cancelled')}
+                                startIcon={bulkEditions ? <CircularProgress size={14} color="inherit" /> : undefined}
+                                onClick={markEditionsCompleted}
+                            >
+                                Mark Editions Completed
                             </Button>
                         </>)}
                     </Stack>
