@@ -1141,7 +1141,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                         </Button>
                                                                     )}
                                                                     {comp.youtubeUrl && (
-                                                                        <Button size="small" variant="outlined" color="error" href={comp.youtubeUrl} target="_blank" rel="noopener noreferrer" startIcon={<VideocamIcon sx={{ fontSize: 14 }} />} endIcon={<OpenInNewIcon sx={{ fontSize: 12 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem' }}>
+                                                                        <Button size="small" variant="outlined" href={comp.youtubeUrl} target="_blank" rel="noopener noreferrer" startIcon={<VideocamIcon sx={{ fontSize: 14 }} color="error" />} endIcon={<OpenInNewIcon sx={{ fontSize: 12 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem' }}>
                                                                             360°
                                                                         </Button>
                                                                     )}
@@ -1391,7 +1391,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                             </Button>
                                                         )}
                                                         {comp.youtubeUrl && (
-                                                            <Button size="small" variant="outlined" color="error" href={comp.youtubeUrl} target="_blank" rel="noopener noreferrer" startIcon={<VideocamIcon sx={{ fontSize: 14 }} />} endIcon={<OpenInNewIcon sx={{ fontSize: 12 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem' }}>
+                                                            <Button size="small" variant="outlined" href={comp.youtubeUrl} target="_blank" rel="noopener noreferrer" startIcon={<VideocamIcon sx={{ fontSize: 14 }} color="error" />} endIcon={<OpenInNewIcon sx={{ fontSize: 12 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem' }}>
                                                                 360°
                                                             </Button>
                                                         )}

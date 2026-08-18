@@ -848,9 +848,8 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             {event.youtubeUrl && (
                                 <Button
                                     variant="outlined"
-                                    color="error"
                                     size="small"
-                                    startIcon={<VideocamIcon sx={{ fontSize: 16 }} />}
+                                    startIcon={<VideocamIcon sx={{ fontSize: 16 }} color="error" />}
                                     endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
                                     onClick={() => window.open(event.youtubeUrl!, '_blank', 'noopener')}
                                     sx={{ textTransform: 'none' }}

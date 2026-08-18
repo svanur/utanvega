@@ -564,11 +564,10 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                                 <Button
                                                     size="small"
                                                     variant="outlined"
-                                                    color="error"
                                                     href={event.youtubeUrl}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    startIcon={<VideocamIcon sx={{ fontSize: 14 }} />}
+                                                    startIcon={<VideocamIcon sx={{ fontSize: 14 }} color="error" />}
                                                     endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
                                                     onClick={(e) => e.stopPropagation()}
                                                     sx={{ textTransform: 'none', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
