@@ -61,8 +61,10 @@ function getEditionChecks(edition: EventEditionDto, eventName: string): HealthCh
     },
     {
       label: 'Reg. URL',
-      passed: !!edition.registrationUrl,
-      tooltip: edition.registrationUrl ?? 'No registration URL',
+      passed: edition.registrationStatus === 'NotRequired' || !!edition.registrationUrl,
+      tooltip: edition.registrationStatus === 'NotRequired'
+        ? 'Not required — walk-in edition'
+        : (edition.registrationUrl ?? 'No registration URL'),
     },
     {
       label: 'Results URL',
