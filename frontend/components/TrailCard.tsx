@@ -56,9 +56,9 @@ interface TrailCardProps {
 
 const getTrailTypeIcon = (type: string) => {
     switch (type) {
-        case 'Loop': return <AllInclusiveIcon sx={{ fontSize: 14 }}color="error" />;
-        case 'OutAndBack': return <CompareArrowsIcon sx={{ fontSize: 14 }}color="error" />;
-        case 'PointToPoint': return <TrendingFlatIcon sx={{ fontSize: 14 }}color="error" />;
+        case 'Loop': return <AllInclusiveIcon sx={{ fontSize: 14 }} />;
+        case 'OutAndBack': return <CompareArrowsIcon sx={{ fontSize: 14 }} />;
+        case 'PointToPoint': return <TrendingFlatIcon sx={{ fontSize: 14 }} />;
         default: return null;
     }
 };
@@ -74,9 +74,9 @@ const trailTypeI18nKey = (type: string) => {
 
 const getTerrainIcon = (type: string) => {
     switch (type) {
-        case 'Flat': return <HorizontalRuleIcon sx={{ fontSize: 14 }}color="error" />;
-        case 'Hilly': return <ShowChartIcon sx={{ fontSize: 14 }}color="error" />;
-        case 'Mountainous': return <FilterHdrIcon sx={{ fontSize: 14 }}color="error" />;
+        case 'Flat': return <HorizontalRuleIcon sx={{ fontSize: 14 }} />;
+        case 'Hilly': return <ShowChartIcon sx={{ fontSize: 14 }} />;
+        case 'Mountainous': return <FilterHdrIcon sx={{ fontSize: 14 }} />;
         default: return undefined;
     }
 };
@@ -208,7 +208,7 @@ const TrailCardComponent: React.FC<TrailCardProps> = ({ trail, onToggleFavorite,
                     zIndex: 0
                 }}
             >
-                <StarIcon sx={{ color: 'white' }}color="error" />
+                <StarIcon sx={{ color: 'white' }} />
                 <Typography sx={{ color: 'white', ml: 1, fontWeight: 'bold' }}>
                     {isFavorited ? t('trailCard.removeFavorite') : t('trailCard.addFavorite')}
                 </Typography>
@@ -237,7 +237,7 @@ const TrailCardComponent: React.FC<TrailCardProps> = ({ trail, onToggleFavorite,
                 <Typography sx={{ color: 'white', mr: 1, fontWeight: 'bold' }}>
                     {t('trailCard.share')}
                 </Typography>
-                <ShareIcon sx={{ color: 'white' }}color="error" />
+                <ShareIcon sx={{ color: 'white' }} />
             </Box>
             )}
 
@@ -280,8 +280,8 @@ const TrailCardComponent: React.FC<TrailCardProps> = ({ trail, onToggleFavorite,
                                                 </IconButton>
                                             </Tooltip>
                                         )}
-                                        {loginEnabled && tickedSlugs.has(trail.slug) && <CheckCircleIcon color="success" sx={{ fontSize: 14 }}color="error" />}
-                                        {isFavorited && <StarIcon color="warning" sx={{ fontSize: 14 }}color="error" />}
+                                        {loginEnabled && tickedSlugs.has(trail.slug) && <CheckCircleIcon color="success" sx={{ fontSize: 14 }} />}
+                                        {isFavorited && <StarIcon color="warning" sx={{ fontSize: 14 }} />}
                                     </Box>
                                 </>
                             ) : (
@@ -302,8 +302,8 @@ const TrailCardComponent: React.FC<TrailCardProps> = ({ trail, onToggleFavorite,
                                                 </IconButton>
                                             </Tooltip>
                                         )}
-                                        {loginEnabled && tickedSlugs.has(trail.slug) && <CheckCircleIcon color="success" sx={{ fontSize: 20 }}color="error" />}
-                                        {isFavorited && <StarIcon color="warning" sx={{ fontSize: 20 }}color="error" />}
+                                        {loginEnabled && tickedSlugs.has(trail.slug) && <CheckCircleIcon color="success" sx={{ fontSize: 20 }} />}
+                                        {isFavorited && <StarIcon color="warning" sx={{ fontSize: 20 }} />}
                                     </Box>
                                 </>
                             )}
@@ -314,16 +314,16 @@ const TrailCardComponent: React.FC<TrailCardProps> = ({ trail, onToggleFavorite,
                             <Stack direction="row" alignItems="center" gap={0.5} sx={{ mt: 0.5 }} flexWrap="wrap">
                                 {trail.locations.length > 0 && (
                                     <>
-                                        <LocationOnIcon sx={{ fontSize: 13, color: 'text.secondary' }}color="error" />
+                                        <LocationOnIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
                                         <Typography variant="body2" color="text.secondary" noWrap>
                                             {[...trail.locations].sort((a, b) => a.order - b.order)[0].name}
                                         </Typography>
                                     </>
                                 )}
-                                {userDist && trail.locations.length > 0 && <FiberManualRecordIcon sx={{ fontSize: 5, color: 'text.disabled' }}color="error" />}
+                                {userDist && trail.locations.length > 0 && <FiberManualRecordIcon sx={{ fontSize: 5, color: 'text.disabled' }} />}
                                 {userDist && (
                                     <>
-                                        <NearMeIcon sx={{ fontSize: 13, color: 'primary.main' }}color="error" />
+                                        <NearMeIcon sx={{ fontSize: 13, color: 'primary.main' }} />
                                         <Typography variant="body2" color="primary.main" fontWeight={500} noWrap>{userDist}</Typography>
                                     </>
                                 )}
@@ -347,7 +347,7 @@ const TrailCardComponent: React.FC<TrailCardProps> = ({ trail, onToggleFavorite,
                                 </Tooltip>
                             )}
                             {trail.difficulty && (
-                                <DifficultyInfo difficulty={trail.difficulty} activityType={trail.activityType}color="error" />
+                                <DifficultyInfo difficulty={trail.difficulty} activityType={trail.activityType} />
                             )}
                         </Stack>
                     ) : (
@@ -358,7 +358,7 @@ const TrailCardComponent: React.FC<TrailCardProps> = ({ trail, onToggleFavorite,
                         gap={1}
                     >
                         {trail.difficulty && (
-                            <DifficultyInfo difficulty={trail.difficulty} activityType={trail.activityType}color="error" />
+                            <DifficultyInfo difficulty={trail.difficulty} activityType={trail.activityType} />
                         )}
                         {trail.terrainType && (
                             <Chip
@@ -366,7 +366,7 @@ const TrailCardComponent: React.FC<TrailCardProps> = ({ trail, onToggleFavorite,
                                 label={t(`trail.terrainType.${trail.terrainType}`, { defaultValue: trail.terrainType })}
                                 size="small"
                                 variant="outlined"
-                           color="error" />
+                            />
                         )}
                         <Chip
                             icon={getActivityIcon(trail.activityType)}
@@ -374,7 +374,7 @@ const TrailCardComponent: React.FC<TrailCardProps> = ({ trail, onToggleFavorite,
                             size="small"
                             variant="outlined"
                             color="primary"
-                       color="error" />
+                        />
                         {trail.trailType && trail.trailType !== 'Unknown' && (
                             <Chip
                                 icon={getTrailTypeIcon(trail.trailType) || undefined}
@@ -382,7 +382,7 @@ const TrailCardComponent: React.FC<TrailCardProps> = ({ trail, onToggleFavorite,
                                 size="small"
                                 variant="outlined"
                                 sx={{ fontSize: '0.7rem' }}
-                           color="error" />
+                            />
                         )}
                         {tagsEnabled && trail.tags && trail.tags.length > 0 && trail.tags
                             .map(tag => (
@@ -402,7 +402,7 @@ const TrailCardComponent: React.FC<TrailCardProps> = ({ trail, onToggleFavorite,
                                         cursor: onTagClick ? 'pointer' : undefined,
                                     }}
                                     variant={tag.color ? 'filled' : 'outlined'}
-                               color="error" />
+                                />
                             ))}
                     </Box>
                     )}
@@ -410,32 +410,32 @@ const TrailCardComponent: React.FC<TrailCardProps> = ({ trail, onToggleFavorite,
                     {/* 3rd row: distance, gain, loss — icon-only in compact */}
                     <Stack direction="row" spacing={compact ? 0.5 : 1.5} color="text.secondary" flexWrap="wrap" mt="auto" pt={compact ? 1 : 2} justifyContent={compact ? 'space-between' : 'flex-start'} alignItems="center">
                         <Box display="flex" alignItems="center">
-                            <RouteIcon sx={{ mr: compact ? 0 : 0.5, fontSize: compact ? 14 : 18 }}color="error" />
+                            <RouteIcon sx={{ mr: compact ? 0 : 0.5, fontSize: compact ? 14 : 18 }} />
                             <Typography variant="body2" fontSize={compact ? '0.75rem' : undefined}>{distanceKm} km</Typography>
                         </Box>
                         <Box display="flex" alignItems="center">
-                            <TrendingUpIcon sx={{ mr: compact ? 0 : 0.5, fontSize: compact ? 14 : 18, color: 'success.main' }}color="error" />
+                            <TrendingUpIcon sx={{ mr: compact ? 0 : 0.5, fontSize: compact ? 14 : 18, color: 'success.main' }} />
                             <Typography variant="body2" fontSize={compact ? '0.75rem' : undefined}>+{Math.round(trail.elevationGain)}</Typography>
                         </Box>
                         <Box display="flex" alignItems="center">
-                            <TrendingDownIcon sx={{ mr: compact ? 0 : 0.5, fontSize: compact ? 14 : 18, color: 'error.main' }}color="error" />
+                            <TrendingDownIcon sx={{ mr: compact ? 0 : 0.5, fontSize: compact ? 14 : 18, color: 'error.main' }} />
                             <Typography variant="body2" fontSize={compact ? '0.75rem' : undefined}>-{Math.round(trail.elevationLoss)}</Typography>
                         </Box>
                         {!compact && trail.activityType === 'TrailRunning' && trail.length > 0 && (
                             <Box display="flex" alignItems="center">
-                                <LandscapeIcon sx={{ mr: 0.5, fontSize: 18 }}color="error" />
+                                <LandscapeIcon sx={{ mr: 0.5, fontSize: 18 }} />
                                 <Typography variant="body2">{Math.round(trail.elevationGain / (trail.length / 1000))} m/km</Typography>
                             </Box>
                         )}
                         {estTime && (
                         <Box display="flex" alignItems="center">
-                            <AccessTimeIcon sx={{ mr: compact ? 0 : 0.5, fontSize: compact ? 14 : 18 }}color="error" />
+                            <AccessTimeIcon sx={{ mr: compact ? 0 : 0.5, fontSize: compact ? 14 : 18 }} />
                             <Typography variant="body2" fontSize={compact ? '0.75rem' : undefined}>~{estTime}</Typography>
                         </Box>
                         )}
                         {userDist && compact && (
                             <Box display="flex" alignItems="center">
-                                <LocationOnIcon sx={{ mr: 0, fontSize: 14, color: 'primary.main' }}color="error" />
+                                <LocationOnIcon sx={{ mr: 0, fontSize: 14, color: 'primary.main' }} />
                                 <Typography variant="body2" fontSize="0.75rem" color="primary.main" fontWeight="medium">
                                     {userDist}
                                 </Typography>
@@ -445,7 +445,7 @@ const TrailCardComponent: React.FC<TrailCardProps> = ({ trail, onToggleFavorite,
 
                     {!compact && trail.elevationProfile && trail.elevationProfile.length >= 2 && (
                         <Box sx={{ mt: 1.5, mx: -0.5, color: 'text.secondary' }}>
-                            <ElevationSparkline profile={trail.elevationProfile} width="100%" height={36}color="error" />
+                            <ElevationSparkline profile={trail.elevationProfile} width="100%" height={36} />
                         </Box>
                     )}
                     {!compact && (
@@ -462,7 +462,7 @@ const TrailCardComponent: React.FC<TrailCardProps> = ({ trail, onToggleFavorite,
                     trail={trail}
                     open={quickViewOpen}
                     onClose={() => setQuickViewOpen(false)}
-               color="error" />
+                />
             )}
             {!disableGestures && (
                 <QRCodeShare
@@ -470,7 +470,7 @@ const TrailCardComponent: React.FC<TrailCardProps> = ({ trail, onToggleFavorite,
                     trailName={trail.name}
                     open={shareOpen}
                     onClose={() => setShareOpen(false)}
-               color="error" />
+                />
             )}
         </Box>
     );
