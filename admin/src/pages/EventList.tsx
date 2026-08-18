@@ -3030,7 +3030,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
                                             </IconButton>
                                           </Tooltip>
                                         )}
-                                        <Tooltip title={edition.notes ? `Notes: ${edition.notes.slice(0, 60)}${edition.notes.length > 60 ? '…' : ''}` : 'Add notes'}>
+                                        <Tooltip title={edition.notes ? `Description: ${edition.notes.slice(0, 60)}${edition.notes.length > 60 ? '…' : ''}` : 'Add edition description'}>
                                           <IconButton size="small" color={edition.notes ? 'primary' : 'default'} onClick={(e) => setNotesPopover({ anchorEl: e.currentTarget, edition, notes: edition.notes ?? '', notesEn: edition.notesEn ?? '' })}>
                                             <NotesIcon fontSize="small" />
                                           </IconButton>
@@ -3230,7 +3230,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
               </FormControl>
             </Box>
             <BilingualTextField
-              label="Description"
+              label="Event description"
               valueIs={eventForm.description}
               valueEn={eventForm.descriptionEn}
               onChangeIs={(v) => setEventField('description', v)}
@@ -3682,7 +3682,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
               ) : null }}
             />
             <BilingualTextField
-              label="Notes"
+              label="Edition description"
               valueIs={editionForm.notes}
               valueEn={editionForm.notesEn}
               onChangeIs={(v) => setEditionField('notes', v)}
@@ -4247,9 +4247,9 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
           transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         >
           <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1.5, width: 360 }}>
-            <Typography variant="subtitle2">Notes — {buildEditionLabel(notesPopover.edition)}</Typography>
+            <Typography variant="subtitle2">Edition description — {buildEditionLabel(notesPopover.edition)}</Typography>
             <TextField
-              label="Notes (IS)"
+              label="Description (IS)"
               size="small"
               fullWidth
               multiline
@@ -4257,10 +4257,10 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
               autoFocus
               value={notesPopover.notes}
               onChange={(e) => setNotesPopover(prev => prev ? { ...prev, notes: e.target.value } : null)}
-              placeholder="Internal notes about this edition…"
+              placeholder="Edition description…"
             />
             <TextField
-              label="Notes (EN)"
+              label="Description (EN)"
               size="small"
               fullWidth
               multiline

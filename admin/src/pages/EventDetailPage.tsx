@@ -360,7 +360,7 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onNotify
           <TextField size="small" fullWidth label="Photo Gallery URL" value={form.photoGalleryUrl}
             onChange={e => set('photoGalleryUrl', e.target.value)} />
           <BilingualTextField
-            size="small" fullWidth label="Notes" multiline rows={2}
+            size="small" fullWidth label="Edition description" multiline rows={2}
             valueIs={form.notes} valueEn={form.notesEn}
             onChangeIs={v => set('notes', v)} onChangeEn={v => set('notesEn', v)}
           />

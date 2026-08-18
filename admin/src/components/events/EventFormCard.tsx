@@ -362,7 +362,7 @@ function EventFormCardInner({ event, linkedTrails = [], onClose, onSaved, onNoti
             }}
           />
           <BilingualTextField
-            size="small" fullWidth label="Description" multiline rows={18} sx={{ mb: 1.5 }}
+            size="small" fullWidth label="Event description" multiline rows={18} sx={{ mb: 1.5 }}
             valueIs={form.description} valueEn={form.descriptionEn}
             onChangeIs={v => set('description', v)} onChangeEn={v => set('descriptionEn', v)}
           />
