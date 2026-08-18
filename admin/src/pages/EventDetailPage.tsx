@@ -44,6 +44,8 @@ import EditIcon from '@mui/icons-material/Edit';
 import DragHandleIcon from '@mui/icons-material/DragIndicator';
 import FlagIcon from '@mui/icons-material/Flag';
 import EventBusyIcon from '@mui/icons-material/EventBusy';
+import TaskAltIcon from '@mui/icons-material/TaskAlt';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
@@ -317,6 +319,8 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onNotify
                     if (/^\d{4}$/.test(prev.title.trim())) updates.title = newYear;
                     if (prev.resultsUrl) updates.resultsUrl = prev.resultsUrl.replace(new RegExp(`${oy}(/?)$`), `${newYear}$1`);
                   }
+                  if (isNew && newYear.length === 4 && !isNaN(ny))
+                    updates.status = ny < new Date().getFullYear() ? 'Completed' : 'Active';
                   return { ...prev, ...updates };
                 });
               }} />
@@ -340,6 +344,14 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onNotify
               onChange={e => set('status', e.target.value as EditionStatus)}>
               {EDITION_STATUSES.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
             </Select>
+            {isNew && (form.status === 'Completed' || form.status === 'Active') && (
+              <FormHelperText>Auto-set based on year — you can override</FormHelperText>
+            )}
+            {!isNew && form.status === 'Completed' && edition?.status !== 'Completed' && (
+              <FormHelperText>
+                Saving will set Active races to Completed and close registration.
+              </FormHelperText>
+            )}
             {!isNew && form.status === 'Cancelled' && edition?.status !== 'Cancelled' && (
               <FormHelperText>
                 Saving will also cancel this edition's races and close registration.
@@ -502,14 +514,21 @@ function SortableRaceRow({ race, edition, isActive, staleTx, detail, onOpen, onD
           </Stack>
         )}
       </TableCell>
-      <TableCell>
-        <Tooltip title={edition.status === 'Cancelled'
-          ? 'Locked — the edition is cancelled'
-          : cycleTooltip('Race status', RACE_STATUSES, race.status)}>
-          <Chip label={race.status} size="small" color={getRaceStatusColor(race.status)}
-            onClick={edition.status === 'Cancelled' ? undefined : e => { e.stopPropagation(); onCycleStatus(); }}
-            sx={{ cursor: edition.status === 'Cancelled' ? 'default' : 'pointer' }} />
-        </Tooltip>
+      <TableCell onClick={e => e.stopPropagation()}>
+        <Stack direction="row" alignItems="center" spacing={0.5}>
+          <Tooltip title={edition.status === 'Cancelled'
+            ? 'Locked — the edition is cancelled'
+            : cycleTooltip('Race status', RACE_STATUSES, race.status)}>
+            <Chip label={race.status} size="small" color={getRaceStatusColor(race.status)}
+              onClick={edition.status === 'Cancelled' ? undefined : e => { e.stopPropagation(); onCycleStatus(); }}
+              sx={{ cursor: edition.status === 'Cancelled' ? 'default' : 'pointer' }} />
+          </Tooltip>
+          {edition.status === 'Completed' && race.status !== 'Completed' && race.status !== 'Cancelled' && (
+            <Tooltip title="Edition is Completed but this race is not — update via the race status chip">
+              <WarningAmberIcon fontSize="small" color="warning" />
+            </Tooltip>
+          )}
+        </Stack>
       </TableCell>
       <TableCell>
         <Tooltip title={race.status === 'Cancelled'
@@ -578,6 +597,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
 
   const [deletingEditionId, setDeletingEditionId] = useState<string | null>(null);
   const [cancelingEditionId, setCancelingEditionId] = useState<string | null>(null);
+  const [completingEditionId, setCompletingEditionId] = useState<string | null>(null);
   const [copyRacesConfirm, setCopyRacesConfirm] = useState<{ edition: EventEditionDto; source: EventEditionDto } | null>(null);
   const [copyingRaces, setCopyingRaces] = useState(false);
   const [showBulkDatesDialog, setShowBulkDatesDialog] = useState(false);
@@ -604,6 +624,12 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
     const t = setTimeout(() => setCancelingEditionId(null), 3000);
     return () => clearTimeout(t);
   }, [cancelingEditionId]);
+
+  useEffect(() => {
+    if (!completingEditionId) return;
+    const t = setTimeout(() => setCompletingEditionId(null), 3000);
+    return () => clearTimeout(t);
+  }, [completingEditionId]);
 
   const currentYear = new Date().getFullYear();
 
@@ -943,10 +969,28 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
     }
   };
 
+  const handleCompleteEdition = async (edition: EventEditionDto) => {
+    if (completingEditionId !== edition.id) {
+      setCompletingEditionId(edition.id);
+      return;
+    }
+    try {
+      await apiFetch(`/api/v1/admin/editions/${edition.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ id: edition.id, eventId: edition.eventId, status: 'Completed', registrationStatus: edition.registrationStatus }),
+      });
+      onNotify('Edition marked Completed — Active races completed along with it', 'success');
+      setCompletingEditionId(null);
+      await refresh();
+    } catch {
+      onNotify('Failed to complete edition', 'error');
+    }
+  };
+
   const handleCycleEditionStatus = (edition: EventEditionDto) => {
-    // Cancelled is reachable only via the dedicated Cancel-edition action, and leaving it is only
-    // done deliberately through the edit dialog — clicking the chip must not silently reactivate it.
-    if (edition.status === 'Cancelled') return;
+    // Cancelled and Completed are terminal states reachable/escapable only via the edit dialog —
+    // clicking the chip must not silently reactivate either.
+    if (edition.status === 'Cancelled' || edition.status === 'Completed') return;
     const cycle = EDITION_STATUS_CYCLE;
     const next = cycle[(cycle.indexOf(edition.status) + 1) % cycle.length]!;
     // Optimistic update
@@ -1231,13 +1275,15 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                 )}
                 <Tooltip title={edition.status === 'Cancelled'
                   ? 'Cancelled — reactivate via Edit edition'
-                  : cycleTooltip('Edition status', EDITION_STATUS_CYCLE, edition.status)}>
+                  : edition.status === 'Completed'
+                    ? 'Completed — reactivate via Edit edition'
+                    : cycleTooltip('Edition status', EDITION_STATUS_CYCLE, edition.status)}>
                   <Chip
                     label={edition.status}
                     size="small"
                     color={getEditionStatusColor(edition.status)}
                     onClick={() => handleCycleEditionStatus(edition)}
-                    sx={{ cursor: edition.status === 'Cancelled' ? 'default' : 'pointer' }}
+                    sx={{ cursor: (edition.status === 'Cancelled' || edition.status === 'Completed') ? 'default' : 'pointer' }}
                   />
                 </Tooltip>
                 <Tooltip title={cycleTooltip('Registration status', ['NotStarted', 'Open', 'Closed'], edition.registrationStatus)}>
@@ -1272,6 +1318,19 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                     <ContentCopyIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
+                {isPast && edition.status !== 'Completed' && edition.status !== 'Cancelled' && (
+                  <Tooltip title={completingEditionId === edition.id
+                    ? `Click again to confirm — sets ${edition.races.filter(r => r.status === 'Active').length} Active race${edition.races.filter(r => r.status === 'Active').length !== 1 ? 's' : ''} to Completed and closes registration (or wait 3 s to cancel)`
+                    : 'Mark edition Completed (also completes Active races and closes registration)'}>
+                    <IconButton
+                      size="small"
+                      color={completingEditionId === edition.id ? 'info' : 'default'}
+                      onClick={() => void handleCompleteEdition(edition)}
+                    >
+                      <TaskAltIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                )}
                 {edition.status !== 'Cancelled' && (
                   <Tooltip title={cancelingEditionId === edition.id
                     ? `Click again to confirm — cancels ${edition.races.filter(r => r.status !== 'Cancelled').length} race${edition.races.filter(r => r.status !== 'Cancelled').length !== 1 ? 's' : ''} and closes registration too (or wait 3 seconds to cancel)`

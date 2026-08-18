@@ -56,4 +56,23 @@ public class EditionStatusHelpersTests
             [RaceStatus.Active]);
         Assert.False(result);
     }
+
+    [Fact]
+    public void ComputeEffectiveCancelled_Completed_ReturnsFalse()
+    {
+        // Completed editions ran successfully — they are not cancelled and must not be treated as such.
+        var result = EditionStatusHelpers.ComputeEffectiveCancelled(EditionStatus.Completed, []);
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void ComputeEffectiveCancelled_CompletedWithAllRacesCancelled_ReturnsFalse()
+    {
+        // All-races-cancelled only implies effective cancellation for non-terminal edition statuses;
+        // a Completed edition should not flip to effectively-cancelled due to race statuses.
+        var result = EditionStatusHelpers.ComputeEffectiveCancelled(
+            EditionStatus.Completed,
+            [RaceStatus.Cancelled, RaceStatus.Cancelled]);
+        Assert.False(result);
+    }
 }

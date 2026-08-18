@@ -35,9 +35,9 @@ export interface RaceFormState {
 }
 
 export const RACE_STATUSES: RaceStatus[] = ['Active', 'Completed', 'Cancelled', 'Hidden'];
-export const EDITION_STATUSES: EditionStatus[] = ['Active', 'Unconfirmed', 'Cancelled', 'Hidden'];
-// Cycling the edition-status chip skips Cancelled — cancelling is a dedicated action (with a race cascade),
-// not something to land on by clicking through a cycle.
+export const EDITION_STATUSES: EditionStatus[] = ['Active', 'Unconfirmed', 'Cancelled', 'Hidden', 'Completed'];
+// Cycling skips Cancelled and Completed — both are terminal states that should be set intentionally,
+// not landed on by clicking through a cycle.
 export const EDITION_STATUS_CYCLE: EditionStatus[] = ['Active', 'Unconfirmed', 'Hidden'];
 export const TICKET_STATUSES: TicketStatus[] = ['Free', 'NotStarted', 'Available', 'AlmostSoldOut', 'SoldOut', 'Closed'];
 export const ACTIVITY_TYPES: ActivityType[] = ['TrailRunning', 'Running', 'Cycling', 'Hiking', 'FunRun', 'ObstacleCourse', 'CrossCountryRun', 'Swim', 'Canicross', 'IronMan', 'Other'];
@@ -124,10 +124,11 @@ export function getRaceStatusColor(status: RaceStatus): 'default' | 'success' | 
   return 'default';
 }
 
-export function getEditionStatusColor(status: EditionStatus): 'default' | 'success' | 'warning' | 'error' {
+export function getEditionStatusColor(status: EditionStatus): 'default' | 'success' | 'warning' | 'error' | 'info' {
   if (status === 'Active') return 'success';
   if (status === 'Unconfirmed') return 'warning'; // matches getEventStatusColor's Unconfirmed mapping
   if (status === 'Cancelled') return 'error';
+  if (status === 'Completed') return 'info';
   return 'default'; // Hidden
 }
 

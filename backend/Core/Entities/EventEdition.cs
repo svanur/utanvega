@@ -13,6 +13,7 @@ public enum EditionStatus
     Unconfirmed,
     Cancelled,
     Hidden,
+    Completed,
 }
 
 public class EventEdition
@@ -59,6 +60,18 @@ public class EventEdition
         foreach (var race in Races.Where(r => r.Status != RaceStatus.Cancelled))
         {
             race.Status = RaceStatus.Cancelled;
+            race.TicketStatus = TicketStatus.Closed;
+        }
+    }
+
+    // Completing an edition cascades to Active races only — Cancelled races stay Cancelled.
+    public void CompleteWithRaces()
+    {
+        Status = EditionStatus.Completed;
+        RegistrationStatus = RegistrationStatus.Closed;
+        foreach (var race in Races.Where(r => r.Status == RaceStatus.Active))
+        {
+            race.Status = RaceStatus.Completed;
             race.TicketStatus = TicketStatus.Closed;
         }
     }
