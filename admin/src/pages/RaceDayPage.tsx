@@ -271,7 +271,7 @@ export default function RaceDayPage({ onNotify, initialDate }: RaceDayPageProps)
 
     const closeAllRegistrations = () =>
         bulkUpdateEditions(
-            editions.filter(ed => ed.registrationStatus !== 'Closed'),
+            editions.filter(ed => ed.registrationStatus !== 'Closed' && ed.registrationStatus !== 'NotRequired'),
             () => ({ registrationStatus: 'Closed' }),
             n => `Registration closed for ${n} edition${n > 1 ? 's' : ''}`
         );
@@ -279,7 +279,7 @@ export default function RaceDayPage({ onNotify, initialDate }: RaceDayPageProps)
     const markEditionsCompleted = () =>
         bulkUpdateEditions(
             editions.filter(ed => ed.editionStatus !== 'Completed' && ed.editionStatus !== 'Cancelled'),
-            () => ({ status: 'Completed', registrationStatus: 'Closed' }),
+            ed => ({ status: 'Completed', registrationStatus: ed.registrationStatus }),
             n => `${n} edition${n > 1 ? 's' : ''} marked as Completed`
         );
 
@@ -294,7 +294,7 @@ export default function RaceDayPage({ onNotify, initialDate }: RaceDayPageProps)
 
     const openAllRegistrations = () =>
         bulkUpdateEditions(
-            editions.filter(ed => ed.registrationStatus !== 'Open'),
+            editions.filter(ed => ed.registrationStatus !== 'Open' && ed.registrationStatus !== 'NotRequired'),
             () => ({ registrationStatus: 'Open' }),
             n => `Registration opened for ${n} edition${n > 1 ? 's' : ''}`
         );

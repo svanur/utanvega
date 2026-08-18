@@ -165,11 +165,11 @@ function formatSchedule(rule: import('../hooks/useEvents').ScheduleRule | null |
   return null;
 }
 
-const REGISTRATION_STATUSES: RegistrationStatus[] = ['NotStarted', 'Open', 'Closed'];
+const REGISTRATION_STATUSES: RegistrationStatus[] = ['NotStarted', 'Open', 'Closed', 'NotRequired'];
 
 function getRegistrationStatusColor(status: RegistrationStatus): 'default' | 'success' | 'warning' {
   if (status === 'Open') return 'success';
-  if (status === 'Closed') return 'default';
+  if (status === 'Closed' || status === 'NotRequired') return 'default';
   return 'warning';
 }
 
@@ -1286,13 +1286,15 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                     sx={{ cursor: (edition.status === 'Cancelled' || edition.status === 'Completed') ? 'default' : 'pointer' }}
                   />
                 </Tooltip>
-                <Tooltip title={cycleTooltip('Registration status', ['NotStarted', 'Open', 'Closed'], edition.registrationStatus)}>
+                <Tooltip title={edition.registrationStatus === 'NotRequired'
+                  ? 'Registration status: Not Required — change via Edit edition'
+                  : cycleTooltip('Registration status', ['NotStarted', 'Open', 'Closed'], edition.registrationStatus)}>
                   <Chip
                     label={edition.registrationStatus}
                     size="small"
                     color={getRegistrationStatusColor(edition.registrationStatus)}
-                    onClick={() => void handleCycleRegStatus(edition)}
-                    sx={{ cursor: 'pointer' }}
+                    onClick={edition.registrationStatus === 'NotRequired' ? undefined : () => void handleCycleRegStatus(edition)}
+                    sx={{ cursor: edition.registrationStatus === 'NotRequired' ? 'default' : 'pointer' }}
                   />
                 </Tooltip>
                 <Chip

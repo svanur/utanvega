@@ -2116,6 +2116,30 @@ public class EventHandlerTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateEdition_SettingStatusToCancelled_WhenRegistrationIsNotRequired_PreservesNotRequired()
+    {
+        var ev = CreateTestEvent();
+        var edition = CreateTestEdition(ev.Id);
+        edition.RegistrationStatus = RegistrationStatus.NotRequired;
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new UpdateEditionCommandHandler(ctx, _cacheInvalidator);
+            await handler.Handle(BuildUpdateEditionCommand(edition, status: "Cancelled"), CancellationToken.None);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        Assert.Equal(EditionStatus.Cancelled, verifyCtx.EventEditions.Find(edition.Id)!.Status);
+        Assert.Equal(RegistrationStatus.NotRequired, verifyCtx.EventEditions.Find(edition.Id)!.RegistrationStatus);
+    }
+
+    [Fact]
     public async Task UpdateEdition_SettingStatusToHidden_DoesNotCascadeRaces()
     {
         var ev = CreateTestEvent();
@@ -2217,6 +2241,30 @@ public class EventHandlerTests : IDisposable
         using var verifyCtx = _factory.CreateContext();
         Assert.Equal(EditionStatus.Completed, verifyCtx.EventEditions.Find(edition.Id)!.Status);
         Assert.Equal(RaceStatus.Cancelled, verifyCtx.Races.Find(race.Id)!.Status);
+    }
+
+    [Fact]
+    public async Task UpdateEdition_SettingStatusToCompleted_WhenRegistrationIsNotRequired_PreservesNotRequired()
+    {
+        var ev = CreateTestEvent();
+        var edition = CreateTestEdition(ev.Id);
+        edition.RegistrationStatus = RegistrationStatus.NotRequired;
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new UpdateEditionCommandHandler(ctx, _cacheInvalidator);
+            await handler.Handle(BuildUpdateEditionCommand(edition, status: "Completed"), CancellationToken.None);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        Assert.Equal(EditionStatus.Completed, verifyCtx.EventEditions.Find(edition.Id)!.Status);
+        Assert.Equal(RegistrationStatus.NotRequired, verifyCtx.EventEditions.Find(edition.Id)!.RegistrationStatus);
     }
 
     [Fact]
