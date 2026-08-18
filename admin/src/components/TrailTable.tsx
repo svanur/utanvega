@@ -27,10 +27,7 @@ interface TrailTableProps {
   onSelectAll: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onSelectOne: (id: string) => void;
   onViewMap: (trail: { id: string; name: string }) => void;
-  onEdit: (trailId: string) => void;
-  onDelete: (trail: { id: string; name: string; slug: string }) => void;
   onRestore: (trail: Trail) => void;
-  onUpdateStatus: (trailId: string, status: string) => void;
   onPatchTrail: (trailId: string, field: string, value: string) => Promise<void>;
   allLocations: LocationDto[];
   onAddLocation: (trailId: string, locationId: string, role?: string) => Promise<void>;
@@ -51,10 +48,7 @@ export default function TrailTable({
   onSelectAll,
   onSelectOne,
   onViewMap,
-  onEdit,
-  onDelete,
   onRestore,
-  onUpdateStatus,
   onPatchTrail,
   allLocations,
   onAddLocation,
@@ -119,10 +113,7 @@ export default function TrailTable({
               selected={selectedIds.includes(trail.id)}
               onSelectOne={onSelectOne}
               onViewMap={onViewMap}
-              onEdit={onEdit}
-              onDelete={onDelete}
               onRestore={onRestore}
-              onUpdateStatus={onUpdateStatus}
               onPatchTrail={onPatchTrail}
               allLocations={allLocations}
               onAddLocation={onAddLocation}
@@ -189,10 +180,7 @@ interface TrailRowProps {
   selected: boolean;
   onSelectOne: (id: string) => void;
   onViewMap: (trail: { id: string; name: string }) => void;
-  onEdit: (trailId: string) => void;
-  onDelete: (trail: { id: string; name: string; slug: string }) => void;
   onRestore: (trail: Trail) => void;
-  onUpdateStatus: (trailId: string, status: string) => void;
   onPatchTrail: (trailId: string, field: string, value: string) => Promise<void>;
   allLocations: LocationDto[];
   onAddLocation: (trailId: string, locationId: string, role?: string) => Promise<void>;
@@ -225,7 +213,7 @@ const activityOptions = [
   { value: 'Cycling', label: 'Cycling' },
 ];
 
-function TrailRowComponent({ trail, selected, onSelectOne, onViewMap, onEdit: _onEdit, onDelete: _onDelete, onRestore, onUpdateStatus: _onUpdateStatus, onPatchTrail, allLocations, onAddLocation, onRemoveLocation, allTags, onAddTag, onRemoveTag, onRowClick }: TrailRowProps) {
+function TrailRowComponent({ trail, selected, onSelectOne, onViewMap, onRestore, onPatchTrail, allLocations, onAddLocation, onRemoveLocation, allTags, onAddTag, onRemoveTag, onRowClick }: TrailRowProps) {
   const [showAddLocation, setShowAddLocation] = useState(false);
   const [showAddTag, setShowAddTag] = useState(false);
 

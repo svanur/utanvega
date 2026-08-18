@@ -404,14 +404,8 @@ export default function TrailsListPage({ onNotify, initialSearch }: { onNotify: 
         onSelectAll={handleSelectAll}
         onSelectOne={handleSelectOne}
         onViewMap={(t) => setSelectedTrailMap(trails.find(x => x.id === t.id) ?? null)}
-        onEdit={(trailId) => {
-          const t = trails.find(x => x.id === trailId);
-          navigate(`/trails/${t?.slug ?? trailId}`);
-        }}
         onRowClick={(t) => navigate(`/trails/${t.slug}`)}
-        onDelete={setTrailToDelete}
         onRestore={handleRestore}
-        onUpdateStatus={handleUpdateStatus}
         onPatchTrail={handlePatchTrail}
         allLocations={allLocations}
         onAddLocation={handleAddLocation}
