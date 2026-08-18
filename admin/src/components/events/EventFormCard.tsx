@@ -47,6 +47,7 @@ import type {
 } from '../../hooks/useEvents';
 import type { Trail } from '../../hooks/useTrails';
 import { useTranslate } from '../../hooks/useTranslate';
+import { usePageShortcuts } from '../../hooks/usePageShortcuts';
 import { trimToUndefined, parseCoordPaste } from '../../utils/strings';
 import BilingualTextField from '../BilingualTextField';
 import { BilingualLangProvider, useBilingualLang } from '../../contexts/BilingualLangContext';
@@ -300,6 +301,12 @@ function EventFormCardInner({ event, linkedTrails = [], onClose, onSaved, onNoti
     }
   };
 
+  usePageShortcuts([
+    { key: 's', handler: () => { if (!saving) void handleSave(); } },
+    { key: 's', ctrl: true, allowInInput: true, handler: () => { if (!saving) void handleSave(); } },
+    { key: 'Escape', allowInInput: true, handler: () => { if (!saving) onClose(); } },
+  ]);
+
   const canTranslate = !!(form.name.trim() || form.description.trim() || form.organizerName.trim() || form.alertMessage.trim());
   const s = form.schedule;
 
@@ -307,12 +314,23 @@ function EventFormCardInner({ event, linkedTrails = [], onClose, onSaved, onNoti
     <Box sx={{ border: '2px solid', borderColor: 'primary.main', borderRadius: 2, p: 2.5, bgcolor: 'background.paper', mt: 1.5, mb: 2 }}>
 
       {/* Header */}
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
         <Typography variant="subtitle1" fontWeight={600}>Edit event</Typography>
         <Stack direction="row" spacing={1} alignItems="center">
           <LangToggleButton />
           <Typography variant="caption" color="text.secondary">{event.slug}</Typography>
         </Stack>
+      </Stack>
+      <Stack direction="row" justifyContent="flex-end" spacing={1} sx={{ mb: 2 }}>
+        <Button size="small" onClick={onClose} disabled={saving}>Cancel</Button>
+        <Button
+          size="small" variant="contained"
+          onClick={() => void handleSave()}
+          disabled={saving || !form.name.trim()}
+          startIcon={saving ? <CircularProgress size={14} /> : undefined}
+        >
+          {saving ? 'Saving…' : 'Save event'}
+        </Button>
       </Stack>
 
       {/* Row 1: two-column */}
@@ -344,7 +362,7 @@ function EventFormCardInner({ event, linkedTrails = [], onClose, onSaved, onNoti
             }}
           />
           <BilingualTextField
-            size="small" fullWidth label="Description" multiline rows={18} sx={{ mb: 1.5 }}
+            size="small" fullWidth label="Event description" multiline rows={18} sx={{ mb: 1.5 }}
             valueIs={form.description} valueEn={form.descriptionEn}
             onChangeIs={v => set('description', v)} onChangeEn={v => set('descriptionEn', v)}
           />

@@ -28,6 +28,7 @@ import CheckBoxIcon from '@mui/icons-material/CheckBox';
 import RaceIcon from '@mui/icons-material/EmojiEvents';
 import TranslateIcon from '@mui/icons-material/Translate';
 import { apiFetch } from '../../hooks/api';
+import { usePageShortcuts } from '../../hooks/usePageShortcuts';
 import { useInvalidateTrailData, type TrailDetail } from '../../hooks/useTrails';
 import { useLocations } from '../../hooks/useLocations';
 import { useTags } from '../../hooks/useTags';
@@ -172,6 +173,12 @@ function TrailFormCardInner({ trail: initialTrail, onClose, onSaved, onNotify }:
     fetchLinkableRaces();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  usePageShortcuts([
+    { key: 's', handler: () => { if (!saving) void handleSave(); } },
+    { key: 's', ctrl: true, allowInInput: true, handler: () => { if (!saving) void handleSave(); } },
+    { key: 'Escape', allowInInput: true, handler: () => { if (!saving) onClose(); } },
+  ]);
 
   const handleChange = (field: keyof TrailDetail, value: string) => {
     setTrail(prev => {
@@ -322,12 +329,18 @@ function TrailFormCardInner({ trail: initialTrail, onClose, onSaved, onNotify }:
 
   return (
     <Box sx={{ border: '2px solid', borderColor: 'primary.main', borderRadius: 2, p: 2.5, bgcolor: 'background.paper', mt: 1.5, mb: 2 }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
         <Typography variant="subtitle1" fontWeight={600}>Edit trail</Typography>
         <Stack direction="row" spacing={1} alignItems="center">
           <LangToggleButton />
           <Typography variant="caption" color="text.secondary">{trail.slug}</Typography>
         </Stack>
+      </Stack>
+      <Stack direction="row" justifyContent="flex-end" spacing={1} sx={{ mb: 2 }}>
+        <Button size="small" onClick={onClose} disabled={saving}>Cancel</Button>
+        <Button size="small" variant="contained" onClick={() => void handleSave()} disabled={saving}>
+          {saving ? 'Saving...' : 'Save trail'}
+        </Button>
       </Stack>
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}

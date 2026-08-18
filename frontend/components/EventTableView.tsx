@@ -16,6 +16,7 @@ import TimerIcon from '@mui/icons-material/Timer';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import CelebrationIcon from '@mui/icons-material/Celebration';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import type { EventSummary, EventDetail, RaceDto, SeriesRaceDto } from '../hooks/useEvents';
 import { API_URL } from '../hooks/useTrails';
 import { haversineKm, formatDistanceKm } from '../utils/geo';
@@ -43,13 +44,6 @@ type TableRow =
 
 
 
-function getRegistrationStatusColor(status: string): 'success' | 'error' | 'default' {
-    switch (status) {
-        case 'Open': return 'success';
-        case 'Closed': return 'error';
-        default: return 'default';
-    }
-}
 
 const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation }) => {
     const { t, i18n } = useTranslation();
@@ -186,13 +180,13 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                         ))}
                         <TableCell>{t('races.table.distances', 'Distances')}</TableCell>
                         <TableCell>
-                            <TableSortLabel active={sortField === 'distance'} direction={sortField === 'distance' ? sortDir : 'asc'} onClick={() => handleSort('distance')}>
-                                {t('trail.kmAway', 'km away')}
+                            <TableSortLabel active={sortField === 'locationName'} direction={sortField === 'locationName' ? sortDir : 'asc'} onClick={() => handleSort('locationName')}>
+                                {t('trail.location', 'Location')}
                             </TableSortLabel>
                         </TableCell>
                         <TableCell>
-                            <TableSortLabel active={sortField === 'locationName'} direction={sortField === 'locationName' ? sortDir : 'asc'} onClick={() => handleSort('locationName')}>
-                                {t('trail.location', 'Location')}
+                            <TableSortLabel active={sortField === 'distance'} direction={sortField === 'distance' ? sortDir : 'asc'} onClick={() => handleSort('distance')}>
+                                {t('trail.nearMe', 'Near me')}
                             </TableSortLabel>
                         </TableCell>
                         <TableCell align="center">{t('races.table.links', 'Links')}</TableCell>
@@ -201,10 +195,50 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                 <TableBody>
                     {(() => {
                         let lastHolidayDate: string | null = null;
+                        let lastYear: string | null = null;
                         return sortedRows.map((row, idx) => {
                         const rowDate = row.kind === 'series-race'
                             ? row.race.dateOfRace
                             : (row.event.displayDate ?? row.event.nextEditionDate);
+                        const rowYear = rowDate ? rowDate.slice(0, 4) : null;
+                        const yearDivider = rowYear && rowYear !== lastYear ? (() => {
+                            lastYear = rowYear;
+                            const newYearDate = `${rowYear}-01-01`;
+                            const newYearHolidays = getHolidays(newYearDate);
+                            const months = t('races.months', { returnObjects: true }) as string[];
+                            const showNewYearBanner = rowDate !== newYearDate && newYearHolidays.length > 0;
+                            return (
+                                <React.Fragment key={`year-${rowYear}`}>
+                                    <TableRow>
+                                        <TableCell colSpan={totalColumns} sx={{ py: 1, px: 2, border: 0 }}>
+                                            <Stack direction="row" alignItems="center" gap={1}>
+                                                <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
+                                                <Stack direction="row" alignItems="center" gap={0.5}>
+                                                    <AutoAwesomeIcon sx={{ fontSize: 13, color: 'primary.main' }} />
+                                                    <Typography variant="caption" fontWeight={700} color="primary">
+                                                        {t('races.newYear', { year: rowYear })}
+                                                    </Typography>
+                                                    <AutoAwesomeIcon sx={{ fontSize: 13, color: 'primary.main' }} />
+                                                </Stack>
+                                                <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
+                                            </Stack>
+                                        </TableCell>
+                                    </TableRow>
+                                    {showNewYearBanner && (
+                                        <TableRow sx={{ bgcolor: alpha(theme.palette.warning.main, 0.12) }}>
+                                            <TableCell colSpan={totalColumns} sx={{ py: 0.5, px: 2, borderBottom: 0 }}>
+                                                <Stack direction="row" alignItems="center" gap={1}>
+                                                    <CelebrationIcon sx={{ fontSize: 15, color: 'warning.dark' }} />
+                                                    <Typography variant="caption" fontWeight={700} sx={{ color: 'warning.dark', letterSpacing: 0.3 }}>
+                                                        {'1. ' + months[0]} — {newYearHolidays.map(h => loc(h.name, h.nameEn) ?? h.name).join(' · ')}
+                                                    </Typography>
+                                                </Stack>
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </React.Fragment>
+                            );
+                        })() : null;
                         const holidays = rowDate ? getHolidays(rowDate) : [];
                         const holidaySeparator = holidays.length > 0 && rowDate !== lastHolidayDate ? (() => {
                             lastHolidayDate = rowDate!;
@@ -231,6 +265,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                 : null;
                             return (
                                 <React.Fragment key={`${event.id}-${race.raceId}`}>
+                                    {yearDivider}
                                     {holidaySeparator}
                                     <TableRow
                                         hover
@@ -291,6 +326,16 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                             <Typography variant="body2" color="text.secondary">—</Typography>
                                         )}
                                     </TableCell>
+                                    <TableCell>
+                                        {event.locationName ? (
+                                            <Stack direction="row" alignItems="center" spacing={0.5}>
+                                                <LocationOnIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
+                                                <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 130 }}>{event.locationName}</Typography>
+                                            </Stack>
+                                        ) : (
+                                            <Typography variant="body2" color="text.secondary">—</Typography>
+                                        )}
+                                    </TableCell>
                                     {(() => {
                                         const km = getDistanceKm(event);
                                         return (
@@ -308,19 +353,9 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                             </TableCell>
                                         );
                                     })()}
-                                    <TableCell>
-                                        {event.locationName ? (
-                                            <Stack direction="row" alignItems="center" spacing={0.5}>
-                                                <LocationOnIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
-                                                <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 130 }}>{event.locationName}</Typography>
-                                            </Stack>
-                                        ) : (
-                                            <Typography variant="body2" color="text.secondary">—</Typography>
-                                        )}
-                                    </TableCell>
                                     <TableCell align="center">
                                         {race.registrationUrl && raceDaysUntil !== null && raceDaysUntil >= 0 ? (
-                                            <Button size="small" variant="outlined" href={race.registrationUrl} target="_blank" rel="noopener noreferrer" endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                                            <Button size="small" variant="contained" href={race.registrationUrl} target="_blank" rel="noopener noreferrer" endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
                                                 {t('races.register', 'Register')}
                                             </Button>
                                         ) : (
@@ -452,6 +487,20 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                     </TableCell>
 
 
+                                    {/* Location */}
+                                    <TableCell>
+                                        {event.locationName ? (
+                                            <Stack direction="row" alignItems="center" spacing={0.5}>
+                                                <LocationOnIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
+                                                <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 130 }}>
+                                                    {event.locationName}
+                                                </Typography>
+                                            </Stack>
+                                        ) : (
+                                            <Typography variant="body2" color="text.secondary">—</Typography>
+                                        )}
+                                    </TableCell>
+
                                     {/* Distance to user */}
                                     {(() => {
                                         const km = getDistanceKm(event);
@@ -471,20 +520,6 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                         );
                                     })()}
 
-                                    {/* Location */}
-                                    <TableCell>
-                                        {event.locationName ? (
-                                            <Stack direction="row" alignItems="center" spacing={0.5}>
-                                                <LocationOnIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
-                                                <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 130 }}>
-                                                    {event.locationName}
-                                                </Typography>
-                                            </Stack>
-                                        ) : (
-                                            <Typography variant="body2" color="text.secondary">—</Typography>
-                                        )}
-                                    </TableCell>
-
                                     {/* Links */}
                                     <TableCell align="center">
                                         <Stack alignItems="center" spacing={0.5}>
@@ -497,27 +532,18 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                                         variant="outlined"
                                                     />
                                                 ) : (
-                                                    <>
-                                                        <Button
-                                                            size="small"
-                                                            variant="outlined"
-                                                            href={event.registrationUrl}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
-                                                            onClick={(e) => e.stopPropagation()}
-                                                            sx={{ textTransform: 'none', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
-                                                        >
-                                                            {t('races.register', 'Register')}
-                                                        </Button>
-                                                        {event.registrationStatus && (
-                                                            <Chip
-                                                                label={t(`races.registrationStatus.${event.registrationStatus}`, event.registrationStatus)}
-                                                                size="small"
-                                                                color={getRegistrationStatusColor(event.registrationStatus)}
-                                                            />
-                                                        )}
-                                                    </>
+                                                    <Button
+                                                        size="small"
+                                                        variant="contained"
+                                                        href={event.registrationUrl}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        sx={{ textTransform: 'none', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+                                                    >
+                                                        {t('races.register', 'Register')}
+                                                    </Button>
                                                 )
                                             ) : event.resultsUrl && event.daysUntil != null && event.daysUntil < 0 ? (
                                                 <Button
@@ -535,18 +561,19 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                                 </Button>
                                             ) : null}
                                             {event.youtubeUrl && (
-                                                <Tooltip title="360° / YouTube">
-                                                    <IconButton
-                                                        size="small"
-                                                        href={event.youtubeUrl}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        color="error"
-                                                    >
-                                                        <VideocamIcon fontSize="small" />
-                                                    </IconButton>
-                                                </Tooltip>
+                                                <Button
+                                                    size="small"
+                                                    variant="outlined"
+                                                    href={event.youtubeUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    startIcon={<VideocamIcon sx={{ fontSize: 14 }} color="error" />}
+                                                    endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    sx={{ textTransform: 'none', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+                                                >
+                                                    360°
+                                                </Button>
                                             )}
                                             {!event.registrationUrl && !event.resultsUrl && !event.youtubeUrl && (
                                                 <Typography variant="body2" color="text.secondary">—</Typography>

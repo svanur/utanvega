@@ -496,7 +496,8 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
 
             <Button
                 startIcon={<ArrowBackIcon />}
-                onClick={() => navigate('/')}
+                onClick={() => navigate(-1)}
+                size="small"
                 sx={{ mb: 2 }}
             >
                 {t('trail.backToTrails')}

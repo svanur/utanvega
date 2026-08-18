@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Core.Services;
@@ -43,6 +44,10 @@ public class CreateEventCommandHandler : IRequestHandler<CreateEventCommand, Gui
     public async Task<Guid> Handle(CreateEventCommand request, CancellationToken cancellationToken)
     {
         var slug = request.Slug ?? SlugGenerator.Generate(request.Name);
+
+        var slugExists = await _context.Events.AnyAsync(e => e.Slug == slug, cancellationToken);
+        if (slugExists)
+            throw new InvalidOperationException($"An event with slug '{slug}' already exists.");
 
         Enum.TryParse<EventType>(request.Type, ignoreCase: true, out var type);
         Enum.TryParse<ActivityType>(request.ActivityType, ignoreCase: true, out var activityType);

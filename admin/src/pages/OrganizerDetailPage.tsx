@@ -38,8 +38,10 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import PhoneIcon from '@mui/icons-material/Phone';
 import SaveIcon from '@mui/icons-material/Save';
 
-import { useOrganizers } from '../hooks/useOrganizers';
+import { useQueryClient } from '@tanstack/react-query';
+import { useOrganizers, type OrganizerDto } from '../hooks/useOrganizers';
 import { useEvents, type EventSummaryDto } from '../hooks/useEvents';
+import { usePageShortcuts } from '../hooks/usePageShortcuts';
 import { trimToUndefined } from '../utils/strings';
 import BilingualTextField from '../components/BilingualTextField';
 import { useTranslate } from '../hooks/useTranslate';
@@ -98,6 +100,7 @@ function getEventStatusColor(status: EventSummaryDto['status']): 'default' | 'su
 export default function OrganizerDetailPage({ onNotify }: Props) {
     const { slug = '' } = useParams<{ slug: string }>();
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
     const { organizers, loading, updateOrganizer, deleteOrganizer } = useOrganizers();
     const { events, loading: eventsLoading } = useEvents();
 
@@ -161,8 +164,12 @@ export default function OrganizerDetailPage({ onNotify }: Props) {
             });
             onNotify(`'${form.name.trim()}' saved`);
             setEditing(false);
-            // If slug changed, navigate to new URL
+            // If slug changed, patch the cache before navigating so the new route
+            // finds the organizer immediately without waiting for the refetch.
             if (slugUnlocked && form.slug && form.slug !== slug) {
+                queryClient.setQueryData(['admin', 'organizers'], (old: OrganizerDto[] | undefined) =>
+                    old?.map(o => o.id === organizer!.id ? { ...o, slug: form.slug } : o) ?? []
+                );
                 navigate(`/organizers/${form.slug}`, { replace: true });
             }
         } catch (err) {
@@ -188,6 +195,15 @@ export default function OrganizerDetailPage({ onNotify }: Props) {
 
     const set = (field: keyof FormState, value: string) =>
         setForm(prev => ({ ...prev, [field]: value }));
+
+    usePageShortcuts([
+        { key: 'u', handler: () => navigate(-1) },
+        { key: 'e', handler: () => editing ? setEditing(false) : openEdit() },
+        { key: 'v', handler: () => { if (SITE_URL && organizer?.slug) window.open(`${SITE_URL}/organizers/${organizer.slug}`, '_blank'); } },
+        { key: 's', handler: () => { if (editing && !saving) void handleSave(); } },
+        { key: 's', ctrl: true, allowInInput: true, handler: () => { if (editing && !saving) void handleSave(); } },
+        { key: 'Escape', allowInInput: true, handler: () => { if (!saving) setEditing(false); } },
+    ]);
 
     if (loading) {
         return (
@@ -322,7 +338,15 @@ export default function OrganizerDetailPage({ onNotify }: Props) {
             {/* Inline edit form */}
             {editing && (
                 <Box sx={{ bgcolor: 'background.paper', border: '1px solid', borderColor: 'primary.main', borderRadius: 2, p: 2.5, mb: 3 }}>
-                    <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>Edit organizer</Typography>
+                    <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
+                        <Typography variant="subtitle1" fontWeight={600}>Edit organizer</Typography>
+                        <Stack direction="row" spacing={1}>
+                            <Button size="small" onClick={() => setEditing(false)} disabled={saving}>Cancel</Button>
+                            <Button size="small" variant="contained" startIcon={saving ? <CircularProgress size={14} color="inherit" /> : <SaveIcon />} onClick={() => void handleSave()} disabled={saving || !form.name.trim()}>
+                                Save
+                            </Button>
+                        </Stack>
+                    </Stack>
                     <Stack spacing={2}>
                         <TextField
                             label="Name"
