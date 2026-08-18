@@ -87,6 +87,7 @@ import { useIcelandicHolidays } from '../hooks/useIcelandicHolidays';
 import { useFavoriteEvents } from '../hooks/useFavoriteEvents';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
+import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import EventQRShare from '../components/EventQRShare';
 
 const EventTableView = lazy(() => import('../components/EventTableView'));
@@ -1105,20 +1106,47 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                         {' '}
                                                                         {loc(race.raceName, race.raceNameEn) ?? race.raceName}
                                                                     </Typography>
+                                                                    {race.dateOfRace && (
+                                                                        <Stack direction="row" alignItems="center" gap={0.5} sx={{ mt: 0.25 }} flexWrap="wrap">
+                                                                            <EventDateBadge dateStr={race.dateOfRace} />
+                                                                            <CalendarMonthIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
+                                                                            <Typography variant="body2" color="text.secondary" noWrap>{formatNextDate(race.dateOfRace, t)}</Typography>
+                                                                            {raceDaysUntil != null && (
+                                                                                <Chip label={getCountdownLabel(raceDaysUntil, t)} color={getCountdownColor(raceDaysUntil)} size="small" sx={{ fontWeight: 700 }} />
+                                                                            )}
+                                                                        </Stack>
+                                                                    )}
                                                                 </Box>
                                                             </Stack>
-                                                            <Stack direction="row" alignItems="center" gap={0.5} sx={{ flexShrink: 0 }}>
-                                                                {race.dateOfRace && (
-                                                                    <>
-                                                                        <CalendarMonthIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
-                                                                        <EventDateBadge dateStr={race.dateOfRace} />
-                                                                        <Typography variant="body2" color="text.secondary" noWrap>{formatNextDate(race.dateOfRace, t)}</Typography>
-                                                                    </>
-                                                                )}
-                                                                {raceDaysUntil != null && (
-                                                                    <Chip label={getCountdownLabel(raceDaysUntil, t)} color={getCountdownColor(raceDaysUntil)} size="small" sx={{ fontWeight: 700 }} />
-                                                                )}
-                                                            </Stack>
+                                                            {(race.registrationUrl || comp.organizerWebsite || comp.resultsUrl || comp.photoGalleryUrl || comp.youtubeUrl) && (
+                                                                <Stack direction="row" alignItems="center" gap={0.5} sx={{ flexShrink: 0 }} flexWrap="wrap" justifyContent="flex-end">
+                                                                    {race.registrationUrl && raceDaysUntil != null && raceDaysUntil >= 0 && (
+                                                                        <Button size="small" variant="outlined" href={race.registrationUrl} target="_blank" rel="noopener noreferrer" endIcon={<OpenInNewIcon sx={{ fontSize: 12 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem' }}>
+                                                                            {t('races.register', 'Register')}
+                                                                        </Button>
+                                                                    )}
+                                                                    {comp.organizerWebsite && (
+                                                                        <Button size="small" variant="outlined" href={comp.organizerWebsite} target="_blank" rel="noopener noreferrer" endIcon={<OpenInNewIcon sx={{ fontSize: 12 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem' }}>
+                                                                            {t('races.organizerSite')}
+                                                                        </Button>
+                                                                    )}
+                                                                    {comp.resultsUrl && (
+                                                                        <Button size="small" variant="outlined" href={comp.resultsUrl} target="_blank" rel="noopener noreferrer" endIcon={<OpenInNewIcon sx={{ fontSize: 12 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem' }}>
+                                                                            {t('races.results', 'Results')}
+                                                                        </Button>
+                                                                    )}
+                                                                    {comp.photoGalleryUrl && (
+                                                                        <Button size="small" variant="outlined" href={comp.photoGalleryUrl} target="_blank" rel="noopener noreferrer" startIcon={<PhotoCameraIcon sx={{ fontSize: 14 }} />} endIcon={<OpenInNewIcon sx={{ fontSize: 12 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem' }}>
+                                                                            {t('races.photoGallery', { domain: (() => { try { return new URL(comp.photoGalleryUrl!).hostname.replace(/^www\./, ''); } catch { return ''; } })(), defaultValue: 'Photos' })}
+                                                                        </Button>
+                                                                    )}
+                                                                    {comp.youtubeUrl && (
+                                                                        <Button size="small" variant="outlined" color="error" href={comp.youtubeUrl} target="_blank" rel="noopener noreferrer" startIcon={<VideocamIcon sx={{ fontSize: 14 }} />} endIcon={<OpenInNewIcon sx={{ fontSize: 12 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem' }}>
+                                                                            360°
+                                                                        </Button>
+                                                                    )}
+                                                                </Stack>
+                                                            )}
                                                         </Stack>
                                                         {/* location · km away */}
                                                         {(comp.locationName || (userLocation && comp.gpxPointLat != null)) && (
@@ -1144,17 +1172,10 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                             <Chip label={t('races.eventTypes.Series', 'Series')} size="small" color={getEventTypeColor('Series')} variant="outlined" sx={{ height: 18, fontSize: '0.65rem' }} />
                                                             <Typography variant="caption" color="text.secondary" noWrap>{loc(comp.name, comp.nameEn)}</Typography>
                                                         </Stack>
-                                                        {/* Distance chip + register */}
+                                                        {/* Distance chip */}
                                                         {race.distanceLabel && (
                                                             <Box sx={{ mt: 0.75 }}>
                                                                 <Chip label={race.distanceLabel} size="small" variant="outlined" color={getTicketStatusColor(race.ticketStatus)} />
-                                                            </Box>
-                                                        )}
-                                                        {race.registrationUrl && raceDaysUntil != null && raceDaysUntil >= 0 && (
-                                                            <Box sx={{ mt: 0.75 }}>
-                                                                <Button size="small" variant="outlined" href={race.registrationUrl} target="_blank" rel="noopener noreferrer" endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.8rem' }}>
-                                                                    {t('races.register', 'Register')}
-                                                                </Button>
                                                             </Box>
                                                         )}
                                                         <Typography variant="caption" color="primary" sx={{ mt: 0.75, display: 'block', fontWeight: 500, textAlign: 'right' }}>
@@ -1320,35 +1341,60 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                 <StarIcon sx={{ fontSize: 16, color: 'warning.main', flexShrink: 0 }} />
                                                             )}
                                                         </Stack>
-                                                    </Box>
-                                                </Stack>
-                                                {!isEffectivelyCancelled(comp) && (
-                                                    <Stack direction="row" alignItems="center" gap={0.5} sx={{ flexShrink: 0 }}>
-                                                        {(comp.displayDate ?? comp.nextEditionDate) && (
-                                                            <>
+                                                        {!isEffectivelyCancelled(comp) && (comp.displayDate ?? comp.nextEditionDate) && (
+                                                            <Stack direction="row" alignItems="center" gap={0.5} sx={{ mt: 0.25 }} flexWrap="wrap">
                                                                 <EventDateBadge dateStr={(comp.displayDate ?? comp.nextEditionDate)!} endDateStr={comp.endDisplayDate} />
                                                                 <CalendarMonthIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
                                                                 <Typography variant="body2" color="text.secondary" noWrap>
                                                                     {formatDateRange((comp.displayDate ?? comp.nextEditionDate)!, comp.endDisplayDate, t)}
                                                                 </Typography>
-                                                            </>
+                                                                {comp.daysUntil != null && (
+                                                                    <Chip
+                                                                        label={getCountdownLabel(comp.daysUntil, t)}
+                                                                        color={getCountdownColor(comp.daysUntil)}
+                                                                        size="small"
+                                                                        sx={{
+                                                                            fontWeight: 700,
+                                                                            ...(comp.daysUntil === 0 && {
+                                                                                animation: 'pulse 1.5s ease-in-out infinite',
+                                                                                '@keyframes pulse': {
+                                                                                    '0%, 100%': { transform: 'scale(1)', boxShadow: 'none' },
+                                                                                    '50%': { transform: 'scale(1.06)', boxShadow: `0 0 8px ${alpha(theme.palette.error.main, 0.6)}` },
+                                                                                },
+                                                                            }),
+                                                                        }}
+                                                                    />
+                                                                )}
+                                                            </Stack>
                                                         )}
-                                                        {comp.daysUntil != null && (
-                                                            <Chip
-                                                                label={getCountdownLabel(comp.daysUntil, t)}
-                                                                color={getCountdownColor(comp.daysUntil)}
-                                                                size="small"
-                                                                sx={{
-                                                                    fontWeight: 700,
-                                                                    ...(comp.daysUntil === 0 && {
-                                                                        animation: 'pulse 1.5s ease-in-out infinite',
-                                                                        '@keyframes pulse': {
-                                                                            '0%, 100%': { transform: 'scale(1)', boxShadow: 'none' },
-                                                                            '50%': { transform: 'scale(1.06)', boxShadow: `0 0 8px ${alpha(theme.palette.error.main, 0.6)}` },
-                                                                        },
-                                                                    }),
-                                                                }}
-                                                            />
+                                                    </Box>
+                                                </Stack>
+                                                {(comp.registrationUrl || comp.organizerWebsite || comp.resultsUrl || comp.photoGalleryUrl || comp.youtubeUrl) && (
+                                                    <Stack direction="row" alignItems="center" gap={0.5} sx={{ flexShrink: 0 }} flexWrap="wrap" justifyContent="flex-end">
+                                                        {comp.registrationUrl && comp.daysUntil != null && comp.daysUntil >= 0 && !isAllSoldOut(comp.distances) && (
+                                                            <Button size="small" variant="outlined" href={comp.registrationUrl} target="_blank" rel="noopener noreferrer" endIcon={<OpenInNewIcon sx={{ fontSize: 12 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem' }}>
+                                                                {t('races.register', 'Register')}
+                                                            </Button>
+                                                        )}
+                                                        {comp.organizerWebsite && (
+                                                            <Button size="small" variant="outlined" href={comp.organizerWebsite} target="_blank" rel="noopener noreferrer" endIcon={<OpenInNewIcon sx={{ fontSize: 12 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem' }}>
+                                                                {t('races.organizerSite')}
+                                                            </Button>
+                                                        )}
+                                                        {comp.resultsUrl && (
+                                                            <Button size="small" variant="outlined" href={comp.resultsUrl} target="_blank" rel="noopener noreferrer" endIcon={<OpenInNewIcon sx={{ fontSize: 12 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem' }}>
+                                                                {t('races.results', 'Results')}
+                                                            </Button>
+                                                        )}
+                                                        {comp.photoGalleryUrl && (
+                                                            <Button size="small" variant="outlined" href={comp.photoGalleryUrl} target="_blank" rel="noopener noreferrer" startIcon={<PhotoCameraIcon sx={{ fontSize: 14 }} />} endIcon={<OpenInNewIcon sx={{ fontSize: 12 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem' }}>
+                                                                {t('races.photos', 'Photos')}
+                                                            </Button>
+                                                        )}
+                                                        {comp.youtubeUrl && (
+                                                            <Button size="small" variant="outlined" color="error" href={comp.youtubeUrl} target="_blank" rel="noopener noreferrer" startIcon={<VideocamIcon sx={{ fontSize: 14 }} />} endIcon={<OpenInNewIcon sx={{ fontSize: 12 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem' }}>
+                                                                360°
+                                                            </Button>
                                                         )}
                                                     </Stack>
                                                 )}
@@ -1418,22 +1464,6 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                         {t('races.table.resaleLink', 'Ticket resale')}
                                                     </Link>
                                                 </Box>
-                                            )}
-
-                                            {/* Row 4: actions */}
-                                            {(comp.registrationUrl || comp.youtubeUrl) && (
-                                                <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.75 }}>
-                                                    {comp.registrationUrl && comp.daysUntil != null && comp.daysUntil >= 0 && !isAllSoldOut(comp.distances) && (
-                                                        <Button size="small" variant="outlined" href={comp.registrationUrl} target="_blank" rel="noopener noreferrer" endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.8rem' }}>
-                                                            {t('races.register', 'Register')}
-                                                        </Button>
-                                                    )}
-                                                    {comp.youtubeUrl && (
-                                                        <Button size="small" variant="outlined" color="error" href={comp.youtubeUrl} target="_blank" rel="noopener noreferrer" startIcon={<VideocamIcon sx={{ fontSize: 14 }} />} endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.8rem' }}>
-                                                            360°
-                                                        </Button>
-                                                    )}
-                                                </Stack>
                                             )}
 
                                             {comp.description && (

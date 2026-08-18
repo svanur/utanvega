@@ -811,6 +811,17 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                     {t('races.register')}
                                 </Button>
                             )}
+                            {event.organizerWebsite && (
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
+                                    onClick={() => window.open(event.organizerWebsite!, '_blank', 'noopener')}
+                                    sx={{ textTransform: 'none' }}
+                                >
+                                    {t('races.organizerSite')}
+                                </Button>
+                            )}
                             {!showEditionSections && primaryEdition?.resultsUrl && (
                                 <Button
                                     variant={isPostRace ? 'contained' : 'outlined'}
@@ -840,21 +851,11 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                     color="error"
                                     size="small"
                                     startIcon={<VideocamIcon sx={{ fontSize: 16 }} />}
+                                    endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
                                     onClick={() => window.open(event.youtubeUrl!, '_blank', 'noopener')}
                                     sx={{ textTransform: 'none' }}
                                 >
                                     360°
-                                </Button>
-                            )}
-                            {event.organizerWebsite && (
-                                <Button
-                                    variant="outlined"
-                                    size="small"
-                                    endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
-                                    onClick={() => window.open(event.organizerWebsite!, '_blank', 'noopener')}
-                                    sx={{ textTransform: 'none' }}
-                                >
-                                    {t('races.organizerSite')}
                                 </Button>
                             )}
                             {isEnabled('calendar_integration', false) && (event.displayDate ?? event.nextEditionDate) && !heroCancelled && event.daysUntil != null && event.daysUntil >= 0 && (
