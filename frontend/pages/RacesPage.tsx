@@ -1148,29 +1148,28 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                 </Stack>
                                                             )}
                                                         </Stack>
-                                                        {/* location · km away */}
-                                                        {(comp.locationName || (userLocation && comp.gpxPointLat != null)) && (
-                                                            <Stack direction="row" alignItems="center" gap={0.5} sx={{ mt: 0.25 }} flexWrap="wrap">
-                                                                {comp.locationName && (
-                                                                    <>
-                                                                        <LocationOnIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
-                                                                        <Typography variant="body2" color="text.secondary" noWrap>{comp.locationName}</Typography>
-                                                                    </>
-                                                                )}
-                                                                {userLocation && comp.gpxPointLat != null && comp.gpxPointLng != null && (
-                                                                    <>
-                                                                        {comp.locationName && <FiberManualRecordIcon sx={{ fontSize: 5, color: 'text.disabled' }} />}
-                                                                        <NearMeIcon sx={{ fontSize: 13, color: 'primary.main' }} />
-                                                                        <Typography variant="body2" color="primary.main" fontWeight={500} noWrap>
-                                                                            {formatDistanceKm(haversineKm(userLocation.lat, userLocation.lng, comp.gpxPointLat, comp.gpxPointLng))}
-                                                                        </Typography>
-                                                                    </>
-                                                                )}
-                                                            </Stack>
-                                                        )}
-                                                        <Stack direction="row" alignItems="center" gap={0.5} sx={{ mt: 0.25 }}>
+                                                        {/* Series type · name · location · km away */}
+                                                        <Stack direction="row" alignItems="center" gap={0.5} sx={{ mt: 0.25 }} flexWrap="wrap">
                                                             <Chip label={t('races.eventTypes.Series', 'Series')} size="small" color={getEventTypeColor('Series')} variant="outlined" sx={{ height: 18, fontSize: '0.65rem' }} />
                                                             <Typography variant="caption" color="text.secondary" noWrap>{loc(comp.name, comp.nameEn)}</Typography>
+                                                            {(comp.locationName || (userLocation && comp.gpxPointLat != null)) && (
+                                                                <FiberManualRecordIcon sx={{ fontSize: 5, color: 'text.disabled' }} />
+                                                            )}
+                                                            {comp.locationName && (
+                                                                <>
+                                                                    <LocationOnIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
+                                                                    <Typography variant="body2" color="text.secondary" noWrap>{comp.locationName}</Typography>
+                                                                </>
+                                                            )}
+                                                            {userLocation && comp.gpxPointLat != null && comp.gpxPointLng != null && (
+                                                                <>
+                                                                    {comp.locationName && <FiberManualRecordIcon sx={{ fontSize: 5, color: 'text.disabled' }} />}
+                                                                    <NearMeIcon sx={{ fontSize: 13, color: 'primary.main' }} />
+                                                                    <Typography variant="body2" color="primary.main" fontWeight={500} noWrap>
+                                                                        {formatDistanceKm(haversineKm(userLocation.lat, userLocation.lng, comp.gpxPointLat, comp.gpxPointLng))}
+                                                                    </Typography>
+                                                                </>
+                                                            )}
                                                         </Stack>
                                                         {/* Distance chip */}
                                                         {race.distanceLabel && (
@@ -1400,9 +1399,15 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                 )}
                                             </Stack>
 
-                                            {/* location · km away */}
-                                            {(comp.locationName || (userLocation && comp.gpxPointLat != null)) && !isEffectivelyCancelled(comp) && (
+                                            {/* type · location · km away */}
+                                            {(comp.type !== 'Advertisement' || comp.locationName || (userLocation && comp.gpxPointLat != null)) && !isEffectivelyCancelled(comp) && (
                                                 <Stack direction="row" alignItems="center" gap={0.5} sx={{ mt: 0.25 }} flexWrap="wrap">
+                                                    {comp.type !== 'Advertisement' && (
+                                                        <Chip label={t(`races.eventTypes.${comp.type}`, comp.type)} size="small" color={getEventTypeColor(comp.type)} variant="outlined" sx={{ height: 18, fontSize: '0.65rem' }} />
+                                                    )}
+                                                    {comp.type !== 'Advertisement' && (comp.locationName || (userLocation && comp.gpxPointLat != null)) && (
+                                                        <FiberManualRecordIcon sx={{ fontSize: 5, color: 'text.disabled' }} />
+                                                    )}
                                                     {comp.locationName && (
                                                         <>
                                                             <LocationOnIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
@@ -1420,10 +1425,6 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                     )}
                                                 </Stack>
                                             )}
-                                            {comp.type !== 'Advertisement' && (
-                                                <Chip label={t(`races.eventTypes.${comp.type}`, comp.type)} size="small" color={getEventTypeColor(comp.type)} variant="outlined" sx={{ height: 18, fontSize: '0.65rem', mt: 0.25 }} />
-                                            )}
-
                                             {/* Alert */}
                                             {(comp.alertMessage || comp.alertMessageEn) && (
                                                 <Alert severity={(comp.alertSeverity as 'info' | 'success' | 'warning' | 'error') ?? 'info'} sx={{ mt: 0.75, borderRadius: 1.5, py: 0, alignItems: 'center', '& .MuiAlert-message': { py: 0.5 } }}>
