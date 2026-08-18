@@ -1015,6 +1015,7 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
   }, [expandedDetail, showOlderEditions]);
   const [showAttentionPanel, setShowAttentionPanel] = useState(true);
   const [attentionFilter, setAttentionFilter] = useState<'noEdition' | 'seriesMissingReg' | 'pastActive' | null>(null);
+  const [weekFilter, setWeekFilter] = useState<'all' | 'next-week'>('all');
   const [urlPopover, setUrlPopover] = useState<{
     anchorEl: HTMLElement;
     edition: EventEditionDto;
@@ -1070,10 +1071,10 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
     return [...new Set(years)].sort((a, b) => b.localeCompare(a));
   }, [events]);
 
-  const hasActiveFilters = attentionFilter !== null || activityFilter !== 'all' || typeFilter !== 'all' || statusFilter !== 'all' || locationFilter !== 'all' || yearFilter !== 'all' || monthFilter !== 'all';
+  const hasActiveFilters = weekFilter !== 'all' || attentionFilter !== null || activityFilter !== 'all' || typeFilter !== 'all' || statusFilter !== 'all' || locationFilter !== 'all' || yearFilter !== 'all' || monthFilter !== 'all';
   const resetFilters = () => {
     setActivityFilter('all'); setTypeFilter('all'); setStatusFilter('all'); setLocationFilter('all');
-    setYearFilter('all'); setMonthFilter('all'); setAttentionFilter(null);
+    setYearFilter('all'); setMonthFilter('all'); setAttentionFilter(null); setWeekFilter('all');
   };
 
   // Deep-link: expand and scroll to the target event once events are loaded
@@ -1105,6 +1106,10 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
 
   const todayStr = new Date().toISOString().slice(0, 10);
   const in30daysStr = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const today = dayjs();
+  const nextWeekMondayOffset = (8 - today.day()) % 7 || 7;
+  const nextWeekStart = today.add(nextWeekMondayOffset, 'day').format('YYYY-MM-DD');
+  const nextWeekEnd = today.add(nextWeekMondayOffset + 6, 'day').format('YYYY-MM-DD');
 
   const filteredEvents = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -1137,6 +1142,10 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
         if (monthFilter !== 'all') {
           if (!event.hasFutureEdition) return true;
           if (!event.nextEditionDate || event.nextEditionDate.slice(5, 7) !== monthFilter) return false;
+        }
+        if (weekFilter === 'next-week') {
+          if (!event.nextEditionDate) return false;
+          if (event.nextEditionDate < nextWeekStart || event.nextEditionDate > nextWeekEnd) return false;
         }
 
         if (attentionFilter === 'noEdition') {
@@ -1174,9 +1183,32 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
 
         return cmp !== 0 ? dir * cmp : a.name.localeCompare(b.name);
       });
-  }, [events, searchQuery, sortBy, sortDir, activityFilter, typeFilter, statusFilter, locationFilter, yearFilter, monthFilter, attentionFilter]);
+  }, [events, searchQuery, sortBy, sortDir, activityFilter, typeFilter, statusFilter, locationFilter, yearFilter, monthFilter, attentionFilter, weekFilter, nextWeekStart, nextWeekEnd]);
 
   
+  const handleCopyAgenda = () => {
+    const byDate = new Map<string, string[]>();
+    for (const e of filteredEvents) {
+      if (!e.nextEditionDate) continue;
+      if (!byDate.has(e.nextEditionDate)) byDate.set(e.nextEditionDate, []);
+      byDate.get(e.nextEditionDate)!.push(e.name);
+    }
+    const sorted = [...byDate.entries()].sort(([a], [b]) => a.localeCompare(b));
+    const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const start = dayjs(nextWeekStart);
+    const end = dayjs(nextWeekEnd);
+    const header = `${start.date()} ${MONTHS_SHORT[start.month() + 1]}–${end.date()} ${MONTHS_SHORT[end.month() + 1]} ${end.year()}`;
+    const lines: string[] = [header, ''];
+    for (const [date, names] of sorted) {
+      const d = dayjs(date);
+      lines.push(`${DAY_NAMES[d.day()]} ${d.date()} ${MONTHS_SHORT[d.month() + 1]}`);
+      names.forEach(n => lines.push(`  • ${n}`));
+      lines.push('');
+    }
+    void navigator.clipboard.writeText(lines.join('\n').trimEnd());
+    onNotify('Agenda copied to clipboard', 'success');
+  };
+
   const handleRequestSort = (field: typeof sortBy) => {
     if (sortBy === field) {
       setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -2575,6 +2607,25 @@ export default function EventList({ onNotify, initialEventId, onEventIdConsumed,
             {MONTHS.slice(1).map((m, i) => <MenuItem key={i} value={String(i + 1).padStart(2, '0')}>{m}</MenuItem>)}
           </Select>
         </FormControl>
+        <Chip
+          label="Next week"
+          size="small"
+          color={weekFilter === 'next-week' ? 'primary' : 'default'}
+          variant={weekFilter === 'next-week' ? 'filled' : 'outlined'}
+          clickable
+          onClick={() => {
+            const next = weekFilter === 'next-week' ? 'all' : 'next-week';
+            setWeekFilter(next);
+            if (next === 'next-week') { setYearFilter('all'); setMonthFilter('all'); }
+          }}
+        />
+        {weekFilter === 'next-week' && (
+          <Tooltip title="Copy agenda to clipboard">
+            <IconButton size="small" aria-label="Copy agenda" onClick={handleCopyAgenda}>
+              <CopyIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
         {hasActiveFilters && (
           <Tooltip title="Clear all filters">
             <IconButton size="small" aria-label="Clear all filters" onClick={resetFilters}>

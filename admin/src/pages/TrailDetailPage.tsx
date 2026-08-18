@@ -230,7 +230,7 @@ export default function TrailDetailPage({ onNotify }: { onNotify: (message: Reac
   usePageShortcuts([
     { key: 'u', handler: () => navigate(-1) },
     { key: 'e', handler: () => setEditingTrail(v => !v) },
-    { key: 'v', handler: () => { if (isPubliclyVisible && PUBLIC_SITE_URL) window.open(`${PUBLIC_SITE_URL}/trails/${trail.slug}`, '_blank'); } },
+    { key: 'v', handler: () => { if (isPubliclyVisible && PUBLIC_SITE_URL) window.open(`${PUBLIC_SITE_URL}/trails/${trail?.slug}`, '_blank'); } },
     { key: 'Escape', allowInInput: true, handler: () => setEditingTrail(false) },
   ]);
 
