@@ -38,7 +38,8 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import PhoneIcon from '@mui/icons-material/Phone';
 import SaveIcon from '@mui/icons-material/Save';
 
-import { useOrganizers } from '../hooks/useOrganizers';
+import { useQueryClient } from '@tanstack/react-query';
+import { useOrganizers, type OrganizerDto } from '../hooks/useOrganizers';
 import { useEvents, type EventSummaryDto } from '../hooks/useEvents';
 import { usePageShortcuts } from '../hooks/usePageShortcuts';
 import { trimToUndefined } from '../utils/strings';
@@ -99,6 +100,7 @@ function getEventStatusColor(status: EventSummaryDto['status']): 'default' | 'su
 export default function OrganizerDetailPage({ onNotify }: Props) {
     const { slug = '' } = useParams<{ slug: string }>();
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
     const { organizers, loading, updateOrganizer, deleteOrganizer } = useOrganizers();
     const { events, loading: eventsLoading } = useEvents();
 
@@ -162,8 +164,12 @@ export default function OrganizerDetailPage({ onNotify }: Props) {
             });
             onNotify(`'${form.name.trim()}' saved`);
             setEditing(false);
-            // If slug changed, navigate to new URL
+            // If slug changed, patch the cache before navigating so the new route
+            // finds the organizer immediately without waiting for the refetch.
             if (slugUnlocked && form.slug && form.slug !== slug) {
+                queryClient.setQueryData(['admin', 'organizers'], (old: OrganizerDto[] | undefined) =>
+                    old?.map(o => o.id === organizer!.id ? { ...o, slug: form.slug } : o) ?? []
+                );
                 navigate(`/organizers/${form.slug}`, { replace: true });
             }
         } catch (err) {
