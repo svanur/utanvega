@@ -69,6 +69,9 @@ public class UpdateEditionCommandHandler : IRequestHandler<UpdateEditionCommand,
                 // regardless of which path (this generic edit, or the dedicated Cancel action)
                 // triggered it — overrides the plain RegistrationStatus set just above.
                 edition.CancelWithRaces();
+            else if (status == EditionStatus.Completed && edition.Status != EditionStatus.Completed)
+                // Completing cascades to Active races only; Cancelled races stay Cancelled.
+                edition.CompleteWithRaces();
             else
                 edition.Status = status;
         }

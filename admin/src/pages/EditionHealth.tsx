@@ -129,10 +129,11 @@ interface ScoredEdition {
   hasTrail: boolean;
   hasResults: boolean;
   hasGoodStatus: boolean;
+  notCompleted: boolean;
 }
 
 type SortField = 'event' | 'year' | 'score';
-type QuickFilter = 'critical' | 'no-date' | 'no-races' | 'no-trail' | 'no-results' | 'bad-status' | 'cancelled';
+type QuickFilter = 'critical' | 'no-date' | 'no-races' | 'no-trail' | 'no-results' | 'bad-status' | 'cancelled' | 'not-completed';
 
 interface EditionHealthProps {
   onViewEvent?: (eventSlug: string) => void;
@@ -169,6 +170,10 @@ export default function EditionHealth({ onViewEvent, onNotify }: EditionHealthPr
         const hasTrail = editionChecks.find(c => c.label === 'Trail')!.passed;
         const hasResults = editionChecks.find(c => c.label === 'Results URL')!.passed;
         const hasGoodStatus = editionChecks.find(c => c.label === 'Reg. Status')!.passed;
+        const notCompleted =
+          isPast(edition.endDate ?? edition.date) &&
+          edition.status !== 'Completed' &&
+          edition.status !== 'Cancelled';
         result.push({
           event,
           edition,
@@ -178,6 +183,7 @@ export default function EditionHealth({ onViewEvent, onNotify }: EditionHealthPr
           hasTrail,
           hasResults,
           hasGoodStatus,
+          notCompleted,
         });
       }
     }
@@ -205,8 +211,9 @@ export default function EditionHealth({ onViewEvent, onNotify }: EditionHealthPr
       case 'no-races':    result = result.filter(s => s.edition.races.length === 0); break;
       case 'no-trail':    result = result.filter(s => !s.hasTrail); break;
       case 'no-results':  result = result.filter(s => !s.hasResults); break;
-      case 'bad-status':  result = result.filter(s => !s.hasGoodStatus); break;
-      case 'cancelled':   result = result.filter(s => s.edition.status === 'Cancelled'); break;
+      case 'bad-status':      result = result.filter(s => !s.hasGoodStatus); break;
+      case 'cancelled':       result = result.filter(s => s.edition.status === 'Cancelled'); break;
+      case 'not-completed':   result = result.filter(s => s.notCompleted); break;
     }
     return [...result].sort((a, b) => {
       let cmp = 0;
@@ -233,6 +240,7 @@ export default function EditionHealth({ onViewEvent, onNotify }: EditionHealthPr
   const noTrailCount = nonCancelled.filter(s => !s.hasTrail).length;
   const noResultsCount = nonCancelled.filter(s => !s.hasResults).length;
   const badStatusCount = nonCancelled.filter(s => !s.hasGoodStatus).length;
+  const notCompletedCount = scored.filter(s => s.notCompleted).length;
   const avgScore = nonCancelled.length > 0 ? Math.round(nonCancelled.reduce((s, e) => s + e.score, 0) / nonCancelled.length) : 0;
 
   const handleSort = (field: SortField) => {
@@ -278,6 +286,9 @@ export default function EditionHealth({ onViewEvent, onNotify }: EditionHealthPr
           filter="no-results" activeFilter={activeFilter} onFilter={setActiveFilter} />
         <SummaryCard title="Open (past)" value={badStatusCount} color={badStatusCount > 0 ? '#d32f2f' : '#2e7d32'}
           filter="bad-status" activeFilter={activeFilter} onFilter={setActiveFilter} />
+        <SummaryCard title="Not Completed" value={notCompletedCount} color={notCompletedCount > 0 ? '#ed6c02' : '#2e7d32'}
+          filter="not-completed" activeFilter={activeFilter} onFilter={setActiveFilter}
+          tooltip="Past editions whose status is not Completed or Cancelled — click to review and wrap them up" />
       </Stack>
 
       {activeFilter && (
@@ -475,7 +486,7 @@ export default function EditionHealth({ onViewEvent, onNotify }: EditionHealthPr
 }
 
 function SummaryCard({
-  title, value, color, filter, activeFilter, onFilter,
+  title, value, color, filter, activeFilter, onFilter, tooltip,
 }: {
   title: string;
   value: string | number;
@@ -483,10 +494,12 @@ function SummaryCard({
   filter?: QuickFilter;
   activeFilter?: QuickFilter | null;
   onFilter?: (f: QuickFilter | null) => void;
+  tooltip?: string;
 }) {
   const isActive = filter != null && activeFilter === filter;
   const isClickable = filter != null && onFilter != null;
   return (
+    <Tooltip title={tooltip ?? ''} arrow placement="top">
     <Card
       variant="outlined"
       onClick={isClickable ? () => onFilter(isActive ? null : filter) : undefined}
@@ -508,5 +521,6 @@ function SummaryCard({
         <Typography variant="h5" fontWeight="bold" sx={{ color }}>{value}</Typography>
       </CardContent>
     </Card>
+    </Tooltip>
   );
 }
