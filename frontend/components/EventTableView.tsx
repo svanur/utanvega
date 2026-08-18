@@ -355,7 +355,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                     })()}
                                     <TableCell align="center">
                                         {race.registrationUrl && raceDaysUntil !== null && raceDaysUntil >= 0 ? (
-                                            <Button size="small" variant="outlined" href={race.registrationUrl} target="_blank" rel="noopener noreferrer" endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                                            <Button size="small" variant="contained" href={race.registrationUrl} target="_blank" rel="noopener noreferrer" endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
                                                 {t('races.register', 'Register')}
                                             </Button>
                                         ) : (
@@ -534,7 +534,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                                 ) : (
                                                     <Button
                                                         size="small"
-                                                        variant="outlined"
+                                                        variant="contained"
                                                         href={event.registrationUrl}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
