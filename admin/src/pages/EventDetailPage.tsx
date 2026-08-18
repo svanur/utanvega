@@ -64,6 +64,7 @@ import {
 } from '../hooks/useEvents';
 import { useTrails } from '../hooks/useTrails';
 import { apiFetch } from '../hooks/api';
+import { usePageShortcuts } from '../hooks/usePageShortcuts';
 import RaceFormCard from '../components/events/RaceFormCard';
 import EventFormCard from '../components/events/EventFormCard';
 import BilingualTextField from '../components/BilingualTextField';
@@ -359,7 +360,7 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onNotify
           <TextField size="small" fullWidth label="Photo Gallery URL" value={form.photoGalleryUrl}
             onChange={e => set('photoGalleryUrl', e.target.value)} />
           <BilingualTextField
-            size="small" fullWidth label="Notes" multiline rows={2}
+            size="small" fullWidth label="Edition description" multiline rows={2}
             valueIs={form.notes} valueEn={form.notesEn}
             onChangeIs={v => set('notes', v)} onChangeEn={v => set('notesEn', v)}
           />
@@ -556,6 +557,13 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
   const [raceForm, setRaceForm] = useState<{ editionId: string; race: RaceDto | null } | null>(null);
 
   const [editingEvent, setEditingEvent] = useState(false);
+
+  usePageShortcuts([
+    { key: 'u', handler: () => navigate(-1) },
+    { key: 'e', handler: () => setEditingEvent(v => !v) },
+    { key: 'v', handler: () => { if (PUBLIC_SITE_URL && detail) window.open(`${PUBLIC_SITE_URL}/events/${detail.slug}`, '_blank'); } },
+    { key: 'Escape', allowInInput: true, handler: () => setEditingEvent(false) },
+  ]);
 
   const linkedTrailsWithCoords = useMemo(() => {
     if (!detail) return [];

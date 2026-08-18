@@ -33,9 +33,11 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
+import dayjs from 'dayjs';
 import AddIcon from '@mui/icons-material/Add';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import ClearIcon from '@mui/icons-material/Clear';
+import CopyIcon from '@mui/icons-material/ContentCopy';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
@@ -220,6 +222,7 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
   const [sortBy, setSortBy] = useState<SortField>('updatedAt');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [attentionFilter, setAttentionFilter] = useState<AttentionFilter>(null);
+  const [weekFilter, setWeekFilter] = useState<'all' | 'next-week'>('all');
   const [showAttentionPanel, setShowAttentionPanel] = useState(true);
   const [cyclingStatusIds, setCyclingStatusIds] = useState<Set<string>>(new Set());
   const [cyclingActivityIds, setCyclingActivityIds] = useState<Set<string>>(new Set());
@@ -235,6 +238,10 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
 
   const todayStr = new Date().toISOString().slice(0, 10);
   const in30daysStr = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const today = dayjs();
+  const nextWeekMondayOffset = (8 - today.day()) % 7 || 7;
+  const nextWeekStart = today.add(nextWeekMondayOffset, 'day').format('YYYY-MM-DD');
+  const nextWeekEnd = today.add(nextWeekMondayOffset + 6, 'day').format('YYYY-MM-DD');
 
   const eventLocationOptions = useMemo(
     () => [...new Set(events.map(e => e.locationName).filter(Boolean) as string[])].sort(),
@@ -245,12 +252,12 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
     return [...new Set(years)].sort((a, b) => b.localeCompare(a));
   }, [events]);
 
-  const hasActiveFilters = attentionFilter !== null || activityFilter !== 'all' || typeFilter !== 'all'
+  const hasActiveFilters = weekFilter !== 'all' || attentionFilter !== null || activityFilter !== 'all' || typeFilter !== 'all'
     || statusFilter !== 'all' || locationFilter !== 'all' || yearFilter !== 'all' || monthFilter !== 'all';
 
   const resetFilters = () => {
     setActivityFilter('all'); setTypeFilter('all'); setStatusFilter('all'); setLocationFilter('all');
-    setYearFilter('all'); setMonthFilter('all'); setAttentionFilter(null);
+    setYearFilter('all'); setMonthFilter('all'); setAttentionFilter(null); setWeekFilter('all');
   };
 
   const handleRequestSort = (field: SortField) => {
@@ -295,6 +302,10 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
           if (!e.hasFutureEdition) return true;
           if (!e.nextEditionDate || e.nextEditionDate.slice(5, 7) !== monthFilter) return false;
         }
+        if (weekFilter === 'next-week') {
+          if (!e.nextEditionDate) return false;
+          if (e.nextEditionDate < nextWeekStart || e.nextEditionDate > nextWeekEnd) return false;
+        }
         if (attentionFilter === 'noEdition' && !(!e.hasFutureEdition && (e.type === 'Race' || e.type === 'Series') && e.status !== 'Cancelled')) return false;
         if (attentionFilter === 'seriesMissingReg' && !(e.type === 'Series' && e.nextEditionDate && e.nextEditionDate <= in30daysStr && e.seriesRaces?.some(r => !r.registrationUrl))) return false;
         if (attentionFilter === 'pastActive' && !(e.status === 'Confirmed' && e.nextEditionDate && e.nextEditionDate < todayStr)) return false;
@@ -319,7 +330,7 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
         }
         return cmp !== 0 ? dir * cmp : a.name.localeCompare(b.name);
       });
-  }, [events, searchQuery, activityFilter, typeFilter, statusFilter, locationFilter, yearFilter, monthFilter, sortBy, sortDir, attentionFilter, todayStr, in30daysStr]);
+  }, [events, searchQuery, activityFilter, typeFilter, statusFilter, locationFilter, yearFilter, monthFilter, sortBy, sortDir, attentionFilter, weekFilter, nextWeekStart, nextWeekEnd, todayStr, in30daysStr]);
 
   // ── Status / activity / type cycling ─────────────────────────────────────
   const handleCycleStatus = async (event: EventSummaryDto) => {
@@ -408,6 +419,33 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
     } finally {
       setCyclingTypeIds(prev => { const s = new Set(prev); s.delete(event.id); return s; });
     }
+  };
+
+  const handleCopyAgenda = () => {
+    const byDate = new Map<string, string[]>();
+    for (const e of filteredEvents) {
+      if (!e.nextEditionDate) continue;
+      if (!byDate.has(e.nextEditionDate)) byDate.set(e.nextEditionDate, []);
+      byDate.get(e.nextEditionDate)!.push(e.name);
+    }
+    const sorted = [...byDate.entries()].sort(([a], [b]) => a.localeCompare(b));
+    const DAY_NAMES = ['Sun', 'Mán', 'Þri', 'Mið', 'Fim', 'Fös', 'Lau'];
+    const MON_FULL = ['', 'janúar', 'febrúar', 'mars', 'apríl', 'maí', 'júní', 'júlí', 'ágúst', 'september', 'október', 'nóvember', 'desember'];
+    const start = dayjs(nextWeekStart);
+    const end = dayjs(nextWeekEnd);
+    const sameMonth = start.month() === end.month();
+    const header = sameMonth
+      ? `${start.date()}. – ${end.date()}. ${MON_FULL[end.month() + 1]} ${end.year()}`
+      : `${start.date()}. ${MON_FULL[start.month() + 1]} – ${end.date()}. ${MON_FULL[end.month() + 1]} ${end.year()}`;
+    const lines: string[] = [header, ''];
+    for (const [date, names] of sorted) {
+      const d = dayjs(date);
+      lines.push(`${DAY_NAMES[d.day()]} ${d.date()}. ${MON_FULL[d.month() + 1]}`);
+      names.forEach(n => lines.push(`  • ${n}`));
+      lines.push('');
+    }
+    void navigator.clipboard.writeText(lines.join('\n').trimEnd());
+    onNotify('Agenda copied to clipboard', 'success');
   };
 
   const openBulkMissingEditions = async () => {
@@ -679,6 +717,25 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
             {MONTHS.slice(1).map((m, i) => <MenuItem key={i} value={String(i + 1).padStart(2, '0')}>{m}</MenuItem>)}
           </Select>
         </FormControl>
+        <Chip
+          label="Next week"
+          size="small"
+          color={weekFilter === 'next-week' ? 'primary' : 'default'}
+          variant={weekFilter === 'next-week' ? 'filled' : 'outlined'}
+          clickable
+          onClick={() => {
+            const next = weekFilter === 'next-week' ? 'all' : 'next-week';
+            setWeekFilter(next);
+            if (next === 'next-week') { setYearFilter('all'); setMonthFilter('all'); }
+          }}
+        />
+        {weekFilter === 'next-week' && (
+          <Tooltip title="Copy agenda to clipboard">
+            <IconButton size="small" aria-label="Copy agenda" onClick={handleCopyAgenda}>
+              <CopyIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
         {hasActiveFilters && (
           <Tooltip title="Clear all filters">
             <IconButton size="small" onClick={resetFilters}><ClearIcon fontSize="small" /></IconButton>

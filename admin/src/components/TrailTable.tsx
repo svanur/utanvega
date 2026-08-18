@@ -1,9 +1,7 @@
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Chip, Button, Box, Checkbox, TableSortLabel, Tooltip, IconButton, Paper, Autocomplete, TextField } from '@mui/material';
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Chip, Box, Checkbox, TableSortLabel, Tooltip, IconButton, Paper, Autocomplete, TextField } from '@mui/material';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import DownloadIcon from '@mui/icons-material/Download';
 import MapIcon from '@mui/icons-material/Map';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
 import RestoreIcon from '@mui/icons-material/Restore';
 import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
 import LoopIcon from '@mui/icons-material/Loop';
@@ -105,8 +103,12 @@ export default function TrailTable({
                 Status
               </TableSortLabel>
             </TableCell>
-            <TableCell align="center">Links</TableCell>
-            <TableCell align="right">Actions</TableCell>
+            <TableCell>
+              <TableSortLabel active={orderBy === 'updatedAt'} direction={orderBy === 'updatedAt' ? order : 'desc'} onClick={() => onRequestSort('updatedAt')}>
+                Updated
+              </TableSortLabel>
+            </TableCell>
+            <TableCell align="center" />
           </TableRow>
         </TableHead>
         <TableBody>
@@ -223,7 +225,7 @@ const activityOptions = [
   { value: 'Cycling', label: 'Cycling' },
 ];
 
-function TrailRowComponent({ trail, selected, onSelectOne, onViewMap, onEdit, onDelete, onRestore, onUpdateStatus: _onUpdateStatus, onPatchTrail, allLocations, onAddLocation, onRemoveLocation, allTags, onAddTag, onRemoveTag, onRowClick }: TrailRowProps) {
+function TrailRowComponent({ trail, selected, onSelectOne, onViewMap, onEdit: _onEdit, onDelete: _onDelete, onRestore, onUpdateStatus: _onUpdateStatus, onPatchTrail, allLocations, onAddLocation, onRemoveLocation, allTags, onAddTag, onRemoveTag, onRowClick }: TrailRowProps) {
   const [showAddLocation, setShowAddLocation] = useState(false);
   const [showAddTag, setShowAddTag] = useState(false);
 
@@ -234,8 +236,6 @@ function TrailRowComponent({ trail, selected, onSelectOne, onViewMap, onEdit, on
 
   const handleSelect = useCallback(() => onSelectOne(trail.id), [onSelectOne, trail.id]);
   const handleViewMap = useCallback(() => onViewMap({ id: trail.id, name: trail.name }), [onViewMap, trail.id, trail.name]);
-  const handleEdit = useCallback(() => onEdit(trail.id), [onEdit, trail.id]);
-  const handleDelete = useCallback(() => onDelete({ id: trail.id, name: trail.name, slug: trail.slug }), [onDelete, trail.id, trail.name, trail.slug]);
   const handleRestore = useCallback(() => onRestore(trail), [onRestore, trail]);
 
   const handleRowClick = useCallback((e: React.MouseEvent<HTMLElement>) => {
@@ -428,8 +428,18 @@ function TrailRowComponent({ trail, selected, onSelectOne, onViewMap, onEdit, on
           />
         )}
       </TableCell>
+      <TableCell>
+        <Typography variant="caption" color="text.secondary" noWrap>
+          {trail.updatedAt ? new Date(trail.updatedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }) : '—'}
+        </Typography>
+      </TableCell>
       <TableCell align="center">
         <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }}>
+          <Tooltip title="View on map">
+            <IconButton size="small" onClick={handleViewMap} aria-label={`View map for ${trail.name}`}>
+              <MapIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
           <Tooltip title="View trail on website">
             <IconButton size="small" component="a" href={`${SITE_URL}/trails/${trail.slug}`} target="_blank" rel="noopener noreferrer" aria-label={`View ${trail.name} on website`}>
               <OpenInNewIcon fontSize="small" />
@@ -453,18 +463,14 @@ function TrailRowComponent({ trail, selected, onSelectOne, onViewMap, onEdit, on
               </IconButton>
             </Tooltip>
           )}
+          {trail.status === 'Archived' && (
+            <Tooltip title="Restore trail">
+              <IconButton size="small" color="success" onClick={handleRestore} aria-label={`Restore ${trail.name}`}>
+                <RestoreIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
         </Box>
-      </TableCell>
-      <TableCell align="right">
-        <Button size="small" startIcon={<MapIcon />} onClick={handleViewMap}>Map</Button>
-        {trail.status === 'Archived' ? (
-          <Button size="small" color="success" startIcon={<RestoreIcon />} onClick={handleRestore}>Restore</Button>
-        ) : (
-          <>
-            <Button size="small" startIcon={<EditIcon />} onClick={handleEdit}>Edit</Button>
-            <Button size="small" color="error" startIcon={<DeleteIcon />} onClick={handleDelete}>Delete</Button>
-          </>
-        )}
       </TableCell>
     </TableRow>
   );

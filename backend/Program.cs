@@ -1719,8 +1719,15 @@ app.MapGet("/api/v1/admin/events/details", [Authorize(Policy = "AdminOnly")] asy
 
 app.MapPost("/api/v1/admin/events", [Authorize(Policy = "AdminOnly")] async (CreateEventCommand command, IMediator mediator) =>
 {
-    var id = await mediator.Send(command);
-    return Results.Created($"/api/v1/events/{id}", new { id });
+    try
+    {
+        var id = await mediator.Send(command);
+        return Results.Created($"/api/v1/events/{id}", new { id });
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.Conflict(new { error = ex.Message });
+    }
 })
 .WithName("CreateEvent");
 

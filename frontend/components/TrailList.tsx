@@ -169,7 +169,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
     }, [searchQuery]);
     const [hidingSlugs, setHidingSlugs] = React.useState<string[]>([]);
     const hidingSlugsSet = React.useMemo(() => new Set(hidingSlugs), [hidingSlugs]);
-    const [discoveryTab, setDiscoveryTab] = React.useState<'trending' | 'recent' | 'races'>('trending');
+    const [discoveryTab, setDiscoveryTab] = React.useState<'trending' | 'recent' | 'races'>('races');
     const discoveryScrollRef = React.useRef<HTMLDivElement>(null);
     const navigatingAway = React.useRef(false);
 
@@ -1048,7 +1048,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                             {isEnabled('races_page') && upcomingCompetitions.length > 0 && (
                                 <Chip
                                     icon={<EmojiEventsIcon />}
-                                    label={t('home.nextRaces')}
+                                    label={t('home.nextEvents')}
                                     size="small"
                                     variant={discoveryTab === 'races' ? 'filled' : 'outlined'}
                                     color={discoveryTab === 'races' ? 'success' : 'default'}

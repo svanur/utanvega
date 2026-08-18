@@ -67,6 +67,17 @@ const shortcutGroups: ShortcutGroup[] = [
         ],
     },
     {
+        title: 'Detail pages (trail / event / organizer)',
+        shortcuts: [
+            { keys: ['u'], description: 'Go back to list' },
+            { keys: ['e'], description: 'Toggle edit form open / closed' },
+            { keys: ['v'], description: 'View on public site' },
+            { keys: ['s'], description: 'Save (when not typing in a field)' },
+            { keys: ['Ctrl', 'S'], description: 'Save (works anywhere, even in fields)' },
+            { keys: ['Esc'], description: 'Cancel / close edit form' },
+        ],
+    },
+    {
         title: 'General',
         shortcuts: [
             { keys: ['Ctrl', '?'], description: 'Show this help' },

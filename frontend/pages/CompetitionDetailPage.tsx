@@ -34,7 +34,6 @@ import InstagramIcon from '@mui/icons-material/Instagram';
 import LanguageIcon from '@mui/icons-material/Language';
 import XIcon from '@mui/icons-material/X';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
-import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
@@ -597,9 +596,11 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2, flexWrap: 'wrap' }}>
                         <Typography variant="h4" fontWeight={800} sx={{
                             display: 'flex', alignItems: 'center', gap: 1, flex: 1, minWidth: 200,
-                            ...(heroCancelled && { textDecoration: 'line-through', opacity: 0.7 }),
+                            ...(event.status === 'Cancelled' && { textDecoration: 'line-through', opacity: 0.7 }),
                         }}>
-                            <EmojiEventsIcon sx={{ color: theme.palette.warning.main, flexShrink: 0 }} />
+                            <Box component="span" sx={{ display: 'flex', color: 'text.secondary', flexShrink: 0, '& svg': { fontSize: '2rem' } }}>
+                                {getActivityIcon(event.activityType)}
+                            </Box>
                             {loc(event.name, event.nameEn)}
                         </Typography>
                         <Stack direction="row" spacing={1} alignItems="center">
@@ -721,10 +722,10 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             <Typography variant="body2" color="text.secondary" sx={{ mr: 0.5 }}>
                                 {t(event.daysUntil != null && event.daysUntil < 0 ? 'races.lastRace' : 'races.nextRace')}
                             </Typography>
-                            <Typography variant="body1" fontWeight={600}>
+                            <EventDateBadge dateStr={(event.displayDate ?? event.nextEditionDate)!} endDateStr={primaryEdition?.endDate ?? event.endDisplayDate} />
+                            <Typography variant="body1">
                                 {formatDateRange((event.displayDate ?? event.nextEditionDate)!, primaryEdition?.endDate ?? event.endDisplayDate, t)}
                             </Typography>
-                            <EventDateBadge dateStr={(event.displayDate ?? event.nextEditionDate)!} endDateStr={primaryEdition?.endDate ?? event.endDisplayDate} />
                         </Box>
                     )}
 
@@ -810,6 +811,17 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                     {t('races.register')}
                                 </Button>
                             )}
+                            {event.organizerWebsite && (
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
+                                    onClick={() => window.open(event.organizerWebsite!, '_blank', 'noopener')}
+                                    sx={{ textTransform: 'none' }}
+                                >
+                                    {t('races.organizerSite')}
+                                </Button>
+                            )}
                             {!showEditionSections && primaryEdition?.resultsUrl && (
                                 <Button
                                     variant={isPostRace ? 'contained' : 'outlined'}
@@ -836,24 +848,13 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             {event.youtubeUrl && (
                                 <Button
                                     variant="outlined"
-                                    color="error"
                                     size="small"
-                                    startIcon={<VideocamIcon sx={{ fontSize: 16 }} />}
+                                    startIcon={<VideocamIcon sx={{ fontSize: 16 }} color="error" />}
+                                    endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
                                     onClick={() => window.open(event.youtubeUrl!, '_blank', 'noopener')}
                                     sx={{ textTransform: 'none' }}
                                 >
                                     360°
-                                </Button>
-                            )}
-                            {event.organizerWebsite && (
-                                <Button
-                                    variant="outlined"
-                                    size="small"
-                                    endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
-                                    onClick={() => window.open(event.organizerWebsite!, '_blank', 'noopener')}
-                                    sx={{ textTransform: 'none' }}
-                                >
-                                    {t('races.organizerSite')}
                                 </Button>
                             )}
                             {isEnabled('calendar_integration', false) && (event.displayDate ?? event.nextEditionDate) && !heroCancelled && event.daysUntil != null && event.daysUntil >= 0 && (

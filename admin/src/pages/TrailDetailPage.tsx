@@ -24,6 +24,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import DownloadIcon from '@mui/icons-material/Download';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import AddIcon from '@mui/icons-material/Add';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
@@ -32,6 +33,7 @@ import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
 import ArchiveIcon from '@mui/icons-material/Archive';
 import RestoreIcon from '@mui/icons-material/Restore';
 import { useTrailDetail, useTrailRaces, useInvalidateTrailData, trailStatusLabel, type TrailDetail, type TrailLinkedRace } from '../hooks/useTrails';
+import { usePageShortcuts } from '../hooks/usePageShortcuts';
 import { useLocations } from '../hooks/useLocations';
 import { useTags } from '../hooks/useTags';
 import { apiFetch } from '../hooks/api';
@@ -43,6 +45,7 @@ import TrailActionDialog, { type TrailAction } from '../components/trails/TrailA
 import { InlineEditSelect, InlineEditText } from '../components/InlineEditCell';
 
 const PUBLIC_SITE_URL = ((import.meta.env.VITE_PUBLIC_SITE_URL ?? '') as string).replace(/\/$/, '');
+const API_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8080';
 const MAP_HEIGHT = 220;
 
 // Visibility states only. 'Flagged' is gone — "needs a look" is now the needsReview
@@ -223,6 +226,13 @@ export default function TrailDetailPage({ onNotify }: { onNotify: (message: Reac
   const [showAddLocation, setShowAddLocation] = useState(false);
   const [showAddTag, setShowAddTag] = useState(false);
   const [statusLegendOpen, setStatusLegendOpen] = useState(false);
+
+  usePageShortcuts([
+    { key: 'u', handler: () => navigate(-1) },
+    { key: 'e', handler: () => setEditingTrail(v => !v) },
+    { key: 'v', handler: () => { if (isPubliclyVisible && PUBLIC_SITE_URL) window.open(`${PUBLIC_SITE_URL}/trails/${trail?.slug}`, '_blank'); } },
+    { key: 'Escape', allowInInput: true, handler: () => setEditingTrail(false) },
+  ]);
 
   // Canonicalize the URL to the slug once the trail loads (some entry points only have the id on hand).
   useEffect(() => {
@@ -495,6 +505,16 @@ export default function TrailDetailPage({ onNotify }: { onNotify: (message: Reac
                 </span>
               </Tooltip>
             )}
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<DownloadIcon />}
+              component="a"
+              href={`${API_URL}/api/v1/trails/${trail.slug}/gpx`}
+              download={`${trail.slug}.gpx`}
+            >
+              GPX
+            </Button>
             <Button size="small"
               variant={editingTrail ? 'contained' : 'outlined'}
               startIcon={<EditIcon />}
