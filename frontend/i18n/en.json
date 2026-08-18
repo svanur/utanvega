@@ -1425,7 +1425,8 @@
         "registrationStatus": {
             "Open": "Registration: Open",
             "Closed": "Registration: Closed",
-            "NotStarted": "Registration: Coming Soon"
+            "NotStarted": "Registration: Coming Soon",
+            "NotRequired": "Free entry"
         },
         "ticketStatus": {
             "Free": "Registration: Free",

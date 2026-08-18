@@ -5,6 +5,7 @@ public enum RegistrationStatus
     NotStarted,
     Open,
     Closed,
+    NotRequired,
 }
 
 public enum EditionStatus
@@ -56,7 +57,8 @@ public class EventEdition
     public void CancelWithRaces()
     {
         Status = EditionStatus.Cancelled;
-        RegistrationStatus = RegistrationStatus.Closed;
+        if (RegistrationStatus != RegistrationStatus.NotRequired)
+            RegistrationStatus = RegistrationStatus.Closed;
         foreach (var race in Races.Where(r => r.Status != RaceStatus.Cancelled))
         {
             race.Status = RaceStatus.Cancelled;
@@ -68,7 +70,8 @@ public class EventEdition
     public void CompleteWithRaces()
     {
         Status = EditionStatus.Completed;
-        RegistrationStatus = RegistrationStatus.Closed;
+        if (RegistrationStatus != RegistrationStatus.NotRequired)
+            RegistrationStatus = RegistrationStatus.Closed;
         foreach (var race in Races.Where(r => r.Status == RaceStatus.Active))
         {
             race.Status = RaceStatus.Completed;

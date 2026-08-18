@@ -1423,9 +1423,10 @@
             "distanceToStart": "Fjarlægð að upphafsstað"
         },
         "registrationStatus": {
-            "Open": "Skráning: Opin",
-            "Closed": "Skráning: Lokuð",
-            "NotStarted": "Skráning: Væntanlegt"
+            "Open": "Skráning opin",
+            "Closed": "Skráningu lokið",
+            "NotStarted": "Skráning væntanleg",
+            "NotRequired": "Frjáls þátttaka"
         },
         "ticketStatus": {
             "Free": "Skráning: Frítt",

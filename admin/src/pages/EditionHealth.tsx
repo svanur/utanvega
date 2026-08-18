@@ -73,11 +73,13 @@ function getEditionChecks(edition: EventEditionDto, eventName: string): HealthCh
     },
     {
       label: 'Reg. Status',
-      passed: hasPastDate ? edition.registrationStatus === 'Closed' : true,
+      passed: hasPastDate ? (edition.registrationStatus === 'Closed' || edition.registrationStatus === 'NotRequired') : true,
       tooltip: hasPastDate
         ? (edition.registrationStatus === 'Closed'
             ? 'Closed (correct for past edition)'
-            : `Registration is "${edition.registrationStatus}" but edition is in the past`)
+            : edition.registrationStatus === 'NotRequired'
+              ? 'Not Required (correct for past walk-in edition)'
+              : `Registration is "${edition.registrationStatus}" but edition is in the past`)
         : `Status: ${edition.registrationStatus}`,
     },
   ];
