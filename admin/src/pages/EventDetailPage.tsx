@@ -1287,7 +1287,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                   />
                 </Tooltip>
                 <Tooltip title={edition.registrationStatus === 'NotRequired'
-                  ? 'Not Required — change via Edit edition'
+                  ? 'Registration status: Not Required — change via Edit edition'
                   : cycleTooltip('Registration status', ['NotStarted', 'Open', 'Closed'], edition.registrationStatus)}>
                   <Chip
                     label={edition.registrationStatus}
