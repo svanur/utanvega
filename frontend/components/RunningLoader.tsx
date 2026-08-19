@@ -68,7 +68,44 @@ const loadingMessages = {
         "Kílómetrafjöldi er konungur...",
         "Kílómetrafjöldi er drottning...",
         "Sko! Það fer eftir ýmsu...",
-        "Minna er meira..."
+        "Minna er meira...",
+        "Þetta er ekki rok, þetta er mótstöðuþjálfun.",
+        "Gluggaveður — förum samt út.",
+        "Fjórar árstíðir á einum kílómetra.",
+        "Vindurinn er í móti. Báðar leiðir.",
+        "Slydda byggir karakter.",
+        "Sést Esjan? Þá fer að rigna.",
+        "Þetta reddast..",
+        "Kindurnar vita bestu leiðina.",
+        "Kindagötur eru bestu göturnar.",
+        "Mosinn man hvert skref. Stígðu létt.",
+        "Miðnætursólin telur ekki tímann.",
+        "Áin var grynnri á kortinu.",
+        "Vaðið er hluti af leiðinni.",
+        "Malarvegur telst utanvega. Tæknilega.",
+        "Hvíld er líka þjálfun.",
+        "Það er í lagi að fara hægt í dag.",
+        "Hægar framfarir eru samt framfarir.",
+        "Enginn kílómetri er tilgangslaus.",
+        "Andardrátturinn kemur alltaf aftur.",
+        "Fjallið er ekki í keppni við mig.",
+        "Líkaminn minn er ekki verkefni sem þarf að leysa.",
+        "Ég hleyp af því ég vil, ekki af því ég verð.",
+        "Erfiðasta brekkan er útihurðin.",
+        "Klukkan segir 5 km. Fæturnir segja 15.",
+        "Rafhlaðan: 12%. Bjartsýnin: 100%.",
+        "Gelið er alltaf í hinum vasanum.",
+        "Það er alltaf einn steinn sem finnur skóinn.",
+        "Blöðrur eru bara minjagripir.",
+        "Njóttu brekkunnar niður í mót — hún er gjöf.",
+        "Nýir skór gera mig hraðari. Þetta eru vísindi.",
+        "Að ganga upp brekkuna er líka hlaup.",
+        "Enginn spyr um tímann í brekkunni.",
+        "Enginn iðrast þess að hafa farið út.",
+        "Kaffi fyrir, kleina eftir.",
+        "Heiti potturinn er endamarkið.",
+        "Sundlaugin bíður.",
+        "Nýtt skópar í dag, kemur skapinu í lag..."
     ],
     en: [
         "Loading trails...",
@@ -128,15 +165,52 @@ const loadingMessages = {
         "Mileage is Queen...",
         "It depends...",
         "Less is more...",
-        "Go slow to go fast..."
+        "Go slow to go fast...",
+        "That's not wind, that's resistance training.",
+        "Looks lovely through the window. Going out anyway.",
+        "Four seasons in one kilometre.",
+        "The wind is against you. Both ways.",
+        "Sleet builds character.",
+        "Can you see Esja? Then it's about to rain.",
+        "It'll all work out... 'Þetta reddast'",
+        "The sheep know the best line.",
+        "Sheep paths are the original singletrack.",
+        "The moss remembers every step. Tread lightly.",
+        "The midnight sun doesn't keep time.",
+        "The river looked shallower on the map.",
+        "The crossing is part of the route.",
+        "Gravel counts as trail. Technically.",
+        "Rest is training too.",
+        "It's okay to be slow today.",
+        "Slow progress is still progress.",
+        "No kilometre is wasted.",
+        "The breath always comes back.",
+        "The mountain isn't competing with me.",
+        "My body is not a problem to be solved.",
+        "I run because I want to, not because I must.",
+        "The steepest hill is the front door.",
+        "Watch says 5 km. Legs say 15.",
+        "Battery: 12%. Optimism: 100%.",
+        "The gel is always in the other pocket.",
+        "There's always one stone that finds your shoe.",
+        "Blisters are just souvenirs.",
+        "Take the downhill. It's a gift.",
+        "New shoes make me faster. That's science.",
+        "Walking the hill still counts as running.",
+        "Nobody asks about your uphill split.",
+        "Nobody ever regretted going out.",
+        "Coffee before, kleina after.",
+        "The hot tub is the finish line.",
+        "The pool is waiting."
     ],
 };
 
 export default function RunningLoader({ message }: { message?: string }) {
   const { i18n } = useTranslation();
   const lang = i18n.language.startsWith('is') ? 'is' : 'en';
-  const [index] = useState(() => Math.floor(Math.random() * loadingMessages.en.length));
-  const text = message ?? loadingMessages[lang][index];
+  const [index] = useState(() => Math.floor(Math.random() * loadingMessages[lang].length));
+  // Modulo keeps this in range if the two lists drift apart in length, or the language changes after mount.
+  const text = message ?? loadingMessages[lang][index % loadingMessages[lang].length];
 
   return (
     <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" gap={1.5} py={2}>
