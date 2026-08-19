@@ -1,5 +1,5 @@
 import { lazy, Suspense, useMemo, useState, useEffect } from 'react';
-import { CssBaseline, ThemeProvider, CircularProgress, Box } from '@mui/material';
+import { CssBaseline, ThemeProvider } from '@mui/material';
 import type { PaletteMode } from '@mui/material';
 import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
 import { createAppTheme } from './theme';
@@ -11,6 +11,7 @@ import SpotlightSearch from './components/SpotlightSearch';
 import { useFeatureFlags } from './hooks/useFeatureFlags';
 import { useLoginEnabled } from './hooks/useLoginEnabled';
 import InstallBanner from './components/InstallBanner';
+import RunningLoader from './components/RunningLoader';
 import { AuthProvider } from './hooks/useAuth';
 
 // Lazy-loaded pages (not needed on initial load)
@@ -51,11 +52,7 @@ const FaqPage = lazy(() => import('./pages/FaqPage'));
 const SendCommentsPage = lazy(() => import('./pages/SendCommentsPage'));
 
 function PageLoader() {
-    return (
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
-            <CircularProgress />
-        </Box>
-    );
+    return <RunningLoader />;
 }
 
 function ScrollToContent() {

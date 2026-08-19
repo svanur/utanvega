@@ -38,6 +38,7 @@ import {
     Select,
     MenuItem,
     Link,
+    Fab,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import SearchIcon from '@mui/icons-material/Search';
@@ -882,11 +883,6 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                 <CalendarMonthIcon fontSize="small" />
                             </IconButton>
                         </Tooltip>
-                        <Tooltip title={t('races.shareQR')}>
-                            <IconButton size="small" onClick={() => { trackSiteQROpen(); setSiteQROpen(true); }}>
-                                <QrCode2Icon fontSize="small" />
-                            </IconButton>
-                        </Tooltip>
                     </Stack>
                 </Box>
                 {/* Views */}
@@ -1537,6 +1533,30 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                     );
                 })()}
             </Container>
+
+            {/* Site QR FAB */}
+            <Tooltip title={t('races.shareQR')} placement="left">
+                <Fab
+                    color="primary"
+                    size="medium"
+                    onClick={() => { trackSiteQROpen(); setSiteQROpen(true); }}
+                    sx={{
+                        position: 'fixed',
+                        bottom: 80,
+                        right: 16,
+                        zIndex: 1200,
+                        '@keyframes pulse': {
+                            '0%': { boxShadow: '0 0 0 0 rgba(25, 118, 210, 0.5)' },
+                            '70%': { boxShadow: '0 0 0 10px rgba(25, 118, 210, 0)' },
+                            '100%': { boxShadow: '0 0 0 0 rgba(25, 118, 210, 0)' },
+                        },
+                        animation: 'pulse 2s ease-in-out 3',
+                    }}
+                    aria-label={t('races.shareQR')}
+                >
+                    <QrCode2Icon />
+                </Fab>
+            </Tooltip>
 
             {/* Site QR dialog */}
             {(() => {
