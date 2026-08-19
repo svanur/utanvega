@@ -18,6 +18,7 @@ import VideocamIcon from '@mui/icons-material/Videocam';
 import CelebrationIcon from '@mui/icons-material/Celebration';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import type { EventSummary, EventDetail, RaceDto, SeriesRaceDto } from '../hooks/useEvents';
+import { NewYearSplitterRows } from './NewYearSplitter';
 import { API_URL } from '../hooks/useTrails';
 import { haversineKm, formatDistanceKm } from '../utils/geo';
 import NearMeIcon from '@mui/icons-material/NearMe';
@@ -207,36 +208,18 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                             const newYearHolidays = getHolidays(newYearDate);
                             const months = t('races.months', { returnObjects: true }) as string[];
                             const showNewYearBanner = rowDate !== newYearDate && newYearHolidays.length > 0;
+                            const bannerText = showNewYearBanner
+                                ? '1. ' + months[0] + ' — ' + newYearHolidays.map(h => loc(h.name, h.nameEn) ?? h.name).join(' · ')
+                                : undefined;
                             return (
-                                <React.Fragment key={`year-${rowYear}`}>
-                                    <TableRow>
-                                        <TableCell colSpan={totalColumns} sx={{ py: 1, px: 2, border: 0 }}>
-                                            <Stack direction="row" alignItems="center" gap={1}>
-                                                <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
-                                                <Stack direction="row" alignItems="center" gap={0.5}>
-                                                    <AutoAwesomeIcon sx={{ fontSize: 13, color: 'primary.main' }} />
-                                                    <Typography variant="caption" fontWeight={700} color="primary">
-                                                        {t('races.newYear', { year: rowYear })}
-                                                    </Typography>
-                                                    <AutoAwesomeIcon sx={{ fontSize: 13, color: 'primary.main' }} />
-                                                </Stack>
-                                                <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
-                                            </Stack>
-                                        </TableCell>
-                                    </TableRow>
-                                    {showNewYearBanner && (
-                                        <TableRow sx={{ bgcolor: alpha(theme.palette.warning.main, 0.12) }}>
-                                            <TableCell colSpan={totalColumns} sx={{ py: 0.5, px: 2, borderBottom: 0 }}>
-                                                <Stack direction="row" alignItems="center" gap={1}>
-                                                    <CelebrationIcon sx={{ fontSize: 15, color: 'warning.dark' }} />
-                                                    <Typography variant="caption" fontWeight={700} sx={{ color: 'warning.dark', letterSpacing: 0.3 }}>
-                                                        {'1. ' + months[0]} — {newYearHolidays.map(h => loc(h.name, h.nameEn) ?? h.name).join(' · ')}
-                                                    </Typography>
-                                                </Stack>
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
-                                </React.Fragment>
+                                <NewYearSplitterRows
+                                    key={`year-${rowYear}`}
+                                    year={rowYear}
+                                    label={t('races.newYear', { year: rowYear })}
+                                    colSpan={totalColumns}
+                                    showBanner={showNewYearBanner}
+                                    bannerText={bannerText}
+                                />
                             );
                         })() : null;
                         const holidays = rowDate ? getHolidays(rowDate) : [];
