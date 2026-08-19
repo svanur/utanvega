@@ -1,6 +1,7 @@
 import { Box, Chip, Divider, Link, Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
 import type { PaletteMode } from '@mui/material';
 import { useTranslation } from 'react-i18next';
+import { Link as RouterLink } from 'react-router-dom';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import LandscapeIcon from '@mui/icons-material/Landscape';
@@ -47,9 +48,12 @@ export default function ItraGuidePage({ mode, onToggleMode }: ItraGuidePageProps
                     <Typography variant="h4" fontWeight={700} gutterBottom>
                         {t('itraGuide.title')}
                     </Typography>
-                    <Typography variant="body1" color="text.secondary">
+                    <Typography variant="body1" color="text.secondary" gutterBottom>
                         {t('itraGuide.intro')}
                     </Typography>
+                    <Link component={RouterLink} to="/itra-handbook" underline="hover" variant="body2">
+                        {t('itraGuide.handbookLink')}
+                    </Link>
                 </Box>
 
                 {/* Concept cards */}
