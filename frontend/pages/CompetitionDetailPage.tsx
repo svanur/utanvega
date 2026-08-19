@@ -37,6 +37,7 @@ import FacebookIcon from '@mui/icons-material/Facebook';
 import InstagramIcon from '@mui/icons-material/Instagram';
 import LanguageIcon from '@mui/icons-material/Language';
 import XIcon from '@mui/icons-material/X';
+import YouTubeIcon from '@mui/icons-material/YouTube';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
@@ -902,6 +903,10 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                         if (type === 'facebook') icon = <FacebookIcon />;
                                         else if (type === 'instagram') icon = <InstagramIcon />;
                                         else if (type === 'x' || type === 'twitter') icon = <XIcon />;
+                                        else if (type === 'youtube') icon = <YouTubeIcon />;
+                                        else if (type === 'tiktok') icon = <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.78 1.52V6.76a4.85 4.85 0 0 1-1.01-.07z"/></svg>;
+                                        else if (type === 'strava') icon = <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>;
+                                        else if (type === 'vimeo') icon = <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M23.977 6.416c-.105 2.338-1.739 5.543-4.894 9.609-3.268 4.247-6.026 6.37-8.29 6.37-1.409 0-2.578-1.294-3.553-3.881l-1.924-7.059c-.702-2.587-1.459-3.88-2.26-3.88-.177 0-.795.372-1.854 1.113L0 7.697c1.059-.924 2.101-1.848 3.124-2.772C4.587 3.55 5.697 2.766 6.48 2.766c1.757 0 2.834 1.648 3.236 4.948.435 3.568.74 5.786.905 6.65.504 2.291 1.06 3.435 1.668 3.435.471 0 1.178-.747 2.116-2.241.937-1.494 1.438-2.631 1.498-3.406.131-1.29-.373-1.934-1.498-1.934-.532 0-1.081.122-1.649.365 1.095-3.591 3.187-5.337 6.285-5.239 2.292.066 3.371 1.553 3.236 4.072z"/></svg>;
                                         return (
                                             <Tooltip key={`${type}-${link.url}`} title={link.type}>
                                                 <IconButton

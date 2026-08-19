@@ -1644,9 +1644,9 @@
         "handbookLink": "→ Handbók: ITRA í framkvæmd"
     },
     "itraHandbook": {
-        "title": "Handbók fyrir ITRA.run",
-        "subtitle": "Allt sem utanvegahlauparar þurfa að vita",
-        "intro": "Vefsíðan ITRA (International Trail Running Association) er miðstöð fyrir utanvegahlaupara um allan heim. Hún heldur utan um árangur, reiknar út alþjóðlegan styrkleika (Performance Index) og utanvegahlaupastig.",
+        "title": "ITRA handbók fyrir utanvegahlaupara",
+        "subtitle": "(Flest)Allt sem utanvegahlauparar þurfa að vita um ITRA",
+        "intro": "Vefsíða ITRA (International Trail Running Association) er miðstöð fyrir utanvegahlaupara um allan heim. Hún heldur utan um árangur, reiknar út alþjóðlegan styrkleika (Performance Index) og utanvegahlaupastig.",
         "guideLink": "← ITRA hugtökin útskýrð",
         "browse": {
             "title": "Skoðun á ITRA stigum og innskráning",
@@ -1654,32 +1654,32 @@
                 "Ekki þörf á innskráningu: Þú getur leitað að sjálfum þér eða öðrum hlaupurum undir flipanum 'Find a runner' án þess að skrá þig inn.",
                 "Aðgengilegar upplýsingar: Almenningur getur séð heildarstigafjölda (Performance Index), nýjustu hlaup og helstu tölfræði hlaupara."
             ],
-            "findLink": "Finna hlaupara á ITRA.run"
+            "findLink": "Finna hlaupara á vefsíðu ITRA"
         },
         "findRaces": {
             "title": "Hvernig finn ég ITRA-vottuð hlaup?",
             "items": [
                 "Aðeins ITRA-vottuð hlaup skila þér ITRA stigum — bæði Performance Index og Endurance Points.",
-                "Á ITRA.run geturðu leitað að hlaupum eftir landi, vegalengd, hæðarmun og erfiðleikastigi.",
-                "Á Íslandi eru fleiri hlaup vottuð á hverju ári — skoðaðu lista ITRA til að sjá hvaða íslenskar keppnir eru skráðar."
+                "Á www.itra.run geturðu leitað að hlaupum eftir landi, vegalengd, hæðarmun og erfiðleikastigi.",
+                "Á Íslandi eru fleiri og fleiri hlaup vottuð á hverju ári — skoðaðu lista ITRA til að sjá hvaða íslenskar keppnir eru skráðar."
             ],
             "link": "Leita að ITRA-vottaðar keppnir"
         },
         "duplicate": {
             "title": "Vandamál með tvo reikninga (Duplicate Profiles)",
             "items": [
-                "Af hverju gerist þetta? Ef þú notar mismunandi rithátt á nafni (t.d. með eða án millinafns, eða með íslenskum stöfum vs. enskum) þegar þú skráir þig í hlaup, getur kerfið haldið að um tvo ólíka hlaupara sé að ræða.",
-                "Afleiðing: Árangurinn þinn skiptist á milli tveggja prófíla. Stigin þín endurspegla þá ekki raunverulegan styrkleika þinn þar sem hluti hlaupa vantar á aðalreikninginn."
+                "Af hverju gerist þetta? Ef þú notar mismunandi rithátt á nafni (t.d. með eða án millinafns, eða með íslenskum eða án íslenskra stafa) þegar þú skráir þig í hlaup, getur kerfið haldið að um ólíka hlaupara sé að ræða. T.d. ef Þóra skráir sig sem Þóra svo Þora, svo Thora og svo Pora, þá er hún Þóra okkar komin með 4 aðganga hjá ITRA. Ekki gott.",
+                "Afleiðing: Árangurinn dreifist á marga prófíla. Stigin þín endurspegla þá ekki raunverulegan styrkleika þinn þar sem hluti hlaupa vantar á aðalreikninginn."
             ]
         },
         "merge": {
             "title": "Hvernig á að sameina tvo ITRA reikninga (Merge)",
-            "intro": "Þú getur auðveldlega sameinað prófíla sjálfur beint í gegnum kerfið:",
+            "intro": "Þú getur auðveldlega sameinað prófíla sjálf/ur beint í gegnum kerfið:",
             "steps": [
                 "Stofnaðu ókeypis reikning á ITRA og skráðu þig inn.",
                 "Farðu í flipann Results og smelltu á Manage my Results.",
                 "Notaðu leitarvélina til að finna hinn prófílinn þinn (prófaðu að víxla nafni og eftirnafni ef hann finnst ekki strax).",
-                "Merktu við þau hlaup sem tilheyra þér og smelltu á Link race result til að færa þau yfir á þinn rétta reikning.",
+                "Merktu við þau hlaup sem tilheyra þér og smelltu á 'Link race result' til að færa þau yfir á þinn rétta reikning.",
                 "Athugaðu: Í sumum tilfellum gætir þú þurft að hlaða upp skilríkjum (vegabréfi eða ökuskírteini) til að staðfesta auðkenni þitt áður en breytingarnar eru samþykktar."
             ]
         },
@@ -1697,14 +1697,14 @@
             "items": [
                 "Þegar niðurstaða er eldri en 36 mánuðir fellur hún sjálfkrafa úr útreikningnum — stigin þín geta lækkað án þess að þú hafir gert neitt.",
                 "Dæmi: Ef þú kláraðir keppni í júní 2022 sem gaf þér 370 stig, mun sú niðurstaða falla úr útreikningi eftir júní 2025 — jafnvel þótt þú sért að sækja um í Laugaveginn árið 2025.",
-                "Ráð: Ef þú ert að safna stigum fyrir umsókn í stór hlaup, vertu viss um að hafa nýlegar niðurstöður til að halda stigum þínum við lýði."
+                "Ráð: Ef þú ert að safna stigum fyrir umsókn í stór hlaup, vertu viss um að hafa nýlegar niðurstöður til að halda stigum þínum virkum."
             ]
         },
         "paid": {
             "title": "Hvað græðir maður á því að borga fyrir áskrift? (Greiðandi meðlimur)",
             "price": "Áskrift kostar um 8 evrur á ári og veitir þér mun dýpri innsýn:",
             "items": [
-                "Ítarleg tölfræði: Fullur aðgangur að grafalvarlegri tölfræði og samanburði á öllum hlaupurum í heiminum, ekki bara þér sjálfum.",
+                "Ítarleg tölfræði: Fullur aðgangur að ítarlegri tölfræði og samanburði á öllum hlaupurum í heiminum, ekki bara þér sjálfum.",
                 "Skoðun á öllum stigum: Þú sérð nákvæm hlaupastig (Race Scores) fyrir öll hlaup hjá öllum hlaupurum í gagnagrunninum.",
                 "Forkaupsréttur á tryggingu: Þú verður að vera með virka áskrift til að eiga möguleika á að kaupa hina virtu alþjóðlegu hlaupatryggingu ITRA."
             ]
