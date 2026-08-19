@@ -76,6 +76,13 @@ function RacesSlugRedirect() {
     return <Navigate to={`/events/${slug}`} replace />;
 }
 
+function ExternalRedirect({ to }: { to: string }) {
+    useEffect(() => {
+        window.location.replace(to);
+    }, [to]);
+    return <PageLoader />;
+}
+
 export default function App() {
     const [mode, setMode] = useState<PaletteMode>(() => {
         const saved = localStorage.getItem('theme-mode');
@@ -238,6 +245,7 @@ export default function App() {
                     <Route path="/shop/running-trip/2026/switzerland" element={<RunningTrip2026Switzerland mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="/services" element={<ServicesPage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="/challenge/2026" element={<ChallengePage mode={mode} onToggleMode={handleToggleMode} />} />
+                    <Route path="/askorun" element={<ExternalRedirect to="https://passportage.com/p/utivistaaskorun" />} />
                     <Route path="/about-us" element={<Navigate to="/about" replace />} />
                     <Route path="/annual-report/2025" element={<AnnualReportPage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="/newsletter" element={<NewsletterPage mode={mode} onToggleMode={handleToggleMode} />} />
