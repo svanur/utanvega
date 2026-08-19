@@ -29,6 +29,9 @@ export interface PromoSlot {
     notes: string;
 }
 
+/** True for hrefs that leave the site — these open in a new tab. */
+export const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
+
 export const SPONSORS: Sponsor[] = [
     { flag: 'ad_top_sponsor_garmin',    name: 'Garmin', href: 'https://garminbudin.is/', img: '/sponsors/garmin.avif', position: 'top' },
     { flag: 'ad_top_sponsor_craft',     name: 'Craft',  href: 'https://craftverslun.is/', img: '/sponsors/craft.avif', position: 'top' },
@@ -41,10 +44,10 @@ export const PROMO_SLOTS: PromoSlot[] = [
         flag: 'ad_top_promo_1',
         name: 'Útivistaáskorun 2026',
         img: '/sponsors/challenge-2026.avif',
-        href: '/challenge/2026',
+        href: 'https://passportage.com/p/utivistaaskorun',
         alt: 'Útivistaáskorun 2026',
         position: 'top',
-        notes: 'Text baked into image — update image file to change copy',
+        notes: 'Text baked into image — update image file to change copy. Links out to Passportage.',
     },
     {
         flag: 'ad_top_promo_2',
@@ -58,12 +61,12 @@ export const PROMO_SLOTS: PromoSlot[] = [
     },
     {
         flag: 'ad_bottom_promo_1',
-        name: 'Promo slot (bottom left)',
+        name: 'Útivistaáskorun 2026',
         img: '/sponsors/challenge-2026.avif',
-        href: '/',
-        alt: 'Promo slot bottom 1',
+        href: 'https://passportage.com/p/utivistaaskorun',
+        alt: 'Útivistaáskorun 2026',
         position: 'bottom',
-        notes: 'Bottom slot — replace img and href when in use',
+        notes: 'Text baked into image — update image file to change copy. Links out to Passportage.',
     },
     {
         flag: 'ad_bottom_promo_2',
@@ -92,7 +95,7 @@ export const SPONSOR_ADS = [
         flag: p.flag,
         image: p.img,
         href: p.href,
-        type: 'Internal' as const,
+        type: isExternalHref(p.href) ? ('External' as const) : ('Internal' as const),
         placement: p.position === 'top' ? 'PromoStrip (top)' : 'PromoStrip (bottom)',
         notes: p.notes,
     })),

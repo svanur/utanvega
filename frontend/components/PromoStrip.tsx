@@ -2,7 +2,7 @@ import { Box, Button, Stack, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
-import { PROMO_SLOTS } from '../data/sponsors';
+import { PROMO_SLOTS, isExternalHref } from '../data/sponsors';
 
 export default function PromoStrip({ position }: { position: 'top' | 'bottom' }) {
     const { t } = useTranslation();
@@ -18,6 +18,7 @@ export default function PromoStrip({ position }: { position: 'top' | 'bottom' })
                     key={slot.flag}
                     component={RouterLink}
                     to={slot.href}
+                    {...(isExternalHref(slot.href) ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
                     sx={{
                         flex: 1,
                         borderRadius: 2,
