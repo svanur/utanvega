@@ -38,6 +38,7 @@ import {
     Select,
     MenuItem,
     Link,
+    Fab,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import SearchIcon from '@mui/icons-material/Search';
@@ -882,11 +883,6 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                 <CalendarMonthIcon fontSize="small" />
                             </IconButton>
                         </Tooltip>
-                        <Tooltip title={t('races.shareQR')}>
-                            <IconButton size="small" onClick={() => { trackSiteQROpen(); setSiteQROpen(true); }}>
-                                <QrCode2Icon fontSize="small" />
-                            </IconButton>
-                        </Tooltip>
                     </Stack>
                 </Box>
                 {/* Views */}
@@ -1349,8 +1345,8 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                         sx={{
                                                                             fontWeight: 700,
                                                                             ...(comp.daysUntil === 0 && {
-                                                                                animation: 'pulse 1.5s ease-in-out infinite',
-                                                                                '@keyframes pulse': {
+                                                                                animation: 'pulseToday 1.5s ease-in-out infinite',
+                                                                                '@keyframes pulseToday': {
                                                                                     '0%, 100%': { transform: 'scale(1)', boxShadow: 'none' },
                                                                                     '50%': { transform: 'scale(1.06)', boxShadow: `0 0 8px ${alpha(theme.palette.error.main, 0.6)}` },
                                                                                 },
@@ -1537,6 +1533,30 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                     );
                 })()}
             </Container>
+
+            {/* Site QR FAB */}
+            <Tooltip title={t('races.shareQR')} placement="left">
+                <Fab
+                    color="primary"
+                    size="medium"
+                    onClick={() => { trackSiteQROpen(); setSiteQROpen(true); }}
+                    sx={{
+                        position: 'fixed',
+                        bottom: 80,
+                        right: 16,
+                        zIndex: 1200,
+                        '@keyframes pulseFab': {
+                            '0%': { boxShadow: `0 0 0 0 ${alpha(theme.palette.primary.main, 0.5)}` },
+                            '70%': { boxShadow: `0 0 0 10px ${alpha(theme.palette.primary.main, 0)}` },
+                            '100%': { boxShadow: `0 0 0 0 ${alpha(theme.palette.primary.main, 0)}` },
+                        },
+                        animation: 'pulseFab 2s ease-in-out 3',
+                    }}
+                    aria-label={t('races.shareQR')}
+                >
+                    <QrCode2Icon />
+                </Fab>
+            </Tooltip>
 
             {/* Site QR dialog */}
             {(() => {
