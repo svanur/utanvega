@@ -1198,6 +1198,8 @@
         "fourwd": "4WD"
     },
     "races": {
+        "shareQR": "Deila hlaupadagskra.is",
+        "shareQRHint": "Skannaðu til að skoða íslenska hlaupaviðburði og finna skemmtilegar leiðir",
         "title": "Öll hlaup á einum stað",
         "subtitle": "Allar upplýsingar eru birtar með fyrirvara um villur og breytingar. Leitið alltaf eftir nýjustu upplýsingum hjá hlaupahaldara.",
         "searchPlaceholder": "Leita að viðburði...",

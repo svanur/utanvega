@@ -1198,6 +1198,8 @@
         "fourwd": "4WD"
     },
     "races": {
+        "shareQR": "Share hlaupadagskra.is",
+        "shareQRHint": "Scan to explore Icelandic running events and find exciting routes near you.",
         "title": "All events in one place",
         "subtitle": "Upcoming events and races in Iceland. Be sure to confirm final dates on the race organizer's website.",
         "searchPlaceholder": "Search events...",
