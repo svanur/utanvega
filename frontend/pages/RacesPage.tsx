@@ -25,6 +25,10 @@ import {
     CircularProgress,
     Button,
     Collapse,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
     Badge,
     FormControlLabel,
     Checkbox,
@@ -40,6 +44,10 @@ import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import QrCode2Icon from '@mui/icons-material/QrCode2';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import CheckIcon from '@mui/icons-material/Check';
+import { QRCodeSVG } from 'qrcode.react';
 import HistoryIcon from '@mui/icons-material/History';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import ListIcon from '@mui/icons-material/List';
@@ -69,7 +77,7 @@ import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
 import { getTicketStatusColor, groupDistances, isAllSoldOut } from '../utils/ticketStatus';
 import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed } from '../utils/eventUtils';
-import { trackViewModeChange } from '../utils/analytics';
+import { trackViewModeChange, trackSiteQROpen } from '../utils/analytics';
 import { useLocalize } from '../utils/localize';
 import { ActivityIcons, getActivityIcon } from '../utils/activityIcon';
 import LandscapeIcon from '@mui/icons-material/Landscape';
@@ -146,7 +154,7 @@ const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
 };
 
 export default function RacesPage({ mode, onToggleMode, showQuote = false }: RacesPageProps) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const loc = useLocalize();
     usePageTitle(t('nav.events'));
     const { getHolidays } = useIcelandicHolidays();
@@ -170,6 +178,8 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
     const [search, setSearch] = useState('');
     const [showFilters, setShowFilters] = useState(false);
     const [filters, setFilters] = useState<EventFilters>(DEFAULT_FILTERS);
+    const [siteQROpen, setSiteQROpen] = useState(false);
+    const [siteQRCopied, setSiteQRCopied] = useState(false);
     const [shareEventId, setShareEventId] = useState<string | null>(null);
     const [shareEventSlug, setShareEventSlug] = useState<string | null>(null);
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -872,6 +882,11 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                 <CalendarMonthIcon fontSize="small" />
                             </IconButton>
                         </Tooltip>
+                        <Tooltip title={t('races.shareQR')}>
+                            <IconButton size="small" onClick={() => { trackSiteQROpen(); setSiteQROpen(true); }}>
+                                <QrCode2Icon fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
                     </Stack>
                 </Box>
                 {/* Views */}
@@ -1522,6 +1537,47 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                     );
                 })()}
             </Container>
+
+            {/* Site QR dialog */}
+            {(() => {
+                const isIcelandic = i18n.language === 'is';
+                const welcomePath = isIcelandic ? '/velkomin' : '/welcome';
+                const siteUrl = `${window.location.origin}${welcomePath}?utm_source=expo&utm_medium=qr&utm_campaign=marathon-expo-2026`;
+                return (
+                    <Dialog open={siteQROpen} onClose={() => setSiteQROpen(false)} maxWidth="xs" fullWidth>
+                        <DialogTitle sx={{ textAlign: 'center', pb: 0 }}>
+                            hlaupadagskra.is
+                        </DialogTitle>
+                        <DialogContent>
+                            <Box display="flex" flexDirection="column" alignItems="center" py={2} gap={2}>
+                                <Box sx={{ p: 2, bgcolor: 'white', borderRadius: 2 }}>
+                                    <QRCodeSVG value={siteUrl} size={200} level="H" includeMargin />
+                                </Box>
+                                <Typography variant="body2" color="text.secondary" align="center">
+                                    {t('races.shareQRHint')}
+                                </Typography>
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    startIcon={siteQRCopied ? <CheckIcon /> : <ContentCopyIcon />}
+                                    color={siteQRCopied ? 'success' : 'primary'}
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(siteUrl);
+                                        setSiteQRCopied(true);
+                                        setTimeout(() => setSiteQRCopied(false), 2000);
+                                    }}
+                                    sx={{ textTransform: 'none' }}
+                                >
+                                    {siteQRCopied ? t('qr.linkCopied') : t('qr.copyLink')}
+                                </Button>
+                            </Box>
+                        </DialogContent>
+                        <DialogActions>
+                            <Button onClick={() => setSiteQROpen(false)}>{t('qr.close')}</Button>
+                        </DialogActions>
+                    </Dialog>
+                );
+            })()}
         </Layout>
     );
 }
