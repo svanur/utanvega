@@ -89,6 +89,7 @@ import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import EventQRShare from '../components/EventQRShare';
+import { NewYearSplitter } from '../components/NewYearSplitter';
 
 const EventTableView = lazy(() => import('../components/EventTableView'));
 const EventMapView = lazy(() => import('../components/EventMapView'));
@@ -979,39 +980,17 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                     const newYearHolidays = getHolidays(newYearDate);
                                     const months = t('races.months', { returnObjects: true }) as string[];
                                     const showNewYearBanner = rowDate !== newYearDate && newYearHolidays.length > 0;
+                                    const bannerText = showNewYearBanner
+                                        ? '1. ' + months[0] + ' — ' + newYearHolidays.map(h => loc(h.name, h.nameEn) ?? h.name).join(' · ')
+                                        : undefined;
                                     return (
-                                        <Fragment key={`year-${rowYear}`}>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, my: 1 }}>
-                                                <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
-                                                <Stack direction="row" alignItems="center" gap={0.5}>
-                                                    <AutoAwesomeIcon sx={{ fontSize: 13, color: 'primary.main' }} />
-                                                    <Typography variant="caption" fontWeight={700} color="primary">
-                                                        {t('races.newYear', { year: rowYear })}
-                                                    </Typography>
-                                                    <AutoAwesomeIcon sx={{ fontSize: 13, color: 'primary.main' }} />
-                                                </Stack>
-                                                <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
-                                            </Box>
-                                            {showNewYearBanner && (
-                                                <Box
-                                                    sx={{
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: 1,
-                                                        px: 1.5,
-                                                        py: 0.75,
-                                                        borderRadius: 1,
-                                                        bgcolor: alpha(theme.palette.warning.main, 0.12),
-                                                        mb: 1,
-                                                    }}
-                                                >
-                                                    <CelebrationIcon sx={{ fontSize: 15, color: 'warning.dark' }} />
-                                                    <Typography variant="caption" fontWeight={700} sx={{ color: 'warning.dark' }}>
-                                                        {'1. ' + months[0]} — {newYearHolidays.map(h => loc(h.name, h.nameEn) ?? h.name).join(' · ')}
-                                                    </Typography>
-                                                </Box>
-                                            )}
-                                        </Fragment>
+                                        <NewYearSplitter
+                                            key={`year-${rowYear}`}
+                                            year={rowYear}
+                                            label={t('races.newYear', { year: rowYear })}
+                                            showBanner={showNewYearBanner}
+                                            bannerText={bannerText}
+                                        />
                                     );
                                 })() : null;
                                 const holidays = rowDate ? getHolidays(rowDate) : [];
