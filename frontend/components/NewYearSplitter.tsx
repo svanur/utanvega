@@ -1,4 +1,4 @@
-import { useRef, useEffect, Fragment } from 'react';
+import { useRef, useEffect, Fragment, RefObject } from 'react';
 import confetti from 'canvas-confetti';
 import { Box, Stack, Typography, TableRow, TableCell, alpha, useTheme } from '@mui/material';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
@@ -30,18 +30,7 @@ function fireConfetti(year: string) {
     burst(0.5, 240);
 }
 
-interface NewYearSplitterProps {
-    year: string;
-    label: string;
-    showBanner?: boolean;
-    bannerText?: string;
-}
-
-/** List-view version — renders Box elements. */
-export function NewYearSplitter({ year, label, showBanner, bannerText }: NewYearSplitterProps) {
-    const ref = useRef<HTMLDivElement>(null);
-    const theme = useTheme();
-
+function useFireConfettiOnVisible(ref: RefObject<Element | null>, year: string) {
     useEffect(() => {
         const el = ref.current;
         if (!el) return;
@@ -56,7 +45,21 @@ export function NewYearSplitter({ year, label, showBanner, bannerText }: NewYear
         );
         observer.observe(el);
         return () => observer.disconnect();
-    }, [year]);
+    }, [ref, year]);
+}
+
+interface NewYearSplitterProps {
+    year: string;
+    label: string;
+    showBanner?: boolean;
+    bannerText?: string;
+}
+
+/** List-view version — renders Box elements. */
+export function NewYearSplitter({ year, label, showBanner, bannerText }: NewYearSplitterProps) {
+    const ref = useRef<HTMLDivElement>(null);
+    const theme = useTheme();
+    useFireConfettiOnVisible(ref, year);
 
     return (
         <Fragment>
@@ -106,22 +109,7 @@ interface NewYearSplitterRowsProps {
 export function NewYearSplitterRows({ year, label, colSpan, showBanner, bannerText }: NewYearSplitterRowsProps) {
     const ref = useRef<HTMLTableRowElement>(null);
     const theme = useTheme();
-
-    useEffect(() => {
-        const el = ref.current;
-        if (!el) return;
-        const observer = new IntersectionObserver(
-            ([entry]) => {
-                if (entry.isIntersecting) {
-                    fireConfetti(year);
-                    observer.disconnect();
-                }
-            },
-            { threshold: 0.5 },
-        );
-        observer.observe(el);
-        return () => observer.disconnect();
-    }, [year]);
+    useFireConfettiOnVisible(ref, year);
 
     return (
         <Fragment>
