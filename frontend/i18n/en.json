@@ -81,7 +81,7 @@
         "switchToIcelandic": "Switch to Icelandic",
         "events": "Events",
         "fun": "Fun",
-        "tagline": "All races in one place",
+        "tagline": "All running events in one place",
         "onlineStore": "Store",
         "tools": "Tools",
         "scratchCard": "Scratch card",
@@ -1199,7 +1199,7 @@
     },
     "races": {
         "shareQR": "Share hlaupadagskra.is",
-        "shareQRHint": "Scan to explore Icelandic running events and find exciting routes near you.",
+        "shareQRHint": "Share the web via the QR code or copy the link and send to your friends. All running events in one place - and now, a whole lost of routes to explore.",
         "title": "All events in one place",
         "subtitle": "Upcoming events and races in Iceland. Be sure to confirm final dates on the race organizer's website.",
         "searchPlaceholder": "Search events...",
