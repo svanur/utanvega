@@ -1638,6 +1638,89 @@
             "title": "🔗 Official Resources",
             "faq": "ITRA Performance Index FAQ",
             "laugavegur": "Laugavegur Ultra Trail Registration Rules"
+        },
+        "handbookLink": "→ Handbook: ITRA in Practice"
+    },
+    "itraHandbook": {
+        "title": "ITRA.run Runner's Handbook",
+        "subtitle": "Everything Trail Runners Need to Know",
+        "intro": "The ITRA (International Trail Running Association) website is the central hub for trail runners worldwide. It tracks results, calculates international performance indexes and trail running scores.",
+        "guideLink": "← ITRA Concepts Explained",
+        "browse": {
+            "title": "Browsing ITRA Scores — No Login Required",
+            "items": [
+                "No registration needed: You can search for yourself or other runners under the \"Find a runner\" tab without creating an account.",
+                "Publicly available data: Anyone can see a runner's total score (Performance Index), recent races, and key statistics."
+            ],
+            "findLink": "Find a runner on ITRA.run"
+        },
+        "findRaces": {
+            "title": "How Do I Find ITRA-Certified Races?",
+            "items": [
+                "Only ITRA-certified races earn you ITRA scores — both Performance Index points and Endurance Points.",
+                "On ITRA.run you can search for races by country, distance, elevation, and difficulty level.",
+                "More races are certified every year — check the ITRA list to see which events in your country are registered."
+            ],
+            "link": "Search for ITRA-certified races"
+        },
+        "duplicate": {
+            "title": "The Duplicate Profile Problem",
+            "items": [
+                "Why does this happen? If you use different name spellings when registering for races (e.g. with or without a middle name, or with special characters vs. ASCII), the system may treat them as two separate runners.",
+                "The consequence: Your results are split between two profiles. Your score no longer reflects your true ability since some races are missing from your main profile."
+            ]
+        },
+        "merge": {
+            "title": "How to Merge Two ITRA Profiles",
+            "intro": "You can merge profiles yourself directly through the system:",
+            "steps": [
+                "Create a free account on ITRA and log in.",
+                "Go to the Results tab and click Manage my Results.",
+                "Use the search to find your other profile (try swapping first and last name if it doesn't appear right away).",
+                "Check the races that belong to you and click Link race result to transfer them to your main profile.",
+                "Note: In some cases you may need to upload ID (passport or driving licence) to verify your identity before changes are approved."
+            ]
+        },
+        "free": {
+            "title": "What Do You Get with a Free Account?",
+            "items": [
+                "Manage your profile: Update personal details and add a profile photo.",
+                "Correct results: Link missing races to your profile or remove races that were incorrectly attributed to you.",
+                "Get your ITRA ID: You receive a unique identifier you can provide when entering races in the future to prevent duplicate profiles."
+            ]
+        },
+        "expiry": {
+            "title": "When Does Your ITRA Score Expire?",
+            "intro": "Your ITRA Performance Index is a weighted average of your best 5 results from the last 36 months.",
+            "items": [
+                "When a result is older than 36 months it automatically drops out of the calculation — your score can fall without you having done anything.",
+                "Example: If you finished a race in June 2022 that earned you a score of 370, that result falls out of the calculation after June 2025 — even if you are applying to Laugavegur that same year.",
+                "Tip: If you are building up a score for a big race application, make sure you have recent results to keep your index current."
+            ]
+        },
+        "paid": {
+            "title": "What Do You Get with a Paid Membership?",
+            "price": "Membership costs around €8 per year and gives you much deeper insight:",
+            "items": [
+                "Detailed statistics: Full access to in-depth analytics and comparison with all runners in the world, not just yourself.",
+                "View all scores: See exact Race Scores for every race for every runner in the database.",
+                "Insurance eligibility: You must have an active membership to be eligible to purchase ITRA's international running insurance."
+            ]
+        },
+        "insurance": {
+            "title": "Should You Buy ITRA Insurance?",
+            "price": "The insurance costs €49 per year and is tailored for trail runners who travel abroad.",
+            "colBenefits": "What it covers",
+            "colWho": "Who it's for",
+            "benefits": [
+                "Search and rescue costs (including helicopter).",
+                "Medical expenses up to €150,000 abroad.",
+                "Medical repatriation.",
+                "Valid worldwide, year-round, for training and racing."
+            ],
+            "goodFor": "A good fit if you plan to race at large events abroad (e.g. UTMB, Transgrancanaria) where rescue insurance is often mandatory.",
+            "notFor": "Not needed if you only run in Iceland, where domestic rescue teams and health insurance cover you.",
+            "note": "If you run frequently in mountains abroad, this is one of the most affordable and comprehensive rescue policies available."
         }
     },
     "eventDayBanner": {

@@ -46,6 +46,7 @@ const AnnualReportPage = lazy(() => import('./pages/AnnualReportPage'));
 const NewsletterPage = lazy(() => import('./pages/NewsletterPage'));
 const ContactPage = lazy(() => import('./pages/ContactPage'));
 const ItraGuidePage = lazy(() => import('./pages/ItraGuidePage'));
+const ItraHandbookPage = lazy(() => import('./pages/ItraHandbookPage'));
 const FaqPage = lazy(() => import('./pages/FaqPage'));
 const SendCommentsPage = lazy(() => import('./pages/SendCommentsPage'));
 
@@ -73,6 +74,13 @@ function TagPage({ mode, onToggleMode }: { mode: PaletteMode; onToggleMode: () =
 function RacesSlugRedirect() {
     const { slug } = useParams<{ slug: string }>();
     return <Navigate to={`/events/${slug}`} replace />;
+}
+
+function ExternalRedirect({ to }: { to: string }) {
+    useEffect(() => {
+        window.location.replace(to);
+    }, [to]);
+    return <PageLoader />;
 }
 
 export default function App() {
@@ -237,11 +245,13 @@ export default function App() {
                     <Route path="/shop/running-trip/2026/switzerland" element={<RunningTrip2026Switzerland mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="/services" element={<ServicesPage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="/challenge/2026" element={<ChallengePage mode={mode} onToggleMode={handleToggleMode} />} />
+                    <Route path="/askorun" element={<ExternalRedirect to="https://passportage.com/p/utivistaaskorun" />} />
                     <Route path="/about-us" element={<Navigate to="/about" replace />} />
                     <Route path="/annual-report/2025" element={<AnnualReportPage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="/newsletter" element={<NewsletterPage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="/contact" element={<ContactPage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="/itra-guide" element={<ItraGuidePage mode={mode} onToggleMode={handleToggleMode} />} />
+                    <Route path="/itra-handbook" element={<ItraHandbookPage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="/faq" element={<FaqPage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="/pages/send-comments" element={<SendCommentsPage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
