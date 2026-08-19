@@ -28,6 +28,10 @@ import {
     Menu,
     MenuItem,
     Link,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
 } from '@mui/material';
 import FacebookIcon from '@mui/icons-material/Facebook';
 import InstagramIcon from '@mui/icons-material/Instagram';
@@ -47,6 +51,10 @@ import TerrainIcon from '@mui/icons-material/Terrain';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
 import { getActivityIcon } from '../utils/activityIcon';
 import QueryStatsIcon from '@mui/icons-material/QueryStats';
+import QrCode2Icon from '@mui/icons-material/QrCode2';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import CheckIcon from '@mui/icons-material/Check';
+import { QRCodeSVG } from 'qrcode.react';
 import confetti from 'canvas-confetti';
 import ShareButtons from '../components/ShareButtons';
 import SendTipButton from '../components/SendTipButton';
@@ -101,6 +109,7 @@ import { googleCalendarUrl, outlookCalendarUrl, downloadIcs } from '../utils/cal
 import EventDateBadge from '../components/EventDateBadge';
 import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, editionKeyFor } from '../utils/eventUtils';
 import { getTicketStatusColor } from '../utils/ticketStatus';
+import { trackEventQRClick } from '../utils/analytics';
 
 type RaceDayChecklistKey = 'bib' | 'shoes' | 'gels' | 'goodMood';
 
@@ -291,6 +300,8 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
 
     const [followMe, setFollowMe] = useState(false);
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+    const [eventQROpen, setEventQROpen] = useState(false);
+    const [eventQRCopied, setEventQRCopied] = useState(false);
 
     useEffect(() => {
         if (!followMe || !navigator.geolocation) return;
@@ -657,6 +668,11 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 />
                             )}
                             {isEnabled('share_trail') && <ShareButtons title={loc(event.name, event.nameEn) ?? event.name} />}
+                            <Tooltip title={t('qr.showQR')}>
+                                <IconButton size="small" onClick={() => { trackEventQRClick(slug ?? ''); setEventQROpen(true); }}>
+                                    <QrCode2Icon fontSize="small" />
+                                </IconButton>
+                            </Tooltip>
                         </Stack>
                     </Box>
 
@@ -1176,6 +1192,45 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                     <SendTipButton type="event" />
                 </Box>
             </Container>
+
+            {/* Event QR dialog */}
+            {(() => {
+                const eventUrl = `${window.location.origin}/events/${slug}`;
+                return (
+                    <Dialog open={eventQROpen} onClose={() => setEventQROpen(false)} maxWidth="xs" fullWidth>
+                        <DialogTitle sx={{ textAlign: 'center', pb: 0 }}>
+                            {loc(event.name, event.nameEn) ?? event.name}
+                        </DialogTitle>
+                        <DialogContent>
+                            <Box display="flex" flexDirection="column" alignItems="center" py={2} gap={2}>
+                                <Box sx={{ p: 2, bgcolor: 'white', borderRadius: 2 }}>
+                                    <QRCodeSVG value={eventUrl} size={200} level="H" includeMargin />
+                                </Box>
+                                <Typography variant="body2" color="text.secondary" align="center">
+                                    {t('qr.scanEvent')}
+                                </Typography>
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    startIcon={eventQRCopied ? <CheckIcon /> : <ContentCopyIcon />}
+                                    color={eventQRCopied ? 'success' : 'primary'}
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(eventUrl);
+                                        setEventQRCopied(true);
+                                        setTimeout(() => setEventQRCopied(false), 2000);
+                                    }}
+                                    sx={{ textTransform: 'none' }}
+                                >
+                                    {eventQRCopied ? t('qr.linkCopied') : t('qr.copyLink')}
+                                </Button>
+                            </Box>
+                        </DialogContent>
+                        <DialogActions>
+                            <Button onClick={() => setEventQROpen(false)}>{t('qr.close')}</Button>
+                        </DialogActions>
+                    </Dialog>
+                );
+            })()}
         </Layout>
     );
 }

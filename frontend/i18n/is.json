@@ -451,7 +451,7 @@
         "autoCapture": "Einnig safnað sjálfkrafa: {{items}}"
     },
     "betaComments": {
-        "title": "Beta prófanir - Endurgjöf",
+        "title": "Vefur í þróun",
         "subtitle": "Hjálpaðu okkur að bæta nýja hlaupadagskra.is",
         "intro": "Við erum að þróa nýjan hlaupadagskra.is vef og endurgjöf þín skiptir okkur máli. Segðu okkur hvað virkar, hvað er brotið eða hvaða nýungar þú vilt sjá.",
         "tipHint": "Til að fá sem besta endurgjöf, notaðu þá \"Senda ábendingu\" hnappinn sem er staðsettur neðarlega á leiðar- og viðburðasíðum. Smelltu þar á 'Senda ábendingu' og fylltu svo út 'Nákvæma skýrslu' — Þá kemur sjálfkrafa skjámynd af síðunni sem þú ert að sjá. Þú getur einnig notað formið hér að neðan án skjámyndar."
@@ -469,9 +469,9 @@
         "subscribe": "Skráðu þig á póstlistann"
     },
     "announcement": {
-        "text": "Við erum á fullu að þróa nýjan hlaupadagskra.is vef. Vertu með okkur í prófunarteyminu.",
+        "text": "Nýr hlaupadagskra.is vefur er enn í þróun. Vertu með okkur og",
         "href": "/pages/send-comments",
-        "linkText": "Sendu inn þínar ábendingar."
+        "linkText": "sendu inn þínar ábendingar"
     },
     "sort": {
         "date": "Dagsetning",
@@ -1198,6 +1198,8 @@
         "fourwd": "4WD"
     },
     "races": {
+        "shareQR": "Deila hlaupadagskra.is",
+        "shareQRHint": "Skannaðu til að skoða íslenska hlaupaviðburði og finna skemmtilegar leiðir",
         "title": "Öll hlaup á einum stað",
         "subtitle": "Allar upplýsingar eru birtar með fyrirvara um villur og breytingar. Leitið alltaf eftir nýjustu upplýsingum hjá hlaupahaldara.",
         "searchPlaceholder": "Leita að viðburði...",

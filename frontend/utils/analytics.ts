@@ -43,3 +43,11 @@ export function trackTrailOfflineSave(slug: string) {
 export function trackTrailDirectionsClick(slug: string) {
     track('Trail Directions Click', { slug });
 }
+
+export function trackSiteQROpen() {
+    track('Site QR Open');
+}
+
+export function trackEventQRClick(slug: string) {
+    track('Event QR Click', { slug });
+}
