@@ -1345,8 +1345,8 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                         sx={{
                                                                             fontWeight: 700,
                                                                             ...(comp.daysUntil === 0 && {
-                                                                                animation: 'pulse 1.5s ease-in-out infinite',
-                                                                                '@keyframes pulse': {
+                                                                                animation: 'pulseToday 1.5s ease-in-out infinite',
+                                                                                '@keyframes pulseToday': {
                                                                                     '0%, 100%': { transform: 'scale(1)', boxShadow: 'none' },
                                                                                     '50%': { transform: 'scale(1.06)', boxShadow: `0 0 8px ${alpha(theme.palette.error.main, 0.6)}` },
                                                                                 },
@@ -1545,12 +1545,12 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                         bottom: 80,
                         right: 16,
                         zIndex: 1200,
-                        '@keyframes pulse': {
-                            '0%': { boxShadow: '0 0 0 0 rgba(25, 118, 210, 0.5)' },
-                            '70%': { boxShadow: '0 0 0 10px rgba(25, 118, 210, 0)' },
-                            '100%': { boxShadow: '0 0 0 0 rgba(25, 118, 210, 0)' },
+                        '@keyframes pulseFab': {
+                            '0%': { boxShadow: `0 0 0 0 ${alpha(theme.palette.primary.main, 0.5)}` },
+                            '70%': { boxShadow: `0 0 0 10px ${alpha(theme.palette.primary.main, 0)}` },
+                            '100%': { boxShadow: `0 0 0 0 ${alpha(theme.palette.primary.main, 0)}` },
                         },
-                        animation: 'pulse 2s ease-in-out 3',
+                        animation: 'pulseFab 2s ease-in-out 3',
                     }}
                     aria-label={t('races.shareQR')}
                 >

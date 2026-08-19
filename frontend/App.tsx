@@ -1,5 +1,5 @@
 import { lazy, Suspense, useMemo, useState, useEffect } from 'react';
-import { CssBaseline, ThemeProvider } from '@mui/material';
+import { CssBaseline, ThemeProvider, Box } from '@mui/material';
 import type { PaletteMode } from '@mui/material';
 import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
 import { createAppTheme } from './theme';
@@ -52,7 +52,11 @@ const FaqPage = lazy(() => import('./pages/FaqPage'));
 const SendCommentsPage = lazy(() => import('./pages/SendCommentsPage'));
 
 function PageLoader() {
-    return <RunningLoader />;
+    return (
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+            <RunningLoader />
+        </Box>
+    );
 }
 
 function ScrollToContent() {
