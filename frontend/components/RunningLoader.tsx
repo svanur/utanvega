@@ -44,7 +44,7 @@ const loadingMessages = {
         "Ég vel samúð fram yfir gagnrýni.",
         "Ég er að gera mitt besta.",
         "Framfarir geta verið hljóðlátar.",
-        "Leggjumst í grasið og jarðtenjum.",
+        "Leggjumst í grasið og jarðtengjum.",
         "Ást er ...að fara í fjallgöngu saman.",
         "Ást er ...að fara út að hlaupa saman.",
         "Anda inn ...anda út",
@@ -56,14 +56,19 @@ const loadingMessages = {
         "Leðja er náttúruleg spa meðferð.",
         "Horfðu ekki á toppinn.",
         "Stígurinn hlustar ekki á afsakanir.",
-        "Ég geymi sprettinn þangað til einhver er að horfa.",
-        "Síðasti kílómetrinn lígur alltaf.",
+        "Ég geymi sprettinn þangað til einhver er að horfa :)",
+        "Síðasti kílómetrinn lýgur alltaf.",
         "Fæturnir sögðu nei. Ég sagði já. Við sættumst.",
         "Sársaukinn er tímabundinn. Strava er að eilífu.",
         "Hleyp frá vandamálum mínum (það virkar).",
         "Sérhver kílómetri segir sögu.",
         "Það þarf ekki að vera hratt til að vera gott.",
         "Garmin mælir skrefin. Hjartað mælir ferðina.",
+        "Meira er ekki alltaf betra",
+        "Kílómetrafjöldi er konungur...",
+        "Kílómetrafjöldi er drottning...",
+        "Sko! Það fer eftir ýmsu...",
+        "Minna er meira..."
     ],
     en: [
         "Loading trails...",
@@ -118,6 +123,12 @@ const loadingMessages = {
         "Every km tells a story.",
         "It doesn't have to be fast to be good.",
         "Garmin counts the steps. The heart counts the journey.",
+        "More is not always better",
+        "Mileage is King...",
+        "Mileage is Queen...",
+        "It depends...",
+        "Less is more...",
+        "Go slow to go fast..."
     ],
 };
 
