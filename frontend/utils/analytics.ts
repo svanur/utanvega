@@ -47,3 +47,7 @@ export function trackTrailDirectionsClick(slug: string) {
 export function trackSiteQROpen() {
     track('Site QR Open');
 }
+
+export function trackEventQRClick(slug: string) {
+    track('Event QR Click', { slug });
+}
