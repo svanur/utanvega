@@ -15,7 +15,7 @@ function StatCard({ value, label }: { value: string; label: string }) {
 export default function AnnualReportPage({ mode, onToggleMode }: { mode: PaletteMode; onToggleMode: () => void }) {
     const { t } = useTranslation();
     return (
-        <Layout mode={mode} onToggleMode={onToggleMode}>
+        <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('nav.annualReport') }]}>
             <Box sx={{ py: 2 }}>
                 <Typography variant="overline" color="text.secondary">hlaupadagskra.is</Typography>
                 <Typography variant="h4" fontWeight={700} gutterBottom>

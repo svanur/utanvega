@@ -6,7 +6,7 @@ import Layout from '../components/Layout';
 export default function RunningTrip2026Switzerland({ mode, onToggleMode }: { mode: PaletteMode; onToggleMode: () => void }) {
     const { t } = useTranslation();
     return (
-        <Layout mode={mode} onToggleMode={onToggleMode} maxWidth="sm">
+        <Layout mode={mode} onToggleMode={onToggleMode} maxWidth="sm" breadcrumb={[{ label: t('nav.runningTrip'), to: '/shop/running-trip' }, { label: 'Switzerland 2026' }]}>
             <Box sx={{ py: 2 }}>
                 <Typography variant="h4" fontWeight={700} gutterBottom>
                     {t('runningTrip.title')}

@@ -14,7 +14,7 @@ export default function SendCommentsPage({ mode, onToggleMode }: SendCommentsPag
     const { t } = useTranslation();
 
     return (
-        <Layout mode={mode} onToggleMode={onToggleMode}>
+        <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('nav.feedback', { defaultValue: 'Feedback' }) }]}>
             <Container maxWidth="sm" sx={{ py: 4 }}>
                 <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1.5 }}>
                     <ScienceIcon sx={{ fontSize: 36, color: 'primary.main' }} />

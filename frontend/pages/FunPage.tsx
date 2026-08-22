@@ -10,6 +10,7 @@ import TrailGeoGuesser from '../components/TrailGeoGuesser';
 import GuessByElevation from '../components/GuessByElevation';
 import { useTranslation } from 'react-i18next';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 interface FunPageProps {
     mode: PaletteMode;
@@ -26,6 +27,7 @@ interface GameDef {
 
 export default function FunPage({ mode, onToggleMode }: FunPageProps) {
     const { t } = useTranslation();
+    usePageTitle(t('nav.fun'));
     const { isEnabled } = useFeatureFlags();
     const { game } = useParams<{ game: string }>();
     const navigate = useNavigate();
@@ -58,7 +60,7 @@ export default function FunPage({ mode, onToggleMode }: FunPageProps) {
     };
 
     return (
-        <Layout mode={mode} onToggleMode={onToggleMode}>
+        <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('nav.explore') }, { label: t('nav.fun') }]}>
             {enabledGames.length === 0 ? (
                 <Typography textAlign="center" color="text.secondary">
                     {t('fun.noGamesEnabled')}

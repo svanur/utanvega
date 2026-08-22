@@ -84,6 +84,7 @@
         "tagline": "All running events in one place",
         "onlineStore": "Store",
         "tools": "Tools",
+        "explore": "Explore",
         "scratchCard": "Scratch card",
         "runningTrip": "Running trip",
         "runs360": "360° Runs",
@@ -95,7 +96,13 @@
         "allTrails": "Trails list",
         "allEvents": "Next Events",
         "eventsCalendar": "Calendar",
-        "editionsHistory": "Past Events"
+        "editionsHistory": "Past Events",
+        "itraGuide": "ITRA Guide",
+        "itraHandbook": "ITRA Handbook",
+        "guide": "Guide",
+        "handbook": "Handbook",
+        "newsletter": "Newsletter",
+        "contact": "Contact"
     },
     "spotlight": {
         "placeholder": "Search trails, locations and races...",
@@ -421,7 +428,7 @@
         "checkingApi": "Checking API…",
         "healthy": "healthy",
         "apiUnavailable": "API unavailable",
-        "discover": "Discover",
+        "discover": "Explore",
         "info": "Info",
         "follow": "Follow",
         "contact": "Contact"
@@ -1573,6 +1580,19 @@
             "title": "Links"
         }
     },
+    "itraLanding": {
+        "intro": "ITRA (International Trail Running Association) is the central hub for trail runners worldwide — tracking race results, calculating performance indexes, and connecting runners across the globe.",
+        "guide": {
+            "title": "ITRA Concepts Explained",
+            "description": "Confused by ITRA points, performance indexes, or scores? This guide breaks down the 5 key concepts using simple Distance vs. Speed logic.",
+            "cta": "Read the guide"
+        },
+        "handbook": {
+            "title": "ITRA Handbook",
+            "description": "Everything you need to know about using the ITRA website — browsing scores, managing your profile, free vs. paid features, and more.",
+            "cta": "Read the handbook"
+        }
+    },
     "itraGuide": {
         "title": "🏃‍♂️ Quick Guide: Understanding the ITRA System",
         "intro": "If you are confused by how ITRA scores work, you are not alone. Here is a clear breakdown of the 5 key concepts you need to know, using a simple \"Distance vs. Speed\" logic.",
@@ -1595,21 +1615,21 @@
                 ]
             },
             {
-                "title": "Mountain Level (The \"Steepness\" Metric)",
+                "title": "ITRA Mountain Level (The \"Steepness\" Metric)",
                 "items": [
                     "📌 What it is: A difficulty rating from 0 to 12 that tells you how technical and steep the terrain is.",
                     "⚙️ How it works: A 1 means flat roads or smooth paths. A 12 means extreme mountain terrain with massive, steep climbs and technical footing. It helps you understand what kind of gear and training you need for the terrain."
                 ]
             },
             {
-                "title": "Finisher Level (The \"Cut-Off\" Metric)",
+                "title": "ITRA Finisher Level (The \"Cut-Off\" Metric)",
                 "items": [
                     "📌 What it is: The minimum personal Performance Index a runner needs to have to successfully cross the finish line before the time limit expires.",
                     "⚙️ How it works: If a race has a Finisher Level of 220, a runner with a personal index of 220 will likely finish right at the final cut-off second. If it is 0, the time limit is exceptionally generous."
                 ]
             },
             {
-                "title": "National League (The \"Local Leaderboard\")",
+                "title": "ITRA National League (The \"Local Leaderboard\")",
                 "items": [
                     "📌 What it is: A yearly ranking system that stacks you up against other runners in your home country.",
                     "⚙️ How it works: It automatically updates every calendar year. If you run at least 3 ITRA-certified races in your own country during the year, your top 3 scores are aggregated to rank you on your local national leaderboard."
@@ -1617,12 +1637,12 @@
             }
         ],
         "section370": {
-            "title": "What does it take to reach a 370 Performance Index?",
+            "title": "What is required to achieve the minimum Performance Index for Laugavegur Ultra?",
             "p1": "To unlock a 370 ITRA Performance Index score, you need to maintain a flat-equivalent pace of roughly 5:45 to 6:00 per kilometer.",
             "p2": "Because trail races have hills, ITRA evaluates your speed using Effort-Kilometers (Effort-KM). The formula adds 1 kilometer of distance for every 100 meters of climbing. To reach a 370 score, you need an average pace of roughly 6:00 to 6:15 per Effort-KM."
         },
         "table": {
-            "title": "Target Finish Times for a 370 ITRA Score",
+            "title": "Target Finish Times for a 370 ITRA Performance Index Score",
             "distance": "Race Distance",
             "elevation": "Elevation Gain",
             "effortKm": "Total Effort-KM",
@@ -1644,7 +1664,7 @@
         "handbookLink": "→ Handbook: ITRA in Practice"
     },
     "itraHandbook": {
-        "title": "ITRA.run Runner's Handbook",
+        "title": "ITRA handbook for the Ultra Runner",
         "subtitle": "Everything Trail Runners Need to Know",
         "intro": "The ITRA (International Trail Running Association) website is the central hub for trail runners worldwide. It tracks results, calculates international performance indexes and trail running scores.",
         "guideLink": "← ITRA Concepts Explained",

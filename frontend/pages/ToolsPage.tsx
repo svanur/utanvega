@@ -1,10 +1,9 @@
 import { useMemo } from 'react';
 import type { PaletteMode } from '@mui/material';
-import { Box, Tabs, Tab, Typography, Card, CardActionArea, CardContent, IconButton } from '@mui/material';
+import { Box, Tabs, Tab, Typography, Card, CardActionArea, CardContent } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import Layout from '../components/Layout';
 import PaceCalculator from '../components/PaceCalculator';
 import RacePredictor from '../components/RacePredictor';
@@ -62,7 +61,7 @@ export default function ToolsPage({ mode, onToggleMode }: { mode: PaletteMode; o
     // Landing page
     if (!toolKey) {
         return (
-            <Layout mode={mode} onToggleMode={onToggleMode}>
+            <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('nav.explore') }, { label: t('nav.tools') }]}>
                 <Box sx={{ maxWidth: 720, mx: 'auto', px: 2, py: 3 }}>
                     <Typography variant="h4" gutterBottom sx={{ fontWeight: 700 }}>
                         🛠️ {t('tools.title')}
@@ -101,16 +100,8 @@ export default function ToolsPage({ mode, onToggleMode }: { mode: PaletteMode; o
 
     // Individual tool page
     return (
-        <Layout mode={mode} onToggleMode={onToggleMode}>
+        <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('nav.tools'), to: '/tools' }, { label: activeTool?.label ?? '' }]}>
             <Box sx={{ maxWidth: activeTool?.key === 'pace-chart' ? { xs: '100%', md: 960 } : 600, mx: 'auto', px: 2, py: 3, transition: 'max-width 0.3s' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                    <IconButton size="small" onClick={() => navigate('/tools')} aria-label="back to tools">
-                        <ArrowBackIcon fontSize="small" />
-                    </IconButton>
-                    <Typography variant="body2" color="text.secondary" sx={{ cursor: 'pointer' }} onClick={() => navigate('/tools')}>
-                        {t('tools.title')}
-                    </Typography>
-                </Box>
 
                 {tools.length === 0 ? (
                     <Typography color="text.secondary">{t('tools.noToolsEnabled')}</Typography>

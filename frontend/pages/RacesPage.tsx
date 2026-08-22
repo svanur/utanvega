@@ -440,7 +440,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
     }
 
     return (
-        <Layout mode={mode} onToggleMode={onToggleMode} maxWidth={viewMode === 'table' ? 'lg' : 'md'} bottomContent={<PartnerLinks />}>
+        <Layout mode={mode} onToggleMode={onToggleMode} maxWidth={viewMode === 'table' ? 'lg' : 'md'} bottomContent={<PartnerLinks />} breadcrumb={[{ label: t('nav.events') }]}>
             {showQuote && isEnabled('random_quote') && <RandomQuote />}
             <Container
                 maxWidth={viewMode === 'table' ? 'lg' : 'md'}

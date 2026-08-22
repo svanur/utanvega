@@ -30,7 +30,7 @@ const PARTNERS: Partner[] = [
     {
         titleKey: 'partnerLinks.itra.title',
         links: [{ label: 'itra.run', href: 'https://itra.run/Races/RaceCalendar' }],
-        internalLinks: [{ labelKey: 'partnerLinks.itra.guideLabel', to: '/itra-guide' }],
+        internalLinks: [{ labelKey: 'partnerLinks.itra.guideLabel', to: '/itra' }],
         descriptionKey: 'partnerLinks.itra.description',
     },
     {

@@ -12,7 +12,7 @@ export default function PromoStrip({ position }: { position: 'top' | 'bottom' })
     if (active.length === 0) return null;
 
     return (
-        <Stack data-promo-strip direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mb: 3 }}>
+        <Stack data-promo-strip direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mt: position === 'bottom' ? 4 : 0, mb: 3 }}>
             {active.map(slot => (
                 <Box
                     key={slot.flag}

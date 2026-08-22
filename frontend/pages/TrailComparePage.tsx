@@ -30,7 +30,6 @@ import {
 } from '@mui/material';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import StraightenIcon from '@mui/icons-material/Straighten';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
@@ -904,16 +903,8 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
     const hasBoth = !!trailA && !!trailB;
 
     return (
-        <Layout mode={mode} onToggleMode={onToggleMode}>
+        <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('nav.trails'), to: '/trails' }, { label: t('compare.compareButton', { defaultValue: 'Compare' }) }]}>
             <Container maxWidth="md" sx={{ py: 2 }}>
-                <Button
-                    startIcon={<ArrowBackIcon />}
-                    onClick={() => navigate('/')}
-                    sx={{ mb: 2 }}
-                >
-                    {t('trail.backToTrails')}
-                </Button>
-
                 {/* Page header */}
                 <Stack direction="row" alignItems="center" spacing={1} mb={3}>
                     <CompareArrowsIcon color="primary" />

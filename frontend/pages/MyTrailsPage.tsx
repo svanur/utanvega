@@ -6,7 +6,6 @@ import {
   TableHead, TableRow, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, PaletteMode, Autocomplete, Checkbox, FormControlLabel, ToggleButton, ToggleButtonGroup, TableSortLabel, InputAdornment,
 } from '@mui/material';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import Layout from '../components/Layout';
@@ -231,12 +230,8 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
   };
 
   return (
-    <Layout mode={mode} onToggleMode={onToggleMode}>
+    <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('profile.title'), to: '/my/profile' }, { label: t('profile.myTrails') }]}>
       <Container maxWidth="md" sx={{ py: 3 }}>
-        <Button startIcon={<ArrowBackIcon />} onClick={() => window.history.back()} sx={{ mb: 2 }}>
-          {t('trail.backToProfile')}
-        </Button>
-
         <Paper elevation={3} sx={{ p: 3 }}>
           <Typography variant="h5" fontWeight="bold" sx={{ mb: 3 }}>
             {t('profile.myTrails')}

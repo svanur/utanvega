@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
-import { Box, ButtonBase, Collapse, Container, Divider, Fab, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Toolbar, Tooltip, Typography, Button, Menu, MenuItem, useMediaQuery, useTheme, Zoom } from '@mui/material';
+import { useState, useEffect, Fragment } from 'react';
+import { Box, ButtonBase, Collapse, Container, Divider, Fab, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Toolbar, Tooltip, Typography, Button, Menu, MenuItem, useMediaQuery, useTheme, Zoom, Stack, Link } from '@mui/material';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
-import { useNavigate } from 'react-router-dom';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { PropsWithChildren, ReactNode } from 'react';
 import type { PaletteMode } from '@mui/material';
@@ -45,11 +46,17 @@ interface NavItem {
     children?: NavChild[];
 }
 
+export interface BreadcrumbItem {
+    label: string;
+    to?: string;
+}
+
 type LayoutProps = PropsWithChildren<{
     mode: PaletteMode;
     onToggleMode: () => void;
     maxWidth?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | false;
     bottomContent?: ReactNode;
+    breadcrumb?: BreadcrumbItem[];
 }>;
 
 function openExternal(href: string) {
@@ -80,7 +87,7 @@ function ScrollToTopButton() {
     );
 }
 
-export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', bottomContent }: LayoutProps) {
+export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', bottomContent, breadcrumb }: LayoutProps) {
     const navigate = useNavigate();
     const { t } = useTranslation();
     const theme = useTheme();
@@ -117,7 +124,15 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
             ? [{ key: 'trails', label: t('nav.trails'), children: trailsChildren }]
             : []),
         ...(isEnabled('tools_page')
-            ? [{ key: 'tools', label: t('nav.tools'), path: '/tools' }]
+            ? [{
+                key: 'explore',
+                label: t('nav.explore'),
+                children: [
+                    { label: t('nav.tools'), path: '/tools' },
+                    { label: t('nav.fun'), path: '/fun' },
+                    { label: 'ITRA', path: '/itra' },
+                ],
+            }]
             : []),
         { key: 'services', label: t('nav.services'), path: '/services' },
         {
@@ -306,6 +321,53 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
 
             {isEnabled('announcement_banner') && <AnnouncementBanner />}
             <SponsorStrip position="top" />
+
+            {breadcrumb && breadcrumb.length > 0 && (
+                <Box
+                    sx={{
+                        position: 'sticky',
+                        top: { xs: 56, sm: 64 },
+                        zIndex: theme.zIndex.appBar - 1,
+                        bgcolor: 'background.paper',
+                        borderBottom: 1,
+                        borderColor: 'divider',
+                        py: 0.75,
+                    }}
+                >
+                    <Container maxWidth={maxWidth} disableGutters={false}>
+                        <Stack direction="row" alignItems="center" spacing={0.5} sx={{ pl: { xs: 2, sm: 3 } }}>
+                            {breadcrumb.map((item, i) => {
+                                const isLast = i === breadcrumb.length - 1;
+                                return (
+                                    <Fragment key={i}>
+                                        {i > 0 && <ChevronRightIcon sx={{ fontSize: 14, color: 'text.disabled', flexShrink: 0 }} />}
+                                        {item.to ? (
+                                            <Link
+                                                component={RouterLink}
+                                                to={item.to}
+                                                variant="caption"
+                                                color="text.secondary"
+                                                underline="hover"
+                                                sx={{ flexShrink: 0 }}
+                                            >
+                                                {item.label}
+                                            </Link>
+                                        ) : isLast ? (
+                                            <Typography variant="caption" color="text.primary" fontWeight={600} noWrap>
+                                                {item.label}
+                                            </Typography>
+                                        ) : (
+                                            <Typography variant="caption" color="text.secondary" noWrap sx={{ flexShrink: 0 }}>
+                                                {item.label}
+                                            </Typography>
+                                        )}
+                                    </Fragment>
+                                );
+                            })}
+                        </Stack>
+                    </Container>
+                </Box>
+            )}
 
             <Container maxWidth={maxWidth} sx={{ py: 4, flex: 1 }}>
                 {isEnabled('hero_band') && heroTheme && <Box sx={{ mb: 3 }}><HeroBand theme={heroTheme} isDark={mode === 'dark'} /></Box>}

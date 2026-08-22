@@ -16,7 +16,7 @@ export default function MediaPage({ mode, onToggleMode }: MediaPageProps) {
     usePageTitle(t('nav.media'));
 
     return (
-        <Layout mode={mode} onToggleMode={onToggleMode}>
+        <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('nav.aboutUs'), to: '/about' }, { label: t('nav.media') }]}>
             <Box sx={{ maxWidth: 720, mx: 'auto' }}>
                 <Typography variant="h4" fontWeight="bold" sx={{ mb: 1 }}>
                     {t('media.title')}
