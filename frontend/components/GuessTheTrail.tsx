@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
     Box, Typography, Button, Stack, Chip, Paper, Fade,
     LinearProgress, IconButton, Tooltip, Collapse, useTheme
@@ -95,8 +95,8 @@ export default function GuessTheTrail() {
     const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
     const [score, setScore] = useState(0);
     const [round, setRound] = useState(1);
-    const [usedTrailIdsRef] = useState<{ current: Set<string> }>({ current: new Set() });
-    const [lastProcessedTrigger] = useState<{ current: number }>({ current: -1 });
+    const usedTrailIdsRef = useRef<Set<string>>(new Set());
+    const lastProcessedTrigger = useRef(-1);
     const [hasUsedEliminate, setHasUsedEliminate] = useState(false);
     const [streak, setStreak] = useState(0);
     const [roundTrigger, setRoundTrigger] = useState(0);
@@ -106,7 +106,7 @@ export default function GuessTheTrail() {
     useEffect(() => {
         fetch(`${API_URL}/api/v1/trails`)
             .then(res => res.json())
-            .then((data: Trail[]) => setTrails(data))
+            .then((data: Trail[]) => setTrails(data.filter(t => (t.activityType === 'Running' || t.activityType === 'TrailRunning') && t.status === 'Published')))
             .catch(err => console.error('Failed to load trails:', err));
     }, []);
 

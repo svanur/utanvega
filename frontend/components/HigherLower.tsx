@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
     Box, Typography, Button, Stack, Paper, Chip, Fade, useTheme
 } from '@mui/material';
@@ -74,7 +74,7 @@ export default function HigherLower() {
     useEffect(() => {
         fetch(`${API_URL}/api/v1/trails`)
             .then(res => res.json())
-            .then((data: Trail[]) => setTrails(data))
+            .then((data: Trail[]) => setTrails(data.filter(t => (t.activityType === 'Running' || t.activityType === 'TrailRunning') && t.status === 'Published')))
             .catch(err => console.error('Failed to load trails:', err));
     }, []);
 
@@ -104,6 +104,8 @@ export default function HigherLower() {
     useEffect(() => {
         if (trails.length >= 2 && phase === 'loading') startGame();
     }, [trails, phase, startGame]);
+
+    const revealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const handleGuess = (guess: 'higher' | 'lower' | 'same') => {
         if (phase !== 'playing' || !leftTrail || !rightTrail) return;
@@ -135,10 +137,8 @@ export default function HigherLower() {
                 setHighScore(newScore);
             }
 
-            // Advance after reveal delay
-            setTimeout(() => {
+            revealTimer.current = setTimeout(() => {
                 const newUsed = new Set(usedIds);
-                // Pick new stat for variety
                 const newStat = STATS[Math.floor(Math.random() * STATS.length)];
                 const next = pickRandom(newUsed);
                 if (!next) {
@@ -164,8 +164,7 @@ export default function HigherLower() {
                 setPhase('playing');
             }, REVEAL_DELAY);
         } else {
-            // Game over after reveal
-            setTimeout(() => {
+            revealTimer.current = setTimeout(() => {
                 if (score >= 10) {
                     confetti({
                         particleCount: 100,
@@ -178,6 +177,8 @@ export default function HigherLower() {
             }, REVEAL_DELAY);
         }
     };
+
+    useEffect(() => () => { if (revealTimer.current) clearTimeout(revealTimer.current); }, []);
 
     // Game over screen
     if (phase === 'gameover') {
