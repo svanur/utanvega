@@ -213,7 +213,7 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
     }
 
     return (
-        <Layout mode={mode} onToggleMode={onToggleMode}>
+        <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('nav.trails'), to: '/trails' }, { label: t('nav.locations') }]}>
             <Container maxWidth="md" sx={{ py: 3 }}>
                 <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <LocationOnIcon sx={{ fontSize: 32, color: theme.palette.primary.main }} />

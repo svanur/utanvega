@@ -17,7 +17,7 @@ const services = [
 export default function ServicesPage({ mode, onToggleMode }: { mode: PaletteMode; onToggleMode: () => void }) {
     const { t } = useTranslation();
     return (
-        <Layout mode={mode} onToggleMode={onToggleMode}>
+        <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('nav.services') }]}>
             <Box sx={{ py: 2 }}>
                 <Typography variant="h4" fontWeight={700} gutterBottom>
                     {t('services.title')}

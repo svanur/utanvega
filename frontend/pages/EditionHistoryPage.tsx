@@ -20,7 +20,6 @@ import {
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import TimerIcon from '@mui/icons-material/Timer';
@@ -135,16 +134,8 @@ export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistor
 
     if (!edition) {
         return (
-            <Layout mode={mode} onToggleMode={onToggleMode}>
+            <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('nav.events'), to: '/events' }, { label: loc(event.name, event.nameEn) ?? event.name, to: `/events/${slug}` }]}>
                 <Container maxWidth="md" sx={{ py: 3 }}>
-                    <Button
-                        startIcon={<ArrowBackIcon />}
-                        onClick={() => navigate(`/events/${slug}`)}
-                        size="small"
-                        sx={{ mb: 2 }}
-                    >
-                        {t('races.history.backToEvent', { defaultValue: 'Back to event' })}
-                    </Button>
                     <Alert severity="warning">
                         {t('races.history.editionNotFound', { defaultValue: 'Edition not found' })}
                     </Alert>
@@ -156,21 +147,14 @@ export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistor
     const heading = loc(edition.title, edition.titleEn)?.trim() || String(edition.year);
 
     return (
-        <Layout mode={mode} onToggleMode={onToggleMode}>
+        <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('nav.events'), to: '/events' }, { label: loc(event.name, event.nameEn) ?? event.name, to: `/events/${slug}` }, { label: editionKey ?? '' }]}>
             <Container
                 maxWidth="md"
                 sx={{ py: 3 }}
                 onTouchStart={handleTouchStart}
                 onTouchEnd={handleTouchEnd}
             >
-                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-                    <Button
-                        startIcon={<ArrowBackIcon />}
-                        onClick={() => navigate(`/events/${slug}`)}
-                        size="small"
-                    >
-                        {t('races.history.backToEvent', { defaultValue: 'Back to event' })}
-                    </Button>
+                <Stack direction="row" alignItems="center" justifyContent="flex-end" sx={{ mb: 2 }}>
                     <Stack direction="row" spacing={0.5}>
                         <IconButton
                             size="small"

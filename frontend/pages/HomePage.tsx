@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router-dom';
 import RandomQuote from '../components/RandomQuote';
 import Layout from '../components/Layout';
 import { TrailList } from '../components/TrailList';
@@ -18,13 +19,19 @@ type HomePageProps = {
 export default function HomePage({ mode, onToggleMode, tagSlug, showQuote = false }: HomePageProps) {
     const { isEnabled } = useFeatureFlags();
     const { t } = useTranslation();
+    const { pathname } = useLocation();
     usePageTitle(t('nav.trails'));
     const [viewMode, setViewMode] = useState(() => {
         try { return localStorage.getItem('utanvega-view-mode') || 'list'; } catch { return 'list'; }
     });
     const maxWidth = viewMode === 'table' ? 'lg' as const : 'md' as const;
+    const breadcrumb = pathname === '/trails'
+        ? [{ label: t('nav.trails') }]
+        : pathname.startsWith('/tags/')
+        ? [{ label: t('nav.trails'), to: '/trails' }]
+        : undefined;
     return (
-        <Layout mode={mode} onToggleMode={onToggleMode} maxWidth={maxWidth} bottomContent={<PartnerLinks />}>
+        <Layout mode={mode} onToggleMode={onToggleMode} maxWidth={maxWidth} bottomContent={<PartnerLinks />} breadcrumb={breadcrumb}>
             {showQuote && isEnabled('random_quote') && <RandomQuote />}
             <TrailList tagSlug={tagSlug} onViewModeChange={setViewMode} />
         </Layout>

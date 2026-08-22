@@ -347,7 +347,7 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
     };
 
     return (
-        <Layout mode={mode} onToggleMode={onToggleMode}>
+        <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('nav.events'), to: '/events' }, { label: t('nav.eventsCalendar') }]}>
             <Container maxWidth="sm" sx={{ py: 3 }}>
                 {/* Header */}
                 <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>

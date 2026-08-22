@@ -217,7 +217,7 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
     }
 
     return (
-        <Layout mode={mode} onToggleMode={onToggleMode}>
+        <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('nav.locations'), to: '/locations' }, { label: loc(location.name, location.nameEn) ?? location.name }]}>
             <Container maxWidth="md" sx={{ py: 2 }}>
                 {/* Breadcrumb navigation */}
                 <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 2, flexWrap: 'wrap' }}>

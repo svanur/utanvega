@@ -7,6 +7,7 @@ import ThermostatIcon from '@mui/icons-material/Thermostat';
 import GpsFixedIcon from '@mui/icons-material/GpsFixed';
 import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
 import Layout from '../components/Layout';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 interface DisclaimerPageProps {
     mode: PaletteMode;
@@ -29,9 +30,10 @@ function Section({ icon, title, children }: { icon: React.ReactNode; title: stri
 
 export default function DisclaimerPage({ mode, onToggleMode }: DisclaimerPageProps) {
     const { t } = useTranslation();
+    usePageTitle(t('nav.disclaimer'));
 
     return (
-        <Layout mode={mode} onToggleMode={onToggleMode}>
+        <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('nav.disclaimer') }]}>
             <Box sx={{ maxWidth: 700, mx: 'auto', px: 2, py: 4 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
                     <WarningAmberIcon sx={{ fontSize: 32, color: 'warning.main' }} />

@@ -46,6 +46,7 @@ const ChallengePage = lazy(() => import('./pages/ChallengePage'));
 const AnnualReportPage = lazy(() => import('./pages/AnnualReportPage'));
 const NewsletterPage = lazy(() => import('./pages/NewsletterPage'));
 const ContactPage = lazy(() => import('./pages/ContactPage'));
+const ItraPage = lazy(() => import('./pages/ItraPage'));
 const ItraGuidePage = lazy(() => import('./pages/ItraGuidePage'));
 const ItraHandbookPage = lazy(() => import('./pages/ItraHandbookPage'));
 const FaqPage = lazy(() => import('./pages/FaqPage'));
@@ -251,6 +252,7 @@ export default function App() {
                     <Route path="/annual-report/2025" element={<AnnualReportPage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="/newsletter" element={<NewsletterPage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="/contact" element={<ContactPage mode={mode} onToggleMode={handleToggleMode} />} />
+                    <Route path="/itra" element={<ItraPage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="/itra-guide" element={<ItraGuidePage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="/itra-handbook" element={<ItraHandbookPage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="/faq" element={<FaqPage mode={mode} onToggleMode={handleToggleMode} />} />

@@ -34,7 +34,7 @@ export default function AboutPage({ mode, onToggleMode }: AboutPageProps) {
     usePageTitle(t('nav.about'));
 
     return (
-        <Layout mode={mode} onToggleMode={onToggleMode}>
+        <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('nav.aboutUs') }]}>
             {/* Hero banner */}
             <Box
                 sx={{

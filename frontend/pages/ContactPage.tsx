@@ -4,6 +4,7 @@ import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import { useTranslation } from 'react-i18next';
 import Layout from '../components/Layout';
 import type { PaletteMode } from '@mui/material';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 // Split to avoid plain-text harvesting
 const USER = 'oskar';
@@ -17,11 +18,12 @@ interface ContactPageProps {
 
 export default function ContactPage({ mode, onToggleMode }: ContactPageProps) {
     const { t } = useTranslation();
+    usePageTitle(t('nav.contact'));
     const [revealed, setRevealed] = useState(false);
     const email = `${USER}@${DOMAIN}.${TLD}`;
 
     return (
-        <Layout mode={mode} onToggleMode={onToggleMode}>
+        <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('nav.contact') }]}>
             <Container maxWidth="sm" sx={{ py: 4 }}>
                 <Paper variant="outlined" sx={{ p: 4, textAlign: 'center' }}>
                     <EmailOutlinedIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />

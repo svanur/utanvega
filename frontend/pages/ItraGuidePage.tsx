@@ -9,6 +9,7 @@ import TimerIcon from '@mui/icons-material/Timer';
 import LeaderboardIcon from '@mui/icons-material/Leaderboard';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import Layout from '../components/Layout';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 interface ItraGuidePageProps {
     mode: PaletteMode;
@@ -25,6 +26,7 @@ const ICONS = [
 
 export default function ItraGuidePage({ mode, onToggleMode }: ItraGuidePageProps) {
     const { t } = useTranslation();
+    usePageTitle(t('nav.itraGuide'));
 
     const concepts = t('itraGuide.concepts', { returnObjects: true }) as {
         title: string;
@@ -41,7 +43,7 @@ export default function ItraGuidePage({ mode, onToggleMode }: ItraGuidePageProps
     }[];
 
     return (
-        <Layout mode={mode} onToggleMode={onToggleMode}>
+        <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('nav.explore') }, { label: 'ITRA', to: '/itra' }, { label: t('nav.guide') }]}>
             <Box sx={{ maxWidth: 800, mx: 'auto' }}>
                 {/* Header */}
                 <Box sx={{ mb: 4 }}>

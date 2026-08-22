@@ -36,7 +36,7 @@ export default function FooterStatus() {
                         <Stack spacing={0.5} sx={{ mt: 1 }}>
                             <MuiLink component={Link} to="/tools" variant="body2" color="text.secondary" underline="hover">{t('tools.title')}</MuiLink>
                             <MuiLink component={Link} to="/fun" variant="body2" color="text.secondary" underline="hover">{t('nav.fun')}</MuiLink>
-                            <MuiLink component={Link} to="/challenge/2026" variant="body2" color="text.secondary" underline="hover">{t('nav.challenge')}</MuiLink>
+                            <MuiLink component={Link} to="/itra" variant="body2" color="text.secondary" underline="hover">ITRA</MuiLink>
                         </Stack>
                     </Box>
 

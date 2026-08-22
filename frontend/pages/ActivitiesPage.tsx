@@ -6,7 +6,6 @@ import {
   DialogContent, DialogActions, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   IconButton, Chip, PaletteMode,
 } from '@mui/material';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -103,12 +102,8 @@ export default function ActivitiesPage({ mode, onToggleMode }: Props) {
   };
 
   return (
-    <Layout mode={mode} onToggleMode={onToggleMode}>
+    <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('profile.title'), to: '/my/profile' }, { label: t('profile.recentActivities') }]}>
       <Container maxWidth="md" sx={{ py: 3 }}>
-        <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/profile')} sx={{ mb: 2 }}>
-          {t('trail.backToProfile')}
-        </Button>
-
         <Paper elevation={3} sx={{ p: 3 }}>
           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
             <Typography variant="h5" fontWeight="bold">

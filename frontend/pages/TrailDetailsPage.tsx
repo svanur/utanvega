@@ -27,7 +27,6 @@ import {
     Snackbar,
     Alert,
 } from '@mui/material';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import RouteIcon from '@mui/icons-material/Route';
@@ -489,19 +488,10 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     const distanceKm = (trail.length / 1000).toFixed(2);
     const estTime = estimateDuration(trail.length, trail.elevationGain, trail.activityType);
     return (
-        <Layout mode={mode} onToggleMode={onToggleMode}>
+        <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('nav.trails'), to: '/trails' }, { label: trail.name }]}>
             {trail.linkedRaces && (
                 <AssociatedEventBanner linkedRaces={trail.linkedRaces} activityType={trail.activityType} />
             )}
-
-            <Button
-                startIcon={<ArrowBackIcon />}
-                onClick={() => navigate(-1)}
-                size="small"
-                sx={{ mb: 2 }}
-            >
-                {t('trail.backToTrails')}
-            </Button>
 
             <Paper elevation={3} sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
                 <Box mb={3}>

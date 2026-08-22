@@ -37,7 +37,7 @@ export default function RunningTripsPage({ mode, onToggleMode }: { mode: Palette
     };
 
     return (
-        <Layout mode={mode} onToggleMode={onToggleMode} maxWidth="sm">
+        <Layout mode={mode} onToggleMode={onToggleMode} maxWidth="sm" breadcrumb={[{ label: t('nav.runningTrip') }]}>
             <Box sx={{ py: 2 }}>
                 <Typography variant="h4" fontWeight={700} gutterBottom>
                     {t('runningTrips.title')}

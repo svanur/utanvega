@@ -3,6 +3,7 @@ import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import { useTranslation } from 'react-i18next';
 import Layout from '../components/Layout';
 import type { PaletteMode } from '@mui/material';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 interface NewsletterPageProps {
     mode: PaletteMode;
@@ -11,8 +12,9 @@ interface NewsletterPageProps {
 
 export default function NewsletterPage({ mode, onToggleMode }: NewsletterPageProps) {
     const { t } = useTranslation();
+    usePageTitle(t('nav.newsletter'));
     return (
-        <Layout mode={mode} onToggleMode={onToggleMode}>
+        <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('nav.newsletter') }]}>
             <Container maxWidth="sm" sx={{ py: 4 }}>
                 <Paper variant="outlined" sx={{ p: 4, textAlign: 'center' }}>
                     <EmailOutlinedIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />

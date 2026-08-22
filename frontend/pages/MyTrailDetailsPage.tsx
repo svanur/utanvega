@@ -7,7 +7,6 @@ import {
   TextField, PaletteMode, TableSortLabel, Checkbox, FormControlLabel, Tooltip as MuiTooltip,
 } from '@mui/material';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import LockIcon from '@mui/icons-material/Lock';
@@ -272,12 +271,8 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
   };
 
   return (
-    <Layout mode={mode} onToggleMode={onToggleMode}>
+    <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('profile.myTrails'), to: '/my/trails' }, { label: trail.name }]}>
       <Container maxWidth="md" sx={{ py: 3 }}>
-        <Button startIcon={<ArrowBackIcon />} onClick={() => window.history.back()} sx={{ mb: 2 }}>
-          {t('trail.backToProfile')}
-        </Button>
-
         <Paper elevation={3} sx={{ p: 3 }}>
           <Typography variant="h5" fontWeight="bold" sx={{ mb: 1 }}>
             {trail.name}
