@@ -106,7 +106,7 @@ export default function GuessTheTrail() {
     useEffect(() => {
         fetch(`${API_URL}/api/v1/trails`)
             .then(res => res.json())
-            .then((data: Trail[]) => setTrails(data.filter(t => (t.activityType === 'Running' || t.activityType === 'TrailRunning') && t.status === 'Published')))
+            .then((data: Trail[]) => setTrails(data.filter(t => t.activityType === 'Running' || t.activityType === 'TrailRunning')))
             .catch(err => console.error('Failed to load trails:', err));
     }, []);
 
