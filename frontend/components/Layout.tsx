@@ -345,7 +345,6 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
             </DynamicHeader>
 
             {isEnabled('announcement_banner') && <AnnouncementBanner />}
-            <SponsorStrip position="top" />
 
             {breadcrumb && breadcrumb.length > 0 && (
                 <Box
@@ -393,6 +392,7 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
                     </Container>
                 </Box>
             )}
+            <SponsorStrip position="top" />
 
             <Container maxWidth={maxWidth} sx={{ py: 4, flex: 1 }}>
                 {isEnabled('hero_band') && heroTheme && <Box sx={{ mb: 3 }}><HeroBand theme={heroTheme} isDark={mode === 'dark'} /></Box>}
