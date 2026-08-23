@@ -1327,6 +1327,17 @@ function RaceCard({
         return 'finished';
     }, [daysUntil, race.status, race.dateOfRace, race.startTime, race.cutoffMinutes, now]);
 
+    // Independent of cutoffMinutes: true as soon as the race starts (or all day if no startTime).
+    // Used only to control RaceFinishCard / RaceShareCard visibility.
+    const pastStart = useMemo(() => {
+        if (daysUntil !== 0 || !race.dateOfRace) return false;
+        if (!race.startTime) return true;
+        const [h, m, s = 0] = race.startTime.split(':').map(Number);
+        const start = new Date(race.dateOfRace + 'T00:00:00');
+        start.setHours(h, m, s, 0);
+        return now >= start;
+    }, [daysUntil, race.dateOfRace, race.startTime, now]);
+
     return (
         <Card id={anchor} variant="outlined" sx={{
             borderRadius: 2,
@@ -1392,7 +1403,7 @@ function RaceCard({
                                     {ACTIVITY_EMOJI[race.trailSlug ? 'TrailRunning' : ''] ?? '🗺️'} {t('races.viewTrail')}
                                 </Button>
                             )}
-                            {showShareCard && racePhase !== 'finished' && race.status !== 'Cancelled' && (
+                            {showShareCard && !pastStart && racePhase !== 'finished' && race.status !== 'Cancelled' && (
                                 <RaceShareCard
                                     eventName={competitionName}
                                     raceName={loc(race.name, race.nameEn) ?? race.name}
@@ -1402,7 +1413,7 @@ function RaceCard({
                                     activityType={activityType}
                                 />
                             )}
-                            {(showFinishCard || (showShareCard && racePhase === 'finished')) && race.status !== 'Cancelled' && (
+                            {(showFinishCard || (showShareCard && (pastStart || racePhase === 'finished'))) && race.status !== 'Cancelled' && (
                                 <RaceFinishCard
                                     eventName={competitionName}
                                     raceName={loc(race.name, race.nameEn) ?? race.name}
