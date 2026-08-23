@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { 
+import {
     Card,
     CardContent,
     Typography,
@@ -8,7 +8,8 @@ import {
     Chip,
     CardActionArea,
     Tooltip,
-    IconButton
+    IconButton,
+    Button,
 } from '@mui/material';
 import RouteIcon from '@mui/icons-material/Route';
 import LandscapeIcon from '@mui/icons-material/Landscape';
@@ -22,6 +23,8 @@ import AllInclusiveIcon from '@mui/icons-material/AllInclusive';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
 import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import NearMeIcon from '@mui/icons-material/NearMe';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
@@ -259,7 +262,7 @@ const TrailCardComponent: React.FC<TrailCardProps> = ({ trail, onToggleFavorite,
                 onTouchEnd={disableGestures ? undefined : handleTouchEnd}
             >
                 <CardActionArea onClick={handleClick} sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'flex-start' }}>
-                    <CardContent sx={{ display: 'flex', flexDirection: 'column', flex: 1, ...(compact ? { p: 1.5, '&:last-child': { pb: 1.5 } } : {}) }}>
+                    <CardContent sx={{ display: 'flex', flexDirection: 'column', flex: 1, ...(compact ? { p: 1.5, '&:last-child': { pb: 1.5 } } : {}), pr: 6 }}>
                         {/* 1st row: activity icon + Trail name + favorite/ticked */}
                         <Stack direction="row" alignItems="flex-start" justifyContent="space-between" gap={1}>
                             {compact ? (
@@ -281,7 +284,6 @@ const TrailCardComponent: React.FC<TrailCardProps> = ({ trail, onToggleFavorite,
                                             </Tooltip>
                                         )}
                                         {loginEnabled && tickedSlugs.has(trail.slug) && <CheckCircleIcon color="success" sx={{ fontSize: 14 }} />}
-                                        {isFavorited && <StarIcon color="warning" sx={{ fontSize: 14 }} />}
                                     </Box>
                                 </>
                             ) : (
@@ -294,16 +296,24 @@ const TrailCardComponent: React.FC<TrailCardProps> = ({ trail, onToggleFavorite,
                                             {trail.name}
                                         </Typography>
                                     </Stack>
-                                    <Box display="flex" alignItems="center" gap={0.25}>
+                                    <Box display="flex" alignItems="center" gap={0.5}>
                                         {trail.youtubeUrl && (
-                                            <Tooltip title={t('trail.video360', '360° Video')}>
-                                                <IconButton size="small" component="a" href={trail.youtubeUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} sx={{ p: 0.25 }}>
-                                                    <VideocamIcon sx={{ fontSize: 18 }} color="error" />
-                                                </IconButton>
-                                            </Tooltip>
+                                            <Button
+                                                size="small"
+                                                variant="outlined"
+                                                component="a"
+                                                href={trail.youtubeUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                startIcon={<VideocamIcon sx={{ fontSize: 14 }} color="error" />}
+                                                endIcon={<OpenInNewIcon sx={{ fontSize: 12 }} />}
+                                                onClick={e => e.stopPropagation()}
+                                                sx={{ textTransform: 'none', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+                                            >
+                                                360°
+                                            </Button>
                                         )}
                                         {loginEnabled && tickedSlugs.has(trail.slug) && <CheckCircleIcon color="success" sx={{ fontSize: 20 }} />}
-                                        {isFavorited && <StarIcon color="warning" sx={{ fontSize: 20 }} />}
                                     </Box>
                                 </>
                             )}
@@ -455,6 +465,22 @@ const TrailCardComponent: React.FC<TrailCardProps> = ({ trail, onToggleFavorite,
                     )}
                     </CardContent>
                 </CardActionArea>
+                <Tooltip title={isFavorited ? t('trailCard.removeFavorite') : t('trailCard.addFavorite')}>
+                    <IconButton
+                        size="small"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            if (onToggleFavorite) {
+                                onToggleFavorite(trail.slug);
+                            } else {
+                                toggleFavorite(trail.slug);
+                            }
+                        }}
+                        sx={{ position: 'absolute', top: 6, right: 6, zIndex: 1, bgcolor: 'background.paper', '&:hover': { bgcolor: 'action.hover' } }}
+                    >
+                        {isFavorited ? <StarIcon fontSize="small" color="warning" /> : <StarBorderIcon fontSize="small" />}
+                    </IconButton>
+                </Tooltip>
             </Card>
 
             {!disableGestures && (

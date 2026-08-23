@@ -3,11 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-    TableSortLabel, Paper, Typography, Chip, IconButton, Tooltip, Stack,
+    TableSortLabel, Paper, Typography, Chip, IconButton, Tooltip, Stack, Button,
 } from '@mui/material';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import VideocamIcon from '@mui/icons-material/Videocam';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import NearMeIcon from '@mui/icons-material/NearMe';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
@@ -198,9 +199,11 @@ const TrailTableView: React.FC<TrailTableViewProps> = ({ trails, favorites, onTo
                                 onClick={() => navigate(`/trails/${trail.slug}`)}
                             >
                                 <TableCell padding="checkbox" onClick={e => e.stopPropagation()}>
-                                    <IconButton size="small" onClick={() => onToggleFavorite(trail.slug)} aria-label={isFav ? t('trailCard.removeFavorite') : t('trailCard.addFavorite')}>
-                                        {isFav ? <StarIcon fontSize="small" color="warning" /> : <StarBorderIcon fontSize="small" />}
-                                    </IconButton>
+                                    <Tooltip title={isFav ? t('trailCard.removeFavorite') : t('trailCard.addFavorite')}>
+                                        <IconButton size="small" onClick={() => onToggleFavorite(trail.slug)}>
+                                            {isFav ? <StarIcon fontSize="small" color="warning" /> : <StarBorderIcon fontSize="small" />}
+                                        </IconButton>
+                                    </Tooltip>
                                 </TableCell>
                                 <TableCell>
                                     <Stack direction="row" alignItems="flex-start" spacing={1}>
@@ -213,20 +216,20 @@ const TrailTableView: React.FC<TrailTableViewProps> = ({ trails, favorites, onTo
                                                     {trail.name}
                                                 </Typography>
                                                 {trail.youtubeUrl && (
-                                                    <Tooltip title={t('trail.video360', '360° Video')}>
-                                                        <IconButton
-                                                            size="small"
-                                                            component="a"
-                                                            href={trail.youtubeUrl}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            aria-label="360° video"
-                                                            onClick={e => e.stopPropagation()}
-                                                            sx={{ p: 0.25 }}
-                                                        >
-                                                            <VideocamIcon sx={{ fontSize: 16 }} color="error" />
-                                                        </IconButton>
-                                                    </Tooltip>
+                                                    <Button
+                                                        size="small"
+                                                        variant="outlined"
+                                                        component="a"
+                                                        href={trail.youtubeUrl}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        startIcon={<VideocamIcon sx={{ fontSize: 14 }} color="error" />}
+                                                        endIcon={<OpenInNewIcon sx={{ fontSize: 12 }} />}
+                                                        onClick={e => e.stopPropagation()}
+                                                        sx={{ textTransform: 'none', fontSize: '0.7rem', whiteSpace: 'nowrap', ml: 0.5 }}
+                                                    >
+                                                        360°
+                                                    </Button>
                                                 )}
                                             </Stack>
                                             <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>

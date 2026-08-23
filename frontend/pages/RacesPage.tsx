@@ -68,8 +68,6 @@ import RandomQuote from '../components/RandomQuote';
 import RunningLoader from '../components/RunningLoader';
 import EventDateBadge from '../components/EventDateBadge';
 import SwipeableCard from '../components/SwipeableCard';
-import RaceShareCard from '../components/RaceShareCard';
-import RaceFinishCard from '../components/RaceFinishCard';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import { useEvents, type EventSummary, type SeriesRaceDto } from '../hooks/useEvents';
 import { API_URL } from '../hooks/useTrails';
@@ -201,7 +199,6 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
     const [filters, setFilters] = useState<EventFilters>(DEFAULT_FILTERS);
     const [siteQROpen, setSiteQROpen] = useState(false);
     const [siteQRCopied, setSiteQRCopied] = useState(false);
-    const [shareEventId, setShareEventId] = useState<string | null>(null);
     const [shareEventSlug, setShareEventSlug] = useState<string | null>(null);
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
     const [locationLoading, setLocationLoading] = useState(false);
@@ -1022,18 +1019,28 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                         {justRaced.map(comp => (
                                             <SwipeableCard
                                                 key={comp.id}
-                                                onSwipeRight={() => setShareEventId(comp.id)}
-                                                revealWidth={0}
+                                                onSwipeRight={() => {
+                                                    toggleFavoriteEvent(comp.slug);
+                                                    if ('vibrate' in navigator) navigator.vibrate(10);
+                                                }}
+                                                rightActions={
+                                                    <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', bgcolor: isFavoriteEvent(comp.slug) ? 'warning.dark' : 'warning.main', color: 'white', gap: 0.5, fontSize: '0.7rem', fontWeight: 600 }}>
+                                                        {isFavoriteEvent(comp.slug) ? <StarIcon sx={{ fontSize: 18 }} /> : <StarBorderIcon sx={{ fontSize: 18 }} />}
+                                                        {isFavoriteEvent(comp.slug) ? t('races.removeFavorite') : t('races.addFavorite')}
+                                                    </Box>
+                                                }
+                                                revealWidth={100}
                                             >
                                             <Card
                                                 variant="outlined"
                                                 sx={{
+                                                    position: 'relative',
                                                     '@media (hover: hover)': { transition: 'transform 0.15s, box-shadow 0.15s', '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] } },
                                                     borderLeft: `4px solid ${theme.palette.success.main}`,
                                                 }}
                                             >
                                                 <CardActionArea onClick={() => navigate(`/events/${comp.slug}`)} onMouseEnter={() => prefetchEvent(comp.slug)}>
-                                                    <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                                                    <CardContent sx={{ p: { xs: 1.5, sm: 2 }, pr: { xs: 6, sm: 6 } }}>
                                                         <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: { xs: 0.5, sm: 1 } }}>
                                                             <Box sx={{ minWidth: 0, width: '100%' }}>
                                                                 <Typography variant="subtitle1" fontWeight={700} sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', sm: 'nowrap' } }}>
@@ -1081,13 +1088,22 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                         </Box>
                                                     </CardContent>
                                                 </CardActionArea>
+                                                <Tooltip title={isFavoriteEvent(comp.slug) ? t('races.removeFavorite') : t('races.addFavorite')}>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={(e) => { e.stopPropagation(); toggleFavoriteEvent(comp.slug); }}
+                                                        sx={{ position: 'absolute', top: 6, right: 6, zIndex: 1, bgcolor: 'background.paper', '&:hover': { bgcolor: 'action.hover' } }}
+                                                    >
+                                                        {isFavoriteEvent(comp.slug) ? <StarIcon fontSize="small" color="warning" /> : <StarBorderIcon fontSize="small" />}
+                                                    </IconButton>
+                                                </Tooltip>
                                             </Card>
                                             </SwipeableCard>
                                         ))}
                                     </Stack>
                                 </Box>
                             )}
-                            
+
                         <Stack spacing={2}>
                             {(() => {
                                 let lastHolidayDate: string | null = null;
@@ -1153,9 +1169,15 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                         {yearDivider}
                                         {holidayBanner}
                                         <SwipeableCard
-                                            onSwipeRight={race.registrationUrl && raceDaysUntil != null && raceDaysUntil >= 0
-                                                ? () => setShareEventId(comp.id)
-                                                : undefined
+                                            onSwipeRight={() => {
+                                                toggleFavoriteEvent(comp.slug);
+                                                if ('vibrate' in navigator) navigator.vibrate(10);
+                                            }}
+                                            rightActions={
+                                                <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', bgcolor: isFavoriteEvent(comp.slug) ? 'warning.dark' : 'warning.main', color: 'white', gap: 0.5, fontSize: '0.7rem', fontWeight: 600 }}>
+                                                    {isFavoriteEvent(comp.slug) ? <StarIcon sx={{ fontSize: 18 }} /> : <StarBorderIcon sx={{ fontSize: 18 }} />}
+                                                    {isFavoriteEvent(comp.slug) ? t('races.removeFavorite') : t('races.addFavorite')}
+                                                </Box>
                                             }
                                             leftActions={
                                                 <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
@@ -1193,9 +1215,9 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                             }
                                             revealWidth={120}
                                         >
-                                            <Card variant="outlined" sx={{ '@media (hover: hover)': { transition: 'transform 0.15s, box-shadow 0.15s', '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] } } }}>
+                                            <Card variant="outlined" sx={{ position: 'relative', '@media (hover: hover)': { transition: 'transform 0.15s, box-shadow 0.15s', '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] } } }}>
                                                 <CardActionArea onClick={() => navigate(`/events/${comp.slug}`)} onMouseEnter={() => prefetchEvent(comp.slug)}>
-                                                    <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                                                    <CardContent sx={{ p: { xs: 1.5, sm: 2 }, pr: { xs: 6, sm: 6 } }}>
                                                         {/* Name + countdown */}
                                                         <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'flex-start' }} justifyContent="space-between" gap={0.5}>
                                                             <Stack direction="row" alignItems="flex-start" gap={1} sx={{ minWidth: 0, width: '100%' }}>
@@ -1284,6 +1306,15 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                         </Typography>
                                                     </CardContent>
                                                 </CardActionArea>
+                                                <Tooltip title={isFavoriteEvent(comp.slug) ? t('races.removeFavorite') : t('races.addFavorite')}>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={(e) => { e.stopPropagation(); toggleFavoriteEvent(comp.slug); }}
+                                                        sx={{ position: 'absolute', top: 6, right: 6, zIndex: 1, bgcolor: 'background.paper', '&:hover': { bgcolor: 'action.hover' } }}
+                                                    >
+                                                        {isFavoriteEvent(comp.slug) ? <StarIcon fontSize="small" color="warning" /> : <StarBorderIcon fontSize="small" />}
+                                                    </IconButton>
+                                                </Tooltip>
                                             </Card>
                                         </SwipeableCard>
                                         </Box>
@@ -1413,13 +1444,14 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                 <Card
                                     variant="outlined"
                                     sx={{
+                                        position: 'relative',
                                         '@media (hover: hover)': { transition: 'transform 0.15s, box-shadow 0.15s', '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] } },
                                         ...(comp.type === 'Advertisement' && { bgcolor: 'rgba(255, 193, 7, 0.08)' }),
                                         ...(isEffectivelyCancelled(comp) && { opacity: 0.65 }),
                                     }}
                                 >
                                     <CardActionArea onClick={() => navigate(`/events/${comp.slug}`)} onMouseEnter={() => prefetchEvent(comp.slug)}>
-                                        <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                                        <CardContent sx={{ p: { xs: 1.5, sm: 2 }, pr: { xs: 6, sm: 6 } }}>
                                             {/* Row 1: activity icon + name + status chips + countdown */}
                                             <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'flex-start' }} justifyContent="space-between" gap={0.5}>
                                                 <Stack direction="row" alignItems="flex-start" gap={1} sx={{ minWidth: 0, width: '100%' }}>
@@ -1437,9 +1469,6 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                             )}
                                                             {!isEffectivelyCancelled(comp) && isEffectivelyUnconfirmed(comp) && (
                                                                 <Chip label={t('races.statusUpcoming')} size="small" color="info" sx={{ height: 18, fontSize: '0.65rem' }} />
-                                                            )}
-                                                            {isFavoriteEvent(comp.slug) && (
-                                                                <StarIcon sx={{ fontSize: 16, color: 'warning.main', flexShrink: 0 }} />
                                                             )}
                                                         </Stack>
                                                         {!isEffectivelyCancelled(comp) && (comp.displayDate ?? comp.nextEditionDate) && (
@@ -1579,6 +1608,15 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                             </Typography>
                                         </CardContent>
                                     </CardActionArea>
+                                    <Tooltip title={isFavoriteEvent(comp.slug) ? t('races.removeFavorite') : t('races.addFavorite')}>
+                                        <IconButton
+                                            size="small"
+                                            onClick={(e) => { e.stopPropagation(); toggleFavoriteEvent(comp.slug); }}
+                                            sx={{ position: 'absolute', top: 6, right: 6, zIndex: 1, bgcolor: 'background.paper', '&:hover': { bgcolor: 'action.hover' } }}
+                                        >
+                                            {isFavoriteEvent(comp.slug) ? <StarIcon fontSize="small" color="warning" /> : <StarBorderIcon fontSize="small" />}
+                                        </IconButton>
+                                    </Tooltip>
                                 </Card>
                                 </SwipeableCard>
                                 </Box>
@@ -1590,46 +1628,13 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                     )
                 ) : viewMode === 'table' ? (
                     <Suspense fallback={<Box display="flex" justifyContent="center" py={4}><CircularProgress /></Box>}>
-                        <EventTableView events={sortedFiltered} userLocation={userLocation} />
+                        <EventTableView events={sortedFiltered} userLocation={userLocation} onToggleFavorite={toggleFavoriteEvent} isFavoriteEvent={isFavoriteEvent} />
                     </Suspense>
                 ) : (
                     <Suspense fallback={<Box display="flex" justifyContent="center" py={4}><CircularProgress /></Box>}>
                         <EventMapView events={filtered} />
                     </Suspense>
                 )}
-
-                {/* Swipe-right share dialogs */}
-                {(() => {
-                    const ev = shareEventId ? [...justRaced, ...upcoming].find(e => e.id === shareEventId) : null;
-                    if (!ev) return null;
-                    const isFinished = justRaced.some(e => e.id === shareEventId);
-                    const firstDistance = ev.distances?.[0]?.label ?? null;
-                    if (isFinished) {
-                        return (
-                            <RaceFinishCard
-                                open
-                                onClose={() => setShareEventId(null)}
-                                eventName={loc(ev.name, ev.nameEn) ?? ev.name}
-                                raceName={loc(ev.name, ev.nameEn) ?? ev.name}
-                                distanceLabel={firstDistance}
-                                date={ev.displayDate ?? ev.nextEditionDate}
-                                activityType={ev.activityType}
-                            />
-                        );
-                    }
-                    return (
-                        <RaceShareCard
-                            open
-                            onClose={() => setShareEventId(null)}
-                            eventName={loc(ev.name, ev.nameEn) ?? ev.name}
-                            raceName={loc(ev.name, ev.nameEn) ?? ev.name}
-                            distanceLabel={firstDistance}
-                            date={ev.displayDate ?? ev.nextEditionDate}
-                            daysUntil={ev.daysUntil}
-                            activityType={ev.activityType}
-                        />
-                    );
-                })()}
 
                 {/* Swipe-left QR share dialog for event cards */}
                 {shareEventSlug && (() => {
