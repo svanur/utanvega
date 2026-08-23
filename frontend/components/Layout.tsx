@@ -2,6 +2,7 @@ import { useState, useEffect, Fragment } from 'react';
 import { Box, ButtonBase, Collapse, Container, Divider, Fab, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Toolbar, Tooltip, Typography, Button, Menu, MenuItem, useMediaQuery, useTheme, Zoom, Stack, Link } from '@mui/material';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { PropsWithChildren, ReactNode } from 'react';
@@ -87,10 +88,14 @@ function ScrollToTopButton() {
     );
 }
 
+const PROD_HOSTNAMES = ['hlaupadagskra.is', 'www.hlaupadagskra.is'];
+const STAGING_BANNER_HEIGHT = 28;
+
 export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', bottomContent, breadcrumb }: LayoutProps) {
     const navigate = useNavigate();
     const { t } = useTranslation();
     const theme = useTheme();
+    const isStaging = !PROD_HOSTNAMES.includes(window.location.hostname);
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const weather = useHeaderWeather();
     const heroTheme = useHeroTheme();
@@ -162,7 +167,27 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
 
     return (
         <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
-            <DynamicHeader weather={weather} isDark={mode === 'dark'}>
+            {isStaging && (
+                <Box sx={{
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: theme.zIndex.appBar + 1,
+                    bgcolor: '#b71c1c',
+                    color: '#fff',
+                    height: STAGING_BANNER_HEIGHT,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 1,
+                }}>
+                    <WarningAmberIcon sx={{ fontSize: 14 }} />
+                    <Typography variant="caption" fontWeight={700} sx={{ letterSpacing: 1.5, textTransform: 'uppercase' }}>
+                        Staging Environment
+                    </Typography>
+                    <WarningAmberIcon sx={{ fontSize: 14 }} />
+                </Box>
+            )}
+            <DynamicHeader weather={weather} isDark={mode === 'dark'} stickyTop={isStaging ? STAGING_BANNER_HEIGHT : 0}>
                 <Toolbar sx={{ gap: 1 }}>
                     <Tooltip title={t('nav.tagline')} placement="bottom-start">
                         <ButtonBase
@@ -326,7 +351,7 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
                 <Box
                     sx={{
                         position: 'sticky',
-                        top: { xs: 56, sm: 64 },
+                        top: { xs: (isStaging ? STAGING_BANNER_HEIGHT : 0) + 56, sm: (isStaging ? STAGING_BANNER_HEIGHT : 0) + 64 },
                         zIndex: theme.zIndex.appBar - 1,
                         bgcolor: 'background.paper',
                         borderBottom: 1,
