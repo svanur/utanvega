@@ -67,6 +67,9 @@ import LostRunner from '../components/LostRunner';
 import WeatherCard from '../components/WeatherCard';
 import { useEvents, useEventBySlug } from '../hooks/useEvents';
 import type { EventEditionDto, RaceDto, ScheduleRule } from '../hooks/useEvents';
+import { useFavoriteEvents } from '../hooks/useFavoriteEvents';
+import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
 import { useLocalize } from '../utils/localize';
 import { useTrailWeather } from '../hooks/useTrails';
 import { useLocations } from '../hooks/useLocations';
@@ -297,6 +300,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     const { isEnabled } = useFeatureFlags();
     const locationsEnabled = isEnabled('locations_page');
     const { locations } = useLocations();
+    const { toggleFavoriteEvent, isFavoriteEvent } = useFavoriteEvents();
 
     const [followMe, setFollowMe] = useState(false);
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -660,6 +664,11 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 />
                             )}
                             {isEnabled('share_trail') && <ShareButtons title={loc(event.name, event.nameEn) ?? event.name} />}
+                            <Tooltip title={isFavoriteEvent(slug ?? '') ? t('races.removeFavorite') : t('races.addFavorite')}>
+                                <IconButton size="small" onClick={() => toggleFavoriteEvent(slug ?? '')} color={isFavoriteEvent(slug ?? '') ? 'warning' : 'default'}>
+                                    {isFavoriteEvent(slug ?? '') ? <StarIcon fontSize="small" /> : <StarBorderIcon fontSize="small" />}
+                                </IconButton>
+                            </Tooltip>
                             <Tooltip title={t('qr.showQR')}>
                                 <IconButton size="small" onClick={() => { trackEventQRClick(slug ?? ''); setEventQROpen(true); }}>
                                     <QrCode2Icon fontSize="small" />

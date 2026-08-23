@@ -233,7 +233,7 @@
         }
     },
     "trailCard": {
-        "removeFavorite": "Fjarlægja úr eftirlætum",
+        "removeFavorite": "Fjarlægja sem eftirlæti",
         "addFavorite": "Bæta í eftirlæti",
         "share": "Deila",
         "kmAway": "km í burtu"
@@ -1241,7 +1241,7 @@
         "directionsToEvent": "Leiðsögn að upphafsstað",
         "addToCalendar": "Setja í dagatal",
         "addFavorite": "Bæta í eftirlæti",
-        "removeFavorite": "Fjarlægja úr eftirlætum",
+        "removeFavorite": "Fjarlægja sem eftirlæti",
         "downloadIcs": "Hlaða niður .ics (Apple/Annað)",
         "racesHeading": "Vegalengdir",
         "scheduleHeading": "Dagsetningar",

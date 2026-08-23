@@ -499,12 +499,14 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                         <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' }, flex: 1 }}>
                             {trail.name}
                         </Typography>
-                        <IconButton
-                            onClick={() => toggleFavorite(trail.slug)}
-                            color="warning"
-                        >
-                            {isFavorite(trail.slug) ? <StarIcon /> : <StarBorderIcon />}
-                        </IconButton>
+                        <Tooltip title={isFavorite(trail.slug) ? t('trailCard.removeFavorite') : t('trailCard.addFavorite')}>
+                            <IconButton
+                                onClick={() => toggleFavorite(trail.slug)}
+                                color="warning"
+                            >
+                                {isFavorite(trail.slug) ? <StarIcon /> : <StarBorderIcon />}
+                            </IconButton>
+                        </Tooltip>
                         {loginEnabled && (
                         <Tooltip title={tickedSlugs.has(trail.slug) ? t('trail.untick') : t('trail.tick')}>
                             <IconButton
