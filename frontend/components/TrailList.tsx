@@ -133,6 +133,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
 
     const [showAdvanced, setShowAdvanced] = React.useState(false);
     const [linkCopied, setLinkCopied] = React.useState(false);
+    const linkCopiedTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const activeFilterCount = React.useMemo(() =>
         filters.lengthBuckets.length +
@@ -518,11 +519,16 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
         }
     };
 
+    const locationRestored = React.useRef(false);
+
     // Restore Autocomplete + expand descendants when locationMenuItems first loads from URL params
     React.useEffect(() => {
-        if (!locationMenuItems.length || !filters.locationSlugs.length || selectedLocationItems.length > 0) return;
+        if (locationRestored.current || !locationMenuItems.length || !filters.locationSlugs.length) return;
         const restored = locationMenuItems.filter(item => filters.locationSlugs.includes(item.slug));
-        if (restored.length > 0) handleLocationSelect(restored);
+        if (restored.length > 0) {
+            locationRestored.current = true;
+            handleLocationSelect(restored);
+        }
     // Run once when menu items first populate; handleLocationSelect is stable
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [locationMenuItems]);
@@ -623,7 +629,8 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                             onClick={() => {
                                                 navigator.clipboard.writeText(window.location.href);
                                                 setLinkCopied(true);
-                                                setTimeout(() => setLinkCopied(false), 2000);
+                                                if (linkCopiedTimer.current) clearTimeout(linkCopiedTimer.current);
+                                                linkCopiedTimer.current = setTimeout(() => setLinkCopied(false), 2000);
                                             }}
                                         >
                                             {linkCopied

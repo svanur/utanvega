@@ -197,6 +197,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
     const [search, setSearch] = useState('');
     const [showFilters, setShowFilters] = useState(false);
     const [linkCopied, setLinkCopied] = useState(false);
+    const linkCopiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [filters, setFilters] = useState<EventFilters>(DEFAULT_FILTERS);
     const [siteQROpen, setSiteQROpen] = useState(false);
     const [siteQRCopied, setSiteQRCopied] = useState(false);
@@ -286,7 +287,6 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
     // Initialize filters from URL params on first render
     useEffect(() => {
         if (urlInitialized.current) return;
-        urlInitialized.current = true;
 
         const updates: Partial<EventFilters> = {};
         const activity = searchParams.get('activity');
@@ -343,6 +343,9 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         setSearchParams(params, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [search, filters]);
+
+    // Set urlInitialized after the sync effect so the sync effect skips the first render
+    useEffect(() => { urlInitialized.current = true; }, []);
 
     const activeFilterCount = useMemo(() =>
         filters.activityTypes.length +
@@ -411,7 +414,8 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
             if (!c.distances?.length) return false;
             return c.distances.some(d => {
                 const km = parseDistanceKm(d.label);
-                return km !== null && f.distanceBuckets.some(b => matchesDistanceBucket(km, b));
+                if (km === null) return true; // unparseable label: include rather than silently drop
+                return f.distanceBuckets.some(b => matchesDistanceBucket(km, b));
             });
         });
         return result;
@@ -584,7 +588,8 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                             onClick={() => {
                                                 navigator.clipboard.writeText(window.location.href);
                                                 setLinkCopied(true);
-                                                setTimeout(() => setLinkCopied(false), 2000);
+                                                if (linkCopiedTimer.current) clearTimeout(linkCopiedTimer.current);
+                                                linkCopiedTimer.current = setTimeout(() => setLinkCopied(false), 2000);
                                             }}
                                         >
                                             {linkCopied

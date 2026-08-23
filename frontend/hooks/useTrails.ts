@@ -59,7 +59,6 @@ export type SortOption = 'distance' | 'name' | 'shortest' | 'longest' | 'elevati
 export interface FilterState {
     lengthBuckets: string[];       // '<10' | '10-21' | '21-42' | '42-100' | '100+'
     elevationGainBuckets: string[]; // '<200' | '200-500' | '500-1000' | '1000+'
-    elevationLossBuckets: string[]; // same
     distanceBuckets: string[];     // '<10' | '10-25' | '25-50' | '50-100' | '100+'
     difficulties: string[];         // multi-select: 'Easy' | 'Moderate' | 'Hard' | 'Expert' | 'Extreme'
     locationSlugs: string[];        // multi-select Autocomplete (location slugs incl. descendants)
@@ -75,7 +74,6 @@ export const ALL_ACTIVITY_TYPES = ['TrailRunning', 'Running', 'Hiking', 'Cycling
 export const DEFAULT_FILTERS: FilterState = {
     lengthBuckets: [],
     elevationGainBuckets: [],
-    elevationLossBuckets: [],
     distanceBuckets: [],
     difficulties: [],
     locationSlugs: [],
@@ -249,19 +247,6 @@ export function useTrails(disableGeolocation = false) {
                     if (b === '200-500') return gain >= 200 && gain < 500;
                     if (b === '500-1000') return gain >= 500 && gain < 1000;
                     if (b === '1000+') return gain >= 1000;
-                    return false;
-                });
-                if (!inBucket) return false;
-            }
-
-            // Elevation Loss bucket filter (OR logic)
-            if (filters.elevationLossBuckets.length > 0) {
-                const loss = trail.elevationLoss;
-                const inBucket = filters.elevationLossBuckets.some(b => {
-                    if (b === '<200') return loss < 200;
-                    if (b === '200-500') return loss >= 200 && loss < 500;
-                    if (b === '500-1000') return loss >= 500 && loss < 1000;
-                    if (b === '1000+') return loss >= 1000;
                     return false;
                 });
                 if (!inBucket) return false;
