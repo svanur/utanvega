@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { haversineKm as haversineKmRaw } from '../utils/geo';
 import {
     Box, Typography, Button, Stack, Paper, Chip, Fade, LinearProgress, useTheme,
@@ -102,8 +102,8 @@ export default function TrailGeoGuesser() {
     const [roundPoints, setRoundPoints] = useState(0);
     const [results, setResults] = useState<RoundResult[]>([]);
     const [hintUsed, setHintUsed] = useState(false);
-    const [usedTrailIdsRef] = useState<{ current: Set<string> }>({ current: new Set() });
-    const [lastTrigger] = useState<{ current: number }>({ current: -1 });
+    const usedTrailIdsRef = useRef<Set<string>>(new Set());
+    const lastTrigger = useRef(-1);
     const [roundTrigger, setRoundTrigger] = useState(0);
 
     // Load trails (only those with coordinates)
@@ -111,7 +111,7 @@ export default function TrailGeoGuesser() {
         fetch(`${API_URL}/api/v1/trails`)
             .then(res => res.json())
             .then((data: Trail[]) =>
-                setTrails(data.filter(t => t.startLatitude && t.startLongitude))
+                setTrails(data.filter(t => (t.activityType === 'Running' || t.activityType === 'TrailRunning') && t.status === 'Published' && t.startLatitude && t.startLongitude))
             )
             .catch(err => console.error('Failed to load trails:', err));
     }, []);
@@ -215,7 +215,7 @@ export default function TrailGeoGuesser() {
         setResults([]);
         usedTrailIdsRef.current = new Set();
         setRoundTrigger(prev => prev + 1);
-    }, [usedTrailIdsRef]);
+    }, []);
 
     // Confetti on excellent finish
     useEffect(() => {

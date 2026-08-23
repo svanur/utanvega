@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { haversineMeters } from '../utils/geo';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { haversineMeters as haversineDist } from '../utils/geo';
 import {
     Box, Typography, Button, Stack, Chip, Paper, Fade,
     LinearProgress, IconButton, Tooltip, Collapse, useTheme,
@@ -61,9 +61,6 @@ function toChartData(coords: number[][]): ChartPoint[] {
     return data;
 }
 
-function haversineDist(lat1: number, lon1: number, lat2: number, lon2: number) {
-    return haversineMeters(lat1, lon1, lat2, lon2);
-}
 
 export default function GuessByElevation() {
     const { t } = useTranslation();
@@ -81,8 +78,8 @@ export default function GuessByElevation() {
     const [round, setRound] = useState(1);
     const [streak, setStreak] = useState(0);
     const [hasUsedEliminate, setHasUsedEliminate] = useState(false);
-    const [usedIds] = useState<{ current: Set<string> }>({ current: new Set() });
-    const [lastTrigger] = useState<{ current: number }>({ current: -1 });
+    const usedIds = useRef<Set<string>>(new Set());
+    const lastTrigger = useRef(-1);
     const [roundTrigger, setRoundTrigger] = useState(0);
     const [cycleCharts, setCycleCharts] = useState<ChartPoint[][]>([]);
 
@@ -91,7 +88,7 @@ export default function GuessByElevation() {
         fetch(`${API_URL}/api/v1/trails`)
             .then(res => res.json())
             .then((data: Trail[]) =>
-                setTrails(data.filter(tr => tr.elevationGain >= MIN_ELEV_GAIN))
+                setTrails(data.filter(tr => (tr.activityType === 'Running' || tr.activityType === 'TrailRunning') && tr.status === 'Published' && tr.elevationGain >= MIN_ELEV_GAIN))
             )
             .catch(err => console.error('Failed to load trails:', err));
     }, []);
