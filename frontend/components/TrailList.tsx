@@ -141,6 +141,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
         filters.difficulties.length +
         (filters.locationSlugs.length > 0 ? 1 : 0) +
         filters.selectedActivityTypes.length +
+        filters.selectedTags.length +
         (filters.favoritesOnly ? 1 : 0) +
         (filters.offlineOnly ? 1 : 0),
     [filters]);
@@ -260,16 +261,37 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
         cooldown: 3000,
     });
 
+    // Build flat list of locations with depth + descendant slug sets for the dropdown
+    const { locationMenuItems, descendantSlugs } = React.useMemo(() => {
+        const items: { slug: string; name: string; nameEn: string | null; depth: number; totalTrails: number }[] = [];
+        const descendants = new Map<string, Set<string>>();
+
+        function flatten(nodes: LocationTreeNode[], depth: number): string[] {
+            const allSlugs: string[] = [];
+            for (const node of nodes) {
+                items.push({ slug: node.slug, name: node.name, nameEn: node.nameEn, depth, totalTrails: node.totalTrailsCount });
+                const childSlugs = flatten(node.children, depth + 1);
+                const descSet = new Set(childSlugs);
+                descendants.set(node.slug, descSet);
+                allSlugs.push(node.slug, ...childSlugs);
+            }
+            return allSlugs;
+        }
+
+        flatten(locationTree, 0);
+        return { locationMenuItems: items, descendantSlugs: descendants };
+    }, [locationTree]);
+
+    const [selectedLocationItems, setSelectedLocationItems] = React.useState<typeof locationMenuItems>([]);
+
     // Initialize filters from URL params on first render
     const urlInitialized = React.useRef(false);
     React.useEffect(() => {
         if (urlInitialized.current) return;
-        urlInitialized.current = true;
 
         const q = searchParams.get('q');
         const activity = searchParams.get('activity');
         const difficulty = searchParams.get('difficulty');
-        const trailType = searchParams.get('trailType');
         const sort = searchParams.get('sort') as SortOption | null;
         const view = searchParams.get('view');
         const favShortcut = searchParams.get('favorites');
@@ -342,26 +364,8 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
         filters.elevationGainBuckets, filters.distanceBuckets, selectedLocationItems,
         filters.selectedTags, filters.favoritesOnly, filters.offlineOnly, filters.sortBy, viewMode]);
 
-    // Build flat list of locations with depth + descendant slug sets for the dropdown
-    const { locationMenuItems, descendantSlugs } = React.useMemo(() => {
-        const items: { slug: string; name: string; nameEn: string | null; depth: number; totalTrails: number }[] = [];
-        const descendants = new Map<string, Set<string>>();
-
-        function flatten(nodes: LocationTreeNode[], depth: number): string[] {
-            const allSlugs: string[] = [];
-            for (const node of nodes) {
-                items.push({ slug: node.slug, name: node.name, nameEn: node.nameEn, depth, totalTrails: node.totalTrailsCount });
-                const childSlugs = flatten(node.children, depth + 1);
-                const descSet = new Set(childSlugs);
-                descendants.set(node.slug, descSet);
-                allSlugs.push(node.slug, ...childSlugs);
-            }
-            return allSlugs;
-        }
-
-        flatten(locationTree, 0);
-        return { locationMenuItems: items, descendantSlugs: descendants };
-    }, [locationTree]);
+    // Runs after the sync effect on first flush — marks init done so sync starts writing
+    React.useEffect(() => { urlInitialized.current = true; }, []);
 
     // Sync URL tag slug with filter state
     React.useEffect(() => {
@@ -513,8 +517,6 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
             }
         }
     };
-
-    const [selectedLocationItems, setSelectedLocationItems] = React.useState<typeof locationMenuItems>([]);
 
     // Restore Autocomplete + expand descendants when locationMenuItems first loads from URL params
     React.useEffect(() => {

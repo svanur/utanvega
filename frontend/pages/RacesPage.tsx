@@ -151,8 +151,8 @@ function parseDistanceKm(label: string): number | null {
 function matchesDistanceBucket(km: number, bucket: RaceDistanceBucket): boolean {
     if (bucket === '<10') return km < 10;
     if (bucket === '10-21') return km >= 10 && km < 21.1;
-    if (bucket === '21-42') return km >= 21.1 && km < 42.2;
-    if (bucket === '42-100') return km >= 42.2 && km < 100;
+    if (bucket === '21-42') return km >= 21.1 && km < 42.195;
+    if (bucket === '42-100') return km >= 42.195 && km < 100;
     return km >= 100;
 }
 
@@ -306,7 +306,8 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         if (itraPoints) updates.itraPoints = itraPoints.split(',').map(Number);
         if (certs) updates.certifications = certs.split(',');
         if (champs) updates.championships = champs.split(',');
-        if (distance) updates.distanceBuckets = distance.split(',') as RaceDistanceBucket[];
+        const VALID_BUCKETS: RaceDistanceBucket[] = ['<10', '10-21', '21-42', '42-100', '100+'];
+        if (distance) updates.distanceBuckets = distance.split(',').filter((b): b is RaceDistanceBucket => VALID_BUCKETS.includes(b as RaceDistanceBucket));
         if (searchParams.get('weekend') === 'true') updates.weekendOnly = true;
         if (searchParams.get('mountain') === 'true') updates.mountainRaceOnly = true;
         if (searchParams.get('favorites') === 'true') updates.favoritesOnly = true;

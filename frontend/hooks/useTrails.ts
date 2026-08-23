@@ -67,7 +67,6 @@ export interface FilterState {
     offlineOnly: boolean;
     selectedTags: string[];
     selectedActivityTypes: string[];
-    terrainTypes: string[];
     sortBy: SortOption;
 }
 
@@ -84,7 +83,6 @@ export const DEFAULT_FILTERS: FilterState = {
     offlineOnly: false,
     selectedTags: [],
     selectedActivityTypes: [],
-    terrainTypes: [],
     sortBy: 'distance',
 };
 
@@ -283,11 +281,6 @@ export function useTrails(disableGeolocation = false) {
             if (filters.selectedTags.length > 0) {
                 const trailTagSlugs = trail.tags?.map(t => t.slug) || [];
                 if (!filters.selectedTags.every(tag => trailTagSlugs.includes(tag))) return false;
-            }
-
-            // Terrain Type (OR logic)
-            if (filters.terrainTypes.length > 0) {
-                if (!trail.terrainType || !filters.terrainTypes.includes(trail.terrainType)) return false;
             }
 
             return true;
