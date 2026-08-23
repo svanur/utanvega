@@ -1331,8 +1331,7 @@ function RaceCard({
     // Used only to control RaceFinishCard / RaceShareCard visibility.
     const pastStart = useMemo(() => {
         if (daysUntil !== 0 || !race.dateOfRace) return false;
-        if (!race.startTime) return true;
-        const [h, m, s = 0] = race.startTime.split(':').map(Number);
+        const [h, m, s = 0] = race.startTime ? race.startTime.split(':').map(Number) : [12, 0, 0];
         const start = new Date(race.dateOfRace + 'T00:00:00');
         start.setHours(h, m, s, 0);
         return now >= start;
