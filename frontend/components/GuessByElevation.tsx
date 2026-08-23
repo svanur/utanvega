@@ -14,11 +14,11 @@ import {
 } from 'recharts';
 import { useTranslation } from 'react-i18next';
 import confetti from 'canvas-confetti';
-import type { Trail } from '../hooks/useTrails';
+import { API_URL } from '../hooks/useTrails';
+import type { Trail, GeoJsonGeometry } from '../hooks/useTrails';
+import { useGameTrails } from '../hooks/useGameTrails';
+import { DECOY_COUNT, CYCLE_DELAYS } from '../utils/gameConstants';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
-
-type GeoJsonGeometry = { type: string; coordinates: number[][] };
 type GameState = 'loading' | 'cycling' | 'playing' | 'correct' | 'wrong' | 'finished';
 type ChartPoint = { distance: number; elevation: number };
 
@@ -26,9 +26,7 @@ const MAX_SCORE = 100;
 const HINT_PENALTY = 20;
 const TOTAL_ROUNDS = 5;
 const OPTIONS_COUNT = 4;
-const DECOY_COUNT = 4;
 const MIN_ELEV_GAIN = 50; // minimum elevation gain to be eligible
-const CYCLE_DELAYS = [80, 80, 100, 100, 120, 150, 200, 300, 450];
 
 interface HintInfo {
     key: string;
@@ -65,7 +63,7 @@ function toChartData(coords: number[][]): ChartPoint[] {
 export default function GuessByElevation() {
     const { t } = useTranslation();
     const theme = useTheme();
-    const [trails, setTrails] = useState<Trail[]>([]);
+    const trails = useGameTrails(t => t.elevationGain >= MIN_ELEV_GAIN);
     const [chartData, setChartData] = useState<ChartPoint[]>([]);
     const [targetTrail, setTargetTrail] = useState<Trail | null>(null);
     const [options, setOptions] = useState<Trail[]>([]);
@@ -82,16 +80,6 @@ export default function GuessByElevation() {
     const lastTrigger = useRef(-1);
     const [roundTrigger, setRoundTrigger] = useState(0);
     const [cycleCharts, setCycleCharts] = useState<ChartPoint[][]>([]);
-
-    // Load trails with meaningful elevation
-    useEffect(() => {
-        fetch(`${API_URL}/api/v1/trails`)
-            .then(res => res.json())
-            .then((data: Trail[]) =>
-                setTrails(data.filter(tr => (tr.activityType === 'Running' || tr.activityType === 'TrailRunning') && tr.elevationGain >= MIN_ELEV_GAIN))
-            )
-            .catch(err => console.error('Failed to load trails:', err));
-    }, []);
 
     // Setup round
     useEffect(() => {

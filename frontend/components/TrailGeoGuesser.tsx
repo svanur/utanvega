@@ -8,20 +8,16 @@ import TrophyIcon from '@mui/icons-material/EmojiEvents';
 import NextIcon from '@mui/icons-material/NavigateNext';
 import PinIcon from '@mui/icons-material/MyLocation';
 import HintIcon from '@mui/icons-material/Lightbulb';
-import { MapContainer, TileLayer, Polyline, Marker, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Polyline, Marker, useMapEvents } from 'react-leaflet';
 import type { LatLngTuple } from 'leaflet';
 import L from 'leaflet';
 import { useTranslation } from 'react-i18next';
 import confetti from 'canvas-confetti';
 import 'leaflet/dist/leaflet.css';
-import type { Trail } from '../hooks/useTrails';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
-
-type GeoJsonGeometry = {
-    type: string;
-    coordinates: number[][]; // [lon, lat, ele]
-};
+import { API_URL } from '../hooks/useTrails';
+import type { Trail, GeoJsonGeometry } from '../hooks/useTrails';
+import { useGameTrails } from '../hooks/useGameTrails';
+import FitBounds from '../components/map/FitBounds';
 
 type GamePhase = 'loading' | 'viewing' | 'guessing' | 'result' | 'finished';
 
@@ -59,19 +55,6 @@ const actualIcon = L.divIcon({
     iconAnchor: [15, 30],
 });
 
-// Fit map to positions
-function FitBounds({ positions }: { positions: LatLngTuple[] }) {
-    const map = useMap();
-    useEffect(() => {
-        if (positions.length > 1) {
-            map.invalidateSize();
-            const bounds = L.latLngBounds(positions);
-            map.fitBounds(bounds, { padding: [30, 30], animate: false });
-        }
-    }, [map, positions]);
-    return null;
-}
-
 // Click handler for overview map
 function MapClickHandler({ onClick }: { onClick: (pos: LatLngTuple) => void }) {
     useMapEvents({
@@ -91,7 +74,7 @@ interface RoundResult {
 export default function TrailGeoGuesser() {
     const { t } = useTranslation();
     const theme = useTheme();
-    const [trails, setTrails] = useState<Trail[]>([]);
+    const trails = useGameTrails(t => !!(t.startLatitude && t.startLongitude));
     const [geometry, setGeometry] = useState<GeoJsonGeometry | null>(null);
     const [targetTrail, setTargetTrail] = useState<Trail | null>(null);
     const [phase, setPhase] = useState<GamePhase>('loading');
@@ -105,16 +88,6 @@ export default function TrailGeoGuesser() {
     const usedTrailIdsRef = useRef<Set<string>>(new Set());
     const lastTrigger = useRef(-1);
     const [roundTrigger, setRoundTrigger] = useState(0);
-
-    // Load trails (only those with coordinates)
-    useEffect(() => {
-        fetch(`${API_URL}/api/v1/trails`)
-            .then(res => res.json())
-            .then((data: Trail[]) =>
-                setTrails(data.filter(t => (t.activityType === 'Running' || t.activityType === 'TrailRunning') && t.startLatitude && t.startLongitude))
-            )
-            .catch(err => console.error('Failed to load trails:', err));
-    }, []);
 
     // Setup round
     useEffect(() => {
@@ -345,7 +318,7 @@ export default function TrailGeoGuesser() {
                             doubleClickZoom={false}
                             touchZoom={false}
                         >
-                            <FitBounds positions={polylinePositions} />
+                            <FitBounds positions={polylinePositions} invalidateSize />
                             <Polyline
                                 positions={polylinePositions}
                                 pathOptions={{ color: theme.palette.mode === 'dark' ? '#64b5f6' : '#f44336', weight: 4, opacity: 0.9 }}
@@ -450,7 +423,7 @@ export default function TrailGeoGuesser() {
                             attributionControl={false}
                         >
                             <TileLayer url={tileUrl} />
-                            <FitBounds positions={[guessPos, actualPos]} />
+                            <FitBounds positions={[guessPos, actualPos]} invalidateSize />
                             <Marker position={guessPos} icon={guessIcon} />
                             <Marker position={actualPos} icon={actualIcon} />
                             <Polyline
