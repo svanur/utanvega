@@ -88,7 +88,7 @@ export default function GuessByElevation() {
         fetch(`${API_URL}/api/v1/trails`)
             .then(res => res.json())
             .then((data: Trail[]) =>
-                setTrails(data.filter(tr => (tr.activityType === 'Running' || tr.activityType === 'TrailRunning') && tr.status === 'Published' && tr.elevationGain >= MIN_ELEV_GAIN))
+                setTrails(data.filter(tr => (tr.activityType === 'Running' || tr.activityType === 'TrailRunning') && tr.elevationGain >= MIN_ELEV_GAIN))
             )
             .catch(err => console.error('Failed to load trails:', err));
     }, []);
