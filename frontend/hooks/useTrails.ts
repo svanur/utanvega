@@ -61,7 +61,6 @@ export interface FilterState {
     elevationGainBuckets: string[]; // '<200' | '200-500' | '500-1000' | '1000+'
     elevationLossBuckets: string[]; // same
     distanceBuckets: string[];     // '<10' | '10-25' | '25-50' | '50-100' | '100+'
-    trailTypes: string[];           // multi-select: 'Loop' | 'OutAndBack' | 'PointToPoint'
     difficulties: string[];         // multi-select: 'Easy' | 'Moderate' | 'Hard' | 'Expert' | 'Extreme'
     locationSlugs: string[];        // multi-select Autocomplete (location slugs incl. descendants)
     favoritesOnly: boolean;
@@ -79,7 +78,6 @@ export const DEFAULT_FILTERS: FilterState = {
     elevationGainBuckets: [],
     elevationLossBuckets: [],
     distanceBuckets: [],
-    trailTypes: [],
     difficulties: [],
     locationSlugs: [],
     favoritesOnly: false,
@@ -272,7 +270,6 @@ export function useTrails(disableGeolocation = false) {
             }
 
             // Trail Type (OR logic)
-            if (filters.trailTypes.length > 0 && !filters.trailTypes.includes(trail.trailType)) return false;
 
             // Difficulty (OR logic)
             if (filters.difficulties.length > 0 && !filters.difficulties.includes(trail.difficulty)) return false;

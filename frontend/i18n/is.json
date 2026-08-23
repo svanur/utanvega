@@ -13,6 +13,8 @@
         "viewDetails": "Skoða nánar",
         "expand": "Opna",
         "collapse": "Loka",
+        "copyLink": "Afrita síu",
+        "copied": "Afritað!",
         "dataLoadUnavailable": "Ekki tókst að sækja gögn núna. Athugaðu nettenginguna og reyndu aftur."
     },
     "auth": {
@@ -256,6 +258,8 @@
         "advancedSearch": "síur",
         "advancedFilters": "Ítarlegar síur",
         "trailLength": "Lengd leiðar",
+        "halfMarathon": "Hálft-Maraþon",
+        "marathonTo100": "Maraþon–100 km",
         "elevationGain": "Hækkun",
         "elevationLoss": "Lækkun",
         "duration": "Áætlaður tími",
