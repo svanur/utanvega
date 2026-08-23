@@ -86,6 +86,11 @@ export const DEFAULT_FILTERS: FilterState = {
 
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
+export type GeoJsonGeometry = {
+    type: string;
+    coordinates: number[][]; // [lon, lat, ele]
+};
+
 const TRAILS_CACHE_KEY = 'utanvega-trails-v1';
 const TRAILS_CACHE_TS_KEY = 'utanvega-trails-v1-ts';
 

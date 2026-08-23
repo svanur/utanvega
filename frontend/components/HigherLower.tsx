@@ -10,8 +10,7 @@ import SameIcon from '@mui/icons-material/DragHandle';
 import { useTranslation } from 'react-i18next';
 import confetti from 'canvas-confetti';
 import type { Trail } from '../hooks/useTrails';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+import { useGameTrails } from '../hooks/useGameTrails';
 
 type StatKey = 'distance' | 'elevation' | 'elevationLoss';
 type GamePhase = 'loading' | 'playing' | 'revealing' | 'gameover';
@@ -60,7 +59,7 @@ function setHighScore(score: number) {
 export default function HigherLower() {
     const { t } = useTranslation();
     const theme = useTheme();
-    const [trails, setTrails] = useState<Trail[]>([]);
+    const trails = useGameTrails();
     const [leftTrail, setLeftTrail] = useState<Trail | null>(null);
     const [rightTrail, setRightTrail] = useState<Trail | null>(null);
     const [activeStat, setActiveStat] = useState<StatDef>(STATS[0]);
@@ -69,14 +68,6 @@ export default function HigherLower() {
     const [highScore, setHighScoreState] = useState(getHighScore());
     const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
     const [usedIds, setUsedIds] = useState<Set<string>>(new Set());
-
-    // Load trails
-    useEffect(() => {
-        fetch(`${API_URL}/api/v1/trails`)
-            .then(res => res.json())
-            .then((data: Trail[]) => setTrails(data.filter(t => t.activityType === 'Running' || t.activityType === 'TrailRunning')))
-            .catch(err => console.error('Failed to load trails:', err));
-    }, []);
 
     const pickRandom = useCallback((exclude: Set<string>): Trail | null => {
         const available = trails.filter(t => !exclude.has(t.id));

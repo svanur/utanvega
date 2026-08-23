@@ -8,20 +8,16 @@ import HintIcon from '@mui/icons-material/Lightbulb';
 import EliminateIcon from '@mui/icons-material/RemoveCircleOutline';
 import ReplayIcon from '@mui/icons-material/Replay';
 import NextIcon from '@mui/icons-material/NavigateNext';
-import { MapContainer, Polyline, useMap } from 'react-leaflet';
+import { MapContainer, Polyline } from 'react-leaflet';
 import type { LatLngTuple } from 'leaflet';
-import L from 'leaflet';
 import { useTranslation } from 'react-i18next';
 import confetti from 'canvas-confetti';
 import 'leaflet/dist/leaflet.css';
-import type { Trail } from '../hooks/useTrails';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
-
-type GeoJsonGeometry = {
-    type: string;
-    coordinates: number[][]; // [lon, lat, ele]
-};
+import { API_URL } from '../hooks/useTrails';
+import type { Trail, GeoJsonGeometry } from '../hooks/useTrails';
+import { useGameTrails } from '../hooks/useGameTrails';
+import FitBounds from '../components/map/FitBounds';
+import { DECOY_COUNT, CYCLE_DELAYS } from '../utils/gameConstants';
 
 type GameState = 'loading' | 'cycling' | 'playing' | 'correct' | 'wrong' | 'finished';
 
@@ -66,25 +62,10 @@ const MAX_SCORE_PER_ROUND = 100;
 const HINT_PENALTY = 20;
 const TOTAL_ROUNDS = 5;
 const OPTIONS_COUNT = 4;
-const DECOY_COUNT = 4;
-// Slot-machine effect: starts fast, gradually slows down before settling
-const CYCLE_DELAYS = [80, 80, 100, 100, 120, 150, 200, 300, 450];
-
-function FitBounds({ positions }: { positions: LatLngTuple[] }) {
-    const map = useMap();
-    useEffect(() => {
-        if (positions.length > 1) {
-            const bounds = L.latLngBounds(positions);
-            map.fitBounds(bounds, { padding: [30, 30], animate: false });
-        }
-    }, [map, positions]);
-    return null;
-}
-
 export default function GuessTheTrail() {
     const { t } = useTranslation();
     const theme = useTheme();
-    const [trails, setTrails] = useState<Trail[]>([]);
+    const trails = useGameTrails();
     const [geometry, setGeometry] = useState<GeoJsonGeometry | null>(null);
     const [targetTrail, setTargetTrail] = useState<Trail | null>(null);
     const [options, setOptions] = useState<Trail[]>([]);
@@ -101,14 +82,6 @@ export default function GuessTheTrail() {
     const [streak, setStreak] = useState(0);
     const [roundTrigger, setRoundTrigger] = useState(0);
     const [cycleGeometries, setCycleGeometries] = useState<GeoJsonGeometry[]>([]);
-
-    // Load all trails once
-    useEffect(() => {
-        fetch(`${API_URL}/api/v1/trails`)
-            .then(res => res.json())
-            .then((data: Trail[]) => setTrails(data.filter(t => t.activityType === 'Running' || t.activityType === 'TrailRunning')))
-            .catch(err => console.error('Failed to load trails:', err));
-    }, []);
 
     // Setup round whenever roundTrigger changes (and trails are loaded)
     useEffect(() => {
