@@ -1596,7 +1596,7 @@ app.MapGet("/api/v1/events/calendar.ics", async (IMediator mediator, IConfigurat
     {
         entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10);
 
-        var siteUrl = configuration["SiteUrl"] ?? "https://utanvega.vercel.app";
+        var siteUrl = configuration["SiteUrl"] ?? "https://www.hlaupadagskra.is";
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var rangeFrom = today.AddMonths(-3);
         var rangeTo = today.AddMonths(12);

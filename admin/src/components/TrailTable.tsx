@@ -15,7 +15,7 @@ import type { TagDto } from '../hooks/useTags';
 import { InlineEditText, InlineEditSelect } from './InlineEditCell';
 import { memo, useCallback, useMemo, useState } from 'react';
 
-const SITE_URL = import.meta.env.VITE_SITE_URL?.trim() || 'https://utanvega.vercel.app';
+const SITE_URL = import.meta.env.VITE_SITE_URL?.trim() || 'https://www.hlaupadagskra.is';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 interface TrailTableProps {
