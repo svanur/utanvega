@@ -138,7 +138,11 @@ function renderCard(
         y += 72;
         ctx.font = '44px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
         ctx.fillStyle = theme.subtextColor;
-        ctx.fillText(props.eventName, W / 2, y);
+        const eventLines = wrapText(ctx, props.eventName, W - 160).slice(0, 2);
+        for (let i = 0; i < eventLines.length; i++) {
+            if (i > 0) y += 52;
+            ctx.fillText(eventLines[i], W / 2, y);
+        }
     }
 
     // Date
@@ -165,11 +169,13 @@ function renderCard(
 
     // Custom message — fixed position above branding, styled as a quote
     if (customText) {
-        const lines = wrapText(ctx, customText, W - 200).slice(0, 2);
-        lines[0] = `„${lines[0]}`;
-        lines[lines.length - 1] = `${lines[lines.length - 1]}"`;
+        // Font must be set before wrapText so measureText uses the real metrics,
+        // and the width budget leaves room for the quote marks added below.
         ctx.font = 'bold 40px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-        ctx.fillStyle = '#000000';
+        const lines = wrapText(ctx, customText, W - 260).slice(0, 2);
+        lines[0] = `„${lines[0]}`;
+        lines[lines.length - 1] = `${lines[lines.length - 1]}“`;
+        ctx.fillStyle = isDark ? '#ffffff' : '#000000';
         ctx.textAlign = 'center';
         const startY = H - 136 - (lines.length > 1 ? 52 : 0);
         for (let i = 0; i < lines.length; i++) ctx.fillText(lines[i], W / 2, startY + i * 52);

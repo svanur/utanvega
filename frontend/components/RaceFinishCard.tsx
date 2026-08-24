@@ -116,8 +116,12 @@ function renderFinishCard(
     if (props.eventName) {
         ctx.font = '40px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
         ctx.fillStyle = theme.subtextColor;
-        ctx.fillText(props.eventName, W / 2, y);
-        y += 86;
+        const eventLines = wrapText(ctx, props.eventName, W - 160).slice(0, 2);
+        for (const line of eventLines) {
+            ctx.fillText(line, W / 2, y);
+            y += 48;
+        }
+        y += 38;
     }
 
     // 2. Race name — hero
@@ -131,9 +135,9 @@ function renderFinishCard(
     }
 
     // 3. Finish time badge
-    y -= 22;
     const hasTime = finishTime && finishTime !== '00:00:00';
     if (hasTime) {
+        y -= 22;
         const bw = 540, bh = 112, bx = (W - bw) / 2;
         ctx.fillStyle = theme.badgeBg;
         drawRoundRect(ctx, bx, y, bw, bh, 20);
@@ -147,6 +151,9 @@ function renderFinishCard(
         ctx.textAlign = 'center';
         ctx.fillText(`⏱️ ${finishTime}`, W / 2, y + 78);
         y += bh + 72;
+    } else {
+        // No badge to separate race name from what follows — add breathing room
+        y += 48;
     }
 
     // 4. Distance label
@@ -173,11 +180,13 @@ function renderFinishCard(
 
     // Custom message — fixed position above branding, styled as a quote
     if (customText) {
-        const lines = wrapText(ctx, customText, W - 200).slice(0, 2);
+        // Font must be set before wrapText so measureText uses the real metrics,
+        // and the width budget leaves room for the quote marks added below.
+        ctx.font = 'bold 40px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        const lines = wrapText(ctx, customText, W - 260).slice(0, 2);
         lines[0] = `„${lines[0]}`;
         lines[lines.length - 1] = `${lines[lines.length - 1]}“`;
-        ctx.font = 'bold 40px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-        ctx.fillStyle = '#000000';
+        ctx.fillStyle = isDark ? '#ffffff' : '#000000';
         ctx.textAlign = 'center';
         const startY = H - 156 - (lines.length > 1 ? 52 : 0);
         for (let i = 0; i < lines.length; i++) ctx.fillText(lines[i], W / 2, startY + i * 52);

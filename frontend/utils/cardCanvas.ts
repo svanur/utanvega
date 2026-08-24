@@ -168,10 +168,17 @@ export function loadBrandImage(onLoad: (img: HTMLImageElement) => void) {
     if (_loading) return;
     _loading = true;
     const img = new Image();
-    img.src = '/images/hlaupadagskra.avif';
     img.onload = () => {
         _cachedBrand = img;
+        _loading = false;
         _callbacks.forEach(cb => cb(img));
         _callbacks.length = 0;
     };
+    img.onerror = () => {
+        // Cards render fine without the logo — drop pending callbacks and
+        // release the lock so a later open can retry.
+        _loading = false;
+        _callbacks.length = 0;
+    };
+    img.src = '/images/hlaupadagskra.avif';
 }
