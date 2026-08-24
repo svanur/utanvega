@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+    Box,
     Button,
     Dialog,
     DialogContent,
     DialogActions,
     Snackbar,
     Alert,
+    TextField,
     useTheme,
 } from '@mui/material';
 import ShareIcon from '@mui/icons-material/Share';
@@ -13,6 +15,15 @@ import DownloadIcon from '@mui/icons-material/Download';
 import CloseIcon from '@mui/icons-material/Close';
 import IconButton from '@mui/material/IconButton';
 import { useTranslation } from 'react-i18next';
+import { ACTIVITY_EMOJI } from '../constants/activityEmoji';
+import {
+    getActivityTheme,
+    getDateLocale,
+    drawRoundRect,
+    wrapText,
+    drawBackground,
+    loadBrandImage,
+} from '../utils/cardCanvas';
 
 interface RaceShareCardProps {
     eventName: string;
@@ -28,45 +39,13 @@ interface RaceShareCardProps {
 const CARD_WIDTH = 1080;
 const CARD_HEIGHT = 1080;
 
-// Module-level cached brand image (shared across all instances, loaded once)
-let cachedBrandImage: HTMLImageElement | null = null;
-let brandImageLoading = false;
-const brandImageCallbacks: Array<(img: HTMLImageElement) => void> = [];
-
-function loadBrandImage(onLoad: (img: HTMLImageElement) => void) {
-    if (cachedBrandImage) { onLoad(cachedBrandImage); return; }
-    brandImageCallbacks.push(onLoad);
-    if (brandImageLoading) return;
-    brandImageLoading = true;
-    const img = new Image();
-    img.src = '/images/hlaupadagskra.avif';
-    img.onload = () => {
-        cachedBrandImage = img;
-        for (const cb of brandImageCallbacks) cb(img);
-        brandImageCallbacks.length = 0;
-    };
-}
-
-import { ACTIVITY_EMOJI } from '../constants/activityEmoji';
-
-function drawRoundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.lineTo(x + w - r, y);
-    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-    ctx.lineTo(x + w, y + h - r);
-    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-    ctx.lineTo(x + r, y + h);
-    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-    ctx.lineTo(x, y + r);
-    ctx.quadraticCurveTo(x, y, x + r, y);
-    ctx.closePath();
-}
-
 function renderCard(
     canvas: HTMLCanvasElement,
     props: RaceShareCardProps,
+    bibNumber: string,
+    customText: string,
     t: (key: string, opts?: Record<string, unknown>) => string,
+    language: string,
     isDark: boolean,
     brandImage: HTMLImageElement | null,
 ) {
@@ -74,154 +53,153 @@ function renderCard(
     canvas.width = CARD_WIDTH;
     canvas.height = CARD_HEIGHT;
 
-    // Background gradient
-    const bgGrad = ctx.createLinearGradient(0, 0, CARD_WIDTH, CARD_HEIGHT);
-    if (isDark) {
-        bgGrad.addColorStop(0, '#1a1a2e');
-        bgGrad.addColorStop(1, '#16213e');
-    } else {
-        bgGrad.addColorStop(0, '#f0f4ff');
-        bgGrad.addColorStop(1, '#e8f5e9');
-    }
-    ctx.fillStyle = bgGrad;
-    ctx.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT);
+    const theme = getActivityTheme(props.activityType, isDark);
+    const W = CARD_WIDTH, H = CARD_HEIGHT;
 
-    // Decorative accent circle (top-right)
-    ctx.globalAlpha = 0.08;
-    ctx.beginPath();
-    ctx.arc(CARD_WIDTH - 100, 100, 300, 0, Math.PI * 2);
-    ctx.fillStyle = isDark ? '#90caf9' : '#1976d2';
-    ctx.fill();
-    ctx.globalAlpha = 1;
+    // Background gradient — diagonal
+    const bg = ctx.createLinearGradient(0, 0, W, H);
+    bg.addColorStop(0, theme.bgFrom);
+    bg.addColorStop(1, theme.bgTo);
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
 
-    const textColor = isDark ? '#ffffff' : '#1a1a1a';
-    const subtextColor = isDark ? '#b0bec5' : '#546e7a';
-    const accentColor = '#1976d2';
+    // Subtle radial glow top-right
+    const glow = ctx.createRadialGradient(W * 0.85, H * 0.15, 0, W * 0.85, H * 0.15, W * 0.5);
+    glow.addColorStop(0, `${theme.accent}18`);
+    glow.addColorStop(1, 'transparent');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, W, H);
 
-    const pad = 80;
-    let y = 160;
+    // Activity-appropriate background silhouette
+    drawBackground(ctx, W, H, theme.mountainColor, props.activityType);
 
-    // Brand image or activity emoji (large)
+    // Brand logo
     if (brandImage) {
-        const imgSize = 160;
-        ctx.drawImage(brandImage, (CARD_WIDTH - imgSize) / 2, y - imgSize + 40, imgSize, imgSize);
+        const imgSize = 88;
+        ctx.globalAlpha = 0.85;
+        ctx.drawImage(brandImage, (W - imgSize) / 2, 44, imgSize, imgSize);
+        ctx.globalAlpha = 1;
+    }
+
+    let y = brandImage ? 168 : 90;
+
+    // Activity emoji
+    const emoji = ACTIVITY_EMOJI[props.activityType ?? ''] ?? '🏃';
+    ctx.font = '100px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(emoji, W / 2, y);
+    y += 76;
+
+    // Bib number — plain accent text directly under the emoji
+    if (bibNumber) {
+        ctx.font = 'bold 52px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        ctx.fillStyle = theme.accent;
+        ctx.fillText(`#${bibNumber}`, W / 2, y);
         y += 60;
     } else {
-        const emoji = ACTIVITY_EMOJI[props.activityType ?? ''] ?? '🏆';
-        ctx.font = '120px serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(emoji, CARD_WIDTH / 2, y);
-        y += 100;
+        y += 20;
     }
 
-    // Race name at the top
-    ctx.font = 'bold 64px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-    ctx.fillStyle = textColor;
+    // Race name — hero text
+    ctx.font = '900 78px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillStyle = theme.textColor;
     ctx.textAlign = 'center';
-    const nameLines = wrapText(ctx, props.raceName, CARD_WIDTH - pad * 2);
+    const nameLines = wrapText(ctx, props.raceName, W - 120);
     for (const line of nameLines) {
-        y += 80;
-        ctx.fillText(line, CARD_WIDTH / 2, y);
+        y += 92;
+        ctx.fillText(line, W / 2, y);
     }
-    y += 40;
+    y += 20;
 
-    // "I'm racing!" badge
+    // "I'm racing!" / "Race day!" badge
+    y += 56;
     const badgeText = props.daysUntil === 0
-        ? t('races.shareCard.racingToday', { defaultValue: "It's race day!" })
-        : t('races.shareCard.racingSoon', { defaultValue: "I'm racing!" });
-    ctx.font = 'bold 52px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-    ctx.fillStyle = accentColor;
+        ? t('races.shareCard.racingToday', { defaultValue: "It's race day! 🏁" })
+        : t('races.shareCard.racingSoon', { defaultValue: "I'm racing! 💥" });
+    ctx.font = '700 54px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillStyle = theme.accent;
     ctx.textAlign = 'center';
-    ctx.fillText(badgeText, CARD_WIDTH / 2, y + 60);
-    y += 120;
+    ctx.fillText(badgeText, W / 2, y);
+    y += 16;
 
-    // Distance with "km" suffix
+    // Distance — big and bold
     if (props.distanceLabel) {
-        y += 60;
-        ctx.font = 'bold 80px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-        ctx.fillStyle = textColor;
+        y += 72;
+        ctx.font = '800 88px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        ctx.fillStyle = theme.textColor;
         const distText = /\d/.test(props.distanceLabel) && !/km/i.test(props.distanceLabel)
             ? `${props.distanceLabel} km`
             : props.distanceLabel;
-        ctx.fillText(distText, CARD_WIDTH / 2, y);
+        ctx.fillText(distText, W / 2, y);
     }
 
     // Event name (if different from race name)
     if (props.eventName && props.eventName !== props.raceName) {
+        y += 72;
         ctx.font = '44px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-        ctx.fillStyle = subtextColor;
-        y += 70;
-        ctx.fillText(props.eventName, CARD_WIDTH / 2, y);
+        ctx.fillStyle = theme.subtextColor;
+        ctx.fillText(props.eventName, W / 2, y);
     }
 
     // Date
     if (props.date) {
-        y += 70;
+        y += 64;
         ctx.font = '40px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-        ctx.fillStyle = subtextColor;
-        const dateObj = new Date(props.date + 'T00:00:00');
-        const dateStr = dateObj.toLocaleDateString(undefined, {
-            weekday: 'long',
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric',
+        ctx.fillStyle = theme.subtextColor;
+        const dateStr = new Date(props.date + 'T00:00:00').toLocaleDateString(getDateLocale(language), {
+            weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
         });
-        ctx.fillText(dateStr, CARD_WIDTH / 2, y);
+        ctx.fillText(dateStr, W / 2, y);
     }
 
     // Countdown
     if (props.daysUntil != null && props.daysUntil > 0) {
-        y += 70;
-        ctx.font = 'bold 44px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-        ctx.fillStyle = accentColor;
-        const countdownText = t('races.shareCard.countdown', {
-            count: props.daysUntil,
-            defaultValue: `${props.daysUntil} days to go!`,
-        });
-        ctx.fillText(countdownText, CARD_WIDTH / 2, y);
+        y += 64;
+        ctx.font = '700 46px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        ctx.fillStyle = theme.accent;
+        ctx.fillText(
+            t('races.shareCard.countdown', { count: props.daysUntil, defaultValue: `${props.daysUntil} days to go!` }),
+            W / 2, y,
+        );
     }
 
-    // Branding (bottom)
-    ctx.font = '32px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-    ctx.fillStyle = isDark ? '#607d8b' : '#90a4ae';
-    ctx.textAlign = 'center';
-    ctx.fillText('hlaupadagskra.is', CARD_WIDTH / 2, CARD_HEIGHT - 60);
+    // Custom message — fixed position above branding, styled as a quote
+    if (customText) {
+        const lines = wrapText(ctx, customText, W - 200).slice(0, 2);
+        lines[0] = `„${lines[0]}`;
+        lines[lines.length - 1] = `${lines[lines.length - 1]}"`;
+        ctx.font = 'bold 40px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        ctx.fillStyle = '#000000';
+        ctx.textAlign = 'center';
+        const startY = H - 136 - (lines.length > 1 ? 52 : 0);
+        for (let i = 0; i < lines.length; i++) ctx.fillText(lines[i], W / 2, startY + i * 52);
+    }
 
-    // Bottom accent line
-    ctx.fillStyle = accentColor;
-    ctx.globalAlpha = 0.6;
-    drawRoundRect(ctx, CARD_WIDTH / 2 - 60, CARD_HEIGHT - 40, 120, 4, 2);
+    // Bottom branding
+    ctx.font = '30px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillStyle = isDark ? '#4a5568' : '#9ca3af';
+    ctx.textAlign = 'center';
+    ctx.fillText('hlaupadagskra.is', W / 2, H - 48);
+
+    // Thin accent line under branding
+    ctx.fillStyle = theme.accent;
+    ctx.globalAlpha = 0.5;
+    drawRoundRect(ctx, W / 2 - 70, H - 30, 140, 4, 2);
     ctx.fill();
     ctx.globalAlpha = 1;
 }
 
-function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
-    const words = text.split(' ');
-    const lines: string[] = [];
-    let current = '';
-    for (const word of words) {
-        const test = current ? `${current} ${word}` : word;
-        if (ctx.measureText(test).width > maxWidth && current) {
-            lines.push(current);
-            current = word;
-        } else {
-            current = test;
-        }
-    }
-    if (current) lines.push(current);
-    return lines.length > 0 ? lines : [text];
-}
-
 export default function RaceShareCard(props: RaceShareCardProps) {
     const { eventName, raceName, distanceLabel, date, daysUntil, activityType, open: openProp, onClose: onCloseProp } = props;
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const theme = useTheme();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [brandImage, setBrandImage] = useState<HTMLImageElement | null>(null);
     const [openInternal, setOpenInternal] = useState(false);
     const open = openProp !== undefined ? openProp : openInternal;
-    const setOpen = openProp !== undefined ? () => {} : setOpenInternal;
     const handleClose = () => { onCloseProp ? onCloseProp() : setOpenInternal(false); };
+    const [bibNumber, setBibNumber] = useState('');
+    const [customText, setCustomText] = useState('');
     const [rendered, setRendered] = useState(false);
     const [snackbar, setSnackbar] = useState('');
     const isDark = theme.palette.mode === 'dark';
@@ -235,12 +213,12 @@ export default function RaceShareCard(props: RaceShareCardProps) {
         if (!open) { setRendered(false); return; }
         const frame = requestAnimationFrame(() => {
             if (canvasRef.current) {
-                renderCard(canvasRef.current, { eventName, raceName, distanceLabel, date, daysUntil, activityType }, t, isDark, brandImage);
+                renderCard(canvasRef.current, { eventName, raceName, distanceLabel, date, daysUntil, activityType }, bibNumber, customText, t, i18n.language, isDark, brandImage);
                 setRendered(true);
             }
         });
         return () => cancelAnimationFrame(frame);
-    }, [open, eventName, raceName, distanceLabel, date, daysUntil, activityType, t, isDark, brandImage]);
+    }, [open, eventName, raceName, distanceLabel, date, daysUntil, activityType, bibNumber, customText, t, i18n.language, isDark, brandImage]);
 
     const getBlob = useCallback((): Promise<Blob | null> => {
         return new Promise((resolve) => {
@@ -264,9 +242,7 @@ export default function RaceShareCard(props: RaceShareCardProps) {
     const handleShare = useCallback(async () => {
         const blob = await getBlob();
         if (!blob) return;
-
         const file = new File([blob], 'race-card.png', { type: 'image/png' });
-
         if (typeof navigator.share !== 'undefined' && navigator.canShare?.({ files: [file] })) {
             try {
                 await navigator.share({
@@ -278,15 +254,11 @@ export default function RaceShareCard(props: RaceShareCardProps) {
                     files: [file],
                 });
             } catch (err) {
-                if (err instanceof Error && err.name !== 'AbortError') {
-                    handleDownload();
-                }
+                if (err instanceof Error && err.name !== 'AbortError') handleDownload();
             }
         } else {
             try {
-                await navigator.clipboard.write([
-                    new ClipboardItem({ 'image/png': blob }),
-                ]);
+                await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
                 setSnackbar(t('races.shareCard.copiedToClipboard', { defaultValue: 'Image copied to clipboard!' }));
             } catch {
                 handleDownload();
@@ -308,12 +280,7 @@ export default function RaceShareCard(props: RaceShareCardProps) {
                 </Button>
             )}
 
-            <Dialog
-                open={open}
-                onClose={handleClose}
-                maxWidth="sm"
-                fullWidth
-            >
+            <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
                 <IconButton
                     aria-label="close"
                     onClick={handleClose}
@@ -321,7 +288,27 @@ export default function RaceShareCard(props: RaceShareCardProps) {
                 >
                     <CloseIcon />
                 </IconButton>
-                <DialogContent sx={{ p: 2, pt: 5, display: 'flex', justifyContent: 'center' }}>
+                <DialogContent sx={{ p: 2, pt: 5, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                    <Box sx={{ width: 120 }}>
+                        <TextField
+                            label={t('races.shareCard.bibLabel', { defaultValue: 'Bib #' })}
+                            value={bibNumber}
+                            onChange={(e) => setBibNumber(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                            size="small"
+                            fullWidth
+                            placeholder="42"
+                        />
+                    </Box>
+                    <TextField
+                        label={t('races.shareCard.customTextLabel', { defaultValue: 'Your message' })}
+                        value={customText}
+                        onChange={(e) => setCustomText(e.target.value.slice(0, 60))}
+                        size="small"
+                        fullWidth
+                        sx={{ maxWidth: 400 }}
+                        placeholder={t('races.shareCard.customTextPlaceholder', { defaultValue: 'Wish me luck! 🤞' })}
+                        inputProps={{ maxLength: 60 }}
+                    />
                     <canvas
                         ref={canvasRef}
                         style={{

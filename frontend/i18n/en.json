@@ -1327,7 +1327,10 @@
             "share": "Share",
             "download": "Save Image",
             "copiedToClipboard": "Image copied to clipboard!",
-            "downloaded": "Image saved!"
+            "downloaded": "Image saved!",
+            "bibLabel": "Bib #",
+            "customTextLabel": "My message",
+            "customTextPlaceholder": "Wish me luck! 🤞"
         },
         "finishCard": {
             "button": "I finished! 🏁",
@@ -1339,7 +1342,10 @@
             "share": "Share",
             "download": "Save Image",
             "copiedToClipboard": "Image copied to clipboard!",
-            "downloaded": "Image saved!"
+            "downloaded": "Image saved!",
+            "bibLabel": "Bib #",
+            "customTextLabel": "My message",
+            "customTextPlaceholder": "That was fun! \uD83E\uDD29"
         },
         "justRaced": "🏁 Just raced!",
         "justRacedSection": "Recently completed",

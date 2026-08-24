@@ -945,11 +945,11 @@
             "elevation": "Hæðarmunur",
             "short": "Stutt <5km",
             "medium": "5–21km",
-            "half": "Hálft 21–42km",
-            "marathon": "Maraþon 42–50km",
+            "half": "Hálft 21 – 42km",
+            "marathon": "Maraþon 42 – 50km",
             "ultra": "Ultra 50km+",
             "flat": "Slétt <300m",
-            "hilly": "Hæðgóðar 300–800m",
+            "hilly": "Hæðgóðar 300 – 800m",
             "mountain": "Fjöll 800m+"
         }
     },
@@ -1309,7 +1309,7 @@
         "checklistTitle": "Tékklisti fyrir keppnisdag",
         "checklistWeatherReady": "Núna: {{temperature}}°C og {{wind}} m/s vindur.",
         "checklistWeatherFallback": "Stutt yfirferð áður en lagt er af stað:",
-        "checklistBib": "Keppnishúmer tilbúið",
+        "checklistBib": "Keppnisnúmer tilbúið",
         "checklistShoes": "Skór og sokkar og keppnisfötin klár",
         "checklistFuel": "Næring & drykkir tilbúnir",
         "checklistGoodMoodReady": "Góða skapið klárt 😄",
@@ -1327,7 +1327,10 @@
             "share": "Deila",
             "download": "Vista mynd",
             "copiedToClipboard": "Mynd afrituð!",
-            "downloaded": "Mynd vistuð!"
+            "downloaded": "Mynd vistuð!",
+            "bibLabel": "Númer",
+            "customTextLabel": "Skilaboð þín",
+            "customTextPlaceholder": "Óskið mér gæfu! 🤞"
         },
         "finishCard": {
             "button": "Ég kláraði! 🏁",
@@ -1339,7 +1342,10 @@
             "share": "Deila",
             "download": "Vista mynd",
             "copiedToClipboard": "Mynd afrituð!",
-            "downloaded": "Mynd vistuð!"
+            "downloaded": "Mynd vistuð!",
+            "bibLabel": "Númerið mitt",
+            "customTextLabel": "Skilaboðin mín",
+            "customTextPlaceholder": "Þetta var gaman! \uD83E\uDD29 GAMAAAN \uD83E\uDD73"
         },
         "justRaced": "🏁 Nýlokið!",
         "justRacedSection": "Nýlega lokið",

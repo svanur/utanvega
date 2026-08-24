@@ -1409,7 +1409,7 @@ function RaceCard({
                                     distanceLabel={race.distanceLabel}
                                     date={race.dateOfRace ?? editionDate ?? null}
                                     daysUntil={daysUntil ?? null}
-                                    activityType={activityType}
+                                    activityType={race.activityType ?? race.trailActivityType ?? activityType}
                                 />
                             )}
                             {(showFinishCard || (showShareCard && (pastStart || racePhase === 'finished'))) && race.status !== 'Cancelled' && (
@@ -1418,7 +1418,7 @@ function RaceCard({
                                     raceName={loc(race.name, race.nameEn) ?? race.name}
                                     distanceLabel={race.distanceLabel}
                                     date={race.dateOfRace ?? editionDate ?? null}
-                                    activityType={activityType}
+                                    activityType={race.activityType ?? race.trailActivityType ?? activityType}
                                 />
                             )}
                         </Stack>
