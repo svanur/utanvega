@@ -6,10 +6,12 @@ import CircularProgress from '@mui/material/CircularProgress';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { useHealth } from '../hooks/useHealth';
+import { useFeatureFlags } from '../hooks/useFeatureFlags';
 
 export default function FooterStatus() {
     const { data, loading, error } = useHealth();
     const { t } = useTranslation();
+    const { isEnabled } = useFeatureFlags();
 
     return (
         <Box
@@ -35,6 +37,10 @@ export default function FooterStatus() {
                         </Typography>
                         <Stack spacing={0.5} sx={{ mt: 1 }}>
                             <MuiLink component={Link} to="/tools" variant="body2" color="text.secondary" underline="hover">{t('tools.title')}</MuiLink>
+                            {/* Route is flag-gated, so the link must be too — otherwise it 404s. */}
+                            {isEnabled('trail_comparison') && (
+                                <MuiLink component={Link} to="/compare" variant="body2" color="text.secondary" underline="hover">{t('compare.title')}</MuiLink>
+                            )}
                             <MuiLink component={Link} to="/fun" variant="body2" color="text.secondary" underline="hover">{t('nav.fun')}</MuiLink>
                             <MuiLink component={Link} to="/itra" variant="body2" color="text.secondary" underline="hover">ITRA</MuiLink>
                         </Stack>
