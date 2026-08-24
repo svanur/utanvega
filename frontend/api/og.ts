@@ -1,5 +1,7 @@
 export const config = { runtime: 'edge' };
 
+import { siteOrigin, esc } from './_site';
+
 // Edge Functions run in a Node-like environment that provides process.env
 declare const process: { env: Record<string, string | undefined> };
 
@@ -8,19 +10,60 @@ const BACKEND_URL =
   process.env.API_URL ||
   'https://backend-wispy-forest-1686.fly.dev';
 
-const SITE_URL =
-  process.env.SITE_URL ||
-  (process.env.VERCEL_PROJECT_PRODUCTION_URL
-    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-    : 'https://utanvega.vercel.app');
-
-function esc(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
+/**
+ * Titles and descriptions for the static routes. Without these every non-trail
+ * URL is indexed under one identical generic title, which suppresses ranking
+ * for all of them. Icelandic, to match the site's default locale (og:locale is
+ * is_IS) — the crawler response carries no language preference to switch on.
+ */
+const ROUTE_META: Record<string, { title: string; description: string }> = {
+  '/events': {
+    title: 'Viðburðir',
+    description:
+      'Öll skráð hlaup og viðburðir á Íslandi — götuhlaup, utanvegahlaup, fjallahlaup og skemmtiskokk. Leitaðu eftir dagsetningu, vegalengd og staðsetningu.',
+  },
+  '/trails': {
+    title: 'Leiðir',
+    description:
+      'Hlaupaleiðir um allt Ísland með vegalengd, hækkun, erfiðleikastigi og GPX-skrám til niðurhals.',
+  },
+  '/compare': {
+    title: 'Bera saman leiðir',
+    description:
+      'Berðu tvær leiðir saman hlið við hlið og sjáðu muninn á vegalengd, hækkun, erfiðleikastigi og undirlagi — gagnlegt þegar þú velur næstu leið eða metur keppni.',
+  },
+  '/locations': {
+    title: 'Staðsetningar',
+    description:
+      'Skoðaðu hlaupaleiðir eftir landshlutum og sveitarfélögum um allt Ísland.',
+  },
+  '/tools': {
+    title: 'Hlaupatól',
+    description:
+      'Reiknivélar og tól fyrir hlaupara — tímaspá, aldursleiðrétting, hraðatafla og fleira.',
+  },
+  '/itra': {
+    title: 'ITRA',
+    description:
+      'Upplýsingar um ITRA-stig, alþjóðlega flokkun utanvegahlaupa og hvernig stigin eru reiknuð.',
+  },
+  '/fun': {
+    title: 'Gaman',
+    description: 'Skemmtiefni, tölfræði og fróðleikur fyrir hlaupara.',
+  },
+  '/services': {
+    title: 'Þjónusta',
+    description: 'Þjónusta Hlaupadagskra.is fyrir hlaupara og mótshaldara.',
+  },
+  '/about': {
+    title: 'Um okkur',
+    description: 'Um Hlaupadagskra.is — hverjir standa að vefnum og hvers vegna.',
+  },
+  '/faq': {
+    title: 'Algengar spurningar',
+    description: 'Svör við algengum spurningum um Hlaupadagskra.is.',
+  },
+};
 
 function fmtDistance(meters: number): string {
   return (meters / 1000).toFixed(1);
@@ -50,9 +93,10 @@ export default async function handler(request: Request) {
   const url = new URL(request.url);
   const slug = url.searchParams.get('slug');
   const path = url.searchParams.get('path');
+  const origin = siteOrigin(request);
 
   if (!slug) {
-    return defaultPage(path ? `/${path}` : '');
+    return defaultPage(origin, path ? `/${path}` : '');
   }
 
   try {
@@ -62,7 +106,7 @@ export default async function handler(request: Request) {
     );
 
     if (!res.ok) {
-      return defaultPage();
+      return defaultPage(origin, `/trails/${slug}`);
     }
 
     const trail = await res.json() as TrailResponse;
@@ -70,7 +114,7 @@ export default async function handler(request: Request) {
     const distance = fmtDistance(trail.length);
     const gain = Math.round(trail.elevationGain);
     const activity = ACTIVITY_LABELS[trail.activityType] || trail.activityType;
-    const canonicalUrl = `${SITE_URL}/trails/${encodeURIComponent(slug)}`;
+    const canonicalUrl = `${origin}/trails/${encodeURIComponent(slug)}`;
 
     const description = trail.description
       ? esc(trail.description.slice(0, 200))
@@ -80,7 +124,7 @@ export default async function handler(request: Request) {
     const subtitle = locations ? ` · ${esc(locations)}` : '';
 
     const ogTitle = `${title} – ${distance} km${subtitle}`;
-    const ogImageUrl = `${SITE_URL}/api/og-image?slug=${encodeURIComponent(slug)}`;
+    const ogImageUrl = `${origin}/api/og-image?slug=${encodeURIComponent(slug)}`;
     const safeCanonicalUrl = esc(canonicalUrl);
 
     const html = `<!DOCTYPE html>
@@ -89,6 +133,7 @@ export default async function handler(request: Request) {
   <meta charset="UTF-8" />
   <title>${title} – Hlaupadagskra.is</title>
   <meta name="description" content="${description}" />
+  <link rel="canonical" href="${safeCanonicalUrl}" />
 
   <meta property="og:title" content="${ogTitle}" />
   <meta property="og:description" content="${description}" />
@@ -105,11 +150,11 @@ export default async function handler(request: Request) {
   <meta name="twitter:title" content="${ogTitle}" />
   <meta name="twitter:description" content="${description}" />
   <meta name="twitter:image" content="${ogImageUrl}" />
-
-  <meta http-equiv="refresh" content="0;url=${safeCanonicalUrl}" />
 </head>
 <body>
-  <p>Redirecting to <a href="${safeCanonicalUrl}">${title} on Hlaupadagskra.is</a>…</p>
+  <h1>${title}</h1>
+  <p>${description}</p>
+  <p><a href="${safeCanonicalUrl}">${title} á Hlaupadagskra.is</a></p>
 </body>
 </html>`;
 
@@ -121,38 +166,57 @@ export default async function handler(request: Request) {
       },
     });
   } catch {
-    return defaultPage();
+    return defaultPage(origin, `/trails/${slug}`);
   }
 }
 
-function defaultPage(path: string = '') {
-  const canonicalUrl = path ? `${SITE_URL}${path}` : SITE_URL;
-  const safeCanonicalUrl = esc(canonicalUrl);
+const SITE_TITLE = 'Hlaupadagskra.is – Öll hlaup á einum stað';
+const SITE_DESCRIPTION =
+  'Vefur til að finna og deila skemmtilegum leiðum, hvort sem þær eru utanvega eða innanbæjar.';
+
+function defaultPage(origin: string, path: string = '') {
+  // Only the path forms the canonical, so every /compare?a=…&b=… permutation
+  // consolidates onto /compare rather than becoming its own indexable URL.
+  const cleanPath = path.split('?')[0].replace(/\/+$/, '');
+  const meta = ROUTE_META[cleanPath];
+
+  const title = meta ? `${meta.title} | Hlaupadagskra.is` : SITE_TITLE;
+  const description = meta ? meta.description : SITE_DESCRIPTION;
+  const heading = meta ? meta.title : 'Hlaupadagskra.is';
+
+  const safeTitle = esc(title);
+  const safeDescription = esc(description);
+  const safeHeading = esc(heading);
+  const safeCanonicalUrl = esc(cleanPath ? `${origin}${cleanPath}` : origin);
+  const ogImageUrl = `${origin}/api/og-image`;
+
   const html = `<!DOCTYPE html>
-<html lang="en">
+<html lang="is">
 <head>
   <meta charset="UTF-8" />
-  <title>Hlaupadagskra.is – Öll hlaup á einum stað</title>
-  <meta name="description" content="Vefur til að finna og deila skemmtilegum leiðum, hvort sem þær eru utanvega eða innanbæjar." />
+  <title>${safeTitle}</title>
+  <meta name="description" content="${safeDescription}" />
+  <link rel="canonical" href="${safeCanonicalUrl}" />
 
-  <meta property="og:title" content="Hlaupadagskra.is – Öll hlaup á einum stað" />
-  <meta property="og:description" content="Vefur til að finna og deila skemmtilegum leiðum, hvort sem þær eru utanvega eða innanbæjar." />
+  <meta property="og:title" content="${safeTitle}" />
+  <meta property="og:description" content="${safeDescription}" />
   <meta property="og:url" content="${safeCanonicalUrl}" />
   <meta property="og:site_name" content="Hlaupadagskra.is" />
   <meta property="og:type" content="website" />
-  <meta property="og:image" content="${SITE_URL}/api/og-image" />
+  <meta property="og:image" content="${ogImageUrl}" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
+  <meta property="og:locale" content="is_IS" />
 
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Hlaupadagskra.is – Öll hlaup á einum stað" />
-  <meta name="twitter:description" content="Vefur til að finna og deila skemmtilegum leiðum, hvort sem þær eru utanvega eða innanbæjar." />
-  <meta name="twitter:image" content="${SITE_URL}/api/og-image" />
-
-  <meta http-equiv="refresh" content="0;url=${safeCanonicalUrl}" />
+  <meta name="twitter:title" content="${safeTitle}" />
+  <meta name="twitter:description" content="${safeDescription}" />
+  <meta name="twitter:image" content="${ogImageUrl}" />
 </head>
 <body>
-  <p>Redirecting to <a href="${safeCanonicalUrl}">Hlaupadagskra.is</a>…</p>
+  <h1>${safeHeading}</h1>
+  <p>${safeDescription}</p>
+  <p><a href="${safeCanonicalUrl}">Hlaupadagskra.is</a></p>
 </body>
 </html>`;
 
