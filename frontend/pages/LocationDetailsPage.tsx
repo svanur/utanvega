@@ -19,7 +19,6 @@ import {
 } from '@mui/material';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import FolderIcon from '@mui/icons-material/Folder';
-import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import StraightenIcon from '@mui/icons-material/Straighten';
 import TerrainIcon from '@mui/icons-material/Terrain';
 import RouteIcon from '@mui/icons-material/Route';
@@ -34,6 +33,7 @@ import RunningLoader from '../components/RunningLoader';
 import ShareButtons from '../components/ShareButtons';
 import LostLocation from '../components/LostLocation';
 import { useLocalize } from '../utils/localize';
+import { breadcrumbContext } from '../utils/breadcrumbContext';
 
 type LocationDetailsPageProps = {
     mode: PaletteMode;
@@ -216,38 +216,30 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
         );
     }
 
-    return (
-        <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('nav.locations'), to: '/locations' }, { label: loc(location.name, location.nameEn) ?? location.name }]}>
-            <Container maxWidth="md" sx={{ py: 2 }}>
-                {/* Breadcrumb navigation */}
-                <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 2, flexWrap: 'wrap' }}>
-                    <Button
-                        size="small"
-                        onClick={() => navigate('/locations')}
-                        sx={{ minWidth: 'auto', textTransform: 'none' }}
-                    >
-                        {t('locations.title')}
-                    </Button>
-                    {breadcrumbs.map((crumb, i) => (
-                        <Stack key={crumb.slug} direction="row" alignItems="center" spacing={0.5}>
-                            <NavigateNextIcon fontSize="small" color="disabled" />
-                            {i < breadcrumbs.length - 1 ? (
-                                <Button
-                                    size="small"
-                                    onClick={() => navigate(`/locations/${crumb.slug}`)}
-                                    sx={{ minWidth: 'auto', textTransform: 'none' }}
-                                >
-                                    {crumb.name}
-                                </Button>
-                            ) : (
-                                <Typography variant="body2" color="text.secondary" fontWeight="bold">
-                                    {crumb.name}
-                                </Typography>
-                            )}
-                        </Stack>
-                    ))}
-                </Stack>
+    const locationName = loc(location.name, location.nameEn) ?? location.name;
 
+    // Full ancestor path from the location tree, rendered in the sticky
+    // breadcrumb. Falls back to just this location if the tree hasn't loaded.
+    const locationCrumbs = [
+        { label: t('nav.locations'), to: '/locations' },
+        ...(breadcrumbs.length > 0
+            ? breadcrumbs.map((crumb, i) => ({
+                label: crumb.name,
+                to: i < breadcrumbs.length - 1 ? `/locations/${crumb.slug}` : undefined,
+            }))
+            : [{ label: locationName }]),
+    ];
+
+    // Carries this location as breadcrumb context so a trail opened from here
+    // renders Locations > {Location} > {Trail} instead of Trails > {Trail}.
+    const trailLinkState = breadcrumbContext([
+        { label: t('nav.locations'), to: '/locations' },
+        { label: locationName, to: `/locations/${slug}` },
+    ]);
+
+    return (
+        <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={locationCrumbs}>
+            <Container maxWidth="md" sx={{ py: 2 }}>
                 <Paper elevation={3} sx={{ p: { xs: 2, sm: 3 }, mb: 4, borderRadius: '16px' }}>
                     <Stack direction="row" alignItems="center" spacing={1} mb={1}>
                         <LocationOnIcon color="primary" sx={{ fontSize: { xs: 28, sm: 35 } }} />
@@ -428,7 +420,7 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
                             <Grid container spacing={1}>
                                 {filteredTrails.map(trail => (
                                     <Grid item xs={12} key={trail.id}>
-                                        <TrailCard trail={trail} />
+                                        <TrailCard trail={trail} linkState={trailLinkState} />
                                     </Grid>
                                 ))}
                             </Grid>

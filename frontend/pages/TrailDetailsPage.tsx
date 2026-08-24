@@ -1,8 +1,9 @@
 import React, { useState, useRef, useMemo, useEffect, lazy, Suspense } from 'react';
 import { trackTrailGpxDownload, trackTrailCompareClick, trackTrailPredictorClick, trackTrailDirectionsClick } from '../utils/analytics';
-import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { usePageTitle } from '../hooks/usePageTitle';
+import { breadcrumbFromState } from '../utils/breadcrumbContext';
 import { 
     Box, 
     Typography, 
@@ -143,6 +144,7 @@ const CHECK_IN_NEARBY_GEO_CACHE_MS = 15 * 60 * 1000;
 export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPageProps) {
     const { slug } = useParams<{ slug: string }>();
     const navigate = useNavigate();
+    const location = useLocation();
     const { t } = useTranslation();
     const localize = useLocalize();
     const { trail, loading, error } = useTrailBySlug(slug);
@@ -487,8 +489,18 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
 
     const distanceKm = (trail.length / 1000).toFixed(2);
     const estTime = estimateDuration(trail.length, trail.elevationGain, trail.activityType);
+
+    // When the user arrived via an event or a location, keep the trail in that
+    // context (Events > {Event} > {Trail}). Arriving any other way — the trails
+    // list, a shared link, a fresh load — falls back to Trails > {Trail}.
+    const breadcrumb = breadcrumbFromState(
+        location.state,
+        { label: trail.name },
+        [{ label: t('nav.trails'), to: '/trails' }, { label: trail.name }],
+    );
+
     return (
-        <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('nav.trails'), to: '/trails' }, { label: trail.name }]}>
+        <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={breadcrumb}>
             {trail.linkedRaces && (
                 <AssociatedEventBanner linkedRaces={trail.linkedRaces} activityType={trail.activityType} />
             )}

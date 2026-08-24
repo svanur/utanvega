@@ -45,6 +45,7 @@ import { getActivityIcon } from '../utils/activityIcon';
 import { useTickedTrails } from '../hooks/useTickedTrails';
 import { TrailQuickView } from './TrailQuickView';
 import DifficultyInfo from './DifficultyInfo';
+import type { BreadcrumbContextState } from '../utils/breadcrumbContext';
 
 interface TrailCardProps {
     trail: Trail;
@@ -54,6 +55,8 @@ interface TrailCardProps {
     isFavorited?: boolean;
     compact?: boolean;
     disableGestures?: boolean;
+    /** Breadcrumb context to carry into the trail page — see breadcrumbContext(). */
+    linkState?: BreadcrumbContextState;
 }
 
 
@@ -84,7 +87,7 @@ const getTerrainIcon = (type: string) => {
     }
 };
 
-const TrailCardComponent: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, onTagClick, isHiding, isFavorited: isFavoritedProp, compact, disableGestures }) => {
+const TrailCardComponent: React.FC<TrailCardProps> = ({ trail, onToggleFavorite, onTagClick, isHiding, isFavorited: isFavoritedProp, compact, disableGestures, linkState }) => {
     const navigate = useNavigate();
     const { t } = useTranslation();
     const loc = useLocalize();
@@ -110,7 +113,7 @@ const TrailCardComponent: React.FC<TrailCardProps> = ({ trail, onToggleFavorite,
 
     const handleClick = () => {
         if (Math.abs(swipeOffset) < 10 && !quickViewOpen) {
-            navigate(`/trails/${trail.slug}`);
+            navigate(`/trails/${trail.slug}`, linkState ? { state: linkState } : undefined);
         }
     };
 
@@ -488,6 +491,7 @@ const TrailCardComponent: React.FC<TrailCardProps> = ({ trail, onToggleFavorite,
                     trail={trail}
                     open={quickViewOpen}
                     onClose={() => setQuickViewOpen(false)}
+                    linkState={linkState}
                 />
             )}
             {!disableGestures && (
