@@ -58,6 +58,7 @@ import ShareButtons from '../components/ShareButtons';
 import { useTrailBySlug, Trail, API_URL } from '../hooks/useTrails';
 import { useTrailGeometry } from '../hooks/useTrailGeometries';
 import { estimateDuration } from '../utils/estimateDuration';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -886,9 +887,25 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
         setSearchParams(next, { replace: true });
     };
 
+    // Suggestion chips express intent about the pair, not the filters. Clearing
+    // them keeps applyFilter's invariant — active filter always matches the
+    // current selections — instead of leaving a pill highlighted while the
+    // chosen trails sit outside its range (and out of the picker dropdowns).
+    // The pickers themselves go through setSlug, which must NOT clear: their
+    // options are already filtered, so any pick there matches by construction.
     const setPair = useCallback((a: string, b: string) => {
+        setFilterDist(null);
+        setFilterElev(null);
         setSearchParams(new URLSearchParams({ a, b }), { replace: true });
     }, [setSearchParams]);
+
+    const applySuggestion = useCallback((key: 'a' | 'b', slug: string) => {
+        setFilterDist(null);
+        setFilterElev(null);
+        const next = new URLSearchParams(searchParams);
+        next.set(key, slug);
+        setSearchParams(next, { replace: true });
+    }, [searchParams, setSearchParams]);
 
     // Ready-made comparisons for the empty state. Derived from viewCount rather
     // than a hardcoded slug list so it can't rot when trails are renamed or
@@ -909,8 +926,13 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
     }, [allTrails]);
 
     // Exactly one trail chosen — suggest comparable partners for the empty slot.
-    const soloSlot: 'a' | 'b' | null = (trailA && !slugB) ? 'b' : (trailB && !slugA) ? 'a' : null;
-    const soloTrail = soloSlot === 'b' ? trailA : soloSlot === 'a' ? trailB : null;
+    // Memoized so soloTrail keeps a stable reference across renders; otherwise
+    // it invalidates similarTrails' deps and re-runs that sort every render.
+    const { soloSlot, soloTrail } = useMemo(() => {
+        if (trailA && !slugB) return { soloSlot: 'b' as const, soloTrail: trailA };
+        if (trailB && !slugA) return { soloSlot: 'a' as const, soloTrail: trailB };
+        return { soloSlot: null, soloTrail: null };
+    }, [trailA, trailB, slugA, slugB]);
 
     const similarTrails = useMemo(() => {
         if (!soloTrail) return [];
@@ -955,6 +977,10 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
 
     const bothLoading = loadingA || loadingB;
     const hasBoth = !!trailA && !!trailB;
+
+    // Matches the string ShareButtons uses above, so a shared link's tab title
+    // and its share title agree. Falls back to the page name until both load.
+    usePageTitle(hasBoth ? `${trailA.name} vs ${trailB.name}` : t('compare.title'));
 
     return (
         <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('nav.trails'), to: '/trails' }, { label: t('compare.compareButton', { defaultValue: 'Compare' }) }]}>
@@ -1018,7 +1044,7 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
                                     size="small"
                                     variant="outlined"
                                     color="primary"
-                                    onClick={() => setSlug(soloSlot, tr.slug)}
+                                    onClick={() => applySuggestion(soloSlot, tr.slug)}
                                 />
                             ))}
                         </Stack>
