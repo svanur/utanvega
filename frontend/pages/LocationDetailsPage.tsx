@@ -34,6 +34,7 @@ import RunningLoader from '../components/RunningLoader';
 import ShareButtons from '../components/ShareButtons';
 import LostLocation from '../components/LostLocation';
 import { useLocalize } from '../utils/localize';
+import { breadcrumbContext } from '../utils/breadcrumbContext';
 
 type LocationDetailsPageProps = {
     mode: PaletteMode;
@@ -216,8 +217,17 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
         );
     }
 
+    const locationName = loc(location.name, location.nameEn) ?? location.name;
+
+    // Carries this location as breadcrumb context so a trail opened from here
+    // renders Locations > {Location} > {Trail} instead of Trails > {Trail}.
+    const trailLinkState = breadcrumbContext([
+        { label: t('nav.locations'), to: '/locations' },
+        { label: locationName, to: `/locations/${slug}` },
+    ]);
+
     return (
-        <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('nav.locations'), to: '/locations' }, { label: loc(location.name, location.nameEn) ?? location.name }]}>
+        <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('nav.locations'), to: '/locations' }, { label: locationName }]}>
             <Container maxWidth="md" sx={{ py: 2 }}>
                 {/* Breadcrumb navigation */}
                 <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 2, flexWrap: 'wrap' }}>
@@ -428,7 +438,7 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
                             <Grid container spacing={1}>
                                 {filteredTrails.map(trail => (
                                     <Grid item xs={12} key={trail.id}>
-                                        <TrailCard trail={trail} />
+                                        <TrailCard trail={trail} linkState={trailLinkState} />
                                     </Grid>
                                 ))}
                             </Grid>

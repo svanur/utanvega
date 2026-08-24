@@ -39,6 +39,7 @@ import LanguageIcon from '@mui/icons-material/Language';
 import XIcon from '@mui/icons-material/X';
 import YouTubeIcon from '@mui/icons-material/YouTube';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
+import { breadcrumbContext } from '../utils/breadcrumbContext';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
@@ -1319,7 +1320,10 @@ function RaceCard({
     // Carries the event as breadcrumb context so the trail page can render
     // Events > {Event} > {Trail} instead of its default Trails > {Trail}.
     const trailLinkState = eventSlug
-        ? { fromEvent: { name: competitionName, slug: eventSlug } }
+        ? breadcrumbContext([
+            { label: t('nav.events'), to: '/events' },
+            { label: competitionName, to: `/events/${eventSlug}` },
+        ])
         : undefined;
 
     // Race phase: determine if race is in progress (started but not finished)

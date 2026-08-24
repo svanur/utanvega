@@ -3,6 +3,7 @@ import { trackTrailGpxDownload, trackTrailCompareClick, trackTrailPredictorClick
 import { useParams, useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { usePageTitle } from '../hooks/usePageTitle';
+import { breadcrumbFromState } from '../utils/breadcrumbContext';
 import { 
     Box, 
     Typography, 
@@ -489,17 +490,14 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     const distanceKm = (trail.length / 1000).toFixed(2);
     const estTime = estimateDuration(trail.length, trail.elevationGain, trail.activityType);
 
-    // When the user arrived from an event page, keep that trail in the event's
-    // context: Events > {Event} > {Trail}. Arriving any other way (Trails list,
-    // a shared link, a fresh load) falls back to Trails > {Trail}.
-    const fromEvent = (location.state as { fromEvent?: { name?: string; slug?: string } } | null)?.fromEvent;
-    const breadcrumb = fromEvent?.name && fromEvent?.slug
-        ? [
-            { label: t('nav.events'), to: '/events' },
-            { label: fromEvent.name, to: `/events/${fromEvent.slug}` },
-            { label: trail.name },
-        ]
-        : [{ label: t('nav.trails'), to: '/trails' }, { label: trail.name }];
+    // When the user arrived via an event or a location, keep the trail in that
+    // context (Events > {Event} > {Trail}). Arriving any other way — the trails
+    // list, a shared link, a fresh load — falls back to Trails > {Trail}.
+    const breadcrumb = breadcrumbFromState(
+        location.state,
+        { label: trail.name },
+        [{ label: t('nav.trails'), to: '/trails' }, { label: trail.name }],
+    );
 
     return (
         <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={breadcrumb}>
