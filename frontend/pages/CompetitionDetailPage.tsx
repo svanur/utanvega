@@ -1010,6 +1010,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                                 daysUntil={event.daysUntil}
                                                 activityType={event.activityType}
                                                 editionDate={edition.date}
+                                                eventSlug={event.slug ?? slug}
                                                 now={currentTime}
                                             />
                                         ))}
@@ -1035,6 +1036,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 daysUntil={event.daysUntil}
                                 activityType={event.activityType}
                                 editionDate={event.displayDate ?? event.nextEditionDate}
+                                eventSlug={event.slug ?? slug}
                                 now={currentTime}
                             />
                             ))}
@@ -1293,6 +1295,7 @@ function RaceCard({
     daysUntil,
     activityType,
     editionDate,
+    eventSlug,
     now,
 }: {
     race: RaceDto;
@@ -1305,12 +1308,19 @@ function RaceCard({
     daysUntil?: number | null;
     activityType?: string;
     editionDate?: string | null;
+    eventSlug?: string | null;
     now: Date;
 }) {
     const theme = useTheme();
     const loc = useLocalize();
     const { isEnabled } = useFeatureFlags();
     const raceDateTime = formatRaceDateTime(race.dateOfRace, race.startTime, t);
+
+    // Carries the event as breadcrumb context so the trail page can render
+    // Events > {Event} > {Trail} instead of its default Trails > {Trail}.
+    const trailLinkState = eventSlug
+        ? { fromEvent: { name: competitionName, slug: eventSlug } }
+        : undefined;
 
     // Race phase: determine if race is in progress (started but not finished)
     const racePhase = useMemo(() => {
@@ -1371,7 +1381,7 @@ function RaceCard({
                         {race.trailName && (
                             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
                                 {race.trailSlug ? (
-                                    <RouterLink to={`/trails/${race.trailSlug}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                                    <RouterLink to={`/trails/${race.trailSlug}`} state={trailLinkState} style={{ color: 'inherit', textDecoration: 'none' }}>
                                         {race.trailName}
                                     </RouterLink>
                                 ) : race.trailName}
@@ -1395,6 +1405,7 @@ function RaceCard({
                                 <Button
                                     component={RouterLink}
                                     to={`/trails/${race.trailSlug}`}
+                                    state={trailLinkState}
                                     size="small"
                                     variant="outlined"
                                     sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}
