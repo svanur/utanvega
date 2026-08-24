@@ -34,10 +34,14 @@ export function breadcrumbFromState(
     const raw = (state as BreadcrumbContextState | null)?.fromCrumbs;
     if (!Array.isArray(raw) || raw.length === 0) return fallback;
 
+    // A single leading slash only — "//evil.com" is protocol-relative and would
+    // resolve off-origin, so it is not an in-app path.
+    const isInAppPath = (to: string) => to.startsWith('/') && !to.startsWith('//');
+
     const crumbs = raw
         .filter((c): c is BreadcrumbItem =>
             !!c && typeof c.label === 'string' && c.label.length > 0
-            && (c.to === undefined || (typeof c.to === 'string' && c.to.startsWith('/'))))
+            && (c.to === undefined || (typeof c.to === 'string' && isInAppPath(c.to))))
         .map(c => ({ label: c.label, to: c.to }));
 
     return crumbs.length > 0 ? [...crumbs, current] : fallback;

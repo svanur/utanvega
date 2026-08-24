@@ -491,6 +491,7 @@ const TrailCardComponent: React.FC<TrailCardProps> = ({ trail, onToggleFavorite,
                     trail={trail}
                     open={quickViewOpen}
                     onClose={() => setQuickViewOpen(false)}
+                    linkState={linkState}
                 />
             )}
             {!disableGestures && (

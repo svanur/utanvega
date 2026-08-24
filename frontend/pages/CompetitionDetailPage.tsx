@@ -1319,12 +1319,17 @@ function RaceCard({
 
     // Carries the event as breadcrumb context so the trail page can render
     // Events > {Event} > {Trail} instead of its default Trails > {Trail}.
-    const trailLinkState = eventSlug
-        ? breadcrumbContext([
-            { label: t('nav.events'), to: '/events' },
-            { label: competitionName, to: `/events/${eventSlug}` },
-        ])
-        : undefined;
+    // Memoized so the per-second `now` tick doesn't hand the links a new
+    // state reference on every render.
+    const trailLinkState = useMemo(
+        () => (eventSlug
+            ? breadcrumbContext([
+                { label: t('nav.events'), to: '/events' },
+                { label: competitionName, to: `/events/${eventSlug}` },
+            ])
+            : undefined),
+        [eventSlug, competitionName, t],
+    );
 
     // Race phase: determine if race is in progress (started but not finished)
     const racePhase = useMemo(() => {
