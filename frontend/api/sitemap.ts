@@ -24,9 +24,16 @@ const STATIC_PATHS = [
   { path: '/faq', priority: '0.4', changefreq: 'monthly' },
 ];
 
-interface TrailSummary {
+interface Slugged {
   slug?: string;
 }
+
+/** Collections whose detail pages are indexable, each listed from the backend. */
+const COLLECTIONS = [
+  { endpoint: 'trails', path: 'trails', priority: '0.8' },
+  { endpoint: 'events', path: 'events', priority: '0.8' },
+  { endpoint: 'locations', path: 'locations', priority: '0.6' },
+];
 
 function urlEntry(loc: string, priority: string, changefreq: string) {
   return `  <url>
@@ -49,24 +56,29 @@ export default async function handler(request: Request) {
     urlEntry(`${origin}${path}`, priority, changefreq)
   );
 
-  // A sitemap missing its trail URLs is still valid and useful, so a backend
-  // outage degrades to the static routes rather than failing the whole response.
-  try {
-    const res = await fetch(`${BACKEND_URL}/api/v1/trails`, {
-      headers: { Accept: 'application/json' },
-    });
-    if (res.ok) {
-      const trails = (await res.json()) as TrailSummary[];
-      for (const trail of trails) {
-        if (!trail.slug) continue;
-        entries.push(
-          urlEntry(`${origin}/trails/${encodeURIComponent(trail.slug)}`, '0.8', 'monthly')
-        );
+  // A sitemap missing some detail URLs is still valid and useful, so a backend
+  // outage degrades to whatever was fetched rather than failing the response.
+  // Collections are fetched together; one failing does not block the others.
+  const collections = await Promise.all(
+    COLLECTIONS.map(async ({ endpoint, path, priority }) => {
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/v1/${endpoint}`, {
+          headers: { Accept: 'application/json' },
+        });
+        if (!res.ok) return [];
+        const items = (await res.json()) as Slugged[];
+        if (!Array.isArray(items)) return [];
+        return items
+          .filter((item) => item.slug)
+          .map((item) =>
+            urlEntry(`${origin}/${path}/${encodeURIComponent(item.slug!)}`, priority, 'monthly')
+          );
+      } catch {
+        return [];
       }
-    }
-  } catch {
-    // Fall through with static routes only.
-  }
+    })
+  );
+  for (const group of collections) entries.push(...group);
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

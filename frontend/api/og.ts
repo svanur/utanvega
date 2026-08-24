@@ -89,6 +89,28 @@ interface TrailResponse {
   tags?: { name: string }[];
 }
 
+interface NamedEntity {
+  name?: string;
+  nameEn?: string | null;
+  description?: string | null;
+  descriptionEn?: string | null;
+}
+
+/**
+ * Detail pages that carry their own name and description from the backend.
+ * Without these, /events/:slug and /locations/:slug — the URLs people actually
+ * search for by name — are indexed under the generic site title.
+ */
+const ENTITY_ROUTES: Record<
+  string,
+  { endpoint: string; suffix: string; unwrap?: string }
+> = {
+  events: { endpoint: 'events', suffix: '' },
+  // This endpoint answers { location, childLocations, trails } rather than the
+  // entity itself, so the entity has to be lifted out of the envelope.
+  locations: { endpoint: 'locations', suffix: ' — hlaupaleiðir', unwrap: 'location' },
+};
+
 export default async function handler(request: Request) {
   const url = new URL(request.url);
   const slug = url.searchParams.get('slug');
@@ -96,6 +118,11 @@ export default async function handler(request: Request) {
   const origin = siteOrigin(request);
 
   if (!slug) {
+    // "events/reykjavikurmarathon" → segments ["events", "reykjavikurmarathon"]
+    const segments = (path || '').split('?')[0].split('/').filter(Boolean);
+    if (segments.length === 2 && ENTITY_ROUTES[segments[0]]) {
+      return entityPage(origin, segments[0], segments[1]);
+    }
     return defaultPage(origin, path ? `/${path}` : '');
   }
 
@@ -105,6 +132,10 @@ export default async function handler(request: Request) {
       { headers: { Accept: 'application/json' } }
     );
 
+    if (res.status === 404) {
+      // A 200 on a missing trail is a soft 404 that wastes crawl budget.
+      return defaultPage(origin, `/trails/${slug}`, 404);
+    }
     if (!res.ok) {
       return defaultPage(origin, `/trails/${slug}`);
     }
@@ -128,7 +159,7 @@ export default async function handler(request: Request) {
     const safeCanonicalUrl = esc(canonicalUrl);
 
     const html = `<!DOCTYPE html>
-<html lang="en">
+<html lang="is">
 <head>
   <meta charset="UTF-8" />
   <title>${title} – Hlaupadagskra.is</title>
@@ -174,7 +205,118 @@ const SITE_TITLE = 'Hlaupadagskra.is – Öll hlaup á einum stað';
 const SITE_DESCRIPTION =
   'Vefur til að finna og deila skemmtilegum leiðum, hvort sem þær eru utanvega eða innanbæjar.';
 
-function defaultPage(origin: string, path: string = '') {
+/**
+ * Renders /events/:slug and /locations/:slug from backend data.
+ * Falls back to the generic page if the entity cannot be fetched, and returns
+ * 404 when the backend says it does not exist — a 200 on a missing entity is a
+ * soft 404 that wastes crawl budget.
+ */
+async function entityPage(origin: string, kind: string, slug: string) {
+  const route = ENTITY_ROUTES[kind];
+  const canonicalPath = `/${kind}/${encodeURIComponent(slug)}`;
+
+  let entity: NamedEntity | null = null;
+  let missing = false;
+
+  try {
+    const res = await fetch(
+      `${BACKEND_URL}/api/v1/${route.endpoint}/${encodeURIComponent(slug)}`,
+      { headers: { Accept: 'application/json' } }
+    );
+    if (res.status === 404) {
+      missing = true;
+    } else if (res.ok) {
+      const body = (await res.json()) as Record<string, unknown>;
+      entity = (route.unwrap ? body?.[route.unwrap] : body) as NamedEntity | null;
+    }
+  } catch {
+    // Backend unreachable — fall through to the generic page below.
+  }
+
+  if (missing) {
+    return defaultPage(origin, canonicalPath, 404);
+  }
+  if (!entity?.name) {
+    return defaultPage(origin, canonicalPath);
+  }
+
+  const name = entity.name;
+  const description =
+    (entity.description || '').trim() ||
+    `${name} — á Hlaupadagskra.is.`;
+
+  return htmlPage({
+    origin,
+    canonicalPath,
+    title: `${name} | Hlaupadagskra.is`,
+    ogTitle: `${name}${route.suffix}`,
+    heading: name,
+    description: description.slice(0, 200),
+    ogImagePath: '/api/og-image',
+  });
+}
+
+/** Single place that builds the crawler-facing HTML, so every route agrees. */
+function htmlPage(opts: {
+  origin: string;
+  canonicalPath: string;
+  title: string;
+  ogTitle: string;
+  heading: string;
+  description: string;
+  ogImagePath: string;
+  status?: number;
+}) {
+  const canonicalUrl = esc(
+    opts.canonicalPath ? `${opts.origin}${opts.canonicalPath}` : opts.origin
+  );
+  const title = esc(opts.title);
+  const ogTitle = esc(opts.ogTitle);
+  const heading = esc(opts.heading);
+  const description = esc(opts.description);
+  const ogImageUrl = esc(`${opts.origin}${opts.ogImagePath}`);
+
+  const html = `<!DOCTYPE html>
+<html lang="is">
+<head>
+  <meta charset="UTF-8" />
+  <title>${title}</title>
+  <meta name="description" content="${description}" />
+  <link rel="canonical" href="${canonicalUrl}" />
+
+  <meta property="og:title" content="${ogTitle}" />
+  <meta property="og:description" content="${description}" />
+  <meta property="og:url" content="${canonicalUrl}" />
+  <meta property="og:site_name" content="Hlaupadagskra.is" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="${ogImageUrl}" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:locale" content="is_IS" />
+  <meta property="og:locale:alternate" content="en_US" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="${ogTitle}" />
+  <meta name="twitter:description" content="${description}" />
+  <meta name="twitter:image" content="${ogImageUrl}" />
+</head>
+<body>
+  <h1>${heading}</h1>
+  <p>${description}</p>
+  <p><a href="${canonicalUrl}">${heading} á Hlaupadagskra.is</a></p>
+</body>
+</html>`;
+
+  return new Response(html, {
+    status: opts.status ?? 200,
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
+    },
+  });
+}
+
+function defaultPage(origin: string, path: string = '', status: number = 200) {
   // Only the path forms the canonical, so every /compare?a=…&b=… permutation
   // consolidates onto /compare rather than becoming its own indexable URL.
   const cleanPath = path.split('?')[0].replace(/\/+$/, '');
@@ -221,7 +363,7 @@ function defaultPage(origin: string, path: string = '') {
 </html>`;
 
   return new Response(html, {
-    status: 200,
+    status,
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
       'Cache-Control': 'public, s-maxage=3600',
