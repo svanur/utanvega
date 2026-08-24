@@ -58,6 +58,7 @@ import ShareButtons from '../components/ShareButtons';
 import { useTrailBySlug, Trail, API_URL } from '../hooks/useTrails';
 import { useTrailGeometry } from '../hooks/useTrailGeometries';
 import { estimateDuration } from '../utils/estimateDuration';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -345,6 +346,21 @@ function fmtM(m: number) {
 
 function fmtPct(v: number) {
     return `${Math.round(v)}%`;
+}
+
+// ─── Trail similarity ─────────────────────────────────────────────────────────
+
+// Mirrors backend DifficultyCalculator.cs: climbing only counts toward effort
+// for activities where it dominates. Road, fun, obstacle and cross-country runs
+// are judged on distance alone, since they carry little elevation.
+const EFFORT_ACTIVITIES = new Set(['TrailRunning', 'Hiking', 'Cycling']);
+
+/** Effort distance in km — the yardstick for "how comparable are these two?" */
+function effortKm(trail: { length: number; elevationGain: number; activityType: string }) {
+    const distanceKm = trail.length / 1000;
+    return EFFORT_ACTIVITIES.has(trail.activityType)
+        ? distanceKm + trail.elevationGain / 100
+        : distanceKm;
 }
 
 // ─── Route similarity ─────────────────────────────────────────────────────────
@@ -871,6 +887,66 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
         setSearchParams(next, { replace: true });
     };
 
+    // Suggestion chips express intent about the pair, not the filters. Clearing
+    // them keeps applyFilter's invariant — active filter always matches the
+    // current selections — instead of leaving a pill highlighted while the
+    // chosen trails sit outside its range (and out of the picker dropdowns).
+    // The pickers themselves go through setSlug, which must NOT clear: their
+    // options are already filtered, so any pick there matches by construction.
+    const setPair = useCallback((a: string, b: string) => {
+        setFilterDist(null);
+        setFilterElev(null);
+        setSearchParams(new URLSearchParams({ a, b }), { replace: true });
+    }, [setSearchParams]);
+
+    const applySuggestion = useCallback((key: 'a' | 'b', slug: string) => {
+        setFilterDist(null);
+        setFilterElev(null);
+        const next = new URLSearchParams(searchParams);
+        next.set(key, slug);
+        setSearchParams(next, { replace: true });
+    }, [searchParams, setSearchParams]);
+
+    // Ready-made comparisons for the empty state. Derived from viewCount rather
+    // than a hardcoded slug list so it can't rot when trails are renamed or
+    // removed. Popular trails are paired with their nearest neighbour by length
+    // so each suggestion is a fair matchup rather than a 3 km hill vs an ultra.
+    const suggestedPairs = useMemo(() => {
+        const popular = allTrails
+            .filter(tr => tr.slug && tr.length > 0)
+            .sort((x, y) => (y.viewCount ?? 0) - (x.viewCount ?? 0))
+            .slice(0, 6)
+            .sort((x, y) => x.length - y.length);
+
+        const pairs: { a: Trail; b: Trail }[] = [];
+        for (let i = 0; i + 1 < popular.length; i += 2) {
+            pairs.push({ a: popular[i], b: popular[i + 1] });
+        }
+        return pairs;
+    }, [allTrails]);
+
+    // Exactly one trail chosen — suggest comparable partners for the empty slot.
+    // Memoized so soloTrail keeps a stable reference across renders; otherwise
+    // it invalidates similarTrails' deps and re-runs that sort every render.
+    const { soloSlot, soloTrail } = useMemo(() => {
+        if (trailA && !slugB) return { soloSlot: 'b' as const, soloTrail: trailA };
+        if (trailB && !slugA) return { soloSlot: 'a' as const, soloTrail: trailB };
+        return { soloSlot: null, soloTrail: null };
+    }, [trailA, trailB, slugA, slugB]);
+
+    const similarTrails = useMemo(() => {
+        if (!soloTrail) return [];
+        const base = effortKm(soloTrail);
+        return allTrails
+            .filter(tr => tr.slug !== soloTrail.slug
+                && tr.length > 0
+                && tr.activityType === soloTrail.activityType)
+            .map(tr => ({ trail: tr, delta: Math.abs(effortKm(tr) - base) }))
+            .sort((x, y) => x.delta - y.delta)
+            .slice(0, 3)
+            .map(x => x.trail);
+    }, [soloTrail, allTrails]);
+
     // Max elevation from geometry
     const maxEleA = useMemo(() => {
         if (!coordsA) return null;
@@ -902,11 +978,15 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
     const bothLoading = loadingA || loadingB;
     const hasBoth = !!trailA && !!trailB;
 
+    // Matches the string ShareButtons uses above, so a shared link's tab title
+    // and its share title agree. Falls back to the page name until both load.
+    usePageTitle(hasBoth ? `${trailA.name} vs ${trailB.name}` : t('compare.title'));
+
     return (
         <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('nav.trails'), to: '/trails' }, { label: t('compare.compareButton', { defaultValue: 'Compare' }) }]}>
             <Container maxWidth="md" sx={{ py: 2 }}>
                 {/* Page header */}
-                <Stack direction="row" alignItems="center" spacing={1} mb={3}>
+                <Stack direction="row" alignItems="center" spacing={1} mb={1}>
                     <CompareArrowsIcon color="primary" />
                     <Typography variant="h5" fontWeight="bold" sx={{ flex: 1 }}>
                         {t('compare.title')}
@@ -918,6 +998,58 @@ export default function TrailComparePage({ mode, onToggleMode }: Props) {
                         />
                     )}
                 </Stack>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    {t('compare.intro')}
+                </Typography>
+
+                {/* Suggestions sit above the picker card so the Paper boundary
+                    separates them from the filter pills inside it — "load this"
+                    never reads as "filter by this". Nothing chosen yet: popular
+                    matchups. One trail chosen: comparable partners for the
+                    empty slot. Both chosen: nothing, the comparison is showing. */}
+                {!slugA && !slugB && suggestedPairs.length > 0 && (
+                    <Box sx={{ mb: 3 }}>
+                        <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+                            {t('compare.tryOne')}
+                        </Typography>
+                        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                            {suggestedPairs.map(({ a, b }) => (
+                                <Chip
+                                    key={`${a.slug}-${b.slug}`}
+                                    label={`${a.name} vs ${b.name}`}
+                                    size="small"
+                                    variant="outlined"
+                                    color="primary"
+                                    onClick={() => setPair(a.slug, b.slug)}
+                                />
+                            ))}
+                        </Stack>
+                    </Box>
+                )}
+
+                {soloTrail && soloSlot && similarTrails.length > 0 && (
+                    <Box sx={{ mb: 3 }}>
+                        <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+                            {t('compare.similarTo', { name: soloTrail.name })}
+                        </Typography>
+                        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                            {similarTrails.map(tr => (
+                                <Chip
+                                    key={tr.slug}
+                                    // Show elevation too where it drives the match, or a
+                                    // 21 km suggestion for a 27 km trail looks arbitrary.
+                                    label={EFFORT_ACTIVITIES.has(tr.activityType)
+                                        ? `${tr.name} · ${fmtKm(tr.length)} · ${fmtM(tr.elevationGain)}`
+                                        : `${tr.name} · ${fmtKm(tr.length)}`}
+                                    size="small"
+                                    variant="outlined"
+                                    color="primary"
+                                    onClick={() => applySuggestion(soloSlot, tr.slug)}
+                                />
+                            ))}
+                        </Stack>
+                    </Box>
+                )}
 
                 {/* Trail pickers + filter pills */}
                 <Paper elevation={2} sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
