@@ -23,7 +23,7 @@ public class GetTrailGpxQueryHandler : IRequestHandler<GetTrailGpxQuery, GpxResp
     public GetTrailGpxQueryHandler(UtanvegaDbContext context, IConfiguration configuration)
     {
         _context = context;
-        _siteUrl = configuration["SiteUrl"] ?? "https://utanvega.vercel.app";
+        _siteUrl = configuration["SiteUrl"] ?? "https://www.hlaupadagskra.is";
     }
 
     public async Task<GpxResponse?> Handle(GetTrailGpxQuery request, CancellationToken cancellationToken)
