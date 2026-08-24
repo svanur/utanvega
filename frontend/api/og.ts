@@ -132,72 +132,41 @@ export default async function handler(request: Request) {
       { headers: { Accept: 'application/json' } }
     );
 
+    // Encoded on every branch, so the canonical a 404 advertises is byte-identical
+    // to the one the same URL gets once the trail exists.
+    const trailPath = `/trails/${encodeURIComponent(slug)}`;
+
     if (res.status === 404) {
       // A 200 on a missing trail is a soft 404 that wastes crawl budget.
-      return defaultPage(origin, `/trails/${slug}`, 404);
+      return defaultPage(origin, trailPath, 404);
     }
     if (!res.ok) {
-      return defaultPage(origin, `/trails/${slug}`);
+      return defaultPage(origin, trailPath);
     }
 
     const trail = await res.json() as TrailResponse;
-    const title = esc(trail.name);
     const distance = fmtDistance(trail.length);
     const gain = Math.round(trail.elevationGain);
     const activity = ACTIVITY_LABELS[trail.activityType] || trail.activityType;
-    const canonicalUrl = `${origin}/trails/${encodeURIComponent(slug)}`;
 
     const description = trail.description
-      ? esc(trail.description.slice(0, 200))
-      : esc(`${distance} km ${activity.toLowerCase()} trail · ${gain}m elevation gain`);
+      ? trail.description.slice(0, 200)
+      : `${distance} km ${activity.toLowerCase()} trail · ${gain}m elevation gain`;
 
     const locations = trail.locations?.map((l) => l.name).join(', ') || '';
-    const subtitle = locations ? ` · ${esc(locations)}` : '';
+    const subtitle = locations ? ` · ${locations}` : '';
 
-    const ogTitle = `${title} – ${distance} km${subtitle}`;
-    const ogImageUrl = `${origin}/api/og-image?slug=${encodeURIComponent(slug)}`;
-    const safeCanonicalUrl = esc(canonicalUrl);
-
-    const html = `<!DOCTYPE html>
-<html lang="is">
-<head>
-  <meta charset="UTF-8" />
-  <title>${title} – Hlaupadagskra.is</title>
-  <meta name="description" content="${description}" />
-  <link rel="canonical" href="${safeCanonicalUrl}" />
-
-  <meta property="og:title" content="${ogTitle}" />
-  <meta property="og:description" content="${description}" />
-  <meta property="og:url" content="${safeCanonicalUrl}" />
-  <meta property="og:site_name" content="Hlaupadagskra.is" />
-  <meta property="og:type" content="website" />
-  <meta property="og:image" content="${ogImageUrl}" />
-  <meta property="og:image:width" content="1200" />
-  <meta property="og:image:height" content="630" />
-  <meta property="og:locale" content="is_IS" />
-  <meta property="og:locale:alternate" content="en_US" />
-
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="${ogTitle}" />
-  <meta name="twitter:description" content="${description}" />
-  <meta name="twitter:image" content="${ogImageUrl}" />
-</head>
-<body>
-  <h1>${title}</h1>
-  <p>${description}</p>
-  <p><a href="${safeCanonicalUrl}">${title} á Hlaupadagskra.is</a></p>
-</body>
-</html>`;
-
-    return new Response(html, {
-      status: 200,
-      headers: {
-        'Content-Type': 'text/html; charset=utf-8',
-        'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
-      },
+    return htmlPage({
+      origin,
+      canonicalPath: trailPath,
+      title: `${trail.name} – Hlaupadagskra.is`,
+      ogTitle: `${trail.name} – ${distance} km${subtitle}`,
+      heading: trail.name,
+      description,
+      ogImagePath: `/api/og-image?slug=${encodeURIComponent(slug)}`,
     });
   } catch {
-    return defaultPage(origin, `/trails/${slug}`);
+    return defaultPage(origin, `/trails/${encodeURIComponent(slug)}`);
   }
 }
 
@@ -307,13 +276,26 @@ function htmlPage(opts: {
 </body>
 </html>`;
 
+  const status = opts.status ?? 200;
+
   return new Response(html, {
-    status: opts.status ?? 200,
+    status,
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
-      'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
+      'Cache-Control': cacheControlFor(status),
     },
   });
+}
+
+/**
+ * A 404 is a statement about "right now" — the event may be published a minute
+ * later. Caching it publicly for an hour would keep serving the 404 from the
+ * edge long after the page exists, so misses get a short window only.
+ */
+function cacheControlFor(status: number): string {
+  return status === 200
+    ? 'public, s-maxage=3600, stale-while-revalidate=86400'
+    : 'public, s-maxage=60';
 }
 
 function defaultPage(origin: string, path: string = '', status: number = 200) {
@@ -322,51 +304,14 @@ function defaultPage(origin: string, path: string = '', status: number = 200) {
   const cleanPath = path.split('?')[0].replace(/\/+$/, '');
   const meta = ROUTE_META[cleanPath];
 
-  const title = meta ? `${meta.title} | Hlaupadagskra.is` : SITE_TITLE;
-  const description = meta ? meta.description : SITE_DESCRIPTION;
-  const heading = meta ? meta.title : 'Hlaupadagskra.is';
-
-  const safeTitle = esc(title);
-  const safeDescription = esc(description);
-  const safeHeading = esc(heading);
-  const safeCanonicalUrl = esc(cleanPath ? `${origin}${cleanPath}` : origin);
-  const ogImageUrl = `${origin}/api/og-image`;
-
-  const html = `<!DOCTYPE html>
-<html lang="is">
-<head>
-  <meta charset="UTF-8" />
-  <title>${safeTitle}</title>
-  <meta name="description" content="${safeDescription}" />
-  <link rel="canonical" href="${safeCanonicalUrl}" />
-
-  <meta property="og:title" content="${safeTitle}" />
-  <meta property="og:description" content="${safeDescription}" />
-  <meta property="og:url" content="${safeCanonicalUrl}" />
-  <meta property="og:site_name" content="Hlaupadagskra.is" />
-  <meta property="og:type" content="website" />
-  <meta property="og:image" content="${ogImageUrl}" />
-  <meta property="og:image:width" content="1200" />
-  <meta property="og:image:height" content="630" />
-  <meta property="og:locale" content="is_IS" />
-
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="${safeTitle}" />
-  <meta name="twitter:description" content="${safeDescription}" />
-  <meta name="twitter:image" content="${ogImageUrl}" />
-</head>
-<body>
-  <h1>${safeHeading}</h1>
-  <p>${safeDescription}</p>
-  <p><a href="${safeCanonicalUrl}">Hlaupadagskra.is</a></p>
-</body>
-</html>`;
-
-  return new Response(html, {
+  return htmlPage({
+    origin,
+    canonicalPath: cleanPath,
+    title: meta ? `${meta.title} | Hlaupadagskra.is` : SITE_TITLE,
+    ogTitle: meta ? `${meta.title} | Hlaupadagskra.is` : SITE_TITLE,
+    heading: meta ? meta.title : 'Hlaupadagskra.is',
+    description: meta ? meta.description : SITE_DESCRIPTION,
+    ogImagePath: '/api/og-image',
     status,
-    headers: {
-      'Content-Type': 'text/html; charset=utf-8',
-      'Cache-Control': 'public, s-maxage=3600',
-    },
   });
 }
