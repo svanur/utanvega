@@ -23,6 +23,8 @@ public record AnalyticsDto(
 public record SummaryDto(
     int TotalViews,
     int UniqueVisitors,
+    int ViewsToday,
+    int ViewsYesterday,
     int ViewsThisWeek,
     int ViewsLastWeek,
     double AvgViewsPerTrail,
@@ -57,6 +59,13 @@ public class GetAnalyticsQueryHandler : IRequestHandler<GetAnalyticsQuery, Analy
         var startOfLastWeek = now.AddDays(-14);
         var thirtyDaysAgo = now.AddDays(-30);
 
+        // Calendar days, not rolling 24-hour windows: "today" should mean the
+        // day the reader is having. Iceland keeps UTC year-round with no DST,
+        // so the UTC day boundary is also the local one and no conversion is
+        // needed — worth stating, since it would not hold in most places.
+        var startOfToday = now.Date;
+        var startOfYesterday = startOfToday.AddDays(-1);
+
         var views = _context.TrailViews.AsNoTracking();
 
         // Archived trails are excluded from every trail-keyed result, as before.
@@ -76,6 +85,12 @@ public class GetAnalyticsQueryHandler : IRequestHandler<GetAnalyticsQuery, Analy
             .Distinct()
             .CountAsync(cancellationToken);
 
+        var viewsToday = await views
+            .CountAsync(v => v.ViewedAtUtc >= startOfToday, cancellationToken);
+
+        var viewsYesterday = await views
+            .CountAsync(v => v.ViewedAtUtc >= startOfYesterday && v.ViewedAtUtc < startOfToday, cancellationToken);
+
         var viewsThisWeek = await views
             .CountAsync(v => v.ViewedAtUtc >= startOfWeek, cancellationToken);
 
@@ -90,7 +105,8 @@ public class GetAnalyticsQueryHandler : IRequestHandler<GetAnalyticsQuery, Analy
         var avgViewsPerTrail = trailsWithViews > 0 ? (double)totalViews / trailsWithViews : 0;
 
         var summary = new SummaryDto(
-            totalViews, uniqueVisitors, viewsThisWeek, viewsLastWeek,
+            totalViews, uniqueVisitors, viewsToday, viewsYesterday,
+            viewsThisWeek, viewsLastWeek,
             Math.Round(avgViewsPerTrail, 1), trailsWithViews);
 
         // ── Daily views (last 30 days) ────────────────────────────────────

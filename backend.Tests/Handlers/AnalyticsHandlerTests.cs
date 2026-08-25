@@ -105,6 +105,33 @@ public class AnalyticsHandlerTests : IDisposable
     }
 
     [Fact]
+    public async Task Summary_CountsTodayAndYesterdayByCalendarDay()
+    {
+        // Calendar days, not rolling 24-hour windows — a view a minute after
+        // midnight belongs to today, one a minute before it to yesterday.
+        // Measured as a delta so the assertion does not depend on how the
+        // shared seed happens to fall relative to midnight.
+        var before = (await Run()).Summary;
+
+        using (var context = _factory.CreateContext())
+        {
+            var midnight = DateTime.UtcNow.Date;
+            void At(DateTime when) => context.TrailViews.Add(new TrailView
+            {
+                Id = Guid.NewGuid(), TrailId = EsjaId, ViewedAtUtc = when, IpHash = "today",
+            });
+            At(midnight.AddMinutes(1));   // today, just after midnight
+            At(midnight.AddMinutes(-1));  // yesterday, just before it
+            At(midnight.AddHours(-10));   // yesterday, earlier
+            context.SaveChanges();
+        }
+
+        var after = (await Run()).Summary;
+        Assert.Equal(1, after.ViewsToday - before.ViewsToday);
+        Assert.Equal(2, after.ViewsYesterday - before.ViewsYesterday);
+    }
+
+    [Fact]
     public async Task Summary_SplitsThisWeekFromLastWeek()
     {
         var result = await Run();
