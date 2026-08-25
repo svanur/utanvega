@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import {
     Box, Typography, Paper, Grid, Skeleton, Chip, Table, TableBody,
     TableCell, TableContainer, TableHead, TableRow, Stack, Button, Tooltip as MuiTooltip
@@ -42,7 +42,6 @@ interface TopTrail {
     name: string;
     slug: string;
     viewCount: number;
-    uniqueVisitors: number;
 }
 
 interface TrendingTrail {

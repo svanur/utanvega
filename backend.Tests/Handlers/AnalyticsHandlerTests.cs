@@ -1,4 +1,4 @@
-using Utanvega.Backend.Application.Analytics.Queries;
+﻿using Utanvega.Backend.Application.Analytics.Queries;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Infrastructure.Persistence;
 using Xunit;
@@ -162,12 +162,11 @@ public class AnalyticsHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task TopTrails_CountViewsAndDistinctVisitorsPerTrail()
+    public async Task TopTrails_CountViewsPerTrail()
     {
         var result = await Run();
-        var esja = result.TopTrails.Single(t => t.Slug == "esja");
-        Assert.Equal(6, esja.ViewCount);
-        Assert.Equal(3, esja.UniqueVisitors); // aaa, bbb, fff
+        Assert.Equal(6, result.TopTrails.Single(t => t.Slug == "esja").ViewCount);
+        Assert.Equal(4, result.TopTrails.Single(t => t.Slug == "hengill").ViewCount);
     }
 
     // ── Trending ──────────────────────────────────────────────────────────

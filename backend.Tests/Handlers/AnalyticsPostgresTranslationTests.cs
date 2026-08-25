@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Utanvega.Backend.Application.Analytics.Queries;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Infrastructure.Persistence;
@@ -92,7 +92,6 @@ public class AnalyticsPostgresTranslationTests
 
         Assert.Equal(["esja", "hengill"], result.TopTrails.Select(t => t.Slug));
         Assert.Equal(6, result.TopTrails.Single(t => t.Slug == "esja").ViewCount);
-        Assert.Equal(3, result.TopTrails.Single(t => t.Slug == "esja").UniqueVisitors);
 
         Assert.Equal(300.0, result.TrendingTrails.Single(t => t.Slug == "esja").ChangePercent);
         Assert.Equal(0.0, result.TrendingTrails.Single(t => t.Slug == "hengill").ChangePercent);

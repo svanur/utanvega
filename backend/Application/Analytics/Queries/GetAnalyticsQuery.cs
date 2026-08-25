@@ -31,7 +31,7 @@ public record SummaryDto(
 
 public record DailyViewsDto(string Date, int Views, int UniqueVisitors);
 public record HourlyViewsDto(int Hour, int Views);
-public record TopTrailDto(string Name, string Slug, int ViewCount, int UniqueVisitors);
+public record TopTrailDto(string Name, string Slug, int ViewCount);
 public record TrendingTrailDto(string Name, string Slug, int ViewsThisWeek, int ViewsLastWeek, double ChangePercent);
 
 public class GetAnalyticsQueryHandler : IRequestHandler<GetAnalyticsQuery, AnalyticsDto>
@@ -125,22 +125,27 @@ public class GetAnalyticsQueryHandler : IRequestHandler<GetAnalyticsQuery, Analy
             .ToList();
 
         // ── Top 10 trails (all-time) ──────────────────────────────────────
+        // Counts views only. A per-trail distinct-visitor count used to be
+        // computed here and returned unused by any client — it was the single
+        // most expensive operation in this query, since COUNT(DISTINCT) runs
+        // per trail group across the whole table before the top ten are taken.
+        // If it is wanted again, note it would be a 90-day figure sitting next
+        // to an all-time ViewCount, and needs labelling as such.
         var topRows = await views
-            .Join(visibleTrails, v => v.TrailId, t => t.Id, (v, t) => new { v.IpHash, t.Name, t.Slug })
+            .Join(visibleTrails, v => v.TrailId, t => t.Id, (v, t) => new { t.Name, t.Slug })
             .GroupBy(x => new { x.Name, x.Slug })
             .Select(g => new
             {
                 g.Key.Name,
                 g.Key.Slug,
                 ViewCount = g.Count(),
-                UniqueVisitors = g.Select(x => x.IpHash).Distinct().Count(),
             })
             .OrderByDescending(r => r.ViewCount)
             .Take(10)
             .ToListAsync(cancellationToken);
 
         var topTrails = topRows
-            .Select(r => new TopTrailDto(r.Name, r.Slug, r.ViewCount, r.UniqueVisitors))
+            .Select(r => new TopTrailDto(r.Name, r.Slug, r.ViewCount))
             .ToList();
 
         // ── Trending: this week vs last week ──────────────────────────────
