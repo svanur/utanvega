@@ -5,6 +5,7 @@ using Serilog;
 using Serilog.Events;
 using Utanvega.Backend.Infrastructure.Persistence;
 using Utanvega.Backend.Infrastructure.Http;
+using Utanvega.Backend.Core;
 using Utanvega.Backend.Core.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -688,7 +689,10 @@ app.MapGet("/api/v1/health", () => Results.Ok(new
 {
     status = "healthy",
     service = "api",
+    // The API contract version, matching the /api/v1/ route prefix — not the
+    // build. appVersion carries the release; the two are separate on purpose.
     version = "v1",
+    appVersion = BuildInfo.Version,
     timestampUtc = DateTime.UtcNow
 }))
 .WithName("Health");
@@ -699,7 +703,8 @@ app.MapGet("/api/v1/admin/health", [Authorize(Policy = "AdminOnly")] () => Resul
     service = "backend 1",
     area = "admin",
     version = "v1",
-    gitHash = Environment.GetEnvironmentVariable("GIT_HASH") ?? "unknown",
+    appVersion = BuildInfo.Version,
+    gitHash = BuildInfo.GitHash,
     timestampUtc = DateTime.UtcNow
 }))
 .WithName("AdminHealth");
@@ -722,7 +727,8 @@ app.MapGet("/", async (IWebHostEnvironment env, UtanvegaDbContext db, IMemoryCac
     return new
     {
         message = "Backend API running!",
-        version = typeof(Program).Assembly.GetName().Version?.ToString() ?? "unknown",
+        version = BuildInfo.Version,
+        gitHash = BuildInfo.GitHash,
         environment = env.EnvironmentName,
         time = DateTime.UtcNow,
         connection = string.IsNullOrEmpty(connectionString) ? "Missing" : "Configured",

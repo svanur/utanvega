@@ -5,7 +5,10 @@ const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080';
 export type HealthStatus = {
     status: string;
     service: string;
+    /** API contract version, matching the /api/v1/ route prefix — not the build. */
     version: string;
+    /** Release version of the running backend, e.g. "1.1.1". */
+    appVersion?: string;
     timestampUtc: string;
 };
 

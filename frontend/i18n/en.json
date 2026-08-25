@@ -776,73 +776,81 @@
             }
         },
         "changelog": {
-            "v2_6": {
+            "v1_1_1": {
+                "title": "Real visitor counts",
+                "description": "The server was reading Fly's proxy address rather than the visitor's, so every visitor looked like the same person. Unique visitor counts were far too low, trail views were being discarded as duplicates within half an hour of each other, and the rate limits on trail views, tips and feedback applied to the whole site at once instead of per visitor."
+            },
+            "v1_1_0": {
                 "title": "Discoverability & SEO - Breadcrumbs - Compare Trails - Race Share Cards",
                 "description": "Search engines could only see trail pages — every other route was indexed under one generic title with no content. Fixed with per-route titles and descriptions, canonical URLs, robots.txt and a sitemap covering 305 URLs. Compare trails added to the footer with suggested matchups and similar-trail shortcuts. Sticky breadcrumbs that remember whether you arrived from an event or a location. Race share and finish cards redesigned with activity colour themes, bib numbers and personal messages. Consistent favourites across cards and tables, and harmonised filters on Events and Trails."
             },
-            "v2_5": {
+            "v1_0_0": {
                 "title": "A new hlaupadagskra.is -- VERSION 2.0 WAS LAUNCHED --",
                 "description": "A brand new hlaupadagskra.is version is launched on the Reykjavik Marathon EXPO."
             },
-            "v2_4": {
+            "v0_15_0": {
                 "title": "Smart presets & sharing",
                 "description": "Time-aware filter presets that change throughout the day — Morning 5k, After Work, Weekend Explorer, and more. Open Graph meta tags with dynamic trail preview images for rich social media link sharing. Nearby preset when geolocation is active. GPX download button on trail pages."
             },
-            "v2_3": {
+            "v0_14_0": {
                 "title": "Directions & legal",
                 "description": "Get directions to trailhead via Google Maps, disclaimer and privacy policy pages, smarter summit weather thresholds for highland trails, and improved trail condition ratings with feels-like temperature and weather code awareness."
             },
-            "v2_2": {
+            "v0_13_0": {
                 "title": "Spotlight search",
                 "description": "Press Ctrl+K to instantly search trails and locations from anywhere. Fuzzy matching with Icelandic character support, keyboard navigation, and grouped results."
             },
-            "v2_1": {
+            "v0_12_0": {
                 "title": "Trail weather",
                 "description": "Live weather forecasts on trail pages via Open-Meteo — current conditions, hourly and 5-day forecast, trail condition indicator, and elevation-aware summit weather for mountain trails. Collapsible panel with bilingual weather descriptions."
             },
-            "v2_0": {
+            "v0_11_0": {
                 "title": "Analytics & insights",
                 "description": "Trail view tracking with privacy-safe IP deduplication, trending trails discovery carousel, \"Most Popular\" sort option, and a full analytics dashboard in admin with daily views, peak hours, and week-over-week trends."
             },
-            "v1_9": {
+            "v0_10_0": {
                 "title": "Activity filters & admin tools",
                 "description": "Activity type filter pills on the trail list, searchable location dropdown and multi-select tag checkboxes in admin, trail stats in the edit dialog, auto trail-type detection on update, and bulk re-detect trail types."
             },
-            "v1_8": {
+            "v0_9_0": {
                 "title": "Fun & performance",
                 "description": "Shake-to-random-trail with slot machine animation, share/copy URL button, fun illustrated 404 pages for missing trails and locations, empty filter state with bored runner, and code splitting with lazy loading for faster page loads."
             },
-            "v1_7": {
+            "v0_8_0": {
                 "title": "UX & mobile",
                 "description": "Dark mode with dark map tiles, trail type icons on cards, URL shareable filters, recently viewed trails carousel, skeleton loading screens, map marker clustering, compact trail cards, and icon-only activity pills on mobile."
             },
-            "v1_6": {
+            "v0_7_0": {
                 "title": "Locations & discovery",
                 "description": "Hierarchical locations with breadcrumbs, fuzzy trail search with suggestions, location detail stats, location role display, activity type icons, and copy-link sharing."
             },
-            "v1_5": {
+            "v0_6_0": {
                 "title": "Quality & polish",
                 "description": "ESLint setup, lint cleanup, security hardening, input validation with FluentValidation, and improved loading animations."
             },
-            "v1_4": {
+            "v0_5_0": {
                 "title": "Admin improvements",
                 "description": "Split admin components, trail health dashboard, bulk GPX upload, and changelog tracking."
             },
-            "v1_3": {
+            "v0_4_0": {
                 "title": "Filters & search",
                 "description": "Advanced filters with elevation, distance, and trail type sliders. Tag-based filtering and search improvements."
             },
-            "v1_2": {
+            "v0_3_0": {
                 "title": "Maps & elevation",
                 "description": "Interactive trail maps with Leaflet, elevation profile charts, route playback, and QR code sharing."
             },
-            "v1_1": {
+            "v0_2_0": {
                 "title": "Locations & favorites",
                 "description": "Location pages, distance-based sorting, favorites and hidden trails, and dark mode support."
             },
-            "v1_0": {
-                "title": "Initial release",
-                "description": "Trail listing with search, detail pages with GPX data, bilingual support (Icelandic/English), and mobile-first design."
+            "v0_1_0": {
+                "title": "Work begins on the 'Utanvega' site as a pet project",
+                "description": "To begin with, mainly a collection of interesting trail running routes."
+            },
+            "v0_0_0": {
+                "title": "February, 2025",
+                "description": "The original hlaupadagskra.is site is released, listing all runs in Iceland in one place."
             }
         }
     },

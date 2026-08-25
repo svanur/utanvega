@@ -114,7 +114,12 @@ export default function FooterStatus() {
                     ) : (
                         <Chip
                             icon={<CheckCircleOutlineIcon />}
-                            label={`${data?.status ?? t('footer.healthy')} • ${data?.version ?? 'v1'}`}
+                            // appVersion is the release; `version` is the API contract
+                            // version and reads as one when shown here. Omit rather than
+                            // print a stand-in, so the chip is never misleading.
+                            label={data?.appVersion
+                                ? `${data.status ?? t('footer.healthy')} • v${data.appVersion}`
+                                : (data?.status ?? t('footer.healthy'))}
                             color="success"
                             variant="outlined"
                             size="small"
