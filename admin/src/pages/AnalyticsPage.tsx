@@ -153,9 +153,9 @@ export default function AnalyticsPage() {
                 <Typography variant="h5" fontWeight="bold" mb={3}>Analytics</Typography>
                 {/* Same count and widths as the real cards, so the layout does
                     not shift when the data arrives. */}
-                <Grid container spacing={2} mb={3}>
+                <Grid container spacing={2} columns={10} mb={3}>
                     {[1, 2, 3, 4, 5].map(i => (
-                        <Grid item xs={6} md={4} key={i}>
+                        <Grid item xs={5} md={2} key={i}>
                             <Skeleton variant="rounded" height={100} />
                         </Grid>
                     ))}
@@ -223,9 +223,12 @@ export default function AnalyticsPage() {
                 )}
             </Stack>
 
-            {/* Summary cards — most recent first, cumulative figures after. */}
-            <Grid container spacing={2} mb={3}>
-                <Grid item xs={6} md={4}>
+            {/* Summary cards — most recent first, cumulative figures after.
+                A 10-column grid rather than the default 12: five cards divide
+                into it evenly (md=2), which 12 cannot do, while xs=5 keeps the
+                familiar two-per-row on a phone. */}
+            <Grid container spacing={2} columns={10} mb={3}>
+                <Grid item xs={5} md={2}>
                     <StatCard
                         title="Views Today"
                         value={summary.viewsToday.toLocaleString()}
@@ -234,7 +237,7 @@ export default function AnalyticsPage() {
                         color="#0288d1"
                     />
                 </Grid>
-                <Grid item xs={6} md={4}>
+                <Grid item xs={5} md={2}>
                     <StatCard
                         title="Views This Week"
                         value={summary.viewsThisWeek.toLocaleString()}
@@ -243,7 +246,7 @@ export default function AnalyticsPage() {
                         color="#2e7d32"
                     />
                 </Grid>
-                <Grid item xs={6} md={4}>
+                <Grid item xs={5} md={2}>
                     <StatCard
                         title="Total Views"
                         value={summary.totalViews.toLocaleString()}
@@ -252,7 +255,7 @@ export default function AnalyticsPage() {
                         color="#1976d2"
                     />
                 </Grid>
-                <Grid item xs={6} md={4}>
+                <Grid item xs={5} md={2}>
                     <StatCard
                         title="Unique Visitors"
                         value={summary.uniqueVisitors.toLocaleString()}
@@ -263,7 +266,7 @@ export default function AnalyticsPage() {
                         color="#9c27b0"
                     />
                 </Grid>
-                <Grid item xs={6} md={4}>
+                <Grid item xs={5} md={2}>
                     <StatCard
                         title="Avg Views / Trail"
                         value={summary.avgViewsPerTrail}
