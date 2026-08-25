@@ -36,7 +36,6 @@ import { useTranslate } from '../../hooks/useTranslate';
 import BilingualTextField from '../BilingualTextField';
 import { BilingualLangProvider, useBilingualLang } from '../../contexts/BilingualLangContext';
 import type { EventDetailDto, EventEditionDto, EventSummaryDto, RaceDto } from '../../hooks/useEvents';
-import { generateSlug } from '../../utils/slugify';
 import { hashText } from '../../utils/translationHash';
 import {
   TRAIL_ACTIVITY_TYPES as activityTypes,
@@ -180,12 +179,13 @@ function TrailFormCardInner({ trail: initialTrail, onClose, onSaved, onNotify }:
     { key: 'Escape', allowInInput: true, handler: () => { if (!saving) onClose(); } },
   ]);
 
+  // Renaming never touches the slug. This form only edits trails that already
+  // exist and are already linked to — from the sitemap, from search results,
+  // from anyone's bookmarks — so a slug that follows the name silently breaks
+  // every one of those URLs, and now returns a hard 404 rather than a soft one.
+  // Changing it is deliberate: unlock the field and type it.
   const handleChange = (field: keyof TrailDetail, value: string) => {
-    setTrail(prev => {
-      const next = { ...prev, [field]: value };
-      if (field === 'name' && !slugUnlocked) next.slug = generateSlug(value);
-      return next;
-    });
+    setTrail(prev => ({ ...prev, [field]: value }));
   };
 
   const handleAddLocation = () => {
