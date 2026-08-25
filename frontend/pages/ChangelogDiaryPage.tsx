@@ -42,7 +42,7 @@ const RELEASE_DATES: Record<string, string> = {
  * pre-launch development. Later releases get no badge of their own — one per
  * release would be noise, since post-launch is the normal case.
  */
-const GO_LIVE_VERSION = 'v2_5';
+const GO_LIVE_VERSION = 'v2_6';
 
 function formatVersion(key: string) {
     return key.replace('_', '.');
