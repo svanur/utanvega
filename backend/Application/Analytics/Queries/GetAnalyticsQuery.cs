@@ -39,10 +39,18 @@ public record TrendingTrailDto(string Name, string Slug, int ViewsThisWeek, int 
 public class GetAnalyticsQueryHandler : IRequestHandler<GetAnalyticsQuery, AnalyticsDto>
 {
     private readonly UtanvegaDbContext _context;
+    private readonly TimeProvider _timeProvider;
 
-    public GetAnalyticsQueryHandler(UtanvegaDbContext context)
+    /// <param name="timeProvider">
+    /// Supplies "now". Injected rather than read from <c>DateTime.UtcNow</c> so
+    /// the day and week boundaries can be tested at an exact instant — a test
+    /// that reads the clock separately from the handler races it, and would
+    /// fail if midnight fell between the two reads.
+    /// </param>
+    public GetAnalyticsQueryHandler(UtanvegaDbContext context, TimeProvider timeProvider)
     {
         _context = context;
+        _timeProvider = timeProvider;
     }
 
     /// <summary>
@@ -54,7 +62,7 @@ public class GetAnalyticsQueryHandler : IRequestHandler<GetAnalyticsQuery, Analy
     /// </summary>
     public async Task<AnalyticsDto> Handle(GetAnalyticsQuery request, CancellationToken cancellationToken)
     {
-        var now = DateTime.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var startOfWeek = now.AddDays(-7);
         var startOfLastWeek = now.AddDays(-14);
         var thirtyDaysAgo = now.AddDays(-30);

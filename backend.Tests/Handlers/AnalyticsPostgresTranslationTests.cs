@@ -74,7 +74,7 @@ public class AnalyticsPostgresTranslationTests
 
         await context.SaveChangesAsync();
 
-        var handler = new GetAnalyticsQueryHandler(context);
+        var handler = new GetAnalyticsQueryHandler(context, TimeProvider.System);
         var result = await handler.Handle(new GetAnalyticsQuery(), CancellationToken.None);
 
         // Same expectations as the SQLite tests — the point is that Postgres
