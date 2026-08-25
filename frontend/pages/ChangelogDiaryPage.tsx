@@ -36,8 +36,13 @@ const RELEASE_DATES: Record<string, string> = {
     v2_5: '2026-08-22',
 };
 
-/** Versions that shipped to production, as opposed to pre-launch development. */
-const WENT_LIVE = 'v2_5';
+/**
+ * The release that went to production. A single marker on an ordered list, not
+ * a category: everything above it shipped after launch, everything below it is
+ * pre-launch development. Later releases get no badge of their own — one per
+ * release would be noise, since post-launch is the normal case.
+ */
+const GO_LIVE_VERSION = 'v2_5';
 
 function formatVersion(key: string) {
     return key.replace('_', '.');
@@ -70,7 +75,7 @@ export default function ChangelogDiaryPage({ mode, onToggleMode }: ChangelogDiar
                 <Stack spacing={2.5}>
                     {VERSIONS.map(key => {
                         const date = RELEASE_DATES[key];
-                        const isLive = key === WENT_LIVE;
+                        const isGoLive = key === GO_LIVE_VERSION;
                         return (
                             <Paper key={key} elevation={2} sx={{ p: { xs: 2, sm: 3 } }}>
                                 <Stack
@@ -91,8 +96,8 @@ export default function ChangelogDiaryPage({ mode, onToggleMode }: ChangelogDiar
                                             {formatDate(date, i18n.language)}
                                         </Typography>
                                     )}
-                                    {isLive && (
-                                        <Chip label="Live" color="success" size="small" variant="outlined" />
+                                    {isGoLive && (
+                                        <Chip label="Went live" color="success" size="small" variant="outlined" />
                                     )}
                                 </Stack>
 

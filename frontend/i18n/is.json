@@ -777,7 +777,7 @@
         },
         "changelog": {
             "v2_6": {
-                "title": "Sýnileiki og leitarvélabestun",
+                "title": "Brauðmolar - SEO sýnileiki - Bera saman leiðir - Keppniskort",
                 "description": "Leitarvélar sáu aðeins leiðasíður — allar aðrar síður voru skráðar undir sama almenna titlinum án innihalds. Lagað með sérsniðnum titlum og lýsingum fyrir hverja síðu, canonical-slóðum, robots.txt og veftré með 305 slóðum. Bera saman leiðir bætt í fótinn ásamt tillögum að samanburði og svipuðum leiðum. Fastar brauðmolaslóðir sem muna hvort komið var frá viðburði eða staðsetningu. Keppniskort endurhönnuð með litaþemum eftir tegund hreyfingar, keppnisnúmeri og persónulegum skilaboðum. Samræmd eftirlæti í kortum og töflum og samstilltar síur á viðburða- og leiðasíðum."
             },
             "v2_5": {

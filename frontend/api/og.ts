@@ -171,10 +171,13 @@ export default async function handler(request: Request) {
 }
 
 /**
- * Paths that must never be indexed. robots.txt disallows them too, but a
- * disallowed URL can still be indexed from an external link — only a noindex
- * response keeps it out, and a crawler has to be allowed to read the page to
- * see that. These are served noindex rather than being blocked outright.
+ * Paths that must never be indexed.
+ *
+ * These are served noindex and are deliberately left crawlable in robots.txt:
+ * a disallowed URL can still be indexed as a bare entry when something links
+ * to it, because the crawler never fetches the page and so never reads the
+ * noindex. Do not add these paths to robots.txt — the two mechanisms cancel
+ * each other out.
  */
 const NOINDEX_PATHS = new Set(['/changelog-diary']);
 
