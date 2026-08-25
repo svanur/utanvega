@@ -8,6 +8,7 @@ import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import PeopleIcon from '@mui/icons-material/People';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import TodayIcon from '@mui/icons-material/Today';
 import RouteIcon from '@mui/icons-material/Route';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import {
@@ -21,6 +22,8 @@ const VERCEL_ANALYTICS_URL = import.meta.env.VITE_VERCEL_ANALYTICS_URL as string
 interface Summary {
     totalViews: number;
     uniqueVisitors: number;
+    viewsToday: number;
+    viewsYesterday: number;
     viewsThisWeek: number;
     viewsLastWeek: number;
     avgViewsPerTrail: number;
@@ -113,6 +116,19 @@ function WeekChangeChip({ thisWeek, lastWeek }: { thisWeek: number; lastWeek: nu
     );
 }
 
+/**
+ * Percentage change against a previous period, signed.
+ *
+ * With no views in the previous period there is nothing to divide by, so any
+ * views now count as +100% rather than an infinity — matching how the backend
+ * reports trending change.
+ */
+function formatChange(current: number, previous: number): string {
+    if (previous === 0) return current > 0 ? '+100%' : '0%';
+    const pct = Math.round(((current - previous) / previous) * 100);
+    return `${pct > 0 ? '+' : ''}${pct}%`;
+}
+
 const HOUR_LABELS = Array.from({ length: 24 }, (_, i) =>
     `${i.toString().padStart(2, '0')}:00`
 );
@@ -135,9 +151,11 @@ export default function AnalyticsPage() {
         return (
             <Box>
                 <Typography variant="h5" fontWeight="bold" mb={3}>Analytics</Typography>
-                <Grid container spacing={2} mb={3}>
-                    {[1, 2, 3, 4].map(i => (
-                        <Grid item xs={6} md={3} key={i}>
+                {/* Same count and widths as the real cards, so the layout does
+                    not shift when the data arrives. */}
+                <Grid container spacing={2} columns={10} mb={3}>
+                    {[1, 2, 3, 4, 5].map(i => (
+                        <Grid item xs={5} md={2} key={i}>
                             <Skeleton variant="rounded" height={100} />
                         </Grid>
                     ))}
@@ -180,9 +198,8 @@ export default function AnalyticsPage() {
     });
     const maxHourlyViews = Math.max(...filledHourlyViews.map(h => h.views), 1);
 
-    const weekChange = summary.viewsLastWeek > 0
-        ? ((summary.viewsThisWeek - summary.viewsLastWeek) / summary.viewsLastWeek * 100).toFixed(0)
-        : summary.viewsThisWeek > 0 ? '+100' : '0';
+    const dayChange = formatChange(summary.viewsToday, summary.viewsYesterday);
+    const weekChange = formatChange(summary.viewsThisWeek, summary.viewsLastWeek);
 
     return (
         <Box>
@@ -206,9 +223,30 @@ export default function AnalyticsPage() {
                 )}
             </Stack>
 
-            {/* Summary Cards */}
-            <Grid container spacing={2} mb={3}>
-                <Grid item xs={6} md={3}>
+            {/* Summary cards — most recent first, cumulative figures after.
+                A 10-column grid rather than the default 12: five cards divide
+                into it evenly (md=2), which 12 cannot do, while xs=5 keeps the
+                familiar two-per-row on a phone. */}
+            <Grid container spacing={2} columns={10} mb={3}>
+                <Grid item xs={5} md={2}>
+                    <StatCard
+                        title="Views Today"
+                        value={summary.viewsToday.toLocaleString()}
+                        subtitle={`${dayChange} vs yesterday`}
+                        icon={<TodayIcon />}
+                        color="#0288d1"
+                    />
+                </Grid>
+                <Grid item xs={5} md={2}>
+                    <StatCard
+                        title="Views This Week"
+                        value={summary.viewsThisWeek.toLocaleString()}
+                        subtitle={`${weekChange} vs last week`}
+                        icon={<CalendarTodayIcon />}
+                        color="#2e7d32"
+                    />
+                </Grid>
+                <Grid item xs={5} md={2}>
                     <StatCard
                         title="Total Views"
                         value={summary.totalViews.toLocaleString()}
@@ -217,7 +255,7 @@ export default function AnalyticsPage() {
                         color="#1976d2"
                     />
                 </Grid>
-                <Grid item xs={6} md={3}>
+                <Grid item xs={5} md={2}>
                     <StatCard
                         title="Unique Visitors"
                         value={summary.uniqueVisitors.toLocaleString()}
@@ -228,16 +266,7 @@ export default function AnalyticsPage() {
                         color="#9c27b0"
                     />
                 </Grid>
-                <Grid item xs={6} md={3}>
-                    <StatCard
-                        title="Views This Week"
-                        value={summary.viewsThisWeek.toLocaleString()}
-                        subtitle={`${weekChange}% vs last week`}
-                        icon={<CalendarTodayIcon />}
-                        color="#2e7d32"
-                    />
-                </Grid>
-                <Grid item xs={6} md={3}>
+                <Grid item xs={5} md={2}>
                     <StatCard
                         title="Avg Views / Trail"
                         value={summary.avgViewsPerTrail}

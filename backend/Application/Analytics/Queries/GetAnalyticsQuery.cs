@@ -23,6 +23,8 @@ public record AnalyticsDto(
 public record SummaryDto(
     int TotalViews,
     int UniqueVisitors,
+    int ViewsToday,
+    int ViewsYesterday,
     int ViewsThisWeek,
     int ViewsLastWeek,
     double AvgViewsPerTrail,
@@ -37,10 +39,18 @@ public record TrendingTrailDto(string Name, string Slug, int ViewsThisWeek, int 
 public class GetAnalyticsQueryHandler : IRequestHandler<GetAnalyticsQuery, AnalyticsDto>
 {
     private readonly UtanvegaDbContext _context;
+    private readonly TimeProvider _timeProvider;
 
-    public GetAnalyticsQueryHandler(UtanvegaDbContext context)
+    /// <param name="timeProvider">
+    /// Supplies "now". Injected rather than read from <c>DateTime.UtcNow</c> so
+    /// the day and week boundaries can be tested at an exact instant — a test
+    /// that reads the clock separately from the handler races it, and would
+    /// fail if midnight fell between the two reads.
+    /// </param>
+    public GetAnalyticsQueryHandler(UtanvegaDbContext context, TimeProvider timeProvider)
     {
         _context = context;
+        _timeProvider = timeProvider;
     }
 
     /// <summary>
@@ -52,10 +62,17 @@ public class GetAnalyticsQueryHandler : IRequestHandler<GetAnalyticsQuery, Analy
     /// </summary>
     public async Task<AnalyticsDto> Handle(GetAnalyticsQuery request, CancellationToken cancellationToken)
     {
-        var now = DateTime.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var startOfWeek = now.AddDays(-7);
         var startOfLastWeek = now.AddDays(-14);
         var thirtyDaysAgo = now.AddDays(-30);
+
+        // Calendar days, not rolling 24-hour windows: "today" should mean the
+        // day the reader is having. Iceland keeps UTC year-round with no DST,
+        // so the UTC day boundary is also the local one and no conversion is
+        // needed — worth stating, since it would not hold in most places.
+        var startOfToday = now.Date;
+        var startOfYesterday = startOfToday.AddDays(-1);
 
         var views = _context.TrailViews.AsNoTracking();
 
@@ -76,6 +93,12 @@ public class GetAnalyticsQueryHandler : IRequestHandler<GetAnalyticsQuery, Analy
             .Distinct()
             .CountAsync(cancellationToken);
 
+        var viewsToday = await views
+            .CountAsync(v => v.ViewedAtUtc >= startOfToday, cancellationToken);
+
+        var viewsYesterday = await views
+            .CountAsync(v => v.ViewedAtUtc >= startOfYesterday && v.ViewedAtUtc < startOfToday, cancellationToken);
+
         var viewsThisWeek = await views
             .CountAsync(v => v.ViewedAtUtc >= startOfWeek, cancellationToken);
 
@@ -90,7 +113,8 @@ public class GetAnalyticsQueryHandler : IRequestHandler<GetAnalyticsQuery, Analy
         var avgViewsPerTrail = trailsWithViews > 0 ? (double)totalViews / trailsWithViews : 0;
 
         var summary = new SummaryDto(
-            totalViews, uniqueVisitors, viewsThisWeek, viewsLastWeek,
+            totalViews, uniqueVisitors, viewsToday, viewsYesterday,
+            viewsThisWeek, viewsLastWeek,
             Math.Round(avgViewsPerTrail, 1), trailsWithViews);
 
         // ── Daily views (last 30 days) ────────────────────────────────────

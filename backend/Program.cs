@@ -347,6 +347,10 @@ var ipHashSalt = builder.Configuration["IpHashSalt"]
     ?? Environment.GetEnvironmentVariable("IP_HASH_SALT")
     ?? string.Empty;
 
+// Injected wherever "now" is needed, so time-dependent logic can be tested at
+// an exact instant rather than racing the system clock.
+builder.Services.AddSingleton(TimeProvider.System);
+
 builder.Services.AddSingleton(new TrailViewRetentionOptions());
 builder.Services.AddHostedService<TrailViewRetentionService>();
 
