@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 const STORAGE_KEY = 'utanvega_favorite_events';
 
@@ -16,7 +16,7 @@ export function useFavoriteEvents() {
         }
     }, []);
 
-    const toggleFavoriteEvent = (slug: string) => {
+    const toggleFavoriteEvent = useCallback((slug: string) => {
         setFavoriteEvents(prev => {
             const next = prev.includes(slug)
                 ? prev.filter(s => s !== slug)
@@ -24,9 +24,9 @@ export function useFavoriteEvents() {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
             return next;
         });
-    };
+    }, []);
 
-    const isFavoriteEvent = (slug: string) => favoriteEvents.includes(slug);
+    const isFavoriteEvent = useCallback((slug: string) => favoriteEvents.includes(slug), [favoriteEvents]);
 
     return { favoriteEvents, toggleFavoriteEvent, isFavoriteEvent };
 }

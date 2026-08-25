@@ -17,6 +17,8 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import CelebrationIcon from '@mui/icons-material/Celebration';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
 import type { EventSummary, EventDetail, RaceDto, SeriesRaceDto } from '../hooks/useEvents';
 import { NewYearSplitterRows } from './NewYearSplitter';
 import { API_URL } from '../hooks/useTrails';
@@ -34,6 +36,8 @@ import { useFeatureFlags } from '../hooks/useFeatureFlags';
 interface EventTableViewProps {
     events: EventSummary[];
     userLocation: { lat: number; lng: number } | null;
+    onToggleFavorite: (slug: string) => void;
+    isFavoriteEvent: (slug: string) => boolean;
 }
 
 type SortField = 'name' | 'daysUntil' | 'nextEditionDate' | 'locationName' | 'activityType' | 'type' | 'distance';
@@ -46,7 +50,7 @@ type TableRow =
 
 
 
-const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation }) => {
+const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation, onToggleFavorite, isFavoriteEvent }) => {
     const { t, i18n } = useTranslation();
     const loc = useLocalize();
     const navigate = useNavigate();
@@ -159,14 +163,15 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
         { field: 'name', label: t('races.table.name', 'Name') },
     ];
 
-    // +1 expand, +4 manual headers (Distances, km away, Location, Links)
-    const totalColumns = columns.length + 5;
+    // +1 star, +1 expand, +4 manual headers (Distances, km away, Location, Links)
+    const totalColumns = columns.length + 6;
 
     return (
         <TableContainer component={Paper} elevation={1} sx={{ borderRadius: 2, width: '100%', overflowX: 'auto' }}>
             <Table size="small" sx={{ minWidth: 750 }}>
                 <TableHead>
                     <TableRow>
+                        <TableCell sx={{ width: 40, p: 0.5 }} />
                         <TableCell sx={{ width: 40, p: 0.5 }} />
                         {columns.map(col => (
                             <TableCell key={col.field} align={col.align ?? 'left'}>
@@ -259,6 +264,13 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                         onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/events/${event.slug}`); } }}
                                 >
                                     <TableCell sx={{ p: 0.5 }} />
+                                    <TableCell sx={{ p: 0.5 }} onClick={e => e.stopPropagation()}>
+                                        <Tooltip title={isFavoriteEvent(event.slug) ? t('races.removeFavorite') : t('races.addFavorite')}>
+                                            <IconButton size="small" onClick={() => onToggleFavorite(event.slug)}>
+                                                {isFavoriteEvent(event.slug) ? <StarIcon fontSize="small" color="warning" /> : <StarBorderIcon fontSize="small" />}
+                                            </IconButton>
+                                        </Tooltip>
+                                    </TableCell>
                                     <TableCell align="center">
                                         {race.dateOfRace ? (
                                             <Stack alignItems="center" spacing={0.5}>
@@ -384,6 +396,13 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation })
                                         >
                                             {isExpanded ? <KeyboardArrowUpIcon fontSize="small" /> : <KeyboardArrowDownIcon fontSize="small" />}
                                         </IconButton>
+                                    </TableCell>
+                                    <TableCell sx={{ p: 0.5 }} onClick={e => e.stopPropagation()}>
+                                        <Tooltip title={isFavoriteEvent(event.slug) ? t('races.removeFavorite') : t('races.addFavorite')}>
+                                            <IconButton size="small" onClick={() => onToggleFavorite(event.slug)}>
+                                                {isFavoriteEvent(event.slug) ? <StarIcon fontSize="small" color="warning" /> : <StarBorderIcon fontSize="small" />}
+                                            </IconButton>
+                                        </Tooltip>
                                     </TableCell>
                                     {/* Date — merged countdown + date + weekday badge */}
                                     <TableCell align="center">

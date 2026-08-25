@@ -21,6 +21,7 @@ const LocationsPage = lazy(() => import('./pages/LocationsPage'));
 const LocationDetailsPage = lazy(() => import('./pages/LocationDetailsPage'));
 const OrganizerDetailPage = lazy(() => import('./pages/OrganizerDetailPage'));
 const AboutPage = lazy(() => import('./pages/AboutPage'));
+const ChangelogDiaryPage = lazy(() => import('./pages/ChangelogDiaryPage'));
 const MediaPage = lazy(() => import('./pages/MediaPage'));
 const DisclaimerPage = lazy(() => import('./pages/DisclaimerPage'));
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
@@ -46,6 +47,7 @@ const ChallengePage = lazy(() => import('./pages/ChallengePage'));
 const AnnualReportPage = lazy(() => import('./pages/AnnualReportPage'));
 const NewsletterPage = lazy(() => import('./pages/NewsletterPage'));
 const ContactPage = lazy(() => import('./pages/ContactPage'));
+const ItraPage = lazy(() => import('./pages/ItraPage'));
 const ItraGuidePage = lazy(() => import('./pages/ItraGuidePage'));
 const ItraHandbookPage = lazy(() => import('./pages/ItraHandbookPage'));
 const FaqPage = lazy(() => import('./pages/FaqPage'));
@@ -155,6 +157,12 @@ export default function App() {
                         path="/about"
                         element={<AboutPage mode={mode} onToggleMode={handleToggleMode} />}
                     />
+                    {/* Unlisted on purpose — reachable only by typing the URL.
+                        Also excluded from the sitemap and noindexed in api/og.ts. */}
+                    <Route
+                        path="/changelog-diary"
+                        element={<ChangelogDiaryPage mode={mode} onToggleMode={handleToggleMode} />}
+                    />
                     <Route
                         path="/media"
                         element={<MediaPage mode={mode} onToggleMode={handleToggleMode} />}
@@ -251,6 +259,7 @@ export default function App() {
                     <Route path="/annual-report/2025" element={<AnnualReportPage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="/newsletter" element={<NewsletterPage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="/contact" element={<ContactPage mode={mode} onToggleMode={handleToggleMode} />} />
+                    <Route path="/itra" element={<ItraPage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="/itra-guide" element={<ItraGuidePage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="/itra-handbook" element={<ItraHandbookPage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="/faq" element={<FaqPage mode={mode} onToggleMode={handleToggleMode} />} />

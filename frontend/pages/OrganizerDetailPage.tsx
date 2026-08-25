@@ -72,7 +72,7 @@ export default function OrganizerDetailPage({ mode, onToggleMode }: OrganizerDet
     const description = loc(organizer.description, organizer.descriptionEn);
 
     return (
-        <Layout mode={mode} onToggleMode={onToggleMode}>
+        <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('nav.events'), to: '/events' }, { label: organizer.name }]}>
             <Container maxWidth="md" sx={{ py: { xs: 3, sm: 5 } }}>
                 {/* Header */}
                 <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1, mb: 1 }}>

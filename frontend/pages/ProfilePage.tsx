@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Box, Button, Container, Paper, Stack, Typography, PaletteMode, Divider } from '@mui/material';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import LogoutIcon from '@mui/icons-material/Logout';
 import Layout from '../components/Layout';
 import { useAuth } from '../hooks/useAuth';
@@ -40,12 +39,8 @@ export default function ProfilePage({ mode, onToggleMode }: Props) {
   };
 
   return (
-    <Layout mode={mode} onToggleMode={onToggleMode}>
+    <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('profile.title') }]}>
       <Container maxWidth="md" sx={{ py: 3 }}>
-        <Button startIcon={<ArrowBackIcon />} onClick={() => window.history.back()} sx={{ mb: 2 }}>
-          {t('trail.backToTrails')}
-        </Button>
-
         <Paper elevation={3} sx={{ p: 3 }}>
           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
             <Box>

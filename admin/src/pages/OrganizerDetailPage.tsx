@@ -72,7 +72,7 @@ function fmtDateRange(start: string, end: string | null): string {
     return `${fmtDate(start)} - ${fmtDate(end)}`;
 }
 
-const SITE_URL = import.meta.env.VITE_SITE_URL?.trim() || 'https://hlaupadagskra.is';
+const SITE_URL = import.meta.env.VITE_SITE_URL?.trim() || 'https://www.hlaupadagskra.is';
 
 interface Props {
     onNotify: (message: ReactNode, severity?: 'success' | 'error') => void;

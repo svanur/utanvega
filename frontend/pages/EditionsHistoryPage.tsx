@@ -122,7 +122,7 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
     }, [rows, search, sortField, sortDir, loc]);
 
     return (
-        <Layout mode={mode} onToggleMode={onToggleMode} maxWidth={viewMode === 'table' ? 'lg' : 'md'}>
+        <Layout mode={mode} onToggleMode={onToggleMode} maxWidth={viewMode === 'table' ? 'lg' : 'md'} breadcrumb={[{ label: t('nav.events'), to: '/events' }, { label: t('nav.editionsHistory') }]}>
             <Container maxWidth={viewMode === 'table' ? 'lg' : 'md'} sx={{ py: 3 }}>
                 <Box sx={{ mb: 3 }}>
                     <Typography variant="h4" fontWeight={800} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

@@ -14,6 +14,7 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined';
 import Layout from '../components/Layout';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 interface ItraHandbookPageProps {
     mode: PaletteMode;
@@ -38,6 +39,7 @@ function SectionCard({ icon, title, children }: { icon: React.ReactNode; title: 
 
 export default function ItraHandbookPage({ mode, onToggleMode }: ItraHandbookPageProps) {
     const { t } = useTranslation();
+    usePageTitle(t('nav.itraHandbook'));
 
     const browseItems = t('itraHandbook.browse.items', { returnObjects: true }) as string[];
     const duplicateItems = t('itraHandbook.duplicate.items', { returnObjects: true }) as string[];
@@ -49,7 +51,7 @@ export default function ItraHandbookPage({ mode, onToggleMode }: ItraHandbookPag
     const insuranceBenefits = t('itraHandbook.insurance.benefits', { returnObjects: true }) as string[];
 
     return (
-        <Layout mode={mode} onToggleMode={onToggleMode}>
+        <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('nav.explore') }, { label: 'ITRA', to: '/itra' }, { label: t('nav.handbook') }]}>
             <Box sx={{ maxWidth: 800, mx: 'auto' }}>
                 {/* Header */}
                 <Box sx={{ mb: 3 }}>

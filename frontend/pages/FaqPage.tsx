@@ -42,7 +42,7 @@ export default function FaqPage({ mode, onToggleMode }: FaqPageProps) {
     ];
 
     return (
-        <Layout mode={mode} onToggleMode={onToggleMode}>
+        <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('nav.faq') }]}>
             <Box sx={{ maxWidth: 760, mx: 'auto', px: 2, py: 4 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
                     <HelpOutlineIcon color="primary" sx={{ fontSize: 32 }} />

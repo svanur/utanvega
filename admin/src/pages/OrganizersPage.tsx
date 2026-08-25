@@ -37,7 +37,7 @@ import { trimToUndefined } from '../utils/strings';
 import BilingualTextField from '../components/BilingualTextField';
 import { useTranslate } from '../hooks/useTranslate';
 
-const SITE_URL = import.meta.env.VITE_SITE_URL?.trim() || 'https://hlaupadagskra.is';
+const SITE_URL = import.meta.env.VITE_SITE_URL?.trim() || 'https://www.hlaupadagskra.is';
 
 interface Props {
     onNotify: (message: ReactNode, severity?: 'success' | 'error') => void;

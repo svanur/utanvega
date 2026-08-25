@@ -12,7 +12,6 @@ import {
   PaletteMode,
   Divider,
 } from '@mui/material';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import LogoutIcon from '@mui/icons-material/Logout';
 import ManageIcon from '@mui/icons-material/ManageAccounts';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -49,12 +48,8 @@ export default function MyProfilePage({ mode, onToggleMode }: Props) {
   };
 
   return (
-    <Layout mode={mode} onToggleMode={onToggleMode}>
+    <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('profile.title') }]}>
       <Container maxWidth="md" sx={{ py: 3 }}>
-        <Button startIcon={<ArrowBackIcon />} onClick={() => window.history.back()} sx={{ mb: 2 }}>
-          {t('trail.backToTrails')}
-        </Button>
-
         <Paper elevation={3} sx={{ p: 3 }}>
           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
             <Box>

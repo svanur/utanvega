@@ -34,6 +34,8 @@ import {
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 import FilterIcon from '@mui/icons-material/FilterList';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import CheckIcon from '@mui/icons-material/Check';
 import ListIcon from '@mui/icons-material/List';
 import MapIcon from '@mui/icons-material/Map';
 import TableChartIcon from '@mui/icons-material/TableChart';
@@ -130,17 +132,17 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
     }, []);
 
     const [showAdvanced, setShowAdvanced] = React.useState(false);
+    const [linkCopied, setLinkCopied] = React.useState(false);
+    const linkCopiedTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const activeFilterCount = React.useMemo(() =>
         filters.lengthBuckets.length +
         filters.elevationGainBuckets.length +
-        filters.elevationLossBuckets.length +
         filters.distanceBuckets.length +
         filters.difficulties.length +
-        filters.trailTypes.length +
         (filters.locationSlugs.length > 0 ? 1 : 0) +
         filters.selectedActivityTypes.length +
-        filters.terrainTypes.length +
+        filters.selectedTags.length +
         (filters.favoritesOnly ? 1 : 0) +
         (filters.offlineOnly ? 1 : 0),
     [filters]);
@@ -260,16 +262,37 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
         cooldown: 3000,
     });
 
+    // Build flat list of locations with depth + descendant slug sets for the dropdown
+    const { locationMenuItems, descendantSlugs } = React.useMemo(() => {
+        const items: { slug: string; name: string; nameEn: string | null; depth: number; totalTrails: number }[] = [];
+        const descendants = new Map<string, Set<string>>();
+
+        function flatten(nodes: LocationTreeNode[], depth: number): string[] {
+            const allSlugs: string[] = [];
+            for (const node of nodes) {
+                items.push({ slug: node.slug, name: node.name, nameEn: node.nameEn, depth, totalTrails: node.totalTrailsCount });
+                const childSlugs = flatten(node.children, depth + 1);
+                const descSet = new Set(childSlugs);
+                descendants.set(node.slug, descSet);
+                allSlugs.push(node.slug, ...childSlugs);
+            }
+            return allSlugs;
+        }
+
+        flatten(locationTree, 0);
+        return { locationMenuItems: items, descendantSlugs: descendants };
+    }, [locationTree]);
+
+    const [selectedLocationItems, setSelectedLocationItems] = React.useState<typeof locationMenuItems>([]);
+
     // Initialize filters from URL params on first render
     const urlInitialized = React.useRef(false);
     React.useEffect(() => {
         if (urlInitialized.current) return;
-        urlInitialized.current = true;
 
         const q = searchParams.get('q');
         const activity = searchParams.get('activity');
         const difficulty = searchParams.get('difficulty');
-        const trailType = searchParams.get('trailType');
         const sort = searchParams.get('sort') as SortOption | null;
         const view = searchParams.get('view');
         const favShortcut = searchParams.get('favorites');
@@ -285,9 +308,22 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
         const updates: Partial<FilterState> = {};
         if (activity) updates.selectedActivityTypes = activity.split(',');
         if (difficulty && difficulty !== 'All') updates.difficulties = difficulty.split(',');
-        if (trailType && trailType !== 'All') updates.trailTypes = trailType.split(',');
         if (sort) updates.sortBy = sort;
         if (favShortcut === 'true') updates.favoritesOnly = true;
+
+        const length = searchParams.get('length');
+        const elevation = searchParams.get('elevation');
+        const nearme = searchParams.get('nearme');
+        const locations = searchParams.get('locations');
+        const tags = searchParams.get('tags');
+        const offline = searchParams.get('offline');
+
+        if (length) updates.lengthBuckets = length.split(',');
+        if (elevation) updates.elevationGainBuckets = elevation.split(',');
+        if (nearme) updates.distanceBuckets = nearme.split(',');
+        if (locations) updates.locationSlugs = locations.split(',');
+        if (tags) updates.selectedTags = tags.split(',');
+        if (offline === 'true') updates.offlineOnly = true;
 
         if (Object.keys(updates).length > 0) {
             setFilters(prev => ({ ...prev, ...updates }));
@@ -310,38 +346,27 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
         const params = new URLSearchParams();
 
         if (searchQuery) params.set('q', searchQuery);
-        if (filters.selectedActivityTypes.length > 0) {
-            params.set('activity', filters.selectedActivityTypes.join(','));
-        }
+        if (filters.selectedActivityTypes.length > 0) params.set('activity', filters.selectedActivityTypes.join(','));
         if (filters.difficulties.length > 0) params.set('difficulty', filters.difficulties.join(','));
-        if (filters.trailTypes.length > 0) params.set('trailType', filters.trailTypes.join(','));
+        if (filters.lengthBuckets.length > 0) params.set('length', filters.lengthBuckets.join(','));
+        if (filters.elevationGainBuckets.length > 0) params.set('elevation', filters.elevationGainBuckets.join(','));
+        if (filters.distanceBuckets.length > 0) params.set('nearme', filters.distanceBuckets.join(','));
+        // Write only user-selected (top-level) slugs, not the expanded descendant set
+        if (selectedLocationItems.length > 0) params.set('locations', selectedLocationItems.map(i => i.slug).join(','));
+        if (filters.selectedTags.length > 0) params.set('tags', filters.selectedTags.join(','));
+        if (filters.favoritesOnly) params.set('favorites', 'true');
+        if (filters.offlineOnly) params.set('offline', 'true');
         if (filters.sortBy !== 'distance') params.set('sort', filters.sortBy);
         if (viewMode !== 'list') params.set('view', viewMode);
 
         setSearchParams(params, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [searchQuery, filters.selectedActivityTypes, filters.difficulties, filters.trailTypes, filters.sortBy, viewMode]);
+    }, [searchQuery, filters.selectedActivityTypes, filters.difficulties, filters.lengthBuckets,
+        filters.elevationGainBuckets, filters.distanceBuckets, selectedLocationItems,
+        filters.selectedTags, filters.favoritesOnly, filters.offlineOnly, filters.sortBy, viewMode]);
 
-    // Build flat list of locations with depth + descendant slug sets for the dropdown
-    const { locationMenuItems, descendantSlugs } = React.useMemo(() => {
-        const items: { slug: string; name: string; nameEn: string | null; depth: number; totalTrails: number }[] = [];
-        const descendants = new Map<string, Set<string>>();
-
-        function flatten(nodes: LocationTreeNode[], depth: number): string[] {
-            const allSlugs: string[] = [];
-            for (const node of nodes) {
-                items.push({ slug: node.slug, name: node.name, nameEn: node.nameEn, depth, totalTrails: node.totalTrailsCount });
-                const childSlugs = flatten(node.children, depth + 1);
-                const descSet = new Set(childSlugs);
-                descendants.set(node.slug, descSet);
-                allSlugs.push(node.slug, ...childSlugs);
-            }
-            return allSlugs;
-        }
-
-        flatten(locationTree, 0);
-        return { locationMenuItems: items, descendantSlugs: descendants };
-    }, [locationTree]);
+    // Runs after the sync effect on first flush — marks init done so sync starts writing
+    React.useEffect(() => { urlInitialized.current = true; }, []);
 
     // Sync URL tag slug with filter state
     React.useEffect(() => {
@@ -494,7 +519,19 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
         }
     };
 
-    const [selectedLocationItems, setSelectedLocationItems] = React.useState<typeof locationMenuItems>([]);
+    const locationRestored = React.useRef(false);
+
+    // Restore Autocomplete + expand descendants when locationMenuItems first loads from URL params
+    React.useEffect(() => {
+        if (locationRestored.current || !locationMenuItems.length || !filters.locationSlugs.length) return;
+        const restored = locationMenuItems.filter(item => filters.locationSlugs.includes(item.slug));
+        if (restored.length > 0) {
+            locationRestored.current = true;
+            handleLocationSelect(restored);
+        }
+    // Run once when menu items first populate; handleLocationSelect is stable
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [locationMenuItems]);
 
     const handleLocationSelect = (items: typeof locationMenuItems) => {
         setSelectedLocationItems(items);
@@ -554,17 +591,17 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
             {/* Page heading */}
             {trailsHeading}
 
-            <Box mb={2}>
+            <Box mb={1}>
                 <TextField
                     fullWidth
-                    variant="outlined"
-                    placeholder={t('filters.searchPlaceholder')}
+                    size="small"
+                    placeholder={t('filters.searchTrails', 'Search trails...')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     InputProps={{
                         startAdornment: (
                             <InputAdornment position="start">
-                                <SearchIcon color="action" />
+                                <SearchIcon color="action" fontSize="small" />
                             </InputAdornment>
                         ),
                         endAdornment: (
@@ -573,12 +610,34 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                     <IconButton
                                         aria-label={t('filters.clearSearch')}
                                         onClick={() => setSearchQuery('')}
-                                        edge="end"
                                         size="small"
-                                        sx={{ mr: 1 }}
+                                        sx={{ mr: 0.5 }}
                                     >
                                         <ClearIcon fontSize="small" />
                                     </IconButton>
+                                )}
+                                {activeFilterCount > 0 && (
+                                    <IconButton size="small" onClick={() => { resetFilters(); setSelectedLocationItems([]); }} sx={{ mr: 0.5 }} title={t('filters.resetFilters')}>
+                                        <ClearIcon fontSize="small" color="error" />
+                                    </IconButton>
+                                )}
+                                {activeFilterCount > 0 && (
+                                    <Tooltip title={linkCopied ? t('common.copied') : t('common.copyLink')}>
+                                        <IconButton
+                                            size="small"
+                                            sx={{ mr: 0.5 }}
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(window.location.href);
+                                                setLinkCopied(true);
+                                                if (linkCopiedTimer.current) clearTimeout(linkCopiedTimer.current);
+                                                linkCopiedTimer.current = setTimeout(() => setLinkCopied(false), 2000);
+                                            }}
+                                        >
+                                            {linkCopied
+                                                ? <CheckIcon fontSize="small" color="success" />
+                                                : <ContentCopyIcon fontSize="small" />}
+                                        </IconButton>
+                                    </Tooltip>
                                 )}
                                 <Button
                                     size="small"
@@ -595,83 +654,13 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                             </InputAdornment>
                         ),
                     }}
-                    sx={{
-                        bgcolor: 'background.paper',
-                        borderRadius: 1,
-                        '& .MuiOutlinedInput-root': {
-                            borderRadius: '12px',
-                        }
-                    }}
                 />
             </Box>
-
-            {/* Activity Type pills */}
-            {isEnabled('activity_pills') && (
-            <Box display="flex" gap={0.5} mb={2} flexWrap="nowrap" overflow="auto">
-                {ALL_ACTIVITY_TYPES.filter(type => trails.some(t => t.activityType === type)).map(type => {
-                    const selected = filters.selectedActivityTypes.includes(type);
-                    const icon = {
-                        TrailRunning: <LandscapeIcon fontSize="small" />,
-                        Running: <DirectionsRunIcon fontSize="small" />,
-                        Hiking: <HikingIcon fontSize="small" />,
-                        Cycling: <DirectionsBikeIcon fontSize="small" />,
-                        FunRun: <CelebrationIcon fontSize="small" />,
-                        ObstacleCourse: <FitnessCenterIcon fontSize="small" />,
-                        CrossCountryRun: <GrassIcon fontSize="small" />,
-                    }[type];
-                    const label = t(`difficulty.${type.charAt(0).toLowerCase() + type.slice(1)}`);
-                    return (
-                        <Tooltip key={type} title={label} arrow>
-                            <Chip
-                                icon={icon}
-                                label={label}
-                                onClick={() => {
-                                    const current = filters.selectedActivityTypes;
-                                    const updated = selected
-                                        ? current.filter(t => t !== type)
-                                        : [...current, type];
-                                    setFilters(f => ({ ...f, selectedActivityTypes: updated }));
-                                }}
-                                color={selected ? 'primary' : 'default'}
-                                variant={selected ? 'filled' : 'outlined'}
-                                size="small"
-                                sx={{ 
-                                    fontWeight: selected ? 'bold' : 'normal',
-                                    opacity: selected ? 1 : 0.6,
-                                    fontSize: '0.75rem',
-                                    height: 26,
-                                    '& .MuiChip-label': { display: { xs: 'none', sm: 'block' }, px: 0.75 },
-                                    '& .MuiChip-icon': { mx: { xs: 0, sm: undefined }, fontSize: '1rem' },
-                                    px: { xs: 0.5, sm: undefined },
-                                    minWidth: { xs: 32, sm: undefined },
-                                    justifyContent: 'center',
-                                }}
-                            />
-                        </Tooltip>
-                    );
-                })}
-            </Box>
-            )}
-
-            {/* Smart time-aware filter presets */}
-            {isEnabled('smart_presets') && (
-            <SmartPresets
-                filters={filters}
-                setFilters={setFilters}
-                defaultFilters={DEFAULT_FILTERS}
-                hasGeolocation={!!userLocation}
-                initialPresetId={initialPresetId}
-                onPresetApply={tagSlug ? (presetId) => {
-                    navigatingAway.current = true;
-                    navigate('/', { replace: true, state: { presetId } });
-                } : undefined}
-            />
-            )}
 
             <Collapse in={showAdvanced}>
                 <Box
                     p={2}
-                    mb={3}
+                    mb={2}
                     sx={{
                         bgcolor: 'background.paper',
                         borderRadius: '12px',
@@ -684,7 +673,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                     </Typography>
 
                     <Grid container spacing={2}>
-                        {/* 1. Location Autocomplete — top */}
+                        {/* 1. Location */}
                         {locationsPageEnabled && locationMenuItems.length > 0 && (
                         <Grid item xs={12}>
                             <Autocomplete
@@ -713,11 +702,177 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                         </Grid>
                         )}
 
-                        {/* 2. Distance from You chips */}
+                        {/* 2. Activity */}
+                        {isEnabled('activity_pills') && (
+                        <Grid item xs={12}>
+                            <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: 'block', mb: 0.75 }}>
+                                {t('races.filters.activityType')}
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                                {ALL_ACTIVITY_TYPES.filter(type => trails.some(t => t.activityType === type)).map(type => {
+                                    const selected = filters.selectedActivityTypes.includes(type);
+                                    const icon = {
+                                        TrailRunning: <LandscapeIcon fontSize="small" />,
+                                        Running: <DirectionsRunIcon fontSize="small" />,
+                                        Hiking: <HikingIcon fontSize="small" />,
+                                        Cycling: <DirectionsBikeIcon fontSize="small" />,
+                                        FunRun: <CelebrationIcon fontSize="small" />,
+                                        ObstacleCourse: <FitnessCenterIcon fontSize="small" />,
+                                        CrossCountryRun: <GrassIcon fontSize="small" />,
+                                    }[type];
+                                    return (
+                                        <Chip
+                                            key={type}
+                                            icon={icon}
+                                            label={t(`difficulty.${type.charAt(0).toLowerCase() + type.slice(1)}`)}
+                                            size="small"
+                                            variant={selected ? 'filled' : 'outlined'}
+                                            color={selected ? 'primary' : 'default'}
+                                            onClick={() => {
+                                                const current = filters.selectedActivityTypes;
+                                                const updated = selected ? current.filter(t => t !== type) : [...current, type];
+                                                setFilters(f => ({ ...f, selectedActivityTypes: updated }));
+                                            }}
+                                            sx={{ cursor: 'pointer' }}
+                                        />
+                                    );
+                                })}
+                            </Box>
+                        </Grid>
+                        )}
+
+                        {/* 3. Trail Length */}
+                        <Grid item xs={12}>
+                            <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: 'block', mb: 0.75 }}>
+                                {t('filters.trailLength')}
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+                                {([
+                                    { key: '<10', label: '< 10 km' },
+                                    { key: '10-21', label: '10–21 km' },
+                                    { key: '21-42', label: t('filters.halfMarathon', 'Half–Marathon') },
+                                    { key: '42-100', label: t('filters.marathonTo100', 'Marathon–100 km') },
+                                    { key: '100+', label: '100 km+' },
+                                ] as const).map(({ key, label }) => {
+                                    const selected = filters.lengthBuckets.includes(key);
+                                    return (
+                                        <Chip
+                                            key={key}
+                                            label={label}
+                                            size="small"
+                                            variant={selected ? 'filled' : 'outlined'}
+                                            color={selected ? 'primary' : 'default'}
+                                            onClick={() => {
+                                                const next = selected
+                                                    ? filters.lengthBuckets.filter(b => b !== key)
+                                                    : [...filters.lengthBuckets, key];
+                                                setFilters(f => ({ ...f, lengthBuckets: next }));
+                                            }}
+                                            sx={{ cursor: 'pointer' }}
+                                        />
+                                    );
+                                })}
+                            </Box>
+                        </Grid>
+
+                        {/* 4. Elevation Gain */}
+                        <Grid item xs={12}>
+                            <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: 'block', mb: 0.75 }}>
+                                {t('filters.elevationGain')}
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+                                {([
+                                    { key: '<200', label: '< 200 m' },
+                                    { key: '200-500', label: '200–500 m' },
+                                    { key: '500-1000', label: '500–1000 m' },
+                                    { key: '1000+', label: '1000 m+' },
+                                ] as const).map(({ key, label }) => {
+                                    const selected = filters.elevationGainBuckets.includes(key);
+                                    return (
+                                        <Chip
+                                            key={key}
+                                            label={label}
+                                            size="small"
+                                            variant={selected ? 'filled' : 'outlined'}
+                                            color={selected ? 'primary' : 'default'}
+                                            onClick={() => {
+                                                const next = selected
+                                                    ? filters.elevationGainBuckets.filter(b => b !== key)
+                                                    : [...filters.elevationGainBuckets, key];
+                                                setFilters(f => ({ ...f, elevationGainBuckets: next }));
+                                            }}
+                                            sx={{ cursor: 'pointer' }}
+                                        />
+                                    );
+                                })}
+                            </Box>
+                        </Grid>
+
+                        {/* 5. Difficulty */}
+                        <Grid item xs={12}>
+                            <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: 'block', mb: 0.75 }}>
+                                {t('filters.difficulty')}
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+                                {(['Easy', 'Moderate', 'Hard', 'Expert', 'Extreme'] as const).map(d => {
+                                    const selected = filters.difficulties.includes(d);
+                                    return (
+                                        <Chip
+                                            key={d}
+                                            label={t(`difficulty.${d.toLowerCase()}`)}
+                                            size="small"
+                                            variant={selected ? 'filled' : 'outlined'}
+                                            color={selected ? 'primary' : 'default'}
+                                            onClick={() => {
+                                                const next = selected
+                                                    ? filters.difficulties.filter(x => x !== d)
+                                                    : [...filters.difficulties, d];
+                                                setFilters(f => ({ ...f, difficulties: next }));
+                                            }}
+                                            sx={{ cursor: 'pointer' }}
+                                        />
+                                    );
+                                })}
+                            </Box>
+                        </Grid>
+
+                        {/* 6. Tags */}
+                        {tagsEnabled && availableTags.length > 0 && (
+                            <Grid item xs={12}>
+                                <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ mb: 0.75, display: 'block' }}>{t('filters.tags')}</Typography>
+                                <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                                    {availableTags.map(tag => {
+                                        const selected = filters.selectedTags.includes(tag.slug);
+                                        return (
+                                            <Chip
+                                                key={tag.slug}
+                                                label={loc(tag.name, tag.nameEn) ?? tag.name}
+                                                size="small"
+                                                onClick={() => {
+                                                    const next = selected
+                                                        ? filters.selectedTags.filter(s => s !== tag.slug)
+                                                        : [...filters.selectedTags, tag.slug];
+                                                    handleFilterChange('selectedTags', next);
+                                                }}
+                                                sx={{
+                                                    backgroundColor: selected ? (tag.color || 'primary.main') : undefined,
+                                                    color: selected ? '#fff' : undefined,
+                                                    borderColor: tag.color || undefined,
+                                                    cursor: 'pointer',
+                                                }}
+                                                variant={selected ? 'filled' : 'outlined'}
+                                            />
+                                        );
+                                    })}
+                                </Box>
+                            </Grid>
+                        )}
+
+                        {/* 7. Near me — conditional on geolocation */}
                         {userLocation && (
                             <Grid item xs={12}>
-                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>
-                                    {t('filters.distanceFromYou')}
+                                <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: 'block', mb: 0.75 }}>
+                                    {t('races.nearMe.label', 'Near me')}
                                 </Typography>
                                 <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
                                     {([
@@ -749,225 +904,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                             </Grid>
                         )}
 
-                        {/* 3. Trail Length chips */}
-                        <Grid item xs={12}>
-                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>
-                                {t('filters.trailLength')}
-                            </Typography>
-                            <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
-                                {([
-                                    { key: '<10', label: '< 10 km' },
-                                    { key: '10-21', label: '10–21.1 km' },
-                                    { key: '21-42', label: '21.1–42.2 km' },
-                                    { key: '42-100', label: '42.2–100 km' },
-                                    { key: '100+', label: '100 km+' },
-                                ] as const).map(({ key, label }) => {
-                                    const selected = filters.lengthBuckets.includes(key);
-                                    return (
-                                        <Chip
-                                            key={key}
-                                            label={label}
-                                            size="small"
-                                            variant={selected ? 'filled' : 'outlined'}
-                                            color={selected ? 'primary' : 'default'}
-                                            onClick={() => {
-                                                const next = selected
-                                                    ? filters.lengthBuckets.filter(b => b !== key)
-                                                    : [...filters.lengthBuckets, key];
-                                                setFilters(f => ({ ...f, lengthBuckets: next }));
-                                            }}
-                                            sx={{ cursor: 'pointer' }}
-                                        />
-                                    );
-                                })}
-                            </Box>
-                        </Grid>
-
-                        {/* 4. Elevation Gain chips */}
-                        <Grid item xs={12}>
-                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>
-                                {t('filters.elevationGain')}
-                            </Typography>
-                            <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
-                                {([
-                                    { key: '<200', label: '< 200 m' },
-                                    { key: '200-500', label: '200–500 m' },
-                                    { key: '500-1000', label: '500–1000 m' },
-                                    { key: '1000+', label: '1000 m+' },
-                                ] as const).map(({ key, label }) => {
-                                    const selected = filters.elevationGainBuckets.includes(key);
-                                    return (
-                                        <Chip
-                                            key={key}
-                                            label={label}
-                                            size="small"
-                                            variant={selected ? 'filled' : 'outlined'}
-                                            color={selected ? 'primary' : 'default'}
-                                            onClick={() => {
-                                                const next = selected
-                                                    ? filters.elevationGainBuckets.filter(b => b !== key)
-                                                    : [...filters.elevationGainBuckets, key];
-                                                setFilters(f => ({ ...f, elevationGainBuckets: next }));
-                                            }}
-                                            sx={{ cursor: 'pointer' }}
-                                        />
-                                    );
-                                })}
-                            </Box>
-                        </Grid>
-
-                        {/* 5. Elevation Loss chips */}
-                        <Grid item xs={12}>
-                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>
-                                {t('filters.elevationLoss')}
-                            </Typography>
-                            <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
-                                {([
-                                    { key: '<200', label: '< 200 m' },
-                                    { key: '200-500', label: '200–500 m' },
-                                    { key: '500-1000', label: '500–1000 m' },
-                                    { key: '1000+', label: '1000 m+' },
-                                ] as const).map(({ key, label }) => {
-                                    const selected = filters.elevationLossBuckets.includes(key);
-                                    return (
-                                        <Chip
-                                            key={key}
-                                            label={label}
-                                            size="small"
-                                            variant={selected ? 'filled' : 'outlined'}
-                                            color={selected ? 'primary' : 'default'}
-                                            onClick={() => {
-                                                const next = selected
-                                                    ? filters.elevationLossBuckets.filter(b => b !== key)
-                                                    : [...filters.elevationLossBuckets, key];
-                                                setFilters(f => ({ ...f, elevationLossBuckets: next }));
-                                            }}
-                                            sx={{ cursor: 'pointer' }}
-                                        />
-                                    );
-                                })}
-                            </Box>
-                        </Grid>
-
-                        {/* 6. Difficulty chips */}
-                        <Grid item xs={12}>
-                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>
-                                {t('filters.difficulty')}
-                            </Typography>
-                            <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
-                                {(['Easy', 'Moderate', 'Hard', 'Expert', 'Extreme'] as const).map(d => {
-                                    const selected = filters.difficulties.includes(d);
-                                    return (
-                                        <Chip
-                                            key={d}
-                                            label={t(`difficulty.${d.toLowerCase()}`)}
-                                            size="small"
-                                            variant={selected ? 'filled' : 'outlined'}
-                                            color={selected ? 'primary' : 'default'}
-                                            onClick={() => {
-                                                const next = selected
-                                                    ? filters.difficulties.filter(x => x !== d)
-                                                    : [...filters.difficulties, d];
-                                                setFilters(f => ({ ...f, difficulties: next }));
-                                            }}
-                                            sx={{ cursor: 'pointer' }}
-                                        />
-                                    );
-                                })}
-                            </Box>
-                        </Grid>
-
-                        {/* 7. Trail Type chips */}
-                        <Grid item xs={12}>
-                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>
-                                {t('filters.trailType')}
-                            </Typography>
-                            <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
-                                {(['Loop', 'OutAndBack', 'PointToPoint'] as const).map(type => {
-                                    const selected = filters.trailTypes.includes(type);
-                                    const key = type.charAt(0).toLowerCase() + type.slice(1);
-                                    const label = t(`trail.${key}`, { defaultValue: type });
-                                    return (
-                                        <Chip
-                                            key={type}
-                                            label={label}
-                                            size="small"
-                                            variant={selected ? 'filled' : 'outlined'}
-                                            color={selected ? 'primary' : 'default'}
-                                            onClick={() => {
-                                                const next = selected
-                                                    ? filters.trailTypes.filter(x => x !== type)
-                                                    : [...filters.trailTypes, type];
-                                                setFilters(f => ({ ...f, trailTypes: next }));
-                                            }}
-                                            sx={{ cursor: 'pointer' }}
-                                        />
-                                    );
-                                })}
-                            </Box>
-                        </Grid>
-
-                        {/* 8. Terrain Type chips */}
-                        <Grid item xs={12}>
-                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>
-                                {t('filters.terrainType.label', 'Terrain Type')}
-                            </Typography>
-                            <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
-                                {(['Mountainous', 'Hilly', 'Flat'] as const).map(tt => {
-                                    const selected = filters.terrainTypes.includes(tt);
-                                    return (
-                                        <Chip
-                                            key={tt}
-                                            label={t(`filters.terrainType.${tt}`, tt)}
-                                            size="small"
-                                            variant={selected ? 'filled' : 'outlined'}
-                                            color={selected ? 'primary' : 'default'}
-                                            onClick={() => {
-                                                const next = selected
-                                                    ? filters.terrainTypes.filter(x => x !== tt)
-                                                    : [...filters.terrainTypes, tt];
-                                                setFilters(f => ({ ...f, terrainTypes: next }));
-                                            }}
-                                            sx={{ cursor: 'pointer' }}
-                                        />
-                                    );
-                                })}
-                            </Box>
-                        </Grid>
-
-                        {/* 9. Tags */}
-                        {tagsEnabled && availableTags.length > 0 && (
-                            <Grid item xs={12}>
-                                <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>{t('filters.tags')}</Typography>
-                                <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                                    {availableTags.map(tag => {
-                                        const selected = filters.selectedTags.includes(tag.slug);
-                                        return (
-                                            <Chip
-                                                key={tag.slug}
-                                                label={loc(tag.name, tag.nameEn) ?? tag.name}
-                                                size="small"
-                                                onClick={() => {
-                                                    const next = selected
-                                                        ? filters.selectedTags.filter(s => s !== tag.slug)
-                                                        : [...filters.selectedTags, tag.slug];
-                                                    handleFilterChange('selectedTags', next);
-                                                }}
-                                                sx={{
-                                                    backgroundColor: selected ? (tag.color || 'primary.main') : undefined,
-                                                    color: selected ? '#fff' : undefined,
-                                                    borderColor: tag.color || undefined,
-                                                    cursor: 'pointer',
-                                                }}
-                                                variant={selected ? 'filled' : 'outlined'}
-                                            />
-                                        );
-                                    })}
-                                </Box>
-                            </Grid>
-                        )}
-
-                        {/* 9. Checkboxes row: Favorites · Offline · Hidden */}
+                        {/* 8. Checkboxes row: Favorites · Offline */}
                         <Grid item xs={12}>
                             <Stack direction="row" flexWrap="wrap" sx={{ gap: 0, mx: -1 }}>
                                 <FormControlLabel
@@ -980,7 +917,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                             checkedIcon={<StarIcon sx={{ color: 'warning.main' }} />}
                                         />
                                     }
-                                    label={t('filters.showFavoritesOnly')}
+                                    label={<Typography variant="body2">{t('filters.showFavoritesOnly')}</Typography>}
                                 />
                                 {isEnabled('offline_button') && offlineSlugs.size > 0 && (
                                     <FormControlLabel
@@ -993,16 +930,16 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                                 checkedIcon={<OfflinePinIcon sx={{ color: 'success.main' }} />}
                                             />
                                         }
-                                        label={t('filters.showOfflineOnly')}
+                                        label={<Typography variant="body2">{t('filters.showOfflineOnly')}</Typography>}
                                     />
                                 )}
                             </Stack>
                         </Grid>
 
-                        {/* 10. Divider + Bottom actions: Reset (conditional) + Close */}
+                        {/* 9. Divider + Bottom actions: Reset (conditional) + Close */}
                         <Grid item xs={12}><Divider /></Grid>
                         <Grid item xs={12} display="flex" justifyContent="flex-end" gap={1}>
-                            {(filters.lengthBuckets.length > 0 || filters.elevationGainBuckets.length > 0 || filters.elevationLossBuckets.length > 0 || filters.distanceBuckets.length > 0 || filters.difficulties.length > 0 || filters.trailTypes.length > 0 || filters.locationSlugs.length > 0 || filters.selectedActivityTypes.length > 0 || filters.favoritesOnly || filters.offlineOnly) && (
+                            {activeFilterCount > 0 && (
                             <Button size="small" onClick={() => {
                                 resetFilters(); setSelectedLocationItems([]);
                                 if (tagSlug) navigate('/', { replace: true });
@@ -1017,6 +954,93 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                     </Grid>
                 </Box>
             </Collapse>
+
+            {/* Activity Type pills — Trail Run + Road Run always visible; other types behind feature flag */}
+            <Box display="flex" gap={0.5} mb={2} flexWrap="nowrap" overflow="auto">
+                <Chip
+                    icon={<LandscapeIcon fontSize="small" />}
+                    label={t('difficulty.trailRunning')}
+                    size="small"
+                    variant={filters.selectedActivityTypes.includes('TrailRunning') ? 'filled' : 'outlined'}
+                    color={filters.selectedActivityTypes.includes('TrailRunning') ? 'primary' : 'default'}
+                    onClick={() => {
+                        const selected = filters.selectedActivityTypes.includes('TrailRunning');
+                        setFilters(f => ({ ...f, selectedActivityTypes: selected ? f.selectedActivityTypes.filter(x => x !== 'TrailRunning') : [...f.selectedActivityTypes, 'TrailRunning'] }));
+                    }}
+                    sx={{ cursor: 'pointer' }}
+                />
+                <Chip
+                    icon={<DirectionsRunIcon fontSize="small" />}
+                    label={t('difficulty.running')}
+                    size="small"
+                    variant={filters.selectedActivityTypes.includes('Running') ? 'filled' : 'outlined'}
+                    color={filters.selectedActivityTypes.includes('Running') ? 'primary' : 'default'}
+                    onClick={() => {
+                        const selected = filters.selectedActivityTypes.includes('Running');
+                        setFilters(f => ({ ...f, selectedActivityTypes: selected ? f.selectedActivityTypes.filter(x => x !== 'Running') : [...f.selectedActivityTypes, 'Running'] }));
+                    }}
+                    sx={{ cursor: 'pointer' }}
+                />
+                {isEnabled('activity_pills') && ALL_ACTIVITY_TYPES
+                    .filter(type => type !== 'TrailRunning' && type !== 'Running' && trails.some(t => t.activityType === type))
+                    .map(type => {
+                        const selected = filters.selectedActivityTypes.includes(type);
+                        const icon = {
+                            Hiking: <HikingIcon fontSize="small" />,
+                            Cycling: <DirectionsBikeIcon fontSize="small" />,
+                            FunRun: <CelebrationIcon fontSize="small" />,
+                            ObstacleCourse: <FitnessCenterIcon fontSize="small" />,
+                            CrossCountryRun: <GrassIcon fontSize="small" />,
+                        }[type as 'Hiking' | 'Cycling' | 'FunRun' | 'ObstacleCourse' | 'CrossCountryRun'];
+                        const label = t(`difficulty.${type.charAt(0).toLowerCase() + type.slice(1)}`);
+                        return (
+                            <Tooltip key={type} title={label} arrow>
+                                <Chip
+                                    icon={icon}
+                                    label={label}
+                                    onClick={() => {
+                                        setFilters(f => ({
+                                            ...f,
+                                            selectedActivityTypes: selected
+                                                ? f.selectedActivityTypes.filter(t => t !== type)
+                                                : [...f.selectedActivityTypes, type],
+                                        }));
+                                    }}
+                                    color={selected ? 'primary' : 'default'}
+                                    variant={selected ? 'filled' : 'outlined'}
+                                    size="small"
+                                    sx={{
+                                        fontWeight: selected ? 'bold' : 'normal',
+                                        opacity: selected ? 1 : 0.6,
+                                        fontSize: '0.75rem',
+                                        height: 26,
+                                        '& .MuiChip-label': { display: { xs: 'none', sm: 'block' }, px: 0.75 },
+                                        '& .MuiChip-icon': { mx: { xs: 0, sm: undefined }, fontSize: '1rem' },
+                                        px: { xs: 0.5, sm: undefined },
+                                        minWidth: { xs: 32, sm: undefined },
+                                        justifyContent: 'center',
+                                    }}
+                                />
+                            </Tooltip>
+                        );
+                    })
+                }
+            </Box>
+
+            {/* Smart time-aware filter presets */}
+            {isEnabled('smart_presets') && (
+            <SmartPresets
+                filters={filters}
+                setFilters={setFilters}
+                defaultFilters={DEFAULT_FILTERS}
+                hasGeolocation={!!userLocation}
+                initialPresetId={initialPresetId}
+                onPresetApply={tagSlug ? (presetId) => {
+                    navigatingAway.current = true;
+                    navigate('/', { replace: true, state: { presetId } });
+                } : undefined}
+            />
+            )}
 
             {/* Discovery carousel — tabbed: Trending / Recently Viewed / Next Races */}
             {isEnabled('discovery_carousel') && (trendingTrails.length > 0 || recentTrails.length > 0 || upcomingCompetitions.length > 0) && viewMode === 'list' && !searchQuery && !filters.favoritesOnly && !tagSlug && (
@@ -1255,7 +1279,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
             {viewMode === 'list' ? (
                 filteredTrails.length === 0 && searchQuery.toLowerCase().trim() !== 'út að hlaupa' ? (
                     <EmptyFilterState
-                        hasActiveFilters={!!(searchQuery || filters.lengthBuckets.length > 0 || filters.elevationGainBuckets.length > 0 || filters.elevationLossBuckets.length > 0 || filters.distanceBuckets.length > 0 || filters.difficulties.length > 0 || filters.trailTypes.length > 0 || filters.locationSlugs.length > 0 || filters.selectedActivityTypes.length > 0 || filters.favoritesOnly)}
+                        hasActiveFilters={!!(searchQuery || activeFilterCount > 0)}
                         onClearFilters={() => { resetFilters(); setSelectedLocationItems([]); setSearchQuery(''); }}
                         searchQuery={searchQuery}
                     />

@@ -39,11 +39,11 @@ import LanguageIcon from '@mui/icons-material/Language';
 import XIcon from '@mui/icons-material/X';
 import YouTubeIcon from '@mui/icons-material/YouTube';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
+import { breadcrumbContext } from '../utils/breadcrumbContext';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import VideocamIcon from '@mui/icons-material/Videocam';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
 import TimerIcon from '@mui/icons-material/Timer';
@@ -68,6 +68,9 @@ import LostRunner from '../components/LostRunner';
 import WeatherCard from '../components/WeatherCard';
 import { useEvents, useEventBySlug } from '../hooks/useEvents';
 import type { EventEditionDto, RaceDto, ScheduleRule } from '../hooks/useEvents';
+import { useFavoriteEvents } from '../hooks/useFavoriteEvents';
+import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
 import { useLocalize } from '../utils/localize';
 import { useTrailWeather } from '../hooks/useTrails';
 import { useLocations } from '../hooks/useLocations';
@@ -298,6 +301,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     const { isEnabled } = useFeatureFlags();
     const locationsEnabled = isEnabled('locations_page');
     const { locations } = useLocations();
+    const { toggleFavoriteEvent, isFavoriteEvent } = useFavoriteEvents();
 
     const [followMe, setFollowMe] = useState(false);
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -584,16 +588,8 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     }
 
     return (
-        <Layout mode={mode} onToggleMode={onToggleMode}>
+        <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('nav.events'), to: '/events' }, { label: loc(event.name, event.nameEn) ?? event.name }]}>
             <Container maxWidth="md" sx={{ py: 3 }}>
-                <Button
-                    startIcon={<ArrowBackIcon />}
-                    onClick={() => navigate(-1)}
-                    size="small"
-                    sx={{ mb: 2 }}
-                >
-                    {t('races.backToRaces')}
-                </Button>
 
                 <Paper
                     elevation={0}
@@ -669,6 +665,11 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 />
                             )}
                             {isEnabled('share_trail') && <ShareButtons title={loc(event.name, event.nameEn) ?? event.name} />}
+                            <Tooltip title={isFavoriteEvent(slug ?? '') ? t('races.removeFavorite') : t('races.addFavorite')}>
+                                <IconButton size="small" onClick={() => toggleFavoriteEvent(slug ?? '')} color={isFavoriteEvent(slug ?? '') ? 'warning' : 'default'}>
+                                    {isFavoriteEvent(slug ?? '') ? <StarIcon fontSize="small" /> : <StarBorderIcon fontSize="small" />}
+                                </IconButton>
+                            </Tooltip>
                             <Tooltip title={t('qr.showQR')}>
                                 <IconButton size="small" onClick={() => { trackEventQRClick(slug ?? ''); setEventQROpen(true); }}>
                                     <QrCode2Icon fontSize="small" />
@@ -1010,6 +1011,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                                 daysUntil={event.daysUntil}
                                                 activityType={event.activityType}
                                                 editionDate={edition.date}
+                                                eventSlug={event.slug ?? slug}
                                                 now={currentTime}
                                             />
                                         ))}
@@ -1035,6 +1037,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 daysUntil={event.daysUntil}
                                 activityType={event.activityType}
                                 editionDate={event.displayDate ?? event.nextEditionDate}
+                                eventSlug={event.slug ?? slug}
                                 now={currentTime}
                             />
                             ))}
@@ -1293,6 +1296,7 @@ function RaceCard({
     daysUntil,
     activityType,
     editionDate,
+    eventSlug,
     now,
 }: {
     race: RaceDto;
@@ -1305,12 +1309,27 @@ function RaceCard({
     daysUntil?: number | null;
     activityType?: string;
     editionDate?: string | null;
+    eventSlug?: string | null;
     now: Date;
 }) {
     const theme = useTheme();
     const loc = useLocalize();
     const { isEnabled } = useFeatureFlags();
     const raceDateTime = formatRaceDateTime(race.dateOfRace, race.startTime, t);
+
+    // Carries the event as breadcrumb context so the trail page can render
+    // Events > {Event} > {Trail} instead of its default Trails > {Trail}.
+    // Memoized so the per-second `now` tick doesn't hand the links a new
+    // state reference on every render.
+    const trailLinkState = useMemo(
+        () => (eventSlug
+            ? breadcrumbContext([
+                { label: t('nav.events'), to: '/events' },
+                { label: competitionName, to: `/events/${eventSlug}` },
+            ])
+            : undefined),
+        [eventSlug, competitionName, t],
+    );
 
     // Race phase: determine if race is in progress (started but not finished)
     const racePhase = useMemo(() => {
@@ -1326,6 +1345,16 @@ function RaceCard({
         if (now.getTime() - start.getTime() < cutoffMs) return 'in-progress';
         return 'finished';
     }, [daysUntil, race.status, race.dateOfRace, race.startTime, race.cutoffMinutes, now]);
+
+    // Independent of cutoffMinutes: true as soon as the race starts (or all day if no startTime).
+    // Used only to control RaceFinishCard / RaceShareCard visibility.
+    const pastStart = useMemo(() => {
+        if (daysUntil !== 0 || !race.dateOfRace) return false;
+        const [h, m, s = 0] = race.startTime ? race.startTime.split(':').map(Number) : [12, 0, 0];
+        const start = new Date(race.dateOfRace + 'T00:00:00');
+        start.setHours(h, m, s, 0);
+        return now >= start;
+    }, [daysUntil, race.dateOfRace, race.startTime, now]);
 
     return (
         <Card id={anchor} variant="outlined" sx={{
@@ -1361,7 +1390,7 @@ function RaceCard({
                         {race.trailName && (
                             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
                                 {race.trailSlug ? (
-                                    <RouterLink to={`/trails/${race.trailSlug}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                                    <RouterLink to={`/trails/${race.trailSlug}`} state={trailLinkState} style={{ color: 'inherit', textDecoration: 'none' }}>
                                         {race.trailName}
                                     </RouterLink>
                                 ) : race.trailName}
@@ -1385,6 +1414,7 @@ function RaceCard({
                                 <Button
                                     component={RouterLink}
                                     to={`/trails/${race.trailSlug}`}
+                                    state={trailLinkState}
                                     size="small"
                                     variant="outlined"
                                     sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}
@@ -1392,23 +1422,23 @@ function RaceCard({
                                     {ACTIVITY_EMOJI[race.trailSlug ? 'TrailRunning' : ''] ?? '🗺️'} {t('races.viewTrail')}
                                 </Button>
                             )}
-                            {showShareCard && racePhase !== 'finished' && race.status !== 'Cancelled' && (
+                            {showShareCard && !pastStart && racePhase !== 'finished' && race.status !== 'Cancelled' && (
                                 <RaceShareCard
                                     eventName={competitionName}
                                     raceName={loc(race.name, race.nameEn) ?? race.name}
                                     distanceLabel={race.distanceLabel}
                                     date={race.dateOfRace ?? editionDate ?? null}
                                     daysUntil={daysUntil ?? null}
-                                    activityType={activityType}
+                                    activityType={race.activityType ?? race.trailActivityType ?? activityType}
                                 />
                             )}
-                            {(showFinishCard || (showShareCard && racePhase === 'finished')) && race.status !== 'Cancelled' && (
+                            {(showFinishCard || (showShareCard && (pastStart || racePhase === 'finished'))) && race.status !== 'Cancelled' && (
                                 <RaceFinishCard
                                     eventName={competitionName}
                                     raceName={loc(race.name, race.nameEn) ?? race.name}
                                     distanceLabel={race.distanceLabel}
                                     date={race.dateOfRace ?? editionDate ?? null}
-                                    activityType={activityType}
+                                    activityType={race.activityType ?? race.trailActivityType ?? activityType}
                                 />
                             )}
                         </Stack>

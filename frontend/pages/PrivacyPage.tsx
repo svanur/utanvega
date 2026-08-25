@@ -7,6 +7,7 @@ import StorageIcon from '@mui/icons-material/Storage';
 import PhonelinkIcon from '@mui/icons-material/Phonelink';
 import CloudOffIcon from '@mui/icons-material/CloudOff';
 import Layout from '../components/Layout';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 interface PrivacyPageProps {
     mode: PaletteMode;
@@ -29,9 +30,10 @@ function Section({ icon, title, children }: { icon: React.ReactNode; title: stri
 
 export default function PrivacyPage({ mode, onToggleMode }: PrivacyPageProps) {
     const { t } = useTranslation();
+    usePageTitle(t('nav.privacy'));
 
     return (
-        <Layout mode={mode} onToggleMode={onToggleMode}>
+        <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('nav.privacy') }]}>
             <Box sx={{ maxWidth: 700, mx: 'auto', px: 2, py: 4 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
                     <SecurityIcon sx={{ fontSize: 32, color: 'primary.main' }} />

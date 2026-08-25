@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
-import { Box, ButtonBase, Collapse, Container, Divider, Fab, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Toolbar, Tooltip, Typography, Button, Menu, MenuItem, useMediaQuery, useTheme, Zoom } from '@mui/material';
+import { useState, useEffect, Fragment } from 'react';
+import { Box, ButtonBase, Collapse, Container, Divider, Fab, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Toolbar, Tooltip, Typography, Button, Menu, MenuItem, useMediaQuery, useTheme, Zoom, Stack, Link } from '@mui/material';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
-import { useNavigate } from 'react-router-dom';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { PropsWithChildren, ReactNode } from 'react';
 import type { PaletteMode } from '@mui/material';
@@ -45,11 +47,17 @@ interface NavItem {
     children?: NavChild[];
 }
 
+export interface BreadcrumbItem {
+    label: string;
+    to?: string;
+}
+
 type LayoutProps = PropsWithChildren<{
     mode: PaletteMode;
     onToggleMode: () => void;
     maxWidth?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | false;
     bottomContent?: ReactNode;
+    breadcrumb?: BreadcrumbItem[];
 }>;
 
 function openExternal(href: string) {
@@ -80,10 +88,14 @@ function ScrollToTopButton() {
     );
 }
 
-export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', bottomContent }: LayoutProps) {
+const PROD_HOSTNAMES = ['hlaupadagskra.is', 'www.hlaupadagskra.is'];
+const STAGING_BANNER_HEIGHT = 28;
+
+export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', bottomContent, breadcrumb }: LayoutProps) {
     const navigate = useNavigate();
     const { t } = useTranslation();
     const theme = useTheme();
+    const isStaging = !PROD_HOSTNAMES.includes(window.location.hostname);
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const weather = useHeaderWeather();
     const heroTheme = useHeroTheme();
@@ -117,7 +129,15 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
             ? [{ key: 'trails', label: t('nav.trails'), children: trailsChildren }]
             : []),
         ...(isEnabled('tools_page')
-            ? [{ key: 'tools', label: t('nav.tools'), path: '/tools' }]
+            ? [{
+                key: 'explore',
+                label: t('nav.explore'),
+                children: [
+                    { label: t('nav.tools'), path: '/tools' },
+                    { label: t('nav.fun'), path: '/fun' },
+                    { label: 'ITRA', path: '/itra' },
+                ],
+            }]
             : []),
         { key: 'services', label: t('nav.services'), path: '/services' },
         {
@@ -147,7 +167,27 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
 
     return (
         <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
-            <DynamicHeader weather={weather} isDark={mode === 'dark'}>
+            {isStaging && (
+                <Box sx={{
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: theme.zIndex.appBar + 1,
+                    bgcolor: '#b71c1c',
+                    color: '#fff',
+                    height: STAGING_BANNER_HEIGHT,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 1,
+                }}>
+                    <WarningAmberIcon sx={{ fontSize: 14 }} />
+                    <Typography variant="caption" fontWeight={700} sx={{ letterSpacing: 1.5, textTransform: 'uppercase' }}>
+                        Staging Environment
+                    </Typography>
+                    <WarningAmberIcon sx={{ fontSize: 14 }} />
+                </Box>
+            )}
+            <DynamicHeader weather={weather} isDark={mode === 'dark'} stickyTop={isStaging ? STAGING_BANNER_HEIGHT : 0}>
                 <Toolbar sx={{ gap: 1 }}>
                     <Tooltip title={t('nav.tagline')} placement="bottom-start">
                         <ButtonBase
@@ -305,6 +345,53 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
             </DynamicHeader>
 
             {isEnabled('announcement_banner') && <AnnouncementBanner />}
+
+            {breadcrumb && breadcrumb.length > 0 && (
+                <Box
+                    sx={{
+                        position: 'sticky',
+                        top: { xs: (isStaging ? STAGING_BANNER_HEIGHT : 0) + 56, sm: (isStaging ? STAGING_BANNER_HEIGHT : 0) + 64 },
+                        zIndex: theme.zIndex.appBar - 1,
+                        bgcolor: 'background.paper',
+                        borderBottom: 1,
+                        borderColor: 'divider',
+                        py: 0.75,
+                    }}
+                >
+                    <Container maxWidth={maxWidth} disableGutters={false}>
+                        <Stack direction="row" alignItems="center" spacing={0.5} sx={{ pl: { xs: 2, sm: 3 } }}>
+                            {breadcrumb.map((item, i) => {
+                                const isLast = i === breadcrumb.length - 1;
+                                return (
+                                    <Fragment key={i}>
+                                        {i > 0 && <ChevronRightIcon sx={{ fontSize: 14, color: 'text.disabled', flexShrink: 0 }} />}
+                                        {item.to ? (
+                                            <Link
+                                                component={RouterLink}
+                                                to={item.to}
+                                                variant="caption"
+                                                color="text.secondary"
+                                                underline="hover"
+                                                sx={{ flexShrink: 0 }}
+                                            >
+                                                {item.label}
+                                            </Link>
+                                        ) : isLast ? (
+                                            <Typography variant="caption" color="text.primary" fontWeight={600} noWrap>
+                                                {item.label}
+                                            </Typography>
+                                        ) : (
+                                            <Typography variant="caption" color="text.secondary" noWrap sx={{ flexShrink: 0 }}>
+                                                {item.label}
+                                            </Typography>
+                                        )}
+                                    </Fragment>
+                                );
+                            })}
+                        </Stack>
+                    </Container>
+                </Box>
+            )}
             <SponsorStrip position="top" />
 
             <Container maxWidth={maxWidth} sx={{ py: 4, flex: 1 }}>

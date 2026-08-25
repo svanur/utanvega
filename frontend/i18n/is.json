@@ -13,6 +13,8 @@
         "viewDetails": "Skoða nánar",
         "expand": "Opna",
         "collapse": "Loka",
+        "copyLink": "Afrita síu",
+        "copied": "Afritað!",
         "dataLoadUnavailable": "Ekki tókst að sækja gögn núna. Athugaðu nettenginguna og reyndu aftur."
     },
     "auth": {
@@ -83,7 +85,8 @@
         "fun": "Gaman",
         "tagline": "Öll hlaup á einum stað",
         "onlineStore": "Verslun",
-        "tools": "Tól",
+        "tools": "Hlaupatól",
+        "explore": "Skoða",
         "scratchCard": "Skafkort",
         "runningTrip": "Hlaupaferð",
         "runs360": "360° Hlaup",
@@ -95,7 +98,13 @@
         "allTrails": "Listi yfir leiðir",
         "allEvents": "Næstu viðburðir",
         "eventsCalendar": "Dagatal",
-        "editionsHistory": "Fyrri viðburðir"
+        "editionsHistory": "Fyrri viðburðir",
+        "itraGuide": "ITRA leiðarvísir",
+        "itraHandbook": "ITRA handbók",
+        "guide": "Leiðarvísir",
+        "handbook": "Handbók",
+        "newsletter": "Fréttabréf",
+        "contact": "Samband"
     },
     "spotlight": {
         "placeholder": "Leita að viðburðu, leiðum og stöðum...",
@@ -224,7 +233,7 @@
         }
     },
     "trailCard": {
-        "removeFavorite": "Fjarlægja úr eftirlætum",
+        "removeFavorite": "Fjarlægja sem eftirlæti",
         "addFavorite": "Bæta í eftirlæti",
         "share": "Deila",
         "kmAway": "km í burtu"
@@ -249,6 +258,8 @@
         "advancedSearch": "síur",
         "advancedFilters": "Ítarlegar síur",
         "trailLength": "Lengd leiðar",
+        "halfMarathon": "Hálft-Maraþon",
+        "marathonTo100": "Maraþon–100 km",
         "elevationGain": "Hækkun",
         "elevationLoss": "Lækkun",
         "duration": "Áætlaður tími",
@@ -421,7 +432,7 @@
         "checkingApi": "Athuga API…",
         "healthy": "virkt",
         "apiUnavailable": "API ekki tiltækt",
-        "discover": "Uppgötvaðu",
+        "discover": "Skoða",
         "info": "Upplýsingar",
         "follow": "Fylgstu með",
         "contact": "Samband"
@@ -765,9 +776,13 @@
             }
         },
         "changelog": {
+            "v2_6": {
+                "title": "Brauðmolar - SEO sýnileiki - Bera saman leiðir - Keppniskort",
+                "description": "Leitarvélar sáu aðeins leiðasíður — allar aðrar síður voru skráðar undir sama almenna titlinum án innihalds. Lagað með sérsniðnum titlum og lýsingum fyrir hverja síðu, canonical-slóðum, robots.txt og veftré með 305 slóðum. Bera saman leiðir bætt í fótinn ásamt tillögum að samanburði og svipuðum leiðum. Fastar brauðmolaslóðir sem muna hvort komið var frá viðburði eða staðsetningu. Keppniskort endurhönnuð með litaþemum eftir tegund hreyfingar, keppnisnúmeri og persónulegum skilaboðum. Samræmd eftirlæti í kortum og töflum og samstilltar síur á viðburða- og leiðasíðum."
+            },
             "v2_5": {
-                "title": "Viðburðir",
-                "description": "Viðburðir, dagatal, tengingar milli leiða og keppna, tímaspá af keppnissíðum, veður á keppnisdegi, rennistikur í verkfærum o deilanleg slóð á hraðatöflu."
+                "title": "Nýr hlaupadagskra.is -- ÚTGÁFA 2.0 FÓR Í LOFTIÐ --",
+                "description": "Nýr hlaupadagskra.is vefur opnaður á Reykjavík Maraþon EXPO sýningunni."
             },
             "v2_4": {
                 "title": "Snjallar forstillingar og deiling",
@@ -922,6 +937,9 @@
         "elevation": "Hæðarsnið",
         "swapTrails": "Skipta leiðum",
         "selectTrails": "Veldu tvær leiðir sem þú vilt bera saman",
+        "intro": "Berðu tvær leiðir saman hlið við hlið og sjáðu muninn á vegalengd, hækkun, erfiðleikastigi og undirlagi — gagnlegt þegar þú velur næstu leið eða metur keppni.",
+        "tryOne": "Prófaðu eina af þessum",
+        "similarTo": "Svipaðar leiðir og {{name}}",
         "trailA": "Leið A",
         "trailB": "Leið B",
         "viewTrail": "Skoða",
@@ -934,11 +952,11 @@
             "elevation": "Hæðarmunur",
             "short": "Stutt <5km",
             "medium": "5–21km",
-            "half": "Hálft 21–42km",
-            "marathon": "Maraþon 42–50km",
+            "half": "Hálft 21 – 42km",
+            "marathon": "Maraþon 42 – 50km",
             "ultra": "Ultra 50km+",
             "flat": "Slétt <300m",
-            "hilly": "Hæðgóðar 300–800m",
+            "hilly": "Hæðgóðar 300 – 800m",
             "mountain": "Fjöll 800m+"
         }
     },
@@ -1230,7 +1248,7 @@
         "directionsToEvent": "Leiðsögn að upphafsstað",
         "addToCalendar": "Setja í dagatal",
         "addFavorite": "Bæta í eftirlæti",
-        "removeFavorite": "Fjarlægja úr eftirlætum",
+        "removeFavorite": "Fjarlægja sem eftirlæti",
         "downloadIcs": "Hlaða niður .ics (Apple/Annað)",
         "racesHeading": "Vegalengdir",
         "scheduleHeading": "Dagsetningar",
@@ -1298,7 +1316,7 @@
         "checklistTitle": "Tékklisti fyrir keppnisdag",
         "checklistWeatherReady": "Núna: {{temperature}}°C og {{wind}} m/s vindur.",
         "checklistWeatherFallback": "Stutt yfirferð áður en lagt er af stað:",
-        "checklistBib": "Keppnishúmer tilbúið",
+        "checklistBib": "Keppnisnúmer tilbúið",
         "checklistShoes": "Skór og sokkar og keppnisfötin klár",
         "checklistFuel": "Næring & drykkir tilbúnir",
         "checklistGoodMoodReady": "Góða skapið klárt 😄",
@@ -1316,7 +1334,10 @@
             "share": "Deila",
             "download": "Vista mynd",
             "copiedToClipboard": "Mynd afrituð!",
-            "downloaded": "Mynd vistuð!"
+            "downloaded": "Mynd vistuð!",
+            "bibLabel": "Númer",
+            "customTextLabel": "Skilaboð þín",
+            "customTextPlaceholder": "Óskið mér gæfu! 🤞"
         },
         "finishCard": {
             "button": "Ég kláraði! 🏁",
@@ -1328,7 +1349,10 @@
             "share": "Deila",
             "download": "Vista mynd",
             "copiedToClipboard": "Mynd afrituð!",
-            "downloaded": "Mynd vistuð!"
+            "downloaded": "Mynd vistuð!",
+            "bibLabel": "Númerið mitt",
+            "customTextLabel": "Skilaboðin mín",
+            "customTextPlaceholder": "Þetta var gaman! \uD83E\uDD29 GAMAAAN \uD83E\uDD73"
         },
         "justRaced": "🏁 Nýlokið!",
         "justRacedSection": "Nýlega lokið",
@@ -1573,9 +1597,22 @@
             "title": "Tenglar"
         }
     },
+    "itraLanding": {
+        "intro": "ITRA (International Trail Running Association) er vefur utanvegahlaupara um allan heim — heldur utan um utanvegakeppnir, reiknar Performance Index og tengir hlaupara saman þvert á landamörk.",
+        "guide": {
+            "title": "ITRA hugtökin útskýrð",
+            "description": "Ertu óviss um hvernig ITRA-stig virka, Performance Index eða National League? Þessi leiðarvísir skýrir 5 lykilhugtök ITRA með einfaldri nálgun vegalengdar og hraða.",
+            "cta": "Lesa leiðarvísinn"
+        },
+        "handbook": {
+            "title": "ITRA handbók",
+            "description": "Allt sem þarf að vita um notkun á ITRA-vefnum — fletta upp stigum, stjórna notandareikningi, hver munur er á ókeypis aðgangi og geiddum og ýmsu fleiri.",
+            "cta": "Lesa handbókina"
+        }
+    },
     "itraGuide": {
         "title": "🏃‍♂️ ITRA hugtökin útskýrð í einföldu máli",
-        "intro": "Ef þú skilur ekki alveg ITRA hugtökin, ITRA Endurance Points, ITRA Index, Mountain Level og National League, þá ert þú ekki ein/n. Hér er yfirlit yfir þessi 5 lykilhugtök sem þú þarft að þekkja, með einfaldri nálgun hvað varðar \"vegalengd og hraða\".",
+        "intro": "Ef þú skilur ekki alveg ITRA hugtökin, ITRA Endurance Points, ITRA Index, Mountain Level og National League, þá ert þú ekki ein/n. Hér er yfirlit yfir þessi 5 lykilhugtök sem þú þarft að þekkja, með einfaldri nálgun hvað varðar \"vegalengd og hraða\". Öll þessi hugtök og allt ITRA tengt er að finna á vef ITRA samtakanna: www.itra.run.",
         "concepts": [
             {
                 "title": "ITRA Endurance Points - ITRA stig (\"Þols\" mælikvarðinn)",
@@ -1586,7 +1623,7 @@
                 ]
             },
             {
-                "title": "ITRA Index - ITRA frammistöðustig(\"Hraða\" mælikvarðinn)",
+                "title": "ITRA Performance Index - (\"Hraða\" mælikvarðinn)",
                 "badge": "Mikilvægast",
                 "items": [
                     "📌 Hvað er þetta: Þín persónu- og alþjóðlegu stig á bilinu 0 til 1000. Stigin tákna hámarksgetu þína í keppni.",
@@ -1595,21 +1632,21 @@
                 ]
             },
             {
-                "title": "Mountain Level - Fjallastig (\"Fjalla\" mælikvarðinn)",
+                "title": "ITRA Mountain Level - (\"Fjalla\" mælikvarðinn)",
                 "items": [
                     "📌 Hvað er þetta: Erfiðleikastig frá 0 til 12 sem segir þér hversu tæknileg og brött brautin er.",
                     "⚙️ Hvernig virkar þetta: 1 stig þýðir flatur vegur eða sléttir stígar. 12 þýðir afar krefjandi fjallalandslag með miklum, bröttum brekkum og tæknilegu undirlagi. Þetta hjálpar þér að skilja hvaða búnað og þjálfun þú þarft til að klára slíka keppni."
                 ]
             },
             {
-                "title": "Finisher Level - Markmiðastig (\"Tímamörk\" mælikvarðinn)",
+                "title": "ITRA Finisher Level - (\"Tímamörk\" mælikvarðinn)",
                 "items": [
                     "📌 Hvað er þetta: Lágmarks framistöðustig(Performance Index), sem hlaupari þarf til að klára keppnina áður en tíminn rennur út.",
-                    "⚙️ Hvernig virkar þetta: Ef keppni hefur 220 markmiðastig(Finisher Level), mun hlaupari með 220 frammistöðustig(Performance Index) klára keppnina lokasekúndum tímamarkanna. Ef keppni hefur 0 markmiðastig, eru tímamörkin óvenjulega rúm."
+                    "⚙️ Hvernig virkar þetta: Ef keppni hefur Finisher Level upp á 220 stig, mun hlaupari með Performance Index upp á 220 klára keppnina lokasekúndum tímamarkanna. Ef keppni hefur Finnisher Level = 0, eru tímamörkin óvenjulega rúm."
                 ]
             },
             {
-                "title": "National League - Þjóðardeild (\"Staðbundinn stigatafla\")",
+                "title": "ITRA National League - Þjóðardeild (\"Staðbundinn stigatafla\")",
                 "items": [
                     "📌 Hvað er þetta: Árlegt stigakerfi sem raðar þér á móti öðrum hlaupurum í þínu heimlandi.",
                     "⚙️ Hvernig virkar þetta: Þjóðardeildin nær yfir eitt almanaksár og uppfærist sjálfkrafa eftir hvert ITRA hlaup. Ef þú hleypur að minnsta kosti 3 ITRA-vottaðar keppnir í þínu landi á árinu, eru efstu 3 stigin þín lögð saman til að raða þér á 'þinn stað' í þjóðardeildinni."
@@ -1618,11 +1655,11 @@
         ],
         "section370": {
             "title": "Hvað þarf til að ná lágmarksstigum í Laugaveginn?",
-            "p1": "Til að geta sótt um í Laugaveginn þarf umsækjandi að hafa a.m.k. 370 frammistöðustig(Performance Index). Til þess að ná því, þarftu að viðhalda meðalhraða á flötum stíg, þar sem þú klárar hvern kílómetra á u.þ.b. 5:45 til 6:00 mínútum(pace).",
+            "p1": "Til að geta sótt um í Laugaveginn þarf umsækjandi að hafa a.m.k. Performance Index upp á 370 stig. Til þess að ná því, þarftu að viðhalda meðalhraða á flötum stíg, þar sem þú klárar hvern kílómetra á u.þ.b. 5:45 til 6:00 mínútum(pace).",
             "p2": "Þar sem langflestar utanvegahlaupaleiðir hafa hæðarmun, metur ITRA hraðann þinn með því sem við köllum 'áreynslu-kílómetrum, eða 'effort-km'. Formúlan bætir við 1 kílómetra vegalengd fyrir hverja 100 metra sem hlaupnir eru upp á við. Til að ná 370 stigum þarf meðalhraðinn að vera um 6:00 til 6:15 á hvern 'áreynslu-kílómetra'(effor-km)."
         },
         "table": {
-            "title": "Dæmi um hvernig maður nær 370 ITRA frammistöðustigum",
+            "title": "Dæmi um hvernig maður nær 370 ITRA 'Performance Index' stigum",
             "distance": "Keppnisvegalengd",
             "elevation": "Hæðarbreyting",
             "effortKm": "Samtals áreynslu-km",
@@ -1644,9 +1681,9 @@
         "handbookLink": "→ Handbók: ITRA í framkvæmd"
     },
     "itraHandbook": {
-        "title": "ITRA handbók fyrir utanvegahlaupara",
+        "title": "ITRA handbók utanvegahlauparans",
         "subtitle": "(Flest)Allt sem utanvegahlauparar þurfa að vita um ITRA",
-        "intro": "Vefsíða ITRA (International Trail Running Association) er miðstöð fyrir utanvegahlaupara um allan heim. Hún heldur utan um árangur, reiknar út alþjóðlegan styrkleika (Performance Index) og utanvegahlaupastig.",
+        "intro": "Skammstöfunin ITRA stendur fyrir 'International Trail Running Association'. Vefur þeirra, www.itra.run, er miðstöð fyrir utanvegahlaupara um allan heim. Hún heldur m.a. utan um árangur hlaupara og gefur keppnum mismunadi erfiðleikastig þannig að hægt sé að átta sig á hversu létt eða erfið viðkomandi keppni er.",
         "guideLink": "← ITRA hugtökin útskýrð",
         "browse": {
             "title": "Skoðun á ITRA stigum og innskráning",
@@ -1692,7 +1729,7 @@
             ]
         },
         "expiry": {
-            "title": "Hvenær rennur ITRA frammistöðustigið þitt út?",
+            "title": "Hvenær rennur ITRA 'Performance Index' út?",
             "intro": "ITRA Performance Index þinn er vegið meðaltal af allt að 5 bestu niðurstöðum þínum á síðustu 36 mánuðum.",
             "items": [
                 "Þegar niðurstaða er eldri en 36 mánuðir fellur hún sjálfkrafa úr útreikningnum — stigin þín geta lækkað án þess að þú hafir gert neitt.",

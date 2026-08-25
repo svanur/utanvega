@@ -22,7 +22,6 @@ import {
     TextField,
     Typography,
 } from '@mui/material';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CloseIcon from '@mui/icons-material/Close';
 import Layout from '../components/Layout';
 import { useTrailBySlug, useTrailLeaderboard } from '../hooks/useTrails';
@@ -115,12 +114,8 @@ export default function TrailLeaderboardPage({ mode, onToggleMode }: Props) {
 
 
     return (
-        <Layout mode={mode} onToggleMode={onToggleMode}>
+        <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('nav.trails'), to: '/trails' }, { label: trail?.name ?? '', to: `/trails/${slug}` }, { label: t('trail.leaderboardTitle') }]}>
             <Container maxWidth="md" sx={{ py: 3 }}>
-                <Button startIcon={<ArrowBackIcon />} onClick={() => window.history.back()} sx={{ mb: 2 }}>
-                    {t('trail.backToTrails')}
-                </Button>
-
                 <Paper elevation={3} sx={{ p: 3 }}>
                     <Typography variant="h5" fontWeight="bold" sx={{ mb: 1 }}>
                         {trail?.name

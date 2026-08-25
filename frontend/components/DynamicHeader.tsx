@@ -135,9 +135,10 @@ interface DynamicHeaderProps {
     weather: HeaderWeather | null;
     isDark: boolean;
     children: React.ReactNode;
+    stickyTop?: number;
 }
 
-export default function DynamicHeader({ weather, isDark, children }: DynamicHeaderProps) {
+export default function DynamicHeader({ weather, isDark, children, stickyTop = 0 }: DynamicHeaderProps) {
     const now = useMemo(() => new Date(), []);
     const hour = now.getHours();
     const gradient = getTimeGradient(hour, isDark);
@@ -166,6 +167,7 @@ export default function DynamicHeader({ weather, isDark, children }: DynamicHead
             position="sticky"
             elevation={0}
             sx={{
+                top: stickyTop,
                 background: gradient,
                 transition: 'background 2s ease',
             }}

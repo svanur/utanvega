@@ -24,6 +24,7 @@ import DifficultyInfo from './DifficultyInfo';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { getActivityIcon } from '../utils/activityIcon';
 import { useLocalize } from '../utils/localize';
+import type { BreadcrumbContextState } from '../utils/breadcrumbContext';
 
 // Mini SVG elevation silhouette for background
 function ElevationSilhouette({ coordinates, color }: { coordinates: number[][]; color: string }) {
@@ -74,6 +75,8 @@ interface TrailQuickViewProps {
     trail: Trail | null;
     open: boolean;
     onClose: () => void;
+    /** Breadcrumb context to carry into the trail page — see breadcrumbContext(). */
+    linkState?: BreadcrumbContextState;
 }
 
 
@@ -113,7 +116,7 @@ function generateSummary(trail: Trail, t: (key: string, opts?: Record<string, un
     return s;
 }
 
-export const TrailQuickView: React.FC<TrailQuickViewProps> = ({ trail, open, onClose }) => {
+export const TrailQuickView: React.FC<TrailQuickViewProps> = ({ trail, open, onClose, linkState }) => {
     const theme = useTheme();
     const navigate = useNavigate();
     const { t, i18n } = useTranslation();
@@ -262,7 +265,7 @@ export const TrailQuickView: React.FC<TrailQuickViewProps> = ({ trail, open, onC
                     endIcon={<OpenInNewIcon />}
                     onClick={() => {
                         onClose();
-                        navigate(`/trails/${trail.slug}`);
+                        navigate(`/trails/${trail.slug}`, linkState ? { state: linkState } : undefined);
                     }}
                     sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 'bold' }}
                 >

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
     Box, Typography, Button, Stack, Paper, Chip, Fade, useTheme
 } from '@mui/material';
@@ -10,8 +10,7 @@ import SameIcon from '@mui/icons-material/DragHandle';
 import { useTranslation } from 'react-i18next';
 import confetti from 'canvas-confetti';
 import type { Trail } from '../hooks/useTrails';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+import { useGameTrails } from '../hooks/useGameTrails';
 
 type StatKey = 'distance' | 'elevation' | 'elevationLoss';
 type GamePhase = 'loading' | 'playing' | 'revealing' | 'gameover';
@@ -60,7 +59,7 @@ function setHighScore(score: number) {
 export default function HigherLower() {
     const { t } = useTranslation();
     const theme = useTheme();
-    const [trails, setTrails] = useState<Trail[]>([]);
+    const trails = useGameTrails();
     const [leftTrail, setLeftTrail] = useState<Trail | null>(null);
     const [rightTrail, setRightTrail] = useState<Trail | null>(null);
     const [activeStat, setActiveStat] = useState<StatDef>(STATS[0]);
@@ -69,14 +68,6 @@ export default function HigherLower() {
     const [highScore, setHighScoreState] = useState(getHighScore());
     const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
     const [usedIds, setUsedIds] = useState<Set<string>>(new Set());
-
-    // Load trails
-    useEffect(() => {
-        fetch(`${API_URL}/api/v1/trails`)
-            .then(res => res.json())
-            .then((data: Trail[]) => setTrails(data))
-            .catch(err => console.error('Failed to load trails:', err));
-    }, []);
 
     const pickRandom = useCallback((exclude: Set<string>): Trail | null => {
         const available = trails.filter(t => !exclude.has(t.id));
@@ -104,6 +95,8 @@ export default function HigherLower() {
     useEffect(() => {
         if (trails.length >= 2 && phase === 'loading') startGame();
     }, [trails, phase, startGame]);
+
+    const revealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const handleGuess = (guess: 'higher' | 'lower' | 'same') => {
         if (phase !== 'playing' || !leftTrail || !rightTrail) return;
@@ -135,10 +128,8 @@ export default function HigherLower() {
                 setHighScore(newScore);
             }
 
-            // Advance after reveal delay
-            setTimeout(() => {
+            revealTimer.current = setTimeout(() => {
                 const newUsed = new Set(usedIds);
-                // Pick new stat for variety
                 const newStat = STATS[Math.floor(Math.random() * STATS.length)];
                 const next = pickRandom(newUsed);
                 if (!next) {
@@ -164,8 +155,7 @@ export default function HigherLower() {
                 setPhase('playing');
             }, REVEAL_DELAY);
         } else {
-            // Game over after reveal
-            setTimeout(() => {
+            revealTimer.current = setTimeout(() => {
                 if (score >= 10) {
                     confetti({
                         particleCount: 100,
@@ -178,6 +168,8 @@ export default function HigherLower() {
             }, REVEAL_DELAY);
         }
     };
+
+    useEffect(() => () => { if (revealTimer.current) clearTimeout(revealTimer.current); }, []);
 
     // Game over screen
     if (phase === 'gameover') {

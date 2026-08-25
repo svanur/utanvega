@@ -14,7 +14,6 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import Layout from '../components/Layout';
 import { useAuth } from '../hooks/useAuth';
 import { useProfile } from '../hooks/useProfile';
@@ -90,12 +89,8 @@ export default function MyProfileSettingsPage({ mode, onToggleMode }: Props) {
   };
 
   return (
-    <Layout mode={mode} onToggleMode={onToggleMode}>
+    <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('profile.title'), to: '/my/profile' }, { label: t('profile.publicProfileSettings') }]}>
       <Container maxWidth="md" sx={{ py: 3 }}>
-        <Button component={RouterLink} to="/my/profile" startIcon={<ArrowBackIcon />} sx={{ mb: 2 }}>
-          {t('trail.backToProfile')}
-        </Button>
-
         <Paper elevation={3} sx={{ p: 3 }}>
           <Typography variant="h5" fontWeight="bold" sx={{ mb: 1 }}>
             {t('profile.publicProfileSettings')}

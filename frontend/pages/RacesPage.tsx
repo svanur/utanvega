@@ -68,8 +68,6 @@ import RandomQuote from '../components/RandomQuote';
 import RunningLoader from '../components/RunningLoader';
 import EventDateBadge from '../components/EventDateBadge';
 import SwipeableCard from '../components/SwipeableCard';
-import RaceShareCard from '../components/RaceShareCard';
-import RaceFinishCard from '../components/RaceFinishCard';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import { useEvents, type EventSummary, type SeriesRaceDto } from '../hooks/useEvents';
 import { API_URL } from '../hooks/useTrails';
@@ -113,9 +111,10 @@ type RacesPageProps = {
 };
 
 
+type RaceDistanceBucket = '<10' | '10-21' | '21-42' | '42-100' | '100+';
+
 interface EventFilters {
     activityTypes: string[];
-    eventTypes: string[];
     months: number[];
     locations: string[];
     itraAny: boolean;
@@ -125,11 +124,11 @@ interface EventFilters {
     weekendOnly: boolean;
     mountainRaceOnly: boolean;
     favoritesOnly: boolean;
+    distanceBuckets: RaceDistanceBucket[];
 }
 
 const DEFAULT_FILTERS: EventFilters = {
     activityTypes: [],
-    eventTypes: [],
     months: [],
     locations: [],
     itraAny: false,
@@ -139,7 +138,21 @@ const DEFAULT_FILTERS: EventFilters = {
     weekendOnly: false,
     mountainRaceOnly: false,
     favoritesOnly: false,
+    distanceBuckets: [],
 };
+
+function parseDistanceKm(label: string): number | null {
+    const m = label.match(/^(\d+(?:[.,]\d+)?)/);
+    return m ? parseFloat(m[1].replace(',', '.')) : null;
+}
+
+function matchesDistanceBucket(km: number, bucket: RaceDistanceBucket): boolean {
+    if (bucket === '<10') return km < 10;
+    if (bucket === '10-21') return km >= 10 && km < 21.1;
+    if (bucket === '21-42') return km >= 21.1 && km < 42.195;
+    if (bucket === '42-100') return km >= 42.195 && km < 100;
+    return km >= 100;
+}
 
 const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
     TrailRunning: <LandscapeIcon fontSize="small" />,
@@ -176,12 +189,16 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
     const { isEnabled } = useFeatureFlags();
     const navigate = useNavigate();
     const theme = useTheme();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const urlInitialized = useRef(false);
+
     const [search, setSearch] = useState('');
     const [showFilters, setShowFilters] = useState(false);
+    const [linkCopied, setLinkCopied] = useState(false);
+    const linkCopiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [filters, setFilters] = useState<EventFilters>(DEFAULT_FILTERS);
     const [siteQROpen, setSiteQROpen] = useState(false);
     const [siteQRCopied, setSiteQRCopied] = useState(false);
-    const [shareEventId, setShareEventId] = useState<string | null>(null);
     const [shareEventSlug, setShareEventSlug] = useState<string | null>(null);
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
     const [locationLoading, setLocationLoading] = useState(false);
@@ -254,7 +271,6 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    const [searchParams, setSearchParams] = useSearchParams();
     const viewModeFromUrl = searchParams.get('view');
     const viewMode: ViewMode = (viewModeFromUrl === 'list' || viewModeFromUrl === 'map' || viewModeFromUrl === 'table')
         ? viewModeFromUrl
@@ -265,9 +281,71 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         trackViewModeChange('events', v);
     };
 
+    // Initialize filters from URL params on first render
+    useEffect(() => {
+        if (urlInitialized.current) return;
+
+        const updates: Partial<EventFilters> = {};
+        const activity = searchParams.get('activity');
+        const months = searchParams.get('months');
+        const locations = searchParams.get('locations');
+        const itraAny = searchParams.get('itraAny');
+        const itraPoints = searchParams.get('itraPoints');
+        const certs = searchParams.get('certs');
+        const champs = searchParams.get('champs');
+        const distance = searchParams.get('distance');
+        const q = searchParams.get('q');
+
+        if (activity) updates.activityTypes = activity.split(',');
+        if (months) updates.months = months.split(',').map(Number);
+        if (locations) updates.locations = locations.split(',');
+        if (itraAny === 'true') updates.itraAny = true;
+        if (itraPoints) updates.itraPoints = itraPoints.split(',').map(Number);
+        if (certs) updates.certifications = certs.split(',');
+        if (champs) updates.championships = champs.split(',');
+        const VALID_BUCKETS: RaceDistanceBucket[] = ['<10', '10-21', '21-42', '42-100', '100+'];
+        if (distance) updates.distanceBuckets = distance.split(',').filter((b): b is RaceDistanceBucket => VALID_BUCKETS.includes(b as RaceDistanceBucket));
+        if (searchParams.get('weekend') === 'true') updates.weekendOnly = true;
+        if (searchParams.get('mountain') === 'true') updates.mountainRaceOnly = true;
+        if (searchParams.get('favorites') === 'true') updates.favoritesOnly = true;
+
+        if (q) setSearch(q);
+        if (Object.keys(updates).length > 0) setFilters(prev => ({ ...prev, ...updates }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Sync filters → URL params (skip defaults to keep URL clean)
+    useEffect(() => {
+        if (!urlInitialized.current) return;
+        // Start from current params so we preserve the 'view' param managed by setViewMode
+        const params = new URLSearchParams(searchParams);
+
+        const set = (key: string, val: string | null) => {
+            if (val) params.set(key, val); else params.delete(key);
+        };
+
+        set('q', search || null);
+        set('activity', filters.activityTypes.length ? filters.activityTypes.join(',') : null);
+        set('months', filters.months.length ? filters.months.join(',') : null);
+        set('locations', filters.locations.length ? filters.locations.join(',') : null);
+        set('itraAny', filters.itraAny ? 'true' : null);
+        set('itraPoints', !filters.itraAny && filters.itraPoints.length ? filters.itraPoints.join(',') : null);
+        set('certs', filters.certifications.length ? filters.certifications.join(',') : null);
+        set('champs', filters.championships.length ? filters.championships.join(',') : null);
+        set('distance', filters.distanceBuckets.length ? filters.distanceBuckets.join(',') : null);
+        set('weekend', filters.weekendOnly ? 'true' : null);
+        set('mountain', filters.mountainRaceOnly ? 'true' : null);
+        set('favorites', filters.favoritesOnly ? 'true' : null);
+
+        setSearchParams(params, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [search, filters]);
+
+    // Set urlInitialized after the sync effect so the sync effect skips the first render
+    useEffect(() => { urlInitialized.current = true; }, []);
+
     const activeFilterCount = useMemo(() =>
         filters.activityTypes.length +
-        filters.eventTypes.length +
         (filters.months.length > 0 ? 1 : 0) +
         filters.locations.length +
         (filters.itraAny ? 1 : filters.itraPoints.length) +
@@ -275,17 +353,17 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         filters.championships.length +
         (filters.weekendOnly ? 1 : 0) +
         (filters.mountainRaceOnly ? 1 : 0) +
-        (filters.favoritesOnly ? 1 : 0),
+        (filters.favoritesOnly ? 1 : 0) +
+        filters.distanceBuckets.length,
     [filters]);
 
     const filterOptions = useMemo(() => {
         const visible = events.filter(e => e.status !== 'Hidden' && e.status !== 'Unlisted');
         const activityTypes = [...new Set(visible.map(e => e.activityType))].sort();
-        const eventTypes = [...new Set(visible.map(e => e.type))].sort();
         const locations = [...new Set(visible.map(e => e.locationName).filter(Boolean) as string[])].sort((a, b) => a.localeCompare(b, 'is'));
         const certifications = [...new Set(visible.flatMap(e => e.certifications ?? []))].sort();
         const championships = [...new Set(visible.flatMap(e => e.championshipCategories ?? []))].sort();
-        return { activityTypes, eventTypes, locations, certifications, championships };
+        return { activityTypes, locations, certifications, championships };
     }, [events]);
 
     const monthNames = t('races.months', { returnObjects: true }) as string[];
@@ -322,7 +400,6 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         if (f.locations.length > 0) result = result.filter(c => c.locationName && f.locations.includes(c.locationName));
         if (!skipMonth && f.months.length > 0) result = result.filter(c => { const d = c.displayDate ?? c.nextEditionDate; return !!d && f.months.includes(new Date(d + 'T00:00:00').getMonth()); });
         if (f.activityTypes.length > 0) result = result.filter(c => f.activityTypes.includes(c.activityType));
-        if (f.eventTypes.length > 0) result = result.filter(c => f.eventTypes.includes(c.type));
         if (f.itraAny) result = result.filter(c => c.itraPoints && c.itraPoints.length > 0);
         else if (f.itraPoints.length > 0) result = result.filter(c => c.itraPoints?.some(p => f.itraPoints.includes(p)));
         if (f.certifications.length > 0) result = result.filter(c => c.certifications?.some(cert => f.certifications.includes(cert)));
@@ -330,6 +407,14 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         if (f.weekendOnly) result = result.filter(c => { const d = c.displayDate ?? c.nextEditionDate; if (!d) return false; const day = new Date(d + 'T00:00:00').getDay(); return day === 0 || day === 6; });
         if (f.mountainRaceOnly) result = result.filter(c => c.isMountainRace === true);
         if (f.favoritesOnly) result = result.filter(c => favoriteEvents.includes(c.slug));
+        if (f.distanceBuckets.length > 0) result = result.filter(c => {
+            if (!c.distances?.length) return false;
+            return c.distances.some(d => {
+                const km = parseDistanceKm(d.label);
+                if (km === null) return true; // unparseable label: include rather than silently drop
+                return f.distanceBuckets.some(b => matchesDistanceBucket(km, b));
+            });
+        });
         return result;
     }, [favoriteEvents]);
 
@@ -440,7 +525,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
     }
 
     return (
-        <Layout mode={mode} onToggleMode={onToggleMode} maxWidth={viewMode === 'table' ? 'lg' : 'md'} bottomContent={<PartnerLinks />}>
+        <Layout mode={mode} onToggleMode={onToggleMode} maxWidth={viewMode === 'table' ? 'lg' : 'md'} bottomContent={<PartnerLinks />} breadcrumb={[{ label: t('nav.events') }]}>
             {showQuote && isEnabled('random_quote') && <RandomQuote />}
             <Container
                 maxWidth={viewMode === 'table' ? 'lg' : 'md'}
@@ -487,6 +572,29 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                         <CloseIcon fontSize="small" />
                                     </IconButton>
                                 )}
+                                {activeFilterCount > 0 && (
+                                    <IconButton size="small" color="error" onClick={() => setFilters(DEFAULT_FILTERS)} sx={{ mr: 0.5 }} title={t('races.filters.reset')}>
+                                        <CloseIcon fontSize="small" />
+                                    </IconButton>
+                                )}
+                                {activeFilterCount > 0 && (
+                                    <Tooltip title={linkCopied ? t('common.copied') : t('common.copyLink')}>
+                                        <IconButton
+                                            size="small"
+                                            sx={{ mr: 0.5 }}
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(window.location.href);
+                                                setLinkCopied(true);
+                                                if (linkCopiedTimer.current) clearTimeout(linkCopiedTimer.current);
+                                                linkCopiedTimer.current = setTimeout(() => setLinkCopied(false), 2000);
+                                            }}
+                                        >
+                                            {linkCopied
+                                                ? <CheckIcon fontSize="small" color="success" />
+                                                : <ContentCopyIcon fontSize="small" />}
+                                        </IconButton>
+                                    </Tooltip>
+                                )}
                                 <Button
                                     size="small"
                                     variant={showFilters || activeFilterCount > 0 ? 'contained' : 'outlined'}
@@ -506,7 +614,10 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
 
                 {/* Filter panel */}
                 <Collapse in={showFilters}>
-                    <Box sx={{ mb: 2, p: 2, bgcolor: 'background.paper', borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+                    <Box sx={{ mb: 2, p: 2, bgcolor: 'background.paper', borderRadius: '12px', border: '1px solid', borderColor: 'divider' }}>
+                        <Typography variant="subtitle2" gutterBottom fontWeight="bold">
+                            {t('filters.advancedFilters')}
+                        </Typography>
 
                         {/* Location */}
                         {filterOptions.locations.length > 0 && (
@@ -556,31 +667,37 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                             </Box>
                         )}
 
-                        {/* Event type */}
-                        {filterOptions.eventTypes.length > 0 && (
-                            <Box sx={{ mb: 1.5 }}>
-                                <Typography variant="caption" color="text.secondary" fontWeight={600}>{t('races.filters.eventType')}</Typography>
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
-                                    {filterOptions.eventTypes.map(type => {
-                                        const selected = filters.eventTypes.includes(type);
-                                        return (
-                                            <Chip
-                                                key={type}
-                                                label={t(`races.eventTypes.${type}`, type)}
-                                                size="small"
-                                                variant={selected ? 'filled' : 'outlined'}
-                                                color={selected ? 'secondary' : 'default'}
-                                                onClick={() => setFilters(f => ({
-                                                    ...f,
-                                                    eventTypes: selected ? f.eventTypes.filter(x => x !== type) : [...f.eventTypes, type],
-                                                }))}
-                                                sx={{ cursor: 'pointer' }}
-                                            />
-                                        );
-                                    })}
-                                </Box>
+                        {/* Race distance */}
+                        <Box sx={{ mb: 1.5 }}>
+                            <Typography variant="caption" color="text.secondary" fontWeight={600}>{t('races.filters.raceDistance', 'Race distance')}</Typography>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                                {([
+                                    { key: '<10', label: '< 10 km' },
+                                    { key: '10-21', label: '10–21 km' },
+                                    { key: '21-42', label: t('filters.halfMarathon', 'Half–Marathon') },
+                                    { key: '42-100', label: t('filters.marathonTo100', 'Marathon–100 km') },
+                                    { key: '100+', label: '100 km+' },
+                                ] as const).map(({ key, label }) => {
+                                    const selected = filters.distanceBuckets.includes(key);
+                                    return (
+                                        <Chip
+                                            key={key}
+                                            label={label}
+                                            size="small"
+                                            variant={selected ? 'filled' : 'outlined'}
+                                            color={selected ? 'primary' : 'default'}
+                                            onClick={() => setFilters(f => ({
+                                                ...f,
+                                                distanceBuckets: selected
+                                                    ? f.distanceBuckets.filter(b => b !== key)
+                                                    : [...f.distanceBuckets, key],
+                                            }))}
+                                            sx={{ cursor: 'pointer' }}
+                                        />
+                                    );
+                                })}
                             </Box>
-                        )}
+                        </Box>
 
                         {/* Month */}
                         <Box sx={{ mb: 1.5 }}>
@@ -603,10 +720,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                             size="small"
                                             variant={selected ? 'filled' : 'outlined'}
                                             color={selected ? 'primary' : 'default'}
-                                            onClick={() => setFilters(f => ({
-                                                ...f,
-                                                months: selected ? f.months.filter(m => m !== idx) : [...f.months, idx],
-                                            }))}
+                                            onClick={() => toggleMonth(idx)}
                                             sx={{ cursor: 'pointer' }}
                                         />
                                     );
@@ -623,11 +737,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                     size="small"
                                     variant={filters.itraAny ? 'filled' : 'outlined'}
                                     color={filters.itraAny ? 'warning' : 'default'}
-                                    onClick={() => setFilters(f => ({
-                                        ...f,
-                                        itraAny: !f.itraAny,
-                                        itraPoints: [],
-                                    }))}
+                                    onClick={() => setFilters(f => ({ ...f, itraAny: !f.itraAny, itraPoints: [] }))}
                                     sx={{ cursor: 'pointer', fontWeight: 600 }}
                                 />
                                 {[0, 1, 2, 3, 4, 5].map(pts => {
@@ -653,104 +763,113 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                             </Box>
                         </Box>
 
-                        {/* Certifications */}
-                        {filterOptions.certifications.length > 0 && (
-                            <Box sx={{ mb: 1.5 }}>
-                                <Typography variant="caption" color="text.secondary" fontWeight={600}>{t('races.filters.certifications')}</Typography>
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
-                                    {filterOptions.certifications.map(cert => {
-                                        const selected = filters.certifications.includes(cert);
-                                        return (
-                                            <Chip
-                                                key={cert}
-                                                label={cert}
-                                                size="small"
-                                                variant={selected ? 'filled' : 'outlined'}
-                                                color={selected ? 'secondary' : 'default'}
-                                                onClick={() => setFilters(f => ({
-                                                    ...f,
-                                                    certifications: selected ? f.certifications.filter(x => x !== cert) : [...f.certifications, cert],
-                                                }))}
-                                                sx={{ cursor: 'pointer' }}
-                                            />
-                                        );
-                                    })}
-                                </Box>
+                        {/* Championships + Certifications — side by side */}
+                        {(filterOptions.championships.length > 0 || filterOptions.certifications.length > 0) && (
+                            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 1.5 }}>
+                                {filterOptions.championships.length > 0 && (
+                                    <Box sx={{ flex: 1, minWidth: 140 }}>
+                                        <Typography variant="caption" color="text.secondary" fontWeight={600}>{t('races.filters.championships')}</Typography>
+                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                                            {filterOptions.championships.map(ch => {
+                                                const selected = filters.championships.includes(ch);
+                                                return (
+                                                    <Chip
+                                                        key={ch}
+                                                        label={ch}
+                                                        size="small"
+                                                        variant={selected ? 'filled' : 'outlined'}
+                                                        color={selected ? 'primary' : 'default'}
+                                                        onClick={() => setFilters(f => ({
+                                                            ...f,
+                                                            championships: selected ? f.championships.filter(x => x !== ch) : [...f.championships, ch],
+                                                        }))}
+                                                        sx={{ cursor: 'pointer' }}
+                                                    />
+                                                );
+                                            })}
+                                        </Box>
+                                    </Box>
+                                )}
+                                {filterOptions.certifications.length > 0 && (
+                                    <Box sx={{ flex: 1, minWidth: 140 }}>
+                                        <Typography variant="caption" color="text.secondary" fontWeight={600}>{t('races.filters.certifications')}</Typography>
+                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                                            {filterOptions.certifications.map(cert => {
+                                                const selected = filters.certifications.includes(cert);
+                                                return (
+                                                    <Chip
+                                                        key={cert}
+                                                        label={cert}
+                                                        size="small"
+                                                        variant={selected ? 'filled' : 'outlined'}
+                                                        color={selected ? 'secondary' : 'default'}
+                                                        onClick={() => setFilters(f => ({
+                                                            ...f,
+                                                            certifications: selected ? f.certifications.filter(x => x !== cert) : [...f.certifications, cert],
+                                                        }))}
+                                                        sx={{ cursor: 'pointer' }}
+                                                    />
+                                                );
+                                            })}
+                                        </Box>
+                                    </Box>
+                                )}
                             </Box>
                         )}
 
-                        {/* Championship categories */}
-                        {filterOptions.championships.length > 0 && (
-                            <Box sx={{ mb: 1.5 }}>
-                                <Typography variant="caption" color="text.secondary" fontWeight={600}>{t('races.filters.championships')}</Typography>
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
-                                    {filterOptions.championships.map(ch => {
-                                        const selected = filters.championships.includes(ch);
-                                        return (
-                                            <Chip
-                                                key={ch}
-                                                label={ch}
-                                                size="small"
-                                                variant={selected ? 'filled' : 'outlined'}
-                                                color={selected ? 'primary' : 'default'}
-                                                onClick={() => setFilters(f => ({
-                                                    ...f,
-                                                    championships: selected ? f.championships.filter(x => x !== ch) : [...f.championships, ch],
-                                                }))}
-                                                sx={{ cursor: 'pointer' }}
-                                            />
-                                        );
-                                    })}
-                                </Box>
-                            </Box>
-                        )}
+                        {/* Checkboxes: Favorites · Weekend · Mountain race */}
+                        <Box sx={{ mb: 1.5 }}>
+                            <Stack direction="row" flexWrap="wrap" sx={{ gap: 0, mx: -1 }}>
+                                <FormControlLabel
+                                    sx={{ mx: 1 }}
+                                    control={
+                                        <Checkbox
+                                            size="small"
+                                            checked={filters.favoritesOnly}
+                                            onChange={e => setFilters(f => ({ ...f, favoritesOnly: e.target.checked }))}
+                                            icon={<StarBorderIcon fontSize="small" />}
+                                            checkedIcon={<StarIcon fontSize="small" sx={{ color: 'warning.main' }} />}
+                                        />
+                                    }
+                                    label={<Typography variant="body2">{t('races.filters.favoritesOnly')}</Typography>}
+                                />
+                                <FormControlLabel
+                                    sx={{ mx: 1 }}
+                                    control={
+                                        <Checkbox
+                                            size="small"
+                                            checked={filters.weekendOnly}
+                                            onChange={e => setFilters(f => ({ ...f, weekendOnly: e.target.checked }))}
+                                        />
+                                    }
+                                    label={<Typography variant="body2">{t('races.filters.weekendOnly')}</Typography>}
+                                />
+                                <FormControlLabel
+                                    sx={{ mx: 1 }}
+                                    control={
+                                        <Checkbox
+                                            size="small"
+                                            checked={filters.mountainRaceOnly}
+                                            onChange={e => setFilters(f => ({ ...f, mountainRaceOnly: e.target.checked }))}
+                                        />
+                                    }
+                                    label={<Typography variant="body2">⛰ {t('races.mountainRace', 'Mountain race')}</Typography>}
+                                />
+                            </Stack>
+                        </Box>
 
                         <Divider sx={{ my: 1 }} />
 
-                        {/* Weekend only + reset + close row */}
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
-                            <FormControlLabel
-                                control={
-                                    <Checkbox
-                                        size="small"
-                                        checked={filters.weekendOnly}
-                                        onChange={e => setFilters(f => ({ ...f, weekendOnly: e.target.checked }))}
-                                    />
-                                }
-                                label={<Typography variant="body2">{t('races.filters.weekendOnly')}</Typography>}
-                            />
-                            <FormControlLabel
-                                control={
-                                    <Checkbox
-                                        size="small"
-                                        checked={filters.favoritesOnly}
-                                        onChange={e => setFilters(f => ({ ...f, favoritesOnly: e.target.checked }))}
-                                        icon={<StarBorderIcon fontSize="small" />}
-                                        checkedIcon={<StarIcon fontSize="small" sx={{ color: 'warning.main' }} />}
-                                    />
-                                }
-                                label={<Typography variant="body2">{t('races.filters.favoritesOnly')}</Typography>}
-                            />
-                            <Chip
-                                label={`⛰ ${t('races.mountainRace', 'Mountain race')}`}
-                                size="small"
-                                variant={filters.mountainRaceOnly ? 'filled' : 'outlined'}
-                                color={filters.mountainRaceOnly ? 'warning' : 'default'}
-                                onClick={() => setFilters(f => ({ ...f, mountainRaceOnly: !f.mountainRaceOnly }))}
-                                sx={{ cursor: 'pointer' }}
-                            />
-                            </Box>
-                            <Box sx={{ display: 'flex', gap: 1 }}>
-                                {activeFilterCount > 0 && (
-                                    <Button size="small" onClick={() => setFilters(DEFAULT_FILTERS)}>
-                                        {t('races.filters.reset')}
-                                    </Button>
-                                )}
-                                <Button size="small" variant="outlined" onClick={() => setShowFilters(false)}>
-                                    {t('filters.closeFilters')}
+                        {/* Footer: Reset + Close */}
+                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                            {activeFilterCount > 0 && (
+                                <Button size="small" onClick={() => setFilters(DEFAULT_FILTERS)}>
+                                    {t('races.filters.reset')}
                                 </Button>
-                            </Box>
+                            )}
+                            <Button size="small" variant="outlined" onClick={() => setShowFilters(false)}>
+                                {t('filters.closeFilters')}
+                            </Button>
                         </Box>
                     </Box>
                 </Collapse>
@@ -807,16 +926,6 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                             />
                         ))
                     }
-                    {activeFilterCount > 0 && (
-                        <Chip
-                            label={t('races.filters.reset')}
-                            size="small"
-                            variant="outlined"
-                            color="error"
-                            icon={<CloseIcon fontSize="small" />}
-                            onClick={() => setFilters(DEFAULT_FILTERS)}
-                        />
-                    )}
                 </Box>
 
                 {/* View toggle + result count */}
@@ -910,18 +1019,28 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                         {justRaced.map(comp => (
                                             <SwipeableCard
                                                 key={comp.id}
-                                                onSwipeRight={() => setShareEventId(comp.id)}
-                                                revealWidth={0}
+                                                onSwipeRight={() => {
+                                                    toggleFavoriteEvent(comp.slug);
+                                                    if ('vibrate' in navigator) navigator.vibrate(10);
+                                                }}
+                                                rightActions={
+                                                    <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', bgcolor: isFavoriteEvent(comp.slug) ? 'warning.dark' : 'warning.main', color: 'white', gap: 0.5, fontSize: '0.7rem', fontWeight: 600 }}>
+                                                        {isFavoriteEvent(comp.slug) ? <StarIcon sx={{ fontSize: 18 }} /> : <StarBorderIcon sx={{ fontSize: 18 }} />}
+                                                        {isFavoriteEvent(comp.slug) ? t('races.removeFavorite') : t('races.addFavorite')}
+                                                    </Box>
+                                                }
+                                                revealWidth={100}
                                             >
                                             <Card
                                                 variant="outlined"
                                                 sx={{
+                                                    position: 'relative',
                                                     '@media (hover: hover)': { transition: 'transform 0.15s, box-shadow 0.15s', '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] } },
                                                     borderLeft: `4px solid ${theme.palette.success.main}`,
                                                 }}
                                             >
                                                 <CardActionArea onClick={() => navigate(`/events/${comp.slug}`)} onMouseEnter={() => prefetchEvent(comp.slug)}>
-                                                    <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                                                    <CardContent sx={{ p: { xs: 1.5, sm: 2 }, pr: { xs: 6, sm: 6 } }}>
                                                         <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: { xs: 0.5, sm: 1 } }}>
                                                             <Box sx={{ minWidth: 0, width: '100%' }}>
                                                                 <Typography variant="subtitle1" fontWeight={700} sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', sm: 'nowrap' } }}>
@@ -969,13 +1088,22 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                         </Box>
                                                     </CardContent>
                                                 </CardActionArea>
+                                                <Tooltip title={isFavoriteEvent(comp.slug) ? t('races.removeFavorite') : t('races.addFavorite')}>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={(e) => { e.stopPropagation(); toggleFavoriteEvent(comp.slug); }}
+                                                        sx={{ position: 'absolute', top: 6, right: 6, zIndex: 1, bgcolor: 'background.paper', '&:hover': { bgcolor: 'action.hover' } }}
+                                                    >
+                                                        {isFavoriteEvent(comp.slug) ? <StarIcon fontSize="small" color="warning" /> : <StarBorderIcon fontSize="small" />}
+                                                    </IconButton>
+                                                </Tooltip>
                                             </Card>
                                             </SwipeableCard>
                                         ))}
                                     </Stack>
                                 </Box>
                             )}
-                            
+
                         <Stack spacing={2}>
                             {(() => {
                                 let lastHolidayDate: string | null = null;
@@ -1041,9 +1169,15 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                         {yearDivider}
                                         {holidayBanner}
                                         <SwipeableCard
-                                            onSwipeRight={race.registrationUrl && raceDaysUntil != null && raceDaysUntil >= 0
-                                                ? () => setShareEventId(comp.id)
-                                                : undefined
+                                            onSwipeRight={() => {
+                                                toggleFavoriteEvent(comp.slug);
+                                                if ('vibrate' in navigator) navigator.vibrate(10);
+                                            }}
+                                            rightActions={
+                                                <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', bgcolor: isFavoriteEvent(comp.slug) ? 'warning.dark' : 'warning.main', color: 'white', gap: 0.5, fontSize: '0.7rem', fontWeight: 600 }}>
+                                                    {isFavoriteEvent(comp.slug) ? <StarIcon sx={{ fontSize: 18 }} /> : <StarBorderIcon sx={{ fontSize: 18 }} />}
+                                                    {isFavoriteEvent(comp.slug) ? t('races.removeFavorite') : t('races.addFavorite')}
+                                                </Box>
                                             }
                                             leftActions={
                                                 <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
@@ -1081,9 +1215,9 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                             }
                                             revealWidth={120}
                                         >
-                                            <Card variant="outlined" sx={{ '@media (hover: hover)': { transition: 'transform 0.15s, box-shadow 0.15s', '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] } } }}>
+                                            <Card variant="outlined" sx={{ position: 'relative', '@media (hover: hover)': { transition: 'transform 0.15s, box-shadow 0.15s', '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] } } }}>
                                                 <CardActionArea onClick={() => navigate(`/events/${comp.slug}`)} onMouseEnter={() => prefetchEvent(comp.slug)}>
-                                                    <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                                                    <CardContent sx={{ p: { xs: 1.5, sm: 2 }, pr: { xs: 6, sm: 6 } }}>
                                                         {/* Name + countdown */}
                                                         <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'flex-start' }} justifyContent="space-between" gap={0.5}>
                                                             <Stack direction="row" alignItems="flex-start" gap={1} sx={{ minWidth: 0, width: '100%' }}>
@@ -1172,6 +1306,15 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                         </Typography>
                                                     </CardContent>
                                                 </CardActionArea>
+                                                <Tooltip title={isFavoriteEvent(comp.slug) ? t('races.removeFavorite') : t('races.addFavorite')}>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={(e) => { e.stopPropagation(); toggleFavoriteEvent(comp.slug); }}
+                                                        sx={{ position: 'absolute', top: 6, right: 6, zIndex: 1, bgcolor: 'background.paper', '&:hover': { bgcolor: 'action.hover' } }}
+                                                    >
+                                                        {isFavoriteEvent(comp.slug) ? <StarIcon fontSize="small" color="warning" /> : <StarBorderIcon fontSize="small" />}
+                                                    </IconButton>
+                                                </Tooltip>
                                             </Card>
                                         </SwipeableCard>
                                         </Box>
@@ -1301,13 +1444,14 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                 <Card
                                     variant="outlined"
                                     sx={{
+                                        position: 'relative',
                                         '@media (hover: hover)': { transition: 'transform 0.15s, box-shadow 0.15s', '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] } },
                                         ...(comp.type === 'Advertisement' && { bgcolor: 'rgba(255, 193, 7, 0.08)' }),
                                         ...(isEffectivelyCancelled(comp) && { opacity: 0.65 }),
                                     }}
                                 >
                                     <CardActionArea onClick={() => navigate(`/events/${comp.slug}`)} onMouseEnter={() => prefetchEvent(comp.slug)}>
-                                        <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                                        <CardContent sx={{ p: { xs: 1.5, sm: 2 }, pr: { xs: 6, sm: 6 } }}>
                                             {/* Row 1: activity icon + name + status chips + countdown */}
                                             <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'flex-start' }} justifyContent="space-between" gap={0.5}>
                                                 <Stack direction="row" alignItems="flex-start" gap={1} sx={{ minWidth: 0, width: '100%' }}>
@@ -1325,9 +1469,6 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                             )}
                                                             {!isEffectivelyCancelled(comp) && isEffectivelyUnconfirmed(comp) && (
                                                                 <Chip label={t('races.statusUpcoming')} size="small" color="info" sx={{ height: 18, fontSize: '0.65rem' }} />
-                                                            )}
-                                                            {isFavoriteEvent(comp.slug) && (
-                                                                <StarIcon sx={{ fontSize: 16, color: 'warning.main', flexShrink: 0 }} />
                                                             )}
                                                         </Stack>
                                                         {!isEffectivelyCancelled(comp) && (comp.displayDate ?? comp.nextEditionDate) && (
@@ -1467,6 +1608,15 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                             </Typography>
                                         </CardContent>
                                     </CardActionArea>
+                                    <Tooltip title={isFavoriteEvent(comp.slug) ? t('races.removeFavorite') : t('races.addFavorite')}>
+                                        <IconButton
+                                            size="small"
+                                            onClick={(e) => { e.stopPropagation(); toggleFavoriteEvent(comp.slug); }}
+                                            sx={{ position: 'absolute', top: 6, right: 6, zIndex: 1, bgcolor: 'background.paper', '&:hover': { bgcolor: 'action.hover' } }}
+                                        >
+                                            {isFavoriteEvent(comp.slug) ? <StarIcon fontSize="small" color="warning" /> : <StarBorderIcon fontSize="small" />}
+                                        </IconButton>
+                                    </Tooltip>
                                 </Card>
                                 </SwipeableCard>
                                 </Box>
@@ -1478,46 +1628,13 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                     )
                 ) : viewMode === 'table' ? (
                     <Suspense fallback={<Box display="flex" justifyContent="center" py={4}><CircularProgress /></Box>}>
-                        <EventTableView events={sortedFiltered} userLocation={userLocation} />
+                        <EventTableView events={sortedFiltered} userLocation={userLocation} onToggleFavorite={toggleFavoriteEvent} isFavoriteEvent={isFavoriteEvent} />
                     </Suspense>
                 ) : (
                     <Suspense fallback={<Box display="flex" justifyContent="center" py={4}><CircularProgress /></Box>}>
                         <EventMapView events={filtered} />
                     </Suspense>
                 )}
-
-                {/* Swipe-right share dialogs */}
-                {(() => {
-                    const ev = shareEventId ? [...justRaced, ...upcoming].find(e => e.id === shareEventId) : null;
-                    if (!ev) return null;
-                    const isFinished = justRaced.some(e => e.id === shareEventId);
-                    const firstDistance = ev.distances?.[0]?.label ?? null;
-                    if (isFinished) {
-                        return (
-                            <RaceFinishCard
-                                open
-                                onClose={() => setShareEventId(null)}
-                                eventName={loc(ev.name, ev.nameEn) ?? ev.name}
-                                raceName={loc(ev.name, ev.nameEn) ?? ev.name}
-                                distanceLabel={firstDistance}
-                                date={ev.displayDate ?? ev.nextEditionDate}
-                                activityType={ev.activityType}
-                            />
-                        );
-                    }
-                    return (
-                        <RaceShareCard
-                            open
-                            onClose={() => setShareEventId(null)}
-                            eventName={loc(ev.name, ev.nameEn) ?? ev.name}
-                            raceName={loc(ev.name, ev.nameEn) ?? ev.name}
-                            distanceLabel={firstDistance}
-                            date={ev.displayDate ?? ev.nextEditionDate}
-                            daysUntil={ev.daysUntil}
-                            activityType={ev.activityType}
-                        />
-                    );
-                })()}
 
                 {/* Swipe-left QR share dialog for event cards */}
                 {shareEventSlug && (() => {
