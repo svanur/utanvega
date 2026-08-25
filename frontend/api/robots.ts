@@ -22,6 +22,10 @@ export default function handler(request: Request) {
         '# keep crawlers off the parameter space entirely.',
         'Disallow: /compare?',
         '',
+        '# Private development diary — also served noindex, which is what',
+        '# actually keeps it out of the index if it is ever linked externally.',
+        'Disallow: /changelog-diary',
+        '',
         `Sitemap: ${origin}/sitemap.xml`,
         '',
       ].join('\n')

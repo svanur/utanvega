@@ -776,9 +776,13 @@
             }
         },
         "changelog": {
+            "v2_6": {
+                "title": "Sýnileiki og leitarvélabestun",
+                "description": "Leitarvélar sáu aðeins leiðasíður — allar aðrar síður voru skráðar undir sama almenna titlinum án innihalds. Lagað með sérsniðnum titlum og lýsingum fyrir hverja síðu, canonical-slóðum, robots.txt og veftré með 305 slóðum. Bera saman leiðir bætt í fótinn ásamt tillögum að samanburði og svipuðum leiðum. Fastar brauðmolaslóðir sem muna hvort komið var frá viðburði eða staðsetningu. Keppniskort endurhönnuð með litaþemum eftir tegund hreyfingar, keppnisnúmeri og persónulegum skilaboðum. Samræmd eftirlæti í kortum og töflum og samstilltar síur á viðburða- og leiðasíðum."
+            },
             "v2_5": {
-                "title": "Viðburðir",
-                "description": "Viðburðir, dagatal, tengingar milli leiða og keppna, tímaspá af keppnissíðum, veður á keppnisdegi, rennistikur í verkfærum o deilanleg slóð á hraðatöflu."
+                "title": "hlaupadagskra.is -- VERSION 2.0 GOES L I V E --",
+                "description": "Nýr hlaupadagskra.is vefur opnaður á Reykjavík Maraþon EXPO sýningunni."
             },
             "v2_4": {
                 "title": "Snjallar forstillingar og deiling",

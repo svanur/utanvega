@@ -170,6 +170,14 @@ export default async function handler(request: Request) {
   }
 }
 
+/**
+ * Paths that must never be indexed. robots.txt disallows them too, but a
+ * disallowed URL can still be indexed from an external link — only a noindex
+ * response keeps it out, and a crawler has to be allowed to read the page to
+ * see that. These are served noindex rather than being blocked outright.
+ */
+const NOINDEX_PATHS = new Set(['/changelog-diary']);
+
 const SITE_TITLE = 'Hlaupadagskra.is – Öll hlaup á einum stað';
 const SITE_DESCRIPTION =
   'Vefur til að finna og deila skemmtilegum leiðum, hvort sem þær eru utanvega eða innanbæjar.';
@@ -244,6 +252,9 @@ function htmlPage(opts: {
   const heading = esc(opts.heading);
   const description = esc(opts.description);
   const ogImageUrl = esc(`${opts.origin}${opts.ogImagePath}`);
+  const robots = NOINDEX_PATHS.has(opts.canonicalPath)
+    ? '\n  <meta name="robots" content="noindex, nofollow" />'
+    : '';
 
   const html = `<!DOCTYPE html>
 <html lang="is">
@@ -251,7 +262,7 @@ function htmlPage(opts: {
   <meta charset="UTF-8" />
   <title>${title}</title>
   <meta name="description" content="${description}" />
-  <link rel="canonical" href="${canonicalUrl}" />
+  <link rel="canonical" href="${canonicalUrl}" />${robots}
 
   <meta property="og:title" content="${ogTitle}" />
   <meta property="og:description" content="${description}" />
