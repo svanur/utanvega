@@ -203,10 +203,25 @@ public class ClientIpResolverTests
     [Fact]
     public void HashIp_DoesNotCollideAcrossTheSaltBoundary()
     {
-        // Guards against naive concatenation letting ("ab","c") and ("a","bc")
-        // land on the same digest.
+        // Concatenating salt and address would make ("203.0.11", "3.7") and
+        // ("203.0.1", "03.7") the same input. HMAC keeps key and message in
+        // separate domains, so they cannot be re-split into each other.
         Assert.NotEqual(
             ClientIpResolver.HashIp("3.7", "203.0.11"),
             ClientIpResolver.HashIp("03.7", "203.0.1"));
+    }
+
+    [Fact]
+    public void HashIp_IsAnHmac_NotAPlainDigestOfSaltAndAddress()
+    {
+        // Pins the construction: a future "simplification" back to
+        // SHA256(salt + ip) would silently reintroduce the boundary problem
+        // and invalidate every stored hash.
+        var expected = System.Convert.ToHexString(
+            System.Security.Cryptography.HMACSHA256.HashData(
+                System.Text.Encoding.UTF8.GetBytes(Salt),
+                System.Text.Encoding.UTF8.GetBytes("203.0.113.7"))).ToLowerInvariant();
+
+        Assert.Equal(expected, ClientIpResolver.HashIp("203.0.113.7", Salt));
     }
 }

@@ -117,9 +117,18 @@ public static class ClientIpResolver
     }
 
     /// <summary>
-    /// Salted digest of one address. Pure and public so it can be tested
+    /// Keyed digest of one address. Pure and public so it can be tested
     /// directly, and so the retention job and any backfill hash identically.
+    ///
+    /// <para>
+    /// HMAC rather than hashing a concatenated string: it is the construction
+    /// designed for "digest this, keyed by a secret", and it keeps the key and
+    /// the message in separate domains, so no pair of salt and address can be
+    /// re-split to collide with another.
+    /// </para>
     /// </summary>
     public static string HashIp(string ip, string salt) =>
-        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(salt + ip))).ToLowerInvariant();
+        Convert.ToHexString(
+            HMACSHA256.HashData(Encoding.UTF8.GetBytes(salt), Encoding.UTF8.GetBytes(ip)))
+        .ToLowerInvariant();
 }
