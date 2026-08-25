@@ -776,73 +776,81 @@
             }
         },
         "changelog": {
-            "v2_6": {
+            "v1_1_1": {
+                "title": "Laga 'innanhúss tölfræði' - Réttar heimsóknatölur",
+                "description": "Vefþjónninn las vistfang milliþjóns Fly í stað vistfangs gestsins, þannig að allir gestir litu út eins og sami notandinn. Fjöldi einstakra gesta var því allt of lágur, flettingar á leiðum féllu niður sem tvítök innan hálftíma og álagsmörk fyrir flettingar, ábendingar og umsagnir giltu fyrir vefinn í heild í stað hvers gests."
+            },
+            "v1_1_0": {
                 "title": "Brauðmolar - SEO sýnileiki - Bera saman leiðir - Keppniskort",
                 "description": "Leitarvélar sáu aðeins leiðasíður — allar aðrar síður voru skráðar undir sama almenna titlinum án innihalds. Lagað með sérsniðnum titlum og lýsingum fyrir hverja síðu, canonical-slóðum, robots.txt og veftré með 305 slóðum. Bera saman leiðir bætt í fótinn ásamt tillögum að samanburði og svipuðum leiðum. Fastar brauðmolaslóðir sem muna hvort komið var frá viðburði eða staðsetningu. Keppniskort endurhönnuð með litaþemum eftir tegund hreyfingar, keppnisnúmeri og persónulegum skilaboðum. Samræmd eftirlæti í kortum og töflum og samstilltar síur á viðburða- og leiðasíðum."
             },
-            "v2_5": {
+            "v1_0_0": {
                 "title": "Nýr hlaupadagskra.is -- ÚTGÁFA 2.0 FÓR Í LOFTIÐ --",
                 "description": "Nýr hlaupadagskra.is vefur opnaður á Reykjavík Maraþon EXPO sýningunni."
             },
-            "v2_4": {
+            "v0_15_0": {
                 "title": "Snjallar forstillingar og deiling",
                 "description": "Tímaháðar síuforstillingar sem breytast yfir daginn — Morgun 5 km, Eftir vinnu, Helgarskoðun og fleira. Open Graph merki með kraftmiklum forskoðunarmyndum leiða fyrir samfélagsmiðla. Nálægt mér forstilling þegar staðsetning er virk. GPX niðurhal á leiðarsíðum."
             },
-            "v2_3": {
+            "v0_14_0": {
                 "title": "Leiðsögn og lögfræði",
                 "description": "Leiðsögn að upphafsstað leiðar í gegnum Google Maps, fyrirvara- og persónuverndarsíður og betri veðurspámörk fyrir hálendisleiðir."
             },
-            "v2_2": {
+            "v0_13_0": {
                 "title": "Hraðleit",
                 "description": "Ýttu á Ctrl+K til að leita strax að leiðum og stöðum hvar sem er. Sveigjanleg leit og flokkaðar niðurstöður."
             },
-            "v2_1": {
+            "v0_12_0": {
                 "title": "Veður á leiðum",
                 "description": "Lifandi veðurspá á leiðarsíðum frá Open-Meteo — núverandi aðstæður, klukkutíma- og 5 daga spá, leiðaraðstæðuvísir og hæðarmeðvituð veðurspá fyrir toppa á fjallaleiðum."
             },
-            "v2_0": {
+            "v0_11_0": {
                 "title": "Greining og innsýn",
                 "description": "Mæling á notkun vefsins, sýna vinsælar leiðir í hringekju. Nú hægt að raða lista eftir 'vinsælustu leiðunum'. Greiningarmæliborð í stjórnborði með daglegum skoðunum, álagstímum og þróun milli vikna."
             },
-            "v1_9": {
+            "v0_10_0": {
                 "title": "Virkni síur og stjórnborðsverkfæri",
                 "description": "Virknitegundar síupillur á leiðalista, leitarhæft staðsetningarval og fjölvalsmerkjarammar í stjórnborði, leiðartölfræði í breytingaglugga, sjálfvirk leiðartegundargreining við uppfærslu og fjöldagreining leiðartegunda."
             },
-            "v1_8": {
+            "v0_9_0": {
                 "title": "Gaman og afköst",
                 "description": "Hristu símann til að finna leið af handahófi. Hnappi bætt við til að deila/afrita slóð. Skemmtilegar 404 síður fyrir leiðir og staðsetningar sem finnast ekki. Kóðaskipting með lazy-loading fyrir hraðvirkari síðuhleðslu. Sagði einhver Easter-egg? Neiii..."
             },
-            "v1_7": {
+            "v0_8_0": {
                 "title": "Notenda- og farsímaupplifun",
                 "description": "Dökkt þema með dökkum kortaflísum, leiðartegundatákn á spjöldum, deilanleg URL síur, nýlega skoðaðar leiðir á hringekju, beinagrindarhleðsla, kortamerkjaklasi, þétt leiðarspjöld og tákn-eingöngu virknipillur á farsíma."
             },
-            "v1_6": {
+            "v0_7_0": {
                 "title": "Staðsetningar og uppgötvun",
                 "description": "Stigveldis staðsetningar með brauðmylsnu. Fuzzy leit að leiðum með tillögum. Tölfræði staðsetninga, staðsetningarhlutverk, virknitegundatákn og hlekkjaafritun."
             },
-            "v1_5": {
+            "v0_6_0": {
                 "title": "Gæði og frágangsatriði",
                 "description": "ESLint uppsetning, hreinsun á lint villum, öryggisendurbætur, inntaksstaðfesting með FluentValidation og bættar hleðsluhreyfinímyndir."
             },
-            "v1_4": {
+            "v0_5_0": {
                 "title": "Endurbætur á stjórnborði",
                 "description": "Uppskipting stjórnborðshluta, heilsumæliborð leiða, fjölda GPX upphal og breytingaskráning."
             },
-            "v1_3": {
+            "v0_4_0": {
                 "title": "Síur og leit",
                 "description": "Ítarlegar síur með hæð, fjarlægð og leiðartegund. Síun eftir merkjum og leitarbætur."
             },
-            "v1_2": {
+            "v0_3_0": {
                 "title": "Kort og hæðarsnið",
                 "description": "Gagnvirk leiðarkort með Leaflet, hæðarsniðsgröf, leiðarendurspilunar og QR kóðadeiling."
             },
-            "v1_1": {
+            "v0_2_0": {
                 "title": "Staðsetningar og eftirlæti",
                 "description": "Staðsetningarsíður, röðun eftir fjarlægð, eftirlæti og faldar leiðir, og stuðningur við dimmt þema."
             },
-            "v1_0": {
+            "v0_1_0": {
+                "title": "Forritun hefst 'Utanvega' vefnum sem pet-project",
+                "description": "Til að byrja með fyrst og fremst safn yfir spennandi utanvegahlaupaleiðir."
+            },
+            "v0_0_0": {
                 "title": "Febrúar, 2025",
-                "description": "Hlaupadagskra.is fer í loftið með lista yfir öll hlaup á Íslandi."
+                "description": "Hinn upprunalegi hlaupadagskra.is vefur fer í loftið með lista yfir öll hlaup á Íslandi."
             }
         }
     },
