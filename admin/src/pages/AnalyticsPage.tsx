@@ -222,7 +222,9 @@ export default function AnalyticsPage() {
                     <StatCard
                         title="Unique Visitors"
                         value={summary.uniqueVisitors.toLocaleString()}
-                        subtitle={`${summary.trailsWithViews} trails viewed`}
+                        // Not all-time: visitor hashes are cleared after 90 days, so
+                        // anything older counts as views but no longer as a visitor.
+                        subtitle="Last 90 days"
                         icon={<PeopleIcon />}
                         color="#9c27b0"
                     />
