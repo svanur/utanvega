@@ -16,14 +16,20 @@ namespace Utanvega.Backend.Infrastructure.Http;
 /// </para>
 ///
 /// <para>
-/// Fly sets <c>Fly-Client-IP</c> at the edge and overwrites any value the
-/// client supplies, so it cannot be forged. <c>X-Forwarded-For</c> is
-/// deliberately NOT read: it arrives client-controlled, and trusting it would
-/// let anyone evade a rate limit by rotating a fabricated address. That is also
-/// why this is a small explicit helper rather than
-/// <c>UseForwardedHeaders</c> — that middleware is only safe once
-/// <c>KnownProxies</c>/<c>KnownNetworks</c> are pinned to Fly's private
-/// network, and getting that wrong fails open.
+/// <c>Fly-Client-IP</c> is only trusted when the process is actually running on
+/// Fly, detected via the <c>FLY_APP_NAME</c> environment variable Fly injects.
+/// The header is trustworthy only because Fly's proxy overwrites whatever the
+/// client sent; reached any other way it is just client-controlled input, and
+/// honouring it would let anyone defeat the rate limits this class exists to
+/// make work by rotating fabricated addresses.
+/// </para>
+///
+/// <para>
+/// <c>X-Forwarded-For</c> is deliberately never read: it arrives
+/// client-controlled with no equivalent guarantee. That is also why this is a
+/// small explicit helper rather than <c>UseForwardedHeaders</c> — that
+/// middleware is only safe once <c>KnownProxies</c>/<c>KnownNetworks</c> are
+/// pinned to Fly's private network, and it fails open when they are not.
 /// </para>
 /// </summary>
 public static class ClientIpResolver
@@ -34,35 +40,76 @@ public static class ClientIpResolver
     public const string Unknown = "unknown";
 
     /// <summary>
-    /// The client's IP, or an empty string when it cannot be determined.
-    /// Falls back to the connection address, which is correct off Fly (local
-    /// development) and no worse than the previous behaviour anywhere else.
+    /// True when running on Fly, where <c>Fly-Client-IP</c> is set by the proxy
+    /// and cannot be forged. Fly injects <c>FLY_APP_NAME</c> into every machine.
     /// </summary>
-    public static string GetClientIp(HttpContext context)
+    private static readonly bool RunningOnFly =
+        !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("FLY_APP_NAME"));
+
+    /// <summary>
+    /// The client's IP, or an empty string when it cannot be determined.
+    /// </summary>
+    public static string GetClientIp(HttpContext context) => GetClientIp(context, RunningOnFly);
+
+    /// <summary>
+    /// Explicit form, for tests and for callers that know whether the request
+    /// arrived through a proxy whose header can be trusted.
+    /// </summary>
+    /// <param name="trustFlyHeader">
+    /// Whether <c>Fly-Client-IP</c> came from Fly's proxy. When false the header
+    /// is ignored entirely and only the connection address is used.
+    /// </param>
+    public static string GetClientIp(HttpContext context, bool trustFlyHeader)
     {
-        var flyClientIp = context.Request.Headers[FlyClientIpHeader].FirstOrDefault();
-        if (!string.IsNullOrWhiteSpace(flyClientIp))
+        if (trustFlyHeader)
         {
-            return flyClientIp.Trim();
+            // LastOrDefault, not FirstOrDefault: Fly replaces any client-supplied
+            // value, so there is normally one entry. Should it ever append
+            // instead, the proxy's value is the last and the client's is the
+            // first — taking the last is correct under both behaviours.
+            var flyClientIp = context.Request.Headers[FlyClientIpHeader].LastOrDefault();
+            if (!string.IsNullOrWhiteSpace(flyClientIp))
+            {
+                return flyClientIp.Trim();
+            }
         }
 
         return context.Connection.RemoteIpAddress?.ToString() ?? string.Empty;
     }
 
     /// <summary>Client IP for use as a rate-limit partition key.</summary>
-    public static string GetPartitionKey(HttpContext context)
+    public static string GetPartitionKey(HttpContext context) => GetPartitionKey(context, RunningOnFly);
+
+    /// <inheritdoc cref="GetPartitionKey(HttpContext)"/>
+    public static string GetPartitionKey(HttpContext context, bool trustFlyHeader)
     {
-        var ip = GetClientIp(context);
+        var ip = GetClientIp(context, trustFlyHeader);
         return string.IsNullOrEmpty(ip) ? Unknown : ip;
     }
 
     /// <summary>
-    /// SHA-256 of the client IP, lowercase hex, for storing alongside a view
-    /// without retaining the address itself.
+    /// SHA-256 of the client IP as lowercase hex, or <c>null</c> when the IP is
+    /// unknown.
+    ///
+    /// <para>
+    /// Null rather than the hash of an empty string: callers treat a present
+    /// hash as identifying one visitor, so hashing <c>""</c> would put every
+    /// unidentifiable request into a single shared bucket. That would make
+    /// <c>RecordTrailView</c>'s deduplication discard all but the first such
+    /// view of each trail per window.
+    /// </para>
     /// </summary>
-    public static string GetClientIpHash(HttpContext context)
+    public static string? GetClientIpHash(HttpContext context) => GetClientIpHash(context, RunningOnFly);
+
+    /// <inheritdoc cref="GetClientIpHash(HttpContext)"/>
+    public static string? GetClientIpHash(HttpContext context, bool trustFlyHeader)
     {
-        var ip = GetClientIp(context);
+        var ip = GetClientIp(context, trustFlyHeader);
+        if (string.IsNullOrEmpty(ip))
+        {
+            return null;
+        }
+
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(ip))).ToLowerInvariant();
     }
 }
