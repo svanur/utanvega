@@ -776,9 +776,13 @@
             }
         },
         "changelog": {
+            "v2_6": {
+                "title": "Discoverability & SEO - Breadcrumbs - Compare Trails - Race Share Cards",
+                "description": "Search engines could only see trail pages — every other route was indexed under one generic title with no content. Fixed with per-route titles and descriptions, canonical URLs, robots.txt and a sitemap covering 305 URLs. Compare trails added to the footer with suggested matchups and similar-trail shortcuts. Sticky breadcrumbs that remember whether you arrived from an event or a location. Race share and finish cards redesigned with activity colour themes, bib numbers and personal messages. Consistent favourites across cards and tables, and harmonised filters on Events and Trails."
+            },
             "v2_5": {
-                "title": "Races & competitions",
-                "description": "Competitions and races with recurring schedule engine, race calendar, trail-to-race cross-links, predict-my-time from race pages, race day weather, tool sliders, pace chart URL sharing, and enhanced runner tools with summary text."
+                "title": "A new hlaupadagskra.is -- VERSION 2.0 WAS LAUNCHED --",
+                "description": "A brand new hlaupadagskra.is version is launched on the Reykjavik Marathon EXPO."
             },
             "v2_4": {
                 "title": "Smart presets & sharing",

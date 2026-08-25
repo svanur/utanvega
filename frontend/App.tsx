@@ -21,6 +21,7 @@ const LocationsPage = lazy(() => import('./pages/LocationsPage'));
 const LocationDetailsPage = lazy(() => import('./pages/LocationDetailsPage'));
 const OrganizerDetailPage = lazy(() => import('./pages/OrganizerDetailPage'));
 const AboutPage = lazy(() => import('./pages/AboutPage'));
+const ChangelogDiaryPage = lazy(() => import('./pages/ChangelogDiaryPage'));
 const MediaPage = lazy(() => import('./pages/MediaPage'));
 const DisclaimerPage = lazy(() => import('./pages/DisclaimerPage'));
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
@@ -155,6 +156,12 @@ export default function App() {
                     <Route
                         path="/about"
                         element={<AboutPage mode={mode} onToggleMode={handleToggleMode} />}
+                    />
+                    {/* Unlisted on purpose — reachable only by typing the URL.
+                        Also excluded from the sitemap and noindexed in api/og.ts. */}
+                    <Route
+                        path="/changelog-diary"
+                        element={<ChangelogDiaryPage mode={mode} onToggleMode={handleToggleMode} />}
                     />
                     <Route
                         path="/media"

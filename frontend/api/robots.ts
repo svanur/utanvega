@@ -22,6 +22,11 @@ export default function handler(request: Request) {
         '# keep crawlers off the parameter space entirely.',
         'Disallow: /compare?',
         '',
+        '# /changelog-diary is deliberately NOT disallowed. It is served with',
+        '# noindex by api/og.ts, and a crawler has to be allowed to fetch the',
+        '# page to see that. Disallowing it would leave the URL eligible to',
+        '# appear as a bare, snippet-less index entry if anything links to it.',
+        '',
         `Sitemap: ${origin}/sitemap.xml`,
         '',
       ].join('\n')
