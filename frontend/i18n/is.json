@@ -776,6 +776,10 @@
             }
         },
         "changelog": {
+            "v1_2_0": {
+                "title": "Tölfræði sem ræður við álag og skammlífari gestagögn",
+                "description": "Tölfræðisíðan í stjórnborðinu sótti allar skráðar flettingar í minni til að leggja þær saman, sem hefði á endanum klárað minni þjónsins; nú reiknar gagnagrunnurinn allar tölur. Auðkenni gesta eru nú dulkóðuð með leynilykli svo ekki er lengur hægt að rekja þau til vistfangs, og þeim er eytt eftir 90 daga — flettingarnar sjálfar eru geymdar áfram svo allar flettingatölur haldast óbreyttar."
+            },
             "v1_1_1": {
                 "title": "Laga 'innanhúss tölfræði' - Réttar heimsóknatölur",
                 "description": "Vefþjónninn las vistfang milliþjóns Fly í stað vistfangs gestsins, þannig að allir gestir litu út eins og sami notandinn. Fjöldi einstakra gesta var því allt of lágur, flettingar á leiðum féllu niður sem tvítök innan hálftíma og álagsmörk fyrir flettingar, ábendingar og umsagnir giltu fyrir vefinn í heild í stað hvers gests."
