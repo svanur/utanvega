@@ -134,6 +134,20 @@ public class AnalyticsHandlerTests : IDisposable
     }
 
     [Fact]
+    public async Task DailyViews_DoNotCountANullHashAsAVisitor()
+    {
+        // Three days ago holds two views — Esja from "bbb" and Hengill with no
+        // hash — so one identified visitor. Counting distinct values without
+        // excluding nulls would report two, inflating every day that contains
+        // an unidentified view. Views from before the retention sweep have no
+        // hash at all, so that would be most days eventually.
+        var result = await Run();
+        var day = result.DailyViews.Single(d => d.Date == _now.AddDays(-3).ToString("yyyy-MM-dd"));
+        Assert.Equal(2, day.Views);
+        Assert.Equal(1, day.UniqueVisitors);
+    }
+
+    [Fact]
     public async Task DailyViews_AreOrderedOldestFirst()
     {
         var result = await Run();

@@ -87,6 +87,15 @@ public class AnalyticsPostgresTranslationTests
         Assert.Equal(Math.Round(11d / 3, 1), result.Summary.AvgViewsPerTrail);
 
         Assert.Equal(10, result.DailyViews.Sum(d => d.Views));
+
+        // Three days ago holds two views — Esja from "bbb" and Hengill with no
+        // hash — so one identified visitor. A null must not count as a visitor,
+        // and Postgres SELECT DISTINCT treats NULL as a row while
+        // COUNT(DISTINCT) does not, so the two translations disagree here.
+        var threeDaysAgo = now.AddDays(-3).ToString("yyyy-MM-dd");
+        var day = result.DailyViews.Single(d => d.Date == threeDaysAgo);
+        Assert.Equal(2, day.Views);
+        Assert.Equal(1, day.UniqueVisitors);
         Assert.Equal(11, result.HourlyViews.Sum(h => h.Views));
         Assert.All(result.HourlyViews, h => Assert.InRange(h.Hour, 0, 23));
 

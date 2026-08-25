@@ -101,7 +101,13 @@ public class GetAnalyticsQueryHandler : IRequestHandler<GetAnalyticsQuery, Analy
             {
                 Day = g.Key,
                 Views = g.Count(),
-                UniqueVisitors = g.Select(v => v.IpHash).Distinct().Count(),
+                // The null guard is redundant — this translates to
+                // COUNT(DISTINCT ip_hash), which already ignores nulls — but it
+                // states the intent in source rather than leaving it to depend
+                // on SQL semantics plus EF's choice of translation, and matches
+                // the summary count above. A view with no hash is a view, not a
+                // visitor.
+                UniqueVisitors = g.Select(v => v.IpHash).Where(h => h != null).Distinct().Count(),
             })
             .OrderBy(r => r.Day)
             .ToListAsync(cancellationToken);
