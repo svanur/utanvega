@@ -1,9 +1,10 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Security.Claims;
 using System.Data;
 using Serilog;
 using Serilog.Events;
 using Utanvega.Backend.Infrastructure.Persistence;
+using Utanvega.Backend.Infrastructure.Http;
 using Utanvega.Backend.Core.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -340,7 +341,7 @@ builder.Services.AddRateLimiter(options =>
 {
     options.AddPolicy("trail-view", httpContext =>
         RateLimitPartition.GetSlidingWindowLimiter(
-            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            ClientIpResolver.GetPartitionKey(httpContext),
             _ => new SlidingWindowRateLimiterOptions
             {
                 PermitLimit = 30,
@@ -350,7 +351,7 @@ builder.Services.AddRateLimiter(options =>
             }));
     options.AddPolicy("send-feedback", httpContext =>
         RateLimitPartition.GetSlidingWindowLimiter(
-            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            ClientIpResolver.GetPartitionKey(httpContext),
             _ => new SlidingWindowRateLimiterOptions
             {
                 PermitLimit = 10,
@@ -361,7 +362,7 @@ builder.Services.AddRateLimiter(options =>
 
     options.AddPolicy("send-tip", httpContext =>
         RateLimitPartition.GetSlidingWindowLimiter(
-            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            ClientIpResolver.GetPartitionKey(httpContext),
             _ => new SlidingWindowRateLimiterOptions
             {
                 PermitLimit = 5,
@@ -565,8 +566,7 @@ app.MapGet("/api/v1/trails/{slug}/gpx", async (string slug, IMediator mediator) 
 
 app.MapPost("/api/v1/trails/{slug}/view", async (string slug, HttpContext httpContext, IMediator mediator) =>
 {
-    var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "";
-    var ipHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(ip))).ToLowerInvariant();
+    var ipHash = ClientIpResolver.GetClientIpHash(httpContext);
     var recorded = await mediator.Send(new RecordTrailViewCommand(slug, ipHash));
     return recorded ? Results.Ok() : Results.NotFound();
 })
