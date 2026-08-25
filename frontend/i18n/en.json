@@ -845,12 +845,12 @@
                 "description": "Location pages, distance-based sorting, favorites and hidden trails, and dark mode support."
             },
             "v0_1_0": {
-                "title": "Initial release",
-                "description": "Trail listing with search, detail pages with GPX data, bilingual support (Icelandic/English), and mobile-first design."
+                "title": "Work begins on the 'Utanvega' site as a pet project",
+                "description": "To begin with, mainly a collection of interesting trail running routes."
             },
             "v0_0_0": {
                 "title": "February, 2025",
-                "description": "The original  hlaupadagskra.is web is released containing Iceland´s 'all runs in one place'."
+                "description": "The original hlaupadagskra.is site is released, listing all runs in Iceland in one place."
             }
         }
     },
