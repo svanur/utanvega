@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using Utanvega.Backend.Infrastructure.Http;
@@ -9,6 +9,7 @@ namespace Utanvega.Backend.Tests.Services;
 public class ClientIpResolverTests
 {
     private const bool OnFly = true;
+    private const string Salt = "test-salt";
     private const bool OffFly = false;
 
     private static HttpContext Context(
@@ -141,31 +142,71 @@ public class ClientIpResolverTests
         // Not SHA-256(""): a present hash means "one identified visitor", so a
         // constant hash would put every unidentifiable request in one bucket
         // and RecordTrailView would discard all but the first view per window.
-        Assert.Null(ClientIpResolver.GetClientIpHash(Context(), OnFly));
+        Assert.Null(ClientIpResolver.GetClientIpHash(Context(), Salt, OnFly));
     }
 
     [Fact]
     public void GetClientIpHash_IsStableForSameClient()
     {
-        var a = ClientIpResolver.GetClientIpHash(Context(flyClientIp: "203.0.113.7"), OnFly);
-        var b = ClientIpResolver.GetClientIpHash(Context(flyClientIp: "203.0.113.7"), OnFly);
+        var a = ClientIpResolver.GetClientIpHash(Context(flyClientIp: "203.0.113.7"), Salt, OnFly);
+        var b = ClientIpResolver.GetClientIpHash(Context(flyClientIp: "203.0.113.7"), Salt, OnFly);
         Assert.Equal(a, b);
     }
 
     [Fact]
     public void GetClientIpHash_DiffersBetweenClients()
     {
-        var a = ClientIpResolver.GetClientIpHash(Context(flyClientIp: "203.0.113.7", remoteIp: "172.19.0.1"), OnFly);
-        var b = ClientIpResolver.GetClientIpHash(Context(flyClientIp: "203.0.113.8", remoteIp: "172.19.0.1"), OnFly);
+        var a = ClientIpResolver.GetClientIpHash(Context(flyClientIp: "203.0.113.7", remoteIp: "172.19.0.1"), Salt, OnFly);
+        var b = ClientIpResolver.GetClientIpHash(Context(flyClientIp: "203.0.113.8", remoteIp: "172.19.0.1"), Salt, OnFly);
         Assert.NotEqual(a, b);
     }
 
     [Fact]
     public void GetClientIpHash_IsLowercaseHexSha256()
     {
-        var hash = ClientIpResolver.GetClientIpHash(Context(flyClientIp: "203.0.113.7"), OnFly);
+        var hash = ClientIpResolver.GetClientIpHash(Context(flyClientIp: "203.0.113.7"), Salt, OnFly);
         Assert.NotNull(hash);
         Assert.Equal(64, hash!.Length);
         Assert.Matches("^[0-9a-f]{64}$", hash);
+    }
+
+    // ── Salting ───────────────────────────────────────────────────────────
+
+    [Fact]
+    public void HashIp_DiffersBySalt()
+    {
+        // Without a salt an IPv4 digest can be reversed by hashing the whole
+        // address space, so the salt is what makes the stored value opaque.
+        Assert.NotEqual(
+            ClientIpResolver.HashIp("203.0.113.7", "salt-one"),
+            ClientIpResolver.HashIp("203.0.113.7", "salt-two"));
+    }
+
+    [Fact]
+    public void HashIp_IsStableForTheSameSaltAndAddress()
+    {
+        // Deduplication and unique-visitor counting both depend on a returning
+        // visitor hashing to the same value.
+        Assert.Equal(
+            ClientIpResolver.HashIp("203.0.113.7", Salt),
+            ClientIpResolver.HashIp("203.0.113.7", Salt));
+    }
+
+    [Fact]
+    public void HashIp_SeparatesAddressesUnderOneSalt()
+    {
+        Assert.NotEqual(
+            ClientIpResolver.HashIp("203.0.113.7", Salt),
+            ClientIpResolver.HashIp("203.0.113.8", Salt));
+    }
+
+    [Fact]
+    public void HashIp_DoesNotCollideAcrossTheSaltBoundary()
+    {
+        // Guards against naive concatenation letting ("ab","c") and ("a","bc")
+        // land on the same digest.
+        Assert.NotEqual(
+            ClientIpResolver.HashIp("3.7", "203.0.11"),
+            ClientIpResolver.HashIp("03.7", "203.0.1"));
     }
 }
