@@ -31,7 +31,7 @@ public record SummaryDto(
 
 public record DailyViewsDto(string Date, int Views, int UniqueVisitors);
 public record HourlyViewsDto(int Hour, int Views);
-public record TopTrailDto(string Name, string Slug, int ViewCount, int UniqueVisitors);
+public record TopTrailDto(string Name, string Slug, int ViewCount);
 public record TrendingTrailDto(string Name, string Slug, int ViewsThisWeek, int ViewsLastWeek, double ChangePercent);
 
 public class GetAnalyticsQueryHandler : IRequestHandler<GetAnalyticsQuery, AnalyticsDto>
@@ -43,6 +43,13 @@ public class GetAnalyticsQueryHandler : IRequestHandler<GetAnalyticsQuery, Analy
         _context = context;
     }
 
+    /// <summary>
+    /// Every figure is aggregated by Postgres and only the results are
+    /// materialised. The previous implementation pulled every TrailView row
+    /// into memory and grouped in C#, which on a 512 MB machine put a hard
+    /// ceiling on how long analytics could keep working — a ceiling that got
+    /// closer once v1.1.1 stopped deduplicating every visitor into one.
+    /// </summary>
     public async Task<AnalyticsDto> Handle(GetAnalyticsQuery request, CancellationToken cancellationToken)
     {
         var now = DateTime.UtcNow;
@@ -50,92 +57,136 @@ public class GetAnalyticsQueryHandler : IRequestHandler<GetAnalyticsQuery, Analy
         var startOfLastWeek = now.AddDays(-14);
         var thirtyDaysAgo = now.AddDays(-30);
 
-        // Fetch all views — lightweight rows (no heavy data)
-        var views = await _context.TrailViews
-            .AsNoTracking()
-            .Select(v => new { v.TrailId, v.ViewedAtUtc, v.IpHash })
-            .ToListAsync(cancellationToken);
+        var views = _context.TrailViews.AsNoTracking();
 
-        // Summary
-        var totalViews = views.Count;
-        var uniqueVisitors = views.Select(v => v.IpHash).Where(h => h != null).Distinct().Count();
-        var viewsThisWeek = views.Count(v => v.ViewedAtUtc >= startOfWeek);
-        var viewsLastWeek = views.Count(v => v.ViewedAtUtc >= startOfLastWeek && v.ViewedAtUtc < startOfWeek);
-        var trailsWithViews = views.Select(v => v.TrailId).Distinct().Count();
+        // Archived trails are excluded from every trail-keyed result, as before.
+        var visibleTrails = _context.Trails
+            .AsNoTracking()
+            .Where(t => t.Status != TrailStatus.Archived);
+
+        // ── Summary ───────────────────────────────────────────────────────
+        // Separate scalar aggregates rather than one combined query: EF cannot
+        // reliably translate COUNT(DISTINCT ...) alongside other aggregates in
+        // a single grouping, and each of these is an index-assisted count.
+        var totalViews = await views.CountAsync(cancellationToken);
+
+        var uniqueVisitors = await views
+            .Where(v => v.IpHash != null)
+            .Select(v => v.IpHash)
+            .Distinct()
+            .CountAsync(cancellationToken);
+
+        var viewsThisWeek = await views
+            .CountAsync(v => v.ViewedAtUtc >= startOfWeek, cancellationToken);
+
+        var viewsLastWeek = await views
+            .CountAsync(v => v.ViewedAtUtc >= startOfLastWeek && v.ViewedAtUtc < startOfWeek, cancellationToken);
+
+        var trailsWithViews = await views
+            .Select(v => v.TrailId)
+            .Distinct()
+            .CountAsync(cancellationToken);
+
         var avgViewsPerTrail = trailsWithViews > 0 ? (double)totalViews / trailsWithViews : 0;
 
-        var summary = new SummaryDto(totalViews, uniqueVisitors, viewsThisWeek, viewsLastWeek, Math.Round(avgViewsPerTrail, 1), trailsWithViews);
+        var summary = new SummaryDto(
+            totalViews, uniqueVisitors, viewsThisWeek, viewsLastWeek,
+            Math.Round(avgViewsPerTrail, 1), trailsWithViews);
 
-        // Daily views (last 30 days)
-        var dailyViews = views
+        // ── Daily views (last 30 days) ────────────────────────────────────
+        var dailyRows = await views
             .Where(v => v.ViewedAtUtc >= thirtyDaysAgo)
             .GroupBy(v => v.ViewedAtUtc.Date)
-            .Select(g => new DailyViewsDto(
-                g.Key.ToString("yyyy-MM-dd"),
-                g.Count(),
-                g.Select(v => v.IpHash).Where(h => h != null).Distinct().Count()
-            ))
-            .OrderBy(d => d.Date)
-            .ToList();
-
-        // Hourly distribution (all-time)
-        var hourlyViews = views
-            .GroupBy(v => v.ViewedAtUtc.Hour)
-            .Select(g => new HourlyViewsDto(g.Key, g.Count()))
-            .OrderBy(h => h.Hour)
-            .ToList();
-
-        // Top 10 trails (all-time)
-        var trailNames = await _context.Trails
-            .Where(t => t.Status != TrailStatus.Archived)
-            .AsNoTracking()
-            .Select(t => new { t.Id, t.Name, t.Slug })
-            .ToDictionaryAsync(t => t.Id, cancellationToken);
-
-        var topTrails = views
-            .GroupBy(v => v.TrailId)
             .Select(g => new
             {
-                TrailId = g.Key,
-                ViewCount = g.Count(),
-                UniqueVisitors = g.Select(v => v.IpHash).Where(h => h != null).Distinct().Count()
+                Day = g.Key,
+                Views = g.Count(),
+                // The null guard is redundant — this translates to
+                // COUNT(DISTINCT ip_hash), which already ignores nulls — but it
+                // states the intent in source rather than leaving it to depend
+                // on SQL semantics plus EF's choice of translation, and matches
+                // the summary count above. A view with no hash is a view, not a
+                // visitor.
+                UniqueVisitors = g.Select(v => v.IpHash).Where(h => h != null).Distinct().Count(),
             })
-            .OrderByDescending(x => x.ViewCount)
-            .Take(10)
-            .Where(x => trailNames.ContainsKey(x.TrailId))
-            .Select(x => new TopTrailDto(
-                trailNames[x.TrailId].Name,
-                trailNames[x.TrailId].Slug,
-                x.ViewCount,
-                x.UniqueVisitors
-            ))
+            .OrderBy(r => r.Day)
+            .ToListAsync(cancellationToken);
+
+        var dailyViews = dailyRows
+            .Select(r => new DailyViewsDto(r.Day.ToString("yyyy-MM-dd"), r.Views, r.UniqueVisitors))
             .ToList();
 
-        // Trending: this week vs last week
-        var thisWeekByTrail = views
-            .Where(v => v.ViewedAtUtc >= startOfWeek)
-            .GroupBy(v => v.TrailId)
-            .ToDictionary(g => g.Key, g => g.Count());
+        // ── Hourly distribution (all-time, UTC) ───────────────────────────
+        // Grouped queries project to anonymous types and are mapped to the DTOs
+        // afterwards: EF cannot order or page by a property of a projected
+        // record constructor, so doing it inline fails to translate.
+        var hourlyRows = await views
+            .GroupBy(v => v.ViewedAtUtc.Hour)
+            .Select(g => new { Hour = g.Key, Views = g.Count() })
+            .OrderBy(r => r.Hour)
+            .ToListAsync(cancellationToken);
 
-        var lastWeekByTrail = views
-            .Where(v => v.ViewedAtUtc >= startOfLastWeek && v.ViewedAtUtc < startOfWeek)
-            .GroupBy(v => v.TrailId)
-            .ToDictionary(g => g.Key, g => g.Count());
+        var hourlyViews = hourlyRows
+            .Select(r => new HourlyViewsDto(r.Hour, r.Views))
+            .ToList();
 
-        var allTrendingIds = thisWeekByTrail.Keys.Union(lastWeekByTrail.Keys).ToList();
-        var trendingTrails = allTrendingIds
-            .Where(id => trailNames.ContainsKey(id))
-            .Select(id =>
+        // ── Top 10 trails (all-time) ──────────────────────────────────────
+        // Counts views only. A per-trail distinct-visitor count used to be
+        // computed here and returned unused by any client — it was the single
+        // most expensive operation in this query, since COUNT(DISTINCT) runs
+        // per trail group across the whole table before the top ten are taken.
+        // If it is wanted again, note it would be a 90-day figure sitting next
+        // to an all-time ViewCount, and needs labelling as such.
+        var topRows = await views
+            .Join(visibleTrails, v => v.TrailId, t => t.Id, (v, t) => new { t.Name, t.Slug })
+            .GroupBy(x => new { x.Name, x.Slug })
+            .Select(g => new
             {
-                var thisWeek = thisWeekByTrail.GetValueOrDefault(id, 0);
-                var lastWeek = lastWeekByTrail.GetValueOrDefault(id, 0);
-                var change = lastWeek > 0 ? Math.Round(((double)thisWeek - lastWeek) / lastWeek * 100, 1) : (thisWeek > 0 ? 100.0 : 0.0);
-                return new TrendingTrailDto(trailNames[id].Name, trailNames[id].Slug, thisWeek, lastWeek, change);
+                g.Key.Name,
+                g.Key.Slug,
+                ViewCount = g.Count(),
             })
-            .OrderByDescending(t => t.ViewsThisWeek)
+            .OrderByDescending(r => r.ViewCount)
             .Take(10)
+            .ToListAsync(cancellationToken);
+
+        var topTrails = topRows
+            .Select(r => new TopTrailDto(r.Name, r.Slug, r.ViewCount))
+            .ToList();
+
+        // ── Trending: this week vs last week ──────────────────────────────
+        // One pass over the fortnight, splitting the two weeks with filtered
+        // counts, rather than a query per week plus a union.
+        var trendingRows = await views
+            .Where(v => v.ViewedAtUtc >= startOfLastWeek)
+            .Join(visibleTrails, v => v.TrailId, t => t.Id, (v, t) => new { v.ViewedAtUtc, t.Name, t.Slug })
+            .GroupBy(x => new { x.Name, x.Slug })
+            .Select(g => new
+            {
+                g.Key.Name,
+                g.Key.Slug,
+                ThisWeek = g.Count(x => x.ViewedAtUtc >= startOfWeek),
+                LastWeek = g.Count(x => x.ViewedAtUtc < startOfWeek),
+            })
+            .OrderByDescending(r => r.ThisWeek)
+            .Take(10)
+            .ToListAsync(cancellationToken);
+
+        var trendingTrails = trendingRows
+            .Select(r => new TrendingTrailDto(
+                r.Name, r.Slug, r.ThisWeek, r.LastWeek,
+                PercentChange(r.ThisWeek, r.LastWeek)))
             .ToList();
 
         return new AnalyticsDto(summary, dailyViews, hourlyViews, topTrails, trendingTrails);
     }
+
+    /// <summary>
+    /// Week-on-week change. With no views last week any views this week count
+    /// as +100% rather than dividing by zero, matching the previous behaviour.
+    /// </summary>
+    private static double PercentChange(int thisWeek, int lastWeek) =>
+        lastWeek > 0
+            ? Math.Round(((double)thisWeek - lastWeek) / lastWeek * 100, 1)
+            : (thisWeek > 0 ? 100.0 : 0.0);
 }

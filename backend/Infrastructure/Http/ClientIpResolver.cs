@@ -88,8 +88,8 @@ public static class ClientIpResolver
     }
 
     /// <summary>
-    /// SHA-256 of the client IP as lowercase hex, or <c>null</c> when the IP is
-    /// unknown.
+    /// Salted SHA-256 of the client IP as lowercase hex, or <c>null</c> when
+    /// the IP is unknown.
     ///
     /// <para>
     /// Null rather than the hash of an empty string: callers treat a present
@@ -98,18 +98,37 @@ public static class ClientIpResolver
     /// <c>RecordTrailView</c>'s deduplication discard all but the first such
     /// view of each trail per window.
     /// </para>
+    ///
+    /// <para>
+    /// The salt matters: IPv4 has only ~4 billion values, so an unsalted digest
+    /// can be reversed by hashing the whole space. Salting is what stops the
+    /// stored value being a recoverable address. It must be stable across
+    /// deploys — a salt that changes makes every returning visitor look new.
+    /// </para>
     /// </summary>
-    public static string? GetClientIpHash(HttpContext context) => GetClientIpHash(context, RunningOnFly);
+    public static string? GetClientIpHash(HttpContext context, string salt) =>
+        GetClientIpHash(context, salt, RunningOnFly);
 
-    /// <inheritdoc cref="GetClientIpHash(HttpContext)"/>
-    public static string? GetClientIpHash(HttpContext context, bool trustFlyHeader)
+    /// <inheritdoc cref="GetClientIpHash(HttpContext, string)"/>
+    public static string? GetClientIpHash(HttpContext context, string salt, bool trustFlyHeader)
     {
         var ip = GetClientIp(context, trustFlyHeader);
-        if (string.IsNullOrEmpty(ip))
-        {
-            return null;
-        }
-
-        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(ip))).ToLowerInvariant();
+        return string.IsNullOrEmpty(ip) ? null : HashIp(ip, salt);
     }
+
+    /// <summary>
+    /// Keyed digest of one address. Pure and public so it can be tested
+    /// directly, and so the retention job and any backfill hash identically.
+    ///
+    /// <para>
+    /// HMAC rather than hashing a concatenated string: it is the construction
+    /// designed for "digest this, keyed by a secret", and it keeps the key and
+    /// the message in separate domains, so no pair of salt and address can be
+    /// re-split to collide with another.
+    /// </para>
+    /// </summary>
+    public static string HashIp(string ip, string salt) =>
+        Convert.ToHexString(
+            HMACSHA256.HashData(Encoding.UTF8.GetBytes(salt), Encoding.UTF8.GetBytes(ip)))
+        .ToLowerInvariant();
 }

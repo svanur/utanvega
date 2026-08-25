@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import {
     Box, Typography, Paper, Grid, Skeleton, Chip, Table, TableBody,
     TableCell, TableContainer, TableHead, TableRow, Stack, Button, Tooltip as MuiTooltip
@@ -42,7 +42,6 @@ interface TopTrail {
     name: string;
     slug: string;
     viewCount: number;
-    uniqueVisitors: number;
 }
 
 interface TrendingTrail {
@@ -222,7 +221,9 @@ export default function AnalyticsPage() {
                     <StatCard
                         title="Unique Visitors"
                         value={summary.uniqueVisitors.toLocaleString()}
-                        subtitle={`${summary.trailsWithViews} trails viewed`}
+                        // Not all-time: visitor hashes are cleared after 90 days, so
+                        // anything older counts as views but no longer as a visitor.
+                        subtitle="Last 90 days"
                         icon={<PeopleIcon />}
                         color="#9c27b0"
                     />
