@@ -5,6 +5,7 @@ using Serilog;
 using Serilog.Events;
 using Utanvega.Backend.Infrastructure.Persistence;
 using Utanvega.Backend.Infrastructure.Http;
+using Utanvega.Backend.Infrastructure.Retention;
 using Utanvega.Backend.Core;
 using Utanvega.Backend.Core.Entities;
 using Microsoft.AspNetCore.Authorization;
@@ -338,6 +339,17 @@ builder.Services.Configure<Microsoft.AspNetCore.Mvc.JsonOptions>(options =>
     options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
 });
 
+// Salt for the stored IP hashes. Must be stable across deploys: a salt that
+// changes makes every returning visitor look new. Absent, hashing falls back to
+// unsalted, which is reversible for IPv4 — hence the warning rather than a
+// silent default.
+var ipHashSalt = builder.Configuration["IpHashSalt"]
+    ?? Environment.GetEnvironmentVariable("IP_HASH_SALT")
+    ?? string.Empty;
+
+builder.Services.AddSingleton(new TrailViewRetentionOptions());
+builder.Services.AddHostedService<TrailViewRetentionService>();
+
 builder.Services.AddRateLimiter(options =>
 {
     options.AddPolicy("trail-view", httpContext =>
@@ -393,6 +405,13 @@ if (string.IsNullOrEmpty(tipRecipient))
 }
 
 var app = builder.Build();
+
+if (string.IsNullOrEmpty(ipHashSalt))
+{
+    app.Logger.LogWarning(
+        "IP_HASH_SALT is not set — stored view hashes are unsalted and reversible for IPv4. " +
+        "Set it to a stable secret; changing it later resets unique-visitor counts.");
+}
 
 // Resolves the Supabase user id from the validated JWT, for audit-trail attribution.
 // Never trust a client-supplied "who did this" value instead of this.
@@ -567,7 +586,7 @@ app.MapGet("/api/v1/trails/{slug}/gpx", async (string slug, IMediator mediator) 
 
 app.MapPost("/api/v1/trails/{slug}/view", async (string slug, HttpContext httpContext, IMediator mediator) =>
 {
-    var ipHash = ClientIpResolver.GetClientIpHash(httpContext);
+    var ipHash = ClientIpResolver.GetClientIpHash(httpContext, ipHashSalt);
     var recorded = await mediator.Send(new RecordTrailViewCommand(slug, ipHash));
     return recorded ? Results.Ok() : Results.NotFound();
 })
