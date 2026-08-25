@@ -19,6 +19,12 @@ FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 
+# Commit the image was built from, surfaced by the health endpoints so a
+# running instance can be tied back to a specific revision. Supplied by CI via
+# --build-arg; defaults to "unknown" for local builds.
+ARG GIT_HASH=unknown
+ENV GIT_HASH=$GIT_HASH
+
 # Expose the port the app listens on
 EXPOSE 8080
 ENV ASPNETCORE_URLS=http://+:8080
