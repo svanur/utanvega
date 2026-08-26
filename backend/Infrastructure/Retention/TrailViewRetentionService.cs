@@ -32,15 +32,18 @@ public class TrailViewRetentionService : BackgroundService
 {
     private readonly IServiceProvider _services;
     private readonly TrailViewRetentionOptions _options;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<TrailViewRetentionService> _logger;
 
     public TrailViewRetentionService(
         IServiceProvider services,
         TrailViewRetentionOptions options,
+        TimeProvider timeProvider,
         ILogger<TrailViewRetentionService> logger)
     {
         _services = services;
         _options = options;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -75,7 +78,7 @@ public class TrailViewRetentionService : BackgroundService
             var context = scope.ServiceProvider.GetRequiredService<UtanvegaDbContext>();
 
             var affected = await TrailViewAnonymizer.AnonymizeAsync(
-                context, _options.Retention, DateTime.UtcNow, cancellationToken);
+                context, _options.Retention, _timeProvider.GetUtcNow().UtcDateTime, cancellationToken);
 
             if (affected > 0)
             {

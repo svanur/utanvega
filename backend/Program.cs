@@ -340,12 +340,25 @@ builder.Services.Configure<Microsoft.AspNetCore.Mvc.JsonOptions>(options =>
 });
 
 // Salt for the stored IP hashes. Must be stable across deploys: a salt that
-// changes makes every returning visitor look new. Absent, hashing falls back to
-// unsalted, which is reversible for IPv4 — hence the warning rather than a
-// silent default.
+// changes makes every returning visitor look new.
+//
+// Outside development its absence is fatal. An empty key still produces a
+// valid-looking HMAC and deduplication keeps working, so nothing looks wrong —
+// but IPv4 has only ~4 billion values, so the whole space can be hashed and the
+// stored digests turned back into addresses. A warning is too easy to miss for
+// a failure whose only symptom is that the data is quietly unprotected, and
+// every hash written before it is noticed has to be discarded.
 var ipHashSalt = builder.Configuration["IpHashSalt"]
     ?? Environment.GetEnvironmentVariable("IP_HASH_SALT")
     ?? string.Empty;
+
+if (string.IsNullOrWhiteSpace(ipHashSalt) && !builder.Environment.IsDevelopment())
+{
+    throw new InvalidOperationException(
+        "IP_HASH_SALT is not set. Stored view hashes would be unsalted and reversible for IPv4. " +
+        "Set it to a stable secret (openssl rand -base64 32) — changing it later resets " +
+        "unique-visitor counts, so it must not be regenerated per deploy.");
+}
 
 // Injected wherever "now" is needed, so time-dependent logic can be tested at
 // an exact instant rather than racing the system clock.
@@ -412,9 +425,10 @@ var app = builder.Build();
 
 if (string.IsNullOrEmpty(ipHashSalt))
 {
+    // Only reachable in development, where startup above does not throw.
     app.Logger.LogWarning(
         "IP_HASH_SALT is not set — stored view hashes are unsalted and reversible for IPv4. " +
-        "Set it to a stable secret; changing it later resets unique-visitor counts.");
+        "Fine locally; outside development this is a startup failure.");
 }
 
 // Resolves the Supabase user id from the validated JWT, for audit-trail attribution.
