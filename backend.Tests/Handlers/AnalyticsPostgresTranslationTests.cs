@@ -29,12 +29,52 @@ public class AnalyticsPostgresTranslationTests
     private static string? ConnectionString =>
         Environment.GetEnvironmentVariable("ANALYTICS_TEST_POSTGRES");
 
+    /// <summary>
+    /// Throws unless the connection string points at a local database.
+    ///
+    /// <para>
+    /// Fails rather than skips: a skip would be read as "not configured" and
+    /// quietly pass, whereas aiming this at a shared database is a mistake
+    /// worth stopping loudly, before anything is dropped.
+    /// </para>
+    /// </summary>
+    private static void RequireLocalDatabase(string connectionString)
+    {
+        var host = connectionString
+            .Split(';', StringSplitOptions.RemoveEmptyEntries)
+            .Select(part => part.Split('=', 2))
+            .Where(kv => kv.Length == 2 && kv[0].Trim().Equals("Host", StringComparison.OrdinalIgnoreCase))
+            .Select(kv => kv[1].Trim())
+            .FirstOrDefault();
+
+        var isLocal = host is not null && (
+            host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
+            host == "127.0.0.1" ||
+            host == "::1");
+
+        if (!isLocal)
+        {
+            throw new InvalidOperationException(
+                $"ANALYTICS_TEST_POSTGRES points at host '{host ?? "(none)"}'. This test drops every " +
+                "table before seeding, so it only runs against localhost. Start a throwaway database: " +
+                "docker run -d --rm -e POSTGRES_PASSWORD=test -e POSTGRES_DB=analytics " +
+                "-p 55433:5432 postgis/postgis:16-3.4");
+        }
+    }
+
     [SkippableFact]
     public async Task Handler_TranslatesAndAggregatesOnPostgres()
     {
         var connectionString = ConnectionString;
         Skip.If(string.IsNullOrWhiteSpace(connectionString),
             "Set ANALYTICS_TEST_POSTGRES to run this against a real Postgres.");
+
+        // This test drops every table before seeding, so it must never be
+        // pointed at a database anyone cares about. A comment recommending
+        // Docker is not a safeguard — someone debugging a translation failure
+        // could reasonably aim this at staging and lose it. Refuse anything
+        // that is not a local host.
+        RequireLocalDatabase(connectionString!);
 
         var options = new DbContextOptionsBuilder<UtanvegaDbContext>()
             .UseNpgsql(connectionString, o => o.UseNetTopologySuite())
@@ -83,8 +123,9 @@ public class AnalyticsPostgresTranslationTests
         Assert.Equal(6, result.Summary.UniqueVisitors);
         Assert.Equal(7, result.Summary.ViewsThisWeek);
         Assert.Equal(3, result.Summary.ViewsLastWeek);
-        Assert.Equal(3, result.Summary.TrailsWithViews);
-        Assert.Equal(Math.Round(11d / 3, 1), result.Summary.AvgViewsPerTrail);
+        // Archived excluded from the average and its trail count; TotalViews keeps it.
+        Assert.Equal(2, result.Summary.TrailsWithViews);
+        Assert.Equal(5.0, result.Summary.AvgViewsPerTrail);
 
         Assert.Equal(10, result.DailyViews.Sum(d => d.Views));
 

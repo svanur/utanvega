@@ -105,12 +105,25 @@ public class GetAnalyticsQueryHandler : IRequestHandler<GetAnalyticsQuery, Analy
         var viewsLastWeek = await views
             .CountAsync(v => v.ViewedAtUtc >= startOfLastWeek && v.ViewedAtUtc < startOfWeek, cancellationToken);
 
-        var trailsWithViews = await views
-            .Select(v => v.TrailId)
+        // Archived trails are excluded from the average and its "across N
+        // trails" label — they are hidden from the site, so counting them
+        // understates how the visible ones are doing.
+        //
+        // Both halves are filtered, not just the divisor: leaving archived
+        // views in the numerator while dropping their trails from the divisor
+        // would spread those views across the visible trails and inflate the
+        // figure. The consequence is that this average deliberately does not
+        // reconcile with Total Views, which stays a genuine all-time total.
+        var viewsOnVisibleTrails = views
+            .Join(visibleTrails, v => v.TrailId, t => t.Id, (v, t) => v.TrailId);
+
+        var trailsWithViews = await viewsOnVisibleTrails
             .Distinct()
             .CountAsync(cancellationToken);
 
-        var avgViewsPerTrail = trailsWithViews > 0 ? (double)totalViews / trailsWithViews : 0;
+        var visibleTrailViews = await viewsOnVisibleTrails.CountAsync(cancellationToken);
+
+        var avgViewsPerTrail = trailsWithViews > 0 ? (double)visibleTrailViews / trailsWithViews : 0;
 
         var summary = new SummaryDto(
             totalViews, uniqueVisitors, viewsToday, viewsYesterday,

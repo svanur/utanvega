@@ -117,16 +117,19 @@ function WeekChangeChip({ thisWeek, lastWeek }: { thisWeek: number; lastWeek: nu
 }
 
 /**
- * Percentage change against a previous period, signed.
+ * Change against a previous period, as a card subtitle.
  *
- * With no views in the previous period there is nothing to divide by, so any
- * views now count as +100% rather than an infinity — matching how the backend
- * reports trending change.
+ * With nothing in the previous period there is no percentage to report — going
+ * from zero is undefined, not +100% — so it says so instead. That also keeps
+ * this consistent with WeekChangeChip, which labels the same condition "New"
+ * rather than inventing a number for it.
+ *
+ * @param label names the previous period, e.g. "yesterday".
  */
-function formatChange(current: number, previous: number): string {
-    if (previous === 0) return current > 0 ? '+100%' : '0%';
+function formatChange(current: number, previous: number, label: string): string {
+    if (previous === 0) return current > 0 ? 'no prior views to compare' : 'no views';
     const pct = Math.round(((current - previous) / previous) * 100);
-    return `${pct > 0 ? '+' : ''}${pct}%`;
+    return `${pct > 0 ? '+' : ''}${pct}% vs ${label}`;
 }
 
 const HOUR_LABELS = Array.from({ length: 24 }, (_, i) =>
@@ -198,8 +201,8 @@ export default function AnalyticsPage() {
     });
     const maxHourlyViews = Math.max(...filledHourlyViews.map(h => h.views), 1);
 
-    const dayChange = formatChange(summary.viewsToday, summary.viewsYesterday);
-    const weekChange = formatChange(summary.viewsThisWeek, summary.viewsLastWeek);
+    const dayChange = formatChange(summary.viewsToday, summary.viewsYesterday, 'yesterday');
+    const weekChange = formatChange(summary.viewsThisWeek, summary.viewsLastWeek, 'previous 7 days');
 
     return (
         <Box>
@@ -232,16 +235,16 @@ export default function AnalyticsPage() {
                     <StatCard
                         title="Views Today"
                         value={summary.viewsToday.toLocaleString()}
-                        subtitle={`${dayChange} vs yesterday`}
+                        subtitle={dayChange}
                         icon={<TodayIcon />}
                         color="#0288d1"
                     />
                 </Grid>
                 <Grid item xs={5} md={2}>
                     <StatCard
-                        title="Views This Week"
+                        title="Views, Last 7 Days"
                         value={summary.viewsThisWeek.toLocaleString()}
-                        subtitle={`${weekChange} vs last week`}
+                        subtitle={weekChange}
                         icon={<CalendarTodayIcon />}
                         color="#2e7d32"
                     />
