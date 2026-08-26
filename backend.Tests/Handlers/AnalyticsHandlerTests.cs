@@ -169,12 +169,18 @@ public class AnalyticsHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task Summary_TotalViewsStillIncludesArchivedTrails()
+    public async Task Summary_TotalViewsExceedsWhatTheAverageAccountsFor()
     {
-        // Guards the asymmetry above: the average excludes archived trails,
-        // but the all-time total is not silently narrowed to match.
+        // The asymmetry itself, rather than a second copy of the total: the
+        // average covers only visible trails, so the archived trail's views
+        // are in TotalViews and nowhere in the average. Asserting the literal
+        // total again would fail alongside the count test and prove nothing.
         var result = await Run();
-        Assert.Equal(11, result.Summary.TotalViews);
+
+        var accountedFor = result.Summary.AvgViewsPerTrail * result.Summary.TrailsWithViews;
+        var archivedViews = result.Summary.TotalViews - accountedFor;
+
+        Assert.Equal(1, archivedViews); // the single view on the archived trail
     }
 
     // ── Daily ─────────────────────────────────────────────────────────────
