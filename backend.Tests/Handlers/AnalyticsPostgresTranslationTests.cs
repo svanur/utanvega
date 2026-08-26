@@ -83,8 +83,9 @@ public class AnalyticsPostgresTranslationTests
         Assert.Equal(6, result.Summary.UniqueVisitors);
         Assert.Equal(7, result.Summary.ViewsThisWeek);
         Assert.Equal(3, result.Summary.ViewsLastWeek);
-        Assert.Equal(3, result.Summary.TrailsWithViews);
-        Assert.Equal(Math.Round(11d / 3, 1), result.Summary.AvgViewsPerTrail);
+        // Archived excluded from the average and its trail count; TotalViews keeps it.
+        Assert.Equal(2, result.Summary.TrailsWithViews);
+        Assert.Equal(5.0, result.Summary.AvgViewsPerTrail);
 
         Assert.Equal(10, result.DailyViews.Sum(d => d.Views));
 

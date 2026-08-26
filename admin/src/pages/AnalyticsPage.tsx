@@ -127,7 +127,7 @@ function WeekChangeChip({ thisWeek, lastWeek }: { thisWeek: number; lastWeek: nu
  * @param label names the previous period, e.g. "yesterday".
  */
 function formatChange(current: number, previous: number, label: string): string {
-    if (previous === 0) return `no views ${label}`;
+    if (previous === 0) return current > 0 ? 'no prior views to compare' : 'no views';
     const pct = Math.round(((current - previous) / previous) * 100);
     return `${pct > 0 ? '+' : ''}${pct}% vs ${label}`;
 }
@@ -202,7 +202,7 @@ export default function AnalyticsPage() {
     const maxHourlyViews = Math.max(...filledHourlyViews.map(h => h.views), 1);
 
     const dayChange = formatChange(summary.viewsToday, summary.viewsYesterday, 'yesterday');
-    const weekChange = formatChange(summary.viewsThisWeek, summary.viewsLastWeek, 'last week');
+    const weekChange = formatChange(summary.viewsThisWeek, summary.viewsLastWeek, 'previous 7 days');
 
     return (
         <Box>
@@ -242,7 +242,7 @@ export default function AnalyticsPage() {
                 </Grid>
                 <Grid item xs={5} md={2}>
                     <StatCard
-                        title="Views This Week"
+                        title="Views, Last 7 Days"
                         value={summary.viewsThisWeek.toLocaleString()}
                         subtitle={weekChange}
                         icon={<CalendarTodayIcon />}

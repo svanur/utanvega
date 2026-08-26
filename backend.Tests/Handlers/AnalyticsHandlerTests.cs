@@ -155,11 +155,26 @@ public class AnalyticsHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task Summary_AveragesOverTrailsThatHaveViews()
+    public async Task Summary_AveragesOverVisibleTrailsOnly()
     {
+        // Esja and Hengill, not the archived trail — it is hidden from the
+        // site, so counting it would understate how the visible ones do.
         var result = await Run();
-        Assert.Equal(3, result.Summary.TrailsWithViews);
-        Assert.Equal(Math.Round(11d / 3, 1), result.Summary.AvgViewsPerTrail);
+        Assert.Equal(2, result.Summary.TrailsWithViews);
+
+        // 6 Esja + 4 Hengill over 2 trails. The archived trail's single view
+        // is excluded from both halves, so this deliberately does not
+        // reconcile with TotalViews (11) — that stays a genuine total.
+        Assert.Equal(5.0, result.Summary.AvgViewsPerTrail);
+    }
+
+    [Fact]
+    public async Task Summary_TotalViewsStillIncludesArchivedTrails()
+    {
+        // Guards the asymmetry above: the average excludes archived trails,
+        // but the all-time total is not silently narrowed to match.
+        var result = await Run();
+        Assert.Equal(11, result.Summary.TotalViews);
     }
 
     // ── Daily ─────────────────────────────────────────────────────────────
