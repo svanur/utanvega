@@ -40,6 +40,13 @@ function LangToggleButton() {
 const EVENT_TYPES: EventType[] = ['Race', 'Series', 'Social', 'Advertisement', 'Festival', 'Other'];
 const ACTIVITY_TYPES: ActivityType[] = ['TrailRunning', 'Running', 'Cycling', 'Hiking', 'FunRun', 'ObstacleCourse', 'CrossCountryRun', 'Swim', 'Canicross', 'IronMan', 'Other'];
 const EVENT_STATUSES: EventStatus[] = ['Unconfirmed', 'Confirmed', 'Cancelled', 'Hidden', 'Unlisted'];
+const EVENT_STATUS_LABELS: Record<EventStatus, string> = {
+  Unconfirmed: 'Unconfirmed',
+  Confirmed: 'Confirmed',
+  Cancelled: 'Cancelled',
+  Hidden: 'Draft — hidden from all',
+  Unlisted: 'Unlisted — view by URL',
+};
 const ACTIVITY_ICONS: Record<string, string> = {
   TrailRunning: '🏃‍♂️', Running: '🏃', Hiking: '🥾', Cycling: '🚴', FunRun: '🎊',
   ObstacleCourse: '🧗', CrossCountryRun: '🌾', Swim: '🏊', Canicross: '🐕', IronMan: '🥇', Other: '🏅',
@@ -146,7 +153,7 @@ function CreateEventDialogInner({ open, onClose, onCreated, onNotify, createEven
             <FormControl size="small" fullWidth>
               <InputLabel>Status</InputLabel>
               <Select value={form.status} label="Status" onChange={e => set('status', e.target.value as EventStatus)}>
-                {EVENT_STATUSES.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+                {EVENT_STATUSES.map(s => <MenuItem key={s} value={s}>{EVENT_STATUS_LABELS[s]}</MenuItem>)}
               </Select>
             </FormControl>
           </Box>
