@@ -1351,7 +1351,6 @@ app.MapPut("/api/v1/admin/tags/{id:guid}", [Authorize(Policy = "AdminOnly")] asy
     if (tag == null) return Results.NotFound();
     tag.Name = dto.Name;
     tag.NameEn = dto.NameEn;
-    tag.Slug = Utanvega.Backend.Core.Services.SlugGenerator.Generate(dto.Name);
     tag.Color = dto.Color;
     if (dto.TranslationHashes != null)
         tag.TranslationHashes = System.Text.Json.JsonSerializer.Serialize(dto.TranslationHashes);

@@ -94,7 +94,7 @@ public class OrganizerHandlerTests : IDisposable
         var org = await verifyCtx.Organizers.FindAsync(orgId);
         Assert.NotNull(org);
         Assert.Equal("New Name", org!.Name);
-        Assert.Equal("new-name", org.Slug);
+        Assert.Equal("old-name", org.Slug);
         Assert.Equal("5559999", org.Phone);
         Assert.Equal("new@email.is", org.Email);
         Assert.Equal("Updated", org.Description);
@@ -130,7 +130,7 @@ public class OrganizerHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task Update_Organizer_AutoGeneratesSlug_WhenSlugNotProvided()
+    public async Task Update_Organizer_PreservesSlug_WhenSlugNotProvided()
     {
         Guid orgId;
         using (var ctx = _factory.CreateContext())
@@ -154,7 +154,37 @@ public class OrganizerHandlerTests : IDisposable
 
         using var verifyCtx = _factory.CreateContext();
         var org = await verifyCtx.Organizers.FindAsync(orgId);
-        Assert.Equal("thorsmork-running-club", org!.Slug);
+        Assert.Equal("Þórsmörk Running Club", org!.Name);
+        Assert.Equal("original-name", org.Slug);
+    }
+
+    [Fact]
+    public async Task Update_Organizer_PreservesSlug_WhenSlugIsBlank()
+    {
+        Guid orgId;
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new CreateOrganizerCommandHandler(ctx);
+            (orgId, _) = await handler.Handle(new CreateOrganizerCommand(
+                Name: "Blank Slug Org", Kennitala: null, Phone: null, Email: null,
+                Website: null, Description: null, ContactName: null
+            ), CancellationToken.None);
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new UpdateOrganizerCommandHandler(ctx);
+            await handler.Handle(new UpdateOrganizerCommand(
+                Id: orgId, Name: "Renamed Org", Kennitala: null, Phone: null,
+                Email: null, Website: null, Description: null, ContactName: null,
+                Slug: "   "
+            ), CancellationToken.None);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        var org = await verifyCtx.Organizers.FindAsync(orgId);
+        Assert.Equal("Renamed Org", org!.Name);
+        Assert.Equal("blank-slug-org", org.Slug);
     }
 
     [Fact]

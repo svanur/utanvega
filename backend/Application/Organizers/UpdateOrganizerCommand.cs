@@ -1,7 +1,6 @@
 using System.Text.Json;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Utanvega.Backend.Core.Services;
 using Utanvega.Backend.Infrastructure.Persistence;
 
 namespace Utanvega.Backend.Application.Organizers;
@@ -35,9 +34,8 @@ public class UpdateOrganizerCommandHandler : IRequestHandler<UpdateOrganizerComm
         if (organizer is null) return false;
 
         organizer.Name = request.Name;
-        organizer.Slug = !string.IsNullOrWhiteSpace(request.Slug)
-            ? request.Slug.Trim()
-            : SlugGenerator.Generate(request.Name);
+        if (!string.IsNullOrWhiteSpace(request.Slug))
+            organizer.Slug = request.Slug.Trim();
         organizer.Kennitala = request.Kennitala;
         organizer.Phone = request.Phone;
         organizer.Email = request.Email;
