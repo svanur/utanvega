@@ -79,6 +79,7 @@ import {
   raceHasStaleTx,
   RACE_STATUSES,
   EDITION_STATUSES,
+  EDITION_STATUS_LABELS,
   EDITION_STATUS_CYCLE,
   TICKET_STATUSES,
   type RaceFormState,
@@ -342,7 +343,7 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onNotify
             <InputLabel>Status</InputLabel>
             <Select value={form.status} label="Status"
               onChange={e => set('status', e.target.value as EditionStatus)}>
-              {EDITION_STATUSES.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+              {EDITION_STATUSES.map(s => <MenuItem key={s} value={s}>{EDITION_STATUS_LABELS[s]}</MenuItem>)}
             </Select>
             {isNew && (form.status === 'Completed' || form.status === 'Active') && (
               <FormHelperText>Auto-set based on year — you can override</FormHelperText>

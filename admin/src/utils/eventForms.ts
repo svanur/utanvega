@@ -36,6 +36,13 @@ export interface RaceFormState {
 
 export const RACE_STATUSES: RaceStatus[] = ['Active', 'Completed', 'Cancelled', 'Hidden'];
 export const EDITION_STATUSES: EditionStatus[] = ['Active', 'Unconfirmed', 'Cancelled', 'Hidden', 'Completed'];
+export const EDITION_STATUS_LABELS: Record<EditionStatus, string> = {
+  Active: 'Active',
+  Unconfirmed: 'Unconfirmed',
+  Cancelled: 'Cancelled',
+  Hidden: 'Draft — hidden from all',
+  Completed: 'Completed',
+};
 // Cycling skips Cancelled and Completed — both are terminal states that should be set intentionally,
 // not landed on by clicking through a cycle.
 export const EDITION_STATUS_CYCLE: EditionStatus[] = ['Active', 'Unconfirmed', 'Hidden'];
