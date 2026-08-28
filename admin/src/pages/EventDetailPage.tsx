@@ -205,7 +205,7 @@ function emptyEditionForm(): EditionFormState {
     date: '', endDate: '', title: '', titleEn: '',
     registrationUrl: '', resultsUrl: '', photoGalleryUrl: '', notes: '', notesEn: '',
     registrationStatus: 'NotStarted', trailId: '',
-    status: 'Active',
+    status: 'Unconfirmed',
   };
 }
 
@@ -320,7 +320,7 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onNotify
                     if (prev.resultsUrl) updates.resultsUrl = prev.resultsUrl.replace(new RegExp(`${oy}(/?)$`), `${newYear}$1`);
                   }
                   if (isNew && newYear.length === 4 && !isNaN(ny))
-                    updates.status = ny < new Date().getFullYear() ? 'Completed' : 'Active';
+                    updates.status = ny < new Date().getFullYear() ? 'Completed' : 'Unconfirmed';
                   return { ...prev, ...updates };
                 });
               }} />
@@ -344,7 +344,7 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onNotify
               onChange={e => set('status', e.target.value as EditionStatus)}>
               {EDITION_STATUSES.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
             </Select>
-            {isNew && (form.status === 'Completed' || form.status === 'Active') && (
+            {isNew && (form.status === 'Completed' || form.status === 'Unconfirmed') && (
               <FormHelperText>Auto-set based on year — you can override</FormHelperText>
             )}
             {!isNew && form.status === 'Completed' && edition?.status !== 'Completed' && (
@@ -688,9 +688,9 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
       notesEn: '',
       registrationStatus: suggestedDate && isPastDate(suggestedDate) ? 'Closed' : 'NotStarted',
       trailId: edition.trailId ?? '',
-      // A clone is a brand-new edition, so it starts Active regardless of the source edition's
+      // A clone is a brand-new edition, so it starts Unconfirmed regardless of the source edition's
       // status (e.g. cloning a Cancelled edition into next year shouldn't carry the cancellation over).
-      status: 'Active',
+      status: 'Unconfirmed',
     });
     setEditingEdition(null); // null = create mode
     setEditionDialogOpen(true);

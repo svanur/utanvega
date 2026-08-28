@@ -73,6 +73,7 @@ public class GenerateEditionsForSeasonCommandHandler : IRequestHandler<GenerateE
             TrailId = request.TrailId,
             RegistrationUrl = request.RegistrationUrl,
             RegistrationStatus = RegistrationStatus.NotStarted,
+            Status = EditionStatus.Unconfirmed,
             CreatedAt = DateTime.UtcNow,
         }).ToList();
 
@@ -172,6 +173,7 @@ public class GenerateEditionsForSeasonCommandHandler : IRequestHandler<GenerateE
                     Title = title,
                     RegistrationUrl = request.RegistrationUrl,
                     RegistrationStatus = RegistrationStatus.NotStarted,
+                    Status = EditionStatus.Unconfirmed,
                     CreatedAt = DateTime.UtcNow,
                 };
                 _context.EventEditions.Add(edition);

@@ -36,6 +36,11 @@ public class CreateEditionCommandValidator : AbstractValidator<CreateEditionComm
             .Must(v => Enum.TryParse<RegistrationStatus>(v, ignoreCase: true, out _))
             .WithMessage($"RegistrationStatus must be one of: {string.Join(", ", Enum.GetNames<RegistrationStatus>())}.");
 
+        RuleFor(x => x.Status)
+            .Must(v => Enum.TryParse<EditionStatus>(v, ignoreCase: true, out _))
+            .WithMessage($"Status must be one of: {string.Join(", ", Enum.GetNames<EditionStatus>())}.")
+            .When(x => x.Status is not null);
+
         RuleFor(x => x.Year)
             .InclusiveBetween(2000, 2100)
             .When(x => x.Year.HasValue);

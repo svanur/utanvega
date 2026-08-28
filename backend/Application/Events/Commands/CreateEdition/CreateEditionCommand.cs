@@ -19,7 +19,8 @@ public record CreateEditionCommand(
     Guid? TrailId,
     string? TitleEn = null,
     string? NotesEn = null,
-    string? PhotoGalleryUrl = null
+    string? PhotoGalleryUrl = null,
+    string? Status = null
 ) : IRequest<Guid>;
 
 public class CreateEditionCommandHandler : IRequestHandler<CreateEditionCommand, Guid>
@@ -36,6 +37,12 @@ public class CreateEditionCommandHandler : IRequestHandler<CreateEditionCommand,
     public async Task<Guid> Handle(CreateEditionCommand request, CancellationToken cancellationToken)
     {
         Enum.TryParse<RegistrationStatus>(request.RegistrationStatus, ignoreCase: true, out var regStatus);
+        // A brand-new edition hasn't been individually confirmed yet, regardless of what produced it
+        // (manual add, or cloning an existing edition into next year) — default to Unconfirmed rather
+        // than falling through to whatever an unparseable or omitted value would otherwise leave it as.
+        var status = Enum.TryParse<EditionStatus>(request.Status, ignoreCase: true, out var parsedStatus)
+            ? parsedStatus
+            : EditionStatus.Unconfirmed;
 
         var edition = new EventEdition
         {
@@ -51,6 +58,7 @@ public class CreateEditionCommandHandler : IRequestHandler<CreateEditionCommand,
             Notes = request.Notes,
             NotesEn = request.NotesEn,
             RegistrationStatus = regStatus,
+            Status = status,
             TrailId = request.TrailId,
             CreatedAt = DateTime.UtcNow,
         };

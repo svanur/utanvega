@@ -42,7 +42,7 @@ public class EventEdition
     public string? TranslationHashes { get; set; }
 
     public RegistrationStatus RegistrationStatus { get; set; } = RegistrationStatus.NotStarted;
-    public EditionStatus Status { get; set; } = EditionStatus.Active;
+    public EditionStatus Status { get; set; } = EditionStatus.Unconfirmed;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
