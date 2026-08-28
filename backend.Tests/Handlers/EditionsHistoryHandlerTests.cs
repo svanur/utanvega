@@ -185,6 +185,33 @@ public class EditionsHistoryHandlerTests : IDisposable
         Assert.Empty(result);
     }
 
+    [Fact]
+    public async Task History_CompletedEditionWithAllRacesCancelled_NotExcludedAsCancelled()
+    {
+        // CompleteWithRaces() leaves races that were already Cancelled as Cancelled, so a Completed
+        // edition with every race Cancelled is a reachable state. It must still surface in history —
+        // the edition ran to conclusion, it wasn't cancelled — even with IncludeCancelled: false.
+        var pastYear = DateOnly.FromDateTime(DateTime.UtcNow).Year - 1;
+        var ev = CreateTestEvent("Completed Despite Cancelled Races");
+        var edition = CreateEdition(ev.Id, new DateOnly(pastYear, 3, 1), status: EditionStatus.Completed);
+        var race = CreateRace(edition.Id, "Cancelled Race", status: RaceStatus.Cancelled);
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEditionsHistoryQueryHandler(queryCtx, _memoryCache);
+        var result = await handler.Handle(new GetEditionsHistoryQuery(pastYear, IncludeCancelled: false), CancellationToken.None);
+
+        var row = Assert.Single(result);
+        Assert.False(row.EffectiveCancelled);
+    }
+
     // ─── Hidden exclusion ───
 
     [Fact]
