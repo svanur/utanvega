@@ -197,7 +197,10 @@ export function LocationDialog({ open, onClose, onSaveSuccess, onNotify, locatio
     const [name, setName] = useState('');
     const [nameEn, setNameEn] = useState('');
     const [slug, setSlug] = useState('');
-    const [slugUnlocked, setSlugUnlocked] = useState(false);
+    // Seeded from the mode rather than defaulting to locked: the effect below
+    // resets this on every open, but it runs after the first paint, so
+    // defaulting to false showed a locked field for a frame when creating.
+    const [slugUnlocked, setSlugUnlocked] = useState(location === undefined);
     // Creating and editing share this dialog, and the slug means different
     // things in each: on a new location it is optional and the backend derives
     // one from the name, on an existing one it is a live URL.
@@ -275,6 +278,15 @@ export function LocationDialog({ open, onClose, onSaveSuccess, onNotify, locatio
     }, [location, open]);
 
     const handleSave = async () => {
+        // An empty slug means "generate one from the name", which the backend
+        // only does on create. Clearing it on an existing location sends null
+        // to an endpoint that requires a value, and the validator answers with
+        // a bare "Slug must not be empty" — say what to do about it instead.
+        if (isEditing && !slug.trim()) {
+            setError('A slug is required. Locations keep their slug unless you set a new one — it is the page address.');
+            return;
+        }
+
         setSaving(true);
         setError(null);
         try {
