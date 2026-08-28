@@ -114,14 +114,21 @@ public class GetAnalyticsQueryHandler : IRequestHandler<GetAnalyticsQuery, Analy
         // would spread those views across the visible trails and inflate the
         // figure. The consequence is that this average deliberately does not
         // reconcile with Total Views, which stays a genuine all-time total.
-        var viewsOnVisibleTrails = views
-            .Join(visibleTrails, v => v.TrailId, t => t.Id, (v, t) => v.TrailId);
+        // Both figures come back from one query rather than enumerating the
+        // same join twice — grouping on a constant gives a single row carrying
+        // the count and the distinct count together.
+        var visible = await views
+            .Join(visibleTrails, v => v.TrailId, t => t.Id, (v, t) => v.TrailId)
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                Views = g.Count(),
+                Trails = g.Select(trailId => trailId).Distinct().Count(),
+            })
+            .FirstOrDefaultAsync(cancellationToken);
 
-        var trailsWithViews = await viewsOnVisibleTrails
-            .Distinct()
-            .CountAsync(cancellationToken);
-
-        var visibleTrailViews = await viewsOnVisibleTrails.CountAsync(cancellationToken);
+        var trailsWithViews = visible?.Trails ?? 0;
+        var visibleTrailViews = visible?.Views ?? 0;
 
         var avgViewsPerTrail = trailsWithViews > 0 ? (double)visibleTrailViews / trailsWithViews : 0;
 

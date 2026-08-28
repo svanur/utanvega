@@ -242,9 +242,12 @@ export function LocationDialog({ open, onClose, onSaveSuccess, onNotify, locatio
     };
 
     useEffect(() => {
-        // Re-lock whenever the dialog is pointed at a different location, so an
-        // unlock never carries over to the next one edited.
-        setSlugUnlocked(false);
+        // The lock protects a slug that is already a live URL, so it only
+        // applies when editing. A new location has nothing to break yet, and
+        // locking the field there would hide the one moment the slug is worth
+        // seeing — before it is created. Reset on every open so an unlock never
+        // carries over to the next location edited.
+        setSlugUnlocked(location === undefined);
         if (location) {
             setName(location.name);
             setNameEn(location.nameEn || '');
@@ -369,35 +372,36 @@ export function LocationDialog({ open, onClose, onSaveSuccess, onNotify, locatio
                                         />
                                     )}
                                 />
-                                {/* Locked by default, as on the trail form. A location's
-                                    slug is its public URL — it is in the sitemap and in
-                                    any shared or indexed link — so changing one should
-                                    take a deliberate action rather than being a keystroke
-                                    away while renaming. Nothing here derives the slug from
-                                    the name: on a new location the backend does that when
-                                    the field is left empty, and on an existing one the
-                                    slug stays put. */}
+                                {/* The lock guards a slug that is already a public URL, so
+                                    it only engages when editing: a location's slug is in
+                                    the sitemap and in any shared or indexed link, and since
+                                    #404 a stale one returns a hard 404. Creating leaves the
+                                    field open — there is nothing to protect yet, and the
+                                    slug is worth seeing at the one moment it is being set.
+                                    Nothing here derives the slug from the name; on a new
+                                    location the backend does that when the field is left
+                                    empty, and on an existing one the slug stays put. */}
                                 <TextField
                                     label="Slug"
                                     value={slug}
                                     onChange={(e) => setSlug(e.target.value)}
                                     fullWidth
                                     disabled={!slugUnlocked}
-                                    placeholder={isEditing ? undefined : 'auto-generated from the name if empty'}
+                                    placeholder={isEditing ? undefined : 'auto-generated from the name if left empty'}
                                     helperText={
-                                        slugUnlocked && isEditing
-                                            ? 'Changing the slug breaks existing bookmarks and shared links.'
-                                            : undefined
+                                        isEditing
+                                            ? (slugUnlocked
+                                                ? 'Changing the slug breaks existing bookmarks and shared links.'
+                                                : undefined)
+                                            : 'Leave empty to generate one from the name.'
                                     }
                                     InputProps={{
-                                        endAdornment: (
+                                        endAdornment: isEditing ? (
                                             <Tooltip
                                                 title={
                                                     slugUnlocked
                                                         ? 'Lock slug'
-                                                        : isEditing
-                                                            ? 'Changing the slug will break any existing bookmarks or shared links to this location. Click to unlock.'
-                                                            : 'Left empty, the slug is generated from the name. Click to unlock and set it yourself.'
+                                                        : 'Changing the slug will break any existing bookmarks or shared links to this location. Click to unlock.'
                                                 }
                                             >
                                                 <IconButton
@@ -408,7 +412,7 @@ export function LocationDialog({ open, onClose, onSaveSuccess, onNotify, locatio
                                                     {slugUnlocked ? <LockOpenIcon fontSize="small" /> : <LockIcon fontSize="small" />}
                                                 </IconButton>
                                             </Tooltip>
-                                        ),
+                                        ) : undefined,
                                     }}
                                 />
                                 <TextField
