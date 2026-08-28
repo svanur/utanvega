@@ -2,9 +2,11 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
     Dialog, DialogTitle, DialogContent, DialogActions,
     Button, TextField, Box, Alert, Typography, Slider,
-    Tabs, Tab, Autocomplete, CircularProgress, Stack
+    Tabs, Tab, Autocomplete, CircularProgress, IconButton, Tooltip
 } from '@mui/material';
 import HistoryIcon from '@mui/icons-material/History';
+import LockIcon from '@mui/icons-material/Lock';
+import LockOpenIcon from '@mui/icons-material/LockOpen';
 import WikiIcon from '@mui/icons-material/AutoFixHigh';
 import TranslateIcon from '@mui/icons-material/Translate';
 import { MapContainer, TileLayer, Marker, Circle, useMapEvents, useMap } from 'react-leaflet';
@@ -195,6 +197,14 @@ export function LocationDialog({ open, onClose, onSaveSuccess, onNotify, locatio
     const [name, setName] = useState('');
     const [nameEn, setNameEn] = useState('');
     const [slug, setSlug] = useState('');
+    // Seeded from the mode rather than defaulting to locked: the effect below
+    // resets this on every open, but it runs after the first paint, so
+    // defaulting to false showed a locked field for a frame when creating.
+    const [slugUnlocked, setSlugUnlocked] = useState(location === undefined);
+    // Creating and editing share this dialog, and the slug means different
+    // things in each: on a new location it is optional and the backend derives
+    // one from the name, on an existing one it is a live URL.
+    const isEditing = location !== undefined;
     const [description, setDescription] = useState('');
     const [descriptionEn, setDescriptionEn] = useState('');
     const [type, setType] = useState<LocationType>('Place');
@@ -235,6 +245,12 @@ export function LocationDialog({ open, onClose, onSaveSuccess, onNotify, locatio
     };
 
     useEffect(() => {
+        // The lock protects a slug that is already a live URL, so it only
+        // applies when editing. A new location has nothing to break yet, and
+        // locking the field there would hide the one moment the slug is worth
+        // seeing — before it is created. Reset on every open so an unlock never
+        // carries over to the next location edited.
+        setSlugUnlocked(location === undefined);
         if (location) {
             setName(location.name);
             setNameEn(location.nameEn || '');
@@ -262,6 +278,15 @@ export function LocationDialog({ open, onClose, onSaveSuccess, onNotify, locatio
     }, [location, open]);
 
     const handleSave = async () => {
+        // An empty slug means "generate one from the name", which the backend
+        // only does on create. Clearing it on an existing location sends null
+        // to an endpoint that requires a value, and the validator answers with
+        // a bare "Slug must not be empty" — say what to do about it instead.
+        if (isEditing && !slug.trim()) {
+            setError('A slug is required. Locations keep their slug unless you set a new one — it is the page address.');
+            return;
+        }
+
         setSaving(true);
         setError(null);
         try {
@@ -359,12 +384,48 @@ export function LocationDialog({ open, onClose, onSaveSuccess, onNotify, locatio
                                         />
                                     )}
                                 />
+                                {/* The lock guards a slug that is already a public URL, so
+                                    it only engages when editing: a location's slug is in
+                                    the sitemap and in any shared or indexed link, and since
+                                    #404 a stale one returns a hard 404. Creating leaves the
+                                    field open — there is nothing to protect yet, and the
+                                    slug is worth seeing at the one moment it is being set.
+                                    Nothing here derives the slug from the name; on a new
+                                    location the backend does that when the field is left
+                                    empty, and on an existing one the slug stays put. */}
                                 <TextField
                                     label="Slug"
                                     value={slug}
                                     onChange={(e) => setSlug(e.target.value)}
                                     fullWidth
-                                    placeholder="auto-generated if empty"
+                                    disabled={!slugUnlocked}
+                                    placeholder={isEditing ? undefined : 'auto-generated from the name if left empty'}
+                                    helperText={
+                                        isEditing
+                                            ? (slugUnlocked
+                                                ? 'Changing the slug breaks existing bookmarks and shared links.'
+                                                : undefined)
+                                            : 'Leave empty to generate one from the name.'
+                                    }
+                                    InputProps={{
+                                        endAdornment: isEditing ? (
+                                            <Tooltip
+                                                title={
+                                                    slugUnlocked
+                                                        ? 'Lock slug'
+                                                        : 'Changing the slug will break any existing bookmarks or shared links to this location. Click to unlock.'
+                                                }
+                                            >
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => setSlugUnlocked(v => !v)}
+                                                    color={slugUnlocked ? 'warning' : 'default'}
+                                                >
+                                                    {slugUnlocked ? <LockOpenIcon fontSize="small" /> : <LockIcon fontSize="small" />}
+                                                </IconButton>
+                                            </Tooltip>
+                                        ) : undefined,
+                                    }}
                                 />
                                 <TextField
                                     label="Name (EN)"
