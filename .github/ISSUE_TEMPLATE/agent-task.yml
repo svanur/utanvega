@@ -1,0 +1,116 @@
+name: Agent task
+description: A scoped unit of work an agent can pick up, implement and open a PR for.
+title: "[Area] "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Fill this in so an agent can work without guessing. The Scrum Master agent **refuses**
+        issues with vague acceptance criteria, so the checklist below is the important part.
+
+        When this is ready to be worked on, add the **`agent-ready`** label. That label is the
+        gate — nothing gets picked up without it.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of the repo does this touch?
+      options:
+        - frontend (public PWA)
+        - admin (dashboard)
+        - backend (.NET API)
+        - database (EF Core / migrations / PostGIS)
+        - mixed
+    validations:
+      required: true
+
+  - type: input
+    id: blocked-by
+    attributes:
+      label: Blocked by
+      description: >
+        Issue numbers that must be closed before this one can be worked, comma separated
+        (e.g. `#445, #447`). The Scrum Master skips any issue whose blockers are still open,
+        so this overrides the normal lowest-number-first order. Leave empty if nothing blocks it.
+      placeholder: "#445"
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / context
+      description: What's wrong or missing today, and why it matters to the user.
+      placeholder: |
+        On the trail list, the distance filter resets whenever you rotate the phone.
+        Users lose their filter mid-scroll, which on mobile means starting over.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: What should happen instead. A rough direction is fine — the agent will read the code.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: >
+        Objectively checkable outcomes. The Tester agent reviews against these,
+        so anything vague here becomes a vague review.
+      value: |
+        - [ ] 
+        - [ ] 
+        - [ ] 
+    validations:
+      required: true
+
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of scope
+      description: Nearby things the agent must NOT touch. This is what keeps the PR small.
+      placeholder: |
+        - Don't redesign the filter panel layout
+        - Don't touch the admin app
+
+  - type: textarea
+    id: mobile
+    attributes:
+      label: Mobile considerations
+      description: >
+        This is a mobile-first PWA and the Tester reviews at 375px. Note anything specific —
+        touch targets, existing swipe/long-press gestures on TrailCard, Leaflet map height,
+        dark mode, or Icelandic strings overflowing (Icelandic runs longer than English).
+
+  - type: textarea
+    id: security
+    attributes:
+      label: Security considerations
+      description: >
+        Anything auth-related? New endpoints needing `[Authorize]`, user-owned data needing an
+        ownership check, admin-only routes, user-supplied input (GPX, slugs, geometry), secrets.
+
+  - type: checkboxes
+    id: requirements
+    attributes:
+      label: Definition of Done — which apply?
+      options:
+        - label: New user-facing strings (needs BOTH `frontend/i18n/en.json` and `is.json`)
+        - label: New backend logic (needs xUnit tests in `backend.Tests/`)
+        - label: Database change (needs an EF Core migration with a reviewed `Down()`)
+        - label: New API endpoint (needs auth decision + error handling)
+        - label: Visual change (needs checking in light AND dark mode)
+
+  - type: textarea
+    id: starting-points
+    attributes:
+      label: Starting points
+      description: Files, functions or line numbers worth reading first. Saves the agent a search.
+      placeholder: |
+        frontend/hooks/useTrails.ts — filter state lives here
+        frontend/components/TrailCard.tsx:120 — gesture handlers

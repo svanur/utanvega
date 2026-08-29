@@ -85,12 +85,64 @@ backend/
 - Translations added to both `en.json` and `is.json` for any new user-facing text.
 
 ## Agent Workflow
-- After completing each task or logical unit of work, **always** use the `ask_user` tool to ask for next steps.
-- Provide 1–3 relevant choices based on what makes sense to do next (e.g., related improvements, fixes spotted during work, items from the backlog).
-- Always allow freeform input so the user can type their own answer.
-- Keep choices actionable and specific, not vague. Example: "Add elevation profile interactivity" not "Improve frontend".
-- Feel free to question the user's choices. Come up with a plan to address their concerns. Use best practices for the task at hand.
-- Do not commit and push changes to the repository until the user explicitly approves. Always ask for confirmation before pushing.
+
+Work moves through a three-agent pipeline defined in `.claude/agents/`. One issue per cycle.
+
+```
+/go  →  scrum-master  →  programmer  →  tester  ⇄  programmer  →  owner merges
+     (picks 1 issue)   (branch, code,   (cold review:   (max 3 rounds)
+                        tests, PR)       security +
+                                         mobile first)
+```
+
+- **scrum-master** — read-only. Picks the lowest-numbered open issue labelled `agent-ready` whose
+  blockers are all closed, refuses vague ones, emits a work order.
+- **programmer** — implements the work order, runs the checks, commits, pushes a feature branch, opens the PR, and applies review fixes.
+- **tester** — reviews the PR **cold** (PR number only, never the Programmer's reasoning), posts the review as a PR comment. Cannot edit code.
+
+### Issue ordering
+
+Add the **`agent-ready`** label to an issue when it's ready to be picked up. Among labelled issues
+the Scrum Master takes the **lowest number first**.
+
+To override that order, record dependencies in the issue body:
+
+```
+Blocked by: #445, #447
+```
+
+The Scrum Master checks each referenced issue and skips the candidate while any blocker is still
+open — so a higher-numbered issue can legitimately be worked first. GitHub doesn't enforce this
+relation and `gh` doesn't expose its native one, so the body line is the source of truth.
+
+### The human gate
+
+`/go` is the only thing that starts a cycle. Agents never chain into the next issue on their own —
+the conductor reports and stops. If the Programmer and Tester disagree for 3 rounds, the cycle
+escalates to the owner rather than continuing.
+
+### Git authority
+
+Inside the pipeline, agents are pre-authorized to commit and push to a **feature branch** and open a
+PR against `main`. No per-push confirmation is needed — the `/go` gate and the PR review are the
+approval points.
+
+These remain human-only, always:
+- **Merging any PR.** Agents never merge and never approve.
+- **Any write to `main`** — no commits, no pushes, no force-pushes.
+- Force-pushing any branch, `git reset --hard`, or `git clean -fd` on work the agent did not create.
+- Changes to CI workflows, `fly.toml`, `Dockerfile`, deploy config, or secrets — unless the issue
+  explicitly asks for them.
+
+Outside the pipeline (an ad-hoc interactive session), ask before pushing.
+
+### General conduct
+
+- Stay inside the stated scope. Something broken but out of scope goes in the PR body under
+  "Spotted but not fixed" — don't fix it, don't silently expand the PR.
+- Question the plan when it looks wrong. A reasoned objection beats a compliant bad change.
+- Report checks honestly. If a build failed or a step was skipped, say so — never report a green
+  cycle you didn't actually get.
 
 ## Gotchas & Tips
 
