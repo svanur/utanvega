@@ -1349,6 +1349,8 @@ app.MapPut("/api/v1/admin/tags/{id:guid}", [Authorize(Policy = "AdminOnly")] asy
 {
     var tag = await context.Tags.FindAsync(id);
     if (tag == null) return Results.NotFound();
+    if (!string.IsNullOrWhiteSpace(dto.Slug) && !System.Text.RegularExpressions.Regex.IsMatch(dto.Slug.Trim(), "^[a-z0-9]+(?:-[a-z0-9]+)*$"))
+        return Results.BadRequest("Slug must be lowercase alphanumeric with hyphens only.");
     tag.Name = dto.Name;
     tag.NameEn = dto.NameEn;
     if (!string.IsNullOrWhiteSpace(dto.Slug))

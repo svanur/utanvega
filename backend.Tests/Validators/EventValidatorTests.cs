@@ -216,6 +216,40 @@ public class EventValidatorTests : IDisposable
     }
 
     [Fact]
+    public void UpdateEvent_NullSlug_Passes()
+    {
+        var cmd = ValidUpdateEventCommand with { Slug = null };
+        var result = _updateEventValidator.TestValidate(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.Slug);
+    }
+
+    [Fact]
+    public void UpdateEvent_BlankSlug_Passes()
+    {
+        // Blank is what UpdateEventCommand's handler treats as "no change requested" — it must not
+        // be rejected by validation before it even reaches that no-op branch.
+        var cmd = ValidUpdateEventCommand with { Slug = "   " };
+        var result = _updateEventValidator.TestValidate(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.Slug);
+    }
+
+    [Fact]
+    public void UpdateEvent_MalformedSlug_Fails()
+    {
+        var cmd = ValidUpdateEventCommand with { Slug = "Not A Slug!!!" };
+        var result = _updateEventValidator.TestValidate(cmd);
+        result.ShouldHaveValidationErrorFor(x => x.Slug);
+    }
+
+    [Fact]
+    public void UpdateEvent_ValidSlug_Passes()
+    {
+        var cmd = ValidUpdateEventCommand with { Slug = "new-event-slug" };
+        var result = _updateEventValidator.TestValidate(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.Slug);
+    }
+
+    [Fact]
     public void UpdateEvent_NonHttpSocialLink_Fails()
     {
         var cmd = ValidUpdateEventCommand with
