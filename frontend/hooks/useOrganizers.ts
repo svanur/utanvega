@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { API_URL } from './useTrails';
+import type { SocialLink } from './useEvents';
 
 export interface OrganizerEventSummary {
     id: string;
@@ -22,6 +23,7 @@ export interface OrganizerPublic {
     descriptionEn: string | null;
     contactName: string | null;
     events: OrganizerEventSummary[];
+    socialLinks: SocialLink[] | null;
 }
 
 export function useOrganizerBySlug(slug: string | undefined) {

@@ -1,5 +1,6 @@
 using FluentValidation.TestHelper;
 using Utanvega.Backend.Application.Organizers;
+using Utanvega.Backend.Core.Entities;
 
 namespace backend.Tests.Validators;
 
@@ -67,5 +68,46 @@ public class OrganizerValidatorTests
         var cmd = ValidUpdateOrganizerCommand with { Slug = "new-organizer-slug" };
         var result = _updateOrganizerValidator.TestValidate(cmd);
         result.ShouldNotHaveValidationErrorFor(x => x.Slug);
+    }
+
+    [Fact]
+    public void UpdateOrganizer_NullSocialLinks_Passes()
+    {
+        var cmd = ValidUpdateOrganizerCommand with { SocialLinks = null };
+        var result = _updateOrganizerValidator.TestValidate(cmd);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void UpdateOrganizer_ValidSocialLinks_Passes()
+    {
+        var cmd = ValidUpdateOrganizerCommand with
+        {
+            SocialLinks = [new SocialLink { Type = "Facebook", Url = "https://facebook.com/org" }]
+        };
+        var result = _updateOrganizerValidator.TestValidate(cmd);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void UpdateOrganizer_SocialLinkMissingType_Fails()
+    {
+        var cmd = ValidUpdateOrganizerCommand with
+        {
+            SocialLinks = [new SocialLink { Type = "", Url = "https://facebook.com/org" }]
+        };
+        var result = _updateOrganizerValidator.TestValidate(cmd);
+        result.ShouldHaveAnyValidationError();
+    }
+
+    [Fact]
+    public void UpdateOrganizer_NonHttpSocialLink_Fails()
+    {
+        var cmd = ValidUpdateOrganizerCommand with
+        {
+            SocialLinks = [new SocialLink { Type = "Suspicious", Url = "ftp://example.com/file" }]
+        };
+        var result = _updateOrganizerValidator.TestValidate(cmd);
+        result.ShouldHaveAnyValidationError();
     }
 }

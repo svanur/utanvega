@@ -26,6 +26,7 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -37,10 +38,11 @@ import MailOutlineIcon from '@mui/icons-material/MailOutline';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import PhoneIcon from '@mui/icons-material/Phone';
 import SaveIcon from '@mui/icons-material/Save';
+import ShareIcon from '@mui/icons-material/Share';
 
 import { useQueryClient } from '@tanstack/react-query';
 import { useOrganizers, type OrganizerDto } from '../hooks/useOrganizers';
-import { useEvents, type EventSummaryDto } from '../hooks/useEvents';
+import { useEvents, type EventSummaryDto, type SocialLink } from '../hooks/useEvents';
 import { usePageShortcuts } from '../hooks/usePageShortcuts';
 import { trimToUndefined } from '../utils/strings';
 import BilingualTextField from '../components/BilingualTextField';
@@ -88,6 +90,7 @@ interface FormState {
     description: string;
     descriptionEn: string;
     contactName: string;
+    socialLinks: SocialLink[];
 }
 
 function getEventStatusColor(status: EventSummaryDto['status']): 'default' | 'success' | 'error' | 'warning' {
@@ -111,6 +114,7 @@ export default function OrganizerDetailPage({ onNotify }: Props) {
     const [form, setForm] = useState<FormState>({
         name: '', slug: '', kennitala: '', phone: '', email: '',
         website: '', description: '', descriptionEn: '', contactName: '',
+        socialLinks: [],
     });
     const [saving, setSaving] = useState(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -141,6 +145,7 @@ export default function OrganizerDetailPage({ onNotify }: Props) {
             description: organizer.description ?? '',
             descriptionEn: organizer.descriptionEn ?? '',
             contactName: organizer.contactName ?? '',
+            socialLinks: organizer.socialLinks?.map(l => ({ ...l })) ?? [],
         });
         setSlugUnlocked(false);
         setEditing(true);
@@ -150,6 +155,7 @@ export default function OrganizerDetailPage({ onNotify }: Props) {
         if (!organizer || !form.name.trim()) return;
         setSaving(true);
         try {
+            const socialLinks = form.socialLinks.filter(l => l.type.trim() && l.url.trim());
             await updateOrganizer({
                 id: organizer.id,
                 name: form.name.trim(),
@@ -161,6 +167,7 @@ export default function OrganizerDetailPage({ onNotify }: Props) {
                 description: trimToUndefined(form.description),
                 descriptionEn: trimToUndefined(form.descriptionEn),
                 contactName: trimToUndefined(form.contactName),
+                socialLinks: socialLinks.length > 0 ? socialLinks : null,
             });
             onNotify(`'${form.name.trim()}' saved`);
             setEditing(false);
@@ -193,8 +200,11 @@ export default function OrganizerDetailPage({ onNotify }: Props) {
         }
     };
 
-    const set = (field: keyof FormState, value: string) =>
+    const set = (field: keyof Omit<FormState, 'socialLinks'>, value: string) =>
         setForm(prev => ({ ...prev, [field]: value }));
+
+    const setSocialLinks = (links: SocialLink[]) =>
+        setForm(prev => ({ ...prev, socialLinks: links }));
 
     usePageShortcuts([
         { key: 'u', handler: () => navigate(-1) },
@@ -298,6 +308,20 @@ export default function OrganizerDetailPage({ onNotify }: Props) {
                             {organizer.contactName && (
                                 <Chip size="small" label={organizer.contactName} variant="outlined" />
                             )}
+                            {organizer.socialLinks?.map(link => (
+                                <Chip
+                                    key={`${link.type}-${link.url}`}
+                                    size="small"
+                                    icon={<ShareIcon />}
+                                    label={link.type}
+                                    variant="outlined"
+                                    component="a"
+                                    href={link.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    clickable
+                                />
+                            ))}
                         </Stack>
                         {organizer.description && (
                             <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5, maxWidth: 600 }}>
@@ -414,6 +438,41 @@ export default function OrganizerDetailPage({ onNotify }: Props) {
                                 fullWidth
                             />
                         </Box>
+                        <Box>
+                            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+                                <Typography variant="subtitle2">Social links</Typography>
+                                <Tooltip title="Add social link">
+                                    <IconButton size="small" onClick={() => setSocialLinks([...form.socialLinks, { type: '', url: '' }])}>
+                                        <AddIcon fontSize="small" />
+                                    </IconButton>
+                                </Tooltip>
+                            </Stack>
+                            {form.socialLinks.length === 0 ? (
+                                <Typography variant="body2" color="text.secondary">No social links.</Typography>
+                            ) : (
+                                <Stack spacing={1}>
+                                    {form.socialLinks.map((link, i) => (
+                                        <Stack key={i} direction="row" spacing={1} alignItems="center">
+                                            <TextField
+                                                size="small" label="Type" value={link.type}
+                                                onChange={e => setSocialLinks(form.socialLinks.map((l, j) => j === i ? { ...l, type: e.target.value } : l))}
+                                                placeholder="Instagram"
+                                                sx={{ width: 130, flexShrink: 0 }}
+                                            />
+                                            <TextField
+                                                size="small" fullWidth label="URL" value={link.url}
+                                                onChange={e => setSocialLinks(form.socialLinks.map((l, j) => j === i ? { ...l, url: e.target.value } : l))}
+                                                placeholder="https://…"
+                                            />
+                                            <IconButton size="small" color="error"
+                                                onClick={() => setSocialLinks(form.socialLinks.filter((_, j) => j !== i))}>
+                                                <DeleteIcon fontSize="small" />
+                                            </IconButton>
+                                        </Stack>
+                                    ))}
+                                </Stack>
+                            )}
+                        </Box>
                         <BilingualTextField
                             label="Description"
                             valueIs={form.description}
@@ -425,7 +484,7 @@ export default function OrganizerDetailPage({ onNotify }: Props) {
                             fullWidth
                         />
                         <Alert severity="info" variant="outlined" sx={{ py: 0.5 }}>
-                            Contact name, website and description are shown publicly on the organizer page.
+                            Contact name, website, social links and description are shown publicly on the organizer page.
                         </Alert>
                         <Stack direction="row" justifyContent="space-between" alignItems="center">
                             <Button

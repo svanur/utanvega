@@ -913,7 +913,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                                 <IconButton
                                                     size="small"
                                                     aria-label={link.type}
-                                                    onClick={() => window.open(link.url, '_blank', 'noopener')}
+                                                    onClick={() => window.open(link.url, '_blank', 'noopener,noreferrer')}
                                                     sx={{ color: 'text.secondary' }}
                                                 >
                                                     {icon}

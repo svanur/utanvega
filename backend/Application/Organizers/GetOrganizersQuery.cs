@@ -21,13 +21,14 @@ public class GetOrganizersQueryHandler : IRequestHandler<GetOrganizersQuery, Lis
         var raw = await _context.Organizers
             .AsNoTracking()
             .OrderBy(o => o.Name)
-            .Select(o => new { o.Id, o.Name, o.Slug, o.Kennitala, o.Phone, o.Email, o.Website, o.Description, o.DescriptionEn, o.ContactName, EventCount = o.Events.Count, o.CreatedAt, o.UpdatedAt, o.TranslationHashes })
+            .Select(o => new { o.Id, o.Name, o.Slug, o.Kennitala, o.Phone, o.Email, o.Website, o.Description, o.DescriptionEn, o.ContactName, EventCount = o.Events.Count, o.CreatedAt, o.UpdatedAt, o.TranslationHashes, o.SocialLinks })
             .ToListAsync(cancellationToken);
 
         return raw.Select(o => new OrganizerDto(
             o.Id, o.Name, o.Slug, o.Kennitala, o.Phone, o.Email, o.Website,
             o.Description, o.DescriptionEn, o.ContactName, o.EventCount, o.CreatedAt, o.UpdatedAt,
-            o.TranslationHashes == null ? null : JsonSerializer.Deserialize<Dictionary<string, string>>(o.TranslationHashes)
+            o.TranslationHashes == null ? null : JsonSerializer.Deserialize<Dictionary<string, string>>(o.TranslationHashes),
+            o.SocialLinks
         )).ToList();
     }
 }
