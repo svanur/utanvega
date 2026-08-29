@@ -41,6 +41,9 @@ const shortcutGroups: ShortcutGroup[] = [
             { keys: ['g', 'a'], description: 'Analytics' },
             { keys: ['g', 'n'], description: 'Sponsors' },
             { keys: ['g', 'p'], description: 'Pools' },
+            { keys: ['j'], description: 'Next row (list pages)' },
+            { keys: ['k'], description: 'Previous row (list pages)' },
+            { keys: ['Enter / o'], description: 'Open focused row (list pages)' },
         ],
     },
     {

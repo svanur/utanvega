@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Alert,
@@ -33,6 +33,7 @@ import PhoneIcon from '@mui/icons-material/Phone';
 import SearchIcon from '@mui/icons-material/Search';
 import TranslateIcon from '@mui/icons-material/Translate';
 import { useOrganizers, type OrganizerDto } from '../hooks/useOrganizers';
+import { useRowFocus } from '../hooks/useRowFocus';
 import { trimToUndefined } from '../utils/strings';
 import BilingualTextField from '../components/BilingualTextField';
 import { useTranslate } from '../hooks/useTranslate';
@@ -119,6 +120,13 @@ export default function OrganizersPage({ onNotify }: Props) {
             return sortDir === 'asc' ? cmp : -cmp;
         });
 
+    // j/k row focus + Enter/o to open — scrolled into view whenever it changes.
+    const { focusedIndex: focusedOrgIndex } = useRowFocus(filtered, (org) => navigate(`/organizers/${org.slug}`));
+    const focusedOrgRowRef = useRef<HTMLTableRowElement>(null);
+    useEffect(() => {
+        focusedOrgRowRef.current?.scrollIntoView({ block: 'nearest' });
+    }, [focusedOrgIndex]);
+
     return (
         <Box sx={{ maxWidth: 1100, mx: 'auto' }}>
             <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1 }}>
@@ -183,11 +191,15 @@ export default function OrganizersPage({ onNotify }: Props) {
                                     </TableCell>
                                 </TableRow>
                             )}
-                            {filtered.map(org => (
+                            {filtered.map((org, idx) => (
                                 <TableRow
                                     key={org.id}
+                                    ref={idx === focusedOrgIndex ? focusedOrgRowRef : undefined}
                                     hover
-                                    sx={{ cursor: 'pointer' }}
+                                    sx={(theme) => ({
+                                        cursor: 'pointer',
+                                        ...(idx === focusedOrgIndex && { outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: -2 }),
+                                    })}
                                     onClick={() => navigate(`/organizers/${org.slug}`)}
                                 >
                                     <TableCell>
