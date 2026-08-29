@@ -3,17 +3,21 @@ import {
   Box, Typography, Paper, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, IconButton, Button, TextField, Chip, Dialog,
   DialogTitle, DialogContent, DialogActions, CircularProgress, InputAdornment,
+  Tooltip,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
+import LockIcon from '@mui/icons-material/Lock';
+import LockOpenIcon from '@mui/icons-material/LockOpen';
 import { useTags, TagDto } from '../hooks/useTags';
 import { apiFetch } from '../hooks/api';
 import BilingualTextField from '../components/BilingualTextField';
 import { useTranslate } from '../hooks/useTranslate';
 import TranslateIcon from '@mui/icons-material/Translate';
+import { trimToUndefined } from '../utils/strings';
 
 const PRESET_COLORS = [
   '#2196f3', '#4caf50', '#ff9800', '#f44336', '#9c27b0',
@@ -26,7 +30,8 @@ interface TagManagementProps {
 
 export default function TagManagement({ onNotify }: TagManagementProps) {
   const { tags, loading, refresh } = useTags();
-  const [editTag, setEditTag] = useState<{ id?: string; name: string; nameEn?: string; color: string | null } | null>(null);
+  const [editTag, setEditTag] = useState<{ id?: string; name: string; nameEn?: string; color: string | null; slug?: string } | null>(null);
+  const [slugUnlocked, setSlugUnlocked] = useState(false);
   const [saving, setSaving] = useState(false);
   const { translate, translating } = useTranslate(msg => onNotify(msg, 'error'));
   const [searchQuery, setSearchQuery] = useState('');
@@ -44,7 +49,12 @@ export default function TagManagement({ onNotify }: TagManagementProps) {
       if (editTag.id) {
         await apiFetch(`/api/v1/admin/tags/${editTag.id}`, {
           method: 'PUT',
-          body: JSON.stringify({ name: editTag.name, nameEn: editTag.nameEn || undefined, color: editTag.color }),
+          body: JSON.stringify({
+            name: editTag.name,
+            nameEn: editTag.nameEn || undefined,
+            color: editTag.color,
+            slug: slugUnlocked ? trimToUndefined(editTag.slug ?? '') : undefined,
+          }),
         });
         onNotify(`Tag "${editTag.name}" updated`, 'success');
       } else {
@@ -104,7 +114,10 @@ export default function TagManagement({ onNotify }: TagManagementProps) {
           <Button
             variant="contained"
             startIcon={<AddIcon />}
-            onClick={() => setEditTag({ name: '', color: PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)] })}
+            onClick={() => {
+              setEditTag({ name: '', color: PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)] });
+              setSlugUnlocked(false);
+            }}
           >
             New Tag
           </Button>
@@ -134,7 +147,10 @@ export default function TagManagement({ onNotify }: TagManagementProps) {
                 <TableCell>{tag.slug}</TableCell>
                 <TableCell align="center">{tag.trailCount}</TableCell>
                 <TableCell align="right">
-                  <IconButton size="small" onClick={() => setEditTag({ id: tag.id, name: tag.name, nameEn: tag.nameEn ?? undefined, color: tag.color })}>
+                  <IconButton size="small" onClick={() => {
+                    setEditTag({ id: tag.id, name: tag.name, nameEn: tag.nameEn ?? undefined, color: tag.color, slug: tag.slug });
+                    setSlugUnlocked(false);
+                  }}>
                     <EditIcon fontSize="small" />
                   </IconButton>
                   <IconButton size="small" color="error" onClick={() => handleDelete(tag)}>
@@ -170,6 +186,29 @@ export default function TagManagement({ onNotify }: TagManagementProps) {
             sx={{ mt: 1, mb: 2 }}
             autoFocus
           />
+          {editTag?.id && (
+            <TextField
+              label="Slug"
+              value={editTag.slug ?? ''}
+              onChange={e => setEditTag(prev => prev ? { ...prev, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-') } : null)}
+              fullWidth
+              disabled={!slugUnlocked}
+              helperText={slugUnlocked ? 'Changing the slug breaks existing bookmarks and shared links.' : 'Lowercase letters, numbers and hyphens only'}
+              inputProps={{ style: { fontFamily: 'monospace' } }}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <Tooltip title={slugUnlocked ? 'Lock slug' : 'Changing the slug will break existing bookmarks or shared links. Click to unlock.'}>
+                      <IconButton size="small" onClick={() => setSlugUnlocked(v => !v)} color={slugUnlocked ? 'warning' : 'default'}>
+                        {slugUnlocked ? <LockOpenIcon fontSize="small" /> : <LockIcon fontSize="small" />}
+                      </IconButton>
+                    </Tooltip>
+                  </InputAdornment>
+                ),
+              }}
+              sx={{ mb: 2 }}
+            />
+          )}
           <Typography variant="subtitle2" gutterBottom>Color</Typography>
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
             {PRESET_COLORS.map(c => (
