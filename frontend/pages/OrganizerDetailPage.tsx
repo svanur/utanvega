@@ -133,7 +133,7 @@ export default function OrganizerDetailPage({ mode, onToggleMode }: OrganizerDet
                                                 <IconButton
                                                     size="small"
                                                     aria-label={link.type}
-                                                    onClick={() => window.open(link.url, '_blank', 'noopener')}
+                                                    onClick={() => window.open(link.url, '_blank', 'noopener,noreferrer')}
                                                     sx={{ color: 'text.secondary' }}
                                                 >
                                                     {icon}
