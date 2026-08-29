@@ -1,4 +1,5 @@
 using FluentValidation;
+using Utanvega.Backend.Application.Validation;
 using Utanvega.Backend.Core.Entities;
 
 namespace Utanvega.Backend.Application.Events.Commands.CreateEvent;
@@ -19,17 +20,17 @@ public class CreateEventCommandValidator : AbstractValidator<CreateEventCommand>
 
         RuleFor(x => x.Type)
             .NotEmpty()
-            .Must(v => Enum.TryParse<EventType>(v, ignoreCase: true, out _))
+            .Must(EnumValidation.IsDefined<EventType>)
             .WithMessage($"Type must be one of: {string.Join(", ", Enum.GetNames<EventType>())}.");
 
         RuleFor(x => x.ActivityType)
             .NotEmpty()
-            .Must(v => Enum.TryParse<ActivityType>(v, ignoreCase: true, out _))
+            .Must(EnumValidation.IsDefined<ActivityType>)
             .WithMessage($"ActivityType must be one of: {string.Join(", ", Enum.GetNames<ActivityType>())}.");
 
         RuleFor(x => x.Status)
             .NotEmpty()
-            .Must(v => Enum.TryParse<EventStatus>(v, ignoreCase: true, out _))
+            .Must(EnumValidation.IsDefined<EventStatus>)
             .WithMessage($"Status must be one of: {string.Join(", ", Enum.GetNames<EventStatus>())}.");
 
         RuleFor(x => x.OrganizerName)

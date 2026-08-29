@@ -1,4 +1,5 @@
 using FluentValidation;
+using Utanvega.Backend.Application.Validation;
 using Utanvega.Backend.Core.Entities;
 
 namespace Utanvega.Backend.Application.Locations.Commands.CreateLocation;
@@ -19,7 +20,7 @@ public class CreateLocationCommandValidator : AbstractValidator<CreateLocationCo
 
         RuleFor(x => x.Type)
             .NotEmpty()
-            .Must(v => Enum.TryParse<LocationType>(v, ignoreCase: true, out _))
+            .Must(EnumValidation.IsDefined<LocationType>)
             .WithMessage($"Type must be one of: {string.Join(", ", Enum.GetNames<LocationType>())}.");
 
         RuleFor(x => x.Latitude)
