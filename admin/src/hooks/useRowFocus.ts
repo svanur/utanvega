@@ -1,6 +1,13 @@
 import { useState } from 'react';
 import { usePageShortcuts } from './usePageShortcuts';
 
+// A MUI Dialog is open somewhere on the page. Row-focus shortcuts must back off entirely
+// while that's true — Enter in particular needs to reach the dialog's own focused button
+// (e.g. "Create"/"Save") instead of being preventDefault()'d by the row-focus handler.
+function isDialogOpen(): boolean {
+  return document.querySelector('[role="dialog"]') !== null;
+}
+
 /**
  * Local j/k/Enter/o row-focus for list pages. Tracks a cursor position within `rows`,
  * independent of any checkbox/selection state, and opens the focused row via `onOpen`.
@@ -13,10 +20,10 @@ export function useRowFocus<T>(rows: T[], onOpen: (row: T) => void) {
   const focusedIndex = rows.length === 0 ? -1 : Math.min(rawIndex, rows.length - 1);
 
   usePageShortcuts([
-    { key: 'j', handler: () => { if (rows.length > 0) setRawIndex(Math.min(focusedIndex + 1, rows.length - 1)); } },
-    { key: 'k', handler: () => { if (rows.length > 0) setRawIndex(Math.max(focusedIndex - 1, 0)); } },
-    { key: 'Enter', handler: () => { const row = rows[focusedIndex]; if (row) onOpen(row); } },
-    { key: 'o', handler: () => { const row = rows[focusedIndex]; if (row) onOpen(row); } },
+    { key: 'j', skip: isDialogOpen, handler: () => { if (rows.length > 0) setRawIndex(Math.min(focusedIndex + 1, rows.length - 1)); } },
+    { key: 'k', skip: isDialogOpen, handler: () => { if (rows.length > 0) setRawIndex(Math.max(focusedIndex - 1, 0)); } },
+    { key: 'Enter', skip: isDialogOpen, handler: () => { const row = rows[focusedIndex]; if (row) onOpen(row); } },
+    { key: 'o', skip: isDialogOpen, handler: () => { const row = rows[focusedIndex]; if (row) onOpen(row); } },
   ]);
 
   return { focusedIndex, setFocusedIndex: setRawIndex };
