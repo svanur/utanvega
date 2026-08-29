@@ -174,6 +174,10 @@ internal class TestDbContext : UtanvegaDbContext
             entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
             entity.Property(e => e.Slug).IsRequired().HasMaxLength(200);
             entity.HasIndex(e => e.Slug).IsUnique();
+            entity.Property(e => e.SocialLinks).HasConversion(
+                v => v == null ? null : JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                v => v == null ? null : JsonSerializer.Deserialize<System.Collections.Generic.List<Core.Entities.SocialLink>>(v, (JsonSerializerOptions?)null)
+            );
         });
 
         modelBuilder.Entity<Core.Entities.EventEdition>(entity =>

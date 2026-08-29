@@ -199,6 +199,78 @@ public class OrganizerHandlerTests : IDisposable
         Assert.False(success);
     }
 
+    [Fact]
+    public async Task Update_Organizer_SavesSocialLinks()
+    {
+        Guid orgId;
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new CreateOrganizerCommandHandler(ctx);
+            (orgId, _) = await handler.Handle(new CreateOrganizerCommand(
+                Name: "Social Org", Kennitala: null, Phone: null, Email: null,
+                Website: null, Description: null, ContactName: null
+            ), CancellationToken.None);
+        }
+
+        var links = new List<SocialLink>
+        {
+            new() { Type = "Instagram", Url = "https://instagram.com/socialorg" },
+            new() { Type = "Facebook", Url = "https://facebook.com/socialorg" },
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new UpdateOrganizerCommandHandler(ctx);
+            await handler.Handle(new UpdateOrganizerCommand(
+                Id: orgId, Name: "Social Org", Kennitala: null, Phone: null,
+                Email: null, Website: null, Description: null, ContactName: null,
+                SocialLinks: links
+            ), CancellationToken.None);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        var org = await verifyCtx.Organizers.FindAsync(orgId);
+        Assert.NotNull(org!.SocialLinks);
+        Assert.Equal(2, org.SocialLinks!.Count);
+        Assert.Equal("Instagram", org.SocialLinks[0].Type);
+        Assert.Equal("https://instagram.com/socialorg", org.SocialLinks[0].Url);
+    }
+
+    [Fact]
+    public async Task Update_Organizer_ClearsSocialLinks_WhenNull()
+    {
+        Guid orgId;
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new CreateOrganizerCommandHandler(ctx);
+            (orgId, _) = await handler.Handle(new CreateOrganizerCommand(
+                Name: "Org With Links", Kennitala: null, Phone: null, Email: null,
+                Website: null, Description: null, ContactName: null
+            ), CancellationToken.None);
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var org = await ctx.Organizers.FindAsync(orgId);
+            org!.SocialLinks = [new SocialLink { Type = "Facebook", Url = "https://facebook.com/x" }];
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new UpdateOrganizerCommandHandler(ctx);
+            await handler.Handle(new UpdateOrganizerCommand(
+                Id: orgId, Name: "Org With Links", Kennitala: null, Phone: null,
+                Email: null, Website: null, Description: null, ContactName: null,
+                SocialLinks: null
+            ), CancellationToken.None);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        var updated = await verifyCtx.Organizers.FindAsync(orgId);
+        Assert.Null(updated!.SocialLinks);
+    }
+
     // ─── DeleteOrganizerCommand ───
 
     [Fact]

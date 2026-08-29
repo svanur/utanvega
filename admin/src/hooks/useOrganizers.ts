@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from './api';
+import type { SocialLink } from './useEvents';
 
 export interface OrganizerDto {
     id: string;
@@ -16,6 +17,7 @@ export interface OrganizerDto {
     createdAt: string;
     updatedAt: string | null;
     translationHashes?: Record<string, string>;
+    socialLinks?: SocialLink[] | null;
 }
 
 export interface CreateOrganizerInput {
@@ -32,6 +34,7 @@ export interface CreateOrganizerInput {
 export interface UpdateOrganizerInput extends CreateOrganizerInput {
     id: string;
     slug?: string;
+    socialLinks?: SocialLink[] | null;
 }
 
 const ORGANIZERS_QUERY_KEY = ['admin', 'organizers'] as const;

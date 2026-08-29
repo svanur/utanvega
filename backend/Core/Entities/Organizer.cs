@@ -13,6 +13,8 @@ public class Organizer
     public string? DescriptionEn { get; set; }
     public string? ContactName { get; set; }
 
+    public List<SocialLink>? SocialLinks { get; set; }
+
     public string? TranslationHashes { get; set; }
 
     // Auditing
