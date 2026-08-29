@@ -1351,6 +1351,8 @@ app.MapPut("/api/v1/admin/tags/{id:guid}", [Authorize(Policy = "AdminOnly")] asy
     if (tag == null) return Results.NotFound();
     tag.Name = dto.Name;
     tag.NameEn = dto.NameEn;
+    if (!string.IsNullOrWhiteSpace(dto.Slug))
+        tag.Slug = dto.Slug.Trim();
     tag.Color = dto.Color;
     if (dto.TranslationHashes != null)
         tag.TranslationHashes = System.Text.Json.JsonSerializer.Serialize(dto.TranslationHashes);
@@ -2270,7 +2272,7 @@ public record SubmitFeedbackRequest(
     string? StepsToReproduce, string? BrowserInfo, string? ScreenshotUrl);
 public record PatchFeedbackRequest(
     string? Status, string? Priority, int? GitHubIssue, bool? ClearGitHubIssue, string? AdminComment);
-public record TagCreateDto(string Name, string? Color, string? NameEn = null, Dictionary<string, string>? TranslationHashes = null);
+public record TagCreateDto(string Name, string? Color, string? NameEn = null, Dictionary<string, string>? TranslationHashes = null, string? Slug = null);
 public record TranslateRequest(List<string> Texts);
 public record BulkAddTagRequest(List<Guid> TrailIds, Guid TagId);
 public record TrailLocationAddRequest(Guid LocationId, string? Role);
