@@ -35,7 +35,6 @@ import KeyboardIcon from '@mui/icons-material/Keyboard';
 import FeedbackIcon from '@mui/icons-material/Feedback';
 
 // Lazy-loaded pages (only the active page's chunk needs to load)
-const TrailList = lazy(() => import('./pages/TrailList'));
 const TrailsListPage = lazy(() => import('./pages/TrailsListPage'));
 const TrailDetailPage = lazy(() => import('./pages/TrailDetailPage'));
 const LocationList = lazy(() => import('./pages/LocationList').then(m => ({ default: m.LocationList })));
@@ -46,7 +45,6 @@ const TrailMapView = lazy(() => import('./pages/TrailMapView'));
 const TagManagement = lazy(() => import('./pages/TagManagement'));
 const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));
 const FeatureFlagsPage = lazy(() => import('./pages/FeatureFlagsPage'));
-const EventList = lazy(() => import('./pages/EventList'));
 const EventsListPage = lazy(() => import('./pages/EventsListPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const HeroThemesPage = lazy(() => import('./pages/HeroThemesPage'));
@@ -97,8 +95,8 @@ const PAGE_PATHS: Record<PageKey, string> = {
 };
 
 function pathToPage(pathname: string): PageKey {
-  if (pathname.startsWith('/events-old') || pathname.startsWith('/events')) return 'events';
-  if (pathname.startsWith('/trails-old') || pathname.startsWith('/trails')) return 'trails';
+  if (pathname.startsWith('/events')) return 'events';
+  if (pathname.startsWith('/trails')) return 'trails';
   if (pathname.startsWith('/organizers')) return 'organizers';
   const entry = Object.entries(PAGE_PATHS).find(([, path]) => path === pathname);
   return (entry?.[0] as PageKey) ?? 'dashboard';
@@ -358,7 +356,6 @@ function AdminContent() {
           ) : currentPage === 'trails' ? (
             <Routes>
               <Route path="/trails/:idOrSlug" element={<TrailDetailPage onNotify={notify} />} />
-              <Route path="/trails-old" element={<TrailList key={refreshTrigger} onNotify={notify} initialSearch={searchTerm} />} />
               <Route path="/trails" element={<TrailsListPage onNotify={notify} initialSearch={searchTerm} />} />
             </Routes>
           ) : currentPage === 'health' ? (
@@ -381,12 +378,6 @@ function AdminContent() {
                 <EventDetailPage
                   onNotify={notify}
                   onNavigateToRaceManager={date => { setRaceDayInitialDate(date); setCurrentPage('race-day'); }}
-                />
-              } />
-              <Route path="/events-old" element={
-                <EventList
-                  onNotify={notify}
-                  onViewEventDetail={slug => navigate(`/events/${slug}`)}
                 />
               } />
               <Route path="/events" element={
