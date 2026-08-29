@@ -100,6 +100,16 @@ Work moves through a three-agent pipeline defined in `.claude/agents/`. One issu
 - **programmer** — implements the work order, runs the checks, commits, pushes a feature branch, opens the PR, and applies review fixes.
 - **tester** — reviews the PR **cold** (PR number only, never the Programmer's reasoning), posts the review as a PR comment. Cannot edit code.
 
+### Creating issues
+
+`/issue <rough description>` puts the Scrum Master into drafting mode: it reads the relevant code,
+checks for duplicates, drafts in the `.github/agent-issue-template.md` format, shows you the draft,
+and files it only after you approve.
+
+It files with **area labels only**. It never applies `agent-ready`, and it never creates an issue
+during a `/go` cycle — an agent that can both write and pick the backlog can manufacture its own
+work, and then the pipeline is running on the agent's intent rather than yours.
+
 ### Issue ordering
 
 Add the **`agent-ready`** label to an issue when it's ready to be picked up. Among labelled issues
