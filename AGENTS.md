@@ -134,12 +134,13 @@ escalates to the owner rather than continuing.
 ### Git authority
 
 Inside the pipeline, agents are pre-authorized to commit and push to a **feature branch** and open a
-PR against `main`. No per-push confirmation is needed — the `/go` gate and the PR review are the
+PR against `develop`. No per-push confirmation is needed — the `/go` gate and the PR review are the
 approval points.
 
 These remain human-only, always:
 - **Merging any PR.** Agents never merge and never approve.
-- **Any write to `main`** — no commits, no pushes, no force-pushes.
+- **Any direct write to `develop` or `main`** — no commits, no pushes, no force-pushes. Feature
+  branches cut from `develop` and PR back into `develop`; `main` is release-only.
 - Force-pushing any branch, `git reset --hard`, or `git clean -fd` on work the agent did not create.
 - Changes to CI workflows, `fly.toml`, `Dockerfile`, deploy config, or secrets — unless the issue
   explicitly asks for them.

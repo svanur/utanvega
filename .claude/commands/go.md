@@ -72,4 +72,4 @@ Then **end your turn**. Do not merge. Do not continue.
 
 ## Reporting honestly
 
-Relay what the agents actually reported. If the Programmer said a build failed, say the build failed. If it skipped a check, say it skipped it. Never smooth a cycle's rough edges into a clean-looking summary — the owner is about to merge this into `main` on the strength of your report.
+Relay what the agents actually reported. If the Programmer said a build failed, say the build failed. If it skipped a check, say it skipped it. Never smooth a cycle's rough edges into a clean-looking summary — the owner is about to merge this into `develop` on the strength of your report.

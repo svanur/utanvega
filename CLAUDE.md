@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-> This repo also has `AGENTS.md` at the root — read it too. It contains detailed backend/frontend/admin coding rules, gotchas, and the three-agent workflow policy (`/go` pipeline; agents push feature branches and open PRs, but never write to `main` and never merge). This file focuses on commands and architecture; avoid duplicating AGENTS.md.
+> This repo also has `AGENTS.md` at the root — read it too. It contains detailed backend/frontend/admin coding rules, gotchas, and the three-agent workflow policy (`/go` pipeline; agents cut feature branches from `develop` and open PRs against `develop`, but never write to `develop` or `main` directly, and never merge). This file focuses on commands and architecture; avoid duplicating AGENTS.md.
 
 ## Project
 
