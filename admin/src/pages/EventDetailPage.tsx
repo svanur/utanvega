@@ -540,9 +540,6 @@ function SortableRaceRow({ race, edition, isActive, staleTx, detail, onOpen, onD
             sx={{ cursor: race.status === 'Cancelled' ? 'default' : 'pointer' }} />
         </Tooltip>
       </TableCell>
-      <TableCell>
-        <Typography variant="body2" color="text.secondary">{race.maxParticipants ?? '—'}</Typography>
-      </TableCell>
       <TableCell align="right" onClick={e => e.stopPropagation()}>
         <Stack direction="row" justifyContent="flex-end" spacing={0.25}>
           <Tooltip title="Edit race">
@@ -1454,13 +1451,12 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                       <TableRow sx={{ '& th': { fontWeight: 600, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 0.5, color: 'text.secondary' } }}>
                         <TableCell sx={{ width: 24, px: 0.5 }} />
                         <TableCell>Name</TableCell>
-                        <TableCell>Distance</TableCell>
+                        <TableCell>Distance Label</TableCell>
                         <TableCell>Result type</TableCell>
                         <TableCell>Route</TableCell>
                         <TableCell>Date / Start / Limit</TableCell>
                         <TableCell>Status</TableCell>
                         <TableCell>Tickets</TableCell>
-                        <TableCell>Max</TableCell>
                         <TableCell align="right" />
                       </TableRow>
                     </TableHead>
