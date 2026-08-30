@@ -878,10 +878,10 @@ app.MapPut("/api/v1/admin/trails/{id:guid}", [Authorize(Policy = "AdminOnly")] a
 })
 .WithName("UpdateTrail");
 
-app.MapPatch("/api/v1/admin/trails/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, PatchTrailCommand command, IMediator mediator) =>
+app.MapPatch("/api/v1/admin/trails/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, PatchTrailCommand command, IMediator mediator, HttpContext httpContext) =>
 {
     if (id != command.Id) return Results.BadRequest("ID mismatch");
-    var success = await mediator.Send(command);
+    var success = await mediator.Send(command with { ActorUserId = GetAuthenticatedUserId(httpContext) });
     return success ? Results.NoContent() : Results.NotFound();
 })
 .WithName("PatchTrail");
@@ -1283,9 +1283,9 @@ app.MapGet("/api/v1/admin/locations", [Authorize(Policy = "AdminOnly")] async (G
 })
 .WithName("GetLocations");
 
-app.MapPost("/api/v1/admin/locations", [Authorize(Policy = "AdminOnly")] async (CreateLocationCommand command, IMediator mediator) =>
+app.MapPost("/api/v1/admin/locations", [Authorize(Policy = "AdminOnly")] async (CreateLocationCommand command, IMediator mediator, HttpContext httpContext) =>
 {
-    var id = await mediator.Send(command);
+    var id = await mediator.Send(command with { ActorUserId = GetAuthenticatedUserId(httpContext) });
     return Results.Created($"/api/v1/admin/locations/{id}", new { id });
 })
 .WithName("CreateLocation");
