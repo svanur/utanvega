@@ -1215,8 +1215,10 @@
             "invalidInput": "Please enter a valid age (5–100) and finish time.",
             "source": "Based on the 2025 USATF MLDR Road Age Grading Tables — Alan Jones",
             "examples": {
-                "m60_5k":    "Male 60, 5K in 22:00",
-                "f45_half":  "Female 45, Half marathon in 1:50:00"
+                "m27_10k":      "Male 27, 10K in 27:40",
+                "f52_half":     "Female 52, Half marathon in 1:25:26",
+                "m60_5k":       "Male 60, 5K in 22:00",
+                "f35_marathon": "Female 35, Marathon in 4:15:00"
             },
             "ageTable": {
                 "title": "Equivalent times by age",

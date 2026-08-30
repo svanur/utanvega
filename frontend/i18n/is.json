@@ -1215,8 +1215,10 @@
             "invalidInput": "Sláðu inn aldur (5–100) og lokatíma.",
             "source": "Byggt á 2025 USATF MLDR Road Age Grading Tables — Alan Jones",
             "examples": {
-                "m60_5k":    "Karl 60, 5K á 22:00",
-                "f45_half":  "Kona 45, Hálfmaraþon á 1:50:00"
+                "m27_10k":      "Karl 27, 10K á 27:40",
+                "f52_half":     "Kona 52, Hálfmaraþon á 1:25:26",
+                "m60_5k":       "Karl 60, 5K á 22:00",
+                "f35_marathon": "Kona 35, Maraþon á 4:15:00"
             },
             "ageTable": {
                 "title": "Jafngildur tími eftir aldri",
