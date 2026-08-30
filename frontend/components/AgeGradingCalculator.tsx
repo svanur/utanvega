@@ -59,7 +59,7 @@ export default function AgeGradingCalculator() {
 
     const ageNum = parseInt(age, 10);
     const runnerSeconds = parseTimeToSeconds(timeStr);
-    const distance = AG_DISTANCES.find(d => d.label === distanceKey) ?? AG_DISTANCES[0];
+    const distance = AG_DISTANCES.find(d => d.key === distanceKey) ?? AG_DISTANCES[0];
     const result = (runnerSeconds && !isNaN(ageNum) && ageNum >= 5 && ageNum <= 100)
         ? calculateAgeGrade(gender, ageNum, distance.km, runnerSeconds)
         : null;
@@ -146,7 +146,9 @@ export default function AgeGradingCalculator() {
                         onChange={e => setDistanceKey(e.target.value)}
                     >
                         {AG_DISTANCES.map(d => (
-                            <MenuItem key={d.label} value={d.label}>{d.label}</MenuItem>
+                            <MenuItem key={d.key} value={d.key}>
+                                {t(`tools.ageGrading.distanceNames.${d.i18nKey}`)}
+                            </MenuItem>
                         ))}
                     </Select>
                 </FormControl>

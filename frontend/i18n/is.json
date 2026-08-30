@@ -1186,6 +1186,14 @@
             "female": "Kona",
             "age": "Aldur",
             "distance": "Vegalengd",
+            "distanceNames": {
+                "5k": "5K",
+                "10k": "10K",
+                "half": "Hálfmaraþon",
+                "marathon": "Maraþon",
+                "50k": "50K",
+                "100k": "100K"
+            },
             "yourTime": "Tími þinn",
             "timeHelp": "t.d. 22:30 eða 1:45:00",
             "ageGradedPct": "Hlutfall aldursflokks",
