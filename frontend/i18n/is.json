@@ -1221,7 +1221,9 @@
                 "subtitle": "Hvaða tíma þyrfti hlaupari til að jafna {{pct}}% frammistöðu þína?",
                 "age": "Aldur",
                 "equivalentTime": "Jafngildur tími",
-                "yourAge": "Þú"
+                "yourAge": "Þú",
+                "showFullRange": "Sýna alla aldra ({{min}}–{{max}})",
+                "showFewerAges": "Sýna færri aldra"
             }
         }
     },

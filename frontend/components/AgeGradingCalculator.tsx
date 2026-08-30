@@ -13,17 +13,17 @@ import { useSearchParams } from 'react-router-dom';
 import TimeSlider from './TimeSlider';
 import {
     AG_DISTANCES, calculateAgeGrade, formatSeconds, parseTimeToSeconds,
-    getAgeFactor, getTier,
+    getAgeFactor, getTier, getAgeTableRows,
 } from '../data/ageGrading';
 import type { Gender } from '../data/ageGrading';
-
-const AGE_TABLE_ROWS = [20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80];
+import { MIN_AGE, MAX_AGE } from '../data/ageGradingFactors.generated';
 
 export default function AgeGradingCalculator() {
     const { t } = useTranslation();
     const [searchParams, setSearchParams] = useSearchParams();
 
     const [showExplainer, setShowExplainer] = useState(false);
+    const [showFullAgeTable, setShowFullAgeTable] = useState(false);
     const [gender, setGender] = useState<Gender>(() => (searchParams.get('gender') as Gender) ?? 'male');
     const [age, setAge] = useState(() => searchParams.get('age') ?? '');
     const [distanceKey, setDistanceKey] = useState(() => searchParams.get('dist') ?? '5K');
@@ -340,9 +340,7 @@ export default function AgeGradingCalculator() {
                             <TableBody>
                                 {(() => {
                                     const { tierColor } = getTier(result.percentage);
-                                    const rows = AGE_TABLE_ROWS.includes(ageNum)
-                                        ? AGE_TABLE_ROWS
-                                        : [...AGE_TABLE_ROWS, ageNum].sort((a, b) => a - b);
+                                    const rows = getAgeTableRows(ageNum, showFullAgeTable);
                                     return rows.map(rowAge => {
                                         const factor = getAgeFactor(gender, rowAge, distanceKey);
                                         const eqSeconds = factor > 0 ? result.ageGradedSeconds / factor : null;
@@ -373,6 +371,17 @@ export default function AgeGradingCalculator() {
                             </TableBody>
                         </Table>
                     </TableContainer>
+                    <Link
+                        component="button"
+                        type="button"
+                        variant="caption"
+                        onClick={() => setShowFullAgeTable(v => !v)}
+                        sx={{ alignSelf: 'flex-start' }}
+                    >
+                        {showFullAgeTable
+                            ? t('tools.ageGrading.ageTable.showFewerAges')
+                            : t('tools.ageGrading.ageTable.showFullRange', { min: MIN_AGE, max: MAX_AGE })}
+                    </Link>
                 </Paper>
             )}
 

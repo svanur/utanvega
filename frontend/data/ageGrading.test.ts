@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { AG_DISTANCES, calculateAgeGrade, getAgeFactor, parseTimeToSeconds } from './ageGrading';
+import {
+    AG_DISTANCES, calculateAgeGrade, getAgeFactor, parseTimeToSeconds,
+    getAgeTableRows, AGE_BAND_HALF_WIDTH, AGE_TABLE_ANCHOR_ROWS,
+} from './ageGrading';
+import { MIN_AGE, MAX_AGE } from './ageGradingFactors.generated';
 
 // Spot-checks pinned against the 2025 USATF MLDR road workbooks
 // (frontend/data/source/{male,female}Road2025.xlsx, `Age Factors` sheet).
@@ -84,6 +88,80 @@ describe('calculateAgeGrade — reported case', () => {
         // Computed from the source workbook directly: OC sec 3772 / (5126 * 0.8546) * 100
         expect(result!.percentage).toBeCloseTo(86.1, 1);
         expect(result!.tier).toBe('nationalClass');
+    });
+});
+
+describe('getAgeTableRows — default (banded) view', () => {
+    it('includes a per-year row for every age within the band around a mid-range age', () => {
+        const rows = getAgeTableRows(52, false);
+        for (let a = 52 - AGE_BAND_HALF_WIDTH; a <= 52 + AGE_BAND_HALF_WIDTH; a++) {
+            expect(rows).toContain(a);
+        }
+    });
+
+    it('retains the 5-year-step anchor ages that fall outside the band', () => {
+        const rows = getAgeTableRows(52, false);
+        // 52's band is 47-57, so the 20/25/.../45 and 60/.../80 anchors survive,
+        // but the in-band anchors (50) do not need to appear twice.
+        expect(rows).toContain(20);
+        expect(rows).toContain(80);
+    });
+
+    it('includes the entered age exactly once, with no duplicate adjacent row', () => {
+        const rows = getAgeTableRows(50, false); // 50 is already an anchor age
+        const occurrences = rows.filter(a => a === 50).length;
+        expect(occurrences).toBe(1);
+    });
+
+    it('every row falls inside [MIN_AGE, MAX_AGE]', () => {
+        const rows = getAgeTableRows(52, false);
+        for (const a of rows) {
+            expect(a).toBeGreaterThanOrEqual(MIN_AGE);
+            expect(a).toBeLessThanOrEqual(MAX_AGE);
+        }
+    });
+
+    it('clamps the band at the lower bound (age near MIN_AGE) without producing out-of-range ages', () => {
+        const rows = getAgeTableRows(6, false);
+        expect(Math.min(...rows)).toBe(MIN_AGE);
+        for (const a of rows) expect(a).toBeGreaterThanOrEqual(MIN_AGE);
+        expect(rows.filter(a => a === 6).length).toBe(1);
+    });
+
+    it('clamps the band at the upper bound (age near MAX_AGE) without producing out-of-range ages', () => {
+        const rows = getAgeTableRows(98, false);
+        expect(Math.max(...rows)).toBe(MAX_AGE);
+        for (const a of rows) expect(a).toBeLessThanOrEqual(MAX_AGE);
+        expect(rows.filter(a => a === 98).length).toBe(1);
+    });
+
+    it('returns a sorted, deduplicated list', () => {
+        const rows = getAgeTableRows(33, false);
+        const sorted = [...rows].sort((a, b) => a - b);
+        expect(rows).toEqual(sorted);
+        expect(new Set(rows).size).toBe(rows.length);
+    });
+});
+
+describe('getAgeTableRows — expanded (full) view', () => {
+    it('returns every year from MIN_AGE to MAX_AGE inclusive', () => {
+        const rows = getAgeTableRows(52, true);
+        expect(rows[0]).toBe(MIN_AGE);
+        expect(rows[rows.length - 1]).toBe(MAX_AGE);
+        expect(rows.length).toBe(MAX_AGE - MIN_AGE + 1);
+    });
+
+    it('is unaffected by the entered age', () => {
+        expect(getAgeTableRows(20, true)).toEqual(getAgeTableRows(80, true));
+    });
+});
+
+describe('AGE_TABLE_ANCHOR_ROWS', () => {
+    it('stays within the real data bounds', () => {
+        for (const a of AGE_TABLE_ANCHOR_ROWS) {
+            expect(a).toBeGreaterThanOrEqual(MIN_AGE);
+            expect(a).toBeLessThanOrEqual(MAX_AGE);
+        }
     });
 });
 
