@@ -89,7 +89,10 @@ Run whatever actually applies to what you touched. Do not claim a check passed t
 - Admin: `cd admin && npm run build && npm run lint`
 
 New backend logic needs xUnit tests in `backend.Tests/`, mirroring the source layout.
-New user-facing strings need entries in **both** `frontend/i18n/en.json` and `is.json`.
+New user-facing strings in the **frontend** need entries in both `frontend/i18n/en.json` and
+`is.json`. This does **not** apply to `admin`, which is English-only — there is no `admin/src/i18n`.
+Never add an i18n layer to `admin`, even if an issue's acceptance criteria appear to ask for one;
+say so in your report instead.
 
 If a check fails, fix it. If you cannot, say so plainly in your report — never report success on a failing build.
 

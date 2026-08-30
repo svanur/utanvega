@@ -55,7 +55,9 @@ Logic errors, null/undefined handling, `async` misuse (`.Result`/`.Wait()` is ba
 
 ### 4. Repo conventions
 
-Definition of Done from `AGENTS.md`: builds without warnings; new logic has xUnit tests in `backend.Tests`; new user-facing strings in **both** `en.json` and `is.json`; file-scoped namespaces; MediatR CQRS handlers; `AsNoTracking()` on read-only queries; migrations have a reviewed `Down()`.
+Definition of Done from `AGENTS.md`: builds without warnings; new logic has xUnit tests in `backend.Tests`; new **frontend** user-facing strings in both `en.json` and `is.json` (`admin` is English-only —
+never flag a missing translation for an admin-only change, and flag it as a defect if a PR adds
+i18n to `admin`); file-scoped namespaces; MediatR CQRS handlers; `AsNoTracking()` on read-only queries; migrations have a reviewed `Down()`.
 
 ## Verdict
 
@@ -85,7 +87,8 @@ Format:
 - `path:line` — <suggestion>
 
 ### Verified
-- <what you actually checked and found correct — auth on new endpoints, 375px layout, both i18n files, etc.>
+- <what you actually checked and found correct — auth on new endpoints, 375px layout, both i18n
+  files for frontend changes, etc.>
 ```
 
 If there are no blocking findings, the verdict is **GOOD TO MERGE** and the Blocking section says "None."

@@ -57,6 +57,8 @@ CI (`.github/workflows/ci.yml`) runs backend build+test and frontend build on ev
 - No global state library; data fetching is done via custom hooks (`hooks/useTrails.ts`, `useLocations.ts`, `useFavorites.ts`, admin's `useAuth.tsx`, etc.) using direct `fetch()` against `API_URL` — there is no centralized API client.
 - Functional components only, mobile-first responsive layout.
 - Routing/composition lives in `App.tsx`; frontend also wires up i18n in `main.tsx`.
+- i18n is **`frontend` only** — the `admin` app is English-only, with no `admin/src/i18n`, no
+  `react-i18next` and no translation files; its strings are written inline in English.
 - Frontend i18n: `react-i18next`, language persisted to `localStorage('utanvega-lang')`, translations in `frontend/i18n/en.json` / `is.json` — any new user-facing string needs both. Icelandic has gendered adjectives (e.g. "leið" is feminine) — keep this in mind when adding translated strings.
 - Leaflet (`react-leaflet`) powers map components (`TrailMap`, `TrailMapView`, `LocationsPage`) — containers need explicit height.
 - Admin uses `@supabase/supabase-js` directly for auth (`admin/src/hooks/useAuth.tsx`); no such auth in frontend.

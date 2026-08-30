@@ -121,7 +121,8 @@ ACCEPTANCE CRITERIA
 <Checklist, each item objectively verifiable.>
 
 REPO-SPECIFIC REQUIREMENTS
-<Only the ones that actually apply. E.g.: new user-facing strings need both frontend/i18n/en.json and is.json; new backend logic needs xUnit tests in backend.Tests; MUI theme colours only (no hardcoded colours, breaks dark mode); mobile-first layout; AsNoTracking() for read-only queries; file-scoped namespaces.>
+<Only the ones that actually apply. E.g.: new frontend user-facing strings need both frontend/i18n/en.json and is.json (admin is
+English-only — never put an i18n requirement on an admin-scoped work order); new backend logic needs xUnit tests in backend.Tests; MUI theme colours only (no hardcoded colours, breaks dark mode); mobile-first layout; AsNoTracking() for read-only queries; file-scoped namespaces.>
 
 STARTING POINTS
 <Files worth reading first, with paths.>

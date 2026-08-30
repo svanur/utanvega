@@ -82,7 +82,10 @@ backend/
 - Code builds without warnings.
 - New logic includes basic unit tests in the `.Tests` project.
 - Sensitive strings are handled via `IConfiguration` or User Secrets.
-- Translations added to both `en.json` and `is.json` for any new user-facing text.
+- Translations added to both `en.json` and `is.json` for any new user-facing text — **`frontend`
+  only**. The `admin` app is English-only: there is no `admin/src/i18n`, no `react-i18next`, and
+  no translation files. Admin strings are written inline in English. Do not add an i18n layer to
+  `admin` to satisfy this rule; it does not apply there.
 
 ## Agent Workflow
 
