@@ -292,4 +292,31 @@ public class TrailCommandHandlerTests : IDisposable
             Assert.True(patched.NeedsReview);
         }
     }
+
+    [Fact]
+    public async Task Patch_WritesChangeLogEntry()
+    {
+        var trail = CreateTestTrail();
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Trails.Add(trail);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new PatchTrailCommandHandler(ctx, _cacheInvalidator);
+            var result = await handler.Handle(
+                new PatchTrailCommand(trail.Id, Name: "Renamed", ActorUserId: "admin-user"), CancellationToken.None);
+            Assert.True(result);
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var entry = ctx.ChangeLogs.Single(c => c.EntityId == trail.Id.ToString());
+            Assert.Equal(nameof(Trail), entry.EntityName);
+            Assert.Equal("admin-user", entry.UserId);
+            Assert.Equal("Update", entry.Action);
+        }
+    }
 }

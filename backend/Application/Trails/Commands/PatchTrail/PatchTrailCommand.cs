@@ -13,7 +13,8 @@ public record PatchTrailCommand(
     string? ActivityType = null,
     string? Difficulty = null,
     string? Status = null,
-    bool? NeedsReview = null
+    bool? NeedsReview = null,
+    string? ActorUserId = null
 ) : IRequest<bool>;
 
 public class PatchTrailCommandHandler : IRequestHandler<PatchTrailCommand, bool>
@@ -54,7 +55,7 @@ public class PatchTrailCommandHandler : IRequestHandler<PatchTrailCommand, bool>
 
         trail.UpdatedAt = DateTime.UtcNow;
 
-        await _context.SaveChangesAsync(cancellationToken);
+        await _context.SaveChangesWithAuditAsync(request.ActorUserId);
         _cacheInvalidator.InvalidateTrail(trail.Slug);
         return true;
     }

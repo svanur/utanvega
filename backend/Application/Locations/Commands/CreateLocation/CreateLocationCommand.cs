@@ -18,7 +18,8 @@ public record CreateLocationCommand(
     double? Radius,
     string? CreatedBy,
     string? NameEn = null,
-    string? DescriptionEn = null
+    string? DescriptionEn = null,
+    string? ActorUserId = null
 ) : IRequest<Guid>;
 
 public class CreateLocationCommandHandler : IRequestHandler<CreateLocationCommand, Guid>
@@ -60,7 +61,7 @@ public class CreateLocationCommandHandler : IRequestHandler<CreateLocationComman
         };
 
         _context.Locations.Add(location);
-        await _context.SaveChangesAsync(cancellationToken);
+        await _context.SaveChangesWithAuditAsync(request.ActorUserId);
         _cacheInvalidator.InvalidateLocation(slug);
 
         return location.Id;
