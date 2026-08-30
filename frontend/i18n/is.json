@@ -404,7 +404,7 @@
         },
         "terrainType": {
             "q": "Hvernig er yfirborðsgerð leiða ákveðin (flatt / hæðótt / fjallaleiðir)?",
-            "a": "Yfirborðsgerð er reiknuð sjálfkrafa út frá GPS-gögnum leiðarinnar með tveimur þáttum: hækkun á hvern km og hámarkshæð yfir sjávarmáli. Flatt: undir 20 m hækkun á km. Fjallaleiðir: hæð yfir 600 m og að minnsta kosti 30 m hækkun á km, eða hvers kyns leið með yfir 50 m hækkun á km. Hæðótt: allt þar á milli. Þröskuldar eru kvarðaðir sérstaklega fyrir íslenskar aðstæður."
+            "a": "Yfirborðsgerð er reiknuð sjálfkrafa út frá GPS-gögnum leiðarinnar með þremur þáttum: hækkun á hvern km, hámarkshæð yfir sjávarmáli, og heildarhækkun. Flatt: undir 20 m hækkun á km. Fjallaleiðir: hæð yfir 600 m og að minnsta kosti 30 m hækkun á km, hvers kyns leið með yfir 50 m hækkun á km, eða hvers kyns leið með 600 m eða meiri heildarhækkun. Hæðótt: allt þar á milli. Þröskuldar eru kvarðaðir sérstaklega fyrir íslenskar aðstæður. Þessi útreikningur er útgangspunktur — stjórnandi getur breytt yfirborðsgerð handvirkt ef hún endurspeglar ekki raunveruleikann."
         },
         "relatedTrails": {
             "q": "Hvernig eru tengdar leiðir fundnar?",
