@@ -776,6 +776,10 @@
             }
         },
         "changelog": {
+            "v1_4_0": {
+                "title": "An age-grading tool that tells the truth",
+                "description": "The age-grading tool has moved from the WMA 2015 tables to the 2025 USATF MLDR road tables. The old standards predated a decade of improvement in distance running, so every score came out too high — women's more than men's, because the women's benchmarks had fallen furthest behind. A half marathon that scored 92.1% now scores 86.1%. The tool also stopped treating everyone under 20 as a 20-year-old and everyone over 80 as an 80-year-old, so juniors and older runners finally get their own standard rather than someone else's; equivalent times can now be read year by year around your own age instead of in five-year steps; a mistyped finish time is flagged instead of returning an impossible score; and the performance tier now says what it is relative to, because \"World Class\" on its own reads as a bigger claim than it is."
+            },
             "v1_3_0": {
                 "title": "Elevation profiles, truer terrain, and links that stay put",
                 "description": "Trail pages now show an elevation profile, with climb ratio alongside the other figures. Terrain classification was rebuilt: it had quietly capped every trail below 400 m as hilly, so steep coastal routes and long climbing ultras were mislabelled — and it contradicted the rules published in the FAQ. Renaming a trail, tag or organizer no longer rewrites its public address, so links shared earlier keep working. Most of the release went into the admin tools behind the site: keyboard navigation in list views, search across organizers, clearer edition and race columns, and traffic broken down by day of week as well as by hour."

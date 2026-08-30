@@ -776,6 +776,10 @@
             }
         },
         "changelog": {
+            "v1_4_0": {
+                "title": "Aldursviðmiðun sem segir satt",
+                "description": "Aldursviðmiðunartólið notar nú 2025 USATF MLDR töflurnar í stað WMA 2015. Eldri viðmiðin voru frá tíma áður en hlaupageta tók stórstígum framförum, svo allar einkunnir voru of háar — og meira hjá konum, því þeirra viðmið höfðu dregist mest aftur úr. Hálfmaraþ on sem áður gaf 92,1% gefur nú 86,1%. Tólið hætti einnig að telja alla undir tvítugu sem tvítuga og alla yfir áttræðu sem áttræða, svo ungir og eldri hlauparar fá loksins sitt eigið viðmið; sambærilega tíma má nú lesa ár fyrir ár í kringum eigin aldur í stað fimm ára ýrepa; rangt sleginn tími er merktur í stað þess að skila ómögulegri einkunn; og frammistöðuflokkurinn segir nú við hvað er miðað, því „World Class“ eitt og sér hljómar stærra en það er."
+            },
             "v1_3_0": {
                 "title": "Hæðarsnið, réttari landslagsgerð og hlekkir sem haldast",
                 "description": "Leiðasíður sýna nú hæðarsnið, og hækkun á hvern kílómetra birtist með öðrum tölum. Útreikningur á landslagsgerð var endurgerður: hann flokkaði sjálfkrafa allar leiðir undir 400 m sem hæðóttar, svo brattar strandleiðir og langar leiðir með mikilli heildarhækkun fengu ranga merkingu — og hann stangaðist á við reglurnar sem birtar eru í algengum spurningum. Þegar leið, merki eða skipuleggjandi fær nýtt nafn breytist vefslóðin ekki lengur, svo eldri hlekkir virka áfram. Stærstur hluti útgáfunnar fór í stjórnborðið að baki vefnum: flýtilyklar í listum, leit að skipuleggjendum, skýrari dálkar fyrir útgáfur og hlaup, og umferð greind eftir vikudögum jafnt sem klukkustundum."
