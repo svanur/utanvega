@@ -1224,8 +1224,8 @@
                 "age": "Aldur",
                 "equivalentTime": "Jafngildur tími",
                 "yourAge": "Þú",
-                "showFullRange": "Sýna allan aldur (frá {{min}} – {{max}})",
-                "showFewerAges": "Sýna færri aldursbil"
+                "showFullRange": "Sýna alla aldra ({{min}}–{{max}})",
+                "showFewerAges": "Sýna færri aldra"
             }
         }
     },
