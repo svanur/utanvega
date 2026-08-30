@@ -221,6 +221,7 @@ export default function AnalyticsPage() {
         return { dayOfWeek: day, views: found?.views || 0, label: DAY_LABELS[i] };
     });
     const maxDayOfWeekViews = Math.max(...mondayFirstViews.map(d => d.views), 1);
+    const totalDayOfWeekViews = mondayFirstViews.reduce((sum, d) => sum + d.views, 0);
 
     const dayChange = formatChange(summary.viewsToday, summary.viewsYesterday, 'yesterday');
     const weekChange = formatChange(summary.viewsThisWeek, summary.viewsLastWeek, 'previous 7 days');
@@ -375,24 +376,32 @@ export default function AnalyticsPage() {
                             a second chart or a day/hour heatmap. The day label
                             sits below each cell rather than on it, so it stays
                             theme text colour instead of needing a second
-                            hardcoded colour to stay legible against the ramp. */}
+                            hardcoded colour to stay legible against the ramp.
+                            The percentage share sits beside the label for the
+                            same reason — it never has to fight the rgba ramp
+                            for contrast. */}
                         <Stack direction="row" spacing={0.5} sx={{ mt: 1.5 }}>
-                            {mondayFirstViews.map(d => (
-                                <MuiTooltip key={d.dayOfWeek} title={`${d.views.toLocaleString()} views`}>
-                                    <Box sx={{ flex: 1, textAlign: 'center' }}>
-                                        <Box
-                                            sx={{
-                                                height: 28,
-                                                borderRadius: 1,
-                                                bgcolor: `rgba(46, 125, 50, ${0.3 + (d.views / maxDayOfWeekViews) * 0.7})`,
-                                            }}
-                                        />
-                                        <Typography variant="caption" color="text.secondary" fontSize={11}>
-                                            {d.label}
-                                        </Typography>
-                                    </Box>
-                                </MuiTooltip>
-                            ))}
+                            {mondayFirstViews.map(d => {
+                                const percentage = totalDayOfWeekViews === 0
+                                    ? 0
+                                    : Math.round((d.views / totalDayOfWeekViews) * 100);
+                                return (
+                                    <MuiTooltip key={d.dayOfWeek} title={`${d.views.toLocaleString()} views`}>
+                                        <Box sx={{ flex: 1, textAlign: 'center' }}>
+                                            <Box
+                                                sx={{
+                                                    height: 28,
+                                                    borderRadius: 1,
+                                                    bgcolor: `rgba(46, 125, 50, ${0.3 + (d.views / maxDayOfWeekViews) * 0.7})`,
+                                                }}
+                                            />
+                                            <Typography variant="caption" color="text.secondary" fontSize={11}>
+                                                {d.label} {percentage}%
+                                            </Typography>
+                                        </Box>
+                                    </MuiTooltip>
+                                );
+                            })}
                         </Stack>
                     </Paper>
                 </Grid>
