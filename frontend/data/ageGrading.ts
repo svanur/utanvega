@@ -45,6 +45,41 @@ export function getAgeFactor(gender: Gender, age: number, distanceKey: string): 
     return row[Math.round(age) - MIN_AGE];
 }
 
+// How many years on each side of the entered age get a per-year row in the
+// default (non-expanded) "equivalent times by age" table — a single named
+// constant so the band width isn't a magic number scattered through the JSX.
+export const AGE_BAND_HALF_WIDTH = 5;
+
+// Fixed 5-year-step anchor ages shown outside the per-year band around the
+// entered age — the same list the table used before per-year banding existed.
+export const AGE_TABLE_ANCHOR_ROWS = [20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80];
+
+// Builds the sorted, deduplicated list of ages to render in the "equivalent
+// times by age" table. `expanded` shows every year from MIN_AGE to MAX_AGE;
+// otherwise a per-year band of AGE_BAND_HALF_WIDTH years around `enteredAge`
+// is shown, plus the fixed 5-year-step anchors that fall outside that band.
+// Always clamped to [MIN_AGE, MAX_AGE] — no out-of-range ages are produced,
+// and `enteredAge` itself always lands in the band, so it's never duplicated
+// against an adjacent anchor row.
+export function getAgeTableRows(enteredAge: number, expanded: boolean): number[] {
+    if (expanded) {
+        const rows: number[] = [];
+        for (let a = MIN_AGE; a <= MAX_AGE; a++) rows.push(a);
+        return rows;
+    }
+
+    const clampedAge = Math.min(MAX_AGE, Math.max(MIN_AGE, enteredAge));
+    const bandMin = Math.max(MIN_AGE, clampedAge - AGE_BAND_HALF_WIDTH);
+    const bandMax = Math.min(MAX_AGE, clampedAge + AGE_BAND_HALF_WIDTH);
+
+    const rows = new Set<number>();
+    for (let a = bandMin; a <= bandMax; a++) rows.add(a);
+    for (const a of AGE_TABLE_ANCHOR_ROWS) {
+        if (a >= MIN_AGE && a <= MAX_AGE && (a < bandMin || a > bandMax)) rows.add(a);
+    }
+    return Array.from(rows).sort((a, b) => a - b);
+}
+
 export interface AgeGradeResult {
     percentage: number;
     ageGradedSeconds: number;

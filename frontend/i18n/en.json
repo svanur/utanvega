@@ -1221,7 +1221,9 @@
                 "subtitle": "What time would a runner of each age need to match your {{pct}}% effort?",
                 "age": "Age",
                 "equivalentTime": "Equivalent time",
-                "yourAge": "You"
+                "yourAge": "You",
+                "showFullRange": "Show every age ({{min}}–{{max}})",
+                "showFewerAges": "Show fewer ages"
             }
         }
     },
