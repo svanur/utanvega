@@ -60,6 +60,7 @@ using Utanvega.Backend.Application.Events.Commands.UpdateRace;
 using Utanvega.Backend.Application.Events.Commands.DeleteRace;
 using Utanvega.Backend.Application.Events.Commands.GenerateEditionsForSeason;
 using Utanvega.Backend.Application.Organizers;
+using Utanvega.Backend.Application.Tags;
 using Utanvega.Backend.Application.Activities.Commands.CreateUserTrailActivity;
 using Utanvega.Backend.Application.Activities.Commands.UpdateUserTrailActivity;
 using Utanvega.Backend.Application.Activities.Commands.DeleteUserTrailActivity;
@@ -1319,58 +1320,31 @@ app.MapDelete("/api/v1/admin/locations/{id:guid}", [Authorize(Policy = "AdminOnl
 .WithName("DeleteLocation");
 
 // Tags Admin API
-app.MapGet("/api/v1/admin/tags", [Authorize(Policy = "AdminOnly")] async (UtanvegaDbContext context) =>
+app.MapGet("/api/v1/admin/tags", [Authorize(Policy = "AdminOnly")] async (IMediator mediator) =>
 {
-    var tags = await context.Tags
-        .AsNoTracking()
-        .OrderBy(t => t.Name)
-        .Select(t => new { t.Id, t.Name, t.NameEn, t.Slug, t.Color, TrailCount = t.TrailTags.Count, t.TranslationHashes })
-        .ToListAsync();
+    var tags = await mediator.Send(new GetTagsQuery());
     return Results.Ok(tags);
 })
 .WithName("GetTags");
 
-app.MapPost("/api/v1/admin/tags", [Authorize(Policy = "AdminOnly")] async (TagCreateDto dto, UtanvegaDbContext context, HttpContext httpContext) =>
+app.MapPost("/api/v1/admin/tags", [Authorize(Policy = "AdminOnly")] async (TagCreateDto dto, IMediator mediator, HttpContext httpContext) =>
 {
-    var tag = new Utanvega.Backend.Core.Entities.Tag
-    {
-        Name = dto.Name,
-        NameEn = dto.NameEn,
-        Slug = Utanvega.Backend.Core.Services.SlugGenerator.Generate(dto.Name),
-        Color = dto.Color
-    };
-    context.Tags.Add(tag);
-    await context.SaveChangesWithAuditAsync(GetAuthenticatedUserId(httpContext));
-    return Results.Created($"/api/v1/admin/tags/{tag.Id}", new { tag.Id, tag.Name, tag.Slug, tag.Color });
+    var (id, slug) = await mediator.Send(new CreateTagCommand(dto.Name, dto.Color, dto.NameEn, GetAuthenticatedUserId(httpContext)));
+    return Results.Created($"/api/v1/admin/tags/{id}", new { Id = id, dto.Name, Slug = slug, dto.Color });
 })
 .WithName("CreateTag");
 
-app.MapPut("/api/v1/admin/tags/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, TagCreateDto dto, UtanvegaDbContext context, HttpContext httpContext) =>
+app.MapPut("/api/v1/admin/tags/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, TagCreateDto dto, IMediator mediator, HttpContext httpContext) =>
 {
-    var tag = await context.Tags.FindAsync(id);
-    if (tag == null) return Results.NotFound();
-    if (!string.IsNullOrWhiteSpace(dto.Slug) && !System.Text.RegularExpressions.Regex.IsMatch(dto.Slug.Trim(), "^[a-z0-9]+(?:-[a-z0-9]+)*$"))
-        return Results.BadRequest("Slug must be lowercase alphanumeric with hyphens only.");
-    tag.Name = dto.Name;
-    tag.NameEn = dto.NameEn;
-    if (!string.IsNullOrWhiteSpace(dto.Slug))
-        tag.Slug = dto.Slug.Trim();
-    tag.Color = dto.Color;
-    if (dto.TranslationHashes != null)
-        tag.TranslationHashes = System.Text.Json.JsonSerializer.Serialize(dto.TranslationHashes);
-    await context.SaveChangesWithAuditAsync(GetAuthenticatedUserId(httpContext));
-    return Results.NoContent();
+    var success = await mediator.Send(new UpdateTagCommand(id, dto.Name, dto.Color, dto.NameEn, dto.Slug, dto.TranslationHashes, GetAuthenticatedUserId(httpContext)));
+    return success ? Results.NoContent() : Results.NotFound();
 })
 .WithName("UpdateTag");
 
-app.MapDelete("/api/v1/admin/tags/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, UtanvegaDbContext context, HttpContext httpContext) =>
+app.MapDelete("/api/v1/admin/tags/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, IMediator mediator, HttpContext httpContext) =>
 {
-    var tag = await context.Tags.Include(t => t.TrailTags).FirstOrDefaultAsync(t => t.Id == id);
-    if (tag == null) return Results.NotFound();
-    context.TrailTags.RemoveRange(tag.TrailTags);
-    context.Tags.Remove(tag);
-    await context.SaveChangesWithAuditAsync(GetAuthenticatedUserId(httpContext));
-    return Results.NoContent();
+    var success = await mediator.Send(new DeleteTagCommand(id, GetAuthenticatedUserId(httpContext)));
+    return success ? Results.NoContent() : Results.NotFound();
 })
 .WithName("DeleteTag");
 
@@ -2274,7 +2248,6 @@ public record SubmitFeedbackRequest(
     string? StepsToReproduce, string? BrowserInfo, string? ScreenshotUrl);
 public record PatchFeedbackRequest(
     string? Status, string? Priority, int? GitHubIssue, bool? ClearGitHubIssue, string? AdminComment);
-public record TagCreateDto(string Name, string? Color, string? NameEn = null, Dictionary<string, string>? TranslationHashes = null, string? Slug = null);
 public record TranslateRequest(List<string> Texts);
 public record BulkAddTagRequest(List<Guid> TrailIds, Guid TagId);
 public record TrailLocationAddRequest(Guid LocationId, string? Role);
