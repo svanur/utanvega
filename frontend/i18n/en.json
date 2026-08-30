@@ -1210,7 +1210,7 @@
             "nextTier": "You need to run {{time}} faster to reach {{tier}}",
             "worldClass": "World Class — top tier reached!",
             "invalidInput": "Please enter a valid age (5–100) and finish time.",
-            "source": "Based on WMA 2015 Road Age Grading Tables — Howard Grubb",
+            "source": "Based on the 2025 USATF MLDR Road Age Grading Tables — Alan Jones",
             "examples": {
                 "m60_5k":    "Male 60, 5K in 22:00",
                 "f45_half":  "Female 45, Half marathon in 1:50:00"

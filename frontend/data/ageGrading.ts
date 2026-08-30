@@ -1,8 +1,16 @@
-// WMA 2015 Road Age Grading Tables
-// Source: Howard Grubb, mldrroad15 — https://howardgrubb.co.uk/athletics/mldrroad15.html
+// 2025 USATF MLDR Road Age Grading Tables
+// Source: USATF Masters Long Distance Running (MLDR) council, approved 2025-01-10.
+// Compiled by Alan Jones — https://github.com/AlanLyttonJones/Age-Grade-Tables
+// Age factors and open standards are generated from the committed source workbooks
+// (frontend/data/source/{male,female}Road2025.xlsx) via
+// frontend/data/source/convert_age_grading.py — see ageGradingFactors.generated.ts
+// and frontend/data/source/README.md for provenance.
 // Open standards = world-best road times at peak age (seconds)
 // Age factors = performance multiplier per age (1.0 = peak, <1.0 = decline)
-// Ages outside 20–80 are clamped to nearest boundary.
+// Factors are looked up per year of age directly (no interpolation, no clamping);
+// ages outside the published 5–100 range are rejected by calculateAgeGrade below.
+
+import { MALE_FACTORS, FEMALE_FACTORS, MIN_AGE, MAX_AGE, OPEN_STANDARDS } from './ageGradingFactors.generated';
 
 export type Gender = 'male' | 'female';
 
@@ -18,64 +26,23 @@ export interface DistanceStandard {
 }
 
 export const AG_DISTANCES: DistanceStandard[] = [
-    { key: '5K',             i18nKey: '5k',       km: 5,        openStandard: { male: 757,   female: 851   } },
-    { key: '10K',            i18nKey: '10k',      km: 10,       openStandard: { male: 1577,  female: 1771  } },
-    { key: 'Half Marathon',  i18nKey: 'half',     km: 21.0975,  openStandard: { male: 3503,  female: 3922  } },
-    { key: 'Marathon',       i18nKey: 'marathon', km: 42.195,   openStandard: { male: 7416,  female: 8125  } },
-    { key: '50K',            i18nKey: '50k',      km: 50,       openStandard: { male: 9838,  female: 11792 } },
-    { key: '100K',           i18nKey: '100k',     km: 100,      openStandard: { male: 22613, female: 25580 } },
+    { key: '5K',             i18nKey: '5k',       km: 5,        openStandard: { male: OPEN_STANDARDS.male['5K'],            female: OPEN_STANDARDS.female['5K']            } },
+    { key: '10K',            i18nKey: '10k',      km: 10,       openStandard: { male: OPEN_STANDARDS.male['10K'],           female: OPEN_STANDARDS.female['10K']           } },
+    { key: 'Half Marathon',  i18nKey: 'half',     km: 21.0975,  openStandard: { male: OPEN_STANDARDS.male['Half Marathon'], female: OPEN_STANDARDS.female['Half Marathon'] } },
+    { key: 'Marathon',       i18nKey: 'marathon', km: 42.195,   openStandard: { male: OPEN_STANDARDS.male['Marathon'],      female: OPEN_STANDARDS.female['Marathon']      } },
+    { key: '50K',            i18nKey: '50k',      km: 50,       openStandard: { male: OPEN_STANDARDS.male['50K'],           female: OPEN_STANDARDS.female['50K']           } },
+    { key: '100K',           i18nKey: '100k',     km: 100,      openStandard: { male: OPEN_STANDARDS.male['100K'],          female: OPEN_STANDARDS.female['100K']          } },
 ];
 
-// Age factors at 5-year anchor points; linear interpolation is used between them.
-// Male road factors (WMA 2015)
-const MALE_ANCHORS: [number, number][] = [
-    [20, 0.9639],
-    [25, 0.9868],
-    [30, 1.0000],
-    [35, 0.9889],
-    [40, 0.9561],
-    [45, 0.9108],
-    [50, 0.8637],
-    [55, 0.8129],
-    [60, 0.7584],
-    [65, 0.7029],
-    [70, 0.6409],
-    [75, 0.5800],
-    [80, 0.5218],
-];
-
-// Female road factors (WMA 2015)
-const FEMALE_ANCHORS: [number, number][] = [
-    [20, 0.9614],
-    [25, 0.9843],
-    [30, 1.0000],
-    [35, 0.9860],
-    [40, 0.9510],
-    [45, 0.9030],
-    [50, 0.8530],
-    [55, 0.7975],
-    [60, 0.7406],
-    [65, 0.6831],
-    [70, 0.6208],
-    [75, 0.5584],
-    [80, 0.4989],
-];
-
-function interpolateFactor(anchors: [number, number][], age: number): number {
-    const clamped = Math.max(anchors[0][0], Math.min(anchors[anchors.length - 1][0], age));
-    for (let i = 0; i < anchors.length - 1; i++) {
-        const [a0, f0] = anchors[i];
-        const [a1, f1] = anchors[i + 1];
-        if (clamped >= a0 && clamped <= a1) {
-            const t = (clamped - a0) / (a1 - a0);
-            return f0 + t * (f1 - f0);
-        }
-    }
-    return anchors[anchors.length - 1][1];
-}
-
-export function getAgeFactor(gender: Gender, age: number): number {
-    return interpolateFactor(gender === 'male' ? MALE_ANCHORS : FEMALE_ANCHORS, age);
+// Direct per-year, per-distance lookup — no interpolation between anchor ages and no
+// clamping to a 20–80 range. `distanceKey` must be one of AG_DISTANCES' keys; ages
+// outside the published MIN_AGE–MAX_AGE range are the caller's responsibility to guard
+// against (calculateAgeGrade below does this for its own callers).
+export function getAgeFactor(gender: Gender, age: number, distanceKey: string): number {
+    const table = gender === 'male' ? MALE_FACTORS : FEMALE_FACTORS;
+    const row = table[distanceKey];
+    if (!row || age < MIN_AGE || age > MAX_AGE) return NaN;
+    return row[Math.round(age) - MIN_AGE];
 }
 
 export interface AgeGradeResult {
@@ -94,22 +61,26 @@ export function calculateAgeGrade(
 ): AgeGradeResult | null {
     if (runnerSeconds <= 0 || age < 5 || age > 100) return null;
 
-    // Find open standard — interpolate if between two known distances
+    // Find open standard and age factor — interpolate both if between two known distances
     const sorted = [...AG_DISTANCES].sort((a, b) => a.km - b.km);
     let openStandard: number;
+    let ageFactor: number;
 
     const exact = sorted.find(d => Math.abs(d.km - distanceKm) < 0.01);
     if (exact) {
         openStandard = exact.openStandard[gender];
+        ageFactor = getAgeFactor(gender, age, exact.key);
     } else {
         const lower = [...sorted].reverse().find(d => d.km < distanceKm);
         const upper = sorted.find(d => d.km > distanceKm);
         if (!lower || !upper) return null;
         const t = (distanceKm - lower.km) / (upper.km - lower.km);
         openStandard = lower.openStandard[gender] + t * (upper.openStandard[gender] - lower.openStandard[gender]);
+        const lowerFactor = getAgeFactor(gender, age, lower.key);
+        const upperFactor = getAgeFactor(gender, age, upper.key);
+        ageFactor = lowerFactor + t * (upperFactor - lowerFactor);
     }
 
-    const ageFactor = getAgeFactor(gender, age);
     const rawPercentage = (openStandard / (runnerSeconds * ageFactor)) * 100;
     const percentage = Math.round(rawPercentage * 10) / 10;
     const ageGradedSeconds = runnerSeconds * ageFactor;
