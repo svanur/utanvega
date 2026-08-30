@@ -100,6 +100,12 @@ public class BackfillElevationProfilesCommandHandler
             // Commit this batch before loading the next — a failure partway through the run
             // leaves prior batches' work saved instead of rolling back everything.
             await _context.SaveChangesAsync(cancellationToken);
+
+            // Detach this batch's entities (and their LineStringZ geometries) so memory is
+            // actually released between batches — without this, the DbContext's change tracker
+            // keeps every processed trail alive for the lifetime of the request, and batching
+            // would only bound the failure blast radius, not peak memory.
+            _context.ChangeTracker.Clear();
         }
 
         return new BackfillElevationProfilesResult(updated, skipReasons.Values.Sum(), skipReasons);
