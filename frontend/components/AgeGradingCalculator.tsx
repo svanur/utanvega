@@ -332,11 +332,13 @@ export default function AgeGradingCalculator() {
                             <TableBody>
                                 {(() => {
                                     const { tierColor } = getTier(result.percentage);
-                                    const clampedAge = Math.max(AGE_TABLE_ROWS[0], Math.min(AGE_TABLE_ROWS[AGE_TABLE_ROWS.length - 1], Math.round(ageNum / 5) * 5));
-                                    return AGE_TABLE_ROWS.map(rowAge => {
+                                    const rows = AGE_TABLE_ROWS.includes(ageNum)
+                                        ? AGE_TABLE_ROWS
+                                        : [...AGE_TABLE_ROWS, ageNum].sort((a, b) => a - b);
+                                    return rows.map(rowAge => {
                                         const factor = getAgeFactor(gender, rowAge);
                                         const eqSeconds = factor > 0 ? result.ageGradedSeconds / factor : null;
-                                        const isYou = rowAge === clampedAge;
+                                        const isYou = rowAge === ageNum;
                                         return (
                                             <TableRow
                                                 key={rowAge}
