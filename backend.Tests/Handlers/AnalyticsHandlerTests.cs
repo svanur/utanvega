@@ -226,6 +226,28 @@ public class AnalyticsHandlerTests : IDisposable
         Assert.All(result.HourlyViews, h => Assert.InRange(h.Hour, 0, 23));
     }
 
+    // ── Day of week ───────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task DayOfWeekViews_AreAlwaysSevenDays_AndSumToTheTotal()
+    {
+        var result = await Run();
+        Assert.Equal(7, result.DayOfWeekViews.Count);
+        Assert.Equal([0, 1, 2, 3, 4, 5, 6], result.DayOfWeekViews.Select(d => d.DayOfWeek).OrderBy(d => d));
+        Assert.Equal(11, result.DayOfWeekViews.Sum(d => d.Views));
+    }
+
+    [Fact]
+    public async Task DayOfWeekViews_GapFillTodaysWeekday_WhenNothingWasSeededOnIt()
+    {
+        // Every seeded view is offset by at least a day from "now" (the
+        // smallest offset used above is 1), so today's own weekday has no
+        // seeded view and must still come back as a zero, not be missing.
+        var result = await Run();
+        var today = result.DayOfWeekViews.Single(d => d.DayOfWeek == (int)_now.DayOfWeek);
+        Assert.Equal(0, today.Views);
+    }
+
     // ── Top trails ────────────────────────────────────────────────────────
 
     [Fact]

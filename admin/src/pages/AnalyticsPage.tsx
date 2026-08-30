@@ -41,6 +41,11 @@ interface HourlyViews {
     views: number;
 }
 
+interface DayOfWeekViews {
+    dayOfWeek: number;
+    views: number;
+}
+
 interface TopTrail {
     name: string;
     slug: string;
@@ -59,6 +64,7 @@ interface AnalyticsData {
     summary: Summary;
     dailyViews: DailyViews[];
     hourlyViews: HourlyViews[];
+    dayOfWeekViews: DayOfWeekViews[];
     topTrails: TopTrail[];
     trendingTrails: TrendingTrail[];
 }
@@ -136,6 +142,13 @@ const HOUR_LABELS = Array.from({ length: 24 }, (_, i) =>
     `${i.toString().padStart(2, '0')}:00`
 );
 
+// .NET's DayOfWeek (and Postgres's date_part('dow'), which the backend
+// translates to) both put Sunday at index 0. The strip is displayed
+// Monday-first, so the reorder happens here on the returned array rather
+// than by rotating the grouping itself in SQL.
+const MONDAY_FIRST_ORDER = [1, 2, 3, 4, 5, 6, 0];
+const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
 const COLORS = ['#2e7d32', '#43a047', '#66bb6a', '#81c784', '#a5d6a7', '#c8e6c9', '#e8f5e9', '#f1f8e9', '#f9fbe7', '#fffde7'];
 
 export default function AnalyticsPage() {
@@ -178,7 +191,7 @@ export default function AnalyticsPage() {
         );
     }
 
-    const { summary, dailyViews, hourlyViews, topTrails, trendingTrails } = data;
+    const { summary, dailyViews, hourlyViews, dayOfWeekViews, topTrails, trendingTrails } = data;
 
     // Fill in missing days in dailyViews for a continuous chart
     const filledDailyViews = (() => {
@@ -200,6 +213,14 @@ export default function AnalyticsPage() {
         return { hour: h, views: found?.views || 0, label: HOUR_LABELS[h] };
     });
     const maxHourlyViews = Math.max(...filledHourlyViews.map(h => h.views), 1);
+
+    // Reordered Monday-first, not gap-filled here — the backend already
+    // guarantees all 7 days, unlike the 24-bucket hourly response above.
+    const mondayFirstViews = MONDAY_FIRST_ORDER.map((day, i) => {
+        const found = dayOfWeekViews.find(dv => dv.dayOfWeek === day);
+        return { dayOfWeek: day, views: found?.views || 0, label: DAY_LABELS[i] };
+    });
+    const maxDayOfWeekViews = Math.max(...mondayFirstViews.map(d => d.views), 1);
 
     const dayChange = formatChange(summary.viewsToday, summary.viewsYesterday, 'yesterday');
     const weekChange = formatChange(summary.viewsThisWeek, summary.viewsLastWeek, 'previous 7 days');
@@ -326,10 +347,13 @@ export default function AnalyticsPage() {
                 {/* Peak Hours */}
                 <Grid item xs={12} md={6}>
                     <Paper elevation={2} sx={{ p: 2.5, height: '100%' }}>
-                        <Typography variant="h6" fontWeight="bold" mb={2}>
+                        <Typography variant="h6" fontWeight="bold">
                             Peak Browsing Hours
                         </Typography>
-                        <ResponsiveContainer width="100%" height={240}>
+                        <Typography variant="caption" color="text.secondary" display="block" mb={2}>
+                            All-time, UTC
+                        </Typography>
+                        <ResponsiveContainer width="100%" height={200}>
                             <BarChart data={filledHourlyViews}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                 <XAxis dataKey="label" fontSize={10} interval={2} />
@@ -345,6 +369,31 @@ export default function AnalyticsPage() {
                                 </Bar>
                             </BarChart>
                         </ResponsiveContainer>
+
+                        {/* Seven-cell intensity strip, Monday-first, reusing the
+                            same opacity ramp as the hourly bars above rather than
+                            a second chart or a day/hour heatmap. The day label
+                            sits below each cell rather than on it, so it stays
+                            theme text colour instead of needing a second
+                            hardcoded colour to stay legible against the ramp. */}
+                        <Stack direction="row" spacing={0.5} sx={{ mt: 1.5 }}>
+                            {mondayFirstViews.map(d => (
+                                <MuiTooltip key={d.dayOfWeek} title={`${d.views.toLocaleString()} views`}>
+                                    <Box sx={{ flex: 1, textAlign: 'center' }}>
+                                        <Box
+                                            sx={{
+                                                height: 28,
+                                                borderRadius: 1,
+                                                bgcolor: `rgba(46, 125, 50, ${0.3 + (d.views / maxDayOfWeekViews) * 0.7})`,
+                                            }}
+                                        />
+                                        <Typography variant="caption" color="text.secondary" fontSize={11}>
+                                            {d.label}
+                                        </Typography>
+                                    </Box>
+                                </MuiTooltip>
+                            ))}
+                        </Stack>
                     </Paper>
                 </Grid>
 
