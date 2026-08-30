@@ -41,24 +41,34 @@ public static class GpxProcessor
             extractedName = nameElement?.Value?.Trim();
         }
 
-        var points = doc.Descendants(ns + "trkpt")
+        var rawPoints = doc.Descendants(ns + "trkpt")
             .Select(p =>
             {
                 var latStr = p.Attribute("lat")?.Value ?? "0";
                 var lonStr = p.Attribute("lon")?.Value ?? "0";
                 var eleElement = p.Element(ns + "ele") ?? p.Elements().FirstOrDefault(e => e.Name.LocalName == "ele");
-                var eleStr = eleElement?.Value ?? "0";
 
                 if (!double.TryParse(latStr, System.Globalization.CultureInfo.InvariantCulture, out var lat)) lat = 0;
                 if (!double.TryParse(lonStr, System.Globalization.CultureInfo.InvariantCulture, out var lon)) lon = 0;
-                if (!double.TryParse(eleStr, System.Globalization.CultureInfo.InvariantCulture, out var ele)) ele = 0;
+
+                // A missing <ele> element means elevation was never captured for this point —
+                // that's different from a genuine reading of 0m, so it must not default to "0".
+                double? ele = null;
+                if (eleElement != null && double.TryParse(eleElement.Value, System.Globalization.CultureInfo.InvariantCulture, out var eleVal))
+                    ele = eleVal;
 
                 return new { Lat = lat, Lon = lon, Ele = ele };
             })
             .ToList();
 
-        if (points.Count == 0)
+        if (rawPoints.Count == 0)
             throw new Exception("No points found in GPX");
+
+        // Whether the GPX carried any elevation data at all. If none of the points had an <ele>
+        // element, the whole trail has no elevation data — the profile must be absent (null),
+        // not an array of zeros.
+        var hasElevationData = rawPoints.Any(p => p.Ele.HasValue);
+        var points = rawPoints.Select(p => new { p.Lat, p.Lon, Ele = p.Ele ?? 0 }).ToList();
 
         var coordinates = points.Select(p => new CoordinateZ(p.Lon, p.Lat, p.Ele)).ToArray();
         var lineString = GeometryFactory.CreateLineString(coordinates);
@@ -77,7 +87,9 @@ public static class GpxProcessor
 
         var detectedType = TrailTypeDetector.Detect(lineString, length);
         var difficulty = DifficultyCalculator.Calculate(length, gain, ActivityType.TrailRunning);
-        var elevationProfile = SampleElevationProfile(points.Select(p => p.Ele).ToArray(), 50);
+        var elevationProfile = hasElevationData
+            ? SampleElevationProfile(points.Select(p => p.Ele).ToArray(), 50)
+            : null;
 
         return new GpxProcessResult(lineString, length, gain, loss, detectedType, difficulty, extractedName, elevationProfile);
     }

@@ -311,6 +311,11 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
         }
     };
 
+    // maxAltitude of exactly 0 is indistinguishable from a degenerate elevation profile
+    // (missing elevation used to be stored as all-zero rather than absent — see #465),
+    // so treat it the same as "no usable altitude data".
+    const altitudeUnusable = trail?.maxAltitude == null || trail?.maxAltitude === 0;
+
     return (
         <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
             <DialogTitle>
@@ -408,8 +413,8 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
                                         variant="outlined"
                                         size="small"
                                         sx={{ mt: 1 }}
-                                        disabled={trail.maxAltitude == null}
-                                        title={trail.maxAltitude == null ? 'Requires GPX data with altitude information' : undefined}
+                                        disabled={altitudeUnusable}
+                                        title={altitudeUnusable ? 'Requires GPX data with altitude information' : undefined}
                                         onClick={() => {
                                             const distanceKm = trail.length / 1000;
                                             const climbRatio = trail.elevationGain / distanceKm;

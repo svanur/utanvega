@@ -64,6 +64,21 @@ public class GpxProcessorTests
         Assert.All(result.ElevationProfile!, e => Assert.Equal(500.0, e, precision: 3));
     }
 
+    [Fact]
+    public void ElevationProfile_NoEleElementsAnywhere_IsNullNotZeros()
+    {
+        // No <ele> child on any <trkpt> — elevation was never captured for this GPX.
+        var gpx = "<?xml version=\"1.0\"?><gpx xmlns=\"http://www.topografix.com/GPX/1/1\"><trk><trkseg>" +
+                  "<trkpt lat=\"64.00\" lon=\"-18.00\"></trkpt>" +
+                  "<trkpt lat=\"64.01\" lon=\"-18.01\"></trkpt>" +
+                  "<trkpt lat=\"64.02\" lon=\"-18.02\"></trkpt>" +
+                  "</trkseg></trk></gpx>";
+
+        var result = GpxProcessor.Process(gpx);
+
+        Assert.Null(result.ElevationProfile);
+    }
+
     // ─── Elevation gain/loss calculation ───
 
     [Fact]
