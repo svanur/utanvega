@@ -7,18 +7,23 @@
 export type Gender = 'male' | 'female';
 
 export interface DistanceStandard {
-    label: string;
+    // Stable, language-independent identifier — used as the <Select> value, distanceKey
+    // state, and ?dist= URL param. Never translate or rename existing values, or shared
+    // links break.
+    key: string;
+    // Suffix into i18n's tools.ageGrading.distanceNames.<i18nKey> for the display name.
+    i18nKey: string;
     km: number;
     openStandard: { male: number; female: number };
 }
 
 export const AG_DISTANCES: DistanceStandard[] = [
-    { label: '5K',             km: 5,        openStandard: { male: 757,   female: 851   } },
-    { label: '10K',            km: 10,       openStandard: { male: 1577,  female: 1771  } },
-    { label: 'Half Marathon',  km: 21.0975,  openStandard: { male: 3503,  female: 3922  } },
-    { label: 'Marathon',       km: 42.195,   openStandard: { male: 7416,  female: 8125  } },
-    { label: '50K',            km: 50,       openStandard: { male: 9838,  female: 11792 } },
-    { label: '100K',           km: 100,      openStandard: { male: 22613, female: 25580 } },
+    { key: '5K',             i18nKey: '5k',       km: 5,        openStandard: { male: 757,   female: 851   } },
+    { key: '10K',            i18nKey: '10k',      km: 10,       openStandard: { male: 1577,  female: 1771  } },
+    { key: 'Half Marathon',  i18nKey: 'half',     km: 21.0975,  openStandard: { male: 3503,  female: 3922  } },
+    { key: 'Marathon',       i18nKey: 'marathon', km: 42.195,   openStandard: { male: 7416,  female: 8125  } },
+    { key: '50K',            i18nKey: '50k',      km: 50,       openStandard: { male: 9838,  female: 11792 } },
+    { key: '100K',           i18nKey: '100k',     km: 100,      openStandard: { male: 22613, female: 25580 } },
 ];
 
 // Age factors at 5-year anchor points; linear interpolation is used between them.
