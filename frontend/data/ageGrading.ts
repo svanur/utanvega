@@ -147,6 +147,16 @@ export function getTier(pct: number): { tier: string; tierColor: string } {
     return           { tier: 'recreational',       tierColor: '#94a3b8' };
 }
 
+// A percentage over 100 means the entered time beats the age-group record for
+// this age/sex/distance — either a genuine (very rare) record-beating run, or
+// far more commonly a mistyped time, e.g. a two-part "H:MM" time such as 3:30
+// for a marathon read as mm:ss (3m30s) instead of the intended h:mm:ss. This
+// is a display-layer flag only — calculateAgeGrade's math is unchanged and
+// still returns the raw percentage; callers decide how to warn about it.
+export function isImplausibleResult(percentage: number): boolean {
+    return percentage > 100;
+}
+
 export function formatSeconds(totalSeconds: number): string {
     const s = Math.round(totalSeconds);
     const h = Math.floor(s / 3600);

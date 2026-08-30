@@ -1210,6 +1210,8 @@
             },
             "nextTier": "You need to run {{time}} faster to reach {{tier}}",
             "worldClass": "World Class for your age and sex — top tier reached!",
+            "implausibleResult": "This time is faster than the age-group record for this age, sex and distance — please double-check it. A common cause is a two-part time like 3:30 being read as mm:ss (3 minutes 30 seconds) when h:mm:ss (3 hours 30 minutes) was meant.",
+            "implausibleBadgeTooltip": "This result looks implausible — check your entered time",
             "invalidInput": "Please enter a valid age (5–100) and finish time.",
             "source": "Based on the 2025 USATF MLDR Road Age Grading Tables — Alan Jones",
             "examples": {
