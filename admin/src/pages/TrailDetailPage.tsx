@@ -433,21 +433,12 @@ export default function TrailDetailPage({ onNotify }: { onNotify: (message: Reac
                   </IconButton>
                 </Tooltip>
               </LabeledField>
-              <LabeledField label="Distance">
-                <Chip label={`${(trail.length / 1000).toFixed(1)} km`} size="small" variant="outlined" />
-              </LabeledField>
-              <LabeledField label="Elevation gain">
-                <Chip label={`↑ ${Math.round(trail.elevationGain)}m`} size="small" color="success" variant="outlined" />
-              </LabeledField>
-              <LabeledField label="Elevation loss">
-                <Chip label={`↓ ${Math.round(trail.elevationLoss)}m`} size="small" color="error" variant="outlined" />
-              </LabeledField>
-              <LabeledField label="Activity">
+              <LabeledField label="Visibility">
                 <InlineEditSelect
-                  value={trail.activityType}
-                  options={activityOptions}
-                  onSave={(v) => handlePatchField('activityType', v)}
-                  renderDisplay={(v) => <Chip label={activityOptions.find(o => o.value === v)?.label ?? v} size="small" variant="outlined" sx={{ cursor: 'pointer' }} />}
+                  value={trail.visibility}
+                  options={visibilityOptions}
+                  onSave={(v) => handlePatchField('visibility', v)}
+                  renderDisplay={(v) => <Chip label={v} size="small" variant="outlined" sx={{ cursor: 'pointer' }} />}
                 />
               </LabeledField>
               <LabeledField label="Difficulty">
@@ -458,14 +449,6 @@ export default function TrailDetailPage({ onNotify }: { onNotify: (message: Reac
                   renderDisplay={(v) => <Chip label={v} size="small" variant="outlined" sx={{ cursor: 'pointer' }} />}
                 />
               </LabeledField>
-              <LabeledField label="Trail type">
-                <InlineEditSelect
-                  value={trail.type}
-                  options={trailTypeOptions}
-                  onSave={(v) => handlePatchField('type', v)}
-                  renderDisplay={(v) => <Chip label={trailTypeOptions.find(o => o.value === v)?.label ?? v} size="small" variant="outlined" sx={{ cursor: 'pointer' }} />}
-                />
-              </LabeledField>
               <LabeledField label="Terrain">
                 <InlineEditSelect
                   value={trail.terrainType ?? ''}
@@ -474,12 +457,36 @@ export default function TrailDetailPage({ onNotify }: { onNotify: (message: Reac
                   renderDisplay={(v) => <Chip label={v || 'No terrain'} size="small" variant="outlined" sx={{ cursor: 'pointer' }} />}
                 />
               </LabeledField>
-              <LabeledField label="Visibility">
+              <LabeledField label="Activity">
                 <InlineEditSelect
-                  value={trail.visibility}
-                  options={visibilityOptions}
-                  onSave={(v) => handlePatchField('visibility', v)}
-                  renderDisplay={(v) => <Chip label={v} size="small" variant="outlined" sx={{ cursor: 'pointer' }} />}
+                  value={trail.activityType}
+                  options={activityOptions}
+                  onSave={(v) => handlePatchField('activityType', v)}
+                  renderDisplay={(v) => <Chip label={activityOptions.find(o => o.value === v)?.label ?? v} size="small" variant="outlined" sx={{ cursor: 'pointer' }} />}
+                />
+              </LabeledField>
+              <LabeledField label="Trail type">
+                <InlineEditSelect
+                  value={trail.type}
+                  options={trailTypeOptions}
+                  onSave={(v) => handlePatchField('type', v)}
+                  renderDisplay={(v) => <Chip label={trailTypeOptions.find(o => o.value === v)?.label ?? v} size="small" variant="outlined" sx={{ cursor: 'pointer' }} />}
+                />
+              </LabeledField>
+              <LabeledField label="Distance">
+                <Chip label={`${(trail.length / 1000).toFixed(1)} km`} size="small" variant="outlined" />
+              </LabeledField>
+              <LabeledField label="Elevation gain">
+                <Chip label={`↑ ${Math.round(trail.elevationGain)}m`} size="small" color="success" variant="outlined" />
+              </LabeledField>
+              <LabeledField label="Elevation loss">
+                <Chip label={`↓ ${Math.round(trail.elevationLoss)}m`} size="small" color="error" variant="outlined" />
+              </LabeledField>
+              <LabeledField label="Climb ratio">
+                <Chip
+                  label={trail.length > 0 ? `${Math.round(trail.elevationGain / (trail.length / 1000))} m/km` : '—'}
+                  size="small"
+                  variant="outlined"
                 />
               </LabeledField>
             </Stack>
