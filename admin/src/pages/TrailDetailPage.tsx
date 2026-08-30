@@ -37,7 +37,8 @@ import { usePageShortcuts } from '../hooks/usePageShortcuts';
 import { useLocations } from '../hooks/useLocations';
 import { useTags } from '../hooks/useTags';
 import { apiFetch } from '../hooks/api';
-import TrailMap from '../components/TrailMap';
+import TrailMap, { type GeoJsonGeometry } from '../components/TrailMap';
+import ElevationChart from '../components/ElevationChart';
 import TrailFormCard from '../components/trails/TrailFormCard';
 import ChangeLogList from '../components/ChangeLogList';
 import TrailStatusLegendDialog from '../components/trails/TrailStatusLegendDialog';
@@ -222,6 +223,7 @@ export default function TrailDetailPage({ onNotify }: { onNotify: (message: Reac
   const [pendingAction, setPendingAction] = useState<TrailAction | null>(null);
   const [actionBusy, setActionBusy] = useState(false);
   const [mapVersion, setMapVersion] = useState(0);
+  const [geometry, setGeometry] = useState<GeoJsonGeometry | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [showAddLocation, setShowAddLocation] = useState(false);
   const [showAddTag, setShowAddTag] = useState(false);
@@ -686,7 +688,16 @@ export default function TrailDetailPage({ onNotify }: { onNotify: (message: Reac
           size and will otherwise ignore its allotted share and force the row to overflow. */}
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 3fr) minmax(0, 1fr)' }, gap: 2 }}>
         <Box sx={{ minWidth: 0 }}>
-          <TrailMap key={`${trail.id}-${mapVersion}`} trailId={trail.id} trailName={trail.name} height={MAP_HEIGHT} />
+          <TrailMap
+            key={`${trail.id}-${mapVersion}`}
+            trailId={trail.id}
+            trailName={trail.name}
+            height={MAP_HEIGHT}
+            onDataLoaded={setGeometry}
+          />
+          {geometry && geometry.coordinates.length >= 2 && (
+            <ElevationChart coordinates={geometry.coordinates} />
+          )}
         </Box>
         <Box sx={{ minWidth: 0, mt: 2 }}>
           <GpxReplaceZone
@@ -701,6 +712,7 @@ export default function TrailDetailPage({ onNotify }: { onNotify: (message: Reac
                 type: stats.detectedType,
                 difficulty: stats.difficulty,
               } : prev);
+              setGeometry(null);
               setMapVersion(v => v + 1);
             }}
           />
