@@ -404,7 +404,7 @@
         },
         "terrainType": {
             "q": "How is the terrain type (Flat / Hilly / Mountainous) decided?",
-            "a": "Terrain type is calculated automatically from the trail's GPS data using two factors: elevation gain per km (climb ratio) and maximum altitude above sea level. Flat: less than 20 m of gain per km. Mountainous: reaches above 600 m altitude with at least 30 m/km gain, or any trail climbing more than 50 m per km. Hilly: everything in between. Thresholds are calibrated for Icelandic conditions."
+            "a": "Terrain type is calculated automatically from the trail's GPS data using three factors: elevation gain per km (climb ratio), maximum altitude above sea level, and total elevation gain. Flat: less than 20 m of gain per km. Mountainous: reaches above 600 m altitude with at least 30 m/km gain, any trail climbing more than 50 m per km, or any trail with 600 m or more of total elevation gain. Hilly: everything in between. Thresholds are calibrated for Icelandic conditions. This calculation is a starting point — an admin may adjust the terrain type by hand if it doesn't match reality."
         },
         "relatedTrails": {
             "q": "How are Related Trails found?",

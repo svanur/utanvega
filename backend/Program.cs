@@ -1426,23 +1426,9 @@ app.MapPost("/api/v1/admin/trails/detect-terrain-types", [Authorize(Policy = "Ad
             continue;
         }
 
-        var climbRatio = trail.ElevationGain / (trail.Length / 1000.0);
         var maxAltitude = trail.ElevationProfile.Max();
 
-        // Mountain Index — high-latitude (Iceland) thresholds
-        Utanvega.Backend.Core.Entities.TerrainType terrainType;
-        if (climbRatio < 20)
-            terrainType = Utanvega.Backend.Core.Entities.TerrainType.Flat;
-        else if (maxAltitude > 600 && climbRatio >= 30)
-            terrainType = Utanvega.Backend.Core.Entities.TerrainType.Mountainous;
-        else if (maxAltitude < 400)
-            terrainType = Utanvega.Backend.Core.Entities.TerrainType.Hilly;
-        else
-            terrainType = climbRatio >= 50
-                ? Utanvega.Backend.Core.Entities.TerrainType.Mountainous
-                : Utanvega.Backend.Core.Entities.TerrainType.Hilly;
-
-        trail.TerrainType = terrainType;
+        trail.TerrainType = MountainIndexClassifier.Classify(trail.Length, trail.ElevationGain, maxAltitude);
         updated++;
     }
 
@@ -1456,6 +1442,23 @@ app.MapPost("/api/v1/admin/trails/detect-terrain-types", [Authorize(Policy = "Ad
     return Results.Ok(new { total = trails.Count, updated, skipped });
 })
 .WithName("DetectTerrainTypes");
+
+app.MapPost("/api/v1/admin/trails/classify-terrain", [Authorize(Policy = "AdminOnly")] (ClassifyTerrainRequest body) =>
+{
+    try
+    {
+        if (body.Length <= 0 || body.MaxAltitude == null)
+            return Results.BadRequest("Length must be positive and MaxAltitude must be provided.");
+
+        var terrainType = MountainIndexClassifier.Classify(body.Length, body.ElevationGain, body.MaxAltitude.Value);
+        return Results.Ok(new { terrainType });
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(ex.Message);
+    }
+})
+.WithName("ClassifyTerrain");
 
 // --- Feature Flags ---
 app.MapGet("/api/v1/features", async (UtanvegaDbContext context, IMemoryCache cache) =>
@@ -2219,6 +2222,7 @@ public record PatchFeedbackRequest(
 public record TranslateRequest(List<string> Texts);
 public record BulkAddTagRequest(List<Guid> TrailIds, Guid TagId);
 public record TrailLocationAddRequest(Guid LocationId, string? Role);
+public record ClassifyTerrainRequest(double Length, double ElevationGain, double? MaxAltitude);
 public record FeatureFlagCreateDto(string Name, bool Enabled = true, string? Description = null);
 public record FeatureFlagUpdateDto(bool? Enabled, string? Description);
 public record CreateUserTrailActivityDto(
