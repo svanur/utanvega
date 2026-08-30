@@ -1197,18 +1197,19 @@
             "yourTime": "Your finish time",
             "timeHelp": "e.g. 22:30 or 1:45:00",
             "ageGradedPct": "Age-graded percentage",
-            "ageGradedTime": "Age-graded equivalent time",
+            "equivalentTo": "Equivalent to a {{time}} open {{distance}}",
             "ageGradedTimeDesc": "The time a peak-age athlete (~30) would need to match your effort",
+            "basisNote": "Age grading compares your time against the best ever recorded for your age and sex — 100% is an age-group record, not an absolute world record.",
             "tiers": "Performance tiers",
             "tierNames": {
-                "worldClass": "World Class",
+                "worldClass": "World Class (age & sex)",
                 "nationalClass": "National Class",
                 "regionalClass": "Regional Class",
                 "localClass": "Local Class",
                 "recreational": "Recreational"
             },
             "nextTier": "You need to run {{time}} faster to reach {{tier}}",
-            "worldClass": "World Class — top tier reached!",
+            "worldClass": "World Class for your age and sex — top tier reached!",
             "invalidInput": "Please enter a valid age (5–100) and finish time.",
             "source": "Based on the 2025 USATF MLDR Road Age Grading Tables — Alan Jones",
             "examples": {
