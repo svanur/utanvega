@@ -316,6 +316,9 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
     // (missing elevation used to be stored as all-zero rather than absent — see #465),
     // so treat it the same as "no usable altitude data".
     const altitudeUnusable = trail?.maxAltitude == null || trail?.maxAltitude === 0;
+    // Mirrors the classify-terrain endpoint's own guard (and detect-terrain-types' skip
+    // condition) so Auto suggest never sends a request the server would reject anyway.
+    const trailTooShortToClassify = (trail?.length ?? 0) <= 1000;
 
     return (
         <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
@@ -415,8 +418,12 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
                                         size="small"
                                         sx={{ mt: 1 }}
                                         startIcon={classifyingTerrain ? <CircularProgress size={16} /> : undefined}
-                                        disabled={altitudeUnusable || classifyingTerrain}
-                                        title={altitudeUnusable ? 'Requires GPX data with altitude information' : undefined}
+                                        disabled={altitudeUnusable || trailTooShortToClassify || classifyingTerrain}
+                                        title={
+                                            altitudeUnusable ? 'Requires GPX data with altitude information'
+                                                : trailTooShortToClassify ? 'Trail is too short to classify (must be over 1000m)'
+                                                    : undefined
+                                        }
                                         onClick={async () => {
                                             setClassifyingTerrain(true);
                                             try {

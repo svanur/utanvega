@@ -1447,8 +1447,18 @@ app.MapPost("/api/v1/admin/trails/classify-terrain", [Authorize(Policy = "AdminO
 {
     try
     {
-        if (body.Length <= 0 || body.MaxAltitude == null)
-            return Results.BadRequest("Length must be positive and MaxAltitude must be provided.");
+        // Mirrors detect-terrain-types' skip condition (trail.Length <= 1000, degenerate profile)
+        // so the two endpoints can never disagree on a trail that one accepts and the other skips.
+        if (body.Length <= 1000)
+            return Results.BadRequest("Length must be greater than 1000m — matches the detect-terrain-types skip threshold for short trails.");
+
+        if (body.ElevationGain < 0)
+            return Results.BadRequest("ElevationGain cannot be negative.");
+
+        // A MaxAltitude of exactly 0 is indistinguishable from a degenerate elevation profile
+        // (missing elevation used to be stored as all-zero rather than absent — see #465).
+        if (body.MaxAltitude is null or 0)
+            return Results.BadRequest("MaxAltitude must be provided and non-zero.");
 
         var terrainType = MountainIndexClassifier.Classify(body.Length, body.ElevationGain, body.MaxAltitude.Value);
         return Results.Ok(new { terrainType });
