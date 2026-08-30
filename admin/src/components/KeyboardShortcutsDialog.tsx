@@ -44,6 +44,7 @@ const shortcutGroups: ShortcutGroup[] = [
             { keys: ['j'], description: 'Next row (list pages)' },
             { keys: ['k'], description: 'Previous row (list pages)' },
             { keys: ['Enter / o'], description: 'Open focused row (list pages)' },
+            { keys: ['Esc'], description: 'Unfocus search (list pages)' },
         ],
     },
     {
