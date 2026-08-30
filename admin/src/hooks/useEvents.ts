@@ -128,7 +128,6 @@ export interface EventSummaryDto {
     seriesRaces: SeriesRaceDto[] | null;
     gpxPointLat: number | null;
     gpxPointLng: number | null;
-    photoGalleryUrl: string | null;
     isMountainRace: boolean;
     terrainType: string | null;
     hasFutureEdition: boolean;
@@ -189,7 +188,6 @@ export interface UpdateEventInput {
     socialLinks?: SocialLink[] | null;
     gpxPointLat?: number | null;
     gpxPointLng?: number | null;
-    photoGalleryUrl?: string;
     translationHashes?: Record<string, string>;
 }
 

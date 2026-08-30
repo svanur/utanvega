@@ -47,7 +47,6 @@ public record EventDetailDto(
     List<string>? ActivityTypes = null,
     string? EditionStatus = null,
     bool EditionEffectiveCancelled = false,
-    string? PhotoGalleryUrl = null,
     string? OrganizerSlug = null
 );
 
@@ -316,7 +315,6 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
             EditionStatus: relevantEdition?.Status.ToString(),
             EditionEffectiveCancelled: relevantEdition != null
                 && EditionStatusHelpers.ComputeEffectiveCancelled(relevantEdition.Status, relevantEdition.Races.Select(r => r.Status).ToList()),
-            PhotoGalleryUrl: ev.PhotoGalleryUrl,
             OrganizerSlug: ev.Organizer != null ? ev.Organizer.Slug : null
         );
     }

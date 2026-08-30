@@ -852,15 +852,15 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                     {isPostRace ? `🏁 ${t('races.results', { defaultValue: 'Results' })}` : t('races.results', { defaultValue: 'Results' })}
                                 </Button>
                             )}
-                            {(primaryEdition?.photoGalleryUrl ?? event.photoGalleryUrl) && (
+                            {primaryEdition?.photoGalleryUrl && (
                                 <Button
                                     variant="outlined"
                                     size="small"
                                     endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
-                                    onClick={() => window.open((primaryEdition?.photoGalleryUrl ?? event.photoGalleryUrl)!, '_blank', 'noopener')}
+                                    onClick={() => window.open(primaryEdition.photoGalleryUrl!, '_blank', 'noopener')}
                                     sx={{ textTransform: 'none' }}
                                 >
-                                    📷 {t('races.photoGallery', { domain: new URL((primaryEdition?.photoGalleryUrl ?? event.photoGalleryUrl)!).hostname.replace(/^www\./, ''), defaultValue: 'Photos' })}
+                                    📷 {t('races.photoGallery', { domain: new URL(primaryEdition.photoGalleryUrl!).hostname.replace(/^www\./, ''), defaultValue: 'Photos' })}
                                 </Button>
                             )}
                             {event.youtubeUrl && (
