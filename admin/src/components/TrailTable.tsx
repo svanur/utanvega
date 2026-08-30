@@ -13,7 +13,7 @@ import { trailStatusLabel, type Trail } from '../hooks/useTrails';
 import type { LocationDto } from '../hooks/useLocations';
 import type { TagDto } from '../hooks/useTags';
 import { InlineEditText, InlineEditSelect } from './InlineEditCell';
-import { memo, useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 const SITE_URL = import.meta.env.VITE_SITE_URL?.trim() || 'https://www.hlaupadagskra.is';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
@@ -21,6 +21,8 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 interface TrailTableProps {
   trails: Trail[];
   selectedIds: string[];
+  /** Id of the row currently focused via j/k keyboard navigation (null if none). */
+  focusedId?: string | null;
   orderBy: string;
   order: 'asc' | 'desc';
   onRequestSort: (property: string) => void;
@@ -42,6 +44,7 @@ interface TrailTableProps {
 export default function TrailTable({
   trails,
   selectedIds,
+  focusedId = null,
   orderBy,
   order,
   onRequestSort,
@@ -111,6 +114,7 @@ export default function TrailTable({
               key={trail.id}
               trail={trail}
               selected={selectedIds.includes(trail.id)}
+              focused={trail.id === focusedId}
               onSelectOne={onSelectOne}
               onViewMap={onViewMap}
               onRestore={onRestore}
@@ -178,6 +182,8 @@ function DifficultyChip({ difficulty }: { difficulty: string }) {
 interface TrailRowProps {
   trail: Trail;
   selected: boolean;
+  /** Row is the current j/k keyboard-navigation cursor — visual only, not selection. */
+  focused: boolean;
   onSelectOne: (id: string) => void;
   onViewMap: (trail: { id: string; name: string }) => void;
   onRestore: (trail: Trail) => void;
@@ -213,9 +219,14 @@ const activityOptions = [
   { value: 'Cycling', label: 'Cycling' },
 ];
 
-function TrailRowComponent({ trail, selected, onSelectOne, onViewMap, onRestore, onPatchTrail, allLocations, onAddLocation, onRemoveLocation, allTags, onAddTag, onRemoveTag, onRowClick }: TrailRowProps) {
+function TrailRowComponent({ trail, selected, focused, onSelectOne, onViewMap, onRestore, onPatchTrail, allLocations, onAddLocation, onRemoveLocation, allTags, onAddTag, onRemoveTag, onRowClick }: TrailRowProps) {
   const [showAddLocation, setShowAddLocation] = useState(false);
   const [showAddTag, setShowAddTag] = useState(false);
+  const rowRef = useRef<HTMLTableRowElement>(null);
+
+  useEffect(() => {
+    if (focused) rowRef.current?.scrollIntoView({ block: 'nearest' });
+  }, [focused]);
 
   const linkedIds = useMemo(() => new Set(trail.locations?.map(l => l.id) ?? []), [trail.locations]);
   const availableLocations = useMemo(() => allLocations.filter(l => !linkedIds.has(l.id)), [allLocations, linkedIds]);
@@ -236,14 +247,16 @@ function TrailRowComponent({ trail, selected, onSelectOne, onViewMap, onRestore,
 
   return (
     <TableRow
+      ref={rowRef}
       selected={selected}
       hover={!!onRowClick}
       onClick={handleRowClick}
-      sx={{
+      sx={(theme) => ({
         opacity: trail.status === 'Archived' ? 0.6 : 1,
         bgcolor: trail.status === 'Archived' ? 'action.hover' : 'inherit',
         ...(onRowClick && { cursor: 'pointer' }),
-      }}
+        ...(focused && { outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: -2 }),
+      })}
     >
       <TableCell padding="checkbox">
         <Checkbox checked={selected} onChange={handleSelect} />
