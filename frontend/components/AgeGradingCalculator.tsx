@@ -212,6 +212,24 @@ export default function AgeGradingCalculator() {
                         </Paper>
                     </Box>
 
+                    {/* Age-graded equivalent time — comparable weight to the percentage above */}
+                    <Box>
+                        <Typography variant="h5" fontWeight={700} sx={{ lineHeight: 1.3 }}>
+                            {t('tools.ageGrading.equivalentTo', {
+                                time: formatSeconds(result.ageGradedSeconds),
+                                distance: t(`tools.ageGrading.distanceNames.${distance.i18nKey}`),
+                            })}
+                        </Typography>
+                        <Typography variant="caption" color="text.disabled">
+                            {t('tools.ageGrading.ageGradedTimeDesc')}
+                        </Typography>
+                    </Box>
+
+                    {/* Always-visible basis note — 100% is an age-group record, not an absolute one */}
+                    <Typography variant="body2" color="text.secondary">
+                        {t('tools.ageGrading.basisNote')}
+                    </Typography>
+
                     {/* Progress bar with tier ticks */}
                     <Box>
                         <Box sx={{ position: 'relative', height: 8 }}>
@@ -251,23 +269,7 @@ export default function AgeGradingCalculator() {
 
                     <Divider />
 
-                    {/* Age-graded time */}
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2 }}>
-                        <Box>
-                            <Typography variant="body2" color="text.secondary">
-                                {t('tools.ageGrading.ageGradedTime')}
-                            </Typography>
-                            <Typography variant="caption" color="text.disabled">
-                                {t('tools.ageGrading.ageGradedTimeDesc')}
-                            </Typography>
-                        </Box>
-                        <Typography variant="h6" fontWeight={700} sx={{ flexShrink: 0 }}>
-                            {formatSeconds(result.ageGradedSeconds)}
-                        </Typography>
-                    </Box>
-
                     {/* Next tier */}
-                    <Divider />
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                         {result.nextTier ? (
                             <>
@@ -310,6 +312,12 @@ export default function AgeGradingCalculator() {
                             </Box>
                         ))}
                     </Box>
+
+                    {/* Table edition / source — kept with the result it produced */}
+                    <Divider />
+                    <Typography variant="caption" color="text.disabled">
+                        {t('tools.ageGrading.source')}
+                    </Typography>
                 </Paper>
             )}
 
@@ -373,10 +381,6 @@ export default function AgeGradingCalculator() {
                     {t('tools.ageGrading.invalidInput')}
                 </Alert>
             )}
-
-            <Typography variant="caption" color="text.disabled">
-                {t('tools.ageGrading.source')}
-            </Typography>
         </Box>
     );
 }

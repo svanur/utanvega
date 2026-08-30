@@ -1197,18 +1197,19 @@
             "yourTime": "Tími þinn",
             "timeHelp": "t.d. 22:30 eða 1:45:00",
             "ageGradedPct": "Hlutfall aldursflokks",
-            "ageGradedTime": "Jafngildur aldursflokkatími",
+            "equivalentTo": "Jafngildir {{time}} í opnum flokki ({{distance}})",
             "ageGradedTimeDesc": "Tíminn sem ~30 ára hlaupari þyrfti til að jafna tíman þinn",
+            "basisNote": "Aldursleiðrétting ber árangur þinn saman við besta árangur sem þekkist hjá einhverjum á þínum aldri og af þínu kyni — 100% er því aldursflokksmet, ekki algert heimsmet.",
             "tiers": "Frammistöðuflokkar",
             "tierNames": {
-                "worldClass": "Heimsklassaflokkur",
+                "worldClass": "Heimsklassaflokkur (m.v. aldur/kyn)",
                 "nationalClass": "Landsliðsflokkur",
                 "regionalClass": "Svæðisflokkur",
                 "localClass": "Innanfélagsflokkur",
                 "recreational": "Tómstundaflokkur"
             },
             "nextTier": "Þú þarft að hlaupa {{time}} mín. hraðar til að ná næsta flokki, sem er: {{tier}}",
-            "worldClass": "Heimsklassa árangur — efsti flokkur náðst!",
+            "worldClass": "Heimsklassa árangur miðað við aldur og kyn — efsti flokkur náðst!",
             "invalidInput": "Sláðu inn aldur (5–100) og lokatíma.",
             "source": "Byggt á 2025 USATF MLDR Road Age Grading Tables — Alan Jones",
             "examples": {
