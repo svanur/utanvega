@@ -20,6 +20,7 @@ using Utanvega.Backend.Application.Trails.Commands.DeleteTrail;
 using Utanvega.Backend.Application.Trails.Commands.BulkTrailAction;
 using Utanvega.Backend.Application.Trails.Commands.PatchTrail;
 using Utanvega.Backend.Application.Trails.Commands.UpdateTrailGpx;
+using Utanvega.Backend.Application.Trails.Commands.BackfillElevationProfiles;
 using Utanvega.Backend.Application.Trails.Queries.GetTrails;
 using Utanvega.Backend.Application.Trails.Queries.GetTrailGeometry;
 using Utanvega.Backend.Application.Locations.Queries.GetLocations;
@@ -60,6 +61,7 @@ using Utanvega.Backend.Application.Events.Commands.UpdateRace;
 using Utanvega.Backend.Application.Events.Commands.DeleteRace;
 using Utanvega.Backend.Application.Events.Commands.GenerateEditionsForSeason;
 using Utanvega.Backend.Application.Organizers;
+using Utanvega.Backend.Application.Tags;
 using Utanvega.Backend.Application.Activities.Commands.CreateUserTrailActivity;
 using Utanvega.Backend.Application.Activities.Commands.UpdateUserTrailActivity;
 using Utanvega.Backend.Application.Activities.Commands.DeleteUserTrailActivity;
@@ -340,12 +342,29 @@ builder.Services.Configure<Microsoft.AspNetCore.Mvc.JsonOptions>(options =>
 });
 
 // Salt for the stored IP hashes. Must be stable across deploys: a salt that
-// changes makes every returning visitor look new. Absent, hashing falls back to
-// unsalted, which is reversible for IPv4 — hence the warning rather than a
-// silent default.
+// changes makes every returning visitor look new.
+//
+// Outside development its absence is fatal. An empty key still produces a
+// valid-looking HMAC and deduplication keeps working, so nothing looks wrong —
+// but IPv4 has only ~4 billion values, so the whole space can be hashed and the
+// stored digests turned back into addresses. A warning is too easy to miss for
+// a failure whose only symptom is that the data is quietly unprotected, and
+// every hash written before it is noticed has to be discarded.
 var ipHashSalt = builder.Configuration["IpHashSalt"]
     ?? Environment.GetEnvironmentVariable("IP_HASH_SALT")
     ?? string.Empty;
+
+if (string.IsNullOrWhiteSpace(ipHashSalt) && !builder.Environment.IsDevelopment())
+{
+    throw new InvalidOperationException(
+        "IP_HASH_SALT is not set. Stored view hashes would be unsalted and reversible for IPv4. " +
+        "Set it to a stable secret (openssl rand -base64 32) — changing it later resets " +
+        "unique-visitor counts, so it must not be regenerated per deploy.");
+}
+
+// Injected wherever "now" is needed, so time-dependent logic can be tested at
+// an exact instant rather than racing the system clock.
+builder.Services.AddSingleton(TimeProvider.System);
 
 builder.Services.AddSingleton(new TrailViewRetentionOptions());
 builder.Services.AddHostedService<TrailViewRetentionService>();
@@ -408,9 +427,10 @@ var app = builder.Build();
 
 if (string.IsNullOrEmpty(ipHashSalt))
 {
+    // Only reachable in development, where startup above does not throw.
     app.Logger.LogWarning(
         "IP_HASH_SALT is not set — stored view hashes are unsalted and reversible for IPv4. " +
-        "Set it to a stable secret; changing it later resets unique-visitor counts.");
+        "Fine locally; outside development this is a startup failure.");
 }
 
 // Resolves the Supabase user id from the validated JWT, for audit-trail attribution.
@@ -800,7 +820,7 @@ app.MapGet("/api/v1/admin/trails/{idOrSlug}", [Authorize(Policy = "AdminOnly")] 
         trail.NeedsReview,
         TerrainType = trail.TerrainType?.ToString(),
         TranslationHashes = trail.TranslationHashes == null ? null : System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(trail.TranslationHashes),
-        MaxAltitude = trail.ElevationProfile != null && trail.ElevationProfile.Length > 0 ? trail.ElevationProfile.Max() : (double?)null,
+        MaxAltitude = ElevationProfileValidator.GetMaxAltitude(trail.ElevationProfile),
         Locations = trail.TrailLocations
             .OrderBy(tl => tl.Order)
             .Select(tl => new { tl.LocationId, Role = tl.Role.ToString(), tl.Order })
@@ -860,10 +880,10 @@ app.MapPut("/api/v1/admin/trails/{id:guid}", [Authorize(Policy = "AdminOnly")] a
 })
 .WithName("UpdateTrail");
 
-app.MapPatch("/api/v1/admin/trails/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, PatchTrailCommand command, IMediator mediator) =>
+app.MapPatch("/api/v1/admin/trails/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, PatchTrailCommand command, IMediator mediator, HttpContext httpContext) =>
 {
     if (id != command.Id) return Results.BadRequest("ID mismatch");
-    var success = await mediator.Send(command);
+    var success = await mediator.Send(command with { ActorUserId = GetAuthenticatedUserId(httpContext) });
     return success ? Results.NoContent() : Results.NotFound();
 })
 .WithName("PatchTrail");
@@ -948,43 +968,10 @@ app.MapPost("/api/v1/admin/trails/bulk-action", [Authorize(Policy = "AdminOnly")
 })
 .WithName("BulkTrailAction");
 
-app.MapPost("/api/v1/admin/trails/backfill-elevation-profiles", [Authorize(Policy = "AdminOnly")] async (UtanvegaDbContext context) =>
+app.MapPost("/api/v1/admin/trails/backfill-elevation-profiles", [Authorize(Policy = "AdminOnly")] async (IMediator mediator) =>
 {
-    var trails = await context.Trails
-        .Where(t => t.GpxData != null && t.ElevationProfile == null)
-        .ToListAsync();
-
-    foreach (var trail in trails)
-    {
-        var line = trail.GpxData as NetTopologySuite.Geometries.LineString;
-        if (line == null) continue;
-
-        var elevations = line.Coordinates
-            .Select(c => c.Z)
-            .Where(z => !double.IsNaN(z))
-            .ToArray();
-
-        if (elevations.Length < 2) continue;
-
-        trail.ElevationProfile = SampleProfile(elevations, 50);
-    }
-
-    await context.SaveChangesAsync();
-    return Results.Ok(new { updated = trails.Count });
-
-    static double[] SampleProfile(double[] src, int n)
-    {
-        if (src.Length <= n) return src;
-        var result = new double[n];
-        for (var i = 0; i < n; i++)
-        {
-            var idx = (double)i / (n - 1) * (src.Length - 1);
-            var lo = (int)idx;
-            var hi = Math.Min(lo + 1, src.Length - 1);
-            result[i] = src[lo] * (1 - (idx - lo)) + src[hi] * (idx - lo);
-        }
-        return result;
-    }
+    var result = await mediator.Send(new BackfillElevationProfilesCommand());
+    return Results.Ok(new { updated = result.Updated, skipped = result.Skipped, skipReasons = result.SkipReasons });
 })
 .WithName("BackfillElevationProfiles");
 
@@ -1265,9 +1252,9 @@ app.MapGet("/api/v1/admin/locations", [Authorize(Policy = "AdminOnly")] async (G
 })
 .WithName("GetLocations");
 
-app.MapPost("/api/v1/admin/locations", [Authorize(Policy = "AdminOnly")] async (CreateLocationCommand command, IMediator mediator) =>
+app.MapPost("/api/v1/admin/locations", [Authorize(Policy = "AdminOnly")] async (CreateLocationCommand command, IMediator mediator, HttpContext httpContext) =>
 {
-    var id = await mediator.Send(command);
+    var id = await mediator.Send(command with { ActorUserId = GetAuthenticatedUserId(httpContext) });
     return Results.Created($"/api/v1/admin/locations/{id}", new { id });
 })
 .WithName("CreateLocation");
@@ -1301,55 +1288,31 @@ app.MapDelete("/api/v1/admin/locations/{id:guid}", [Authorize(Policy = "AdminOnl
 .WithName("DeleteLocation");
 
 // Tags Admin API
-app.MapGet("/api/v1/admin/tags", [Authorize(Policy = "AdminOnly")] async (UtanvegaDbContext context) =>
+app.MapGet("/api/v1/admin/tags", [Authorize(Policy = "AdminOnly")] async (IMediator mediator) =>
 {
-    var tags = await context.Tags
-        .AsNoTracking()
-        .OrderBy(t => t.Name)
-        .Select(t => new { t.Id, t.Name, t.NameEn, t.Slug, t.Color, TrailCount = t.TrailTags.Count, t.TranslationHashes })
-        .ToListAsync();
+    var tags = await mediator.Send(new GetTagsQuery());
     return Results.Ok(tags);
 })
 .WithName("GetTags");
 
-app.MapPost("/api/v1/admin/tags", [Authorize(Policy = "AdminOnly")] async (TagCreateDto dto, UtanvegaDbContext context, HttpContext httpContext) =>
+app.MapPost("/api/v1/admin/tags", [Authorize(Policy = "AdminOnly")] async (TagCreateDto dto, IMediator mediator, HttpContext httpContext) =>
 {
-    var tag = new Utanvega.Backend.Core.Entities.Tag
-    {
-        Name = dto.Name,
-        NameEn = dto.NameEn,
-        Slug = Utanvega.Backend.Core.Services.SlugGenerator.Generate(dto.Name),
-        Color = dto.Color
-    };
-    context.Tags.Add(tag);
-    await context.SaveChangesWithAuditAsync(GetAuthenticatedUserId(httpContext));
-    return Results.Created($"/api/v1/admin/tags/{tag.Id}", new { tag.Id, tag.Name, tag.Slug, tag.Color });
+    var (id, slug) = await mediator.Send(new CreateTagCommand(dto.Name, dto.Color, dto.NameEn, GetAuthenticatedUserId(httpContext)));
+    return Results.Created($"/api/v1/admin/tags/{id}", new { Id = id, dto.Name, Slug = slug, dto.Color });
 })
 .WithName("CreateTag");
 
-app.MapPut("/api/v1/admin/tags/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, TagCreateDto dto, UtanvegaDbContext context, HttpContext httpContext) =>
+app.MapPut("/api/v1/admin/tags/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, TagCreateDto dto, IMediator mediator, HttpContext httpContext) =>
 {
-    var tag = await context.Tags.FindAsync(id);
-    if (tag == null) return Results.NotFound();
-    tag.Name = dto.Name;
-    tag.NameEn = dto.NameEn;
-    tag.Slug = Utanvega.Backend.Core.Services.SlugGenerator.Generate(dto.Name);
-    tag.Color = dto.Color;
-    if (dto.TranslationHashes != null)
-        tag.TranslationHashes = System.Text.Json.JsonSerializer.Serialize(dto.TranslationHashes);
-    await context.SaveChangesWithAuditAsync(GetAuthenticatedUserId(httpContext));
-    return Results.NoContent();
+    var success = await mediator.Send(new UpdateTagCommand(id, dto.Name, dto.Color, dto.NameEn, dto.Slug, dto.TranslationHashes, GetAuthenticatedUserId(httpContext)));
+    return success ? Results.NoContent() : Results.NotFound();
 })
 .WithName("UpdateTag");
 
-app.MapDelete("/api/v1/admin/tags/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, UtanvegaDbContext context, HttpContext httpContext) =>
+app.MapDelete("/api/v1/admin/tags/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, IMediator mediator, HttpContext httpContext) =>
 {
-    var tag = await context.Tags.Include(t => t.TrailTags).FirstOrDefaultAsync(t => t.Id == id);
-    if (tag == null) return Results.NotFound();
-    context.TrailTags.RemoveRange(tag.TrailTags);
-    context.Tags.Remove(tag);
-    await context.SaveChangesWithAuditAsync(GetAuthenticatedUserId(httpContext));
-    return Results.NoContent();
+    var success = await mediator.Send(new DeleteTagCommand(id, GetAuthenticatedUserId(httpContext)));
+    return success ? Results.NoContent() : Results.NotFound();
 })
 .WithName("DeleteTag");
 
@@ -1457,29 +1420,15 @@ app.MapPost("/api/v1/admin/trails/detect-terrain-types", [Authorize(Policy = "Ad
 
     foreach (var trail in trails)
     {
-        if (trail.Length <= 1000 || trail.ElevationProfile == null || trail.ElevationProfile.Length == 0)
+        if (trail.Length <= 1000 || ElevationProfileValidator.IsDegenerate(trail.ElevationProfile))
         {
             skipped++;
             continue;
         }
 
-        var climbRatio = trail.ElevationGain / (trail.Length / 1000.0);
         var maxAltitude = trail.ElevationProfile.Max();
 
-        // Mountain Index — high-latitude (Iceland) thresholds
-        Utanvega.Backend.Core.Entities.TerrainType terrainType;
-        if (climbRatio < 20)
-            terrainType = Utanvega.Backend.Core.Entities.TerrainType.Flat;
-        else if (maxAltitude > 600 && climbRatio >= 30)
-            terrainType = Utanvega.Backend.Core.Entities.TerrainType.Mountainous;
-        else if (maxAltitude < 400)
-            terrainType = Utanvega.Backend.Core.Entities.TerrainType.Hilly;
-        else
-            terrainType = climbRatio >= 50
-                ? Utanvega.Backend.Core.Entities.TerrainType.Mountainous
-                : Utanvega.Backend.Core.Entities.TerrainType.Hilly;
-
-        trail.TerrainType = terrainType;
+        trail.TerrainType = MountainIndexClassifier.Classify(trail.Length, trail.ElevationGain, maxAltitude);
         updated++;
     }
 
@@ -1493,6 +1442,33 @@ app.MapPost("/api/v1/admin/trails/detect-terrain-types", [Authorize(Policy = "Ad
     return Results.Ok(new { total = trails.Count, updated, skipped });
 })
 .WithName("DetectTerrainTypes");
+
+app.MapPost("/api/v1/admin/trails/classify-terrain", [Authorize(Policy = "AdminOnly")] (ClassifyTerrainRequest body) =>
+{
+    try
+    {
+        // Mirrors detect-terrain-types' skip condition (trail.Length <= 1000, degenerate profile)
+        // so the two endpoints can never disagree on a trail that one accepts and the other skips.
+        if (body.Length <= 1000)
+            return Results.BadRequest("Length must be greater than 1000m — matches the detect-terrain-types skip threshold for short trails.");
+
+        if (body.ElevationGain < 0)
+            return Results.BadRequest("ElevationGain cannot be negative.");
+
+        // A MaxAltitude of exactly 0 is indistinguishable from a degenerate elevation profile
+        // (missing elevation used to be stored as all-zero rather than absent — see #465).
+        if (body.MaxAltitude is null or 0)
+            return Results.BadRequest("MaxAltitude must be provided and non-zero.");
+
+        var terrainType = MountainIndexClassifier.Classify(body.Length, body.ElevationGain, body.MaxAltitude.Value);
+        return Results.Ok(new { terrainType });
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(ex.Message);
+    }
+})
+.WithName("ClassifyTerrain");
 
 // --- Feature Flags ---
 app.MapGet("/api/v1/features", async (UtanvegaDbContext context, IMemoryCache cache) =>
@@ -2253,10 +2229,10 @@ public record SubmitFeedbackRequest(
     string? StepsToReproduce, string? BrowserInfo, string? ScreenshotUrl);
 public record PatchFeedbackRequest(
     string? Status, string? Priority, int? GitHubIssue, bool? ClearGitHubIssue, string? AdminComment);
-public record TagCreateDto(string Name, string? Color, string? NameEn = null, Dictionary<string, string>? TranslationHashes = null);
 public record TranslateRequest(List<string> Texts);
 public record BulkAddTagRequest(List<Guid> TrailIds, Guid TagId);
 public record TrailLocationAddRequest(Guid LocationId, string? Role);
+public record ClassifyTerrainRequest(double Length, double ElevationGain, double? MaxAltitude);
 public record FeatureFlagCreateDto(string Name, bool Enabled = true, string? Description = null);
 public record FeatureFlagUpdateDto(bool? Enabled, string? Description);
 public record CreateUserTrailActivityDto(

@@ -80,11 +80,18 @@ public class AnalyticsHandlerTests : IDisposable
         context.SaveChanges();
     }
 
-    private async Task<AnalyticsDto> Run()
+    private async Task<AnalyticsDto> Run(DateTime? asOf = null)
     {
         await using UtanvegaDbContext context = _factory.CreateContext();
-        var handler = new GetAnalyticsQueryHandler(context);
+        var clock = asOf is null ? TimeProvider.System : new FixedClock(asOf.Value);
+        var handler = new GetAnalyticsQueryHandler(context, clock);
         return await handler.Handle(new GetAnalyticsQuery(), CancellationToken.None);
+    }
+
+    /// A clock stopped at one instant, so boundary behaviour is exact.
+    private sealed class FixedClock(DateTime utcNow) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => new(utcNow, TimeSpan.Zero);
     }
 
     // ── Summary ───────────────────────────────────────────────────────────
@@ -105,6 +112,39 @@ public class AnalyticsHandlerTests : IDisposable
     }
 
     [Fact]
+    public async Task Summary_CountsTodayAndYesterdayByCalendarDay()
+    {
+        // Calendar days, not rolling 24-hour windows. The clock is stopped at a
+        // known instant so the boundary is exact: reading the clock separately
+        // from the handler would race it, and midnight falling between the two
+        // reads would move the planted views into the wrong day.
+        // Ten days ahead of the shared seed, whose newest view is a day old, so
+        // none of it falls in this today or yesterday and the counts below are
+        // exactly the views planted here.
+        var noon = _now.Date.AddDays(10).AddHours(12);
+        var midnight = noon.Date;
+
+        using (var context = _factory.CreateContext())
+        {
+            void At(DateTime when) => context.TrailViews.Add(new TrailView
+            {
+                Id = Guid.NewGuid(), TrailId = EsjaId, ViewedAtUtc = when, IpHash = "boundary",
+            });
+            At(midnight);                  // exactly midnight — today
+            At(midnight.AddMinutes(1));    // just after — today
+            At(midnight.AddTicks(-1));     // a tick before — yesterday
+            At(midnight.AddHours(-10));    // yesterday, earlier
+            At(midnight.AddDays(-1));      // exactly yesterday midnight — yesterday
+            At(midnight.AddDays(-1).AddTicks(-1)); // a tick before that — neither
+            context.SaveChanges();
+        }
+
+        var summary = (await Run(asOf: noon)).Summary;
+        Assert.Equal(2, summary.ViewsToday);
+        Assert.Equal(3, summary.ViewsYesterday);
+    }
+
+    [Fact]
     public async Task Summary_SplitsThisWeekFromLastWeek()
     {
         var result = await Run();
@@ -115,11 +155,32 @@ public class AnalyticsHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task Summary_AveragesOverTrailsThatHaveViews()
+    public async Task Summary_AveragesOverVisibleTrailsOnly()
     {
+        // Esja and Hengill, not the archived trail — it is hidden from the
+        // site, so counting it would understate how the visible ones do.
         var result = await Run();
-        Assert.Equal(3, result.Summary.TrailsWithViews);
-        Assert.Equal(Math.Round(11d / 3, 1), result.Summary.AvgViewsPerTrail);
+        Assert.Equal(2, result.Summary.TrailsWithViews);
+
+        // 6 Esja + 4 Hengill over 2 trails. The archived trail's single view
+        // is excluded from both halves, so this deliberately does not
+        // reconcile with TotalViews (11) — that stays a genuine total.
+        Assert.Equal(5.0, result.Summary.AvgViewsPerTrail);
+    }
+
+    [Fact]
+    public async Task Summary_TotalViewsExceedsWhatTheAverageAccountsFor()
+    {
+        // The asymmetry itself, rather than a second copy of the total: the
+        // average covers only visible trails, so the archived trail's views
+        // are in TotalViews and nowhere in the average. Asserting the literal
+        // total again would fail alongside the count test and prove nothing.
+        var result = await Run();
+
+        var accountedFor = result.Summary.AvgViewsPerTrail * result.Summary.TrailsWithViews;
+        var archivedViews = result.Summary.TotalViews - accountedFor;
+
+        Assert.Equal(1, archivedViews); // the single view on the archived trail
     }
 
     // ── Daily ─────────────────────────────────────────────────────────────
@@ -163,6 +224,28 @@ public class AnalyticsHandlerTests : IDisposable
         Assert.Equal(11, result.HourlyViews.Sum(h => h.Views));
         Assert.Equal(result.HourlyViews.OrderBy(h => h.Hour).Select(h => h.Hour), result.HourlyViews.Select(h => h.Hour));
         Assert.All(result.HourlyViews, h => Assert.InRange(h.Hour, 0, 23));
+    }
+
+    // ── Day of week ───────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task DayOfWeekViews_AreAlwaysSevenDays_AndSumToTheTotal()
+    {
+        var result = await Run();
+        Assert.Equal(7, result.DayOfWeekViews.Count);
+        Assert.Equal([0, 1, 2, 3, 4, 5, 6], result.DayOfWeekViews.Select(d => d.DayOfWeek).OrderBy(d => d));
+        Assert.Equal(11, result.DayOfWeekViews.Sum(d => d.Views));
+    }
+
+    [Fact]
+    public async Task DayOfWeekViews_GapFillTodaysWeekday_WhenNothingWasSeededOnIt()
+    {
+        // Every seeded view is offset by at least a day from "now" (the
+        // smallest offset used above is 1), so today's own weekday has no
+        // seeded view and must still come back as a zero, not be missing.
+        var result = await Run();
+        var today = result.DayOfWeekViews.Single(d => d.DayOfWeek == (int)_now.DayOfWeek);
+        Assert.Equal(0, today.Views);
     }
 
     // ── Top trails ────────────────────────────────────────────────────────

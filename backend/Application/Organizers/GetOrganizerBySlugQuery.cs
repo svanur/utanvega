@@ -26,7 +26,7 @@ public class GetOrganizerBySlugQueryHandler : IRequestHandler<GetOrganizerBySlug
         var organizer = await _context.Organizers
             .AsNoTracking()
             .Where(o => o.Slug == request.Slug)
-            .Select(o => new { o.Id, o.Name, o.Slug, o.Website, o.Description, o.DescriptionEn, o.ContactName })
+            .Select(o => new { o.Id, o.Name, o.Slug, o.Website, o.Description, o.DescriptionEn, o.ContactName, o.SocialLinks })
             .FirstOrDefaultAsync(cancellationToken);
 
         if (organizer is null) return null;
@@ -63,7 +63,7 @@ public class GetOrganizerBySlugQueryHandler : IRequestHandler<GetOrganizerBySlug
         return new OrganizerPublicDto(
             organizer.Id, organizer.Name, organizer.Slug, organizer.Website,
             organizer.Description, organizer.DescriptionEn, organizer.ContactName,
-            events
+            events, organizer.SocialLinks
         );
     }
 }

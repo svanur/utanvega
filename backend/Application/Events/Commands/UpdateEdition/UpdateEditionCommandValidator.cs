@@ -1,4 +1,5 @@
 using FluentValidation;
+using Utanvega.Backend.Application.Validation;
 using Utanvega.Backend.Core.Entities;
 
 namespace Utanvega.Backend.Application.Events.Commands.UpdateEdition;
@@ -33,11 +34,11 @@ public class UpdateEditionCommandValidator : AbstractValidator<UpdateEditionComm
 
         RuleFor(x => x.RegistrationStatus)
             .NotEmpty()
-            .Must(v => Enum.TryParse<RegistrationStatus>(v, ignoreCase: true, out _))
+            .Must(EnumValidation.IsDefined<RegistrationStatus>)
             .WithMessage($"RegistrationStatus must be one of: {string.Join(", ", Enum.GetNames<RegistrationStatus>())}.");
 
         RuleFor(x => x.Status)
-            .Must(v => Enum.TryParse<EditionStatus>(v, ignoreCase: true, out _))
+            .Must(EnumValidation.IsDefined<EditionStatus>)
             .WithMessage($"Status must be one of: {string.Join(", ", Enum.GetNames<EditionStatus>())}.")
             .When(x => !string.IsNullOrEmpty(x.Status));
 

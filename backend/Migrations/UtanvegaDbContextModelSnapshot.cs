@@ -459,6 +459,9 @@ namespace Utanvega.Backend.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<string>("SocialLinks")
+                        .HasColumnType("jsonb");
+
                     b.Property<string>("TranslationHashes")
                         .HasColumnType("text");
 

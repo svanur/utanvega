@@ -1,5 +1,7 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using NetTopologySuite.Geometries;
+using NetTopologySuite.IO;
 using System.Text.Json;
 using Utanvega.Backend.Infrastructure.Persistence;
 
@@ -54,9 +56,12 @@ internal class TestDbContext : UtanvegaDbContext
             entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
             entity.Property(e => e.Slug).IsRequired().HasMaxLength(250);
             entity.HasIndex(e => e.Slug).IsUnique();
+            // SQLite has no PostGIS geometry column — round-trip via WKB (with Z ordinate) so
+            // tests exercising GpxData (e.g. elevation-profile backfill) see real geometry
+            // instead of it silently vanishing to null.
             entity.Property(e => e.GpxData).HasConversion(
-                v => (byte[]?)null,
-                v => null!
+                v => v == null ? null : new WKBWriter { HandleOrdinates = Ordinates.XYZ }.Write(v),
+                v => v == null ? null : (Geometry)new WKBReader { HandleOrdinates = Ordinates.XYZ }.Read(v)
             );
             entity.Property(e => e.Status).HasConversion<string>();
             entity.Property(e => e.ActivityTypeId).HasConversion<string>();
@@ -174,6 +179,10 @@ internal class TestDbContext : UtanvegaDbContext
             entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
             entity.Property(e => e.Slug).IsRequired().HasMaxLength(200);
             entity.HasIndex(e => e.Slug).IsUnique();
+            entity.Property(e => e.SocialLinks).HasConversion(
+                v => v == null ? null : JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                v => v == null ? null : JsonSerializer.Deserialize<System.Collections.Generic.List<Core.Entities.SocialLink>>(v, (JsonSerializerOptions?)null)
+            );
         });
 
         modelBuilder.Entity<Core.Entities.EventEdition>(entity =>

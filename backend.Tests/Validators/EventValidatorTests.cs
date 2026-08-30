@@ -94,6 +94,16 @@ public class EventValidatorTests : IDisposable
     }
 
     [Fact]
+    public void CreateEvent_NumericStatus_Fails()
+    {
+        // Regression: Enum.TryParse alone would have accepted this ("99" fits EventStatus's
+        // underlying int type) and let it through to the handler as unvalidated input.
+        var cmd = ValidCreateEventCommand with { Status = "99" };
+        var result = _createEventValidator.TestValidate(cmd);
+        result.ShouldHaveValidationErrorFor(x => x.Status);
+    }
+
+    [Fact]
     public void CreateEvent_InvalidUrl_Fails()
     {
         var cmd = ValidCreateEventCommand with { OrganizerWebsite = "not-a-url" };
@@ -206,6 +216,40 @@ public class EventValidatorTests : IDisposable
     }
 
     [Fact]
+    public void UpdateEvent_NullSlug_Passes()
+    {
+        var cmd = ValidUpdateEventCommand with { Slug = null };
+        var result = _updateEventValidator.TestValidate(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.Slug);
+    }
+
+    [Fact]
+    public void UpdateEvent_BlankSlug_Passes()
+    {
+        // Blank is what UpdateEventCommand's handler treats as "no change requested" — it must not
+        // be rejected by validation before it even reaches that no-op branch.
+        var cmd = ValidUpdateEventCommand with { Slug = "   " };
+        var result = _updateEventValidator.TestValidate(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.Slug);
+    }
+
+    [Fact]
+    public void UpdateEvent_MalformedSlug_Fails()
+    {
+        var cmd = ValidUpdateEventCommand with { Slug = "Not A Slug!!!" };
+        var result = _updateEventValidator.TestValidate(cmd);
+        result.ShouldHaveValidationErrorFor(x => x.Slug);
+    }
+
+    [Fact]
+    public void UpdateEvent_ValidSlug_Passes()
+    {
+        var cmd = ValidUpdateEventCommand with { Slug = "new-event-slug" };
+        var result = _updateEventValidator.TestValidate(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.Slug);
+    }
+
+    [Fact]
     public void UpdateEvent_NonHttpSocialLink_Fails()
     {
         var cmd = ValidUpdateEventCommand with
@@ -286,6 +330,32 @@ public class EventValidatorTests : IDisposable
         var cmd = ValidCreateEditionCommand with { RegistrationStatus = "Invalid" };
         var result = _createEditionValidator.TestValidate(cmd);
         result.ShouldHaveValidationErrorFor(x => x.RegistrationStatus);
+    }
+
+    [Fact]
+    public void CreateEdition_NullStatus_Passes()
+    {
+        var cmd = ValidCreateEditionCommand with { Status = null };
+        var result = _createEditionValidator.TestValidate(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.Status);
+    }
+
+    [Fact]
+    public void CreateEdition_InvalidStatus_Fails()
+    {
+        var cmd = ValidCreateEditionCommand with { Status = "NotAStatus" };
+        var result = _createEditionValidator.TestValidate(cmd);
+        result.ShouldHaveValidationErrorFor(x => x.Status);
+    }
+
+    [Fact]
+    public void CreateEdition_NumericStatus_Fails()
+    {
+        // Regression: Enum.TryParse alone would have accepted this ("99" fits EditionStatus's
+        // underlying int type) and let it through to the handler as unvalidated input.
+        var cmd = ValidCreateEditionCommand with { Status = "99" };
+        var result = _createEditionValidator.TestValidate(cmd);
+        result.ShouldHaveValidationErrorFor(x => x.Status);
     }
 
     [Fact]

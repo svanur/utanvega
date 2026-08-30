@@ -16,6 +16,7 @@ public record AnalyticsDto(
     SummaryDto Summary,
     List<DailyViewsDto> DailyViews,
     List<HourlyViewsDto> HourlyViews,
+    List<DayOfWeekViewsDto> DayOfWeekViews,
     List<TopTrailDto> TopTrails,
     List<TrendingTrailDto> TrendingTrails
 );
@@ -23,6 +24,8 @@ public record AnalyticsDto(
 public record SummaryDto(
     int TotalViews,
     int UniqueVisitors,
+    int ViewsToday,
+    int ViewsYesterday,
     int ViewsThisWeek,
     int ViewsLastWeek,
     double AvgViewsPerTrail,
@@ -31,16 +34,29 @@ public record SummaryDto(
 
 public record DailyViewsDto(string Date, int Views, int UniqueVisitors);
 public record HourlyViewsDto(int Hour, int Views);
+
+// DayOfWeek is stored as .NET's int enum value (Sunday = 0 ... Saturday = 6),
+// matching Postgres's date_part('dow') under Npgsql's translation — not
+// reordered here. Monday-first display, if wanted, is a client concern.
+public record DayOfWeekViewsDto(int DayOfWeek, int Views);
 public record TopTrailDto(string Name, string Slug, int ViewCount);
 public record TrendingTrailDto(string Name, string Slug, int ViewsThisWeek, int ViewsLastWeek, double ChangePercent);
 
 public class GetAnalyticsQueryHandler : IRequestHandler<GetAnalyticsQuery, AnalyticsDto>
 {
     private readonly UtanvegaDbContext _context;
+    private readonly TimeProvider _timeProvider;
 
-    public GetAnalyticsQueryHandler(UtanvegaDbContext context)
+    /// <param name="timeProvider">
+    /// Supplies "now". Injected rather than read from <c>DateTime.UtcNow</c> so
+    /// the day and week boundaries can be tested at an exact instant — a test
+    /// that reads the clock separately from the handler races it, and would
+    /// fail if midnight fell between the two reads.
+    /// </param>
+    public GetAnalyticsQueryHandler(UtanvegaDbContext context, TimeProvider timeProvider)
     {
         _context = context;
+        _timeProvider = timeProvider;
     }
 
     /// <summary>
@@ -52,10 +68,17 @@ public class GetAnalyticsQueryHandler : IRequestHandler<GetAnalyticsQuery, Analy
     /// </summary>
     public async Task<AnalyticsDto> Handle(GetAnalyticsQuery request, CancellationToken cancellationToken)
     {
-        var now = DateTime.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var startOfWeek = now.AddDays(-7);
         var startOfLastWeek = now.AddDays(-14);
         var thirtyDaysAgo = now.AddDays(-30);
+
+        // Calendar days, not rolling 24-hour windows: "today" should mean the
+        // day the reader is having. Iceland keeps UTC year-round with no DST,
+        // so the UTC day boundary is also the local one and no conversion is
+        // needed — worth stating, since it would not hold in most places.
+        var startOfToday = now.Date;
+        var startOfYesterday = startOfToday.AddDays(-1);
 
         var views = _context.TrailViews.AsNoTracking();
 
@@ -76,21 +99,48 @@ public class GetAnalyticsQueryHandler : IRequestHandler<GetAnalyticsQuery, Analy
             .Distinct()
             .CountAsync(cancellationToken);
 
+        var viewsToday = await views
+            .CountAsync(v => v.ViewedAtUtc >= startOfToday, cancellationToken);
+
+        var viewsYesterday = await views
+            .CountAsync(v => v.ViewedAtUtc >= startOfYesterday && v.ViewedAtUtc < startOfToday, cancellationToken);
+
         var viewsThisWeek = await views
             .CountAsync(v => v.ViewedAtUtc >= startOfWeek, cancellationToken);
 
         var viewsLastWeek = await views
             .CountAsync(v => v.ViewedAtUtc >= startOfLastWeek && v.ViewedAtUtc < startOfWeek, cancellationToken);
 
-        var trailsWithViews = await views
-            .Select(v => v.TrailId)
-            .Distinct()
-            .CountAsync(cancellationToken);
+        // Archived trails are excluded from the average and its "across N
+        // trails" label — they are hidden from the site, so counting them
+        // understates how the visible ones are doing.
+        //
+        // Both halves are filtered, not just the divisor: leaving archived
+        // views in the numerator while dropping their trails from the divisor
+        // would spread those views across the visible trails and inflate the
+        // figure. The consequence is that this average deliberately does not
+        // reconcile with Total Views, which stays a genuine all-time total.
+        // Both figures come back from one query rather than enumerating the
+        // same join twice — grouping on a constant gives a single row carrying
+        // the count and the distinct count together.
+        var visible = await views
+            .Join(visibleTrails, v => v.TrailId, t => t.Id, (v, t) => v.TrailId)
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                Views = g.Count(),
+                Trails = g.Select(trailId => trailId).Distinct().Count(),
+            })
+            .FirstOrDefaultAsync(cancellationToken);
 
-        var avgViewsPerTrail = trailsWithViews > 0 ? (double)totalViews / trailsWithViews : 0;
+        var trailsWithViews = visible?.Trails ?? 0;
+        var visibleTrailViews = visible?.Views ?? 0;
+
+        var avgViewsPerTrail = trailsWithViews > 0 ? (double)visibleTrailViews / trailsWithViews : 0;
 
         var summary = new SummaryDto(
-            totalViews, uniqueVisitors, viewsThisWeek, viewsLastWeek,
+            totalViews, uniqueVisitors, viewsToday, viewsYesterday,
+            viewsThisWeek, viewsLastWeek,
             Math.Round(avgViewsPerTrail, 1), trailsWithViews);
 
         // ── Daily views (last 30 days) ────────────────────────────────────
@@ -128,6 +178,27 @@ public class GetAnalyticsQueryHandler : IRequestHandler<GetAnalyticsQuery, Analy
 
         var hourlyViews = hourlyRows
             .Select(r => new HourlyViewsDto(r.Hour, r.Views))
+            .ToList();
+
+        // ── Day-of-week distribution (all-time, UTC) ──────────────────────
+        // Same two-step pattern as the hourly block above: grouping on
+        // ViewedAtUtc.DayOfWeek and projecting to an anonymous type, mapped to
+        // the DTO afterwards, since EF cannot order by a property of a
+        // projected record constructor.
+        var dayOfWeekRows = await views
+            .GroupBy(v => v.ViewedAtUtc.DayOfWeek)
+            .Select(g => new { DayOfWeek = g.Key, Views = g.Count() })
+            .ToListAsync(cancellationToken);
+
+        // Gap-filled here rather than left to the client, unlike the hourly
+        // chart: seven values is small and fixed, so there is no cost to
+        // guaranteeing every day is present, and it means a client cannot
+        // forget the zero-view days the way an hourly client filling 24
+        // buckets would still have to remember to do.
+        var dayOfWeekViews = Enum.GetValues<DayOfWeek>()
+            .Select(day => new DayOfWeekViewsDto(
+                (int)day,
+                dayOfWeekRows.FirstOrDefault(r => r.DayOfWeek == day)?.Views ?? 0))
             .ToList();
 
         // ── Top 10 trails (all-time) ──────────────────────────────────────
@@ -178,7 +249,7 @@ public class GetAnalyticsQueryHandler : IRequestHandler<GetAnalyticsQuery, Analy
                 PercentChange(r.ThisWeek, r.LastWeek)))
             .ToList();
 
-        return new AnalyticsDto(summary, dailyViews, hourlyViews, topTrails, trendingTrails);
+        return new AnalyticsDto(summary, dailyViews, hourlyViews, dayOfWeekViews, topTrails, trendingTrails);
     }
 
     /// <summary>

@@ -8,6 +8,7 @@ import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import PeopleIcon from '@mui/icons-material/People';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import TodayIcon from '@mui/icons-material/Today';
 import RouteIcon from '@mui/icons-material/Route';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import {
@@ -21,6 +22,8 @@ const VERCEL_ANALYTICS_URL = import.meta.env.VITE_VERCEL_ANALYTICS_URL as string
 interface Summary {
     totalViews: number;
     uniqueVisitors: number;
+    viewsToday: number;
+    viewsYesterday: number;
     viewsThisWeek: number;
     viewsLastWeek: number;
     avgViewsPerTrail: number;
@@ -35,6 +38,11 @@ interface DailyViews {
 
 interface HourlyViews {
     hour: number;
+    views: number;
+}
+
+interface DayOfWeekViews {
+    dayOfWeek: number;
     views: number;
 }
 
@@ -56,6 +64,7 @@ interface AnalyticsData {
     summary: Summary;
     dailyViews: DailyViews[];
     hourlyViews: HourlyViews[];
+    dayOfWeekViews: DayOfWeekViews[];
     topTrails: TopTrail[];
     trendingTrails: TrendingTrail[];
 }
@@ -113,9 +122,32 @@ function WeekChangeChip({ thisWeek, lastWeek }: { thisWeek: number; lastWeek: nu
     );
 }
 
+/**
+ * Change against a previous period, as a card subtitle.
+ *
+ * With nothing in the previous period there is no percentage to report — going
+ * from zero is undefined, not +100% — so it says so instead. That also keeps
+ * this consistent with WeekChangeChip, which labels the same condition "New"
+ * rather than inventing a number for it.
+ *
+ * @param label names the previous period, e.g. "yesterday".
+ */
+function formatChange(current: number, previous: number, label: string): string {
+    if (previous === 0) return current > 0 ? 'no prior views to compare' : 'no views';
+    const pct = Math.round(((current - previous) / previous) * 100);
+    return `${pct > 0 ? '+' : ''}${pct}% vs ${label}`;
+}
+
 const HOUR_LABELS = Array.from({ length: 24 }, (_, i) =>
     `${i.toString().padStart(2, '0')}:00`
 );
+
+// .NET's DayOfWeek (and Postgres's date_part('dow'), which the backend
+// translates to) both put Sunday at index 0. The strip is displayed
+// Monday-first, so the reorder happens here on the returned array rather
+// than by rotating the grouping itself in SQL.
+const MONDAY_FIRST_ORDER = [1, 2, 3, 4, 5, 6, 0];
+const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 const COLORS = ['#2e7d32', '#43a047', '#66bb6a', '#81c784', '#a5d6a7', '#c8e6c9', '#e8f5e9', '#f1f8e9', '#f9fbe7', '#fffde7'];
 
@@ -135,9 +167,11 @@ export default function AnalyticsPage() {
         return (
             <Box>
                 <Typography variant="h5" fontWeight="bold" mb={3}>Analytics</Typography>
-                <Grid container spacing={2} mb={3}>
-                    {[1, 2, 3, 4].map(i => (
-                        <Grid item xs={6} md={3} key={i}>
+                {/* Same count and widths as the real cards, so the layout does
+                    not shift when the data arrives. */}
+                <Grid container spacing={2} columns={10} mb={3}>
+                    {[1, 2, 3, 4, 5].map(i => (
+                        <Grid item xs={5} md={2} key={i}>
                             <Skeleton variant="rounded" height={100} />
                         </Grid>
                     ))}
@@ -157,7 +191,7 @@ export default function AnalyticsPage() {
         );
     }
 
-    const { summary, dailyViews, hourlyViews, topTrails, trendingTrails } = data;
+    const { summary, dailyViews, hourlyViews, dayOfWeekViews, topTrails, trendingTrails } = data;
 
     // Fill in missing days in dailyViews for a continuous chart
     const filledDailyViews = (() => {
@@ -180,9 +214,16 @@ export default function AnalyticsPage() {
     });
     const maxHourlyViews = Math.max(...filledHourlyViews.map(h => h.views), 1);
 
-    const weekChange = summary.viewsLastWeek > 0
-        ? ((summary.viewsThisWeek - summary.viewsLastWeek) / summary.viewsLastWeek * 100).toFixed(0)
-        : summary.viewsThisWeek > 0 ? '+100' : '0';
+    // Reordered Monday-first, not gap-filled here — the backend already
+    // guarantees all 7 days, unlike the 24-bucket hourly response above.
+    const mondayFirstViews = MONDAY_FIRST_ORDER.map((day, i) => {
+        const found = dayOfWeekViews.find(dv => dv.dayOfWeek === day);
+        return { dayOfWeek: day, views: found?.views || 0, label: DAY_LABELS[i] };
+    });
+    const maxDayOfWeekViews = Math.max(...mondayFirstViews.map(d => d.views), 1);
+
+    const dayChange = formatChange(summary.viewsToday, summary.viewsYesterday, 'yesterday');
+    const weekChange = formatChange(summary.viewsThisWeek, summary.viewsLastWeek, 'previous 7 days');
 
     return (
         <Box>
@@ -206,9 +247,30 @@ export default function AnalyticsPage() {
                 )}
             </Stack>
 
-            {/* Summary Cards */}
-            <Grid container spacing={2} mb={3}>
-                <Grid item xs={6} md={3}>
+            {/* Summary cards — most recent first, cumulative figures after.
+                A 10-column grid rather than the default 12: five cards divide
+                into it evenly (md=2), which 12 cannot do, while xs=5 keeps the
+                familiar two-per-row on a phone. */}
+            <Grid container spacing={2} columns={10} mb={3}>
+                <Grid item xs={5} md={2}>
+                    <StatCard
+                        title="Views Today"
+                        value={summary.viewsToday.toLocaleString()}
+                        subtitle={dayChange}
+                        icon={<TodayIcon />}
+                        color="#0288d1"
+                    />
+                </Grid>
+                <Grid item xs={5} md={2}>
+                    <StatCard
+                        title="Views, Last 7 Days"
+                        value={summary.viewsThisWeek.toLocaleString()}
+                        subtitle={weekChange}
+                        icon={<CalendarTodayIcon />}
+                        color="#2e7d32"
+                    />
+                </Grid>
+                <Grid item xs={5} md={2}>
                     <StatCard
                         title="Total Views"
                         value={summary.totalViews.toLocaleString()}
@@ -217,7 +279,7 @@ export default function AnalyticsPage() {
                         color="#1976d2"
                     />
                 </Grid>
-                <Grid item xs={6} md={3}>
+                <Grid item xs={5} md={2}>
                     <StatCard
                         title="Unique Visitors"
                         value={summary.uniqueVisitors.toLocaleString()}
@@ -228,16 +290,7 @@ export default function AnalyticsPage() {
                         color="#9c27b0"
                     />
                 </Grid>
-                <Grid item xs={6} md={3}>
-                    <StatCard
-                        title="Views This Week"
-                        value={summary.viewsThisWeek.toLocaleString()}
-                        subtitle={`${weekChange}% vs last week`}
-                        icon={<CalendarTodayIcon />}
-                        color="#2e7d32"
-                    />
-                </Grid>
-                <Grid item xs={6} md={3}>
+                <Grid item xs={5} md={2}>
                     <StatCard
                         title="Avg Views / Trail"
                         value={summary.avgViewsPerTrail}
@@ -294,10 +347,13 @@ export default function AnalyticsPage() {
                 {/* Peak Hours */}
                 <Grid item xs={12} md={6}>
                     <Paper elevation={2} sx={{ p: 2.5, height: '100%' }}>
-                        <Typography variant="h6" fontWeight="bold" mb={2}>
+                        <Typography variant="h6" fontWeight="bold">
                             Peak Browsing Hours
                         </Typography>
-                        <ResponsiveContainer width="100%" height={240}>
+                        <Typography variant="caption" color="text.secondary" display="block" mb={2}>
+                            All-time, UTC
+                        </Typography>
+                        <ResponsiveContainer width="100%" height={200}>
                             <BarChart data={filledHourlyViews}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                 <XAxis dataKey="label" fontSize={10} interval={2} />
@@ -313,6 +369,31 @@ export default function AnalyticsPage() {
                                 </Bar>
                             </BarChart>
                         </ResponsiveContainer>
+
+                        {/* Seven-cell intensity strip, Monday-first, reusing the
+                            same opacity ramp as the hourly bars above rather than
+                            a second chart or a day/hour heatmap. The day label
+                            sits below each cell rather than on it, so it stays
+                            theme text colour instead of needing a second
+                            hardcoded colour to stay legible against the ramp. */}
+                        <Stack direction="row" spacing={0.5} sx={{ mt: 1.5 }}>
+                            {mondayFirstViews.map(d => (
+                                <MuiTooltip key={d.dayOfWeek} title={`${d.views.toLocaleString()} views`}>
+                                    <Box sx={{ flex: 1, textAlign: 'center' }}>
+                                        <Box
+                                            sx={{
+                                                height: 28,
+                                                borderRadius: 1,
+                                                bgcolor: `rgba(46, 125, 50, ${0.3 + (d.views / maxDayOfWeekViews) * 0.7})`,
+                                            }}
+                                        />
+                                        <Typography variant="caption" color="text.secondary" fontSize={11}>
+                                            {d.label}
+                                        </Typography>
+                                    </Box>
+                                </MuiTooltip>
+                            ))}
+                        </Stack>
                     </Paper>
                 </Grid>
 

@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Alert,
@@ -58,6 +58,7 @@ import {
   type ScheduleRule,
 } from '../hooks/useEvents';
 import { useTrails } from '../hooks/useTrails';
+import { useRowFocus } from '../hooks/useRowFocus';
 import CreateEventDialog from '../components/events/CreateEventDialog';
 import {
   MONTHS,
@@ -331,6 +332,13 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
         return cmp !== 0 ? dir * cmp : a.name.localeCompare(b.name);
       });
   }, [events, searchQuery, activityFilter, typeFilter, statusFilter, locationFilter, yearFilter, monthFilter, sortBy, sortDir, attentionFilter, weekFilter, nextWeekStart, nextWeekEnd, todayStr, in30daysStr]);
+
+  // j/k row focus + Enter/o to open — scrolled into view whenever it changes.
+  const { focusedIndex: focusedEventIndex } = useRowFocus(filteredEvents, (e) => navigate(`/events/${e.slug}`));
+  const focusedEventRowRef = useRef<HTMLTableRowElement>(null);
+  useEffect(() => {
+    focusedEventRowRef.current?.scrollIntoView({ block: 'nearest' });
+  }, [focusedEventIndex]);
 
   // ── Status / activity / type cycling ─────────────────────────────────────
   const handleCycleStatus = async (event: EventSummaryDto) => {
@@ -793,14 +801,16 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredEvents.map(event => (
+            {filteredEvents.map((event, idx) => (
               <TableRow
                 key={event.id}
+                ref={idx === focusedEventIndex ? focusedEventRowRef : undefined}
                 hover
-                sx={{
+                sx={(theme) => ({
                   cursor: 'pointer',
                   ...(event.type === 'Advertisement' && { bgcolor: 'rgba(255, 193, 7, 0.08)' }),
-                }}
+                  ...(idx === focusedEventIndex && { outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: -2 }),
+                })}
                 onClick={() => navigate(`/events/${event.slug}`)}
               >
                 {/* Name */}

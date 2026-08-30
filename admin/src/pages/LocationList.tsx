@@ -96,9 +96,18 @@ const LocationTreeRow = React.memo(function LocationTreeRow({ node, depth, onEdi
                         ) : hasChildren ? (
                             <ChevronRightIcon fontSize="small" color="primary" sx={{ mr: 1 }} />
                         ) : null}
-                        <Typography variant="body2" fontWeight={hasChildren ? 'bold' : 'normal'}>
-                            {node.name}
-                        </Typography>
+                        <Box>
+                            <Typography variant="body2" fontWeight={hasChildren ? 'bold' : 'normal'}>
+                                {node.name}
+                            </Typography>
+                            {/* Under the name rather than in its own column: the
+                                tree's indentation already makes Name the widest
+                                cell, and the slug is reference detail rather than
+                                something to scan down. */}
+                            <Typography variant="caption" color="text.disabled">
+                                {node.slug}
+                            </Typography>
+                        </Box>
                     </Box>
                 </TableCell>
                 <TableCell>
@@ -223,41 +232,45 @@ export function LocationList({ onNotify }: LocationListProps) {
                     <Typography variant="h4">Locations</Typography>
                     <Chip label={isSearching ? `${searchResults.length} / ${locations.length}` : locations.length} size="small" />
                 </Box>
-                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                    <TextField
-                        size="small"
-                        placeholder="Search locations…"
-                        value={searchQuery}
-                        onChange={e => setSearchQuery(e.target.value)}
-                        sx={{ width: 220 }}
-                        InputProps={{
-                            startAdornment: (
-                                <InputAdornment position="start">
-                                    <SearchIcon fontSize="small" />
-                                </InputAdornment>
-                            ),
-                            endAdornment: searchQuery ? (
-                                <InputAdornment position="end">
-                                    <IconButton size="small" aria-label="Clear search" onClick={() => setSearchQuery('')}>
-                                        <ClearIcon fontSize="small" />
-                                    </IconButton>
-                                </InputAdornment>
-                            ) : undefined,
-                        }}
-                    />
-                    {!isSearching && <>
-                        <Button size="small" onClick={expandAll}>Expand All</Button>
-                        <Button size="small" onClick={collapseAll}>Collapse All</Button>
-                    </>}
-                    <Button
-                        variant="contained"
-                        startIcon={<AddIcon />}
-                        onClick={() => { setSelectedLocation(undefined); setDialogOpen(true); }}
-                    >
-                        New Location
-                    </Button>
-                </Box>
+                <Button
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    onClick={() => { setSelectedLocation(undefined); setDialogOpen(true); }}
+                >
+                    New Location
+                </Button>
             </Box>
+
+            {/* Search and list controls in their own bar below the header, left
+                aligned, matching the events and trails pages. Creating a location
+                stays top right — it is an action, not a filter. */}
+            <Paper sx={{ mb: 3, p: 2, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+                <TextField
+                    size="small"
+                    placeholder="Search locations…"
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    sx={{ minWidth: 200, flexGrow: 1, maxWidth: 300 }}
+                    InputProps={{
+                        startAdornment: (
+                            <InputAdornment position="start">
+                                <SearchIcon fontSize="small" />
+                            </InputAdornment>
+                        ),
+                        endAdornment: searchQuery ? (
+                            <InputAdornment position="end">
+                                <IconButton size="small" aria-label="Clear search" onClick={() => setSearchQuery('')}>
+                                    <ClearIcon fontSize="small" />
+                                </IconButton>
+                            </InputAdornment>
+                        ) : undefined,
+                    }}
+                />
+                {!isSearching && <>
+                    <Button size="small" onClick={expandAll}>Expand All</Button>
+                    <Button size="small" onClick={collapseAll}>Collapse All</Button>
+                </>}
+            </Paper>
 
             <TableContainer component={Paper}>
                 <Table size="small">

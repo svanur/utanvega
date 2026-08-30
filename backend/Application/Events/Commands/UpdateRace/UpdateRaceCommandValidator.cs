@@ -1,5 +1,6 @@
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using Utanvega.Backend.Application.Validation;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Infrastructure.Persistence;
 
@@ -25,7 +26,7 @@ public class UpdateRaceCommandValidator : AbstractValidator<UpdateRaceCommand>
 
         RuleFor(x => x.Status)
             .NotEmpty()
-            .Must(v => Enum.TryParse<RaceStatus>(v, ignoreCase: true, out _))
+            .Must(EnumValidation.IsDefined<RaceStatus>)
             .WithMessage($"Status must be one of: {string.Join(", ", Enum.GetNames<RaceStatus>())}.")
             .MustAsync(async (command, statusValue, ct) =>
             {
@@ -43,12 +44,12 @@ public class UpdateRaceCommandValidator : AbstractValidator<UpdateRaceCommand>
 
         RuleFor(x => x.TicketStatus)
             .NotEmpty()
-            .Must(v => Enum.TryParse<TicketStatus>(v, ignoreCase: true, out _))
+            .Must(EnumValidation.IsDefined<TicketStatus>)
             .WithMessage($"TicketStatus must be one of: {string.Join(", ", Enum.GetNames<TicketStatus>())}.");
 
         RuleFor(x => x.ResultType)
             .NotEmpty()
-            .Must(v => Enum.TryParse<ResultType>(v, ignoreCase: true, out _))
+            .Must(EnumValidation.IsDefined<ResultType>)
             .WithMessage($"ResultType must be one of: {string.Join(", ", Enum.GetNames<ResultType>())}.");
 
         RuleFor(x => x.SortOrder).GreaterThanOrEqualTo(0);

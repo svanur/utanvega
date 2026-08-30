@@ -36,10 +36,19 @@ export interface RaceFormState {
 
 export const RACE_STATUSES: RaceStatus[] = ['Active', 'Completed', 'Cancelled', 'Hidden'];
 export const EDITION_STATUSES: EditionStatus[] = ['Active', 'Unconfirmed', 'Cancelled', 'Hidden', 'Completed'];
+export const EDITION_STATUS_LABELS: Record<EditionStatus, string> = {
+  Active: 'Active',
+  Unconfirmed: 'Unconfirmed',
+  Cancelled: 'Cancelled',
+  Hidden: 'Draft — hidden from all',
+  Completed: 'Completed',
+};
 // Cycling skips Cancelled and Completed — both are terminal states that should be set intentionally,
 // not landed on by clicking through a cycle.
 export const EDITION_STATUS_CYCLE: EditionStatus[] = ['Active', 'Unconfirmed', 'Hidden'];
 export const TICKET_STATUSES: TicketStatus[] = ['Free', 'NotStarted', 'Available', 'AlmostSoldOut', 'SoldOut', 'Closed'];
+// null (not yet rated) is a distinct step from 0 (rated at zero points) — keep both in the cycle.
+export const ITRA_VALUES: (number | null)[] = [null, 0, 1, 2, 3, 4, 5, 6];
 export const ACTIVITY_TYPES: ActivityType[] = ['TrailRunning', 'Running', 'Cycling', 'Hiking', 'FunRun', 'ObstacleCourse', 'CrossCountryRun', 'Swim', 'Canicross', 'IronMan', 'Other'];
 export const RESULT_TYPES: ResultType[] = ['Time', 'Distance', 'Laps'];
 

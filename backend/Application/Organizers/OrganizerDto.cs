@@ -1,3 +1,5 @@
+using Utanvega.Backend.Core.Entities;
+
 namespace Utanvega.Backend.Application.Organizers;
 
 public record OrganizerEventSummaryDto(
@@ -20,7 +22,8 @@ public record OrganizerPublicDto(
     string? Description,
     string? DescriptionEn,
     string? ContactName,
-    List<OrganizerEventSummaryDto> Events
+    List<OrganizerEventSummaryDto> Events,
+    List<SocialLink>? SocialLinks = null
 );
 
 public record OrganizerDto(
@@ -37,5 +40,6 @@ public record OrganizerDto(
     int EventCount,
     DateTime CreatedAt,
     DateTime? UpdatedAt,
-    Dictionary<string, string>? TranslationHashes = null
+    Dictionary<string, string>? TranslationHashes = null,
+    List<SocialLink>? SocialLinks = null
 );

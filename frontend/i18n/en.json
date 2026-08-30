@@ -404,7 +404,7 @@
         },
         "terrainType": {
             "q": "How is the terrain type (Flat / Hilly / Mountainous) decided?",
-            "a": "Terrain type is calculated automatically from the trail's GPS data using two factors: elevation gain per km (climb ratio) and maximum altitude above sea level. Flat: less than 20 m of gain per km. Mountainous: reaches above 600 m altitude with at least 30 m/km gain, or any trail climbing more than 50 m per km. Hilly: everything in between. Thresholds are calibrated for Icelandic conditions."
+            "a": "Terrain type is calculated automatically from the trail's GPS data using three factors: elevation gain per km (climb ratio), maximum altitude above sea level, and total elevation gain. Flat: less than 20 m of gain per km. Mountainous: reaches above 600 m altitude with at least 30 m/km gain, any trail climbing more than 50 m per km, or any trail with 600 m or more of total elevation gain. Hilly: everything in between. Thresholds are calibrated for Icelandic conditions. This calculation is a starting point — an admin may adjust the terrain type by hand if it doesn't match reality."
         },
         "relatedTrails": {
             "q": "How are Related Trails found?",
@@ -776,6 +776,10 @@
             }
         },
         "changelog": {
+            "v1_3_0": {
+                "title": "Elevation profiles, truer terrain, and links that stay put",
+                "description": "Trail pages now show an elevation profile, with climb ratio alongside the other figures. Terrain classification was rebuilt: it had quietly capped every trail below 400 m as hilly, so steep coastal routes and long climbing ultras were mislabelled — and it contradicted the rules published in the FAQ. Renaming a trail, tag or organizer no longer rewrites its public address, so links shared earlier keep working. Most of the release went into the admin tools behind the site: keyboard navigation in list views, search across organizers, clearer edition and race columns, and traffic broken down by day of week as well as by hour."
+            },
             "v1_2_0": {
                 "title": "Analytics that scale, and shorter-lived visitor data",
                 "description": "The admin analytics page loaded every recorded view into memory to add it up, which would eventually have run the server out of memory; every figure is now calculated by the database instead. Visitor identifiers are keyed with a secret so they can no longer be traced back to an address, and are cleared after 90 days — the views themselves are kept, so all view counts are unaffected."

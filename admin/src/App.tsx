@@ -1,6 +1,6 @@
 import { Box, CssBaseline, ThemeProvider, createTheme, AppBar, Toolbar, Typography, Container, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Snackbar, Alert, Button, CircularProgress, Link, IconButton, Tooltip } from '@mui/material';
 import HomeIcon from '@mui/icons-material/Home';
-import DashboardIcon from '@mui/icons-material/Dashboard';
+import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
 import MapIcon from '@mui/icons-material/Map';
@@ -35,7 +35,6 @@ import KeyboardIcon from '@mui/icons-material/Keyboard';
 import FeedbackIcon from '@mui/icons-material/Feedback';
 
 // Lazy-loaded pages (only the active page's chunk needs to load)
-const TrailList = lazy(() => import('./pages/TrailList'));
 const TrailsListPage = lazy(() => import('./pages/TrailsListPage'));
 const TrailDetailPage = lazy(() => import('./pages/TrailDetailPage'));
 const LocationList = lazy(() => import('./pages/LocationList').then(m => ({ default: m.LocationList })));
@@ -46,7 +45,6 @@ const TrailMapView = lazy(() => import('./pages/TrailMapView'));
 const TagManagement = lazy(() => import('./pages/TagManagement'));
 const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));
 const FeatureFlagsPage = lazy(() => import('./pages/FeatureFlagsPage'));
-const EventList = lazy(() => import('./pages/EventList'));
 const EventsListPage = lazy(() => import('./pages/EventsListPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const HeroThemesPage = lazy(() => import('./pages/HeroThemesPage'));
@@ -97,8 +95,8 @@ const PAGE_PATHS: Record<PageKey, string> = {
 };
 
 function pathToPage(pathname: string): PageKey {
-  if (pathname.startsWith('/events-old') || pathname.startsWith('/events')) return 'events';
-  if (pathname.startsWith('/trails-old') || pathname.startsWith('/trails')) return 'trails';
+  if (pathname.startsWith('/events')) return 'events';
+  if (pathname.startsWith('/trails')) return 'trails';
   if (pathname.startsWith('/organizers')) return 'organizers';
   const entry = Object.entries(PAGE_PATHS).find(([, path]) => path === pathname);
   return (entry?.[0] as PageKey) ?? 'dashboard';
@@ -299,7 +297,7 @@ function AdminContent() {
             {[
               { key: 'dashboard' as const,          icon: <HomeIcon />,                                      label: 'Home' },
               { key: 'events' as const,              icon: <EmojiEventsIcon />,                               label: 'Events' },
-              { key: 'trails' as const,              icon: <DashboardIcon />,                                 label: 'Trails' },
+              { key: 'trails' as const,              icon: <DirectionsRunIcon />,                             label: 'Trails' },
               { key: 'race-day' as const,            icon: <FlagIcon />,                                      label: 'Race Manager' },
               { key: 'locations' as const,           icon: <LocationOnIcon />,                                label: 'Locations' },
               { key: 'organizers' as const,          icon: <GroupIcon />,                                     label: 'Organizers' },
@@ -358,7 +356,6 @@ function AdminContent() {
           ) : currentPage === 'trails' ? (
             <Routes>
               <Route path="/trails/:idOrSlug" element={<TrailDetailPage onNotify={notify} />} />
-              <Route path="/trails-old" element={<TrailList key={refreshTrigger} onNotify={notify} initialSearch={searchTerm} />} />
               <Route path="/trails" element={<TrailsListPage onNotify={notify} initialSearch={searchTerm} />} />
             </Routes>
           ) : currentPage === 'health' ? (
@@ -381,12 +378,6 @@ function AdminContent() {
                 <EventDetailPage
                   onNotify={notify}
                   onNavigateToRaceManager={date => { setRaceDayInitialDate(date); setCurrentPage('race-day'); }}
-                />
-              } />
-              <Route path="/events-old" element={
-                <EventList
-                  onNotify={notify}
-                  onViewEventDetail={slug => navigate(`/events/${slug}`)}
                 />
               } />
               <Route path="/events" element={

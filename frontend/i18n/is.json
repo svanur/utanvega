@@ -404,7 +404,7 @@
         },
         "terrainType": {
             "q": "Hvernig er yfirborðsgerð leiða ákveðin (flatt / hæðótt / fjallaleiðir)?",
-            "a": "Yfirborðsgerð er reiknuð sjálfkrafa út frá GPS-gögnum leiðarinnar með tveimur þáttum: hækkun á hvern km og hámarkshæð yfir sjávarmáli. Flatt: undir 20 m hækkun á km. Fjallaleiðir: hæð yfir 600 m og að minnsta kosti 30 m hækkun á km, eða hvers kyns leið með yfir 50 m hækkun á km. Hæðótt: allt þar á milli. Þröskuldar eru kvarðaðir sérstaklega fyrir íslenskar aðstæður."
+            "a": "Yfirborðsgerð er reiknuð sjálfkrafa út frá GPS-gögnum leiðarinnar með þremur þáttum: hækkun á hvern km, hámarkshæð yfir sjávarmáli, og heildarhækkun. Flatt: undir 20 m hækkun á km. Fjallaleiðir: hæð yfir 600 m og að minnsta kosti 30 m hækkun á km, hvers kyns leið með yfir 50 m hækkun á km, eða hvers kyns leið með 600 m eða meiri heildarhækkun. Hæðótt: allt þar á milli. Þröskuldar eru kvarðaðir sérstaklega fyrir íslenskar aðstæður. Þessi útreikningur er útgangspunktur — stjórnandi getur breytt yfirborðsgerð handvirkt ef hún endurspeglar ekki raunveruleikann."
         },
         "relatedTrails": {
             "q": "Hvernig eru tengdar leiðir fundnar?",
@@ -776,6 +776,10 @@
             }
         },
         "changelog": {
+            "v1_3_0": {
+                "title": "Hæðarsnið, réttari landslagsgerð og hlekkir sem haldast",
+                "description": "Leiðasíður sýna nú hæðarsnið, og hækkun á hvern kílómetra birtist með öðrum tölum. Útreikningur á landslagsgerð var endurgerður: hann flokkaði sjálfkrafa allar leiðir undir 400 m sem hæðóttar, svo brattar strandleiðir og langar leiðir með mikilli heildarhækkun fengu ranga merkingu — og hann stangaðist á við reglurnar sem birtar eru í algengum spurningum. Þegar leið, merki eða skipuleggjandi fær nýtt nafn breytist vefslóðin ekki lengur, svo eldri hlekkir virka áfram. Stærstur hluti útgáfunnar fór í stjórnborðið að baki vefnum: flýtilyklar í listum, leit að skipuleggjendum, skýrari dálkar fyrir útgáfur og hlaup, og umferð greind eftir vikudögum jafnt sem klukkustundum."
+            },
             "v1_2_0": {
                 "title": "Tölfræði sem ræður við álag og skammlífari gestagögn",
                 "description": "Tölfræðisíðan í stjórnborðinu sótti allar skráðar flettingar í minni til að leggja þær saman, sem hefði á endanum klárað minni þjónsins; nú reiknar gagnagrunnurinn allar tölur. Auðkenni gesta eru nú dulkóðuð með leynilykli svo ekki er lengur hægt að rekja þau til vistfangs, og þeim er eytt eftir 90 daga — flettingarnar sjálfar eru geymdar áfram svo allar flettingatölur haldast óbreyttar."

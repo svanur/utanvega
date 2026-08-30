@@ -341,6 +341,70 @@ public class EventHandlerTests : IDisposable
         Assert.Equal(RegistrationStatus.Open, edition.RegistrationStatus);
     }
 
+    [Fact]
+    public async Task Create_Edition_DefaultsToUnconfirmed_WhenStatusNotProvided()
+    {
+        var ev = CreateTestEvent();
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var edCtx = _factory.CreateContext();
+        var handler = new CreateEditionCommandHandler(edCtx, _cacheInvalidator);
+        var id = await handler.Handle(new CreateEditionCommand(
+            EventId: ev.Id,
+            Year: 2025,
+            Date: new DateOnly(2025, 7, 12),
+            EndDate: null,
+            Title: "2025 Edition",
+            RegistrationUrl: null,
+            ResultsUrl: null,
+            Notes: null,
+            RegistrationStatus: "NotStarted",
+            TrailId: null
+        ), CancellationToken.None);
+
+        using var verifyCtx = _factory.CreateContext();
+        var edition = verifyCtx.EventEditions.Find(id);
+        Assert.Equal(EditionStatus.Unconfirmed, edition!.Status);
+    }
+
+    [Fact]
+    public async Task Create_Edition_UsesExplicitStatus_WhenProvided()
+    {
+        // Regression test: CreateEditionCommand previously had no Status property at all, so the
+        // admin form's status field was silently dropped — every new edition landed on the entity's
+        // hardcoded default no matter what was selected (or auto-selected for a past-dated edition).
+        var ev = CreateTestEvent();
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var edCtx = _factory.CreateContext();
+        var handler = new CreateEditionCommandHandler(edCtx, _cacheInvalidator);
+        var id = await handler.Handle(new CreateEditionCommand(
+            EventId: ev.Id,
+            Year: 2020,
+            Date: new DateOnly(2020, 7, 12),
+            EndDate: null,
+            Title: "2020 Edition",
+            RegistrationUrl: null,
+            ResultsUrl: null,
+            Notes: null,
+            RegistrationStatus: "NotStarted",
+            TrailId: null,
+            Status: "Completed"
+        ), CancellationToken.None);
+
+        using var verifyCtx = _factory.CreateContext();
+        var edition = verifyCtx.EventEditions.Find(id);
+        Assert.Equal(EditionStatus.Completed, edition!.Status);
+    }
+
     // ─── UpdateEditionCommand ───
 
     [Fact]
@@ -860,6 +924,9 @@ public class EventHandlerTests : IDisposable
         var editions = verifyCtx.EventEditions.Where(e => e.EventId == ev.Id).ToList();
         Assert.Equal(result.EditionIds.Count, editions.Count);
         Assert.All(editions, e => Assert.NotNull(e.Date));
+        // Auto-generated editions haven't been individually confirmed by an admin, even though the
+        // recurring schedule that produced them was — same as a manually added edition.
+        Assert.All(editions, e => Assert.Equal(EditionStatus.Unconfirmed, e.Status));
     }
 
     [Fact]
@@ -925,6 +992,7 @@ public class EventHandlerTests : IDisposable
             .Single();
         Assert.Equal(2025, edition.Year);
         Assert.Contains("2025", edition.Title!);
+        Assert.Equal(EditionStatus.Unconfirmed, edition.Status);
 
         var races = verifyCtx.Races.Where(r => r.EventEditionId == edition.Id).OrderBy(r => r.SortOrder).ToList();
         Assert.Equal(6, races.Count);
@@ -2427,7 +2495,7 @@ public class EventHandlerTests : IDisposable
         var result = await handler.Handle(new GetEventsQuery(), CancellationToken.None);
 
         var dto = Assert.Single(result);
-        Assert.Equal("Active", dto.EditionStatus);
+        Assert.Equal("Unconfirmed", dto.EditionStatus);
         Assert.True(dto.EditionEffectiveCancelled);
     }
 
@@ -2524,7 +2592,7 @@ public class EventHandlerTests : IDisposable
         var result = await handler.Handle(new GetEventQuery("race-attrition-detail-event"), CancellationToken.None);
 
         var editionDto = Assert.Single(result!.Editions);
-        Assert.Equal("Active", editionDto.Status);
+        Assert.Equal("Unconfirmed", editionDto.Status);
         Assert.True(editionDto.EffectiveCancelled);
     }
 

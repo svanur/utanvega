@@ -1,4 +1,5 @@
 using FluentValidation;
+using Utanvega.Backend.Application.Validation;
 using Utanvega.Backend.Core.Entities;
 
 namespace Utanvega.Backend.Application.Trails.Commands.UpdateTrail;
@@ -21,27 +22,27 @@ public class UpdateTrailCommandValidator : AbstractValidator<UpdateTrailCommand>
 
         RuleFor(x => x.ActivityType)
             .NotEmpty()
-            .Must(v => Enum.TryParse<ActivityType>(v, ignoreCase: true, out _))
+            .Must(EnumValidation.IsDefined<ActivityType>)
             .WithMessage($"ActivityType must be one of: {string.Join(", ", Enum.GetNames<ActivityType>())}.");
 
         RuleFor(x => x.Status)
             .NotEmpty()
-            .Must(v => Enum.TryParse<TrailStatus>(v, ignoreCase: true, out _))
+            .Must(EnumValidation.IsDefined<TrailStatus>)
             .WithMessage($"Status must be one of: {string.Join(", ", Enum.GetNames<TrailStatus>())}.");
 
         RuleFor(x => x.Type)
             .NotEmpty()
-            .Must(v => Enum.TryParse<TrailType>(v, ignoreCase: true, out _))
+            .Must(EnumValidation.IsDefined<TrailType>)
             .WithMessage($"Type must be one of: {string.Join(", ", Enum.GetNames<TrailType>())}.");
 
         RuleFor(x => x.Difficulty)
             .NotEmpty()
-            .Must(v => Enum.TryParse<Difficulty>(v, ignoreCase: true, out _))
+            .Must(EnumValidation.IsDefined<Difficulty>)
             .WithMessage($"Difficulty must be one of: {string.Join(", ", Enum.GetNames<Difficulty>())}.");
 
         RuleFor(x => x.Visibility)
             .NotEmpty()
-            .Must(v => Enum.TryParse<Visibility>(v, ignoreCase: true, out _))
+            .Must(EnumValidation.IsDefined<Visibility>)
             .WithMessage($"Visibility must be one of: {string.Join(", ", Enum.GetNames<Visibility>())}.");
 
         RuleFor(x => x.Description)
@@ -60,7 +61,7 @@ public class UpdateTrailCommandValidator : AbstractValidator<UpdateTrailCommand>
                 loc.RuleFor(l => l.LocationId).NotEmpty();
                 loc.RuleFor(l => l.Role)
                     .NotEmpty()
-                    .Must(v => Enum.TryParse<TrailLocationRole>(v, ignoreCase: true, out _))
+                    .Must(EnumValidation.IsDefined<TrailLocationRole>)
                     .WithMessage($"Role must be one of: {string.Join(", ", Enum.GetNames<TrailLocationRole>())}.");
                 loc.RuleFor(l => l.Order).GreaterThanOrEqualTo(0);
             })

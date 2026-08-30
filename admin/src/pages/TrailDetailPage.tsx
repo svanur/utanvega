@@ -37,7 +37,8 @@ import { usePageShortcuts } from '../hooks/usePageShortcuts';
 import { useLocations } from '../hooks/useLocations';
 import { useTags } from '../hooks/useTags';
 import { apiFetch } from '../hooks/api';
-import TrailMap from '../components/TrailMap';
+import TrailMap, { type GeoJsonGeometry } from '../components/TrailMap';
+import ElevationChart from '../components/ElevationChart';
 import TrailFormCard from '../components/trails/TrailFormCard';
 import ChangeLogList from '../components/ChangeLogList';
 import TrailStatusLegendDialog from '../components/trails/TrailStatusLegendDialog';
@@ -222,6 +223,7 @@ export default function TrailDetailPage({ onNotify }: { onNotify: (message: Reac
   const [pendingAction, setPendingAction] = useState<TrailAction | null>(null);
   const [actionBusy, setActionBusy] = useState(false);
   const [mapVersion, setMapVersion] = useState(0);
+  const [geometry, setGeometry] = useState<GeoJsonGeometry | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [showAddLocation, setShowAddLocation] = useState(false);
   const [showAddTag, setShowAddTag] = useState(false);
@@ -433,21 +435,12 @@ export default function TrailDetailPage({ onNotify }: { onNotify: (message: Reac
                   </IconButton>
                 </Tooltip>
               </LabeledField>
-              <LabeledField label="Distance">
-                <Chip label={`${(trail.length / 1000).toFixed(1)} km`} size="small" variant="outlined" />
-              </LabeledField>
-              <LabeledField label="Elevation gain">
-                <Chip label={`↑ ${Math.round(trail.elevationGain)}m`} size="small" color="success" variant="outlined" />
-              </LabeledField>
-              <LabeledField label="Elevation loss">
-                <Chip label={`↓ ${Math.round(trail.elevationLoss)}m`} size="small" color="error" variant="outlined" />
-              </LabeledField>
-              <LabeledField label="Activity">
+              <LabeledField label="Visibility">
                 <InlineEditSelect
-                  value={trail.activityType}
-                  options={activityOptions}
-                  onSave={(v) => handlePatchField('activityType', v)}
-                  renderDisplay={(v) => <Chip label={activityOptions.find(o => o.value === v)?.label ?? v} size="small" variant="outlined" sx={{ cursor: 'pointer' }} />}
+                  value={trail.visibility}
+                  options={visibilityOptions}
+                  onSave={(v) => handlePatchField('visibility', v)}
+                  renderDisplay={(v) => <Chip label={v} size="small" variant="outlined" sx={{ cursor: 'pointer' }} />}
                 />
               </LabeledField>
               <LabeledField label="Difficulty">
@@ -458,14 +451,6 @@ export default function TrailDetailPage({ onNotify }: { onNotify: (message: Reac
                   renderDisplay={(v) => <Chip label={v} size="small" variant="outlined" sx={{ cursor: 'pointer' }} />}
                 />
               </LabeledField>
-              <LabeledField label="Trail type">
-                <InlineEditSelect
-                  value={trail.type}
-                  options={trailTypeOptions}
-                  onSave={(v) => handlePatchField('type', v)}
-                  renderDisplay={(v) => <Chip label={trailTypeOptions.find(o => o.value === v)?.label ?? v} size="small" variant="outlined" sx={{ cursor: 'pointer' }} />}
-                />
-              </LabeledField>
               <LabeledField label="Terrain">
                 <InlineEditSelect
                   value={trail.terrainType ?? ''}
@@ -474,12 +459,36 @@ export default function TrailDetailPage({ onNotify }: { onNotify: (message: Reac
                   renderDisplay={(v) => <Chip label={v || 'No terrain'} size="small" variant="outlined" sx={{ cursor: 'pointer' }} />}
                 />
               </LabeledField>
-              <LabeledField label="Visibility">
+              <LabeledField label="Activity">
                 <InlineEditSelect
-                  value={trail.visibility}
-                  options={visibilityOptions}
-                  onSave={(v) => handlePatchField('visibility', v)}
-                  renderDisplay={(v) => <Chip label={v} size="small" variant="outlined" sx={{ cursor: 'pointer' }} />}
+                  value={trail.activityType}
+                  options={activityOptions}
+                  onSave={(v) => handlePatchField('activityType', v)}
+                  renderDisplay={(v) => <Chip label={activityOptions.find(o => o.value === v)?.label ?? v} size="small" variant="outlined" sx={{ cursor: 'pointer' }} />}
+                />
+              </LabeledField>
+              <LabeledField label="Trail type">
+                <InlineEditSelect
+                  value={trail.type}
+                  options={trailTypeOptions}
+                  onSave={(v) => handlePatchField('type', v)}
+                  renderDisplay={(v) => <Chip label={trailTypeOptions.find(o => o.value === v)?.label ?? v} size="small" variant="outlined" sx={{ cursor: 'pointer' }} />}
+                />
+              </LabeledField>
+              <LabeledField label="Distance">
+                <Chip label={`${(trail.length / 1000).toFixed(1)} km`} size="small" variant="outlined" />
+              </LabeledField>
+              <LabeledField label="Elevation gain">
+                <Chip label={`↑ ${Math.round(trail.elevationGain)}m`} size="small" color="success" variant="outlined" />
+              </LabeledField>
+              <LabeledField label="Elevation loss">
+                <Chip label={`↓ ${Math.round(trail.elevationLoss)}m`} size="small" color="error" variant="outlined" />
+              </LabeledField>
+              <LabeledField label="Climb ratio">
+                <Chip
+                  label={trail.length > 0 ? `${Math.round(trail.elevationGain / (trail.length / 1000))} m/km` : '—'}
+                  size="small"
+                  variant="outlined"
                 />
               </LabeledField>
             </Stack>
@@ -679,7 +688,16 @@ export default function TrailDetailPage({ onNotify }: { onNotify: (message: Reac
           size and will otherwise ignore its allotted share and force the row to overflow. */}
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 3fr) minmax(0, 1fr)' }, gap: 2 }}>
         <Box sx={{ minWidth: 0 }}>
-          <TrailMap key={`${trail.id}-${mapVersion}`} trailId={trail.id} trailName={trail.name} height={MAP_HEIGHT} />
+          <TrailMap
+            key={`${trail.id}-${mapVersion}`}
+            trailId={trail.id}
+            trailName={trail.name}
+            height={MAP_HEIGHT}
+            onDataLoaded={setGeometry}
+          />
+          {geometry && geometry.coordinates.length >= 2 && (
+            <ElevationChart coordinates={geometry.coordinates} />
+          )}
         </Box>
         <Box sx={{ minWidth: 0, mt: 2 }}>
           <GpxReplaceZone
@@ -694,6 +712,7 @@ export default function TrailDetailPage({ onNotify }: { onNotify: (message: Reac
                 type: stats.detectedType,
                 difficulty: stats.difficulty,
               } : prev);
+              setGeometry(null);
               setMapVersion(v => v + 1);
             }}
           />

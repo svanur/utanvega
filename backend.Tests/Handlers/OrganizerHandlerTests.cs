@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Moq;
+using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Application.Organizers;
 using Utanvega.Backend.Core.Entities;
 
@@ -7,6 +9,7 @@ namespace Utanvega.Backend.Tests.Handlers;
 public class OrganizerHandlerTests : IDisposable
 {
     private readonly TestDbContextFactory _factory;
+    private readonly ICacheInvalidator _cacheInvalidator = new Mock<ICacheInvalidator>().Object;
 
     public OrganizerHandlerTests()
     {
@@ -82,7 +85,7 @@ public class OrganizerHandlerTests : IDisposable
 
         using (var ctx = _factory.CreateContext())
         {
-            var handler = new UpdateOrganizerCommandHandler(ctx);
+            var handler = new UpdateOrganizerCommandHandler(ctx, _cacheInvalidator);
             var success = await handler.Handle(new UpdateOrganizerCommand(
                 Id: orgId, Name: "New Name", Kennitala: null, Phone: "5559999",
                 Email: "new@email.is", Website: null, Description: "Updated", ContactName: "Anna"
@@ -94,7 +97,7 @@ public class OrganizerHandlerTests : IDisposable
         var org = await verifyCtx.Organizers.FindAsync(orgId);
         Assert.NotNull(org);
         Assert.Equal("New Name", org!.Name);
-        Assert.Equal("new-name", org.Slug);
+        Assert.Equal("old-name", org.Slug);
         Assert.Equal("5559999", org.Phone);
         Assert.Equal("new@email.is", org.Email);
         Assert.Equal("Updated", org.Description);
@@ -116,7 +119,7 @@ public class OrganizerHandlerTests : IDisposable
 
         using (var ctx = _factory.CreateContext())
         {
-            var handler = new UpdateOrganizerCommandHandler(ctx);
+            var handler = new UpdateOrganizerCommandHandler(ctx, _cacheInvalidator);
             await handler.Handle(new UpdateOrganizerCommand(
                 Id: orgId, Name: "Test Org", Kennitala: null, Phone: null,
                 Email: null, Website: null, Description: null, ContactName: null,
@@ -130,7 +133,7 @@ public class OrganizerHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task Update_Organizer_AutoGeneratesSlug_WhenSlugNotProvided()
+    public async Task Update_Organizer_PreservesSlug_WhenSlugNotProvided()
     {
         Guid orgId;
         using (var ctx = _factory.CreateContext())
@@ -144,7 +147,7 @@ public class OrganizerHandlerTests : IDisposable
 
         using (var ctx = _factory.CreateContext())
         {
-            var handler = new UpdateOrganizerCommandHandler(ctx);
+            var handler = new UpdateOrganizerCommandHandler(ctx, _cacheInvalidator);
             await handler.Handle(new UpdateOrganizerCommand(
                 Id: orgId, Name: "Þórsmörk Running Club", Kennitala: null, Phone: null,
                 Email: null, Website: null, Description: null, ContactName: null,
@@ -154,19 +157,178 @@ public class OrganizerHandlerTests : IDisposable
 
         using var verifyCtx = _factory.CreateContext();
         var org = await verifyCtx.Organizers.FindAsync(orgId);
-        Assert.Equal("thorsmork-running-club", org!.Slug);
+        Assert.Equal("Þórsmörk Running Club", org!.Name);
+        Assert.Equal("original-name", org.Slug);
+    }
+
+    [Fact]
+    public async Task Update_Organizer_PreservesSlug_WhenSlugIsBlank()
+    {
+        Guid orgId;
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new CreateOrganizerCommandHandler(ctx);
+            (orgId, _) = await handler.Handle(new CreateOrganizerCommand(
+                Name: "Blank Slug Org", Kennitala: null, Phone: null, Email: null,
+                Website: null, Description: null, ContactName: null
+            ), CancellationToken.None);
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new UpdateOrganizerCommandHandler(ctx, _cacheInvalidator);
+            await handler.Handle(new UpdateOrganizerCommand(
+                Id: orgId, Name: "Renamed Org", Kennitala: null, Phone: null,
+                Email: null, Website: null, Description: null, ContactName: null,
+                Slug: "   "
+            ), CancellationToken.None);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        var org = await verifyCtx.Organizers.FindAsync(orgId);
+        Assert.Equal("Renamed Org", org!.Name);
+        Assert.Equal("blank-slug-org", org.Slug);
+    }
+
+    [Fact]
+    public async Task Update_Organizer_InvalidatesCache_ForCurrentSlug()
+    {
+        // Regression test: GetOrganizerBySlugQuery caches for 60 minutes and nothing was evicting
+        // it on update, so the public organizer page could serve stale data for up to an hour after
+        // any edit — found live while verifying #430's social links feature against the real cache.
+        Guid orgId;
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new CreateOrganizerCommandHandler(ctx);
+            (orgId, _) = await handler.Handle(new CreateOrganizerCommand(
+                Name: "Cache Org", Kennitala: null, Phone: null, Email: null,
+                Website: null, Description: null, ContactName: null
+            ), CancellationToken.None);
+        }
+
+        var cacheInvalidator = new Mock<ICacheInvalidator>();
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new UpdateOrganizerCommandHandler(ctx, cacheInvalidator.Object);
+            await handler.Handle(new UpdateOrganizerCommand(
+                Id: orgId, Name: "Cache Org Updated", Kennitala: null, Phone: null,
+                Email: null, Website: null, Description: null, ContactName: null
+            ), CancellationToken.None);
+        }
+
+        cacheInvalidator.Verify(c => c.InvalidateOrganizer("cache-org"), Times.Once);
+    }
+
+    [Fact]
+    public async Task Update_Organizer_InvalidatesCache_ForBothOldAndNewSlug_WhenSlugChanges()
+    {
+        Guid orgId;
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new CreateOrganizerCommandHandler(ctx);
+            (orgId, _) = await handler.Handle(new CreateOrganizerCommand(
+                Name: "Rename Cache Org", Kennitala: null, Phone: null, Email: null,
+                Website: null, Description: null, ContactName: null
+            ), CancellationToken.None);
+        }
+
+        var cacheInvalidator = new Mock<ICacheInvalidator>();
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new UpdateOrganizerCommandHandler(ctx, cacheInvalidator.Object);
+            await handler.Handle(new UpdateOrganizerCommand(
+                Id: orgId, Name: "Rename Cache Org", Kennitala: null, Phone: null,
+                Email: null, Website: null, Description: null, ContactName: null,
+                Slug: "renamed-cache-org"
+            ), CancellationToken.None);
+        }
+
+        cacheInvalidator.Verify(c => c.InvalidateOrganizer("renamed-cache-org"), Times.Once);
+        cacheInvalidator.Verify(c => c.InvalidateOrganizer("rename-cache-org"), Times.Once);
     }
 
     [Fact]
     public async Task Update_Organizer_Returns_False_ForUnknownId()
     {
         using var ctx = _factory.CreateContext();
-        var handler = new UpdateOrganizerCommandHandler(ctx);
+        var handler = new UpdateOrganizerCommandHandler(ctx, _cacheInvalidator);
         var success = await handler.Handle(new UpdateOrganizerCommand(
             Id: Guid.NewGuid(), Name: "Ghost", Kennitala: null, Phone: null,
             Email: null, Website: null, Description: null, ContactName: null
         ), CancellationToken.None);
         Assert.False(success);
+    }
+
+    [Fact]
+    public async Task Update_Organizer_SavesSocialLinks()
+    {
+        Guid orgId;
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new CreateOrganizerCommandHandler(ctx);
+            (orgId, _) = await handler.Handle(new CreateOrganizerCommand(
+                Name: "Social Org", Kennitala: null, Phone: null, Email: null,
+                Website: null, Description: null, ContactName: null
+            ), CancellationToken.None);
+        }
+
+        var links = new List<SocialLink>
+        {
+            new() { Type = "Instagram", Url = "https://instagram.com/socialorg" },
+            new() { Type = "Facebook", Url = "https://facebook.com/socialorg" },
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new UpdateOrganizerCommandHandler(ctx, _cacheInvalidator);
+            await handler.Handle(new UpdateOrganizerCommand(
+                Id: orgId, Name: "Social Org", Kennitala: null, Phone: null,
+                Email: null, Website: null, Description: null, ContactName: null,
+                SocialLinks: links
+            ), CancellationToken.None);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        var org = await verifyCtx.Organizers.FindAsync(orgId);
+        Assert.NotNull(org!.SocialLinks);
+        Assert.Equal(2, org.SocialLinks!.Count);
+        Assert.Equal("Instagram", org.SocialLinks[0].Type);
+        Assert.Equal("https://instagram.com/socialorg", org.SocialLinks[0].Url);
+    }
+
+    [Fact]
+    public async Task Update_Organizer_ClearsSocialLinks_WhenNull()
+    {
+        Guid orgId;
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new CreateOrganizerCommandHandler(ctx);
+            (orgId, _) = await handler.Handle(new CreateOrganizerCommand(
+                Name: "Org With Links", Kennitala: null, Phone: null, Email: null,
+                Website: null, Description: null, ContactName: null
+            ), CancellationToken.None);
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var org = await ctx.Organizers.FindAsync(orgId);
+            org!.SocialLinks = [new SocialLink { Type = "Facebook", Url = "https://facebook.com/x" }];
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new UpdateOrganizerCommandHandler(ctx, _cacheInvalidator);
+            await handler.Handle(new UpdateOrganizerCommand(
+                Id: orgId, Name: "Org With Links", Kennitala: null, Phone: null,
+                Email: null, Website: null, Description: null, ContactName: null,
+                SocialLinks: null
+            ), CancellationToken.None);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        var updated = await verifyCtx.Organizers.FindAsync(orgId);
+        Assert.Null(updated!.SocialLinks);
     }
 
     // ─── DeleteOrganizerCommand ───

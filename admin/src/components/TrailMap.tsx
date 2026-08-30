@@ -5,9 +5,9 @@ import 'leaflet/dist/leaflet.css';
 import { useEffect, useState } from 'react';
 import { apiFetch } from '../hooks/api';
 
-type GeoJsonGeometry = {
+export type GeoJsonGeometry = {
     type: string;
-    coordinates: [number, number][];
+    coordinates: number[][]; // [lon, lat, ele]
 };
 
 function ChangeView({ bounds, padded }: { bounds: [number, number][]; padded: boolean }) {
@@ -24,7 +24,7 @@ function ChangeView({ bounds, padded }: { bounds: [number, number][]; padded: bo
     return null;
 }
 
-export default function TrailMap({ trailId, trailName: _trailName, showMarkers = true, height = 400 }: { trailId: string, trailName: string, showMarkers?: boolean, height?: number }) {
+export default function TrailMap({ trailId, trailName: _trailName, showMarkers = true, height = 400, onDataLoaded }: { trailId: string, trailName: string, showMarkers?: boolean, height?: number, onDataLoaded?: (data: GeoJsonGeometry) => void }) {
     const [geometry, setGeometry] = useState<GeoJsonGeometry | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -34,6 +34,7 @@ export default function TrailMap({ trailId, trailName: _trailName, showMarkers =
                 setLoading(true);
                 const data = await apiFetch<GeoJsonGeometry>(`/api/v1/admin/trails/${trailId}/geometry`);
                 setGeometry(data);
+                if (onDataLoaded) onDataLoaded(data);
             } catch (err) {
                 console.error('Failed to fetch geometry:', err);
             } finally {
@@ -41,6 +42,8 @@ export default function TrailMap({ trailId, trailName: _trailName, showMarkers =
             }
         };
         fetchGeometry();
+    // onDataLoaded is a callback that may change on every render; only re-fetch when trailId changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [trailId]);
 
     if (loading) return <Typography>Loading Map...</Typography>;

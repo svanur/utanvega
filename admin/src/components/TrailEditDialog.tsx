@@ -76,6 +76,7 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
     const { tags: allTags } = useTags();
 
     const { translate, translating } = useTranslate();
+    const [classifyingTerrain, setClassifyingTerrain] = useState(false);
     const [newLocId, setNewLocId] = useState('');
     const [newLocRole, setNewLocRole] = useState<'Start' | 'End' | 'BelongsTo' | 'PassingThrough'>('BelongsTo');
     const [activeTab, setActiveTab] = useState(0);
@@ -311,6 +312,14 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
         }
     };
 
+    // maxAltitude of exactly 0 is indistinguishable from a degenerate elevation profile
+    // (missing elevation used to be stored as all-zero rather than absent — see #465),
+    // so treat it the same as "no usable altitude data".
+    const altitudeUnusable = trail?.maxAltitude == null || trail?.maxAltitude === 0;
+    // Mirrors the classify-terrain endpoint's own guard (and detect-terrain-types' skip
+    // condition) so Auto suggest never sends a request the server would reject anyway.
+    const trailTooShortToClassify = (trail?.length ?? 0) <= 1000;
+
     return (
         <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
             <DialogTitle>
@@ -408,28 +417,32 @@ export default function TrailEditDialog({ open, trailId, onClose, onSaveSuccess 
                                         variant="outlined"
                                         size="small"
                                         sx={{ mt: 1 }}
-                                        disabled={trail.maxAltitude == null}
-                                        title={trail.maxAltitude == null ? 'Requires GPX data with altitude information' : undefined}
-                                        onClick={() => {
-                                            const distanceKm = trail.length / 1000;
-                                            const climbRatio = trail.elevationGain / distanceKm;
-                                            const maxAlt = trail.maxAltitude ?? 0;
-                                            // Mountain Index (high-latitude / Iceland thresholds)
-                                            // Rule 1: low climb ratio (<20 m/km) → Flat
-                                            // Rule 2: high altitude (>600m) + climb ratio ≥ 30 m/km → Mountainous
-                                            // Rule 3: low altitude (<400m) → Hilly
-                                            // Rule 4: grey zone (400–600m) → Mountainous if climb ratio ≥ 50 m/km
-                                            let suggested: string;
-                                            if (climbRatio < 20) {
-                                                suggested = 'Flat';
-                                            } else if (maxAlt > 600 && climbRatio >= 30) {
-                                                suggested = 'Mountainous';
-                                            } else if (maxAlt < 400) {
-                                                suggested = 'Hilly';
-                                            } else {
-                                                suggested = climbRatio >= 50 ? 'Mountainous' : 'Hilly';
+                                        startIcon={classifyingTerrain ? <CircularProgress size={16} /> : undefined}
+                                        disabled={altitudeUnusable || trailTooShortToClassify || classifyingTerrain}
+                                        title={
+                                            altitudeUnusable ? 'Requires GPX data with altitude information'
+                                                : trailTooShortToClassify ? 'Trail is too short to classify (must be over 1000m)'
+                                                    : undefined
+                                        }
+                                        onClick={async () => {
+                                            setClassifyingTerrain(true);
+                                            try {
+                                                // Mountain Index — computed server-side by MountainIndexClassifier so the
+                                                // suggestion here always matches what detect-terrain-types would persist.
+                                                const result = await apiFetch<{ terrainType: string }>('/api/v1/admin/trails/classify-terrain', {
+                                                    method: 'POST',
+                                                    body: JSON.stringify({
+                                                        length: trail.length,
+                                                        elevationGain: trail.elevationGain,
+                                                        maxAltitude: trail.maxAltitude,
+                                                    }),
+                                                });
+                                                handleChange('terrainType', result.terrainType);
+                                            } catch (err) {
+                                                setError(err instanceof Error ? err.message : 'Failed to classify terrain.');
+                                            } finally {
+                                                setClassifyingTerrain(false);
                                             }
-                                            handleChange('terrainType', suggested);
                                         }}
                                     >
                                         Auto suggest

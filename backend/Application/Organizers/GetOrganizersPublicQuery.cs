@@ -20,7 +20,7 @@ public class GetOrganizersPublicQueryHandler : IRequestHandler<GetOrganizersPubl
         return await _context.Organizers
             .AsNoTracking()
             .OrderBy(o => o.Name)
-            .Select(o => new OrganizerPublicDto(o.Id, o.Name, o.Slug, o.Website, o.Description, o.DescriptionEn, o.ContactName, new List<OrganizerEventSummaryDto>()))
+            .Select(o => new OrganizerPublicDto(o.Id, o.Name, o.Slug, o.Website, o.Description, o.DescriptionEn, o.ContactName, new List<OrganizerEventSummaryDto>(), o.SocialLinks))
             .ToListAsync(cancellationToken);
     }
 }

@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTrails, Trail } from '../hooks/useTrails';
 import { useTags } from '../hooks/useTags';
 import { useLocations } from '../hooks/useLocations';
+import { useRowFocus } from '../hooks/useRowFocus';
 import { apiFetch } from '../hooks/api';
 import TrailToolsPanel from '../components/TrailToolsPanel';
 import TrailFilterBar from '../components/TrailFilterBar';
@@ -101,6 +102,10 @@ export default function TrailsListPage({ onNotify, initialSearch }: { onNotify: 
         return isAsc ? comparison : -comparison;
       });
   }, [trails, search, statusFilter, typeFilter, activityFilter, locationFilter, yearFilter, monthFilter, orderBy, order, needsReviewOnly]);
+
+  // j/k row focus + Enter/o to open — independent of the checkbox selection above.
+  const { focusedIndex: focusedTrailIndex } = useRowFocus(filteredAndSortedTrails, (t) => navigate(`/trails/${t.slug}`));
+  const focusedTrailId = filteredAndSortedTrails[focusedTrailIndex]?.id ?? null;
 
   const handleRequestSort = (property: string) => {
     const isAsc = orderBy === property && order === 'asc';
@@ -398,6 +403,7 @@ export default function TrailsListPage({ onNotify, initialSearch }: { onNotify: 
       <TrailTable
         trails={filteredAndSortedTrails}
         selectedIds={selectedIds}
+        focusedId={focusedTrailId}
         orderBy={orderBy}
         order={order}
         onRequestSort={handleRequestSort}

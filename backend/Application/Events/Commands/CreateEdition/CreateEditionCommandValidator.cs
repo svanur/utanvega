@@ -1,4 +1,5 @@
 using FluentValidation;
+using Utanvega.Backend.Application.Validation;
 using Utanvega.Backend.Core.Entities;
 
 namespace Utanvega.Backend.Application.Events.Commands.CreateEdition;
@@ -33,8 +34,13 @@ public class CreateEditionCommandValidator : AbstractValidator<CreateEditionComm
 
         RuleFor(x => x.RegistrationStatus)
             .NotEmpty()
-            .Must(v => Enum.TryParse<RegistrationStatus>(v, ignoreCase: true, out _))
+            .Must(EnumValidation.IsDefined<RegistrationStatus>)
             .WithMessage($"RegistrationStatus must be one of: {string.Join(", ", Enum.GetNames<RegistrationStatus>())}.");
+
+        RuleFor(x => x.Status)
+            .Must(EnumValidation.IsDefined<EditionStatus>)
+            .WithMessage($"Status must be one of: {string.Join(", ", Enum.GetNames<EditionStatus>())}.")
+            .When(x => x.Status is not null);
 
         RuleFor(x => x.Year)
             .InclusiveBetween(2000, 2100)

@@ -55,6 +55,13 @@ import { BilingualLangProvider, useBilingualLang } from '../../contexts/Bilingua
 const EVENT_TYPES: EventType[] = ['Race', 'Series', 'Social', 'Advertisement', 'Festival', 'Other'];
 const ACTIVITY_TYPES: ActivityType[] = ['TrailRunning', 'Running', 'Cycling', 'Hiking', 'FunRun', 'ObstacleCourse', 'CrossCountryRun', 'Swim', 'Canicross', 'IronMan', 'Other'];
 const EVENT_STATUSES: EventStatus[] = ['Unconfirmed', 'Confirmed', 'Cancelled', 'Hidden', 'Unlisted'];
+const EVENT_STATUS_LABELS: Record<EventStatus, string> = {
+  Unconfirmed: 'Unconfirmed',
+  Confirmed: 'Confirmed',
+  Cancelled: 'Cancelled',
+  Hidden: 'Draft — hidden from all',
+  Unlisted: 'Unlisted — view by URL',
+};
 const ALERT_SEVERITIES: AlertSeverity[] = ['info', 'success', 'warning', 'error'];
 const DAYS: DayOfWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const MONTHS = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -381,7 +388,7 @@ function EventFormCardInner({ event, linkedTrails = [], onClose, onSaved, onNoti
             <FormControl size="small" fullWidth>
               <InputLabel>Status</InputLabel>
               <Select value={form.status} label="Status" onChange={e => set('status', e.target.value as EventStatus)}>
-                {EVENT_STATUSES.map(st => <MenuItem key={st} value={st}>{st}</MenuItem>)}
+                {EVENT_STATUSES.map(st => <MenuItem key={st} value={st}>{EVENT_STATUS_LABELS[st]}</MenuItem>)}
               </Select>
             </FormControl>
           </Stack>
