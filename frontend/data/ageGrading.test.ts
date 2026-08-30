@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
     AG_DISTANCES, calculateAgeGrade, getAgeFactor, parseTimeToSeconds,
     getAgeTableRows, AGE_BAND_HALF_WIDTH, AGE_TABLE_ANCHOR_ROWS,
+    isImplausibleResult,
 } from './ageGrading';
 import { MIN_AGE, MAX_AGE } from './ageGradingFactors.generated';
 
@@ -162,6 +163,43 @@ describe('AGE_TABLE_ANCHOR_ROWS', () => {
             expect(a).toBeGreaterThanOrEqual(MIN_AGE);
             expect(a).toBeLessThanOrEqual(MAX_AGE);
         }
+    });
+});
+
+describe('isImplausibleResult — flags a >100% age-graded percentage', () => {
+    it('flags percentages over 100, including a wildly implausible one', () => {
+        expect(isImplausibleResult(100.1)).toBe(true);
+        expect(isImplausibleResult(4657.0)).toBe(true);
+    });
+
+    it('does not flag 100 exactly or anything below it', () => {
+        expect(isImplausibleResult(100)).toBe(false);
+        expect(isImplausibleResult(99.9)).toBe(false);
+        expect(isImplausibleResult(60)).toBe(false);
+    });
+
+    it('flags a genuine, just-over-100% record-beating result the same as an obvious mistype', () => {
+        // Male, 25 (peak age factor 1.0 for Marathon), 2:00:00 vs. the 7235s open
+        // standard — a plausible-looking, barely-over-100% result. The warning must
+        // not be suppressed just because the number looks reasonable at a glance.
+        const distance = AG_DISTANCES.find(d => d.key === 'Marathon')!;
+        const result = calculateAgeGrade('male', 25, distance.km, 7200);
+        expect(result).not.toBeNull();
+        expect(result!.percentage).toBeGreaterThan(100);
+        expect(result!.percentage).toBeLessThan(101);
+        expect(isImplausibleResult(result!.percentage)).toBe(true);
+    });
+
+    it('flags "3:30" entered for a Marathon (read as mm:ss) as implausible, but not "3:30:00"', () => {
+        const distance = AG_DISTANCES.find(d => d.key === 'Marathon')!;
+
+        const mistyped = calculateAgeGrade('male', 25, distance.km, parseTimeToSeconds('3:30')!);
+        expect(mistyped).not.toBeNull();
+        expect(isImplausibleResult(mistyped!.percentage)).toBe(true);
+
+        const intended = calculateAgeGrade('male', 25, distance.km, parseTimeToSeconds('3:30:00')!);
+        expect(intended).not.toBeNull();
+        expect(isImplausibleResult(intended!.percentage)).toBe(false);
     });
 });
 

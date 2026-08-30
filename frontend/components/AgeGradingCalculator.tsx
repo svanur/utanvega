@@ -8,12 +8,13 @@ import {
 import KeyboardArrowUp from '@mui/icons-material/KeyboardArrowUp';
 import KeyboardArrowDown from '@mui/icons-material/KeyboardArrowDown';
 import RestartAlt from '@mui/icons-material/RestartAlt';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import TimeSlider from './TimeSlider';
 import {
     AG_DISTANCES, calculateAgeGrade, formatSeconds, parseTimeToSeconds,
-    getAgeFactor, getTier, getAgeTableRows,
+    getAgeFactor, getTier, getAgeTableRows, isImplausibleResult,
 } from '../data/ageGrading';
 import type { Gender } from '../data/ageGrading';
 import { MIN_AGE, MAX_AGE } from '../data/ageGradingFactors.generated';
@@ -63,6 +64,7 @@ export default function AgeGradingCalculator() {
     const result = (runnerSeconds && !isNaN(ageNum) && ageNum >= 5 && ageNum <= 100)
         ? calculateAgeGrade(gender, ageNum, distance.km, runnerSeconds)
         : null;
+    const implausible = result ? isImplausibleResult(result.percentage) : false;
 
     const handleReset = () => {
         setGender('male');
@@ -203,14 +205,28 @@ export default function AgeGradingCalculator() {
                             sx={{
                                 px: 2, py: 0.75, bgcolor: result.tierColor + '22',
                                 border: `1px solid ${result.tierColor}`,
+                                borderStyle: implausible ? 'dashed' : 'solid',
                                 borderRadius: 2,
+                                display: 'flex', alignItems: 'center', gap: 0.5,
                             }}
                         >
+                            {implausible && (
+                                <Tooltip title={t('tools.ageGrading.implausibleBadgeTooltip')} arrow>
+                                    <WarningAmberIcon fontSize="small" sx={{ color: 'warning.main' }} />
+                                </Tooltip>
+                            )}
                             <Typography variant="subtitle2" fontWeight={700} sx={{ color: result.tierColor }}>
                                 {t(`tools.ageGrading.tierNames.${result.tier}`)}
                             </Typography>
                         </Paper>
                     </Box>
+
+                    {/* Implausible result — likely a two-part time misread as mm:ss */}
+                    {implausible && (
+                        <Alert severity="warning" variant="outlined">
+                            {t('tools.ageGrading.implausibleResult')}
+                        </Alert>
+                    )}
 
                     {/* Age-graded equivalent time — comparable weight to the percentage above */}
                     <Box>

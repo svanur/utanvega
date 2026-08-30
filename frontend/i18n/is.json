@@ -1210,6 +1210,8 @@
             },
             "nextTier": "Þú þarft að hlaupa {{time}} mín. hraðar til að ná næsta flokki, sem er: {{tier}}",
             "worldClass": "Heimsklassa árangur miðað við aldur og kyn — efsti flokkur náðst!",
+            "implausibleResult": "Þessi tími er hraðari en aldursflokksmetið fyrir þennan aldur, kyn og vegalengd — athugaðu hann vel. Algeng orsök er að tvíliða tími eins og 3:30 sé lesinn sem mín:sek (3 mínútur og 30 sekúndur) þegar átt var við klst:mín:sek (3 klukkustundir og 30 mínútur).",
+            "implausibleBadgeTooltip": "Þessi niðurstaða virðist ótrúverðug — athugaðu tímann sem þú slóst inn",
             "invalidInput": "Sláðu inn aldur (5–100) og lokatíma.",
             "source": "Byggt á 2025 USATF MLDR Road Age Grading Tables — Alan Jones",
             "examples": {
@@ -1222,8 +1224,8 @@
                 "age": "Aldur",
                 "equivalentTime": "Jafngildur tími",
                 "yourAge": "Þú",
-                "showFullRange": "Sýna alla aldra ({{min}}–{{max}})",
-                "showFewerAges": "Sýna færri aldra"
+                "showFullRange": "Sýna allan aldur (frá {{min}} – {{max}})",
+                "showFewerAges": "Sýna færri aldursbil"
             }
         }
     },
