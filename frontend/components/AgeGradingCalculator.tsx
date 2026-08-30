@@ -336,7 +336,7 @@ export default function AgeGradingCalculator() {
                                         ? AGE_TABLE_ROWS
                                         : [...AGE_TABLE_ROWS, ageNum].sort((a, b) => a - b);
                                     return rows.map(rowAge => {
-                                        const factor = getAgeFactor(gender, rowAge);
+                                        const factor = getAgeFactor(gender, rowAge, distanceKey);
                                         const eqSeconds = factor > 0 ? result.ageGradedSeconds / factor : null;
                                         const isYou = rowAge === ageNum;
                                         return (

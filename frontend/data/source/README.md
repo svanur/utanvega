@@ -42,4 +42,16 @@ Half Marathon 3772 s (62:52).
 `openpyxl` is not a project dependency and does not need to be. `.xlsx` is a zip of XML and
 can be read with `zipfile` plus `xml.etree.ElementTree` from the standard library.
 
+## Regenerating the generated data
+
+`convert_age_grading.py` in this directory reads both workbooks (resolving the `Age
+Factors` sheet by name via `workbook.xml` + its rels, since sheet order/numbering differs
+between the male and female files) and writes
+`frontend/data/ageGradingFactors.generated.ts`, consumed by `frontend/data/ageGrading.ts`.
+Run it from the repo root whenever a new edition of the workbooks replaces the ones here:
+
+```
+python frontend/data/source/convert_age_grading.py
+```
+
 Tracked in #504.
