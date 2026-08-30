@@ -16,6 +16,7 @@ public record AnalyticsDto(
     SummaryDto Summary,
     List<DailyViewsDto> DailyViews,
     List<HourlyViewsDto> HourlyViews,
+    List<DayOfWeekViewsDto> DayOfWeekViews,
     List<TopTrailDto> TopTrails,
     List<TrendingTrailDto> TrendingTrails
 );
@@ -33,6 +34,11 @@ public record SummaryDto(
 
 public record DailyViewsDto(string Date, int Views, int UniqueVisitors);
 public record HourlyViewsDto(int Hour, int Views);
+
+// DayOfWeek is stored as .NET's int enum value (Sunday = 0 ... Saturday = 6),
+// matching Postgres's date_part('dow') under Npgsql's translation — not
+// reordered here. Monday-first display, if wanted, is a client concern.
+public record DayOfWeekViewsDto(int DayOfWeek, int Views);
 public record TopTrailDto(string Name, string Slug, int ViewCount);
 public record TrendingTrailDto(string Name, string Slug, int ViewsThisWeek, int ViewsLastWeek, double ChangePercent);
 
@@ -174,6 +180,27 @@ public class GetAnalyticsQueryHandler : IRequestHandler<GetAnalyticsQuery, Analy
             .Select(r => new HourlyViewsDto(r.Hour, r.Views))
             .ToList();
 
+        // ── Day-of-week distribution (all-time, UTC) ──────────────────────
+        // Same two-step pattern as the hourly block above: grouping on
+        // ViewedAtUtc.DayOfWeek and projecting to an anonymous type, mapped to
+        // the DTO afterwards, since EF cannot order by a property of a
+        // projected record constructor.
+        var dayOfWeekRows = await views
+            .GroupBy(v => v.ViewedAtUtc.DayOfWeek)
+            .Select(g => new { DayOfWeek = g.Key, Views = g.Count() })
+            .ToListAsync(cancellationToken);
+
+        // Gap-filled here rather than left to the client, unlike the hourly
+        // chart: seven values is small and fixed, so there is no cost to
+        // guaranteeing every day is present, and it means a client cannot
+        // forget the zero-view days the way an hourly client filling 24
+        // buckets would still have to remember to do.
+        var dayOfWeekViews = Enum.GetValues<DayOfWeek>()
+            .Select(day => new DayOfWeekViewsDto(
+                (int)day,
+                dayOfWeekRows.FirstOrDefault(r => r.DayOfWeek == day)?.Views ?? 0))
+            .ToList();
+
         // ── Top 10 trails (all-time) ──────────────────────────────────────
         // Counts views only. A per-trail distinct-visitor count used to be
         // computed here and returned unused by any client — it was the single
@@ -222,7 +249,7 @@ public class GetAnalyticsQueryHandler : IRequestHandler<GetAnalyticsQuery, Analy
                 PercentChange(r.ThisWeek, r.LastWeek)))
             .ToList();
 
-        return new AnalyticsDto(summary, dailyViews, hourlyViews, topTrails, trendingTrails);
+        return new AnalyticsDto(summary, dailyViews, hourlyViews, dayOfWeekViews, topTrails, trendingTrails);
     }
 
     /// <summary>

@@ -140,6 +140,15 @@ public class AnalyticsPostgresTranslationTests
         Assert.Equal(11, result.HourlyViews.Sum(h => h.Views));
         Assert.All(result.HourlyViews, h => Assert.InRange(h.Hour, 0, 23));
 
+        // date_part('dow') is Npgsql's translation of .DayOfWeek and, like the
+        // .NET enum, puts Sunday at 0 — but it is a double under Postgres, and
+        // SQLite's DayOfWeek extraction is permissive in ways Npgsql is not, so
+        // this is exactly the kind of grouping the hourly assertion above exists
+        // to catch if it stopped translating.
+        Assert.Equal(7, result.DayOfWeekViews.Count);
+        Assert.Equal([0, 1, 2, 3, 4, 5, 6], result.DayOfWeekViews.Select(d => d.DayOfWeek).OrderBy(d => d));
+        Assert.Equal(11, result.DayOfWeekViews.Sum(d => d.Views));
+
         Assert.Equal(["esja", "hengill"], result.TopTrails.Select(t => t.Slug));
         Assert.Equal(6, result.TopTrails.Single(t => t.Slug == "esja").ViewCount);
 
