@@ -1,6 +1,6 @@
 import { Box, CssBaseline, ThemeProvider, createTheme, AppBar, Toolbar, Typography, Container, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Snackbar, Alert, Button, CircularProgress, Link, IconButton, Tooltip } from '@mui/material';
 import HomeIcon from '@mui/icons-material/Home';
-import DashboardIcon from '@mui/icons-material/Dashboard';
+import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
 import MapIcon from '@mui/icons-material/Map';
@@ -297,7 +297,7 @@ function AdminContent() {
             {[
               { key: 'dashboard' as const,          icon: <HomeIcon />,                                      label: 'Home' },
               { key: 'events' as const,              icon: <EmojiEventsIcon />,                               label: 'Events' },
-              { key: 'trails' as const,              icon: <DashboardIcon />,                                 label: 'Trails' },
+              { key: 'trails' as const,              icon: <DirectionsRunIcon />,                             label: 'Trails' },
               { key: 'race-day' as const,            icon: <FlagIcon />,                                      label: 'Race Manager' },
               { key: 'locations' as const,           icon: <LocationOnIcon />,                                label: 'Locations' },
               { key: 'organizers' as const,          icon: <GroupIcon />,                                     label: 'Organizers' },
