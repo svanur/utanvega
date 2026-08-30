@@ -33,6 +33,8 @@ You have two modes, and they must never mix:
 ## Selection rule (deterministic — follow in order)
 
 1. `gh issue list --label agent-ready --state open --json number,title,labels,body,createdAt`
+   (the body alone is enough to shortlist; the readiness check below reads each candidate's full
+   thread before anything is emitted)
 2. Exclude any issue that already has an open PR referencing it (`gh pr list --state open --json number,title,body,headRefName`).
 3. Exclude any issue labelled `SPIKE`, `wontfix`, or `duplicate`.
 4. **Exclude blocked issues.** For each remaining candidate, scan its body for a `Blocked by` line
@@ -64,7 +66,22 @@ PR that wastes a full review cycle.
 
 ## Readiness check — refuse ambiguous work
 
-Before emitting a work order, verify the issue has all of:
+**Read the whole thread first, not just the body:**
+
+```
+gh issue view <N> --comments
+```
+
+Decisions, acceptance criteria and design corrections are frequently recorded in **comments** rather
+than edited into the body — that is deliberate, because a comment preserves the original framing and
+shows what was decided and when. An issue whose body ends with an open question is often already
+resolved further down the thread.
+
+**A later comment supersedes the body.** Where they conflict, the most recent explicit decision wins.
+Never refuse an issue as "no acceptance criteria" without having read its comments — that is the most
+likely place for them to be.
+
+Then verify the issue has all of:
 - A clear statement of the problem or desired behaviour.
 - Acceptance criteria you could objectively test.
 - An identifiable area (frontend / admin / backend / database).
@@ -77,7 +94,14 @@ Also refuse if the issue is clearly too large for one PR (touches all three apps
 
 ## Output format
 
-Read `AGENTS.md` and `CLAUDE.md` first so the work order matches repo conventions. Then emit exactly this:
+Read `AGENTS.md` and `CLAUDE.md` first so the work order matches repo conventions.
+
+Build the work order from the **whole thread** — body plus comments. If a comment carries the
+acceptance criteria, a chosen approach, or a warning about a trap (a wrong file to copy, a guard that
+must be preserved), carry all of it into the work order verbatim. The Programmer sees only your work
+order, so anything you leave behind is lost.
+
+Then emit exactly this:
 
 ```
 ISSUE: #<number> — <title>
