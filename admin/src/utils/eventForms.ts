@@ -47,6 +47,8 @@ export const EDITION_STATUS_LABELS: Record<EditionStatus, string> = {
 // not landed on by clicking through a cycle.
 export const EDITION_STATUS_CYCLE: EditionStatus[] = ['Active', 'Unconfirmed', 'Hidden'];
 export const TICKET_STATUSES: TicketStatus[] = ['Free', 'NotStarted', 'Available', 'AlmostSoldOut', 'SoldOut', 'Closed'];
+// null (not yet rated) is a distinct step from 0 (rated at zero points) — keep both in the cycle.
+export const ITRA_VALUES: (number | null)[] = [null, 0, 1, 2, 3, 4, 5, 6];
 export const ACTIVITY_TYPES: ActivityType[] = ['TrailRunning', 'Running', 'Cycling', 'Hiking', 'FunRun', 'ObstacleCourse', 'CrossCountryRun', 'Swim', 'Canicross', 'IronMan', 'Other'];
 export const RESULT_TYPES: ResultType[] = ['Time', 'Distance', 'Laps'];
 

@@ -82,6 +82,7 @@ import {
   EDITION_STATUS_LABELS,
   EDITION_STATUS_CYCLE,
   TICKET_STATUSES,
+  ITRA_VALUES,
   type RaceFormState,
 } from '../utils/eventForms';
 import { hashText } from '../utils/translationHash';
@@ -409,6 +410,7 @@ interface SortableRaceRowProps {
   onDuplicate: () => void;
   onCycleStatus: () => void;
   onCycleTicket: () => void;
+  onCycleItra: () => void;
   patchRaceInDetail: (raceId: string, patch: Partial<RaceDto>) => void;
   racePayload: (race: RaceDto, patch: Partial<RaceDto>) => object;
   onNotify: (msg: string, severity?: 'success' | 'error') => void;
@@ -420,7 +422,7 @@ function cycleTooltip(label: string, values: string[], current: string) {
   return `${label}: ${values.join(' → ')} (next: ${next})`;
 }
 
-function SortableRaceRow({ race, edition, isActive, staleTx, detail, onOpen, onDuplicate, onCycleStatus, onCycleTicket, patchRaceInDetail, racePayload, onNotify }: SortableRaceRowProps) {
+function SortableRaceRow({ race, edition, isActive, staleTx, detail, onOpen, onDuplicate, onCycleStatus, onCycleTicket, onCycleItra, patchRaceInDetail, racePayload, onNotify }: SortableRaceRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: race.id });
   const [copyDateAnchor, setCopyDateAnchor] = useState<HTMLElement | null>(null);
   const [copyingDate, setCopyingDate] = useState(false);
@@ -443,6 +445,14 @@ function SortableRaceRow({ race, edition, isActive, staleTx, detail, onOpen, onD
     ...(edition.date ? [{ date: edition.date, label: `Parent: ${fmtDate(edition.date)}` }] : []),
     ...siblingDates.filter(d => d !== edition.date).map(d => ({ date: d, label: `Sibling: ${fmtDate(d)}` })),
   ];
+
+  // race.activityType === null means "inherit from event" — fall back to the event's own activity type.
+  const effectiveActivityType = race.activityType ?? detail?.activityType;
+  const isItraEligible = effectiveActivityType === 'TrailRunning';
+  const itraLocked = race.status === 'Cancelled';
+  const itraLabel = race.itraPoints === null ? 'ITRA —' : `ITRA ${race.itraPoints}`;
+  const itraDisplayValues = ITRA_VALUES.map(v => v === null ? '—' : String(v));
+  const itraCurrentDisplay = race.itraPoints === null ? '—' : String(race.itraPoints);
 
   return (
     <TableRow
@@ -539,6 +549,19 @@ function SortableRaceRow({ race, edition, isActive, staleTx, detail, onOpen, onD
             onClick={race.status === 'Cancelled' ? undefined : e => { e.stopPropagation(); onCycleTicket(); }}
             sx={{ cursor: race.status === 'Cancelled' ? 'default' : 'pointer' }} />
         </Tooltip>
+      </TableCell>
+      <TableCell onClick={e => e.stopPropagation()}>
+        {isItraEligible ? (
+          <Tooltip title={itraLocked
+            ? 'Locked — the race is cancelled'
+            : cycleTooltip('ITRA points', itraDisplayValues, itraCurrentDisplay)}>
+            <Chip label={itraLabel} size="small" variant="outlined" color="default"
+              onClick={itraLocked ? undefined : e => { e.stopPropagation(); onCycleItra(); }}
+              sx={{ cursor: itraLocked ? 'default' : 'pointer' }} />
+          </Tooltip>
+        ) : (
+          <Typography variant="body2" color="text.secondary">- -</Typography>
+        )}
       </TableCell>
       <TableCell align="right" onClick={e => e.stopPropagation()}>
         <Stack direction="row" justifyContent="flex-end" spacing={0.25}>
@@ -934,6 +957,17 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
     }).catch(() => {
       patchRaceInDetail(race.id, { ticketStatus: race.ticketStatus });
       onNotify('Failed to update ticket status', 'error');
+    });
+  };
+
+  const handleCycleItraPoints = (race: RaceDto) => {
+    const next = ITRA_VALUES[(ITRA_VALUES.indexOf(race.itraPoints) + 1) % ITRA_VALUES.length]!;
+    patchRaceInDetail(race.id, { itraPoints: next });
+    apiFetch(`/api/v1/admin/races/${race.id}`, {
+      method: 'PUT', body: JSON.stringify(racePayload(race, { itraPoints: next })),
+    }).catch(() => {
+      patchRaceInDetail(race.id, { itraPoints: race.itraPoints });
+      onNotify('Failed to update ITRA points', 'error');
     });
   };
 
@@ -1457,6 +1491,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                         <TableCell>Date / Start / Limit</TableCell>
                         <TableCell>Status</TableCell>
                         <TableCell>Tickets</TableCell>
+                        <TableCell>ITRA</TableCell>
                         <TableCell align="right" />
                       </TableRow>
                     </TableHead>
@@ -1478,6 +1513,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                               onDuplicate={() => openDuplicateRace(race, edition)}
                               onCycleStatus={() => handleCycleRaceStatus(race)}
                               onCycleTicket={() => handleCycleTicketStatus(race)}
+                              onCycleItra={() => handleCycleItraPoints(race)}
                               staleTx={staleTx}
                               detail={detail}
                               patchRaceInDetail={patchRaceInDetail}
