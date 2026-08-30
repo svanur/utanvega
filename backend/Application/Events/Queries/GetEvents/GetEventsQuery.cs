@@ -266,7 +266,7 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 relevantEdition?.RegistrationUrl,
                 relevantEdition?.RegistrationStatus.ToString(),
                 relevantEdition?.ResultsUrl,
-                relevantEdition?.PhotoGalleryUrl ?? e.PhotoGalleryUrl,
+                relevantEdition?.PhotoGalleryUrl,
                 certifications?.Count > 0 ? certifications : null,
                 youtubeUrl,
                 championshipCategories?.Count > 0 ? championshipCategories : null,

@@ -776,6 +776,10 @@
             }
         },
         "changelog": {
+            "v1_4_0": {
+                "title": "An age-grading tool that tells the truth",
+                "description": "The age-grading tool has moved from the WMA 2015 tables to the 2025 USATF MLDR road tables. The old standards predated a decade of improvement in distance running, so every score came out too high — women's more than men's, because the women's benchmarks had fallen furthest behind. A half marathon that scored 92.1% now scores 86.1%. The tool also stopped treating everyone under 20 as a 20-year-old and everyone over 80 as an 80-year-old, so juniors and older runners finally get their own standard rather than someone else's; equivalent times can now be read year by year around your own age instead of in five-year steps; a mistyped finish time is flagged instead of returning an impossible score; and the performance tier now says what it is relative to, because \"World Class\" on its own reads as a bigger claim than it is."
+            },
             "v1_3_0": {
                 "title": "Elevation profiles, truer terrain, and links that stay put",
                 "description": "Trail pages now show an elevation profile, with climb ratio alongside the other figures. Terrain classification was rebuilt: it had quietly capped every trail below 400 m as hilly, so steep coastal routes and long climbing ultras were mislabelled — and it contradicted the rules published in the FAQ. Renaming a trail, tag or organizer no longer rewrites its public address, so links shared earlier keep working. Most of the release went into the admin tools behind the site: keyboard navigation in list views, search across organizers, clearer edition and race columns, and traffic broken down by day of week as well as by hour."
@@ -1186,33 +1190,48 @@
             "female": "Female",
             "age": "Age",
             "distance": "Distance",
+            "distanceNames": {
+                "5k": "5K",
+                "10k": "10K",
+                "half": "Half Marathon",
+                "marathon": "Marathon",
+                "50k": "50K",
+                "100k": "100K"
+            },
             "yourTime": "Your finish time",
             "timeHelp": "e.g. 22:30 or 1:45:00",
             "ageGradedPct": "Age-graded percentage",
-            "ageGradedTime": "Age-graded equivalent time",
+            "equivalentTo": "Equivalent to a {{time}} open {{distance}}",
             "ageGradedTimeDesc": "The time a peak-age athlete (~30) would need to match your effort",
+            "basisNote": "Age grading compares your time against the best ever recorded for your age and sex — 100% is an age-group record, not an absolute world record.",
             "tiers": "Performance tiers",
             "tierNames": {
-                "worldClass": "World Class",
+                "worldClass": "World Class (age & sex)",
                 "nationalClass": "National Class",
                 "regionalClass": "Regional Class",
                 "localClass": "Local Class",
                 "recreational": "Recreational"
             },
             "nextTier": "You need to run {{time}} faster to reach {{tier}}",
-            "worldClass": "World Class — top tier reached!",
+            "worldClass": "World Class for your age and sex — top tier reached!",
+            "implausibleResult": "This time is faster than the age-group record for this age, sex and distance — please double-check it. A common cause is a two-part time like 3:30 being read as mm:ss (3 minutes 30 seconds) when h:mm:ss (3 hours 30 minutes) was meant.",
+            "implausibleBadgeTooltip": "This result looks implausible — check your entered time",
             "invalidInput": "Please enter a valid age (5–100) and finish time.",
-            "source": "Based on WMA 2015 Road Age Grading Tables — Howard Grubb",
+            "source": "Based on the 2025 USATF MLDR Road Age Grading Tables — Alan Jones",
             "examples": {
-                "m60_5k":    "Male 60, 5K in 22:00",
-                "f45_half":  "Female 45, Half marathon in 1:50:00"
+                "m27_10k":      "Male 27, 10K in 27:40",
+                "f52_half":     "Female 52, Half marathon in 1:25:26",
+                "m60_5k":       "Male 60, 5K in 22:00",
+                "f35_marathon": "Female 35, Marathon in 4:15:00"
             },
             "ageTable": {
                 "title": "Equivalent times by age",
                 "subtitle": "What time would a runner of each age need to match your {{pct}}% effort?",
                 "age": "Age",
                 "equivalentTime": "Equivalent time",
-                "yourAge": "You"
+                "yourAge": "You",
+                "showFullRange": "Show every age ({{min}}–{{max}})",
+                "showFewerAges": "Show fewer ages"
             }
         }
     },

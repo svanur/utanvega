@@ -776,6 +776,10 @@
             }
         },
         "changelog": {
+            "v1_4_0": {
+                "title": "Aldursviðmiðun sem segir satt",
+                "description": "Aldursviðmiðunartólið notar nú 2025 USATF MLDR töflurnar í stað WMA 2015. Eldri viðmiðin voru frá tíma áður en hlaupageta tók stórstígum framförum, svo allar einkunnir voru of háar — og meira hjá konum, því þeirra viðmið höfðu dregist mest aftur úr. Hálfmaraþon sem áður gaf 92,1% gefur nú 86,1%. Tólið hætti einnig að telja alla undir tvítugu sem tvítuga og alla yfir áttræðu sem áttræða, svo ungir og eldri hlauparar fá loksins sitt eigið viðmið; sambærilega tíma má nú lesa ár fyrir ár í kringum eigin aldur í stað fimm ára þrepa; rangt sleginn tími er merktur í stað þess að skila ómögulegri einkunn; og frammistöðuflokkurinn segir nú við hvað er miðað, því „World Class“ eitt og sér hljómar stærra en það er."
+            },
             "v1_3_0": {
                 "title": "Hæðarsnið, réttari landslagsgerð og hlekkir sem haldast",
                 "description": "Leiðasíður sýna nú hæðarsnið, og hækkun á hvern kílómetra birtist með öðrum tölum. Útreikningur á landslagsgerð var endurgerður: hann flokkaði sjálfkrafa allar leiðir undir 400 m sem hæðóttar, svo brattar strandleiðir og langar leiðir með mikilli heildarhækkun fengu ranga merkingu — og hann stangaðist á við reglurnar sem birtar eru í algengum spurningum. Þegar leið, merki eða skipuleggjandi fær nýtt nafn breytist vefslóðin ekki lengur, svo eldri hlekkir virka áfram. Stærstur hluti útgáfunnar fór í stjórnborðið að baki vefnum: flýtilyklar í listum, leit að skipuleggjendum, skýrari dálkar fyrir útgáfur og hlaup, og umferð greind eftir vikudögum jafnt sem klukkustundum."
@@ -1186,33 +1190,48 @@
             "female": "Kona",
             "age": "Aldur",
             "distance": "Vegalengd",
+            "distanceNames": {
+                "5k": "5K",
+                "10k": "10K",
+                "half": "Hálfmaraþon",
+                "marathon": "Maraþon",
+                "50k": "50K",
+                "100k": "100K"
+            },
             "yourTime": "Tími þinn",
             "timeHelp": "t.d. 22:30 eða 1:45:00",
             "ageGradedPct": "Hlutfall aldursflokks",
-            "ageGradedTime": "Jafngildur aldursflokkatími",
+            "equivalentTo": "Jafngildir {{time}} í opnum flokki ({{distance}})",
             "ageGradedTimeDesc": "Tíminn sem ~30 ára hlaupari þyrfti til að jafna tíman þinn",
+            "basisNote": "Aldursleiðrétting ber árangur þinn saman við besta árangur sem þekkist hjá einhverjum á þínum aldri og af þínu kyni — 100% er því aldursflokksmet, ekki algert heimsmet.",
             "tiers": "Frammistöðuflokkar",
             "tierNames": {
-                "worldClass": "Heimsklassaflokkur",
+                "worldClass": "Heimsklassaflokkur (m.v. aldur/kyn)",
                 "nationalClass": "Landsliðsflokkur",
                 "regionalClass": "Svæðisflokkur",
                 "localClass": "Innanfélagsflokkur",
                 "recreational": "Tómstundaflokkur"
             },
             "nextTier": "Þú þarft að hlaupa {{time}} mín. hraðar til að ná næsta flokki, sem er: {{tier}}",
-            "worldClass": "Heimsklassa árangur — efsti flokkur náðst!",
+            "worldClass": "Heimsklassa árangur miðað við aldur og kyn — efsti flokkur náðst!",
+            "implausibleResult": "Þessi tími er hraðari en aldursflokksmetið fyrir þennan aldur, kyn og vegalengd — athugaðu hann vel. Algeng orsök er að tvíliða tími eins og 3:30 sé lesinn sem mín:sek (3 mínútur og 30 sekúndur) þegar átt var við klst:mín:sek (3 klukkustundir og 30 mínútur).",
+            "implausibleBadgeTooltip": "Þessi niðurstaða virðist ótrúverðug — athugaðu tímann sem þú slóst inn",
             "invalidInput": "Sláðu inn aldur (5–100) og lokatíma.",
-            "source": "Byggt á WMA 2015 Road Age Grading Tables — Howard Grubb",
+            "source": "Byggt á 2025 USATF MLDR Road Age Grading Tables — Alan Jones",
             "examples": {
-                "m60_5k":    "Karl 60, 5K á 22:00",
-                "f45_half":  "Kona 45, Hálfmaraþon á 1:50:00"
+                "m27_10k":      "Karl 27, 10K á 27:40",
+                "f52_half":     "Kona 52, Hálfmaraþon á 1:25:26",
+                "m60_5k":       "Karl 60, 5K á 22:00",
+                "f35_marathon": "Kona 35, Maraþon á 4:15:00"
             },
             "ageTable": {
                 "title": "Jafngildur tími eftir aldri",
                 "subtitle": "Hvaða tíma þyrfti hlaupari til að jafna {{pct}}% frammistöðu þína?",
                 "age": "Aldur",
                 "equivalentTime": "Jafngildur tími",
-                "yourAge": "Þú"
+                "yourAge": "Þú",
+                "showFullRange": "Sýna allan aldur (frá {{min}}–{{max}})",
+                "showFewerAges": "Sýna færri aldursbil"
             }
         }
     },

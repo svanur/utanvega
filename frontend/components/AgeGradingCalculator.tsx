@@ -8,22 +8,23 @@ import {
 import KeyboardArrowUp from '@mui/icons-material/KeyboardArrowUp';
 import KeyboardArrowDown from '@mui/icons-material/KeyboardArrowDown';
 import RestartAlt from '@mui/icons-material/RestartAlt';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import TimeSlider from './TimeSlider';
 import {
     AG_DISTANCES, calculateAgeGrade, formatSeconds, parseTimeToSeconds,
-    getAgeFactor, getTier,
+    getAgeFactor, getTier, getAgeTableRows, isImplausibleResult,
 } from '../data/ageGrading';
 import type { Gender } from '../data/ageGrading';
-
-const AGE_TABLE_ROWS = [20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80];
+import { MIN_AGE, MAX_AGE } from '../data/ageGradingFactors.generated';
 
 export default function AgeGradingCalculator() {
     const { t } = useTranslation();
     const [searchParams, setSearchParams] = useSearchParams();
 
     const [showExplainer, setShowExplainer] = useState(false);
+    const [showFullAgeTable, setShowFullAgeTable] = useState(false);
     const [gender, setGender] = useState<Gender>(() => (searchParams.get('gender') as Gender) ?? 'male');
     const [age, setAge] = useState(() => searchParams.get('age') ?? '');
     const [distanceKey, setDistanceKey] = useState(() => searchParams.get('dist') ?? '5K');
@@ -59,10 +60,11 @@ export default function AgeGradingCalculator() {
 
     const ageNum = parseInt(age, 10);
     const runnerSeconds = parseTimeToSeconds(timeStr);
-    const distance = AG_DISTANCES.find(d => d.label === distanceKey) ?? AG_DISTANCES[0];
+    const distance = AG_DISTANCES.find(d => d.key === distanceKey) ?? AG_DISTANCES[0];
     const result = (runnerSeconds && !isNaN(ageNum) && ageNum >= 5 && ageNum <= 100)
         ? calculateAgeGrade(gender, ageNum, distance.km, runnerSeconds)
         : null;
+    const implausible = result ? isImplausibleResult(result.percentage) : false;
 
     const handleReset = () => {
         setGender('male');
@@ -114,8 +116,10 @@ export default function AgeGradingCalculator() {
             {/* Example scenarios */}
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                 {[
-                    { label: t('tools.ageGrading.examples.m60_5k'),   gender: 'male'   as Gender, age: '60', dist: '5K',           time: '22:00' },
-                    { label: t('tools.ageGrading.examples.f45_half'),  gender: 'female' as Gender, age: '45', dist: 'Half Marathon', time: '1:50:00' },
+                    { label: t('tools.ageGrading.examples.m27_10k'),      gender: 'male'   as Gender, age: '27', dist: '10K',           time: '27:40' },
+                    { label: t('tools.ageGrading.examples.f52_half'),     gender: 'female' as Gender, age: '52', dist: 'Half Marathon',  time: '1:25:26' },
+                    { label: t('tools.ageGrading.examples.m60_5k'),       gender: 'male'   as Gender, age: '60', dist: '5K',             time: '22:00' },
+                    { label: t('tools.ageGrading.examples.f35_marathon'), gender: 'female' as Gender, age: '35', dist: 'Marathon',       time: '4:15:00' },
                 ].map(ex => (
                     <Chip
                         key={ex.label}
@@ -146,7 +150,9 @@ export default function AgeGradingCalculator() {
                         onChange={e => setDistanceKey(e.target.value)}
                     >
                         {AG_DISTANCES.map(d => (
-                            <MenuItem key={d.label} value={d.label}>{d.label}</MenuItem>
+                            <MenuItem key={d.key} value={d.key}>
+                                {t(`tools.ageGrading.distanceNames.${d.i18nKey}`)}
+                            </MenuItem>
                         ))}
                     </Select>
                 </FormControl>
@@ -201,14 +207,46 @@ export default function AgeGradingCalculator() {
                             sx={{
                                 px: 2, py: 0.75, bgcolor: result.tierColor + '22',
                                 border: `1px solid ${result.tierColor}`,
+                                borderStyle: implausible ? 'dashed' : 'solid',
                                 borderRadius: 2,
+                                display: 'flex', alignItems: 'center', gap: 0.5,
                             }}
                         >
+                            {implausible && (
+                                <Tooltip title={t('tools.ageGrading.implausibleBadgeTooltip')} arrow>
+                                    <WarningAmberIcon fontSize="small" sx={{ color: 'warning.main' }} />
+                                </Tooltip>
+                            )}
                             <Typography variant="subtitle2" fontWeight={700} sx={{ color: result.tierColor }}>
                                 {t(`tools.ageGrading.tierNames.${result.tier}`)}
                             </Typography>
                         </Paper>
                     </Box>
+
+                    {/* Implausible result — likely a two-part time misread as mm:ss */}
+                    {implausible && (
+                        <Alert severity="warning" variant="outlined">
+                            {t('tools.ageGrading.implausibleResult')}
+                        </Alert>
+                    )}
+
+                    {/* Age-graded equivalent time — comparable weight to the percentage above */}
+                    <Box>
+                        <Typography variant="h5" fontWeight={700} sx={{ lineHeight: 1.3 }}>
+                            {t('tools.ageGrading.equivalentTo', {
+                                time: formatSeconds(result.ageGradedSeconds),
+                                distance: t(`tools.ageGrading.distanceNames.${distance.i18nKey}`),
+                            })}
+                        </Typography>
+                        <Typography variant="caption" color="text.disabled">
+                            {t('tools.ageGrading.ageGradedTimeDesc')}
+                        </Typography>
+                    </Box>
+
+                    {/* Always-visible basis note — 100% is an age-group record, not an absolute one */}
+                    <Typography variant="body2" color="text.secondary">
+                        {t('tools.ageGrading.basisNote')}
+                    </Typography>
 
                     {/* Progress bar with tier ticks */}
                     <Box>
@@ -249,23 +287,7 @@ export default function AgeGradingCalculator() {
 
                     <Divider />
 
-                    {/* Age-graded time */}
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2 }}>
-                        <Box>
-                            <Typography variant="body2" color="text.secondary">
-                                {t('tools.ageGrading.ageGradedTime')}
-                            </Typography>
-                            <Typography variant="caption" color="text.disabled">
-                                {t('tools.ageGrading.ageGradedTimeDesc')}
-                            </Typography>
-                        </Box>
-                        <Typography variant="h6" fontWeight={700} sx={{ flexShrink: 0 }}>
-                            {formatSeconds(result.ageGradedSeconds)}
-                        </Typography>
-                    </Box>
-
                     {/* Next tier */}
-                    <Divider />
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                         {result.nextTier ? (
                             <>
@@ -308,6 +330,12 @@ export default function AgeGradingCalculator() {
                             </Box>
                         ))}
                     </Box>
+
+                    {/* Table edition / source — kept with the result it produced */}
+                    <Divider />
+                    <Typography variant="caption" color="text.disabled">
+                        {t('tools.ageGrading.source')}
+                    </Typography>
                 </Paper>
             )}
 
@@ -330,11 +358,11 @@ export default function AgeGradingCalculator() {
                             <TableBody>
                                 {(() => {
                                     const { tierColor } = getTier(result.percentage);
-                                    const clampedAge = Math.max(AGE_TABLE_ROWS[0], Math.min(AGE_TABLE_ROWS[AGE_TABLE_ROWS.length - 1], Math.round(ageNum / 5) * 5));
-                                    return AGE_TABLE_ROWS.map(rowAge => {
-                                        const factor = getAgeFactor(gender, rowAge);
+                                    const rows = getAgeTableRows(ageNum, showFullAgeTable);
+                                    return rows.map(rowAge => {
+                                        const factor = getAgeFactor(gender, rowAge, distanceKey);
                                         const eqSeconds = factor > 0 ? result.ageGradedSeconds / factor : null;
-                                        const isYou = rowAge === clampedAge;
+                                        const isYou = rowAge === ageNum;
                                         return (
                                             <TableRow
                                                 key={rowAge}
@@ -361,6 +389,17 @@ export default function AgeGradingCalculator() {
                             </TableBody>
                         </Table>
                     </TableContainer>
+                    <Link
+                        component="button"
+                        type="button"
+                        variant="caption"
+                        onClick={() => setShowFullAgeTable(v => !v)}
+                        sx={{ alignSelf: 'flex-start' }}
+                    >
+                        {showFullAgeTable
+                            ? t('tools.ageGrading.ageTable.showFewerAges')
+                            : t('tools.ageGrading.ageTable.showFullRange', { min: MIN_AGE, max: MAX_AGE })}
+                    </Link>
                 </Paper>
             )}
 
@@ -369,10 +408,6 @@ export default function AgeGradingCalculator() {
                     {t('tools.ageGrading.invalidInput')}
                 </Alert>
             )}
-
-            <Typography variant="caption" color="text.disabled">
-                {t('tools.ageGrading.source')}
-            </Typography>
         </Box>
     );
 }

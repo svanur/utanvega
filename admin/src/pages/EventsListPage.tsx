@@ -360,7 +360,6 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
         locationId: event.locationId ?? null, scheduleRule: event.scheduleRule ?? null,
         socialLinks: event.socialLinks ?? null,
         gpxPointLat: event.gpxPointLat ?? null, gpxPointLng: event.gpxPointLng ?? null,
-        photoGalleryUrl: event.photoGalleryUrl ?? undefined,
         translationHashes: event.translationHashes,
       });
     } catch {
@@ -389,7 +388,6 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
         locationId: event.locationId ?? null, scheduleRule: event.scheduleRule ?? null,
         socialLinks: event.socialLinks ?? null,
         gpxPointLat: event.gpxPointLat ?? null, gpxPointLng: event.gpxPointLng ?? null,
-        photoGalleryUrl: event.photoGalleryUrl ?? undefined,
         translationHashes: event.translationHashes,
       });
     } catch {
@@ -418,7 +416,6 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
         locationId: event.locationId ?? null, scheduleRule: event.scheduleRule ?? null,
         socialLinks: event.socialLinks ?? null,
         gpxPointLat: event.gpxPointLat ?? null, gpxPointLng: event.gpxPointLng ?? null,
-        photoGalleryUrl: event.photoGalleryUrl ?? undefined,
         translationHashes: event.translationHashes,
       });
     } catch {
