@@ -99,7 +99,6 @@ interface EventFormState {
   alertSeverity: AlertSeverity | '';
   schedule: ScheduleFormState;
   socialLinks: SocialLink[];
-  photoGalleryUrl: string;
   locationId: string;
   gpxPointLat: string;
   gpxPointLng: string;
@@ -170,7 +169,6 @@ function buildForm(event: EventDetailDto): EventFormState {
     alertSeverity: event.alertSeverity ?? '',
     schedule: buildScheduleForm(event.scheduleRule ?? null),
     socialLinks: event.socialLinks?.map(l => ({ ...l })) ?? [],
-    photoGalleryUrl: event.photoGalleryUrl ?? '',
     locationId: event.locationId ?? '',
     gpxPointLat: event.gpxPointLat != null ? String(event.gpxPointLat) : '',
     gpxPointLng: event.gpxPointLng != null ? String(event.gpxPointLng) : '',
@@ -295,7 +293,6 @@ function EventFormCardInner({ event, linkedTrails = [], onClose, onSaved, onNoti
         socialLinks: socialLinks.length > 0 ? socialLinks : null,
         gpxPointLat: form.gpxPointLat.trim() ? parseFloat(form.gpxPointLat) : null,
         gpxPointLng: form.gpxPointLng.trim() ? parseFloat(form.gpxPointLng) : null,
-        photoGalleryUrl: form.photoGalleryUrl.trim() || undefined,
       };
       await onUpdateEvent(event.id, input);
       onNotify('Event saved', 'success');
@@ -422,14 +419,6 @@ function EventFormCardInner({ event, linkedTrails = [], onClose, onSaved, onNoti
             placeholder="https://…"
             helperText="Leave blank to use the organizer's website"
           />
-          <Divider sx={{ my: 1.5 }} />
-          <SectionLabel>Photo Gallery</SectionLabel>
-          <TextField
-            size="small" fullWidth label="Photo Gallery URL" value={form.photoGalleryUrl}
-            onChange={e => set('photoGalleryUrl', e.target.value)}
-            placeholder="https://…"
-          />
-
           <Divider sx={{ my: 1.5 }} />
           <SectionLabel>Location</SectionLabel>
           <Autocomplete
