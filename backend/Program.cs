@@ -819,7 +819,7 @@ app.MapGet("/api/v1/admin/trails/{idOrSlug}", [Authorize(Policy = "AdminOnly")] 
         trail.NeedsReview,
         TerrainType = trail.TerrainType?.ToString(),
         TranslationHashes = trail.TranslationHashes == null ? null : System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(trail.TranslationHashes),
-        MaxAltitude = trail.ElevationProfile != null && trail.ElevationProfile.Length > 0 ? trail.ElevationProfile.Max() : (double?)null,
+        MaxAltitude = ElevationProfileValidator.GetMaxAltitude(trail.ElevationProfile),
         Locations = trail.TrailLocations
             .OrderBy(tl => tl.Order)
             .Select(tl => new { tl.LocationId, Role = tl.Role.ToString(), tl.Order })
@@ -985,7 +985,10 @@ app.MapPost("/api/v1/admin/trails/backfill-elevation-profiles", [Authorize(Polic
 
         if (elevations.Length < 2) continue;
 
-        trail.ElevationProfile = SampleProfile(elevations, 50);
+        var profile = SampleProfile(elevations, 50);
+        if (ElevationProfileValidator.IsDegenerate(profile)) continue;
+
+        trail.ElevationProfile = profile;
     }
 
     await context.SaveChangesAsync();
@@ -1452,7 +1455,7 @@ app.MapPost("/api/v1/admin/trails/detect-terrain-types", [Authorize(Policy = "Ad
 
     foreach (var trail in trails)
     {
-        if (trail.Length <= 1000 || trail.ElevationProfile == null || trail.ElevationProfile.Length == 0)
+        if (trail.Length <= 1000 || ElevationProfileValidator.IsDegenerate(trail.ElevationProfile))
         {
             skipped++;
             continue;
