@@ -20,6 +20,7 @@ using Utanvega.Backend.Application.Trails.Commands.DeleteTrail;
 using Utanvega.Backend.Application.Trails.Commands.BulkTrailAction;
 using Utanvega.Backend.Application.Trails.Commands.PatchTrail;
 using Utanvega.Backend.Application.Trails.Commands.UpdateTrailGpx;
+using Utanvega.Backend.Application.Trails.Commands.BackfillElevationProfiles;
 using Utanvega.Backend.Application.Trails.Queries.GetTrails;
 using Utanvega.Backend.Application.Trails.Queries.GetTrailGeometry;
 using Utanvega.Backend.Application.Locations.Queries.GetLocations;
@@ -967,46 +968,10 @@ app.MapPost("/api/v1/admin/trails/bulk-action", [Authorize(Policy = "AdminOnly")
 })
 .WithName("BulkTrailAction");
 
-app.MapPost("/api/v1/admin/trails/backfill-elevation-profiles", [Authorize(Policy = "AdminOnly")] async (UtanvegaDbContext context) =>
+app.MapPost("/api/v1/admin/trails/backfill-elevation-profiles", [Authorize(Policy = "AdminOnly")] async (IMediator mediator) =>
 {
-    var trails = await context.Trails
-        .Where(t => t.GpxData != null && t.ElevationProfile == null)
-        .ToListAsync();
-
-    foreach (var trail in trails)
-    {
-        var line = trail.GpxData as NetTopologySuite.Geometries.LineString;
-        if (line == null) continue;
-
-        var elevations = line.Coordinates
-            .Select(c => c.Z)
-            .Where(z => !double.IsNaN(z))
-            .ToArray();
-
-        if (elevations.Length < 2) continue;
-
-        var profile = SampleProfile(elevations, 50);
-        if (ElevationProfileValidator.IsDegenerate(profile)) continue;
-
-        trail.ElevationProfile = profile;
-    }
-
-    await context.SaveChangesAsync();
-    return Results.Ok(new { updated = trails.Count });
-
-    static double[] SampleProfile(double[] src, int n)
-    {
-        if (src.Length <= n) return src;
-        var result = new double[n];
-        for (var i = 0; i < n; i++)
-        {
-            var idx = (double)i / (n - 1) * (src.Length - 1);
-            var lo = (int)idx;
-            var hi = Math.Min(lo + 1, src.Length - 1);
-            result[i] = src[lo] * (1 - (idx - lo)) + src[hi] * (idx - lo);
-        }
-        return result;
-    }
+    var result = await mediator.Send(new BackfillElevationProfilesCommand());
+    return Results.Ok(new { updated = result.Updated, skipped = result.Skipped, skipReasons = result.SkipReasons });
 })
 .WithName("BackfillElevationProfiles");
 

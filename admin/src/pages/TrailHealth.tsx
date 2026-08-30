@@ -164,8 +164,17 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
   const handleBackfillElevationProfiles = async () => {
     setBackfillingProfiles(true);
     try {
-      const result = await apiFetch<{ updated: number }>('/api/v1/admin/trails/backfill-elevation-profiles', { method: 'POST' });
-      onNotify(`Elevation profiles backfilled: ${result.updated} trails updated`);
+      const result = await apiFetch<{ updated: number; skipped: number; skipReasons: Record<string, number> }>(
+        '/api/v1/admin/trails/backfill-elevation-profiles', { method: 'POST' }
+      );
+      const reasonsText = Object.entries(result.skipReasons)
+        .filter(([, count]) => count > 0)
+        .map(([reason, count]) => `${count} ${reason}`)
+        .join(', ');
+      onNotify(
+        `Elevation profiles backfilled: ${result.updated} trails updated`
+        + (result.skipped > 0 ? `, ${result.skipped} skipped (${reasonsText})` : '')
+      );
     } catch (_err) {
       onNotify('Failed to backfill elevation profiles', 'error');
     } finally {
