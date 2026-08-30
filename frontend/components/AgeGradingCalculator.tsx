@@ -116,8 +116,10 @@ export default function AgeGradingCalculator() {
             {/* Example scenarios */}
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                 {[
-                    { label: t('tools.ageGrading.examples.m60_5k'),   gender: 'male'   as Gender, age: '60', dist: '5K',           time: '22:00' },
-                    { label: t('tools.ageGrading.examples.f45_half'),  gender: 'female' as Gender, age: '45', dist: 'Half Marathon', time: '1:50:00' },
+                    { label: t('tools.ageGrading.examples.m27_10k'),      gender: 'male'   as Gender, age: '27', dist: '10K',           time: '27:40' },
+                    { label: t('tools.ageGrading.examples.f52_half'),     gender: 'female' as Gender, age: '52', dist: 'Half Marathon',  time: '1:25:26' },
+                    { label: t('tools.ageGrading.examples.m60_5k'),       gender: 'male'   as Gender, age: '60', dist: '5K',             time: '22:00' },
+                    { label: t('tools.ageGrading.examples.f35_marathon'), gender: 'female' as Gender, age: '35', dist: 'Marathon',       time: '4:15:00' },
                 ].map(ex => (
                     <Chip
                         key={ex.label}
