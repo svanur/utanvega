@@ -5,7 +5,7 @@ import {
   CardContent, Stack, Tooltip, IconButton, TextField, InputAdornment,
   Collapse, Alert, AlertTitle, List, ListItem, ListItemText, ListItemIcon,
   Button, CircularProgress, Dialog, DialogTitle, DialogContent,
-  DialogContentText, DialogActions,
+  DialogContentText, DialogActions, Divider,
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
@@ -152,7 +152,7 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
     setDetecting(true);
     try {
       const result = await apiFetch<{ total: number; updated: number }>('/api/v1/admin/trails/detect-types', { method: 'POST' });
-      onNotify(`Trail types re-detected: ${result.updated} of ${result.total} trails updated`);
+      onNotify(`Route Shape (TrailType) re-detected: ${result.updated} of ${result.total} trails updated`);
       invalidateTrails();
     } catch (_err) {
       onNotify('Failed to detect trail types', 'error');
@@ -186,7 +186,7 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
     setDetectingTerrain(true);
     try {
       const result = await apiFetch<{ total: number; updated: number; skipped: number }>('/api/v1/admin/trails/detect-terrain-types', { method: 'POST' });
-      onNotify(`Terrain types detected: ${result.updated} of ${result.total} trails updated (${result.skipped} skipped)`);
+      onNotify(`Terrain (TerrainType) filled in: ${result.updated} of ${result.total} trails updated (${result.skipped} skipped)`);
       invalidateTrails();
     } catch (_err) {
       onNotify('Failed to detect terrain types', 'error');
@@ -268,7 +268,7 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
         <Typography variant="h5" fontWeight="bold">Trail Health Dashboard</Typography>
-        <Stack direction="row" spacing={1}>
+        <Stack direction="row" spacing={1} alignItems="center">
           <Button
             variant="outlined"
             size="small"
@@ -285,16 +285,7 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
             disabled={detecting || detectingLocations || detectingTerrain || backfillingProfiles || recalculating}
             onClick={() => setTerrainDialogOpen(true)}
           >
-            {detectingTerrain ? 'Detecting...' : 'Re-detect Terrain Types'}
-          </Button>
-          <Button
-            variant="outlined"
-            size="small"
-            startIcon={detecting ? <CircularProgress size={16} /> : <AutoFixHighIcon />}
-            disabled={detecting || detectingLocations || detectingTerrain || backfillingProfiles || recalculating}
-            onClick={() => setTypesDialogOpen(true)}
-          >
-            {detecting ? 'Detecting...' : 'Re-detect Trail Types'}
+            {detectingTerrain ? 'Detecting...' : 'Re-detect Terrain (Flat / Hilly / Mountainous)'}
           </Button>
           <Button
             variant="outlined"
@@ -304,6 +295,16 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
             onClick={() => setElevationDialogOpen(true)}
           >
             {backfillingProfiles ? 'Backfilling...' : 'Backfill Elevation Profiles'}
+          </Button>
+          <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={detecting ? <CircularProgress size={16} /> : <AutoFixHighIcon />}
+            disabled={detecting || detectingLocations || detectingTerrain || backfillingProfiles || recalculating}
+            onClick={() => setTypesDialogOpen(true)}
+          >
+            {detecting ? 'Detecting...' : 'Re-detect Route Shape (Loop / Out-and-back / Point-to-point)'}
           </Button>
           <Button
             variant="outlined"
@@ -335,13 +336,16 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
         </Dialog>
 
         <Dialog open={terrainDialogOpen} onClose={() => { if (!detectingTerrain) setTerrainDialogOpen(false); }} maxWidth="sm" fullWidth>
-          <DialogTitle>Re-detect Terrain Types</DialogTitle>
+          <DialogTitle>Re-detect Terrain (Flat / Hilly / Mountainous)</DialogTitle>
           <DialogContent>
             <DialogContentText>
-              This will classify each trail as <strong>Flat</strong>, <strong>Hilly</strong>, or <strong>Mountainous</strong> based on its elevation profile and elevation-gain-per-km ratio.
+              This will classify trails as <strong>Flat</strong>, <strong>Hilly</strong>, or <strong>Mountainous</strong> based on their elevation profile and elevation-gain-per-km ratio, writing the result to the <strong>TerrainType</strong> field.
             </DialogContentText>
             <DialogContentText sx={{ mt: 1.5 }}>
-              Existing terrain type values will be <strong>overwritten</strong>. Trails without GPX data will be skipped.
+              This only fills trails that <strong>currently have no terrain type set</strong>. Trails that already have a terrain type — even a wrong one — will not be revisited or corrected by running this again.
+            </DialogContentText>
+            <DialogContentText sx={{ mt: 1.5 }}>
+              <strong>This write is effectively one-shot per trail.</strong> If the detected value is wrong, re-running this will not fix it — the only way to correct it is to reset that trail's TerrainType to null directly in the database, then re-run.
             </DialogContentText>
           </DialogContent>
           <DialogActions>
@@ -353,13 +357,13 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
         </Dialog>
 
         <Dialog open={typesDialogOpen} onClose={() => { if (!detecting) setTypesDialogOpen(false); }} maxWidth="sm" fullWidth>
-          <DialogTitle>Re-detect Trail Types</DialogTitle>
+          <DialogTitle>Re-detect Route Shape (Loop / Out-and-back / Point-to-point)</DialogTitle>
           <DialogContent>
             <DialogContentText>
-              This will classify each trail as <strong>Loop</strong>, <strong>Out & Back</strong>, or <strong>Point to Point</strong> by analysing the shape of the GPS track — comparing start and end coordinates and route geometry.
+              This will classify each trail as <strong>Loop</strong>, <strong>Out & Back</strong>, or <strong>Point to Point</strong> by analysing the shape of the GPS track — comparing start and end coordinates and route geometry — writing the result to the <strong>TrailType</strong> field.
             </DialogContentText>
             <DialogContentText sx={{ mt: 1.5 }}>
-              Existing trail type values will be <strong>overwritten</strong>. Trails without GPX data will be skipped.
+              This recomputes and <strong>overwrites</strong> the TrailType on every eligible trail every time it is run, regardless of the value currently set.
             </DialogContentText>
           </DialogContent>
           <DialogActions>
