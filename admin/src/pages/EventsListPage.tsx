@@ -60,6 +60,7 @@ import {
 import { useTrails } from '../hooks/useTrails';
 import { useRowFocus } from '../hooks/useRowFocus';
 import CreateEventDialog from '../components/events/CreateEventDialog';
+import { EVENT_STATUS_CYCLE } from '../utils/eventForms';
 import {
   MONTHS,
   MONTHS_SHORT,
@@ -344,8 +345,11 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
   const handleCycleStatus = async (event: EventSummaryDto) => {
     if (cyclingStatusIds.has(event.id)) return;
     if (event.status !== 'Unconfirmed' && event.status !== 'Confirmed') return;
-    const i = EVENT_STATUSES.indexOf(event.status as EventStatus);
-    const next = EVENT_STATUSES[(i + 1) % EVENT_STATUSES.length]!;
+    // Cancelled is deliberately excluded from the cycle — cancelling cascades to editions and races
+    // (see backend Event.CancelWithEditions), so it's only reachable via the dedicated Cancel Event
+    // confirmation dialog, not a click-through step.
+    const i = EVENT_STATUS_CYCLE.indexOf(event.status as EventStatus);
+    const next = EVENT_STATUS_CYCLE[(i + 1) % EVENT_STATUS_CYCLE.length]!;
     patchEventLocally(event.id, { status: next });
     setCyclingStatusIds(prev => new Set(prev).add(event.id));
     try {
@@ -900,7 +904,7 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
 
                 {/* Status — cycles on click */}
                 <TableCell align="center" onClick={e => e.stopPropagation()}>
-                  <Tooltip title={cyclingStatusIds.has(event.id) ? 'Updating…' : cycleTooltip('Status', EVENT_STATUSES, event.status)}>
+                  <Tooltip title={cyclingStatusIds.has(event.id) ? 'Updating…' : cycleTooltip('Status', EVENT_STATUS_CYCLE, event.status)}>
                     <Chip
                       label={event.status}
                       size="small"

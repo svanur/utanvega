@@ -9,6 +9,7 @@ import {
   Divider,
   FormControl,
   FormControlLabel,
+  FormHelperText,
   IconButton,
   InputLabel,
   Menu,
@@ -387,6 +388,9 @@ function EventFormCardInner({ event, linkedTrails = [], onClose, onSaved, onNoti
               <Select value={form.status} label="Status" onChange={e => set('status', e.target.value as EventStatus)}>
                 {EVENT_STATUSES.map(st => <MenuItem key={st} value={st}>{EVENT_STATUS_LABELS[st]}</MenuItem>)}
               </Select>
+              {event.status === 'Cancelled' && form.status !== 'Cancelled' && (
+                <FormHelperText>Reactivating won't restore cancelled editions or races.</FormHelperText>
+              )}
             </FormControl>
           </Stack>
           <FormControl size="small" fullWidth sx={{ mb: 1.5 }}>

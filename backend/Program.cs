@@ -52,6 +52,7 @@ using Utanvega.Backend.Application.Events.Queries.GetAllEventDetails;
 using Utanvega.Backend.Application.Events.Commands.CreateEvent;
 using Utanvega.Backend.Application.Events.Commands.UpdateEvent;
 using Utanvega.Backend.Application.Events.Commands.DeleteEvent;
+using Utanvega.Backend.Application.Events.Commands.CancelEvent;
 using Utanvega.Backend.Application.Events.Commands.CreateEdition;
 using Utanvega.Backend.Application.Events.Commands.UpdateEdition;
 using Utanvega.Backend.Application.Events.Commands.DeleteEdition;
@@ -1746,6 +1747,13 @@ app.MapDelete("/api/v1/admin/events/{id:guid}", [Authorize(Policy = "AdminOnly")
     return success ? Results.NoContent() : Results.NotFound();
 })
 .WithName("DeleteEvent");
+
+app.MapPost("/api/v1/admin/events/{id:guid}/cancel", [Authorize(Policy = "AdminOnly")] async (Guid id, IMediator mediator) =>
+{
+    var success = await mediator.Send(new CancelEventCommand(id));
+    return success ? Results.NoContent() : Results.NotFound();
+})
+.WithName("CancelEvent");
 
 // Organizers (public list for dropdowns — trimmed DTO, no PII)
 app.MapGet("/api/v1/organizers", async (IMediator mediator) =>

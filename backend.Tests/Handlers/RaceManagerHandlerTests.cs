@@ -128,6 +128,70 @@ public class RaceManagerHandlerTests : IDisposable
         Assert.Equal(EventStatus.Confirmed, (await verify.Events.FindAsync(ev.Id))!.Status);
     }
 
+    [Fact]
+    public async Task PatchEventStatus_CancellingEvent_CascadesToFutureEdition()
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var (ev, edition) = await SeedEdition(today.AddDays(30));
+        using (var db = _factory.CreateContext())
+        {
+            var found = await db.EventEditions.FindAsync(edition.Id);
+            found!.Status = EditionStatus.Active;
+            await db.SaveChangesAsync();
+        }
+
+        var handler = new PatchEventStatusCommandHandler(_factory.CreateContext());
+        var result = await handler.Handle(new PatchEventStatusCommand(ev.Id, "Cancelled"), CancellationToken.None);
+
+        Assert.True(result);
+        using var verify = _factory.CreateContext();
+        Assert.Equal(EventStatus.Cancelled, (await verify.Events.FindAsync(ev.Id))!.Status);
+        Assert.Equal(EditionStatus.Cancelled, (await verify.EventEditions.FindAsync(edition.Id))!.Status);
+    }
+
+    [Fact]
+    public async Task PatchEventStatus_CancellingEvent_LeavesPastDatedEditionUntouched()
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var (ev, edition) = await SeedEdition(today.AddDays(-30));
+        using (var db = _factory.CreateContext())
+        {
+            var found = await db.EventEditions.FindAsync(edition.Id);
+            found!.Status = EditionStatus.Active;
+            await db.SaveChangesAsync();
+        }
+
+        var handler = new PatchEventStatusCommandHandler(_factory.CreateContext());
+        await handler.Handle(new PatchEventStatusCommand(ev.Id, "Cancelled"), CancellationToken.None);
+
+        using var verify = _factory.CreateContext();
+        Assert.Equal(EditionStatus.Active, (await verify.EventEditions.FindAsync(edition.Id))!.Status);
+    }
+
+    [Fact]
+    public async Task PatchEventStatus_ReactivatingCancelledEvent_DoesNotCascadeToEditions()
+    {
+        // Reactivation must not be treated symmetrically with cancellation: an edition that was
+        // separately cancelled while the event was cancelled stays cancelled — moving the event
+        // back to Confirmed doesn't imply the editions/races should un-cancel too.
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var (ev, edition) = await SeedEdition(today.AddDays(30), status: EventStatus.Cancelled);
+        using (var db = _factory.CreateContext())
+        {
+            var found = await db.EventEditions.FindAsync(edition.Id);
+            found!.Status = EditionStatus.Cancelled;
+            await db.SaveChangesAsync();
+        }
+
+        var handler = new PatchEventStatusCommandHandler(_factory.CreateContext());
+        var result = await handler.Handle(new PatchEventStatusCommand(ev.Id, "Confirmed"), CancellationToken.None);
+
+        Assert.True(result);
+        using var verify = _factory.CreateContext();
+        Assert.Equal(EventStatus.Confirmed, (await verify.Events.FindAsync(ev.Id))!.Status);
+        Assert.Equal(EditionStatus.Cancelled, (await verify.EventEditions.FindAsync(edition.Id))!.Status);
+    }
+
     // ── GetRaceDayEditions ────────────────────────────────────────────────────
 
     [Fact]
