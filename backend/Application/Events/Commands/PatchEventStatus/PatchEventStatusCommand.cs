@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Infrastructure.Persistence;
 
@@ -10,10 +11,12 @@ public record PatchEventStatusCommand(Guid Id, string Status, string? ActorUserI
 public class PatchEventStatusCommandHandler : IRequestHandler<PatchEventStatusCommand, bool>
 {
     private readonly UtanvegaDbContext _context;
+    private readonly ICacheInvalidator _cacheInvalidator;
 
-    public PatchEventStatusCommandHandler(UtanvegaDbContext context)
+    public PatchEventStatusCommandHandler(UtanvegaDbContext context, ICacheInvalidator cacheInvalidator)
     {
         _context = context;
+        _cacheInvalidator = cacheInvalidator;
     }
 
     public async Task<bool> Handle(PatchEventStatusCommand request, CancellationToken cancellationToken)
@@ -27,7 +30,8 @@ public class PatchEventStatusCommandHandler : IRequestHandler<PatchEventStatusCo
 
         if (!Enum.TryParse<EventStatus>(request.Status, ignoreCase: true, out var status)) return false;
 
-        if (status == EventStatus.Cancelled && ev.Status != EventStatus.Cancelled)
+        var cascading = status == EventStatus.Cancelled && ev.Status != EventStatus.Cancelled;
+        if (cascading)
             // Transitioning into Cancelled always cascades to qualifying editions (and their races)
             // regardless of which path (this generic patch, the full edit form, or the dedicated
             // Cancel action) triggered it.
@@ -36,6 +40,12 @@ public class PatchEventStatusCommandHandler : IRequestHandler<PatchEventStatusCo
             ev.Status = status;
 
         await _context.SaveChangesWithAuditAsync(request.ActorUserId);
+
+        if (cascading)
+            // Matches CancelEventCommand/CancelEditionCommand's pattern — the public site must not
+            // keep serving a stale "active" page for an event this endpoint just cascade-cancelled.
+            _cacheInvalidator.InvalidateEvent(ev.Slug);
+
         return true;
     }
 }
