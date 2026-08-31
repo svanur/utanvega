@@ -345,20 +345,18 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onNotify
             <InputLabel>Status</InputLabel>
             <Select value={form.status} label="Status"
               onChange={e => set('status', e.target.value as EditionStatus)}>
-              {EDITION_STATUSES.map(s => <MenuItem key={s} value={s}>{EDITION_STATUS_LABELS[s]}</MenuItem>)}
+              {EDITION_STATUSES.map(s => (
+                // Cancelled and Completed are terminal states with their own dedicated, safer
+                // entry points (row-level Cancel/Complete actions) — they must not be landable
+                // on incidentally via this dropdown. Keep the option disabled unless it's already
+                // the current value, so the Select still renders it instead of showing blank.
+                <MenuItem key={s} value={s} disabled={(s === 'Cancelled' || s === 'Completed') && s !== form.status}>
+                  {EDITION_STATUS_LABELS[s]}
+                </MenuItem>
+              ))}
             </Select>
             {isNew && (form.status === 'Completed' || form.status === 'Unconfirmed') && (
               <FormHelperText>Auto-set based on year — you can override</FormHelperText>
-            )}
-            {!isNew && form.status === 'Completed' && edition?.status !== 'Completed' && (
-              <FormHelperText>
-                Saving will set Active races to Completed and close registration.
-              </FormHelperText>
-            )}
-            {!isNew && form.status === 'Cancelled' && edition?.status !== 'Cancelled' && (
-              <FormHelperText>
-                Saving will also cancel this edition's races and close registration.
-              </FormHelperText>
             )}
           </FormControl>
           <FormControl size="small" fullWidth>
