@@ -803,13 +803,23 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
                 key={event.id}
                 ref={idx === focusedEventIndex ? focusedEventRowRef : undefined}
                 hover
-                sx={(theme) => ({
-                  cursor: 'pointer',
-                  ...(event.type === 'Advertisement' && { bgcolor: 'rgba(255, 193, 7, 0.08)' }),
-                  // Dim (not disabledOpacity itself — that's too faint for text contrast) hidden/unlisted rows.
-                  ...((event.status === 'Hidden' || event.status === 'Unlisted') && { opacity: 1 - theme.palette.action.disabledOpacity }),
-                  ...(idx === focusedEventIndex && { outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: -2 }),
-                })}
+                sx={(theme) => {
+                  // Hidden/unlisted rows get a neutral background wash instead of a row-wide
+                  // `opacity`: opacity would multiply against MUI's own alpha-based text colors
+                  // (text.secondary is already translucent) and would fade the j/k focus outline
+                  // below, so text colour and the outline are left untouched — only the background
+                  // changes, layered underneath the (unrelated) Advertisement tint via `background`
+                  // so both can show at once.
+                  const bgLayers = [
+                    (event.status === 'Hidden' || event.status === 'Unlisted') && theme.palette.action.selected,
+                    event.type === 'Advertisement' && 'rgba(255, 193, 7, 0.08)',
+                  ].filter((layer): layer is string => Boolean(layer));
+                  return {
+                    cursor: 'pointer',
+                    ...(bgLayers.length > 0 && { background: bgLayers.map(layer => `linear-gradient(${layer}, ${layer})`).join(', ') }),
+                    ...(idx === focusedEventIndex && { outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: -2 }),
+                  };
+                }}
                 onClick={() => navigate(`/events/${event.slug}`)}
               >
                 {/* Name */}
