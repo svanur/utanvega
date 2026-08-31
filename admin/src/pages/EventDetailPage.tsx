@@ -57,7 +57,6 @@ import {
   type EventDetailDto,
   type EventEditionDto,
   type EditionStatus,
-  type EventStatus,
   type RaceDto,
   type RaceStatus,
   type RegistrationStatus,
@@ -81,6 +80,7 @@ import {
   EDITION_STATUSES,
   EDITION_STATUS_LABELS,
   EDITION_STATUS_CYCLE,
+  EVENT_STATUS_CYCLE,
   TICKET_STATUSES,
   ITRA_VALUES,
   type RaceFormState,
@@ -96,6 +96,7 @@ import {
   suggestEditionEndDateForYear,
   computeClonedRaceDate,
   sortEditions,
+  editionsAffectedByEventCancel,
 } from '../utils/eventHelpers';
 
 const PUBLIC_SITE_URL = ((import.meta.env.VITE_PUBLIC_SITE_URL ?? '') as string).replace(/\/$/, '');
@@ -611,6 +612,17 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
     return trails.filter(t => trailIds.has(t.id) && t.startLatitude != null && t.startLongitude != null);
   }, [detail, trails]);
 
+  // Editions the "Cancel Event" cascade will actually touch — previewed in the confirmation dialog
+  // before the admin commits to it. Same rule as backend Event.CancelWithEditions.
+  const editionsAffectedByCancel = useMemo(
+    () => detail ? editionsAffectedByEventCancel(detail.editions) : [],
+    [detail],
+  );
+  const raceCountAffectedByCancel = useMemo(
+    () => editionsAffectedByCancel.reduce((sum, ed) => sum + ed.races.filter(r => r.status !== 'Cancelled').length, 0),
+    [editionsAffectedByCancel],
+  );
+
   const [editionDialogOpen, setEditionDialogOpen] = useState(false);
   const [editingEdition, setEditingEdition] = useState<EventEditionDto | null>(null);
   const [editionInitialValues, setEditionInitialValues] = useState<EditionFormState | undefined>(undefined);
@@ -627,6 +639,8 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
   const [savingBulkDates, setSavingBulkDates] = useState(false);
   const [localRaceOrder, setLocalRaceOrder] = useState<Map<string, string[]>>(new Map());
   const [confirmDeleteEvent, setConfirmDeleteEvent] = useState(false);
+  const [cancelEventDialogOpen, setCancelEventDialogOpen] = useState(false);
+  const [cancellingEvent, setCancellingEvent] = useState(false);
 
   useEffect(() => {
     if (!confirmDeleteEvent) return;
@@ -729,10 +743,10 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
     await refresh();
   };
 
-  const EVENT_STATUSES_CYCLE: EventStatus[] = ['Unconfirmed', 'Confirmed', 'Cancelled', 'Hidden', 'Unlisted'];
-
   const handleCycleEventStatus = () => {
-    const next = EVENT_STATUSES_CYCLE[(EVENT_STATUSES_CYCLE.indexOf(detail!.status) + 1) % EVENT_STATUSES_CYCLE.length]!;
+    // Cancelled is deliberately excluded from the cycle — see EVENT_STATUS_CYCLE's doc comment.
+    // Cancelling an event is only reachable via the dedicated Cancel Event confirmation dialog.
+    const next = EVENT_STATUS_CYCLE[(EVENT_STATUS_CYCLE.indexOf(detail!.status) + 1) % EVENT_STATUS_CYCLE.length]!;
     setDetail(prev => prev ? { ...prev, status: next } : prev);
     apiFetch(`/api/v1/admin/events/${detail!.id}`, {
       method: 'PUT',
@@ -938,6 +952,21 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
     }
   };
 
+  const handleConfirmCancelEvent = async () => {
+    if (!detail) return;
+    setCancellingEvent(true);
+    try {
+      await apiFetch(`/api/v1/admin/events/${detail.id}/cancel`, { method: 'POST' });
+      onNotify('Event cancelled — qualifying editions and races cancelled along with it');
+      setCancelEventDialogOpen(false);
+      await refresh();
+    } catch (err) {
+      onNotify(err instanceof Error ? err.message : 'Failed to cancel event', 'error');
+    } finally {
+      setCancellingEvent(false);
+    }
+  };
+
   const handleCycleRaceStatus = (race: RaceDto) => {
     const next = RACE_STATUSES[(RACE_STATUSES.indexOf(race.status) + 1) % RACE_STATUSES.length]! as RaceStatus;
     patchRaceInDetail(race.id, { status: next });
@@ -1138,7 +1167,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
           <Box>
             <Typography variant="h5" fontWeight={600} gutterBottom>{detail.name}</Typography>
             <Stack direction="row" flexWrap="wrap" gap={0.75} alignItems="center" sx={{ mb: 0.5 }}>
-              <Tooltip title={cycleTooltip('Event status', EVENT_STATUSES_CYCLE, detail.status)}>
+              <Tooltip title={cycleTooltip('Event status', EVENT_STATUS_CYCLE, detail.status)}>
                 <Chip label={detail.status} size="small"
                   color={detail.status === 'Confirmed' ? 'success' : detail.status === 'Cancelled' ? 'error' : detail.status === 'Unconfirmed' ? 'warning' : 'default'}
                   onClick={handleCycleEventStatus}
@@ -1197,6 +1226,16 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
               onClick={() => { setEditingEdition(null); setEditionDialogOpen(true); }}>
               Add edition
             </Button>
+            {detail.status !== 'Cancelled' && (
+              <Tooltip title="Cancel event (also cancels its upcoming editions and races)">
+                <Button size="small" color="error" variant="outlined"
+                  startIcon={<EventBusyIcon />}
+                  onClick={() => setCancelEventDialogOpen(true)}
+                >
+                  Cancel event
+                </Button>
+              </Tooltip>
+            )}
             <Tooltip title={confirmDeleteEvent ? 'Click again to confirm — or wait 3 seconds to cancel' : 'Delete event'}>
               <Button size="small" color="error"
                 variant={confirmDeleteEvent ? 'contained' : 'outlined'}
@@ -1608,6 +1647,47 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
         }}
         onNotify={onNotify}
       />
+
+      {/* Cancel event confirmation — a real dialog, not click-to-arm, because the blast radius is
+          two levels deep (event → editions → races) and isn't summarisable in a tooltip. */}
+      <Dialog open={cancelEventDialogOpen} onClose={() => setCancelEventDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Cancel Event</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2">
+            Cancel <strong>{detail?.name}</strong>?
+          </Typography>
+          {editionsAffectedByCancel.length > 0 ? (
+            <>
+              <Typography variant="body2" sx={{ mt: 1.5 }}>
+                This will also cancel {editionsAffectedByCancel.length} edition{editionsAffectedByCancel.length === 1 ? '' : 's'} and {raceCountAffectedByCancel} race{raceCountAffectedByCancel === 1 ? '' : 's'}:
+              </Typography>
+              <Box component="ul" sx={{ mt: 0.5, mb: 0, pl: 3 }}>
+                {editionsAffectedByCancel.map(ed => {
+                  const raceCount = ed.races.filter(r => r.status !== 'Cancelled').length;
+                  return (
+                    <Typography key={ed.id} component="li" variant="body2">
+                      {ed.title ?? ed.year ?? fmtDate(ed.date)} — {raceCount} race{raceCount === 1 ? '' : 's'}
+                    </Typography>
+                  );
+                })}
+              </Box>
+            </>
+          ) : (
+            <Typography variant="body2" sx={{ mt: 1.5 }} color="text.secondary">
+              No editions qualify for cascade — completed, already-cancelled, and past-dated editions are left untouched.
+            </Typography>
+          )}
+          <Typography variant="body2" sx={{ mt: 1.5 }} color="text.secondary">
+            Reactivating the event later will not restore these editions or races — they will stay Cancelled.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCancelEventDialogOpen(false)}>Back</Button>
+          <Button variant="contained" color="error" onClick={() => void handleConfirmCancelEvent()} disabled={cancellingEvent}>
+            {cancellingEvent ? <CircularProgress size={20} /> : 'Cancel Event'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Copy races confirmation */}
       <Dialog open={!!copyRacesConfirm} onClose={() => setCopyRacesConfirm(null)} maxWidth="sm" fullWidth>
