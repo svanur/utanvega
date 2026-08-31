@@ -806,13 +806,21 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
                 sx={(theme) => ({
                   cursor: 'pointer',
                   ...(event.type === 'Advertisement' && { bgcolor: 'rgba(255, 193, 7, 0.08)' }),
+                  // Dim (not disabledOpacity itself — that's too faint for text contrast) hidden/unlisted rows.
+                  ...((event.status === 'Hidden' || event.status === 'Unlisted') && { opacity: 1 - theme.palette.action.disabledOpacity }),
                   ...(idx === focusedEventIndex && { outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: -2 }),
                 })}
                 onClick={() => navigate(`/events/${event.slug}`)}
               >
                 {/* Name */}
                 <TableCell>
-                  <Typography variant="body2" fontWeight={700}>{event.name}</Typography>
+                  <Typography
+                    variant="body2"
+                    fontWeight={700}
+                    sx={event.status === 'Cancelled' ? { textDecoration: 'line-through' } : undefined}
+                  >
+                    {event.name}
+                  </Typography>
                   <Tooltip title="Click to copy slug">
                     <Typography
                       variant="caption"
