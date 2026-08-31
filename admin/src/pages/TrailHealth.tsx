@@ -266,9 +266,9 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1, mb: 2 }}>
         <Typography variant="h5" fontWeight="bold">Trail Health Dashboard</Typography>
-        <Stack direction="row" spacing={1} alignItems="center">
+        <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
           <Button
             variant="outlined"
             size="small"
