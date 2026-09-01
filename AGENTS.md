@@ -54,6 +54,28 @@ Or run individually:
 - **i18n**: Icelandic (`is`) default, English (`en`) fallback. Uses `react-i18next`. Language persisted in `localStorage('utanvega-lang')`. Translation files: `frontend/i18n/en.json` and `is.json`.
 - **Components**: Functional components only. Mobile-first responsive design using MUI breakpoints. Touch gestures (swipe, long-press) for mobile UX.
 
+### Dialogs vs pages
+
+Use a **dialog** for a single confirmation, or a short form of roughly **six fields or fewer**.
+
+Use a **page or an inline form** for anything longer. A long form in a modal means scrolling inside a
+popup, which is a poor container on desktop and a bad one on a phone — and a page can be linked to,
+which a dialog cannot.
+
+Two hard rules:
+
+- **Never open a dialog from a dialog.** If a flow seems to need it, the outer dialog should have been
+  a page.
+- **An action with consequences beyond the field it names is not a field edit.** Cancelling an event
+  cascades to its editions and races, so it does not belong in a Status dropdown. Give it a dedicated
+  control and confirm it — click-to-arm with a tooltip naming the effect for narrow-scope actions
+  (see Cancel/Delete edition), a dialog when the blast radius is wide enough to need itemising.
+
+Existing code does not fully follow this. `TrailEditDialog` (18 fields) and `LocationDialog` (12) are
+known exceptions awaiting conversion; smaller dialogs like `CreateEventDialog` are correct as they are.
+**Follow this rule for new work rather than matching the nearest existing dialog** — the convention is
+the target, not the current average.
+
 ## Project Structure
 ```
 frontend/
