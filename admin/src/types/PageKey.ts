@@ -1,1 +1,1 @@
-export type PageKey = 'dashboard' | 'trails' | 'locations' | 'health' | 'event-health' | 'edition-health' | 'map' | 'tags' | 'analytics' | 'features' | 'events' | 'hero-themes' | 'sponsors' | 'pools' | 'organizers' | 'translation-health' | 'race-day' | 'feedback';
+export type PageKey = 'dashboard' | 'trails' | 'locations' | 'health' | 'event-health' | 'edition-health' | 'map' | 'tags' | 'analytics' | 'features' | 'events' | 'hero-themes' | 'sponsors' | 'pools' | 'organizers' | 'photographers' | 'translation-health' | 'race-day' | 'feedback';

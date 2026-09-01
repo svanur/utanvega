@@ -62,6 +62,7 @@ using Utanvega.Backend.Application.Events.Commands.UpdateRace;
 using Utanvega.Backend.Application.Events.Commands.DeleteRace;
 using Utanvega.Backend.Application.Events.Commands.GenerateEditionsForSeason;
 using Utanvega.Backend.Application.Organizers;
+using Utanvega.Backend.Application.Photographers;
 using Utanvega.Backend.Application.Tags;
 using Utanvega.Backend.Application.Activities.Commands.CreateUserTrailActivity;
 using Utanvega.Backend.Application.Activities.Commands.UpdateUserTrailActivity;
@@ -1799,6 +1800,43 @@ app.MapDelete("/api/v1/admin/organizers/{id:guid}", [Authorize(Policy = "AdminOn
     return success ? Results.NoContent() : Results.NotFound();
 })
 .WithName("DeleteOrganizer");
+
+// Admin Photographer CRUD
+app.MapGet("/api/v1/admin/photographers", [Authorize(Policy = "AdminOnly")] async (IMediator mediator) =>
+{
+    var photographers = await mediator.Send(new GetPhotographersQuery());
+    return Results.Ok(photographers);
+})
+.WithName("GetAdminPhotographers");
+
+app.MapGet("/api/v1/admin/photographers/{slug}", [Authorize(Policy = "AdminOnly")] async (string slug, IMediator mediator) =>
+{
+    var photographer = await mediator.Send(new GetPhotographerBySlugQuery(slug));
+    return photographer is null ? Results.NotFound() : Results.Ok(photographer);
+})
+.WithName("GetAdminPhotographerBySlug");
+
+app.MapPost("/api/v1/admin/photographers", [Authorize(Policy = "AdminOnly")] async (CreatePhotographerCommand command, IMediator mediator) =>
+{
+    var (id, slug) = await mediator.Send(command);
+    return Results.Created($"/api/v1/admin/photographers/{slug}", new { id, slug });
+})
+.WithName("CreatePhotographer");
+
+app.MapPut("/api/v1/admin/photographers/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, UpdatePhotographerCommand command, IMediator mediator) =>
+{
+    if (id != command.Id) return Results.BadRequest("ID mismatch");
+    var success = await mediator.Send(command);
+    return success ? Results.NoContent() : Results.NotFound();
+})
+.WithName("UpdatePhotographer");
+
+app.MapDelete("/api/v1/admin/photographers/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, IMediator mediator) =>
+{
+    var success = await mediator.Send(new DeletePhotographerCommand(id));
+    return success ? Results.NoContent() : Results.NotFound();
+})
+.WithName("DeletePhotographer");
 
 // Admin Edition CRUD
 app.MapPost("/api/v1/admin/events/{eventId:guid}/editions", [Authorize(Policy = "AdminOnly")] async (Guid eventId, CreateEditionCommand command, IMediator mediator) =>
