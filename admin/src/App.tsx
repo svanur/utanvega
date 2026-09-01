@@ -455,6 +455,7 @@ function AdminContent() {
       <AdminSpotlightSearch
         onEditTrail={(id) => navigate(`/trails/${id}`)}
         onEditEvent={(slug) => navigate(`/events/${slug}`)}
+        onEditPhotographer={(slug) => navigate(`/photographers/${slug}`)}
         onNavigate={(page) => setCurrentPage(page as PageKey)}
         onFilterTrails={(term) => { setSearchTerm(term); setCurrentPage('trails'); }}
       />
