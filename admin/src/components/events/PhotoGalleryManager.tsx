@@ -266,12 +266,20 @@ export default function PhotoGalleryManager({ editionId, onNotify }: PhotoGaller
   // sortOrder before either has actually been persisted.
   const hasUnsavedRow = drafts.some(d => d.id === null);
 
+  // max(SortOrder)+1 rather than a count of persisted rows — a delete-then-add of a non-last
+  // gallery leaves a gap, and counting rows would reissue an already-used SortOrder, colliding
+  // with a survivor since neither the backend nor the OrderBy query renumbers/tiebreaks on it.
+  const nextSortOrder = (rows: RowDraft[]): number => {
+    const persistedOrders = rows.filter(d => d.id !== null).map(d => d.sortOrder);
+    return persistedOrders.length === 0 ? 0 : Math.max(...persistedOrders) + 1;
+  };
+
   const handleAddRow = () => {
     if (hasUnsavedRow) return;
     const key = `new-${tempKeyRef.current++}`;
     setDrafts(prev => [...prev, {
       key, id: null, url: '', photographer: null, title: '', titleEn: '',
-      sortOrder: prev.filter(d => d.id !== null).length, dirty: false, saving: false,
+      sortOrder: nextSortOrder(prev), dirty: false, saving: false,
     }]);
   };
 
@@ -287,7 +295,7 @@ export default function PhotoGalleryManager({ editionId, onNotify }: PhotoGaller
       if (draft.id === null) {
         // Recompute at save time (not add time) in case a persisted row was deleted or
         // reordered while this draft was still being filled in.
-        const sortOrder = drafts.filter(d => d.id !== null).length;
+        const sortOrder = nextSortOrder(drafts);
         const { id } = await createPhotoGallery({
           eventEditionId: editionId,
           url: draft.url.trim(),
