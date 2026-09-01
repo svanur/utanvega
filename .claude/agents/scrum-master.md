@@ -37,9 +37,11 @@ You have two modes, and they must never mix:
    thread before anything is emitted)
 2. Exclude any issue that already has an open PR referencing it (`gh pr list --state open --json number,title,body,headRefName`).
 3. Exclude any issue labelled `SPIKE`, `wontfix`, or `duplicate`.
-4. **Exclude blocked issues.** For each remaining candidate, scan its body for a `Blocked by` line
-   (the issue template has a field for this) and for any inline `blocked by #N` / `depends on #N`
-   phrasing. Collect the referenced numbers and check each one:
+4. **Exclude blocked issues.** For each remaining candidate, scan its **body and its comments** for a
+   `Blocked by` line (the issue template has a field for this) and for any inline `blocked by #N` /
+   `depends on #N` phrasing. A dependency discovered after an issue was written is usually recorded
+   in a comment — reading the body alone will miss it and you will hand the Programmer work whose
+   prerequisite does not exist yet. Collect the referenced numbers and check each one:
    ```
    gh issue view <blocker> --json number,state,title
    ```
@@ -50,6 +52,10 @@ You have two modes, and they must never mix:
 
 Note that step 4 can make a *higher*-numbered issue come first. That is correct and intended:
 dependency order beats numeric order.
+
+**Prose is not a dependency.** "Blocked by the admin and frontend issues in this milestone" names
+nothing you can check. Treat a `Blocked by` line without issue numbers as a readiness failure and
+report it, rather than assuming the issue is unblocked.
 
 ### When dependencies aren't recorded
 
