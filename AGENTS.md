@@ -71,10 +71,15 @@ Two hard rules:
   control and confirm it — click-to-arm with a tooltip naming the effect for narrow-scope actions
   (see Cancel/Delete edition), a dialog when the blast radius is wide enough to need itemising.
 
-Existing code does not fully follow this. `TrailEditDialog` (18 fields) and `LocationDialog` (12) are
-known exceptions awaiting conversion; smaller dialogs like `CreateEventDialog` are correct as they are.
+Existing code does not fully follow this. `LocationDialog` (12 fields) is a known exception awaiting
+conversion; smaller dialogs like `CreateEventDialog` (4 fields) are correct as they are.
 **Follow this rule for new work rather than matching the nearest existing dialog** — the convention is
 the target, not the current average.
+
+**Check that a component is actually rendered before working on it.** `TrailEditDialog` was an
+18-field dialog that nothing imported; two issues cited it by path and three commits were spent
+fixing it before anyone noticed the live code was elsewhere (see #541). A component can be complete,
+correct and entirely dead. When an issue names a file, confirm it is reachable from a route first.
 
 ## Project Structure
 ```
