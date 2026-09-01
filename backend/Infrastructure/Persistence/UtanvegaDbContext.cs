@@ -27,6 +27,7 @@ public class UtanvegaDbContext : DbContext
     public DbSet<TrailCheckIn> TrailCheckIns => Set<TrailCheckIn>();
     public DbSet<Organizer> Organizers => Set<Organizer>();
     public DbSet<Photographer> Photographers => Set<Photographer>();
+    public DbSet<PhotoGallery> PhotoGalleries => Set<PhotoGallery>();
     public DbSet<Feedback> Feedback => Set<Feedback>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -275,6 +276,27 @@ public class UtanvegaDbContext : DbContext
 
             entity.HasIndex(e => e.EventId);
             entity.HasIndex(e => e.Date);
+        });
+
+        modelBuilder.Entity<PhotoGallery>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Url).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.Title).HasMaxLength(200);
+            entity.Property(e => e.TitleEn).HasMaxLength(200);
+            entity.Property(e => e.CreatedBy).HasMaxLength(200);
+
+            entity.HasOne(e => e.EventEdition)
+                  .WithMany(ed => ed.PhotoGalleries)
+                  .HasForeignKey(e => e.EventEditionId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Photographer)
+                  .WithMany()
+                  .HasForeignKey(e => e.PhotographerId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(e => e.EventEditionId);
         });
 
         modelBuilder.Entity<Race>(entity =>
