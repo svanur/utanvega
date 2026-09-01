@@ -26,6 +26,7 @@ public class UtanvegaDbContext : DbContext
     public DbSet<Profile> Profiles => Set<Profile>();
     public DbSet<TrailCheckIn> TrailCheckIns => Set<TrailCheckIn>();
     public DbSet<Organizer> Organizers => Set<Organizer>();
+    public DbSet<Photographer> Photographers => Set<Photographer>();
     public DbSet<Feedback> Feedback => Set<Feedback>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -216,6 +217,29 @@ public class UtanvegaDbContext : DbContext
             entity.Property(e => e.Email).HasMaxLength(200);
             entity.Property(e => e.Website).HasMaxLength(500);
             entity.Property(e => e.ContactName).HasMaxLength(200);
+
+            entity.Property(e => e.SocialLinks)
+                  .HasColumnType("jsonb")
+                  .HasConversion(
+                      v => v == null ? null : JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                      v => v == null ? null : JsonSerializer.Deserialize<List<SocialLink>>(v, (JsonSerializerOptions?)null)
+                  )
+                  .Metadata.SetValueComparer(new ValueComparer<List<SocialLink>?>(
+                      (a, b) => JsonSerializer.Serialize(a, (JsonSerializerOptions?)null) == JsonSerializer.Serialize(b, (JsonSerializerOptions?)null),
+                      v => v == null ? 0 : JsonSerializer.Serialize(v, (JsonSerializerOptions?)null).GetHashCode(),
+                      v => v == null ? null : JsonSerializer.Deserialize<List<SocialLink>>(JsonSerializer.Serialize(v, (JsonSerializerOptions?)null), (JsonSerializerOptions?)null)
+                  ));
+        });
+
+        modelBuilder.Entity<Photographer>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Slug).IsRequired().HasMaxLength(200);
+            entity.HasIndex(e => e.Slug).IsUnique();
+            entity.HasIndex(e => e.Name);
+            entity.Property(e => e.Email).HasMaxLength(200);
+            entity.Property(e => e.Website).HasMaxLength(500);
 
             entity.Property(e => e.SocialLinks)
                   .HasColumnType("jsonb")

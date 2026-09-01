@@ -13,6 +13,7 @@ import ViewDayOutlinedIcon from '@mui/icons-material/ViewDayOutlined';
 import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
 import PoolIcon from '@mui/icons-material/Pool';
 import GroupIcon from '@mui/icons-material/Group';
+import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
@@ -51,6 +52,8 @@ const HeroThemesPage = lazy(() => import('./pages/HeroThemesPage'));
 const SponsorsPage = lazy(() => import('./pages/SponsorsPage'));
 const OrganizersPage = lazy(() => import('./pages/OrganizersPage'));
 const OrganizerDetailPage = lazy(() => import('./pages/OrganizerDetailPage'));
+const PhotographersPage = lazy(() => import('./pages/PhotographersPage'));
+const PhotographerDetailPage = lazy(() => import('./pages/PhotographerDetailPage'));
 const PoolsPage = lazy(() => import('./pages/PoolsPage'));
 const TranslationHealth = lazy(() => import('./pages/TranslationHealth'));
 const RaceDayPage = lazy(() => import('./pages/RaceDayPage'));
@@ -79,6 +82,7 @@ const PAGE_PATHS: Record<PageKey, string> = {
   trails: '/trails',
   locations: '/locations',
   organizers: '/organizers',
+  photographers: '/photographers',
   health: '/health',
   'event-health': '/event-health',
   'edition-health': '/edition-health',
@@ -98,6 +102,7 @@ function pathToPage(pathname: string): PageKey {
   if (pathname.startsWith('/events')) return 'events';
   if (pathname.startsWith('/trails')) return 'trails';
   if (pathname.startsWith('/organizers')) return 'organizers';
+  if (pathname.startsWith('/photographers')) return 'photographers';
   const entry = Object.entries(PAGE_PATHS).find(([, path]) => path === pathname);
   return (entry?.[0] as PageKey) ?? 'dashboard';
 }
@@ -301,6 +306,7 @@ function AdminContent() {
               { key: 'race-day' as const,            icon: <FlagIcon />,                                      label: 'Race Manager' },
               { key: 'locations' as const,           icon: <LocationOnIcon />,                                label: 'Locations' },
               { key: 'organizers' as const,          icon: <GroupIcon />,                                     label: 'Organizers' },
+              { key: 'photographers' as const,       icon: <CameraAltIcon />,                                 label: 'Photographers' },
               { key: 'tags' as const,                icon: <LocalOfferIcon />,                                label: 'Tags' },
               { key: 'features' as const,            icon: <ToggleOnIcon />,                                  label: 'Features' },
               { key: 'health' as const,              icon: <HealthAndSafetyIcon />,                           label: 'Trail Health' },
@@ -398,6 +404,11 @@ function AdminContent() {
             <Routes>
               <Route path="/organizers/:slug" element={<OrganizerDetailPage onNotify={notify} />} />
               <Route path="/organizers" element={<OrganizersPage onNotify={notify} />} />
+            </Routes>
+          ) : currentPage === 'photographers' ? (
+            <Routes>
+              <Route path="/photographers/:slug" element={<PhotographerDetailPage onNotify={notify} />} />
+              <Route path="/photographers" element={<PhotographersPage onNotify={notify} />} />
             </Routes>
           ) : currentPage === 'race-day' ? (
             <RaceDayPage
