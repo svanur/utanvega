@@ -23,6 +23,13 @@ export function isInputFocused(): boolean {
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (el as HTMLElement).isContentEditable;
 }
 
+// A MUI Dialog is open somewhere on the page. Row-focus shortcuts must back off entirely
+// while that's true — Enter in particular needs to reach the dialog's own focused button
+// (e.g. "Create"/"Save") instead of being preventDefault()'d by a page-level shortcut.
+export function isDialogOpen(): boolean {
+  return document.querySelector('[role="dialog"]') !== null;
+}
+
 /**
  * Attach page-level keyboard shortcuts. The shortcuts array is read via a ref
  * so handlers always see current state without needing to re-register the listener.

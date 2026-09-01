@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, type ReactNode } from 'react';
+import { useState, useMemo, useEffect, useRef, type ReactNode } from 'react';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import dayjs, { type Dayjs } from 'dayjs';
@@ -65,7 +65,8 @@ import {
 } from '../hooks/useEvents';
 import { useTrails } from '../hooks/useTrails';
 import { apiFetch } from '../hooks/api';
-import { usePageShortcuts } from '../hooks/usePageShortcuts';
+import { usePageShortcuts, isDialogOpen } from '../hooks/usePageShortcuts';
+import { useIdRowFocus } from '../hooks/useIdRowFocus';
 import RaceFormCard from '../components/events/RaceFormCard';
 import EventFormCard from '../components/events/EventFormCard';
 import BilingualTextField from '../components/BilingualTextField';
@@ -403,6 +404,8 @@ interface SortableRaceRowProps {
   race: RaceDto;
   edition: EventEditionDto;
   isActive: boolean;
+  isFocused: boolean;
+  focusRef?: (el: HTMLTableRowElement | null) => void;
   staleTx: boolean;
   detail: EventDetailDto | null;
   onOpen: () => void;
@@ -421,8 +424,11 @@ function cycleTooltip(label: string, values: string[], current: string) {
   return `${label}: ${values.join(' → ')} (next: ${next})`;
 }
 
-function SortableRaceRow({ race, edition, isActive, staleTx, detail, onOpen, onDuplicate, onCycleStatus, onCycleTicket, onCycleItra, patchRaceInDetail, racePayload, onNotify }: SortableRaceRowProps) {
+function SortableRaceRow({ race, edition, isActive, isFocused, focusRef, staleTx, detail, onOpen, onDuplicate, onCycleStatus, onCycleTicket, onCycleItra, patchRaceInDetail, racePayload, onNotify }: SortableRaceRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: race.id });
+  // Both dnd-kit's sortable node ref and the keyboard-focus scroll-into-view ref need the
+  // same DOM node — dnd-kit doesn't accept a second ref, so merge them into one callback.
+  const setRowRef = (el: HTMLTableRowElement | null) => { setNodeRef(el); focusRef?.(el); };
   const [copyDateAnchor, setCopyDateAnchor] = useState<HTMLElement | null>(null);
   const [copyingDate, setCopyingDate] = useState(false);
 
@@ -455,9 +461,9 @@ function SortableRaceRow({ race, edition, isActive, staleTx, detail, onOpen, onD
 
   return (
     <TableRow
-      ref={setNodeRef}
+      ref={setRowRef}
       hover
-      sx={{
+      sx={(theme) => ({
         cursor: 'pointer',
         bgcolor: isActive ? 'action.selected' : undefined,
         borderLeft: isActive ? '3px solid' : '3px solid transparent',
@@ -465,7 +471,8 @@ function SortableRaceRow({ race, edition, isActive, staleTx, detail, onOpen, onD
         opacity: isDragging ? 0.5 : 1,
         transform: CSS.Transform.toString(transform),
         transition,
-      }}
+        ...(isFocused && { outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: -2 }),
+      })}
       onClick={onOpen}
     >
       <TableCell sx={{ px: 0.5, color: 'text.disabled', cursor: 'grab' }} {...attributes} {...listeners} onClick={e => e.stopPropagation()}>
@@ -583,6 +590,13 @@ interface EventDetailPageProps {
   onNavigateToRaceManager?: (date: string) => void;
 }
 
+// A flat, id-based row for j/k/o/Space keyboard navigation across visible editions and the
+// races of expanded editions — see the useIdRowFocus call below for why this has to be
+// id-based rather than a plain index.
+type FocusRow =
+  | { kind: 'edition'; id: string; edition: EventEditionDto }
+  | { kind: 'race'; id: string; race: RaceDto; edition: EventEditionDto };
+
 export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: EventDetailPageProps) {
   const { slug = '' } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -691,6 +705,58 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
     setExpandedEditionIds(prev => { const n = new Set(prev); n.add(edition.id); return n; });
     setRaceForm({ editionId: edition.id, race });
   };
+
+  // Flat, id-based focus list: visible editions plus the (sorted) races of expanded editions,
+  // in the same visual order the render below produces. Id-based rather than index-based
+  // because Space (expand/collapse) inserts/removes rows above the focused one, which would
+  // silently shift a plain index onto the wrong row.
+  const focusRows = useMemo<FocusRow[]>(() => {
+    const rows: FocusRow[] = [];
+    for (const edition of editionsByYear.visible) {
+      rows.push({ kind: 'edition', id: `edition:${edition.id}`, edition });
+      if (expandedEditionIds.has(edition.id)) {
+        const races = localRaceOrder.get(edition.id)
+          ? localRaceOrder.get(edition.id)!.map(id => edition.races.find(r => r.id === id)).filter((r): r is RaceDto => !!r)
+          : [...edition.races].sort(sortRaces);
+        for (const race of races) rows.push({ kind: 'race', id: `race:${race.id}`, race, edition });
+      }
+    }
+    return rows;
+  }, [editionsByYear.visible, expandedEditionIds, localRaceOrder]);
+
+  const { focusedId } = useIdRowFocus(focusRows, row => {
+    if (row.kind === 'edition') { setEditingEdition(row.edition); setEditionDialogOpen(true); }
+    else openRaceForm(row.race, row.edition);
+  });
+
+  // One shared ref registry for both edition header rows and race rows, keyed by the same
+  // `edition:<id>` / `race:<id>` ids used in focusRows — lets scrollIntoView find whichever
+  // DOM node is focused without threading a ref through two differently-shaped rows.
+  const focusRowRefs = useRef<Map<string, HTMLElement>>(new Map());
+  const setFocusRowRef = (id: string) => (el: HTMLElement | null) => {
+    if (el) focusRowRefs.current.set(id, el);
+    else focusRowRefs.current.delete(id);
+  };
+  useEffect(() => {
+    if (!focusedId) return;
+    focusRowRefs.current.get(focusedId)?.scrollIntoView({ block: 'nearest' });
+  }, [focusedId]);
+
+  // Space toggles expand/collapse for a focused edition and does nothing on a focused race.
+  // Kept as its own usePageShortcuts registration (rather than folded into useIdRowFocus)
+  // since expand/collapse is specific to this page's edition/race semantics, not something a
+  // generic id-focus hook should know about. usePageShortcuts calls preventDefault() before
+  // invoking the handler, so this also satisfies "Space must not scroll the page".
+  usePageShortcuts([
+    {
+      key: ' ',
+      skip: isDialogOpen,
+      handler: () => {
+        const row = focusRows.find(r => r.id === focusedId);
+        if (row?.kind === 'edition') toggleEdition(row.edition.id);
+      },
+    },
+  ]);
 
   const [duplicateRaceValues, setDuplicateRaceValues] = useState<RaceFormState | undefined>(undefined);
 
@@ -1291,6 +1357,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
         const expanded = expandedEditionIds.has(edition.id);
         const raceCount = edition.races.length;
         const isPast = edition.date ? edition.date < new Date().toISOString().slice(0, 10) : false;
+        const isEditionFocused = focusedId === `edition:${edition.id}`;
 
         return (
           <Box
@@ -1305,15 +1372,17 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
           >
             {/* Edition header */}
             <Stack
+              ref={setFocusRowRef(`edition:${edition.id}`)}
               direction="row"
               alignItems="center"
               spacing={1}
-              sx={{
+              sx={(theme) => ({
                 px: 2, py: 1.25,
                 cursor: 'pointer',
                 bgcolor: expanded ? 'primary.50' : 'background.paper',
                 '&:hover': { bgcolor: expanded ? 'primary.50' : 'action.hover' },
-              }}
+                ...(isEditionFocused && { outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: -2 }),
+              })}
               onClick={() => toggleEdition(edition.id)}
             >
               {expanded
@@ -1546,6 +1615,8 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                               race={race}
                               edition={edition}
                               isActive={raceForm?.race?.id === race.id}
+                              isFocused={focusedId === `race:${race.id}`}
+                              focusRef={setFocusRowRef(`race:${race.id}`)}
                               onOpen={() => openRaceForm(race, edition)}
                               onDuplicate={() => openDuplicateRace(race, edition)}
                               onCycleStatus={() => handleCycleRaceStatus(race)}
