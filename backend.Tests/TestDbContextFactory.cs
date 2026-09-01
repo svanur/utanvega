@@ -218,6 +218,23 @@ internal class TestDbContext : UtanvegaDbContext
                   .OnDelete(DeleteBehavior.SetNull);
         });
 
+        modelBuilder.Entity<Core.Entities.PhotoGallery>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Url).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.Title).HasMaxLength(200);
+            entity.Property(e => e.TitleEn).HasMaxLength(200);
+            entity.Property(e => e.CreatedBy).HasMaxLength(200);
+            entity.HasOne(e => e.EventEdition)
+                  .WithMany(ed => ed.PhotoGalleries)
+                  .HasForeignKey(e => e.EventEditionId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Photographer)
+                  .WithMany()
+                  .HasForeignKey(e => e.PhotographerId)
+                  .OnDelete(DeleteBehavior.SetNull);
+        });
+
         modelBuilder.Entity<Core.Entities.Race>(entity =>
         {
             entity.HasKey(e => e.Id);
