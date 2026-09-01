@@ -1337,11 +1337,6 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
             {detail.editions.length} total
           </Typography>
         </Typography>
-        {editionsByYear.hidden > 0 && (
-          <Button size="small" variant="text" onClick={() => setShowOlderEditions(v => !v)}>
-            {showOlderEditions ? 'Hide older' : `Show ${editionsByYear.hidden} older`}
-          </Button>
-        )}
       </Stack>
 
       {editionsByYear.visible.length === 0 && (
@@ -1661,6 +1656,14 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
           </Box>
         );
       })}
+
+      {editionsByYear.hidden > 0 && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, mb: 3 }}>
+          <Button size="small" variant="text" onClick={() => setShowOlderEditions(v => !v)}>
+            {showOlderEditions ? 'Hide older' : `Show ${editionsByYear.hidden} older`}
+          </Button>
+        </Box>
+      )}
 
       {/* Edition dialog */}
       <EditionDialog
