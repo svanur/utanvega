@@ -69,6 +69,7 @@ import { usePageShortcuts, isDialogOpen } from '../hooks/usePageShortcuts';
 import { useIdRowFocus } from '../hooks/useIdRowFocus';
 import RaceFormCard from '../components/events/RaceFormCard';
 import EventFormCard from '../components/events/EventFormCard';
+import PhotoGalleryManager from '../components/events/PhotoGalleryManager';
 import BilingualTextField from '../components/BilingualTextField';
 import { BilingualLangProvider, useBilingualLang } from '../contexts/BilingualLangContext';
 import {
@@ -195,7 +196,6 @@ interface EditionFormState {
   titleEn: string;
   registrationUrl: string;
   resultsUrl: string;
-  photoGalleryUrl: string;
   notes: string;
   notesEn: string;
   registrationStatus: RegistrationStatus;
@@ -207,7 +207,7 @@ function emptyEditionForm(): EditionFormState {
   return {
     year: String(new Date().getFullYear()),
     date: '', endDate: '', title: '', titleEn: '',
-    registrationUrl: '', resultsUrl: '', photoGalleryUrl: '', notes: '', notesEn: '',
+    registrationUrl: '', resultsUrl: '', notes: '', notesEn: '',
     registrationStatus: 'NotStarted', trailId: '',
     status: 'Unconfirmed',
   };
@@ -218,7 +218,7 @@ function buildEditionForm(ed: EventEditionDto): EditionFormState {
     year: ed.year?.toString() ?? '',
     date: ed.date ?? '', endDate: ed.endDate ?? '',
     title: ed.title ?? '', titleEn: ed.titleEn ?? '',
-    registrationUrl: ed.registrationUrl ?? '', resultsUrl: ed.resultsUrl ?? '', photoGalleryUrl: ed.photoGalleryUrl ?? '',
+    registrationUrl: ed.registrationUrl ?? '', resultsUrl: ed.resultsUrl ?? '',
     notes: ed.notes ?? '', notesEn: ed.notesEn ?? '',
     registrationStatus: ed.registrationStatus, trailId: ed.trailId ?? '',
     status: ed.status,
@@ -267,7 +267,6 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onNotify
       titleEn: form.titleEn.trim() || undefined,
       registrationUrl: form.registrationUrl.trim() || undefined,
       resultsUrl: form.resultsUrl.trim() || undefined,
-      photoGalleryUrl: form.photoGalleryUrl.trim() || undefined,
       notes: form.notes.trim() || undefined,
       notesEn: form.notesEn.trim() || undefined,
       registrationStatus: form.registrationStatus,
@@ -371,13 +370,15 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onNotify
             onChange={e => set('registrationUrl', e.target.value)} />
           <TextField size="small" fullWidth label="Results URL" value={form.resultsUrl}
             onChange={e => set('resultsUrl', e.target.value)} />
-          <TextField size="small" fullWidth label="Photo Gallery URL" value={form.photoGalleryUrl}
-            onChange={e => set('photoGalleryUrl', e.target.value)} />
           <BilingualTextField
             size="small" fullWidth label="Edition description" multiline rows={2}
             valueIs={form.notes} valueEn={form.notesEn}
             onChangeIs={v => set('notes', v)} onChangeEn={v => set('notesEn', v)}
           />
+          <Divider />
+          {/* Photo galleries are a separate sub-resource (own table/endpoints) — each row saves
+              and reorders itself immediately, independent of this dialog's own Save button. */}
+          <PhotoGalleryManager editionId={edition?.id ?? null} onNotify={onNotify} />
         </Stack>
       </DialogContent>
       <DialogActions>
@@ -782,7 +783,6 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
       titleEn: '',
       registrationUrl: bumpYearInUrl(edition.registrationUrl ?? '', edition.year, nextYear),
       resultsUrl: bumpYearInUrl(edition.resultsUrl ?? '', edition.year, nextYear),
-      photoGalleryUrl: '',
       notes: '',
       notesEn: '',
       registrationStatus: suggestedDate && isPastDate(suggestedDate) ? 'Closed' : 'NotStarted',
