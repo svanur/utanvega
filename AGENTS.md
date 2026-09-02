@@ -169,6 +169,12 @@ Inside the pipeline, agents are pre-authorized to commit and push to a **feature
 PR against `develop`. No per-push confirmation is needed — the `/go` gate and the PR review are the
 approval points.
 
+**Verify the branch immediately before every commit**, not once per cycle. A checkout several
+commands ago is not evidence of where HEAD is now — another session or cycle can move it in between.
+And `git push origin <branch>` pushes the ref of that name, not HEAD, so a commit made on the wrong
+branch is followed by a push that reports success while sending nothing. Confirm what landed with
+`git merge-base --is-ancestor HEAD origin/<branch>`.
+
 These remain human-only, always:
 - **Merging any PR.** Agents never merge and never approve.
 - **Any direct write to `develop` or `main`** — no commits, no pushes, no force-pushes. Feature

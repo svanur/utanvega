@@ -98,6 +98,36 @@ If a check fails, fix it. If you cannot, say so plainly in your report — never
 
 ## Commit and PR
 
+### ⚠️ Check the branch in the same breath as the commit
+
+**`git branch --show-current` immediately before `git commit`, every time — not at Step 0 and not
+once per cycle.** A checkout several commands ago is not evidence of where HEAD is now: another
+session, another cycle, or the owner can move it in between, and nothing warns you.
+
+```
+git branch --show-current      # must be your feature branch
+git status --porcelain         # must contain only your intended files
+git commit ...
+```
+
+If the branch is not the one from your work order, **STOP and report** — do not commit, do not
+`checkout` and retry. Something moved HEAD underneath you and that is worth the owner knowing.
+
+**`git push origin <branch>` pushes the ref of that name, not HEAD.** So a commit made on the wrong
+branch is followed by a push that reports success while sending nothing, and the work ends up
+somewhere nobody is looking — often inside another PR. Push the branch you actually committed to,
+and verify it landed:
+
+```
+git push -u origin <branch>
+git fetch origin
+git merge-base --is-ancestor HEAD origin/<branch>   # must succeed
+```
+
+A push command exiting zero is not proof the commit reached the remote branch you meant.
+
+### The commit itself
+
 Small, coherent commits. Message body explains *why*, not *what*.
 
 End every commit message with:
@@ -105,11 +135,14 @@ End every commit message with:
 Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
 ```
 
-Then:
+Then open the PR:
 ```
-git push -u origin <branch>
 gh pr create --base develop --title "<title>" --body "<body>"
 ```
+
+If the push is rejected as non-fast-forward, `develop` or your branch moved while you were working
+— likely during a long build. Rebase onto the new tip (`git pull --rebase origin <branch>`) and
+verify again. Never force-push to resolve it.
 
 ### Then return to develop
 
@@ -143,6 +176,10 @@ git status --porcelain          # must be empty, or STOP
 git checkout <branch>
 git pull --ff-only origin <branch>   # in case anything was pushed to it
 ```
+
+The same rule applies to every commit in a review round: **re-check `git branch --show-current`
+immediately before each `git commit`**, not just after this checkout. Review rounds are exactly when
+HEAD is most likely to have moved between one action and the next.
 
 Then:
 
