@@ -117,6 +117,16 @@ public class CreateTrailFromGpxCommandHandler : IRequestHandler<CreateTrailFromG
         var finalName = name ?? result.ExtractedName ?? "Unnamed Trail";
         var slug = SlugGenerator.Generate(finalName);
 
+        // Mirrors detect-terrain-types' skip condition (Length <= 1000, degenerate profile) so a
+        // newly created trail is classified up front instead of needing a manual Auto suggest
+        // click or a later backfill run.
+        TerrainType? terrainType = null;
+        if (result.Length > 1000 && !ElevationProfileValidator.IsDegenerate(result.ElevationProfile))
+        {
+            var maxAltitude = ElevationProfileValidator.GetMaxAltitude(result.ElevationProfile)!.Value;
+            terrainType = MountainIndexClassifier.Classify(result.Length, result.ElevationGain, maxAltitude);
+        }
+
         return new Trail
         {
             Name = finalName,
@@ -128,6 +138,7 @@ public class CreateTrailFromGpxCommandHandler : IRequestHandler<CreateTrailFromG
             ElevationProfile = result.ElevationProfile,
             Type = result.DetectedType,
             Difficulty = result.Difficulty,
+            TerrainType = terrainType,
             ActivityTypeId = activityType ?? result.DetectedActivityType ?? ActivityType.TrailRunning,
             Status = TrailStatus.Draft,
             CreatedAt = DateTime.UtcNow
