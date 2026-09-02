@@ -2967,4 +2967,126 @@ public class EventHandlerTests : IDisposable
         Assert.Equal(EditionStatus.Cancelled, verifyCtx.EventEditions.Find(edition.Id)!.Status);
         Assert.Equal(RegistrationStatus.Closed, verifyCtx.EventEditions.Find(edition.Id)!.RegistrationStatus);
     }
+
+    // ─── Public photo galleries (#548) ───
+
+    private async Task<(Event ev, EventEdition edition)> SeedEditionWithGalleries(string slug)
+    {
+        var ev = CreateTestEvent($"Gallery Event {slug}");
+        ev.Slug = slug;
+        var edition = CreateTestEdition(ev.Id);
+        // GetEventsQuery only surfaces galleries via the "relevant" edition, which requires a
+        // future (or ongoing/recent) date — push it forward so all three handlers under test
+        // treat this edition consistently, regardless of when the suite actually runs.
+        var futureDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30));
+        edition.Date = futureDate;
+        edition.Year = futureDate.Year;
+        var photographer = new Photographer { Id = Guid.NewGuid(), Name = "Jón Jónsson", Slug = $"jon-jonsson-{Guid.NewGuid():N}" };
+        var galleries = new[]
+        {
+            new PhotoGallery { Id = Guid.NewGuid(), EventEditionId = edition.Id, Url = "https://photos.example.com/third", SortOrder = 2, CreatedBy = "admin@utanvega.is" },
+            new PhotoGallery { Id = Guid.NewGuid(), EventEditionId = edition.Id, Url = "https://photos.example.com/first", SortOrder = 0, PhotographerId = photographer.Id, Title = "Race day", TitleEn = "Race day", CreatedBy = "admin@utanvega.is" },
+            new PhotoGallery { Id = Guid.NewGuid(), EventEditionId = edition.Id, Url = "https://photos.example.com/second", SortOrder = 1, CreatedBy = "admin@utanvega.is" },
+        };
+
+        using var ctx = _factory.CreateContext();
+        ctx.Events.Add(ev);
+        ctx.EventEditions.Add(edition);
+        ctx.Photographers.Add(photographer);
+        ctx.PhotoGalleries.AddRange(galleries);
+        await ctx.SaveChangesAsync();
+        return (ev, edition);
+    }
+
+    [Fact]
+    public async Task GetEvent_BySlug_Editions_CarryGalleries_OrderedBySortOrder()
+    {
+        await SeedEditionWithGalleries("gallery-detail-event");
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventQuery("gallery-detail-event"), CancellationToken.None);
+
+        var editionDto = Assert.Single(result!.Editions);
+        Assert.Equal(
+            new[] { "https://photos.example.com/first", "https://photos.example.com/second", "https://photos.example.com/third" },
+            editionDto.Galleries.Select(g => g.Url).ToArray());
+        Assert.Equal("Jón Jónsson", editionDto.Galleries[0].PhotographerName);
+    }
+
+    [Fact]
+    public async Task GetEvent_BySlug_EditionWithoutGalleries_ReturnsEmptyList_NeverNull()
+    {
+        var ev = CreateTestEvent("No Gallery Event");
+        ev.Slug = "no-gallery-event";
+        var edition = CreateTestEdition(ev.Id);
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventQuery("no-gallery-event"), CancellationToken.None);
+
+        var editionDto = Assert.Single(result!.Editions);
+        Assert.NotNull(editionDto.Galleries);
+        Assert.Empty(editionDto.Galleries);
+    }
+
+    [Fact]
+    public async Task GetAllEventDetails_Editions_CarryGalleries_OrderedBySortOrder()
+    {
+        await SeedEditionWithGalleries("gallery-admin-detail-event");
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetAllEventDetailsQueryHandler(queryCtx);
+        var result = await handler.Handle(new GetAllEventDetailsQuery(), CancellationToken.None);
+
+        var eventDetail = Assert.Single(result, e => e.Slug == "gallery-admin-detail-event");
+        var editionDto = Assert.Single(eventDetail.Editions);
+        Assert.Equal(
+            new[] { "https://photos.example.com/first", "https://photos.example.com/second", "https://photos.example.com/third" },
+            editionDto.Galleries.Select(g => g.Url).ToArray());
+    }
+
+    [Fact]
+    public async Task GetEvents_Summary_IncludesGalleries_FromRelevantEdition()
+    {
+        await SeedEditionWithGalleries("gallery-summary-event");
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(), CancellationToken.None);
+
+        var summary = Assert.Single(result, e => e.Slug == "gallery-summary-event");
+        Assert.NotNull(summary.Galleries);
+        Assert.Equal(3, summary.Galleries!.Count);
+        Assert.Equal("https://photos.example.com/first", summary.Galleries[0].Url);
+    }
+
+    [Fact]
+    public async Task GetEvents_Summary_EventWithoutGalleries_ReturnsEmptyList_NeverNull()
+    {
+        var ev = CreateTestEvent("No Gallery Summary Event");
+        ev.Slug = "no-gallery-summary-event";
+        var edition = CreateTestEdition(ev.Id);
+        edition.Date = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(10);
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(), CancellationToken.None);
+
+        var summary = Assert.Single(result, e => e.Slug == "no-gallery-summary-event");
+        Assert.NotNull(summary.Galleries);
+        Assert.Empty(summary.Galleries!);
+    }
 }

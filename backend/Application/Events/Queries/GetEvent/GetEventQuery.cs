@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Application.Events;
 using Utanvega.Backend.Application.Events.Queries.GetEvents;
+using Utanvega.Backend.Application.PhotoGalleries;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Core.Services;
 using Utanvega.Backend.Infrastructure.Persistence;
@@ -78,6 +79,9 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
             .Include(e => e.Organizer)
             .Include(e => e.Editions)
                 .ThenInclude(ed => ed.Races)
+            .Include(e => e.Editions)
+                .ThenInclude(ed => ed.PhotoGalleries)
+                    .ThenInclude(g => g.Photographer)
             .FirstOrDefaultAsync(e => e.Slug == request.Slug, cancellationToken);
 
         if (ev == null) return null;
@@ -227,6 +231,7 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
                         ResultType: r.ResultType.ToString()
                     ))
                     .ToList(),
+                ed.PhotoGalleries.ToPublicDtos(),
                 ed.CreatedAt,
                 ed.UpdatedAt,
                 Status: ed.Status.ToString(),

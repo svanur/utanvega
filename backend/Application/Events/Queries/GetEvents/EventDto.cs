@@ -1,5 +1,6 @@
 namespace Utanvega.Backend.Application.Events.Queries.GetEvents;
 
+using Utanvega.Backend.Application.PhotoGalleries;
 using Utanvega.Backend.Core.Entities;
 
 public record RaceDistanceSummaryDto(
@@ -65,7 +66,8 @@ public record EventSummaryDto(
     List<string>? ActivityTypes = null,
     string? EditionStatus = null,
     bool EditionEffectiveCancelled = false,
-    string? OrganizerSlug = null
+    string? OrganizerSlug = null,
+    List<PublicPhotoGalleryDto>? Galleries = null
 );
 
 public record RaceDto(
@@ -121,6 +123,7 @@ public record EventEditionDto(
     string? TrailName,
     string? TrailSlug,
     List<RaceDto> Races,
+    List<PublicPhotoGalleryDto> Galleries,
     DateTime CreatedAt,
     DateTime? UpdatedAt,
     Dictionary<string, string>? TranslationHashes = null,

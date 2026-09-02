@@ -591,4 +591,63 @@ public class EditionsHistoryHandlerTests : IDisposable
         // Descending order
         Assert.Equal(result.OrderDescending(), result);
     }
+
+    // ─── Galleries (#548) ───
+
+    [Fact]
+    public async Task History_Row_CarriesGalleries_OrderedBySortOrder()
+    {
+        var pastYear = DateOnly.FromDateTime(DateTime.UtcNow).Year - 1;
+        var ev = CreateTestEvent("Gallery History Event");
+        var edition = CreateEdition(ev.Id, new DateOnly(pastYear, 6, 1));
+        var photographer = new Photographer { Id = Guid.NewGuid(), Name = "Jón Jónsson", Slug = "jon-jonsson-history" };
+        var galleries = new[]
+        {
+            new PhotoGallery { Id = Guid.NewGuid(), EventEditionId = edition.Id, Url = "https://photos.example.com/third", SortOrder = 2 },
+            new PhotoGallery { Id = Guid.NewGuid(), EventEditionId = edition.Id, Url = "https://photos.example.com/first", SortOrder = 0, PhotographerId = photographer.Id },
+            new PhotoGallery { Id = Guid.NewGuid(), EventEditionId = edition.Id, Url = "https://photos.example.com/second", SortOrder = 1 },
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Photographers.Add(photographer);
+            ctx.PhotoGalleries.AddRange(galleries);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEditionsHistoryQueryHandler(queryCtx, _memoryCache);
+        var result = await handler.Handle(new GetEditionsHistoryQuery(pastYear), CancellationToken.None);
+
+        var row = Assert.Single(result);
+        Assert.Equal(
+            new[] { "https://photos.example.com/first", "https://photos.example.com/second", "https://photos.example.com/third" },
+            row.Galleries.Select(g => g.Url).ToArray());
+        Assert.Equal("Jón Jónsson", row.Galleries[0].PhotographerName);
+    }
+
+    [Fact]
+    public async Task History_Row_EditionWithoutGalleries_ReturnsEmptyList_NeverNull()
+    {
+        var pastYear = DateOnly.FromDateTime(DateTime.UtcNow).Year - 1;
+        var ev = CreateTestEvent("No Gallery History Event");
+        var edition = CreateEdition(ev.Id, new DateOnly(pastYear, 6, 1));
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEditionsHistoryQueryHandler(queryCtx, _memoryCache);
+        var result = await handler.Handle(new GetEditionsHistoryQuery(pastYear), CancellationToken.None);
+
+        var row = Assert.Single(result);
+        Assert.NotNull(row.Galleries);
+        Assert.Empty(row.Galleries);
+    }
 }

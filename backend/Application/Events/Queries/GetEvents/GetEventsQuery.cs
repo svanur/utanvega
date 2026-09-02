@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Application.Events;
+using Utanvega.Backend.Application.PhotoGalleries;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Core.Services;
 using Utanvega.Backend.Infrastructure.Persistence;
@@ -36,6 +37,9 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
             .Include(e => e.Organizer)
             .Include(e => e.Editions)
                 .ThenInclude(ed => ed.Races)
+            .Include(e => e.Editions)
+                .ThenInclude(ed => ed.PhotoGalleries)
+                    .ThenInclude(g => g.Photographer)
             .AsQueryable();
 
         if (!request.IncludeHidden)
@@ -282,7 +286,8 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 EditionStatus: relevantEdition?.Status.ToString(),
                 EditionEffectiveCancelled: relevantEdition != null
                     && EditionStatusHelpers.ComputeEffectiveCancelled(relevantEdition.Status, relevantEdition.Races.Select(r => r.Status).ToList()),
-                OrganizerSlug: e.Organizer != null ? e.Organizer.Slug : null
+                OrganizerSlug: e.Organizer != null ? e.Organizer.Slug : null,
+                Galleries: relevantEdition?.PhotoGalleries.ToPublicDtos() ?? []
             );
         }).ToList();
     }
