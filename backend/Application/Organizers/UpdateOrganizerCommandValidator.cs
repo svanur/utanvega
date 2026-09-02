@@ -16,6 +16,13 @@ public class UpdateOrganizerCommandValidator : AbstractValidator<UpdateOrganizer
             .WithMessage("Slug must be lowercase alphanumeric with hyphens only.")
             .When(x => !string.IsNullOrWhiteSpace(x.Slug));
 
+        RuleFor(x => x.Website)
+            .MaximumLength(500)
+            .Must(url => Uri.TryCreate(url, UriKind.Absolute, out var uri)
+                && (uri.Scheme == "http" || uri.Scheme == "https"))
+            .WithMessage("Website must be a valid HTTP or HTTPS URL.")
+            .When(x => !string.IsNullOrEmpty(x.Website));
+
         RuleForEach(x => x.SocialLinks)
             .ChildRules(link =>
             {

@@ -110,4 +110,81 @@ public class OrganizerValidatorTests
         var result = _updateOrganizerValidator.TestValidate(cmd);
         result.ShouldHaveAnyValidationError();
     }
+
+    [Fact]
+    public void UpdateOrganizer_NullWebsite_Passes()
+    {
+        var cmd = ValidUpdateOrganizerCommand with { Website = null };
+        var result = _updateOrganizerValidator.TestValidate(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.Website);
+    }
+
+    [Fact]
+    public void UpdateOrganizer_HttpsWebsite_Passes()
+    {
+        var cmd = ValidUpdateOrganizerCommand with { Website = "https://reykjavikmarathon.is" };
+        var result = _updateOrganizerValidator.TestValidate(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.Website);
+    }
+
+    [Fact]
+    public void UpdateOrganizer_JavascriptSchemeWebsite_Fails()
+    {
+        var cmd = ValidUpdateOrganizerCommand with { Website = "javascript:alert(1)" };
+        var result = _updateOrganizerValidator.TestValidate(cmd);
+        result.ShouldHaveValidationErrorFor(x => x.Website);
+    }
+
+    // ─── CreateOrganizerCommandValidator ───
+
+    private readonly CreateOrganizerCommandValidator _createOrganizerValidator = new();
+
+    private CreateOrganizerCommand ValidCreateOrganizerCommand => new(
+        Name: "Reykjavík Marathon Club",
+        Kennitala: null,
+        Phone: null,
+        Email: null,
+        Website: null,
+        Description: null,
+        ContactName: null
+    );
+
+    [Fact]
+    public void CreateOrganizer_ValidCommand_Passes()
+    {
+        var result = _createOrganizerValidator.TestValidate(ValidCreateOrganizerCommand);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void CreateOrganizer_EmptyName_Fails()
+    {
+        var cmd = ValidCreateOrganizerCommand with { Name = "" };
+        var result = _createOrganizerValidator.TestValidate(cmd);
+        result.ShouldHaveValidationErrorFor(x => x.Name);
+    }
+
+    [Fact]
+    public void CreateOrganizer_OverLengthName_Fails()
+    {
+        var cmd = ValidCreateOrganizerCommand with { Name = new string('a', 201) };
+        var result = _createOrganizerValidator.TestValidate(cmd);
+        result.ShouldHaveValidationErrorFor(x => x.Name);
+    }
+
+    [Fact]
+    public void CreateOrganizer_HttpsWebsite_Passes()
+    {
+        var cmd = ValidCreateOrganizerCommand with { Website = "https://reykjavikmarathon.is" };
+        var result = _createOrganizerValidator.TestValidate(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.Website);
+    }
+
+    [Fact]
+    public void CreateOrganizer_JavascriptSchemeWebsite_Fails()
+    {
+        var cmd = ValidCreateOrganizerCommand with { Website = "javascript:alert(1)" };
+        var result = _createOrganizerValidator.TestValidate(cmd);
+        result.ShouldHaveValidationErrorFor(x => x.Website);
+    }
 }
