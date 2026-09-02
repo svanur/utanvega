@@ -431,7 +431,10 @@ function TrailRowComponent({ trail, selected, focused, onSelectOne, onViewMap, o
       </TableCell>
       <TableCell>
         <Typography variant="caption" color="text.secondary" noWrap>
-          {trail.updatedAt ? new Date(trail.updatedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }) : '—'}
+          {(() => {
+            const displayDate = trail.updatedAt ?? trail.createdAt;
+            return displayDate ? new Date(displayDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }) : '—';
+          })()}
         </Typography>
       </TableCell>
       <TableCell align="center">

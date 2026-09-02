@@ -99,6 +99,7 @@ public class TrailQueryHandlerTests : IDisposable
         trail.ElevationLoss = 430;
         trail.Type = TrailType.Loop;
         trail.Difficulty = Difficulty.Moderate;
+        trail.CreatedAt = new DateTime(2026, 1, 15, 0, 0, 0, DateTimeKind.Utc);
 
         using (var ctx = _factory.CreateContext())
         {
@@ -122,6 +123,8 @@ public class TrailQueryHandlerTests : IDisposable
             Assert.Equal("TrailRunning", dto.ActivityType);
             Assert.Equal("Loop", dto.TrailType);
             Assert.Equal("Moderate", dto.Difficulty);
+            Assert.Equal(trail.CreatedAt, dto.CreatedAt);
+            Assert.Null(dto.UpdatedAt);
         }
     }
 

@@ -1,21 +1,23 @@
 import React, { useState, useCallback } from 'react';
-import { 
-  Box, 
-  Typography, 
-  Paper, 
-  List, 
-  ListItem, 
-  ListItemText, 
-  ListItemSecondaryAction, 
-  IconButton, 
-  Button, 
+import {
+  Box,
+  Typography,
+  Paper,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemSecondaryAction,
+  IconButton,
+  Button,
   CircularProgress,
   Divider,
   TextField,
-  Alert
+  Alert,
+  Link
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../hooks/api';
 
 interface GpxBulkUploadProps {
@@ -37,6 +39,7 @@ interface SimilarityMatch {
 }
 
 const GpxBulkUpload: React.FC<GpxBulkUploadProps> = ({ onUploadSuccess, onNotify }) => {
+  const navigate = useNavigate();
   const [files, setFiles] = useState<GpxFile[]>([]);
   const [uploading, setUploading] = useState(false);
   const [checking, setChecking] = useState(false);
@@ -180,11 +183,29 @@ const GpxBulkUpload: React.FC<GpxBulkUploadProps> = ({ onUploadSuccess, onNotify
     });
 
     try {
-      await apiFetch('/api/v1/admin/trails/bulk-upload-gpx', {
+      const { count, ids } = await apiFetch<{ count: number; ids: string[] }>('/api/v1/admin/trails/bulk-upload-gpx', {
         method: 'POST',
         body: formData,
       });
-      onNotify(`Successfully uploaded ${files.length} trails`, 'success');
+      const trailWord = count === 1 ? 'trail' : 'trails';
+      if (count === 1 && ids[0]) {
+        onNotify(
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+            <Typography variant="body2">Successfully uploaded 1 {trailWord}.</Typography>
+            <Link
+              component="button"
+              onClick={() => navigate(`/trails/${ids[0]}`)}
+              color="inherit"
+              sx={{ fontWeight: 'bold', textDecoration: 'underline', verticalAlign: 'baseline', fontSize: 'inherit', p: 0 }}
+            >
+              View Trail
+            </Link>
+          </Box>,
+          'success'
+        );
+      } else {
+        onNotify(`Successfully uploaded ${count} ${trailWord}`, 'success');
+      }
       setFiles([]);
       onUploadSuccess();
     } catch (error) {
