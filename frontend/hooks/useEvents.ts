@@ -71,7 +71,6 @@ export interface EventSummary {
     registrationUrl: string | null;
     registrationStatus: string | null;
     resultsUrl: string | null;
-    photoGalleryUrl: string | null;
     galleries: PublicPhotoGallery[];
     certifications: string[] | null;
     youtubeUrl: string | null;
@@ -130,7 +129,6 @@ export interface EventEditionDto {
     titleEn: string | null;
     registrationUrl: string | null;
     resultsUrl: string | null;
-    photoGalleryUrl: string | null;
     galleries: PublicPhotoGallery[];
     notes: string | null;
     notesEn: string | null;
@@ -259,7 +257,6 @@ export interface EditionHistoryRow {
     effectiveCancelled: boolean;
     distances: { label: string; ticketStatus: string | null }[];
     resultsUrl: string | null;
-    photoGalleryUrl: string | null;
     galleries: PublicPhotoGallery[];
     activityTypes: string[] | null;
     eventActivityType: string;

@@ -1,8 +1,8 @@
 namespace Utanvega.Backend.Core.Entities;
 
 // An EventEdition can have multiple photo galleries (from different photographers), each with its
-// own URL and optional attribution. This supersedes EventEdition.PhotoGalleryUrl going forward, but
-// that legacy single-URL field is left untouched until #491/#492 migrate consumers off it.
+// own URL and optional attribution. This supersedes the legacy single-URL column that used to live
+// on EventEdition, dropped in #492 once #491 finished migrating consumers off it.
 public class PhotoGallery
 {
     public Guid Id { get; set; } = Guid.NewGuid();

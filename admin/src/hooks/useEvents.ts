@@ -72,7 +72,6 @@ export interface EventEditionDto {
     titleEn: string | null;
     registrationUrl: string | null;
     resultsUrl: string | null;
-    photoGalleryUrl: string | null;
     notes: string | null;
     notesEn: string | null;
     registrationStatus: RegistrationStatus;
@@ -200,7 +199,6 @@ export interface CreateEditionInput {
     titleEn?: string;
     registrationUrl?: string;
     resultsUrl?: string;
-    photoGalleryUrl?: string;
     notes?: string;
     notesEn?: string;
     registrationStatus: RegistrationStatus;
@@ -216,7 +214,6 @@ export interface UpdateEditionInput {
     titleEn?: string;
     registrationUrl?: string;
     resultsUrl?: string;
-    photoGalleryUrl?: string;
     notes?: string;
     notesEn?: string;
     registrationStatus: RegistrationStatus;

@@ -1544,15 +1544,6 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                       </Typography>
                     </Box>
                   )}
-                  {edition.photoGalleryUrl && (
-                    <Box>
-                      <Typography variant="caption" color="text.secondary" display="block">Photo Gallery</Typography>
-                      <Typography variant="body2" component="a" href={edition.photoGalleryUrl} target="_blank" rel="noopener"
-                        sx={{ color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}>
-                        {(() => { const s = edition.photoGalleryUrl.replace(/^https?:\/\//, ''); return s.length > 40 ? s.slice(0, 40) + '…' : s; })()}
-                      </Typography>
-                    </Box>
-                  )}
                   {edition.trailName && (
                     <Box>
                       <Typography variant="caption" color="text.secondary" display="block">Trail</Typography>

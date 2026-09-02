@@ -8,8 +8,8 @@ public class UpdatePhotoGalleryCommandValidator : AbstractValidator<UpdatePhotoG
     {
         RuleFor(x => x.Id).NotEmpty();
 
-        // Same rule as CreateEditionCommandValidator's PhotoGalleryUrl, except Url is required here
-        // (a gallery with no URL has nothing to link to).
+        // Same URL-format rule the edition validators used to apply to the now-removed legacy
+        // gallery URL field, except Url is required here (a gallery with no URL has nothing to link to).
         RuleFor(x => x.Url).NotEmpty();
 
         RuleFor(x => x.Url)

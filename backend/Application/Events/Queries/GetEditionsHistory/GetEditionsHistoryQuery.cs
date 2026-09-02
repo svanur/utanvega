@@ -23,7 +23,6 @@ public record EditionHistoryRowDto(
     bool EffectiveCancelled,
     List<RaceDistanceSummaryDto> Distances,
     string? ResultsUrl,
-    string? PhotoGalleryUrl,
     // #548: measured against local dev data for the (partial, year-to-date) 2026 history response —
     // 9 rows, 3 carrying at least one gallery: 5145 bytes serialized without this field vs. 5659
     // bytes with it, a +514 byte (~10%) delta for that sample. Scales with gallery count per edition,
@@ -179,7 +178,6 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
             effectiveCancelled,
             distances,
             ed.ResultsUrl,
-            ed.PhotoGalleryUrl,
             ed.PhotoGalleries.ToPublicDtos(),
             activityTypes.Count > 0 ? activityTypes : null,
             ed.Event.ActivityType.ToString(),

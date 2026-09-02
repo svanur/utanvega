@@ -187,7 +187,6 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
                 ed.TitleEn,
                 ed.RegistrationUrl,
                 ed.ResultsUrl,
-                ed.PhotoGalleryUrl,
                 ed.Notes,
                 ed.NotesEn,
                 ed.RegistrationStatus.ToString(),
