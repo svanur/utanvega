@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Infrastructure.Persistence;
 
 namespace Utanvega.Backend.Application.PhotoGalleries;
@@ -16,15 +17,20 @@ public record UpdatePhotoGalleryCommand(
 public class UpdatePhotoGalleryCommandHandler : IRequestHandler<UpdatePhotoGalleryCommand, bool>
 {
     private readonly UtanvegaDbContext _context;
+    private readonly ICacheInvalidator _cacheInvalidator;
 
-    public UpdatePhotoGalleryCommandHandler(UtanvegaDbContext context)
+    public UpdatePhotoGalleryCommandHandler(UtanvegaDbContext context, ICacheInvalidator cacheInvalidator)
     {
         _context = context;
+        _cacheInvalidator = cacheInvalidator;
     }
 
     public async Task<bool> Handle(UpdatePhotoGalleryCommand request, CancellationToken cancellationToken)
     {
-        var gallery = await _context.PhotoGalleries.FirstOrDefaultAsync(g => g.Id == request.Id, cancellationToken);
+        var gallery = await _context.PhotoGalleries
+            .Include(g => g.EventEdition)
+            .ThenInclude(ed => ed.Event)
+            .FirstOrDefaultAsync(g => g.Id == request.Id, cancellationToken);
         if (gallery is null) return false;
 
         gallery.Url = request.Url;
@@ -34,6 +40,7 @@ public class UpdatePhotoGalleryCommandHandler : IRequestHandler<UpdatePhotoGalle
         gallery.SortOrder = request.SortOrder;
 
         await _context.SaveChangesAsync(cancellationToken);
+        _cacheInvalidator.InvalidateEvent(gallery.EventEdition.Event.Slug);
         return true;
     }
 }

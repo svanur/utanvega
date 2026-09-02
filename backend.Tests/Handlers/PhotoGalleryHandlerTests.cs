@@ -1,5 +1,7 @@
 using FluentValidation.TestHelper;
 using Microsoft.EntityFrameworkCore;
+using Moq;
+using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Application.PhotoGalleries;
 using Utanvega.Backend.Core.Entities;
 
@@ -8,6 +10,7 @@ namespace Utanvega.Backend.Tests.Handlers;
 public class PhotoGalleryHandlerTests : IDisposable
 {
     private readonly TestDbContextFactory _factory;
+    private readonly ICacheInvalidator _cacheInvalidator = new Mock<ICacheInvalidator>().Object;
 
     public PhotoGalleryHandlerTests()
     {
@@ -36,6 +39,10 @@ public class PhotoGalleryHandlerTests : IDisposable
         db.Events.Add(ev);
         db.EventEditions.Add(edition);
         await db.SaveChangesAsync();
+
+        // Fix up the navigation explicitly rather than relying on EF's in-memory change tracker
+        // fixup — callers need edition.Event.Slug available without a separate Include roundtrip.
+        edition.Event = ev;
         return edition;
     }
 
@@ -61,7 +68,7 @@ public class PhotoGalleryHandlerTests : IDisposable
         var edition = await SeedEdition();
 
         using var ctx = _factory.CreateContext();
-        var handler = new CreatePhotoGalleryCommandHandler(ctx);
+        var handler = new CreatePhotoGalleryCommandHandler(ctx, _cacheInvalidator);
 
         var id = await handler.Handle(new CreatePhotoGalleryCommand(
             EventEditionId: edition.Id,
@@ -90,7 +97,7 @@ public class PhotoGalleryHandlerTests : IDisposable
         var photographer = await SeedPhotographer();
 
         using var ctx = _factory.CreateContext();
-        var handler = new CreatePhotoGalleryCommandHandler(ctx);
+        var handler = new CreatePhotoGalleryCommandHandler(ctx, _cacheInvalidator);
 
         var id = await handler.Handle(new CreatePhotoGalleryCommand(
             EventEditionId: edition.Id,
@@ -105,6 +112,27 @@ public class PhotoGalleryHandlerTests : IDisposable
         Assert.Equal(photographer.Id, gallery!.PhotographerId);
     }
 
+    [Fact]
+    public async Task Create_PhotoGallery_InvalidatesEventCache_WithEventSlug()
+    {
+        // #559 — the event page and editions history page cache the gallery list, so adding one
+        // must invalidate the owning event's public cache, not just write the row.
+        var edition = await SeedEdition();
+        var cacheInvalidator = new Mock<ICacheInvalidator>();
+
+        using var ctx = _factory.CreateContext();
+        var handler = new CreatePhotoGalleryCommandHandler(ctx, cacheInvalidator.Object);
+
+        await handler.Handle(new CreatePhotoGalleryCommand(
+            EventEditionId: edition.Id,
+            Url: "https://photos.example.com/invalidate-on-create",
+            PhotographerId: null,
+            Title: null
+        ), CancellationToken.None);
+
+        cacheInvalidator.Verify(c => c.InvalidateEvent(edition.Event.Slug), Times.Once);
+    }
+
     // ─── UpdatePhotoGalleryCommand ───
 
     [Fact]
@@ -114,7 +142,7 @@ public class PhotoGalleryHandlerTests : IDisposable
         Guid galleryId;
         using (var ctx = _factory.CreateContext())
         {
-            var handler = new CreatePhotoGalleryCommandHandler(ctx);
+            var handler = new CreatePhotoGalleryCommandHandler(ctx, _cacheInvalidator);
             galleryId = await handler.Handle(new CreatePhotoGalleryCommand(
                 EventEditionId: edition.Id,
                 Url: "https://photos.example.com/old",
@@ -125,7 +153,7 @@ public class PhotoGalleryHandlerTests : IDisposable
 
         using (var ctx = _factory.CreateContext())
         {
-            var handler = new UpdatePhotoGalleryCommandHandler(ctx);
+            var handler = new UpdatePhotoGalleryCommandHandler(ctx, _cacheInvalidator);
             var success = await handler.Handle(new UpdatePhotoGalleryCommand(
                 Id: galleryId,
                 Url: "https://photos.example.com/new",
@@ -148,7 +176,7 @@ public class PhotoGalleryHandlerTests : IDisposable
     public async Task Update_PhotoGallery_Returns_False_ForUnknownId()
     {
         using var ctx = _factory.CreateContext();
-        var handler = new UpdatePhotoGalleryCommandHandler(ctx);
+        var handler = new UpdatePhotoGalleryCommandHandler(ctx, _cacheInvalidator);
         var success = await handler.Handle(new UpdatePhotoGalleryCommand(
             Id: Guid.NewGuid(),
             Url: "https://photos.example.com/ghost",
@@ -156,6 +184,54 @@ public class PhotoGalleryHandlerTests : IDisposable
             Title: null
         ), CancellationToken.None);
         Assert.False(success);
+    }
+
+    [Fact]
+    public async Task Update_PhotoGallery_InvalidatesEventCache_WithEventSlug()
+    {
+        var edition = await SeedEdition();
+        Guid galleryId;
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new CreatePhotoGalleryCommandHandler(ctx, _cacheInvalidator);
+            galleryId = await handler.Handle(new CreatePhotoGalleryCommand(
+                EventEditionId: edition.Id,
+                Url: "https://photos.example.com/before-update",
+                PhotographerId: null,
+                Title: null
+            ), CancellationToken.None);
+        }
+
+        var cacheInvalidator = new Mock<ICacheInvalidator>();
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new UpdatePhotoGalleryCommandHandler(ctx, cacheInvalidator.Object);
+            await handler.Handle(new UpdatePhotoGalleryCommand(
+                Id: galleryId,
+                Url: "https://photos.example.com/after-update",
+                PhotographerId: null,
+                Title: null
+            ), CancellationToken.None);
+        }
+
+        cacheInvalidator.Verify(c => c.InvalidateEvent(edition.Event.Slug), Times.Once);
+    }
+
+    [Fact]
+    public async Task Update_PhotoGallery_UnknownId_DoesNotInvalidateCache()
+    {
+        var cacheInvalidator = new Mock<ICacheInvalidator>();
+        using var ctx = _factory.CreateContext();
+        var handler = new UpdatePhotoGalleryCommandHandler(ctx, cacheInvalidator.Object);
+
+        await handler.Handle(new UpdatePhotoGalleryCommand(
+            Id: Guid.NewGuid(),
+            Url: "https://photos.example.com/ghost",
+            PhotographerId: null,
+            Title: null
+        ), CancellationToken.None);
+
+        cacheInvalidator.Verify(c => c.InvalidateEvent(It.IsAny<string>()), Times.Never);
     }
 
     // ─── DeletePhotoGalleryCommand ───
@@ -167,7 +243,7 @@ public class PhotoGalleryHandlerTests : IDisposable
         Guid galleryId;
         using (var ctx = _factory.CreateContext())
         {
-            var handler = new CreatePhotoGalleryCommandHandler(ctx);
+            var handler = new CreatePhotoGalleryCommandHandler(ctx, _cacheInvalidator);
             galleryId = await handler.Handle(new CreatePhotoGalleryCommand(
                 EventEditionId: edition.Id,
                 Url: "https://photos.example.com/to-delete",
@@ -178,7 +254,7 @@ public class PhotoGalleryHandlerTests : IDisposable
 
         using (var ctx = _factory.CreateContext())
         {
-            var handler = new DeletePhotoGalleryCommandHandler(ctx);
+            var handler = new DeletePhotoGalleryCommandHandler(ctx, _cacheInvalidator);
             var success = await handler.Handle(new DeletePhotoGalleryCommand(galleryId), CancellationToken.None);
             Assert.True(success);
         }
@@ -191,9 +267,47 @@ public class PhotoGalleryHandlerTests : IDisposable
     public async Task Delete_PhotoGallery_Returns_False_ForUnknownId()
     {
         using var ctx = _factory.CreateContext();
-        var handler = new DeletePhotoGalleryCommandHandler(ctx);
+        var handler = new DeletePhotoGalleryCommandHandler(ctx, _cacheInvalidator);
         var success = await handler.Handle(new DeletePhotoGalleryCommand(Guid.NewGuid()), CancellationToken.None);
         Assert.False(success);
+    }
+
+    [Fact]
+    public async Task Delete_PhotoGallery_InvalidatesEventCache_WithEventSlug()
+    {
+        var edition = await SeedEdition();
+        Guid galleryId;
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new CreatePhotoGalleryCommandHandler(ctx, _cacheInvalidator);
+            galleryId = await handler.Handle(new CreatePhotoGalleryCommand(
+                EventEditionId: edition.Id,
+                Url: "https://photos.example.com/before-delete",
+                PhotographerId: null,
+                Title: null
+            ), CancellationToken.None);
+        }
+
+        var cacheInvalidator = new Mock<ICacheInvalidator>();
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new DeletePhotoGalleryCommandHandler(ctx, cacheInvalidator.Object);
+            await handler.Handle(new DeletePhotoGalleryCommand(galleryId), CancellationToken.None);
+        }
+
+        cacheInvalidator.Verify(c => c.InvalidateEvent(edition.Event.Slug), Times.Once);
+    }
+
+    [Fact]
+    public async Task Delete_PhotoGallery_UnknownId_DoesNotInvalidateCache()
+    {
+        var cacheInvalidator = new Mock<ICacheInvalidator>();
+        using var ctx = _factory.CreateContext();
+        var handler = new DeletePhotoGalleryCommandHandler(ctx, cacheInvalidator.Object);
+
+        await handler.Handle(new DeletePhotoGalleryCommand(Guid.NewGuid()), CancellationToken.None);
+
+        cacheInvalidator.Verify(c => c.InvalidateEvent(It.IsAny<string>()), Times.Never);
     }
 
     // ─── GetPhotoGalleriesByEditionQuery ───
@@ -205,7 +319,7 @@ public class PhotoGalleryHandlerTests : IDisposable
 
         using (var ctx = _factory.CreateContext())
         {
-            var handler = new CreatePhotoGalleryCommandHandler(ctx);
+            var handler = new CreatePhotoGalleryCommandHandler(ctx, _cacheInvalidator);
             await handler.Handle(new CreatePhotoGalleryCommand(
                 EventEditionId: edition.Id, Url: "https://photos.example.com/third",
                 PhotographerId: null, Title: null, SortOrder: 2
@@ -238,7 +352,7 @@ public class PhotoGalleryHandlerTests : IDisposable
 
         using (var ctx = _factory.CreateContext())
         {
-            var handler = new CreatePhotoGalleryCommandHandler(ctx);
+            var handler = new CreatePhotoGalleryCommandHandler(ctx, _cacheInvalidator);
             await handler.Handle(new CreatePhotoGalleryCommand(
                 EventEditionId: edition1.Id, Url: "https://photos.example.com/mine",
                 PhotographerId: null, Title: null
@@ -265,7 +379,7 @@ public class PhotoGalleryHandlerTests : IDisposable
 
         using (var ctx = _factory.CreateContext())
         {
-            var handler = new CreatePhotoGalleryCommandHandler(ctx);
+            var handler = new CreatePhotoGalleryCommandHandler(ctx, _cacheInvalidator);
             await handler.Handle(new CreatePhotoGalleryCommand(
                 EventEditionId: edition.Id, Url: "https://photos.example.com/attributed",
                 PhotographerId: photographer.Id, Title: null
