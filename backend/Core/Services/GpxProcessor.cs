@@ -12,12 +12,43 @@ public record GpxProcessResult(
     TrailType DetectedType,
     Difficulty Difficulty,
     string? ExtractedName,
-    double[]? ElevationProfile = null
+    double[]? ElevationProfile = null,
+    ActivityType? DetectedActivityType = null
 );
 
 public static class GpxProcessor
 {
     private static readonly GeometryFactory GeometryFactory = new(new PrecisionModel(), 4326);
+
+    // Leniently maps the standard GPX <type> element to our ActivityType enum.
+    // Keys are pre-normalized (lowercase, no underscores/hyphens/spaces) so lookups
+    // only need to normalize the incoming value the same way.
+    private static readonly Dictionary<string, ActivityType> ActivityTypeAliases = new()
+    {
+        ["trailrunning"] = ActivityType.TrailRunning,
+        ["trailrun"] = ActivityType.TrailRunning,
+        ["running"] = ActivityType.Running,
+        ["run"] = ActivityType.Running,
+        ["roadrunning"] = ActivityType.Running,
+        ["hiking"] = ActivityType.Hiking,
+        ["hike"] = ActivityType.Hiking,
+        ["walking"] = ActivityType.Hiking,
+        ["cycling"] = ActivityType.Cycling,
+        ["biking"] = ActivityType.Cycling,
+        ["roadbiking"] = ActivityType.Cycling,
+        ["mountainbiking"] = ActivityType.Cycling,
+    };
+
+    private static string NormalizeActivityTypeKey(string value) =>
+        value.ToLowerInvariant().Replace("_", "").Replace("-", "").Replace(" ", "");
+
+    // An unrecognised or missing <type> must yield no detected activity type — never a fallback.
+    private static ActivityType? DetectActivityType(string? rawType)
+    {
+        if (string.IsNullOrWhiteSpace(rawType)) return null;
+        var key = NormalizeActivityTypeKey(rawType.Trim());
+        return ActivityTypeAliases.TryGetValue(key, out var activityType) ? activityType : null;
+    }
 
     public static GpxProcessResult Process(string gpxXml, string? nameOverride = null)
     {
@@ -91,7 +122,10 @@ public static class GpxProcessor
             ? SampleElevationProfile(points.Select(p => p.Ele).ToArray(), 50)
             : null;
 
-        return new GpxProcessResult(lineString, length, gain, loss, detectedType, difficulty, extractedName, elevationProfile);
+        var rawActivityType = doc.Descendants(ns + "trk").Elements(ns + "type").FirstOrDefault()?.Value;
+        var detectedActivityType = DetectActivityType(rawActivityType);
+
+        return new GpxProcessResult(lineString, length, gain, loss, detectedType, difficulty, extractedName, elevationProfile, detectedActivityType);
     }
 
     private static double[] SampleElevationProfile(double[] elevations, int targetSamples)

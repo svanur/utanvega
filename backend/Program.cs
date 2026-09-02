@@ -1066,12 +1066,11 @@ app.MapPost("/api/v1/admin/trails/upload-gpx", [Authorize(Policy = "AdminOnly")]
     using var reader = new StreamReader(file.OpenReadStream());
     var gpxXml = await reader.ReadToEndAsync();
     
-    ActivityType parsedActivityType;
-    if (activityType is null)
+    if (string.IsNullOrWhiteSpace(activityType))
     {
-        parsedActivityType = ActivityType.TrailRunning;
+        return Results.BadRequest("activityType is required.");
     }
-    else if (!Enum.TryParse<ActivityType>(activityType, ignoreCase: true, out parsedActivityType))
+    if (!Enum.TryParse<ActivityType>(activityType, ignoreCase: true, out var parsedActivityType))
     {
         return Results.BadRequest($"Invalid activityType '{activityType}'. Valid values: {string.Join(", ", Enum.GetNames<ActivityType>())}");
     }
@@ -1145,15 +1144,19 @@ app.MapPost("/api/v1/admin/trails/check-similarity", [Authorize(Policy = "AdminO
     try 
     {
         var command = new CheckTrailSimilarityCommand(name, gpxXml);
-        var matches = await mediator.Send(command);
-        
-        var response = matches.Select(m => new {
-            trailId = m.TrailId,
-            trailName = m.TrailName,
-            matchPercentage = m.MatchPercentage,
-            message = $"This trail is a {m.MatchPercentage}% match to '{m.TrailName}'"
-        });
-        
+        var result = await mediator.Send(command);
+
+        var response = new
+        {
+            matches = result.Matches.Select(m => new {
+                trailId = m.TrailId,
+                trailName = m.TrailName,
+                matchPercentage = m.MatchPercentage,
+                message = $"This trail is a {m.MatchPercentage}% match to '{m.TrailName}'"
+            }),
+            detectedActivityType = result.DetectedActivityType
+        };
+
         return Results.Ok(response);
     }
     catch (Exception ex)
@@ -1198,7 +1201,8 @@ app.MapPost("/api/v1/admin/trails/bulk-check-similarity", [Authorize(Policy = "A
                 trailName = m.TrailName,
                 matchPercentage = m.MatchPercentage,
                 message = $"This trail is a {m.MatchPercentage}% match to '{m.TrailName}'"
-            })
+            }),
+            detectedActivityType = r.DetectedActivityType
         });
         
         return Results.Ok(response);
@@ -1217,22 +1221,29 @@ app.MapPost("/api/v1/admin/trails/bulk-upload-gpx", [Authorize(Policy = "AdminOn
     var form = await context.Request.ReadFormAsync();
     var files = form.Files.GetFiles("files");
     var names = form.TryGetValue("names", out var namesList) ? namesList.ToList() : new List<string?>();
+    var activityTypes = form.TryGetValue("activityTypes", out var activityTypesList) ? activityTypesList.ToList() : new List<string?>();
 
     if (files == null || files.Count == 0) return Results.BadRequest("No files uploaded.");
-    
+
     var gpxFiles = new List<Utanvega.Backend.Application.Trails.Commands.BulkCreateTrailsFromGpx.GpxFileInfo>();
     for (int i = 0; i < files.Count; i++)
     {
         var file = files[i];
         var name = names.Count > i ? names[i] : null;
+        var activityTypeRaw = activityTypes.Count > i ? activityTypes[i] : null;
+
+        if (string.IsNullOrWhiteSpace(activityTypeRaw) || !Enum.TryParse<ActivityType>(activityTypeRaw, ignoreCase: true, out var activityType))
+        {
+            return Results.BadRequest($"Missing or invalid activityType for file '{file.FileName}'. Valid values: {string.Join(", ", Enum.GetNames<ActivityType>())}");
+        }
 
         using var reader = new StreamReader(file.OpenReadStream());
         var gpxXml = await reader.ReadToEndAsync();
-        
-        gpxFiles.Add(new Utanvega.Backend.Application.Trails.Commands.BulkCreateTrailsFromGpx.GpxFileInfo(name, gpxXml));
+
+        gpxFiles.Add(new Utanvega.Backend.Application.Trails.Commands.BulkCreateTrailsFromGpx.GpxFileInfo(name, gpxXml, activityType));
     }
-    
-    try 
+
+    try
     {
         var command = new BulkCreateTrailsFromGpxCommand(gpxFiles, GetAuthenticatedUserId(context));
         var trailIds = await mediator.Send(command);
