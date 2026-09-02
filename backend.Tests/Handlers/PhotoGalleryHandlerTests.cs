@@ -342,4 +342,56 @@ public class PhotoGalleryHandlerTests : IDisposable
         var result = validator.TestValidate(cmd);
         result.ShouldHaveValidationErrorFor(x => x.Url);
     }
+
+    // ─── PublicPhotoGalleryDto shape (#548) ───
+
+    [Fact]
+    public void PublicPhotoGalleryDto_DoesNotExposeAdminOnlyFields()
+    {
+        // The public projection must withhold everything an anonymous visitor has no business
+        // seeing: the row Id, the FK back to the edition, the raw PhotographerId, and auditing
+        // fields (CreatedAt/CreatedBy) — mirrors the admin-only fields PhotoGalleryDto carries.
+        var propertyNames = typeof(PublicPhotoGalleryDto).GetProperties().Select(p => p.Name).ToHashSet();
+
+        Assert.DoesNotContain("Id", propertyNames);
+        Assert.DoesNotContain("EventEditionId", propertyNames);
+        Assert.DoesNotContain("PhotographerId", propertyNames);
+        Assert.DoesNotContain("CreatedAt", propertyNames);
+        Assert.DoesNotContain("CreatedBy", propertyNames);
+
+        var expected = new[] { "Url", "Title", "TitleEn", "PhotographerName", "PhotographerSlug", "SortOrder" };
+        Assert.Equal(expected.Length, propertyNames.Count);
+        foreach (var name in expected)
+            Assert.Contains(name, propertyNames);
+    }
+
+    [Fact]
+    public void ToPublicDtos_OrdersBySortOrder_AndMapsPhotographerNameAndSlug()
+    {
+        var photographer = new Photographer { Id = Guid.NewGuid(), Name = "Jón Jónsson", Slug = "jon-jonsson" };
+        var galleries = new List<PhotoGallery>
+        {
+            new() { Url = "https://photos.example.com/third", SortOrder = 2 },
+            new() { Url = "https://photos.example.com/first", SortOrder = 0, Photographer = photographer },
+            new() { Url = "https://photos.example.com/second", SortOrder = 1 },
+        };
+
+        var result = galleries.ToPublicDtos();
+
+        Assert.Equal(
+            new[] { "https://photos.example.com/first", "https://photos.example.com/second", "https://photos.example.com/third" },
+            result.Select(g => g.Url).ToArray());
+        Assert.Equal("Jón Jónsson", result[0].PhotographerName);
+        Assert.Equal("jon-jonsson", result[0].PhotographerSlug);
+        Assert.Null(result[1].PhotographerName);
+    }
+
+    [Fact]
+    public void ToPublicDtos_EmptyCollection_ReturnsEmptyList_NeverNull()
+    {
+        var result = new List<PhotoGallery>().ToPublicDtos();
+
+        Assert.NotNull(result);
+        Assert.Empty(result);
+    }
 }
