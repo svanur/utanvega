@@ -69,7 +69,7 @@ import { usePageShortcuts, isDialogOpen } from '../hooks/usePageShortcuts';
 import { useIdRowFocus } from '../hooks/useIdRowFocus';
 import RaceFormCard from '../components/events/RaceFormCard';
 import EventFormCard from '../components/events/EventFormCard';
-import PhotoGalleryManager from '../components/events/PhotoGalleryManager';
+import PhotoGalleryManager, { type PhotoGalleryManagerHandle } from '../components/events/PhotoGalleryManager';
 import BilingualTextField from '../components/BilingualTextField';
 import { BilingualLangProvider, useBilingualLang } from '../contexts/BilingualLangContext';
 import {
@@ -253,6 +253,7 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onNotify
   const isNew = edition === null;
   const [form, setForm] = useState<EditionFormState>(initialValues ?? (edition ? buildEditionForm(edition) : emptyEditionForm()));
   const [saving, setSaving] = useState(false);
+  const galleryManagerRef = useRef<PhotoGalleryManagerHandle>(null);
 
   const set = <K extends keyof EditionFormState>(k: K, v: EditionFormState[K]) =>
     setForm(prev => ({ ...prev, [k]: v }));
@@ -279,12 +280,22 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onNotify
         const result = await apiFetch<{ id: string }>(`/api/v1/admin/events/${eventId}/editions`, {
           method: 'POST', body: JSON.stringify(input),
         });
+        // A brand-new edition has no gallery rows to flush yet — PhotoGalleryManager only lets
+        // an admin add one once editionId is non-null (see its own early return) — but flush
+        // through the id we just got anyway, using it rather than the (still-null) editionId
+        // prop, so this stays correct if that gate is ever relaxed.
+        await galleryManagerRef.current?.flushPending(result.id);
         onNotify('Edition created', 'success');
         onSaved(result.id);
       } else {
         await apiFetch(`/api/v1/admin/editions/${edition!.id}`, {
           method: 'PUT', body: JSON.stringify({ id: edition!.id, ...input }),
         });
+        const galleriesOk = await galleryManagerRef.current?.flushPending(edition!.id) ?? true;
+        if (!galleriesOk) {
+          onNotify('Edition saved, but a photo gallery failed to save — fix it and Save again', 'error');
+          return; // keep the dialog open so the admin can retry the gallery save
+        }
         onNotify('Edition saved', 'success');
         onSaved();
       }
@@ -296,8 +307,23 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onNotify
     }
   };
 
+  // Cancel and backdrop/Escape dismissal both discard the dialog the same way — if a gallery
+  // row is filled in or edited but not yet flushed, warn before losing it, mirroring the
+  // confirm() guard TrailFormCard uses for its own "pending selection would be silently
+  // dropped" case rather than introducing a new confirm-dialog component.
+  const handleCancelOrDismiss = () => {
+    if (galleryManagerRef.current?.hasPendingChanges()) {
+      const proceed = confirm(
+        'You have an unsaved photo gallery in this edition — closing now will discard it.\n\n'
+        + 'Cancel to go back and save it, or OK to discard and close.'
+      );
+      if (!proceed) return;
+    }
+    onClose();
+  };
+
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth
+    <Dialog open={open} onClose={handleCancelOrDismiss} maxWidth="sm" fullWidth
       TransitionProps={{ onEnter: () => setForm(initialValues ?? (edition ? buildEditionForm(edition) : emptyEditionForm())) }}>
       <DialogTitle>
         <Stack direction="row" justifyContent="space-between" alignItems="center">
@@ -376,13 +402,15 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onNotify
             onChangeIs={v => set('notes', v)} onChangeEn={v => set('notesEn', v)}
           />
           <Divider />
-          {/* Photo galleries are a separate sub-resource (own table/endpoints) — each row saves
-              and reorders itself immediately, independent of this dialog's own Save button. */}
-          <PhotoGalleryManager editionId={edition?.id ?? null} onNotify={onNotify} />
+          {/* Photo galleries are a separate sub-resource (own table/endpoints) — a row's own
+              check-mark still saves and reorders it immediately, but this dialog's Save/Cancel
+              also flush/warn about any row left dirty or new-but-filled, via the ref (see
+              handleSave/handleCancelOrDismiss above and PhotoGalleryManager's flushPending). */}
+          <PhotoGalleryManager ref={galleryManagerRef} editionId={edition?.id ?? null} onNotify={onNotify} />
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={saving}>Cancel</Button>
+        <Button onClick={handleCancelOrDismiss} disabled={saving}>Cancel</Button>
         <Button variant="contained" onClick={() => void handleSave()} disabled={saving}>
           {saving ? 'Saving…' : isNew ? 'Add edition' : 'Save edition'}
         </Button>

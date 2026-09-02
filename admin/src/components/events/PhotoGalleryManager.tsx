@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type ReactNode } from 'react';
 import {
   Autocomplete,
   Box,
@@ -28,6 +28,15 @@ import { trimToUndefined } from '../../utils/strings';
 interface PhotoGalleryManagerProps {
   editionId: string | null;
   onNotify: (msg: ReactNode, severity?: 'success' | 'error') => void;
+}
+
+// Imperative escape hatch for EditionDialogInner's own Save/Cancel: this component's row drafts
+// are otherwise entirely private, but the dialog's Save button needs to flush any dirty/new-but-
+// filled row before it closes (rather than silently discarding it, as it did before #549), and
+// Cancel/dismiss needs to know one exists so it can warn instead of discarding it silently.
+export interface PhotoGalleryManagerHandle {
+  hasPendingChanges: () => boolean;
+  flushPending: (editionId: string) => Promise<boolean>;
 }
 
 interface PhotographerRef {
@@ -153,15 +162,18 @@ interface GalleryRowProps {
 
 function GalleryRow({ draft, photographers, onCreatePhotographer, onChange, onSave, onDelete, confirmingDelete, draggable }: GalleryRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: draft.key, disabled: !draggable });
-  const canSave = draft.url.trim() !== '' && (draft.id === null || draft.dirty);
   const isNew = draft.id === null;
+  // Mirrors the "needs a flush" gate in PhotoGalleryManager.flushPending — kept in sync there
+  // and here so the border/label always agree with what a dialog Save would actually persist.
+  const isUnsaved = draft.url.trim() !== '' && (isNew || draft.dirty);
+  const canSave = isUnsaved;
 
   return (
     <Box
       ref={setNodeRef}
       sx={{
         border: 1,
-        borderColor: 'divider',
+        borderColor: isUnsaved ? 'warning.main' : 'divider',
         borderRadius: 1,
         p: 1.5,
         mb: 1.5,
@@ -178,8 +190,8 @@ function GalleryRow({ draft, photographers, onCreatePhotographer, onChange, onSa
         >
           <DragHandleIcon fontSize="small" />
         </Box>
-        <Typography variant="caption" color="text.secondary" sx={{ flexGrow: 1 }}>
-          {isNew ? 'New gallery' : `Gallery`}
+        <Typography variant="caption" color={isUnsaved ? 'warning.main' : 'text.secondary'} sx={{ flexGrow: 1 }}>
+          {isNew ? 'New gallery (unsaved)' : draft.dirty ? 'Gallery (unsaved changes)' : 'Gallery'}
         </Typography>
         {canSave && (
           <Tooltip title={isNew ? 'Add gallery' : 'Save changes'}>
@@ -219,7 +231,7 @@ function GalleryRow({ draft, photographers, onCreatePhotographer, onChange, onSa
   );
 }
 
-export default function PhotoGalleryManager({ editionId, onNotify }: PhotoGalleryManagerProps) {
+const PhotoGalleryManager = forwardRef<PhotoGalleryManagerHandle, PhotoGalleryManagerProps>(function PhotoGalleryManager({ editionId, onNotify }, ref) {
   const { galleries, loading, createPhotoGallery, updatePhotoGallery, deletePhotoGallery, refresh } = usePhotoGalleries(editionId);
   const { photographers, createPhotographer } = usePhotographers();
 
@@ -286,10 +298,16 @@ export default function PhotoGalleryManager({ editionId, onNotify }: PhotoGaller
   const handleCancelNewRow = (key: string) =>
     setDrafts(prev => prev.filter(d => d.key !== key));
 
-  const handleSaveRow = async (key: string) => {
+  // Shared by the per-row Save button (handleSaveRow) and the dialog-level flush (flushPending,
+  // exposed via the ref) so the two paths can never diverge in payload shape — see #549.
+  const persistDraft = async (
+    key: string,
+    effectiveEditionId: string,
+    opts?: { notifyOnSuccess?: boolean },
+  ): Promise<boolean> => {
     const draft = drafts.find(d => d.key === key);
-    if (!draft || !editionId) return;
-    if (!draft.url.trim()) { onNotify('URL is required', 'error'); return; }
+    if (!draft || !draft.url.trim()) return false;
+    const notifyOnSuccess = opts?.notifyOnSuccess ?? true;
     patchDraft(key, { saving: true });
     try {
       if (draft.id === null) {
@@ -297,7 +315,7 @@ export default function PhotoGalleryManager({ editionId, onNotify }: PhotoGaller
         // reordered while this draft was still being filled in.
         const sortOrder = nextSortOrder(drafts);
         const { id } = await createPhotoGallery({
-          eventEditionId: editionId,
+          eventEditionId: effectiveEditionId,
           url: draft.url.trim(),
           photographerId: draft.photographer?.id ?? null,
           title: trimToUndefined(draft.title) ?? null,
@@ -305,7 +323,7 @@ export default function PhotoGalleryManager({ editionId, onNotify }: PhotoGaller
           sortOrder,
         });
         patchDraft(key, { id, saving: false, dirty: false });
-        onNotify('Gallery added', 'success');
+        if (notifyOnSuccess) onNotify('Gallery added', 'success');
       } else {
         await updatePhotoGallery({
           id: draft.id,
@@ -316,12 +334,21 @@ export default function PhotoGalleryManager({ editionId, onNotify }: PhotoGaller
           sortOrder: draft.sortOrder,
         });
         patchDraft(key, { saving: false, dirty: false });
-        onNotify('Gallery saved', 'success');
+        if (notifyOnSuccess) onNotify('Gallery saved', 'success');
       }
+      return true;
     } catch (err) {
       patchDraft(key, { saving: false });
       onNotify(err instanceof Error ? err.message : 'Failed to save gallery', 'error');
+      return false;
     }
+  };
+
+  const handleSaveRow = async (key: string) => {
+    const draft = drafts.find(d => d.key === key);
+    if (!draft || !editionId) return;
+    if (!draft.url.trim()) { onNotify('URL is required', 'error'); return; }
+    await persistDraft(key, editionId);
   };
 
   const handleDeleteRow = async (key: string) => {
@@ -367,6 +394,29 @@ export default function PhotoGalleryManager({ editionId, onNotify }: PhotoGaller
       onNotify('Failed to reorder galleries', 'error');
     }
   };
+
+  // A row "needs flushing" under the same gate GalleryRow uses to show its own Save button
+  // (canSave/isUnsaved) — a non-empty URL that's either brand new or edited since its last save.
+  const hasPendingChanges = () =>
+    drafts.some(d => d.url.trim() !== '' && (d.id === null || d.dirty));
+
+  // Called by EditionDialogInner's own Save button, with the edition id it just created/already
+  // has — never the editionId prop directly, since for a brand-new edition that prop is still
+  // null at the point the dialog's create-edition call resolves. Sequential rather than
+  // Promise.all: a new row's sortOrder is computed from current `drafts` at persist time
+  // (see persistDraft/nextSortOrder), so two new rows persisting concurrently could both read
+  // the same "next" value and collide.
+  const flushPending = async (effectiveEditionId: string): Promise<boolean> => {
+    const pendingKeys = drafts.filter(d => d.url.trim() !== '' && (d.id === null || d.dirty)).map(d => d.key);
+    let allOk = true;
+    for (const key of pendingKeys) {
+      const ok = await persistDraft(key, effectiveEditionId, { notifyOnSuccess: false });
+      if (!ok) allOk = false;
+    }
+    return allOk;
+  };
+
+  useImperativeHandle(ref, () => ({ hasPendingChanges, flushPending }));
 
   if (!editionId) {
     return (
@@ -421,4 +471,6 @@ export default function PhotoGalleryManager({ editionId, onNotify }: PhotoGaller
       )}
     </Box>
   );
-}
+});
+
+export default PhotoGalleryManager;
