@@ -956,7 +956,14 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
             </Collapse>
 
             {/* Activity Type pills — Trail Run + Road Run always visible; other types behind feature flag */}
-            <Box display="flex" gap={0.5} mb={2} flexWrap="nowrap" overflow="auto">
+            <Box
+                display="flex"
+                gap={0.5}
+                mb={2}
+                flexWrap="nowrap"
+                overflow="auto"
+                sx={{ minWidth: 0, maxWidth: '100%', overscrollBehaviorX: 'contain' }}
+            >
                 <Chip
                     icon={<LandscapeIcon fontSize="small" />}
                     label={t('difficulty.trailRunning')}
@@ -1098,6 +1105,9 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                             overflowX: 'auto',
                             pb: 1,
                             scrollSnapType: 'x mandatory',
+                            minWidth: 0,
+                            maxWidth: '100%',
+                            overscrollBehaviorX: 'contain',
                             '&::-webkit-scrollbar': { display: 'none' },
                             msOverflowStyle: 'none',
                             scrollbarWidth: 'none',

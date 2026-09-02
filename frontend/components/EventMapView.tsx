@@ -133,7 +133,7 @@ const EventMapView: React.FC<EventMapViewProps> = ({ events }) => {
     ), [eventsWithCoords, t]);
 
     return (
-        <Box sx={{ height: 500, borderRadius: 2, overflow: 'hidden', position: 'relative' }}>
+        <Box sx={{ height: 500, width: '100%', maxWidth: '100%', borderRadius: 2, overflow: 'hidden', position: 'relative' }}>
             <Paper
                 elevation={3}
                 sx={{

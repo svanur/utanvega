@@ -751,6 +751,8 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 borderRadius: 2,
                                 overflow: 'hidden',
                                 height: 220,
+                                width: '100%',
+                                maxWidth: '100%',
                                 border: '1px solid',
                                 borderColor: 'divider',
                                 position: 'relative',
