@@ -1280,6 +1280,7 @@
         "photoGallery": "Photos from {{domain}}",
         "photos": "Photos",
         "photoBy": "Photo: {{name}}",
+        "photoByPrefix": "Photo:",
         "galleryCount_one": "{{count}} gallery",
         "galleryCount_other": "{{count}} galleries",
         "galleryCount": "{{count}} galleries",
@@ -1828,5 +1829,11 @@
         "events": "Events",
         "noEvents": "No events found",
         "notFound": "Organizer not found"
+    },
+    "photographerPage": {
+        "website": "Photographer website",
+        "galleries": "Galleries",
+        "noGalleries": "No galleries found",
+        "notFound": "Photographer not found"
     }
 }

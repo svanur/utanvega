@@ -1280,6 +1280,7 @@
         "photoGallery": "Myndir frá {{domain}}",
         "photos": "Myndir",
         "photoBy": "Mynd: {{name}}",
+        "photoByPrefix": "Mynd:",
         "galleryCount_one": "{{count}} myndasafn",
         "galleryCount_other": "{{count}} myndasöfn",
         "galleryCount": "{{count}} myndasöfn",
@@ -1828,5 +1829,11 @@
         "events": "Viðburðir",
         "noEvents": "Engir viðburðir fundust",
         "notFound": "Skipuleggjandi fannst ekki"
+    },
+    "photographerPage": {
+        "website": "Vefur ljósmyndara",
+        "galleries": "Myndasöfn",
+        "noGalleries": "Engin myndasöfn fundust",
+        "notFound": "Ljósmyndari fannst ekki"
     }
 }
