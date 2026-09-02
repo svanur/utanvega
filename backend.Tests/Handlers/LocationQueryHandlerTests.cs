@@ -267,6 +267,41 @@ public class LocationQueryHandlerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetLocationBySlug_TrailsReturnActualCreatedAt_NotClrDefault()
+    {
+        var location = CreateLocation("Vik", LocationType.Place);
+        var trail = CreatePublishedTrail("Trail With Date");
+        trail.CreatedAt = new DateTime(2025, 3, 10, 0, 0, 0, DateTimeKind.Utc);
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Locations.Add(location);
+            ctx.Trails.Add(trail);
+            await ctx.SaveChangesAsync();
+
+            ctx.TrailLocations.Add(new TrailLocation
+            {
+                TrailId = trail.Id,
+                LocationId = location.Id,
+                Role = TrailLocationRole.BelongsTo
+            });
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new GetLocationBySlugQueryHandler(ctx);
+            var result = await handler.Handle(
+                new GetLocationBySlugQuery("vik"), CancellationToken.None);
+
+            Assert.NotNull(result);
+            var trailDto = Assert.Single(result.Trails);
+            Assert.Equal(trail.CreatedAt, trailDto.CreatedAt);
+            Assert.NotEqual(default, trailDto.CreatedAt);
+        }
+    }
+
+    [Fact]
     public async Task GetLocationBySlug_ReturnsNullForMissing()
     {
         using var ctx = _factory.CreateContext();

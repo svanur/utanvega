@@ -111,6 +111,7 @@ public class GetLocationBySlugQueryHandler : IRequestHandler<GetLocationBySlugQu
                 t.Type,
                 t.Difficulty,
                 t.YoutubeUrl,
+                t.CreatedAt,
                 HasGpx = t.GpxData != null,
                 Locations = t.TrailLocations
                     .OrderBy(tl => tl.Order)
@@ -149,7 +150,8 @@ public class GetLocationBySlugQueryHandler : IRequestHandler<GetLocationBySlugQu
             startCoords.TryGetValue(t.Id, out var ls2) ? ls2?.StartPoint.X : null,
             t.Locations,
             t.Tags,
-            YoutubeUrl: t.YoutubeUrl
+            YoutubeUrl: t.YoutubeUrl,
+            CreatedAt: t.CreatedAt
         )).ToList();
 
         return new LocationWithTrailsDto(locationDto, childDtos, trailDtos);

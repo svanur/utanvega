@@ -99,6 +99,7 @@ public class GetTrailBySlugQueryHandler : IRequestHandler<GetTrailBySlugQuery, T
             LinkedRaces: linkedRaceDtos.Count > 0 ? linkedRaceDtos : null,
             YoutubeUrl: trail.YoutubeUrl,
             ElevationProfile: trail.ElevationProfile,
+            CreatedAt: trail.CreatedAt,
             TerrainType: trail.TerrainType?.ToString(),
             NameEn: trail.NameEn,
             DescriptionEn: trail.DescriptionEn,
