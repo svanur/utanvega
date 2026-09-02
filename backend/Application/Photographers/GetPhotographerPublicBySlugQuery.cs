@@ -31,6 +31,7 @@ public class GetPhotographerPublicBySlugQueryHandler : IRequestHandler<GetPhotog
         var galleries = await _context.PhotoGalleries
             .AsNoTracking()
             .Where(g => g.PhotographerId == photographer.Id
+                && g.EventEdition.Status != EditionStatus.Hidden
                 && g.EventEdition.Event.Status != EventStatus.Hidden
                 && g.EventEdition.Event.Status != EventStatus.Unlisted)
             .Select(g => new PhotographerGalleryEntryDto(

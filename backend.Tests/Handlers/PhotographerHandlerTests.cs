@@ -373,7 +373,8 @@ public class PhotographerHandlerTests : IDisposable
     // ─── GetPhotographerPublicBySlugQuery ───
 
     private async Task<(Guid PhotographerId, Guid EventId, Guid EditionId)> SeedGalleryFixture(
-        Guid photographerId, string eventSlug, EventStatus eventStatus, int? editionYear, DateOnly? editionDate, string galleryUrl)
+        Guid photographerId, string eventSlug, EventStatus eventStatus, int? editionYear, DateOnly? editionDate, string galleryUrl,
+        EditionStatus editionStatus = EditionStatus.Active)
     {
         using var ctx = _factory.CreateContext();
         var ev = new Event
@@ -389,6 +390,7 @@ public class PhotographerHandlerTests : IDisposable
             EventId = ev.Id,
             Year = editionYear,
             Date = editionDate,
+            Status = editionStatus,
             RegistrationStatus = RegistrationStatus.NotRequired,
         };
         ctx.EventEditions.Add(edition);
@@ -484,6 +486,32 @@ public class PhotographerHandlerTests : IDisposable
 
         var gallery = Assert.Single(result!.Galleries);
         Assert.Equal("https://photos.example.com/visible", gallery.GalleryUrl);
+    }
+
+    [Fact]
+    public async Task GetPhotographerPublicBySlug_Excludes_IndividuallyHiddenEdition()
+    {
+        // An admin can hide a single edition while its parent event stays public (e.g. one
+        // cancelled/retired year of an otherwise ongoing race) — the edition-level filter must
+        // catch that case even though Event.Status alone would let it through.
+        Guid photographerId;
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new CreatePhotographerCommandHandler(ctx);
+            (photographerId, _) = await handler.Handle(new CreatePhotographerCommand(
+                Name: "Edition Filtered Photographer", Website: null, Email: null, Description: null
+            ), CancellationToken.None);
+        }
+
+        await SeedGalleryFixture(photographerId, "visible-edition-event", EventStatus.Confirmed, 2025, new DateOnly(2025, 6, 1), "https://photos.example.com/visible-edition");
+        await SeedGalleryFixture(photographerId, "hidden-edition-event", EventStatus.Confirmed, 2024, new DateOnly(2024, 6, 1), "https://photos.example.com/hidden-edition", EditionStatus.Hidden);
+
+        using var ctx2 = _factory.CreateContext();
+        var handler2 = new GetPhotographerPublicBySlugQueryHandler(ctx2);
+        var result = await handler2.Handle(new GetPhotographerPublicBySlugQuery("edition-filtered-photographer"), CancellationToken.None);
+
+        var gallery = Assert.Single(result!.Galleries);
+        Assert.Equal("https://photos.example.com/visible-edition", gallery.GalleryUrl);
     }
 
     [Fact]
