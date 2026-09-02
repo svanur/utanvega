@@ -43,6 +43,14 @@ public class UpdateTrailGpxCommandHandler : IRequestHandler<UpdateTrailGpxComman
         trail.ElevationProfile = result.ElevationProfile;
         trail.Type = result.DetectedType;
         trail.Difficulty = result.Difficulty;
+
+        // Decision: TerrainType is deliberately left untouched on a GPX replace, not recomputed.
+        // Unlike Type/Difficulty (auto-detected every time), TerrainType may have been set by an
+        // admin's manual "Auto suggest" click or by the detect-terrain-types backfill, and a GPX
+        // replace (e.g. a corrected track) should not silently discard that. If this ever needs
+        // to recompute, it must only fill in TerrainType when it was null — never overwrite an
+        // existing value — to match the "never silently overwrite a manual value" rule that
+        // applies to create as well.
         trail.UpdatedAt = DateTime.UtcNow;
         trail.UpdatedBy = request.ActorUserId;
 
