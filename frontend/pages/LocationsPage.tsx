@@ -27,7 +27,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
 import SortIcon from '@mui/icons-material/Sort';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
-import MapIcon from '@mui/icons-material/Map';
+import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
 import ViewListIcon from '@mui/icons-material/ViewList';
 import { MapContainer, TileLayer, Marker, Tooltip as LeafletTooltip, useMap, LayersControl } from 'react-leaflet';
 import MarkerClusterGroup from '@changey/react-leaflet-markercluster';
@@ -353,7 +353,7 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                         exclusive
                         onChange={(_, v) => v && setShowMap(v === 'map')}
                     >
-                        <ToggleButton value="map"><Tooltip title={t('locations.showMap')}><MapIcon sx={{ fontSize: 18 }} /></Tooltip></ToggleButton>
+                        <ToggleButton value="map"><Tooltip title={t('locations.showMap')}><PlaceOutlinedIcon sx={{ fontSize: 18 }} /></Tooltip></ToggleButton>
                         <ToggleButton value="list"><Tooltip title={t('locations.hideMap')}><ViewListIcon sx={{ fontSize: 18 }} /></Tooltip></ToggleButton>
                     </ToggleButtonGroup>
                 </Stack>

@@ -37,7 +37,7 @@ import FilterIcon from '@mui/icons-material/FilterList';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CheckIcon from '@mui/icons-material/Check';
 import ListIcon from '@mui/icons-material/List';
-import MapIcon from '@mui/icons-material/Map';
+import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
@@ -1246,7 +1246,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                         </Tooltip>
                         <Tooltip title={t('home.mapView')}>
                             <ToggleButton value="map" aria-label={t('home.mapView')}>
-                                <MapIcon fontSize="small" />
+                                <PlaceOutlinedIcon fontSize="small" />
                             </ToggleButton>
                         </Tooltip>
                         <Tooltip title={t('home.tableView')}>

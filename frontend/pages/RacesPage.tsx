@@ -52,7 +52,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import HistoryIcon from '@mui/icons-material/History';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import ListIcon from '@mui/icons-material/List';
-import MapIcon from '@mui/icons-material/Map';
+import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import FilterListIcon from '@mui/icons-material/FilterList';
@@ -978,7 +978,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                             </Tooltip>
                             <Tooltip title={t('home.mapView')}>
                                 <ToggleButton value="map" aria-label={t('home.mapView')}>
-                                    <MapIcon fontSize="small" />
+                                    <PlaceOutlinedIcon fontSize="small" />
                                 </ToggleButton>
                             </Tooltip>
                             <Tooltip title={t('home.tableView')}>
