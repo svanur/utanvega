@@ -125,8 +125,10 @@ Work moves through a three-agent pipeline defined in `.claude/agents/`. One issu
                                          mobile first)
 ```
 
-- **scrum-master** — read-only. Picks the lowest-numbered open issue labelled `agent-ready` whose
-  blockers are all closed, refuses vague ones, emits a work order.
+- **scrum-master** — read-only while selecting. Picks the lowest-numbered open issue labelled
+  `agent-ready` whose blockers are all closed, refuses vague ones, emits a work order. At the end of a
+  cycle it also files the PR's durable "spotted but not fixed" leftovers as **unlabelled** issues, so
+  they are tracked rather than left in a PR body.
 - **programmer** — implements the work order, runs the checks, commits, pushes a feature branch, opens the PR, and applies review fixes.
 - **tester** — reviews the PR **cold** (PR number only, never the Programmer's reasoning), posts the review as a PR comment. Cannot edit code.
 
