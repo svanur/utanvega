@@ -4,9 +4,11 @@ using Utanvega.Backend.Application.Trails.Commands.CreateTrailFromGpx;
 
 namespace Utanvega.Backend.Application.Trails.Commands.CheckTrailSimilarity;
 
-public record CheckTrailSimilarityCommand(string? Name, string GpxXml) : IRequest<List<TrailSimilarityMatch>>;
+public record CheckTrailSimilarityResult(List<TrailSimilarityMatch> Matches, ActivityType? DetectedActivityType);
 
-public class CheckTrailSimilarityCommandHandler : IRequestHandler<CheckTrailSimilarityCommand, List<TrailSimilarityMatch>>
+public record CheckTrailSimilarityCommand(string? Name, string GpxXml) : IRequest<CheckTrailSimilarityResult>;
+
+public class CheckTrailSimilarityCommandHandler : IRequestHandler<CheckTrailSimilarityCommand, CheckTrailSimilarityResult>
 {
     private readonly CreateTrailFromGpxCommandHandler _createHandler;
 
@@ -15,9 +17,10 @@ public class CheckTrailSimilarityCommandHandler : IRequestHandler<CheckTrailSimi
         _createHandler = createHandler;
     }
 
-    public async Task<List<TrailSimilarityMatch>> Handle(CheckTrailSimilarityCommand request, CancellationToken cancellationToken)
+    public async Task<CheckTrailSimilarityResult> Handle(CheckTrailSimilarityCommand request, CancellationToken cancellationToken)
     {
-        var trail = _createHandler.ProcessGpx(request.Name, request.GpxXml);
-        return await _createHandler.CheckSimilarityAsync(trail, cancellationToken);
+        var (trail, detectedActivityType) = _createHandler.ProcessGpxWithDetection(request.Name, request.GpxXml);
+        var matches = await _createHandler.CheckSimilarityAsync(trail, cancellationToken);
+        return new CheckTrailSimilarityResult(matches, detectedActivityType);
     }
 }

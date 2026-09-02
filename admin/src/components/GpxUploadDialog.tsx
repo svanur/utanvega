@@ -34,7 +34,7 @@ const ACTIVITY_TYPES = [
 
 export default function GpxUploadDialog({ open, onClose, onUploadSuccess }: { open: boolean, onClose: () => void, onUploadSuccess: (trail?: { id: string, slug: string, name: string }, detectedLocations?: DetectedLocation[]) => void }) {
     const [name, setName] = useState('');
-    const [activityType, setActivityType] = useState('TrailRunning');
+    const [activityType, setActivityType] = useState('');
     const [file, setFile] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
     const [checking, setChecking] = useState(false);
@@ -45,6 +45,7 @@ export default function GpxUploadDialog({ open, onClose, onUploadSuccess }: { op
         const selectedFile = e.target.files?.[0] || null;
         setFile(selectedFile);
         setMatches([]); // Reset matches on new file
+        setActivityType(''); // Reset prefill — the new file's own <type> (if any) will set it below
         setError(null);
         
         if (selectedFile) {
@@ -108,7 +109,10 @@ export default function GpxUploadDialog({ open, onClose, onUploadSuccess }: { op
             }
 
             const result = await response.json();
-            setMatches(result || []);
+            setMatches(result.matches || []);
+            if (result.detectedActivityType) {
+                setActivityType(result.detectedActivityType);
+            }
         } catch (err) {
             console.error('[ERROR] Similarity check exception:', err);
         } finally {
@@ -119,6 +123,10 @@ export default function GpxUploadDialog({ open, onClose, onUploadSuccess }: { op
     const handleUpload = async () => {
         if (!name || !file) {
             setError('Please provide a name and a GPX file.');
+            return;
+        }
+        if (!activityType) {
+            setError('Please choose an activity type.');
             return;
         }
 
@@ -165,7 +173,7 @@ export default function GpxUploadDialog({ open, onClose, onUploadSuccess }: { op
 
     const handleClose = () => {
         setName('');
-        setActivityType('TrailRunning');
+        setActivityType('');
         setFile(null);
         setMatches([]);
         setError(null);
@@ -226,17 +234,23 @@ export default function GpxUploadDialog({ open, onClose, onUploadSuccess }: { op
                         onChange={(e) => setName(e.target.value)}
                         required
                     />
-                    <FormControl fullWidth>
+                    <FormControl fullWidth required error={!activityType}>
                         <InputLabel>Activity Type</InputLabel>
                         <Select
                             value={activityType}
                             label="Activity Type"
+                            displayEmpty
                             onChange={(e) => setActivityType(e.target.value)}
                         >
                             {ACTIVITY_TYPES.map(at => (
                                 <MenuItem key={at.value} value={at.value}>{at.label}</MenuItem>
                             ))}
                         </Select>
+                        {file && !checking && !activityType && (
+                            <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>
+                                No activity type was detected in the GPX file — please choose one.
+                            </Typography>
+                        )}
                     </FormControl>
                     <Button
                         variant="outlined"
@@ -265,7 +279,7 @@ export default function GpxUploadDialog({ open, onClose, onUploadSuccess }: { op
                 <Button 
                     onClick={handleUpload} 
                     variant="contained" 
-                    disabled={uploading || checking || !name || !file}
+                    disabled={uploading || checking || !name || !file || !activityType}
                     startIcon={uploading ? <CircularProgress size={20} /> : null}
                     color={matches.length > 0 ? "warning" : "primary"}
                 >

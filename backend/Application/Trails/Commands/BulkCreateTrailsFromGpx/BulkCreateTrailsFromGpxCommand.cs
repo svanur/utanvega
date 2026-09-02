@@ -10,7 +10,7 @@ using Utanvega.Backend.Application.Trails.Commands.CreateTrailFromGpx;
 
 namespace Utanvega.Backend.Application.Trails.Commands.BulkCreateTrailsFromGpx;
 
-public record GpxFileInfo(string? Name, string GpxXml);
+public record GpxFileInfo(string? Name, string GpxXml, ActivityType ActivityType);
 
 public record BulkCreateTrailsFromGpxCommand(List<GpxFileInfo> Files, string? ActorUserId = null) : IRequest<List<Guid>>;
 
@@ -40,7 +40,7 @@ public class BulkCreateTrailsFromGpxCommandHandler : IRequestHandler<BulkCreateT
         {
             try
             {
-                var trail = _singleHandler.ProcessGpx(file.Name, file.GpxXml);
+                var trail = _singleHandler.ProcessGpx(file.Name, file.GpxXml, file.ActivityType);
                 
                 // Check if slug already exists in DB or in this batch
                 var existing = await _context.Trails.AnyAsync(t => t.Slug == trail.Slug, cancellationToken);

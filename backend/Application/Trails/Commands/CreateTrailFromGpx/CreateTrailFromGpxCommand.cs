@@ -14,7 +14,7 @@ public record TrailSimilarityMatch(Guid TrailId, string TrailName, double MatchP
 
 public record DetectedLocationResult(Guid Id, string Name, string Type, string Role, double DistanceMeters);
 
-public record CreateTrailFromGpxCommand(string? Name, string GpxXml, ActivityType ActivityType = ActivityType.TrailRunning, string? ActorUserId = null) : IRequest<CreateTrailFromGpxResult>;
+public record CreateTrailFromGpxCommand(string? Name, string GpxXml, ActivityType ActivityType, string? ActorUserId = null) : IRequest<CreateTrailFromGpxResult>;
 
 public class CreateTrailFromGpxCommandHandler : IRequestHandler<CreateTrailFromGpxCommand, CreateTrailFromGpxResult>
 {
@@ -98,9 +98,22 @@ public class CreateTrailFromGpxCommandHandler : IRequestHandler<CreateTrailFromG
         return matches;
     }
 
-    public Trail ProcessGpx(string? name, string gpxXml, ActivityType activityType = ActivityType.TrailRunning)
+    public Trail ProcessGpx(string? name, string gpxXml, ActivityType activityType) =>
+        ProcessGpx(name, gpxXml, (ActivityType?)activityType, out _);
+
+    // Used by the similarity-check paths, which don't persist the resulting Trail and so
+    // don't need a real ActivityType — but do need the type detected from the GPX <type>
+    // element, to surface it back to the frontend for prefill before the actual create call.
+    public (Trail Trail, ActivityType? DetectedActivityType) ProcessGpxWithDetection(string? name, string gpxXml)
+    {
+        var trail = ProcessGpx(name, gpxXml, null, out var detectedActivityType);
+        return (trail, detectedActivityType);
+    }
+
+    private Trail ProcessGpx(string? name, string gpxXml, ActivityType? activityType, out ActivityType? detectedActivityType)
     {
         var result = GpxProcessor.Process(gpxXml, name);
+        detectedActivityType = result.DetectedActivityType;
         var finalName = name ?? result.ExtractedName ?? "Unnamed Trail";
         var slug = SlugGenerator.Generate(finalName);
 
@@ -115,7 +128,7 @@ public class CreateTrailFromGpxCommandHandler : IRequestHandler<CreateTrailFromG
             ElevationProfile = result.ElevationProfile,
             Type = result.DetectedType,
             Difficulty = result.Difficulty,
-            ActivityTypeId = activityType,
+            ActivityTypeId = activityType ?? result.DetectedActivityType ?? ActivityType.TrailRunning,
             Status = TrailStatus.Draft,
             CreatedAt = DateTime.UtcNow
         };
