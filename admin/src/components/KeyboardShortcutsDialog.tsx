@@ -40,7 +40,7 @@ const shortcutGroups: ShortcutGroup[] = [
             { keys: ['g', 'm'], description: 'Trail Map' },
             { keys: ['g', 'a'], description: 'Analytics' },
             { keys: ['g', 'n'], description: 'Sponsors' },
-            { keys: ['g', 'p'], description: 'Pools' },
+            { keys: ['g', 'p'], description: 'Photographers' },
             { keys: ['j'], description: 'Next row (list pages, and editions/races on event detail page)' },
             { keys: ['k'], description: 'Previous row (list pages, and editions/races on event detail page)' },
             { keys: ['Enter / o'], description: 'Open focused row (list pages, and editions/races on event detail page)' },
