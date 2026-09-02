@@ -1279,6 +1279,10 @@
         "results": "Results",
         "photoGallery": "Photos from {{domain}}",
         "photos": "Photos",
+        "photoBy": "Photo: {{name}}",
+        "galleryCount_one": "{{count}} gallery",
+        "galleryCount_other": "{{count}} galleries",
+        "galleryCount": "{{count}} galleries",
         "organizerSite": "Website",
         "directionsToEvent": "Directions to event",
         "addToCalendar": "Add to Calendar",
@@ -1453,6 +1457,7 @@
             "showCancelled": "Show cancelled",
             "noResults": "No past events found.",
             "resultsLink": "Results",
+            "galleryColumn": "Photo gallery",
             "searchingAllYears": "all years"
         },
         "table": {
