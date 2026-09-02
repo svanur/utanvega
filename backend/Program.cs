@@ -1793,8 +1793,30 @@ app.MapGet("/api/v1/admin/organizers", [Authorize(Policy = "AdminOnly")] async (
 
 app.MapPost("/api/v1/admin/organizers", [Authorize(Policy = "AdminOnly")] async (CreateOrganizerCommand command, IMediator mediator) =>
 {
-    var (id, slug) = await mediator.Send(command);
-    return Results.Created($"/api/v1/organizers/{slug}", new { id, slug });
+    try
+    {
+        var (id, slug) = await mediator.Send(command);
+        return Results.Created($"/api/v1/organizers/{slug}", new { id, slug });
+    }
+    catch (DbUpdateException ex) when (ex.InnerException is PostgresException pg)
+    {
+        Log.Error(ex, "Database error creating organizer. SqlState={SqlState} Detail={Detail}", pg.SqlState, pg.Detail);
+
+        // Handle unique constraint violation (SQL state 23505) — e.g. two organizer names
+        // that normalize to the same slug ("Jón Jónsson" vs "Jon Jonsson").
+        if (pg.SqlState == "23505" && pg.MessageText.Contains("IX_Organizers_Slug"))
+        {
+            return Results.Conflict(new
+            {
+                message = "An organizer with a matching name/slug already exists. Please choose a different name."
+            });
+        }
+
+        return Results.Problem(
+            title: "Failed to create organizer",
+            detail: "A database error occurred while saving the organizer.",
+            statusCode: StatusCodes.Status500InternalServerError);
+    }
 })
 .WithName("CreateOrganizer");
 
@@ -1838,8 +1860,30 @@ app.MapGet("/api/v1/admin/photographers/{slug}", [Authorize(Policy = "AdminOnly"
 
 app.MapPost("/api/v1/admin/photographers", [Authorize(Policy = "AdminOnly")] async (CreatePhotographerCommand command, IMediator mediator) =>
 {
-    var (id, slug) = await mediator.Send(command);
-    return Results.Created($"/api/v1/admin/photographers/{slug}", new { id, slug });
+    try
+    {
+        var (id, slug) = await mediator.Send(command);
+        return Results.Created($"/api/v1/admin/photographers/{slug}", new { id, slug });
+    }
+    catch (DbUpdateException ex) when (ex.InnerException is PostgresException pg)
+    {
+        Log.Error(ex, "Database error creating photographer. SqlState={SqlState} Detail={Detail}", pg.SqlState, pg.Detail);
+
+        // Handle unique constraint violation (SQL state 23505) — e.g. two photographer names
+        // that normalize to the same slug ("Jón Jónsson" vs "Jon Jonsson").
+        if (pg.SqlState == "23505" && pg.MessageText.Contains("IX_Photographers_Slug"))
+        {
+            return Results.Conflict(new
+            {
+                message = "A photographer with a matching name/slug already exists. Please choose a different name."
+            });
+        }
+
+        return Results.Problem(
+            title: "Failed to create photographer",
+            detail: "A database error occurred while saving the photographer.",
+            statusCode: StatusCodes.Status500InternalServerError);
+    }
 })
 .WithName("CreatePhotographer");
 
