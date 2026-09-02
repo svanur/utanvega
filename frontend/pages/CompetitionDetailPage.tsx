@@ -66,6 +66,7 @@ import Layout from '../components/Layout';
 import RunningLoader from '../components/RunningLoader';
 import LostRunner from '../components/LostRunner';
 import WeatherCard from '../components/WeatherCard';
+import GalleryLinks from '../components/GalleryLinks';
 import { useEvents, useEventBySlug } from '../hooks/useEvents';
 import type { EventEditionDto, RaceDto, ScheduleRule } from '../hooks/useEvents';
 import { useFavoriteEvents } from '../hooks/useFavoriteEvents';
@@ -272,17 +273,7 @@ function EditionMeta({
                             {t('races.results', { defaultValue: 'Results' })}
                         </Button>
                     )}
-                    {edition.photoGalleryUrl && (
-                        <Button
-                            variant="outlined"
-                            size="small"
-                            endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
-                            onClick={() => window.open(edition.photoGalleryUrl!, '_blank', 'noopener')}
-                            sx={{ textTransform: 'none' }}
-                        >
-                            📷 {t('races.photoGallery', { domain: new URL(edition.photoGalleryUrl!).hostname.replace(/^www\./, ''), defaultValue: 'Photos' })}
-                        </Button>
-                    )}
+                    <GalleryLinks galleries={edition.galleries} />
                 </Stack>
             )}
         </Box>
@@ -852,17 +843,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                     {isPostRace ? `🏁 ${t('races.results', { defaultValue: 'Results' })}` : t('races.results', { defaultValue: 'Results' })}
                                 </Button>
                             )}
-                            {primaryEdition?.photoGalleryUrl && (
-                                <Button
-                                    variant="outlined"
-                                    size="small"
-                                    endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
-                                    onClick={() => window.open(primaryEdition.photoGalleryUrl!, '_blank', 'noopener')}
-                                    sx={{ textTransform: 'none' }}
-                                >
-                                    📷 {t('races.photoGallery', { domain: new URL(primaryEdition.photoGalleryUrl!).hostname.replace(/^www\./, ''), defaultValue: 'Photos' })}
-                                </Button>
-                            )}
+                            <GalleryLinks galleries={primaryEdition?.galleries ?? []} />
                             {event.youtubeUrl && (
                                 <Button
                                     variant="outlined"
@@ -1177,17 +1158,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                                     }}
                                                 />
                                             )}
-                                            {edition.photoGalleryUrl && (
-                                                <Chip
-                                                    label={`📷 ${t('races.photoGallery', { domain: new URL(edition.photoGalleryUrl!).hostname.replace(/^www\./, ''), defaultValue: 'Photos' })}`}
-                                                    size="small"
-                                                    variant="outlined"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        window.open(edition.photoGalleryUrl!, '_blank', 'noopener');
-                                                    }}
-                                                />
-                                            )}
+                                            <GalleryLinks galleries={edition.galleries} variant="chip" stopPropagation />
                                         </Stack>
                                     </Paper>
                                 );

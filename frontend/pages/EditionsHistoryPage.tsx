@@ -14,6 +14,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
 import HistoryIcon from '@mui/icons-material/History';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import ListIcon from '@mui/icons-material/List';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
@@ -22,6 +23,7 @@ import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import Layout from '../components/Layout';
 import RunningLoader from '../components/RunningLoader';
+import GalleryCompact from '../components/GalleryCompact';
 import { useEditionsHistory, useEditionsHistoryAllYears, useEditionsHistoryYears } from '../hooks/useEvents';
 import { ActivityIcons } from '../utils/activityIcon';
 import { groupDistances } from '../utils/ticketStatus';
@@ -277,19 +279,24 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                                                 </Stack>
                                             )}
 
-                                            {row.resultsUrl && (
-                                                <Button
-                                                    size="small"
-                                                    variant="outlined"
-                                                    href={row.resultsUrl}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
-                                                    onClick={e => e.stopPropagation()}
-                                                    sx={{ mt: 0.75, textTransform: 'none', fontSize: '0.8rem' }}
-                                                >
-                                                    {t('races.editionsHistory.resultsLink', 'Results')}
-                                                </Button>
+                                            {(row.resultsUrl || row.galleries.length > 0) && (
+                                                <Stack direction="row" flexWrap="wrap" gap={1} sx={{ mt: 0.75 }} alignItems="flex-start">
+                                                    {row.resultsUrl && (
+                                                        <Button
+                                                            size="small"
+                                                            variant="outlined"
+                                                            href={row.resultsUrl}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
+                                                            onClick={e => e.stopPropagation()}
+                                                            sx={{ textTransform: 'none', fontSize: '0.8rem' }}
+                                                        >
+                                                            {t('races.editionsHistory.resultsLink', 'Results')}
+                                                        </Button>
+                                                    )}
+                                                    <GalleryCompact galleries={row.galleries} variant="button" />
+                                                </Stack>
                                             )}
                                         </CardContent>
                                     </CardActionArea>
@@ -319,6 +326,11 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                                         </TableSortLabel>
                                     </TableCell>
                                     <TableCell align="center">{t('races.editionsHistory.resultsLink', 'Results')}</TableCell>
+                                    <TableCell align="center" sx={{ width: 48, p: 0.5 }}>
+                                        <Tooltip title={t('races.editionsHistory.galleryColumn', 'Photo gallery')}>
+                                            <PhotoCameraIcon fontSize="small" sx={{ color: 'text.secondary', verticalAlign: 'middle' }} />
+                                        </Tooltip>
+                                    </TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
@@ -373,6 +385,9 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                                                 ) : (
                                                     <Typography variant="body2" color="text.secondary">—</Typography>
                                                 )}
+                                            </TableCell>
+                                            <TableCell align="center" sx={{ p: 0.5 }} onClick={e => e.stopPropagation()}>
+                                                <GalleryCompact galleries={row.galleries} variant="icon" />
                                             </TableCell>
                                         </TableRow>
                                     );

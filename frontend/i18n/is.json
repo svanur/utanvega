@@ -1279,6 +1279,10 @@
         "results": "Úrslit",
         "photoGallery": "Myndir frá {{domain}}",
         "photos": "Myndir",
+        "photoBy": "Mynd: {{name}}",
+        "galleryCount_one": "{{count}} myndasafn",
+        "galleryCount_other": "{{count}} myndasöfn",
+        "galleryCount": "{{count}} myndasöfn",
         "organizerSite": "Vefur",
         "directionsToEvent": "Leiðsögn að upphafsstað",
         "addToCalendar": "Setja í dagatal",
@@ -1453,6 +1457,7 @@
             "showCancelled": "Sýna aflýst",
             "noResults": "Engir fyrri viðburðir fundust.",
             "resultsLink": "Úrslit",
+            "galleryColumn": "Myndasafn",
             "searchingAllYears": "öll ár"
         },
         "table": {

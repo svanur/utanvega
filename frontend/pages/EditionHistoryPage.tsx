@@ -31,6 +31,7 @@ import Layout from '../components/Layout';
 import RunningLoader from '../components/RunningLoader';
 import LostRunner from '../components/LostRunner';
 import { useEventBySlug } from '../hooks/useEvents';
+import GalleryLinks from '../components/GalleryLinks';
 import type { EventEditionDto, RaceDto } from '../hooks/useEvents';
 import { useLocalize } from '../utils/localize';
 import { splitMinutes } from '../utils/cutoffTime';
@@ -240,17 +241,7 @@ export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistor
                                 {t('races.results', { defaultValue: 'Results' })}
                             </Button>
                         )}
-                        {edition.photoGalleryUrl && (
-                            <Button
-                                variant="outlined"
-                                size="small"
-                                endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
-                                onClick={() => window.open(edition.photoGalleryUrl!, '_blank', 'noopener')}
-                                sx={{ textTransform: 'none' }}
-                            >
-                                📷 {t('races.photoGallery', { domain: new URL(edition.photoGalleryUrl!).hostname.replace(/^www\./, ''), defaultValue: 'Photos' })}
-                            </Button>
-                        )}
+                        <GalleryLinks galleries={edition.galleries} />
                     </Stack>
                 </Paper>
 
