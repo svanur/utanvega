@@ -17,7 +17,7 @@ interface GalleryLinksProps {
 
 // One link per gallery, ordered by sortOrder, each with a photographer attribution caption when
 // one is on record — renders nothing for an empty array so callers can drop it in unconditionally.
-// A single gallery renders as one Button/Chip, matching the pre-#491 single-photoGalleryUrl look;
+// A single gallery renders as one Button/Chip, matching the pre-#491 single-URL look;
 // 2+ galleries fan out into that many links side by side (fine here — every call site already
 // wraps its action row). EditionsHistoryPage.tsx is the one exception dense enough to need a
 // count-collapsed treatment instead; see GalleryCompact for that.

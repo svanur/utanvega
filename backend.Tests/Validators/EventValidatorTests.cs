@@ -374,22 +374,6 @@ public class EventValidatorTests : IDisposable
         result.ShouldNotHaveValidationErrorFor(x => x.EndDate);
     }
 
-    [Fact]
-    public void CreateEdition_InvalidPhotoGalleryUrl_Fails()
-    {
-        var cmd = ValidCreateEditionCommand with { PhotoGalleryUrl = "not-a-url" };
-        var result = _createEditionValidator.TestValidate(cmd);
-        result.ShouldHaveValidationErrorFor(x => x.PhotoGalleryUrl);
-    }
-
-    [Fact]
-    public void CreateEdition_ValidPhotoGalleryUrl_Passes()
-    {
-        var cmd = ValidCreateEditionCommand with { PhotoGalleryUrl = "https://sportmyndir.is/album/60" };
-        var result = _createEditionValidator.TestValidate(cmd);
-        result.ShouldNotHaveValidationErrorFor(x => x.PhotoGalleryUrl);
-    }
-
     // ─── UpdateEditionCommandValidator ───
 
     private readonly UpdateEditionCommandValidator _updateEditionValidator = new();
@@ -420,22 +404,6 @@ public class EventValidatorTests : IDisposable
         var cmd = ValidUpdateEditionCommand with { Id = Guid.Empty };
         var result = _updateEditionValidator.TestValidate(cmd);
         result.ShouldHaveValidationErrorFor(x => x.Id);
-    }
-
-    [Fact]
-    public void UpdateEdition_InvalidPhotoGalleryUrl_Fails()
-    {
-        var cmd = ValidUpdateEditionCommand with { PhotoGalleryUrl = "not-a-url" };
-        var result = _updateEditionValidator.TestValidate(cmd);
-        result.ShouldHaveValidationErrorFor(x => x.PhotoGalleryUrl);
-    }
-
-    [Fact]
-    public void UpdateEdition_ValidPhotoGalleryUrl_Passes()
-    {
-        var cmd = ValidUpdateEditionCommand with { PhotoGalleryUrl = "https://sportmyndir.is/album/60" };
-        var result = _updateEditionValidator.TestValidate(cmd);
-        result.ShouldNotHaveValidationErrorFor(x => x.PhotoGalleryUrl);
     }
 
     [Fact]

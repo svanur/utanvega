@@ -26,12 +26,6 @@ public class UpdateEditionCommandValidator : AbstractValidator<UpdateEditionComm
             .WithMessage("ResultsUrl must be a valid URL.")
             .When(x => !string.IsNullOrEmpty(x.ResultsUrl));
 
-        RuleFor(x => x.PhotoGalleryUrl)
-            .MaximumLength(500)
-            .Must(url => Uri.TryCreate(url, UriKind.Absolute, out _))
-            .WithMessage("PhotoGalleryUrl must be a valid URL.")
-            .When(x => !string.IsNullOrEmpty(x.PhotoGalleryUrl));
-
         RuleFor(x => x.RegistrationStatus)
             .NotEmpty()
             .Must(EnumValidation.IsDefined<RegistrationStatus>)

@@ -21,8 +21,7 @@ public record UpdateEditionCommand(
     string? TitleEn = null,
     string? NotesEn = null,
     Dictionary<string, string>? TranslationHashes = null,
-    string? Status = null,
-    string? PhotoGalleryUrl = null
+    string? Status = null
 ) : IRequest<bool>;
 
 public class UpdateEditionCommandHandler : IRequestHandler<UpdateEditionCommand, bool>
@@ -54,7 +53,6 @@ public class UpdateEditionCommandHandler : IRequestHandler<UpdateEditionCommand,
         edition.TitleEn = request.TitleEn;
         edition.RegistrationUrl = request.RegistrationUrl;
         edition.ResultsUrl = request.ResultsUrl;
-        edition.PhotoGalleryUrl = request.PhotoGalleryUrl;
         edition.Notes = request.Notes;
         edition.NotesEn = request.NotesEn;
         edition.RegistrationStatus = regStatus;

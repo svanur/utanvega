@@ -35,7 +35,6 @@ public class EventEdition
     public string? TitleEn { get; set; }
     public string? RegistrationUrl { get; set; }
     public string? ResultsUrl { get; set; }
-    public string? PhotoGalleryUrl { get; set; }
     public string? Notes { get; set; }
     public string? NotesEn { get; set; }
 
