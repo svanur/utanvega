@@ -61,7 +61,7 @@ export default function TrailsListPage({ onNotify, initialSearch }: { onNotify: 
 
   const yearOptions = useMemo(() => {
     const years = trails
-      .map(t => t.updatedAt?.slice(0, 4))
+      .map(t => (t.updatedAt ?? t.createdAt)?.slice(0, 4))
       .filter((y): y is string => !!y);
     return [...new Set(years)].sort((a, b) => b.localeCompare(a));
   }, [trails]);
@@ -79,8 +79,8 @@ export default function TrailsListPage({ onNotify, initialSearch }: { onNotify: 
         const matchesLocation = locationFilter === 'all'
           || (locationFilter === 'none' && (!trail.locations || trail.locations.length === 0))
           || trail.locations?.some(l => l.name === locationFilter);
-        const matchesYear = yearFilter === 'all' || (trail.updatedAt ?? '').slice(0, 4) === yearFilter;
-        const matchesMonth = monthFilter === 'all' || (trail.updatedAt ?? '').slice(5, 7) === monthFilter;
+        const matchesYear = yearFilter === 'all' || (trail.updatedAt ?? trail.createdAt ?? '').slice(0, 4) === yearFilter;
+        const matchesMonth = monthFilter === 'all' || (trail.updatedAt ?? trail.createdAt ?? '').slice(5, 7) === monthFilter;
         const matchesReview = !needsReviewOnly || trail.needsReview === true;
         return matchesSearch && matchesStatus && matchesType && matchesActivity && matchesLocation && matchesYear && matchesMonth && matchesReview;
       })
@@ -89,8 +89,10 @@ export default function TrailsListPage({ onNotify, initialSearch }: { onNotify: 
         let comparison = 0;
 
         if (orderBy === 'updatedAt') {
-          const aTime = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
-          const bTime = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+          const aDate = a.updatedAt ?? a.createdAt;
+          const bDate = b.updatedAt ?? b.createdAt;
+          const aTime = aDate ? new Date(aDate).getTime() : 0;
+          const bTime = bDate ? new Date(bDate).getTime() : 0;
           comparison = aTime - bTime;
         } else {
           const aValue = (a as unknown as Record<string, string | number>)[orderBy];
