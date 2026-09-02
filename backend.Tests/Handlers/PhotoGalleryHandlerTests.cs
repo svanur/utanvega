@@ -113,6 +113,32 @@ public class PhotoGalleryHandlerTests : IDisposable
     }
 
     [Fact]
+    public async Task Create_PhotoGallery_PersistsCreatedBy()
+    {
+        // #565 — CreatedBy was accepted by the command but never populated by the endpoint,
+        // so it was always null in practice. This asserts the handler actually persists whatever
+        // authenticated user id the endpoint injects via `command with { CreatedBy = ... }`.
+        var edition = await SeedEdition();
+        const string authenticatedUserId = "supabase-user-123";
+
+        using var ctx = _factory.CreateContext();
+        var handler = new CreatePhotoGalleryCommandHandler(ctx, _cacheInvalidator);
+
+        var id = await handler.Handle(new CreatePhotoGalleryCommand(
+            EventEditionId: edition.Id,
+            Url: "https://photos.example.com/audited",
+            PhotographerId: null,
+            Title: null,
+            CreatedBy: authenticatedUserId
+        ), CancellationToken.None);
+
+        using var verifyCtx = _factory.CreateContext();
+        var gallery = await verifyCtx.PhotoGalleries.FindAsync(id);
+        Assert.NotNull(gallery);
+        Assert.Equal(authenticatedUserId, gallery!.CreatedBy);
+    }
+
+    [Fact]
     public async Task Create_PhotoGallery_InvalidatesEventCache_WithEventSlug()
     {
         // #559 — the event page and editions history page cache the gallery list, so adding one
