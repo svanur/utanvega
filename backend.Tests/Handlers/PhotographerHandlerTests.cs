@@ -347,4 +347,195 @@ public class PhotographerHandlerTests : IDisposable
         var result = await handler.Handle(new GetPhotographerBySlugQuery("does-not-exist"), CancellationToken.None);
         Assert.Null(result);
     }
+
+    // ─── PhotographerPublicDto shape (#494) ───
+
+    [Fact]
+    public void PhotographerPublicDto_DoesNotExposeAdminOnlyFields()
+    {
+        // The public projection must withhold everything an anonymous visitor has no business
+        // seeing: Id, Email, TranslationHashes and auditing fields — mirrors OrganizerPublicDto's
+        // treatment of Organizer's admin-only fields.
+        var propertyNames = typeof(PhotographerPublicDto).GetProperties().Select(p => p.Name).ToHashSet();
+
+        Assert.DoesNotContain("Id", propertyNames);
+        Assert.DoesNotContain("Email", propertyNames);
+        Assert.DoesNotContain("TranslationHashes", propertyNames);
+        Assert.DoesNotContain("CreatedAt", propertyNames);
+        Assert.DoesNotContain("UpdatedAt", propertyNames);
+
+        var expected = new[] { "Name", "Slug", "Website", "Description", "DescriptionEn", "Galleries", "SocialLinks" };
+        Assert.Equal(expected.Length, propertyNames.Count);
+        foreach (var name in expected)
+            Assert.Contains(name, propertyNames);
+    }
+
+    // ─── GetPhotographerPublicBySlugQuery ───
+
+    private async Task<(Guid PhotographerId, Guid EventId, Guid EditionId)> SeedGalleryFixture(
+        Guid photographerId, string eventSlug, EventStatus eventStatus, int? editionYear, DateOnly? editionDate, string galleryUrl,
+        EditionStatus editionStatus = EditionStatus.Active)
+    {
+        using var ctx = _factory.CreateContext();
+        var ev = new Event
+        {
+            Name = eventSlug, Slug = eventSlug,
+            Type = EventType.Race, Status = eventStatus,
+        };
+        ctx.Events.Add(ev);
+        await ctx.SaveChangesAsync();
+
+        var edition = new EventEdition
+        {
+            EventId = ev.Id,
+            Year = editionYear,
+            Date = editionDate,
+            Status = editionStatus,
+            RegistrationStatus = RegistrationStatus.NotRequired,
+        };
+        ctx.EventEditions.Add(edition);
+        await ctx.SaveChangesAsync();
+
+        ctx.PhotoGalleries.Add(new PhotoGallery
+        {
+            EventEditionId = edition.Id,
+            PhotographerId = photographerId,
+            Url = galleryUrl,
+        });
+        await ctx.SaveChangesAsync();
+
+        return (photographerId, ev.Id, edition.Id);
+    }
+
+    [Fact]
+    public async Task GetPhotographerPublicBySlug_Returns_PublicFieldsOnly()
+    {
+        Guid photographerId;
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new CreatePhotographerCommandHandler(ctx);
+            (photographerId, _) = await handler.Handle(new CreatePhotographerCommand(
+                Name: "Public Photographer", Website: "https://public.is",
+                Email: "secret@public.is", Description: "A description"
+            ), CancellationToken.None);
+        }
+
+        using var ctx2 = _factory.CreateContext();
+        var handler2 = new GetPhotographerPublicBySlugQueryHandler(ctx2);
+        var result = await handler2.Handle(new GetPhotographerPublicBySlugQuery("public-photographer"), CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Equal("Public Photographer", result!.Name);
+        Assert.Equal("public-photographer", result.Slug);
+        Assert.Equal("https://public.is", result.Website);
+        Assert.Equal("A description", result.Description);
+        Assert.Empty(result.Galleries);
+    }
+
+    [Fact]
+    public async Task GetPhotographerPublicBySlug_Returns_Null_ForUnknownSlug()
+    {
+        using var ctx = _factory.CreateContext();
+        var handler = new GetPhotographerPublicBySlugQueryHandler(ctx);
+        var result = await handler.Handle(new GetPhotographerPublicBySlugQuery("does-not-exist"), CancellationToken.None);
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task GetPhotographerPublicBySlug_WithNoGalleries_DoesNotThrow()
+    {
+        // Regression guard: a photographer with zero attributed galleries must render an empty
+        // list, not throw or 500 — the frontend page's empty state depends on this.
+        Guid photographerId;
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new CreatePhotographerCommandHandler(ctx);
+            (photographerId, _) = await handler.Handle(new CreatePhotographerCommand(
+                Name: "Empty Photographer", Website: null, Email: null, Description: null
+            ), CancellationToken.None);
+        }
+
+        using var ctx2 = _factory.CreateContext();
+        var handler2 = new GetPhotographerPublicBySlugQueryHandler(ctx2);
+        var result = await handler2.Handle(new GetPhotographerPublicBySlugQuery("empty-photographer"), CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result!.Galleries);
+        Assert.Empty(result.Galleries);
+    }
+
+    [Fact]
+    public async Task GetPhotographerPublicBySlug_Excludes_HiddenAndUnlistedEvents()
+    {
+        Guid photographerId;
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new CreatePhotographerCommandHandler(ctx);
+            (photographerId, _) = await handler.Handle(new CreatePhotographerCommand(
+                Name: "Filtered Photographer", Website: null, Email: null, Description: null
+            ), CancellationToken.None);
+        }
+
+        await SeedGalleryFixture(photographerId, "visible-event", EventStatus.Confirmed, 2025, new DateOnly(2025, 6, 1), "https://photos.example.com/visible");
+        await SeedGalleryFixture(photographerId, "hidden-event", EventStatus.Hidden, 2025, new DateOnly(2025, 5, 1), "https://photos.example.com/hidden");
+        await SeedGalleryFixture(photographerId, "unlisted-event", EventStatus.Unlisted, 2025, new DateOnly(2025, 4, 1), "https://photos.example.com/unlisted");
+
+        using var ctx2 = _factory.CreateContext();
+        var handler2 = new GetPhotographerPublicBySlugQueryHandler(ctx2);
+        var result = await handler2.Handle(new GetPhotographerPublicBySlugQuery("filtered-photographer"), CancellationToken.None);
+
+        var gallery = Assert.Single(result!.Galleries);
+        Assert.Equal("https://photos.example.com/visible", gallery.GalleryUrl);
+    }
+
+    [Fact]
+    public async Task GetPhotographerPublicBySlug_Excludes_IndividuallyHiddenEdition()
+    {
+        // An admin can hide a single edition while its parent event stays public (e.g. one
+        // cancelled/retired year of an otherwise ongoing race) — the edition-level filter must
+        // catch that case even though Event.Status alone would let it through.
+        Guid photographerId;
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new CreatePhotographerCommandHandler(ctx);
+            (photographerId, _) = await handler.Handle(new CreatePhotographerCommand(
+                Name: "Edition Filtered Photographer", Website: null, Email: null, Description: null
+            ), CancellationToken.None);
+        }
+
+        await SeedGalleryFixture(photographerId, "visible-edition-event", EventStatus.Confirmed, 2025, new DateOnly(2025, 6, 1), "https://photos.example.com/visible-edition");
+        await SeedGalleryFixture(photographerId, "hidden-edition-event", EventStatus.Confirmed, 2024, new DateOnly(2024, 6, 1), "https://photos.example.com/hidden-edition", EditionStatus.Hidden);
+
+        using var ctx2 = _factory.CreateContext();
+        var handler2 = new GetPhotographerPublicBySlugQueryHandler(ctx2);
+        var result = await handler2.Handle(new GetPhotographerPublicBySlugQuery("edition-filtered-photographer"), CancellationToken.None);
+
+        var gallery = Assert.Single(result!.Galleries);
+        Assert.Equal("https://photos.example.com/visible-edition", gallery.GalleryUrl);
+    }
+
+    [Fact]
+    public async Task GetPhotographerPublicBySlug_Sorts_NewestEditionFirst()
+    {
+        Guid photographerId;
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new CreatePhotographerCommandHandler(ctx);
+            (photographerId, _) = await handler.Handle(new CreatePhotographerCommand(
+                Name: "Sorted Photographer", Website: null, Email: null, Description: null
+            ), CancellationToken.None);
+        }
+
+        await SeedGalleryFixture(photographerId, "oldest-event", EventStatus.Confirmed, 2022, new DateOnly(2022, 6, 1), "https://photos.example.com/2022");
+        await SeedGalleryFixture(photographerId, "newest-event", EventStatus.Confirmed, 2025, new DateOnly(2025, 6, 1), "https://photos.example.com/2025");
+        await SeedGalleryFixture(photographerId, "middle-event", EventStatus.Confirmed, 2023, new DateOnly(2023, 6, 1), "https://photos.example.com/2023");
+
+        using var ctx2 = _factory.CreateContext();
+        var handler2 = new GetPhotographerPublicBySlugQueryHandler(ctx2);
+        var result = await handler2.Handle(new GetPhotographerPublicBySlugQuery("sorted-photographer"), CancellationToken.None);
+
+        Assert.Equal(
+            new[] { "https://photos.example.com/2025", "https://photos.example.com/2023", "https://photos.example.com/2022" },
+            result!.Galleries.Select(g => g.GalleryUrl).ToArray());
+    }
 }

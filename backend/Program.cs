@@ -1802,6 +1802,14 @@ app.MapDelete("/api/v1/admin/organizers/{id:guid}", [Authorize(Policy = "AdminOn
 })
 .WithName("DeleteOrganizer");
 
+// Photographers (public detail page — narrowed DTO, no PII)
+app.MapGet("/api/v1/photographers/{slug}", async (string slug, IMediator mediator) =>
+{
+    var photographer = await mediator.Send(new GetPhotographerPublicBySlugQuery(slug));
+    return photographer is null ? Results.NotFound() : Results.Ok(photographer);
+})
+.WithName("GetPhotographerBySlugPublic");
+
 // Admin Photographer CRUD
 app.MapGet("/api/v1/admin/photographers", [Authorize(Policy = "AdminOnly")] async (IMediator mediator) =>
 {

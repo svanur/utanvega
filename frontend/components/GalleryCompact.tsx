@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Badge, Box, Button, IconButton, Menu, MenuItem, Tooltip, Typography } from '@mui/material';
+import { Badge, Box, Button, IconButton, Link, Menu, MenuItem, Tooltip, Typography } from '@mui/material';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import { useTranslation } from 'react-i18next';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useLocalize } from '../utils/localize';
 import { galleryLabel, sortedGalleries } from '../utils/galleryLabel';
 import type { PublicPhotoGallery } from '../hooks/useEvents';
@@ -21,6 +22,7 @@ interface GalleryCompactProps {
 export default function GalleryCompact({ galleries, variant }: GalleryCompactProps) {
     const { t } = useTranslation();
     const loc = useLocalize();
+    const navigate = useNavigate();
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
     if (galleries.length === 0) return null;
@@ -58,9 +60,22 @@ export default function GalleryCompact({ galleries, variant }: GalleryCompactPro
                 >
                     {label}
                 </Button>
-                {attribution && (
+                {g.photographerName && (
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.68rem' }}>
-                        {attribution}
+                        {t('races.photoByPrefix', { defaultValue: 'Photo:' })}{' '}
+                        {g.photographerSlug ? (
+                            <Link
+                                component={RouterLink}
+                                to={`/photographers/${g.photographerSlug}`}
+                                color="inherit"
+                                underline="hover"
+                                onClick={e => e.stopPropagation()}
+                            >
+                                {g.photographerName}
+                            </Link>
+                        ) : (
+                            g.photographerName
+                        )}
                     </Typography>
                 )}
             </Box>
@@ -102,7 +117,26 @@ export default function GalleryCompact({ galleries, variant }: GalleryCompactPro
                             <Typography variant="body2">{galleryLabel(g, loc, t)}</Typography>
                             {g.photographerName && (
                                 <Typography variant="caption" color="text.secondary" display="block">
-                                    {t('races.photoBy', { name: g.photographerName, defaultValue: `Photo: ${g.photographerName}` })}
+                                    {t('races.photoByPrefix', { defaultValue: 'Photo:' })}{' '}
+                                    {g.photographerSlug ? (
+                                        // The MenuItem itself is an <a> (component="a", href={g.url}) so a
+                                        // nested RouterLink/<a> here would be invalid HTML and would break
+                                        // click targeting. Navigate imperatively instead of nesting an anchor.
+                                        <Box
+                                            component="span"
+                                            onClick={e => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                closeMenu();
+                                                navigate(`/photographers/${g.photographerSlug}`);
+                                            }}
+                                            sx={{ textDecoration: 'underline', cursor: 'pointer' }}
+                                        >
+                                            {g.photographerName}
+                                        </Box>
+                                    ) : (
+                                        g.photographerName
+                                    )}
                                 </Typography>
                             )}
                         </Box>

@@ -1,7 +1,8 @@
-import { Box, Button, Chip, Typography } from '@mui/material';
+import { Box, Button, Chip, Link, Typography } from '@mui/material';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { useTranslation } from 'react-i18next';
+import { Link as RouterLink } from 'react-router-dom';
 import { useLocalize } from '../utils/localize';
 import { galleryLabel, sortedGalleries } from '../utils/galleryLabel';
 import type { PublicPhotoGallery } from '../hooks/useEvents';
@@ -33,9 +34,6 @@ export default function GalleryLinks({ galleries, variant = 'button', size = 'sm
         <>
             {sortedGalleries(galleries).map(g => {
                 const label = galleryLabel(g, loc, t);
-                const attribution = g.photographerName
-                    ? t('races.photoBy', { name: g.photographerName, defaultValue: `Photo: ${g.photographerName}` })
-                    : null;
                 return (
                     <Box key={g.url} sx={{ display: 'flex', flexDirection: 'column', alignItems: variant === 'chip' ? 'flex-start' : 'center' }}>
                         {variant === 'chip' ? (
@@ -66,9 +64,22 @@ export default function GalleryLinks({ galleries, variant = 'button', size = 'sm
                                 {label}
                             </Button>
                         )}
-                        {attribution && (
+                        {g.photographerName && (
                             <Typography variant="caption" color="text.secondary" sx={{ mt: 0.25, fontSize: '0.68rem' }}>
-                                {attribution}
+                                {t('races.photoByPrefix', { defaultValue: 'Photo:' })}{' '}
+                                {g.photographerSlug ? (
+                                    <Link
+                                        component={RouterLink}
+                                        to={`/photographers/${g.photographerSlug}`}
+                                        color="inherit"
+                                        underline="hover"
+                                        onClick={handleClick}
+                                    >
+                                        {g.photographerName}
+                                    </Link>
+                                ) : (
+                                    g.photographerName
+                                )}
                             </Typography>
                         )}
                     </Box>
