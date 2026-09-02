@@ -1910,10 +1910,10 @@ app.MapGet("/api/v1/admin/editions/{editionId:guid}/photo-galleries", [Authorize
 })
 .WithName("GetAdminPhotoGalleriesByEdition");
 
-app.MapPost("/api/v1/admin/editions/{editionId:guid}/photo-galleries", [Authorize(Policy = "AdminOnly")] async (Guid editionId, CreatePhotoGalleryCommand command, IMediator mediator) =>
+app.MapPost("/api/v1/admin/editions/{editionId:guid}/photo-galleries", [Authorize(Policy = "AdminOnly")] async (Guid editionId, CreatePhotoGalleryCommand command, IMediator mediator, HttpContext httpContext) =>
 {
     if (editionId != command.EventEditionId) return Results.BadRequest("EventEditionId mismatch");
-    var id = await mediator.Send(command);
+    var id = await mediator.Send(command with { CreatedBy = GetAuthenticatedUserId(httpContext) });
     return Results.Created($"/api/v1/admin/editions/{editionId}/photo-galleries/{id}", new { id });
 })
 .WithName("CreatePhotoGallery");
