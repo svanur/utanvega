@@ -29,10 +29,11 @@ export const GO_TO_PAGES: Record<string, PageKey> = {
     a: 'analytics',          // [a]nalytics
     f: 'features',           // [f]eatures
     n: 'sponsors',           // spo[n]sors
-    p: 'pools',              // [p]ools
+    p: 'photographers',      // [p]hotographers
     c: 'race-day',           // ra[c]e day
     b: 'feedback',           // feed[b]ack
     // hero-themes has no shortcut — rarely used config page, no good mnemonic letter remaining
+    // pools has no shortcut — rarely used, and 'p' is better spent on photographers
 };
 
 function isInputFocused(): boolean {
