@@ -9,7 +9,7 @@ export default function SponsorStrip({ position }: { position: 'top' | 'bottom' 
 
     return (
         <Box data-sponsor-strip sx={{ borderTop: position === 'bottom' ? 1 : 0, borderBottom: position === 'top' ? 1 : 0, borderColor: 'divider', bgcolor: 'background.paper', py: 1 }}>
-            <Stack direction="row" justifyContent="center" alignItems="center" spacing={4}>
+            <Stack direction="row" justifyContent="center" alignItems="center" spacing={4} useFlexGap flexWrap="wrap">
                 {active.map(s => (
                     <a key={s.flag} href={s.href} target="_blank" rel="noopener noreferrer">
                         <Box

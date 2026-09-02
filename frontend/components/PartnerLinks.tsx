@@ -54,6 +54,7 @@ export default function PartnerLinks() {
                 bgcolor: 'background.paper',
                 px: { xs: 2, sm: 3 },
                 py: 3,
+                overflowX: 'hidden',
             }}
         >
             <Stack
@@ -67,7 +68,7 @@ export default function PartnerLinks() {
                     <Card
                         key={partner.titleKey}
                         variant="outlined"
-                        sx={{ flex: '1 1 200px', maxWidth: { sm: 280 } }}
+                        sx={{ flex: '1 1 200px', maxWidth: { xs: '100%', sm: 280 }, minWidth: 0 }}
                     >
                         <CardContent sx={{ pb: '12px !important' }}>
                             <Typography variant="subtitle2" fontWeight={700} gutterBottom>

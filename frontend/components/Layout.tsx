@@ -166,7 +166,7 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
     }
 
     return (
-        <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
+        <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default', overflowX: 'hidden' }}>
             {isStaging && (
                 <Box sx={{
                     position: 'sticky',
