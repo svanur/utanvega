@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Alert,
@@ -32,6 +32,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import TranslateIcon from '@mui/icons-material/Translate';
 import { usePhotographers, type PhotographerDto } from '../hooks/usePhotographers';
 import { useRowFocus } from '../hooks/useRowFocus';
+import { useUrlFilterState } from '../hooks/useUrlFilterState';
 import { usePageShortcuts, isDialogOpen } from '../hooks/usePageShortcuts';
 import { trimToUndefined } from '../utils/strings';
 import BilingualTextField from '../components/BilingualTextField';
@@ -51,12 +52,22 @@ const EMPTY_FORM = {
 
 type FormState = typeof EMPTY_FORM;
 
+// Only 'name' has a sort control in the table header — an unrecognized value (stale bookmark,
+// hand-edited URL) falls back to 'name'.
+const PHOTOGRAPHERS_FILTER_SCHEMA = {
+    search: { default: '' },
+    sortBy: { default: 'name', allowed: ['name'] },
+    sortDir: { default: 'asc', allowed: ['asc', 'desc'] },
+} as const;
+
 export default function PhotographersPage({ onNotify }: Props) {
     const navigate = useNavigate();
     const { photographers, loading, error, createPhotographer } = usePhotographers();
-    const [search, setSearch] = useState('');
-    const [sortBy, setSortBy] = useState<keyof PhotographerDto>('name');
-    const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+    const { values, setValue, setValues } = useUrlFilterState(PHOTOGRAPHERS_FILTER_SCHEMA);
+    const search = values.search;
+    const setSearch = useCallback((v: string) => setValue('search', v), [setValue]);
+    const sortBy = values.sortBy as keyof PhotographerDto;
+    const sortDir = values.sortDir;
     const [dialogOpen, setDialogOpen] = useState(false);
     const [form, setForm] = useState<FormState>(EMPTY_FORM);
     const [saving, setSaving] = useState(false);
@@ -92,12 +103,11 @@ export default function PhotographersPage({ onNotify }: Props) {
     };
 
     const handleSort = (col: keyof PhotographerDto) => {
-        if (sortBy === col) {
-            setSortDir(d => d === 'asc' ? 'desc' : 'asc');
-        } else {
-            setSortBy(col);
-            setSortDir('asc');
-        }
+        const isAsc = sortBy === col && sortDir === 'asc';
+        setValues({
+            sortBy: col as 'name',
+            sortDir: sortBy === col ? (isAsc ? 'desc' : 'asc') : 'asc',
+        });
     };
 
     const filtered = photographers

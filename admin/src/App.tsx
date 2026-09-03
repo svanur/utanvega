@@ -131,7 +131,6 @@ function AdminContent() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [raceDayInitialDate, setRaceDayInitialDate] = useState<string | undefined>(undefined);
   const [createEventIntent, setCreateEventIntent] = useState(false);
-  const [searchTerm, setSearchTerm] = useState<string | null>(null);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [pendingNav, setPendingNav] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean, message: React.ReactNode, severity: 'success' | 'error' }>({
@@ -362,7 +361,7 @@ function AdminContent() {
           ) : currentPage === 'trails' ? (
             <Routes>
               <Route path="/trails/:idOrSlug" element={<TrailDetailPage onNotify={notify} />} />
-              <Route path="/trails" element={<TrailsListPage onNotify={notify} initialSearch={searchTerm} />} />
+              <Route path="/trails" element={<TrailsListPage onNotify={notify} />} />
             </Routes>
           ) : currentPage === 'health' ? (
             <TrailHealth onEditTrail={(id) => navigate(`/trails/${id}`)} onNotify={notify} />
@@ -457,7 +456,7 @@ function AdminContent() {
         onEditEvent={(slug) => navigate(`/events/${slug}`)}
         onEditPhotographer={(slug) => navigate(`/photographers/${slug}`)}
         onNavigate={(page) => setCurrentPage(page as PageKey)}
-        onFilterTrails={(term) => { setSearchTerm(term); setCurrentPage('trails'); }}
+        onFilterTrails={(term) => navigate(`/trails?search=${encodeURIComponent(term)}`)}
       />
       <KeyboardShortcutsDialog open={showShortcuts} onClose={() => setShowShortcuts(false)} />
     </Box>
