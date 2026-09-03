@@ -4,6 +4,8 @@ export interface PageShortcut {
   key: string;
   /** Requires Ctrl (or Cmd on Mac). */
   ctrl?: boolean;
+  /** Requires Alt. */
+  alt?: boolean;
   /** Fires even when a form element has focus. */
   allowInInput?: boolean;
   /**
@@ -44,8 +46,9 @@ export function usePageShortcuts(shortcuts: PageShortcut[]) {
         const keyMatch = e.key.toLowerCase() === s.key.toLowerCase();
         const ctrlMatch = s.ctrl
           ? e.ctrlKey || e.metaKey
-          : !e.ctrlKey && !e.metaKey && !e.altKey;
-        if (!keyMatch || !ctrlMatch) continue;
+          : !e.ctrlKey && !e.metaKey;
+        const altMatch = s.alt ? e.altKey : !e.altKey;
+        if (!keyMatch || !ctrlMatch || !altMatch) continue;
         if (!s.allowInInput && isInputFocused()) continue;
         if (s.skip?.()) continue;
         e.preventDefault();

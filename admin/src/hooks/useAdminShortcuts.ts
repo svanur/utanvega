@@ -105,7 +105,7 @@ export function useAdminShortcuts({
 
             // Alt+letter actions
             if (e.altKey && !e.ctrlKey && !e.metaKey) {
-                if (e.key === 'n' || e.key === 'N') { e.preventDefault(); onNewTrail(); return; }
+                if ((e.key === 'n' || e.key === 'N') && currentPage === 'trails') { e.preventDefault(); onNewTrail(); return; }
                 if (e.key === 'r' || e.key === 'R') { e.preventDefault(); onRefresh(); return; }
                 if ((e.key === 't' || e.key === 'T') && currentPage === 'trails') { e.preventDefault(); onToggleTools(); return; }
                 if (e.key === 's' || e.key === 'S') { e.preventDefault(); onToggleSidebar(); return; }

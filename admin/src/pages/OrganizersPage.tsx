@@ -34,6 +34,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import TranslateIcon from '@mui/icons-material/Translate';
 import { useOrganizers, type OrganizerDto } from '../hooks/useOrganizers';
 import { useRowFocus } from '../hooks/useRowFocus';
+import { usePageShortcuts, isDialogOpen } from '../hooks/usePageShortcuts';
 import { trimToUndefined } from '../utils/strings';
 import BilingualTextField from '../components/BilingualTextField';
 import { useTranslate } from '../hooks/useTranslate';
@@ -126,6 +127,10 @@ export default function OrganizersPage({ onNotify }: Props) {
     useEffect(() => {
         focusedOrgRowRef.current?.scrollIntoView({ block: 'nearest' });
     }, [focusedOrgIndex]);
+
+    usePageShortcuts([
+        { key: 'n', alt: true, skip: isDialogOpen, handler: openCreate },
+    ]);
 
     return (
         <Box sx={{ maxWidth: 1100, mx: 'auto' }}>
