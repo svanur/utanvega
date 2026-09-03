@@ -16,6 +16,7 @@ import ClearIcon from '@mui/icons-material/Clear';
 import { useLocations, LocationDto } from '../hooks/useLocations';
 import { LocationDialog } from '../components/LocationDialog';
 import { apiFetch } from '../hooks/api';
+import { usePageShortcuts, isDialogOpen } from '../hooks/usePageShortcuts';
 
 interface LocationListProps {
     onNotify: (message: string, severity: 'success' | 'error') => void;
@@ -220,6 +221,10 @@ export function LocationList({ onNotify }: LocationListProps) {
             onNotify(err instanceof Error ? err.message : 'Failed to delete location', 'error');
         }
     }, [onNotify, refresh]);
+
+    usePageShortcuts([
+        { key: 'n', alt: true, skip: isDialogOpen, handler: () => { setSelectedLocation(undefined); setDialogOpen(true); } },
+    ]);
 
     if (loading && !locations.length) {
         return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>;

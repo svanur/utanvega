@@ -65,7 +65,12 @@ const shortcutGroups: ShortcutGroup[] = [
     {
         title: 'Actions',
         shortcuts: [
-            { keys: ['Alt', 'N'], description: 'New trail (upload GPX)' },
+            { keys: ['Alt', 'N'], description: 'New trail (upload GPX) — Trails list' },
+            { keys: ['Alt', 'N'], description: 'New event — Events list' },
+            { keys: ['Alt', 'N'], description: 'New location — Locations list' },
+            { keys: ['Alt', 'N'], description: 'New organizer — Organizers list' },
+            { keys: ['Alt', 'N'], description: 'New photographer — Photographers list' },
+            { keys: ['Alt', 'N'], description: 'New tag — Tags list' },
             { keys: ['Alt', 'R'], description: 'Refresh trail list' },
             { keys: ['Alt', 'T'], description: 'Toggle tools panel' },
             { keys: ['Alt', 'S'], description: 'Toggle sidebar' },

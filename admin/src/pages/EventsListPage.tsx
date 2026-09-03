@@ -59,6 +59,7 @@ import {
 } from '../hooks/useEvents';
 import { useTrails } from '../hooks/useTrails';
 import { useRowFocus } from '../hooks/useRowFocus';
+import { usePageShortcuts, isDialogOpen } from '../hooks/usePageShortcuts';
 import CreateEventDialog from '../components/events/CreateEventDialog';
 import { EVENT_STATUS_CYCLE } from '../utils/eventForms';
 import {
@@ -340,6 +341,10 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
   useEffect(() => {
     focusedEventRowRef.current?.scrollIntoView({ block: 'nearest' });
   }, [focusedEventIndex]);
+
+  usePageShortcuts([
+    { key: 'n', alt: true, skip: isDialogOpen, handler: () => setCreateDialogOpen(true) },
+  ]);
 
   // ── Status / activity / type cycling ─────────────────────────────────────
   const handleCycleStatus = async (event: EventSummaryDto) => {

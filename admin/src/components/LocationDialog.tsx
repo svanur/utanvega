@@ -371,6 +371,7 @@ export function LocationDialog({ open, onClose, onSaveSuccess, onNotify, locatio
                                             {...params}
                                             label="Name"
                                             required
+                                            autoFocus
                                             InputProps={{
                                                 ...params.InputProps,
                                                 endAdornment: (

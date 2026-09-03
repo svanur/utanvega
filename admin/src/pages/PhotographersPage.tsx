@@ -32,6 +32,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import TranslateIcon from '@mui/icons-material/Translate';
 import { usePhotographers, type PhotographerDto } from '../hooks/usePhotographers';
 import { useRowFocus } from '../hooks/useRowFocus';
+import { usePageShortcuts, isDialogOpen } from '../hooks/usePageShortcuts';
 import { trimToUndefined } from '../utils/strings';
 import BilingualTextField from '../components/BilingualTextField';
 import { useTranslate } from '../hooks/useTranslate';
@@ -116,6 +117,10 @@ export default function PhotographersPage({ onNotify }: Props) {
     useEffect(() => {
         focusedPhotographerRowRef.current?.scrollIntoView({ block: 'nearest' });
     }, [focusedPhotographerIndex]);
+
+    usePageShortcuts([
+        { key: 'n', alt: true, skip: isDialogOpen, handler: openCreate },
+    ]);
 
     return (
         <Box sx={{ maxWidth: 1100, mx: 'auto' }}>

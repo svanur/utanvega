@@ -14,6 +14,7 @@ import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import { useTags, TagDto } from '../hooks/useTags';
 import { apiFetch } from '../hooks/api';
+import { usePageShortcuts, isDialogOpen } from '../hooks/usePageShortcuts';
 import BilingualTextField from '../components/BilingualTextField';
 import { useTranslate } from '../hooks/useTranslate';
 import TranslateIcon from '@mui/icons-material/Translate';
@@ -73,6 +74,15 @@ export default function TagManagement({ onNotify }: TagManagementProps) {
     }
   };
 
+  const openCreate = () => {
+    setEditTag({ name: '', color: PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)] });
+    setSlugUnlocked(false);
+  };
+
+  usePageShortcuts([
+    { key: 'n', alt: true, skip: isDialogOpen, handler: openCreate },
+  ]);
+
   const handleDelete = async (tag: TagDto) => {
     if (!confirm(`Delete tag "${tag.name}"? It will be removed from ${tag.trailCount} trail(s).`)) return;
     try {
@@ -114,10 +124,7 @@ export default function TagManagement({ onNotify }: TagManagementProps) {
           <Button
             variant="contained"
             startIcon={<AddIcon />}
-            onClick={() => {
-              setEditTag({ name: '', color: PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)] });
-              setSlugUnlocked(false);
-            }}
+            onClick={openCreate}
           >
             New Tag
           </Button>
