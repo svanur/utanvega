@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Alert,
@@ -59,6 +59,7 @@ import {
 } from '../hooks/useEvents';
 import { useTrails } from '../hooks/useTrails';
 import { useRowFocus } from '../hooks/useRowFocus';
+import { useUrlFilterState } from '../hooks/useUrlFilterState';
 import { usePageShortcuts, isDialogOpen } from '../hooks/usePageShortcuts';
 import CreateEventDialog from '../components/events/CreateEventDialog';
 import { EVENT_STATUS_CYCLE } from '../utils/eventForms';
@@ -198,6 +199,23 @@ function formatSchedule(rule: ScheduleRule | null): string {
 type SortField = 'name' | 'activityType' | 'type' | 'nextEditionDate' | 'status' | 'editionCount' | 'locationName' | 'updatedAt';
 type AttentionFilter = 'noEdition' | 'seriesMissingReg' | 'pastActive' | null;
 
+// An unrecognized value (stale bookmark, hand-edited URL) falls back to the field's default.
+// locationFilter/yearFilter are left unvalidated — their valid values depend on loaded events.
+// attentionFilter's "null" state is represented by an empty string, since URL params can't hold null.
+const EVENTS_FILTER_SCHEMA = {
+  searchQuery: { default: '' },
+  activityFilter: { default: 'all', allowed: ['all', ...ACTIVITY_TYPES] },
+  typeFilter: { default: 'all', allowed: ['all', ...EVENT_TYPES] },
+  statusFilter: { default: 'all', allowed: ['all', ...EVENT_STATUSES] },
+  locationFilter: { default: 'all' },
+  yearFilter: { default: 'all' },
+  monthFilter: { default: 'all', allowed: ['all', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'] },
+  sortBy: { default: 'updatedAt', allowed: ['name', 'activityType', 'type', 'nextEditionDate', 'status', 'editionCount', 'locationName', 'updatedAt'] },
+  sortDir: { default: 'desc', allowed: ['asc', 'desc'] },
+  attentionFilter: { default: '', allowed: ['noEdition', 'seriesMissingReg', 'pastActive'] },
+  weekFilter: { default: 'all', allowed: ['all', 'next-week'] },
+} as const;
+
 interface EventsListPageProps {
   onNotify: (message: ReactNode, severity?: 'success' | 'error') => void;
   initialCreate?: boolean;
@@ -215,17 +233,21 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
   const { trails } = useTrails();
   const sortedTrails = [...trails].filter(t => t.status === 'Published' || t.status === 'EventOnly').sort((a, b) => a.name.localeCompare(b.name));
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activityFilter, setActivityFilter] = useState<string>('all');
-  const [typeFilter, setTypeFilter] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [locationFilter, setLocationFilter] = useState<string>('all');
-  const [yearFilter, setYearFilter] = useState<string>('all');
-  const [monthFilter, setMonthFilter] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<SortField>('updatedAt');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
-  const [attentionFilter, setAttentionFilter] = useState<AttentionFilter>(null);
-  const [weekFilter, setWeekFilter] = useState<'all' | 'next-week'>('all');
+  const { values, setValue, setValues } = useUrlFilterState(EVENTS_FILTER_SCHEMA);
+  const searchQuery = values.searchQuery;
+  const setSearchQuery = useCallback((v: string) => setValue('searchQuery', v), [setValue]);
+  const activityFilter = values.activityFilter;
+  const typeFilter = values.typeFilter;
+  const statusFilter = values.statusFilter;
+  const locationFilter = values.locationFilter;
+  const yearFilter = values.yearFilter;
+  const monthFilter = values.monthFilter;
+  const sortBy = values.sortBy as SortField;
+  const sortDir = values.sortDir as 'asc' | 'desc';
+  const attentionFilter = (values.attentionFilter || null) as AttentionFilter;
+  const setAttentionFilter = useCallback((v: AttentionFilter) => setValue('attentionFilter', v ?? ''), [setValue]);
+  const weekFilter = values.weekFilter as 'all' | 'next-week';
+  const setWeekFilter = useCallback((v: 'all' | 'next-week') => setValue('weekFilter', v), [setValue]);
   const [showAttentionPanel, setShowAttentionPanel] = useState(true);
   const [cyclingStatusIds, setCyclingStatusIds] = useState<Set<string>>(new Set());
   const [cyclingActivityIds, setCyclingActivityIds] = useState<Set<string>>(new Set());
@@ -259,13 +281,17 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
     || statusFilter !== 'all' || locationFilter !== 'all' || yearFilter !== 'all' || monthFilter !== 'all';
 
   const resetFilters = () => {
-    setActivityFilter('all'); setTypeFilter('all'); setStatusFilter('all'); setLocationFilter('all');
-    setYearFilter('all'); setMonthFilter('all'); setAttentionFilter(null); setWeekFilter('all');
+    // Deliberately leaves searchQuery, sortBy and sortDir untouched — this is the "clear
+    // filters" affordance, not a full reset (see handleResetFilters-equivalent elsewhere).
+    setValues({
+      activityFilter: 'all', typeFilter: 'all', statusFilter: 'all', locationFilter: 'all',
+      yearFilter: 'all', monthFilter: 'all', attentionFilter: '', weekFilter: 'all',
+    });
   };
 
   const handleRequestSort = (field: SortField) => {
-    if (sortBy === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
-    else { setSortBy(field); setSortDir('asc'); }
+    const isAsc = sortBy === field && sortDir === 'asc';
+    setValues({ sortBy: field, sortDir: sortBy === field ? (isAsc ? 'desc' : 'asc') : 'asc' });
   };
 
   // ── Needs attention items ─────────────────────────────────────────────────
@@ -690,28 +716,28 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
         />
         <FormControl size="small" sx={{ minWidth: 140 }}>
           <InputLabel>Activity</InputLabel>
-          <Select value={activityFilter} label="Activity" onChange={e => setActivityFilter(e.target.value)}>
+          <Select value={activityFilter} label="Activity" onChange={e => setValue('activityFilter', e.target.value)}>
             <MenuItem value="all">All</MenuItem>
             {ACTIVITY_TYPES.map(at => <MenuItem key={at} value={at}>{ACTIVITY_ICONS[at] ?? '🏅'} {at}</MenuItem>)}
           </Select>
         </FormControl>
         <FormControl size="small" sx={{ minWidth: 120 }}>
           <InputLabel>Type</InputLabel>
-          <Select value={typeFilter} label="Type" onChange={e => setTypeFilter(e.target.value)}>
+          <Select value={typeFilter} label="Type" onChange={e => setValue('typeFilter', e.target.value)}>
             <MenuItem value="all">All</MenuItem>
             {EVENT_TYPES.map(t => <MenuItem key={t} value={t}>{t}</MenuItem>)}
           </Select>
         </FormControl>
         <FormControl size="small" sx={{ minWidth: 120 }}>
           <InputLabel>Status</InputLabel>
-          <Select value={statusFilter} label="Status" onChange={e => setStatusFilter(e.target.value)}>
+          <Select value={statusFilter} label="Status" onChange={e => setValue('statusFilter', e.target.value)}>
             <MenuItem value="all">All</MenuItem>
             {EVENT_STATUSES.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
           </Select>
         </FormControl>
         <FormControl size="small" sx={{ minWidth: 140 }}>
           <InputLabel>Location</InputLabel>
-          <Select value={locationFilter} label="Location" onChange={e => setLocationFilter(e.target.value)}>
+          <Select value={locationFilter} label="Location" onChange={e => setValue('locationFilter', e.target.value)}>
             <MenuItem value="all">All</MenuItem>
             <MenuItem value="none"><em>No location</em></MenuItem>
             {eventLocationOptions.map(loc => <MenuItem key={loc} value={loc}>{loc}</MenuItem>)}
@@ -719,14 +745,14 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
         </FormControl>
         <FormControl size="small" sx={{ minWidth: 100 }}>
           <InputLabel>Year</InputLabel>
-          <Select value={yearFilter} label="Year" onChange={e => { setYearFilter(e.target.value); setMonthFilter('all'); }}>
+          <Select value={yearFilter} label="Year" onChange={e => setValues({ yearFilter: e.target.value, monthFilter: 'all' })}>
             <MenuItem value="all">All</MenuItem>
             {yearOptions.map(y => <MenuItem key={y} value={y}>{y}</MenuItem>)}
           </Select>
         </FormControl>
         <FormControl size="small" sx={{ minWidth: 120 }} disabled={yearFilter === 'all'}>
           <InputLabel>Month</InputLabel>
-          <Select value={monthFilter} label="Month" onChange={e => setMonthFilter(e.target.value)}>
+          <Select value={monthFilter} label="Month" onChange={e => setValue('monthFilter', e.target.value)}>
             <MenuItem value="all">All</MenuItem>
             {MONTHS.slice(1).map((m, i) => <MenuItem key={i} value={String(i + 1).padStart(2, '0')}>{m}</MenuItem>)}
           </Select>
@@ -739,8 +765,8 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
           clickable
           onClick={() => {
             const next = weekFilter === 'next-week' ? 'all' : 'next-week';
-            setWeekFilter(next);
-            if (next === 'next-week') { setYearFilter('all'); setMonthFilter('all'); }
+            if (next === 'next-week') setValues({ weekFilter: next, yearFilter: 'all', monthFilter: 'all' });
+            else setWeekFilter(next);
           }}
         />
         {weekFilter === 'next-week' && (
