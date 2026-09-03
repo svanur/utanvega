@@ -288,6 +288,123 @@ public class PhotographerHandlerTests : IDisposable
         Assert.False(success);
     }
 
+    [Fact]
+    public async Task Delete_Photographer_WithoutReassignment_LeavesGalleriesUnattributed()
+    {
+        // No ReassignToPhotographerId — the DB-level SetNull rule on PhotoGallery.PhotographerId
+        // handles this with no manual clearing needed in the handler.
+        var (photographerId, _, galleryId) = await SeedPhotographerWithGallery();
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new DeletePhotographerCommandHandler(ctx);
+            var success = await handler.Handle(new DeletePhotographerCommand(photographerId), CancellationToken.None);
+            Assert.True(success);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        Assert.Null(await verifyCtx.Photographers.FindAsync(photographerId));
+        var gallery = await verifyCtx.PhotoGalleries.FindAsync(galleryId);
+        Assert.NotNull(gallery);
+        Assert.Null(gallery!.PhotographerId);
+    }
+
+    [Fact]
+    public async Task Delete_Photographer_WithReassignment_MovesAllGalleries_ThenDeletes()
+    {
+        var (photographerId, _, _) = await SeedPhotographerWithGallery(galleryCount: 3);
+
+        Guid targetId;
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new CreatePhotographerCommandHandler(ctx);
+            (targetId, _) = await handler.Handle(new CreatePhotographerCommand(
+                Name: "Reassignment Target", Website: null, Email: null, Description: null
+            ), CancellationToken.None);
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new DeletePhotographerCommandHandler(ctx);
+            var success = await handler.Handle(new DeletePhotographerCommand(photographerId, targetId), CancellationToken.None);
+            Assert.True(success);
+        }
+
+        // Both halves of the operation must be visible together: the source photographer is gone
+        // and every one of its galleries — not some subset — now points at the target. There's no
+        // literal mid-transaction fault injected here (per existing test conventions in this repo),
+        // but asserting all three galleries moved together is the closest black-box equivalent of
+        // "no partial state": a handler that reassigned only some rows before failing would fail
+        // this count assertion just as visibly as one that left the photographer un-deleted.
+        using var verifyCtx = _factory.CreateContext();
+        Assert.Null(await verifyCtx.Photographers.FindAsync(photographerId));
+        var movedCount = await verifyCtx.PhotoGalleries.CountAsync(g => g.PhotographerId == targetId);
+        Assert.Equal(3, movedCount);
+        var remainingOnSource = await verifyCtx.PhotoGalleries.CountAsync(g => g.PhotographerId == photographerId);
+        Assert.Equal(0, remainingOnSource);
+    }
+
+    [Fact]
+    public async Task Delete_Photographer_ReassignToSelf_IsTreatedAsNoTarget()
+    {
+        // Defensive guard: a reassign-to-self request (shouldn't happen via the admin picker, which
+        // excludes the photographer being deleted) must not leave galleries pointing at a
+        // now-deleted photographer — it falls back to the same SetNull behaviour as no target.
+        var (photographerId, _, galleryId) = await SeedPhotographerWithGallery();
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new DeletePhotographerCommandHandler(ctx);
+            var success = await handler.Handle(new DeletePhotographerCommand(photographerId, photographerId), CancellationToken.None);
+            Assert.True(success);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        Assert.Null(await verifyCtx.Photographers.FindAsync(photographerId));
+        var gallery = await verifyCtx.PhotoGalleries.FindAsync(galleryId);
+        Assert.NotNull(gallery);
+        Assert.Null(gallery!.PhotographerId);
+    }
+
+    private async Task<(Guid PhotographerId, Guid EditionId, Guid GalleryId)> SeedPhotographerWithGallery(int galleryCount = 1)
+    {
+        using var ctx = _factory.CreateContext();
+        var photographer = new Photographer { Name = "Gallery Owner", Slug = $"gallery-owner-{Guid.NewGuid():N}" };
+        ctx.Photographers.Add(photographer);
+
+        var ev = new Event
+        {
+            Name = "Gallery Event", Slug = $"gallery-event-{Guid.NewGuid():N}",
+            Type = EventType.Race, Status = EventStatus.Confirmed,
+        };
+        ctx.Events.Add(ev);
+        await ctx.SaveChangesAsync();
+
+        var edition = new EventEdition
+        {
+            EventId = ev.Id,
+            RegistrationStatus = RegistrationStatus.NotRequired,
+        };
+        ctx.EventEditions.Add(edition);
+        await ctx.SaveChangesAsync();
+
+        Guid firstGalleryId = Guid.Empty;
+        for (var i = 0; i < galleryCount; i++)
+        {
+            var gallery = new PhotoGallery
+            {
+                EventEditionId = edition.Id,
+                PhotographerId = photographer.Id,
+                Url = $"https://photos.example.com/gallery-{i}",
+            };
+            ctx.PhotoGalleries.Add(gallery);
+            if (i == 0) firstGalleryId = gallery.Id;
+        }
+        await ctx.SaveChangesAsync();
+
+        return (photographer.Id, edition.Id, firstGalleryId);
+    }
+
     // ─── GetPhotographersQuery ───
 
     [Fact]
@@ -310,6 +427,38 @@ public class PhotographerHandlerTests : IDisposable
 
         var names = result.Select(p => p.Name).ToList();
         Assert.Equal(new[] { "Alpha Photography", "Middle Photography", "Zebra Photography" }, names);
+    }
+
+    [Fact]
+    public async Task GetPhotographers_GalleryCount_IsZero_ForPhotographerWithNoGalleries()
+    {
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new CreatePhotographerCommandHandler(ctx);
+            await handler.Handle(new CreatePhotographerCommand(
+                Name: "No Galleries Photographer", Website: null, Email: null, Description: null
+            ), CancellationToken.None);
+        }
+
+        using var ctx2 = _factory.CreateContext();
+        var handler2 = new GetPhotographersQueryHandler(ctx2);
+        var result = await handler2.Handle(new GetPhotographersQuery(), CancellationToken.None);
+
+        var photographer = result.Single(p => p.Name == "No Galleries Photographer");
+        Assert.Equal(0, photographer.GalleryCount);
+    }
+
+    [Fact]
+    public async Task GetPhotographers_IncludesCorrectGalleryCount()
+    {
+        var (photographerId, _, _) = await SeedPhotographerWithGallery(galleryCount: 2);
+
+        using var ctx = _factory.CreateContext();
+        var handler = new GetPhotographersQueryHandler(ctx);
+        var result = await handler.Handle(new GetPhotographersQuery(), CancellationToken.None);
+
+        var photographer = result.Single(p => p.Id == photographerId);
+        Assert.Equal(2, photographer.GalleryCount);
     }
 
     // ─── GetPhotographerBySlugQuery ───
@@ -337,6 +486,23 @@ public class PhotographerHandlerTests : IDisposable
         Assert.Equal("slugged-photographer", photographer.Slug);
         Assert.Equal("https://slugged.is", photographer.Website);
         Assert.Equal("A description", photographer.Description);
+        Assert.Equal(0, photographer.GalleryCount);
+    }
+
+    [Fact]
+    public async Task GetPhotographerBySlug_IncludesCorrectGalleryCount()
+    {
+        var (photographerId, _, _) = await SeedPhotographerWithGallery(galleryCount: 4);
+
+        using var ctx = _factory.CreateContext();
+        var slug = (await ctx.Photographers.FindAsync(photographerId))!.Slug;
+
+        using var ctx2 = _factory.CreateContext();
+        var handler = new GetPhotographerBySlugQueryHandler(ctx2);
+        var photographer = await handler.Handle(new GetPhotographerBySlugQuery(slug), CancellationToken.None);
+
+        Assert.NotNull(photographer);
+        Assert.Equal(4, photographer!.GalleryCount);
     }
 
     [Fact]

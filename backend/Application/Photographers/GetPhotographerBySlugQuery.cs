@@ -21,14 +21,14 @@ public class GetPhotographerBySlugQueryHandler : IRequestHandler<GetPhotographer
         var raw = await _context.Photographers
             .AsNoTracking()
             .Where(p => p.Slug == request.Slug)
-            .Select(p => new { p.Id, p.Name, p.Slug, p.Website, p.Email, p.Description, p.DescriptionEn, p.CreatedAt, p.UpdatedAt, p.TranslationHashes, p.SocialLinks })
+            .Select(p => new { p.Id, p.Name, p.Slug, p.Website, p.Email, p.Description, p.DescriptionEn, GalleryCount = p.PhotoGalleries.Count, p.CreatedAt, p.UpdatedAt, p.TranslationHashes, p.SocialLinks })
             .FirstOrDefaultAsync(cancellationToken);
 
         if (raw is null) return null;
 
         return new PhotographerDto(
             raw.Id, raw.Name, raw.Slug, raw.Website, raw.Email,
-            raw.Description, raw.DescriptionEn, raw.CreatedAt, raw.UpdatedAt,
+            raw.Description, raw.DescriptionEn, raw.GalleryCount, raw.CreatedAt, raw.UpdatedAt,
             raw.TranslationHashes == null ? null : JsonSerializer.Deserialize<Dictionary<string, string>>(raw.TranslationHashes),
             raw.SocialLinks
         );

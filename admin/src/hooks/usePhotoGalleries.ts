@@ -32,7 +32,37 @@ export interface UpdatePhotoGalleryInput {
     sortOrder?: number;
 }
 
+export interface PhotoGalleryByPhotographerDto {
+    id: string;
+    eventEditionId: string;
+    url: string;
+    title: string | null;
+    titleEn: string | null;
+    eventId: string;
+    eventName: string;
+    eventNameEn: string | null;
+    eventSlug: string;
+    editionYear: number | null;
+    editionDate: string | null;
+}
+
 const photoGalleriesQueryKey = (editionId: string) => ['admin', 'photo-galleries', editionId] as const;
+const photoGalleriesByPhotographerQueryKey = (photographerId: string) => ['admin', 'photo-galleries', 'by-photographer', photographerId] as const;
+
+// Galleries aren't nested on PhotographerDto either — fetched separately, once, when the
+// photographer detail page is open, rather than per-row in a list.
+export function usePhotoGalleriesByPhotographer(photographerId: string | null) {
+    const { data: galleries = [], isLoading: loading, error: queryError } = useQuery({
+        queryKey: photoGalleriesByPhotographerQueryKey(photographerId ?? ''),
+        queryFn: () => apiFetch<PhotoGalleryByPhotographerDto[]>(`/api/v1/admin/photographers/${photographerId}/photo-galleries`),
+        enabled: !!photographerId,
+        staleTime: 30_000,
+    });
+
+    const error = queryError instanceof Error ? queryError.message : queryError ? 'Unknown error' : null;
+
+    return { galleries, loading, error };
+}
 
 // Galleries aren't nested on EventEditionDto — they must be fetched separately per edition,
 // only once we actually have an edition id (a not-yet-saved edition has nothing to fetch).

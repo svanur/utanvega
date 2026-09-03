@@ -1895,12 +1895,19 @@ app.MapPut("/api/v1/admin/photographers/{id:guid}", [Authorize(Policy = "AdminOn
 })
 .WithName("UpdatePhotographer");
 
-app.MapDelete("/api/v1/admin/photographers/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, IMediator mediator) =>
+app.MapDelete("/api/v1/admin/photographers/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, Guid? reassignToId, IMediator mediator) =>
 {
-    var success = await mediator.Send(new DeletePhotographerCommand(id));
+    var success = await mediator.Send(new DeletePhotographerCommand(id, reassignToId));
     return success ? Results.NoContent() : Results.NotFound();
 })
 .WithName("DeletePhotographer");
+
+app.MapGet("/api/v1/admin/photographers/{id:guid}/photo-galleries", [Authorize(Policy = "AdminOnly")] async (Guid id, IMediator mediator) =>
+{
+    var galleries = await mediator.Send(new GetPhotoGalleriesByPhotographerQuery(id));
+    return Results.Ok(galleries);
+})
+.WithName("GetAdminPhotoGalleriesByPhotographer");
 
 // Admin PhotoGallery CRUD
 app.MapGet("/api/v1/admin/editions/{editionId:guid}/photo-galleries", [Authorize(Policy = "AdminOnly")] async (Guid editionId, IMediator mediator) =>
