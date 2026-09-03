@@ -1834,6 +1834,9 @@
         "website": "Photographer website",
         "galleries": "Galleries",
         "noGalleries": "No galleries found",
-        "notFound": "Photographer not found"
+        "notFound": "Photographer not found",
+        "openGalleryAriaLabel": "Open the {{event}} photo gallery (opens in a new tab)",
+        "viewEdition": "View edition",
+        "viewEditionAriaLabel": "View the {{event}} edition on this site"
     }
 }

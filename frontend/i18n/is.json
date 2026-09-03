@@ -1834,6 +1834,9 @@
         "website": "Vefur ljósmyndara",
         "galleries": "Myndasöfn",
         "noGalleries": "Engin myndasöfn fundust",
-        "notFound": "Ljósmyndari fannst ekki"
+        "notFound": "Ljósmyndari fannst ekki",
+        "openGalleryAriaLabel": "Opna myndasafn fyrir {{event}} (opnast í nýjum flipa)",
+        "viewEdition": "Skoða útgáfu",
+        "viewEditionAriaLabel": "Skoða útgáfu {{event}} á þessari síðu"
     }
 }

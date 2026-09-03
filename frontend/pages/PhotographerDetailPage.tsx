@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom';
+import { useParams, Link as RouterLink } from 'react-router-dom';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -21,6 +21,7 @@ import InstagramIcon from '@mui/icons-material/Instagram';
 import LanguageIcon from '@mui/icons-material/Language';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
+import HistoryIcon from '@mui/icons-material/History';
 import XIcon from '@mui/icons-material/X';
 import YouTubeIcon from '@mui/icons-material/YouTube';
 import Layout from '../components/Layout';
@@ -31,7 +32,7 @@ import { usePhotographerBySlug, type PhotographerGalleryEntry } from '../hooks/u
 import type { PublicPhotoGallery } from '../hooks/useEvents';
 import { useLocalize } from '../utils/localize';
 import { galleryLabel } from '../utils/galleryLabel';
-import { formatNextDate } from '../utils/eventUtils';
+import { editionKeyFor, formatNextDate } from '../utils/eventUtils';
 
 type PhotographerDetailPageProps = {
     mode: PaletteMode;
@@ -181,9 +182,21 @@ export default function PhotographerDetailPage({ mode, onToggleMode }: Photograp
                                 : entry.editionYear
                                     ? String(entry.editionYear)
                                     : null;
+                            // The gallery link is the primary, visually dominant action (external, new
+                            // tab); the edition link is a secondary affordance back to this site. Kept
+                            // as siblings rather than nesting one anchor inside the other's CardActionArea
+                            // — nested <a> elements are invalid HTML and break click targeting (see
+                            // GalleryCompact.tsx for the same constraint solved the same way).
+                            const editionHref = `/events/${entry.eventSlug}/history/${editionKeyFor({ date: entry.editionDate, year: entry.editionYear, id: entry.editionId })}`;
                             return (
                                 <Card key={`${entry.editionId}-${entry.galleryUrl}`} variant="outlined" sx={{ borderRadius: 2 }}>
-                                    <CardActionArea component="a" href={entry.galleryUrl} target="_blank" rel="noopener noreferrer">
+                                    <CardActionArea
+                                        component="a"
+                                        href={entry.galleryUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        aria-label={t('photographerPage.openGalleryAriaLabel', { event: eventName })}
+                                    >
                                         <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
                                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, flexWrap: 'wrap' }}>
                                                 <Typography variant="body1" fontWeight={600}>
@@ -204,6 +217,21 @@ export default function PhotographerDetailPage({ mode, onToggleMode }: Photograp
                                             </Box>
                                         </CardContent>
                                     </CardActionArea>
+                                    <Divider />
+                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', px: 2, py: 0.75 }}>
+                                        <Link
+                                            component={RouterLink}
+                                            to={editionHref}
+                                            variant="body2"
+                                            underline="hover"
+                                            color="text.secondary"
+                                            aria-label={t('photographerPage.viewEditionAriaLabel', { event: eventName })}
+                                            sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}
+                                        >
+                                            <HistoryIcon fontSize="inherit" />
+                                            {t('photographerPage.viewEdition')}
+                                        </Link>
+                                    </Box>
                                 </Card>
                             );
                         })}
