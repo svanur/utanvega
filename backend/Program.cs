@@ -1823,8 +1823,31 @@ app.MapPost("/api/v1/admin/organizers", [Authorize(Policy = "AdminOnly")] async 
 app.MapPut("/api/v1/admin/organizers/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, UpdateOrganizerCommand command, IMediator mediator) =>
 {
     if (id != command.Id) return Results.BadRequest("ID mismatch");
-    var success = await mediator.Send(command);
-    return success ? Results.NoContent() : Results.NotFound();
+
+    try
+    {
+        var success = await mediator.Send(command);
+        return success ? Results.NoContent() : Results.NotFound();
+    }
+    catch (DbUpdateException ex) when (ex.InnerException is PostgresException pg)
+    {
+        Log.Error(ex, "Database error updating organizer. SqlState={SqlState} Detail={Detail}", pg.SqlState, pg.Detail);
+
+        // Handle unique constraint violation (SQL state 23505) — e.g. two organizer names
+        // that normalize to the same slug ("Jón Jónsson" vs "Jon Jonsson").
+        if (pg.SqlState == "23505" && pg.MessageText.Contains("IX_Organizers_Slug"))
+        {
+            return Results.Conflict(new
+            {
+                message = "An organizer with a matching name/slug already exists. Please choose a different name."
+            });
+        }
+
+        return Results.Problem(
+            title: "Failed to update organizer",
+            detail: "A database error occurred while saving the organizer.",
+            statusCode: StatusCodes.Status500InternalServerError);
+    }
 })
 .WithName("UpdateOrganizer");
 
@@ -1890,8 +1913,31 @@ app.MapPost("/api/v1/admin/photographers", [Authorize(Policy = "AdminOnly")] asy
 app.MapPut("/api/v1/admin/photographers/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, UpdatePhotographerCommand command, IMediator mediator) =>
 {
     if (id != command.Id) return Results.BadRequest("ID mismatch");
-    var success = await mediator.Send(command);
-    return success ? Results.NoContent() : Results.NotFound();
+
+    try
+    {
+        var success = await mediator.Send(command);
+        return success ? Results.NoContent() : Results.NotFound();
+    }
+    catch (DbUpdateException ex) when (ex.InnerException is PostgresException pg)
+    {
+        Log.Error(ex, "Database error updating photographer. SqlState={SqlState} Detail={Detail}", pg.SqlState, pg.Detail);
+
+        // Handle unique constraint violation (SQL state 23505) — e.g. two photographer names
+        // that normalize to the same slug ("Jón Jónsson" vs "Jon Jonsson").
+        if (pg.SqlState == "23505" && pg.MessageText.Contains("IX_Photographers_Slug"))
+        {
+            return Results.Conflict(new
+            {
+                message = "A photographer with a matching name/slug already exists. Please choose a different name."
+            });
+        }
+
+        return Results.Problem(
+            title: "Failed to update photographer",
+            detail: "A database error occurred while saving the photographer.",
+            statusCode: StatusCodes.Status500InternalServerError);
+    }
 })
 .WithName("UpdatePhotographer");
 
