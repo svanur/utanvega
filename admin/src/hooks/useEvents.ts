@@ -62,6 +62,18 @@ export interface RaceDto {
     translationHashes?: Record<string, string>;
 }
 
+// Mirrors backend's PublicPhotoGalleryDto (and frontend's identically-shaped PublicPhotoGallery)
+// — a read-only summary for the edition meta row. Full CRUD shape/state lives in
+// usePhotoGalleries's own PhotoGalleryDto, used by PhotoGalleryManager inside the Edit dialog.
+export interface EditionPhotoGallery {
+    url: string;
+    title: string | null;
+    titleEn: string | null;
+    photographerName: string | null;
+    photographerSlug: string | null;
+    sortOrder: number;
+}
+
 export interface EventEditionDto {
     id: string;
     eventId: string;
@@ -79,6 +91,7 @@ export interface EventEditionDto {
     trailName: string | null;
     trailSlug: string | null;
     races: RaceDto[];
+    galleries: EditionPhotoGallery[];
     createdAt: string;
     updatedAt: string | null;
     translationHashes?: Record<string, string>;

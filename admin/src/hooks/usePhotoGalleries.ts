@@ -64,9 +64,17 @@ export function usePhotoGalleriesByPhotographer(photographerId: string | null) {
     return { galleries, loading, error };
 }
 
-// Galleries aren't nested on EventEditionDto — they must be fetched separately per edition,
-// only once we actually have an edition id (a not-yet-saved edition has nothing to fetch).
-export function usePhotoGalleries(editionId: string | null) {
+// This hook's own PhotoGalleryDto (full CRUD shape, incl. photographerId, createdAt/By) isn't
+// nested on EventEditionDto — it's fetched separately per edition here, only once we actually
+// have an edition id (a not-yet-saved edition has nothing to fetch). EventEditionDto does carry
+// a *narrower* `galleries` summary (mirroring the backend's PublicPhotoGalleryDto) for the
+// read-only meta row in EventDetailPage, sourced from the admin event-detail query instead.
+//
+// onMutated is an escape hatch to keep that other, denormalized summary in sync: invalidating
+// photoGalleriesQueryKey alone wouldn't refresh ['admin','event', slug], so callers thread a
+// callback down (see PhotoGalleryManager's onGalleryMutated) rather than this hook needing to
+// know about the event-detail cache.
+export function usePhotoGalleries(editionId: string | null, onMutated?: () => void) {
     const queryClient = useQueryClient();
 
     const { data: galleries = [], isLoading: loading, error: queryError } = useQuery({
@@ -88,6 +96,7 @@ export function usePhotoGalleries(editionId: string | null) {
             body: JSON.stringify(input),
         });
         await invalidate();
+        onMutated?.();
         return result;
     };
 
@@ -97,11 +106,13 @@ export function usePhotoGalleries(editionId: string | null) {
             body: JSON.stringify(input),
         });
         await invalidate();
+        onMutated?.();
     };
 
     const deletePhotoGallery = async (id: string): Promise<void> => {
         await apiFetch(`/api/v1/admin/photo-galleries/${id}`, { method: 'DELETE' });
         await invalidate();
+        onMutated?.();
     };
 
     return { galleries, loading, error, refresh: invalidate, createPhotoGallery, updatePhotoGallery, deletePhotoGallery };
