@@ -78,6 +78,10 @@ export default function PhotographerDetailPage({ mode, onToggleMode }: Photograp
     }
 
     const description = loc(photographer.description, photographer.descriptionEn);
+    // Stored website values are free text from the admin form and aren't scheme-validated
+    // at write time — a `javascript:` (or other) URI must never reach a clickable href.
+    // Mirrors the social-link filter below.
+    const website = photographer.website && /^https?:\/\//i.test(photographer.website) ? photographer.website : null;
 
     return (
         <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('nav.events'), to: '/events' }, { label: photographer.name }]}>
@@ -91,13 +95,13 @@ export default function PhotographerDetailPage({ mode, onToggleMode }: Photograp
                 </Box>
 
                 {/* Meta row: website + social links */}
-                {(photographer.website || (photographer.socialLinks && photographer.socialLinks.length > 0)) && (
+                {(website || (photographer.socialLinks && photographer.socialLinks.length > 0)) && (
                     <Stack direction="row" spacing={3} flexWrap="wrap" alignItems="center" sx={{ mb: 2 }}>
-                        {photographer.website && (
+                        {website && (
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                 <LanguageIcon fontSize="small" color="action" />
                                 <Link
-                                    href={photographer.website}
+                                    href={website}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     underline="hover"

@@ -19,7 +19,8 @@ public record PhotographerGalleryEntryDto(
 
 // Narrowed public-facing projection of Photographer — deliberately withholds Id, Email,
 // TranslationHashes, CreatedAt/UpdatedAt and any other admin-only field. See
-// GetOrganizerBySlugQuery / OrganizerPublicDto for the same pattern applied to organizers.
+// OrganizerPublicDto for the same pattern applied to organizers (both DTOs withhold Id;
+// no public frontend caller needs one).
 public record PhotographerPublicDto(
     string Name,
     string Slug,
