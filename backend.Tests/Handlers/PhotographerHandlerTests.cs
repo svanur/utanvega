@@ -402,6 +402,29 @@ public class PhotographerHandlerTests : IDisposable
         Assert.Null(gallery!.PhotographerId);
     }
 
+    [Fact]
+    public async Task Delete_Photographer_WithUnknownReassignTarget_Throws_AndLeavesDataUnchanged()
+    {
+        // #593 — an unknown reassign target must be caught before ExecuteUpdateAsync touches the
+        // FK-backed PhotoGallery.PhotographerId column, not surface as a raw DB constraint failure.
+        var (photographerId, _, galleryId) = await SeedPhotographerWithGallery();
+        var unknownTargetId = Guid.NewGuid();
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new DeletePhotographerCommandHandler(ctx);
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                handler.Handle(new DeletePhotographerCommand(photographerId, unknownTargetId), CancellationToken.None));
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        var photographer = await verifyCtx.Photographers.FindAsync(photographerId);
+        Assert.NotNull(photographer);
+        var gallery = await verifyCtx.PhotoGalleries.FindAsync(galleryId);
+        Assert.NotNull(gallery);
+        Assert.Equal(photographerId, gallery!.PhotographerId);
+    }
+
     private async Task<(Guid PhotographerId, Guid EditionId, Guid GalleryId)> SeedPhotographerWithGallery(int galleryCount = 1)
     {
         using var ctx = _factory.CreateContext();

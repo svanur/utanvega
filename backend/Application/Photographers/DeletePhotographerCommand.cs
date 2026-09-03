@@ -28,6 +28,10 @@ public class DeletePhotographerCommandHandler : IRequestHandler<DeletePhotograph
         // photographer still exists, or vice versa), so both go through one explicit transaction.
         if (request.ReassignToPhotographerId is { } targetId && targetId != request.Id)
         {
+            var targetExists = await _context.Photographers.AnyAsync(p => p.Id == targetId, cancellationToken);
+            if (!targetExists)
+                throw new InvalidOperationException("Reassignment target photographer not found.");
+
             await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
 
             await _context.PhotoGalleries
