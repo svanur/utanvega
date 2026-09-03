@@ -10,6 +10,7 @@ export interface PhotographerDto {
     email: string | null;
     description: string | null;
     descriptionEn: string | null;
+    galleryCount: number;
     createdAt: string;
     updatedAt: string | null;
     translationHashes?: Record<string, string>;
@@ -64,8 +65,9 @@ export function usePhotographers() {
         await invalidate();
     };
 
-    const deletePhotographer = async (id: string): Promise<void> => {
-        await apiFetch(`/api/v1/admin/photographers/${id}`, { method: 'DELETE' });
+    const deletePhotographer = async (id: string, reassignToId?: string): Promise<void> => {
+        const query = reassignToId ? `?reassignToId=${reassignToId}` : '';
+        await apiFetch(`/api/v1/admin/photographers/${id}${query}`, { method: 'DELETE' });
         await invalidate();
     };
 

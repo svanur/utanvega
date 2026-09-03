@@ -21,12 +21,12 @@ public class GetPhotographersQueryHandler : IRequestHandler<GetPhotographersQuer
         var raw = await _context.Photographers
             .AsNoTracking()
             .OrderBy(p => p.Name)
-            .Select(p => new { p.Id, p.Name, p.Slug, p.Website, p.Email, p.Description, p.DescriptionEn, p.CreatedAt, p.UpdatedAt, p.TranslationHashes, p.SocialLinks })
+            .Select(p => new { p.Id, p.Name, p.Slug, p.Website, p.Email, p.Description, p.DescriptionEn, GalleryCount = p.PhotoGalleries.Count, p.CreatedAt, p.UpdatedAt, p.TranslationHashes, p.SocialLinks })
             .ToListAsync(cancellationToken);
 
         return raw.Select(p => new PhotographerDto(
             p.Id, p.Name, p.Slug, p.Website, p.Email,
-            p.Description, p.DescriptionEn, p.CreatedAt, p.UpdatedAt,
+            p.Description, p.DescriptionEn, p.GalleryCount, p.CreatedAt, p.UpdatedAt,
             p.TranslationHashes == null ? null : JsonSerializer.Deserialize<Dictionary<string, string>>(p.TranslationHashes),
             p.SocialLinks
         )).ToList();

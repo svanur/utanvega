@@ -292,7 +292,7 @@ public class UtanvegaDbContext : DbContext
                   .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasOne(e => e.Photographer)
-                  .WithMany()
+                  .WithMany(p => p.PhotoGalleries)
                   .HasForeignKey(e => e.PhotographerId)
                   .OnDelete(DeleteBehavior.SetNull);
 

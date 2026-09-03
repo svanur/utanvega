@@ -17,4 +17,8 @@ public class Photographer
     // Auditing
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
+
+    // Navigation — SetNull on delete (see UtanvegaDbContext), so this is only used for counting
+    // and reassignment; it is never cascade-deleted.
+    public ICollection<PhotoGallery> PhotoGalleries { get; set; } = new List<PhotoGallery>();
 }

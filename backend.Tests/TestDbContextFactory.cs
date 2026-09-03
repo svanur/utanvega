@@ -230,7 +230,7 @@ internal class TestDbContext : UtanvegaDbContext
                   .HasForeignKey(e => e.EventEditionId)
                   .OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.Photographer)
-                  .WithMany()
+                  .WithMany(p => p.PhotoGalleries)
                   .HasForeignKey(e => e.PhotographerId)
                   .OnDelete(DeleteBehavior.SetNull);
         });

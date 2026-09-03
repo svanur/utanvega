@@ -421,6 +421,104 @@ public class PhotoGalleryHandlerTests : IDisposable
         Assert.Equal("Jón Jónsson", gallery.PhotographerName);
     }
 
+    // ─── GetPhotoGalleriesByPhotographerQuery ───
+
+    [Fact]
+    public async Task GetPhotoGalleriesByPhotographer_Returns_OnlyThatPhotographersGalleries()
+    {
+        var edition = await SeedEdition();
+        var photographer = await SeedPhotographer();
+        var otherPhotographer = await SeedPhotographer();
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new CreatePhotoGalleryCommandHandler(ctx, _cacheInvalidator);
+            await handler.Handle(new CreatePhotoGalleryCommand(
+                EventEditionId: edition.Id, Url: "https://photos.example.com/mine",
+                PhotographerId: photographer.Id, Title: null
+            ), CancellationToken.None);
+            await handler.Handle(new CreatePhotoGalleryCommand(
+                EventEditionId: edition.Id, Url: "https://photos.example.com/theirs",
+                PhotographerId: otherPhotographer.Id, Title: null
+            ), CancellationToken.None);
+            await handler.Handle(new CreatePhotoGalleryCommand(
+                EventEditionId: edition.Id, Url: "https://photos.example.com/unattributed",
+                PhotographerId: null, Title: null
+            ), CancellationToken.None);
+        }
+
+        using var ctx2 = _factory.CreateContext();
+        var queryHandler = new GetPhotoGalleriesByPhotographerQueryHandler(ctx2);
+        var result = await queryHandler.Handle(new GetPhotoGalleriesByPhotographerQuery(photographer.Id), CancellationToken.None);
+
+        var url = Assert.Single(result).Url;
+        Assert.Equal("https://photos.example.com/mine", url);
+    }
+
+    [Fact]
+    public async Task GetPhotoGalleriesByPhotographer_IncludesEventAndEditionInfo()
+    {
+        var photographer = await SeedPhotographer();
+        var photographerId = photographer.Id;
+
+        Guid eventId, editionId;
+        using (var ctx = _factory.CreateContext())
+        {
+            var ev = new Event
+            {
+                Name = "Laugavegur Ultra", Slug = "laugavegur-ultra",
+                Type = EventType.Race, Status = EventStatus.Confirmed,
+            };
+            ctx.Events.Add(ev);
+            await ctx.SaveChangesAsync();
+            eventId = ev.Id;
+
+            var edition = new EventEdition
+            {
+                EventId = ev.Id,
+                Year = 2025,
+                Date = new DateOnly(2025, 7, 12),
+                RegistrationStatus = RegistrationStatus.NotRequired,
+            };
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+            editionId = edition.Id;
+
+            ctx.PhotoGalleries.Add(new PhotoGallery
+            {
+                EventEditionId = edition.Id,
+                PhotographerId = photographerId,
+                Url = "https://photos.example.com/laugavegur",
+            });
+            await ctx.SaveChangesAsync();
+        }
+
+        using var ctx2 = _factory.CreateContext();
+        var queryHandler = new GetPhotoGalleriesByPhotographerQueryHandler(ctx2);
+        var result = await queryHandler.Handle(new GetPhotoGalleriesByPhotographerQuery(photographerId), CancellationToken.None);
+
+        var gallery = Assert.Single(result);
+        Assert.Equal(editionId, gallery.EventEditionId);
+        Assert.Equal(eventId, gallery.EventId);
+        Assert.Equal("Laugavegur Ultra", gallery.EventName);
+        Assert.Equal("laugavegur-ultra", gallery.EventSlug);
+        Assert.Equal(2025, gallery.EditionYear);
+        Assert.Equal(new DateOnly(2025, 7, 12), gallery.EditionDate);
+    }
+
+    [Fact]
+    public async Task GetPhotoGalleriesByPhotographer_Returns_EmptyList_WhenNoGalleries()
+    {
+        var photographer = await SeedPhotographer();
+
+        using var ctx = _factory.CreateContext();
+        var queryHandler = new GetPhotoGalleriesByPhotographerQueryHandler(ctx);
+        var result = await queryHandler.Handle(new GetPhotoGalleriesByPhotographerQuery(photographer.Id), CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Empty(result);
+    }
+
     // ─── Validators ───
 
     [Fact]

@@ -10,6 +10,7 @@ public record PhotographerDto(
     string? Email,
     string? Description,
     string? DescriptionEn,
+    int GalleryCount,
     DateTime CreatedAt,
     DateTime? UpdatedAt,
     Dictionary<string, string>? TranslationHashes = null,

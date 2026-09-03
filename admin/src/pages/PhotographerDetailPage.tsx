@@ -1,7 +1,10 @@
 import { type ReactNode, useState } from 'react';
+import dayjs from 'dayjs';
+import 'dayjs/locale/is';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
     Alert,
+    Autocomplete,
     Box,
     Button,
     Chip,
@@ -12,7 +15,14 @@ import {
     DialogTitle,
     IconButton,
     InputAdornment,
+    Paper,
     Stack,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
     TextField,
     Tooltip,
     Typography,
@@ -26,11 +36,13 @@ import LanguageIcon from '@mui/icons-material/Language';
 import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import MailOutlineIcon from '@mui/icons-material/MailOutline';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import SaveIcon from '@mui/icons-material/Save';
 import ShareIcon from '@mui/icons-material/Share';
 
 import { useQueryClient } from '@tanstack/react-query';
 import { usePhotographers, type PhotographerDto } from '../hooks/usePhotographers';
+import { usePhotoGalleriesByPhotographer } from '../hooks/usePhotoGalleries';
 import type { SocialLink } from '../hooks/useEvents';
 import { usePageShortcuts } from '../hooks/usePageShortcuts';
 import { trimToUndefined } from '../utils/strings';
@@ -40,6 +52,17 @@ import TranslateIcon from '@mui/icons-material/Translate';
 
 interface Props {
     onNotify: (message: ReactNode, severity?: 'success' | 'error') => void;
+}
+
+interface PhotographerRef {
+    id: string;
+    name: string;
+}
+
+function fmtEdition(year: number | null, date: string | null): string {
+    if (date) return dayjs(date).locale('is').format('D. MMMM YYYY');
+    if (year) return String(year);
+    return '—';
 }
 
 interface FormState {
@@ -59,6 +82,7 @@ export default function PhotographerDetailPage({ onNotify }: Props) {
     const { photographers, loading, updatePhotographer, deletePhotographer } = usePhotographers();
 
     const photographer = photographers.find(p => p.slug === slug) ?? null;
+    const { galleries, loading: galleriesLoading } = usePhotoGalleriesByPhotographer(photographer?.id ?? null);
 
     const [editing, setEditing] = useState(false);
     const [slugUnlocked, setSlugUnlocked] = useState(false);
@@ -69,7 +93,12 @@ export default function PhotographerDetailPage({ onNotify }: Props) {
     const [saving, setSaving] = useState(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [deleting, setDeleting] = useState(false);
+    const [reassignTarget, setReassignTarget] = useState<PhotographerRef | null>(null);
     const { translate, translating } = useTranslate(msg => onNotify(msg, 'error'));
+
+    const reassignOptions: PhotographerRef[] = photographers
+        .filter(p => p.id !== photographer?.id)
+        .map(p => ({ id: p.id, name: p.name }));
 
     const openEdit = () => {
         if (!photographer) return;
@@ -118,11 +147,11 @@ export default function PhotographerDetailPage({ onNotify }: Props) {
         }
     };
 
-    const handleDelete = async () => {
+    const handleDelete = async (reassignToId?: string) => {
         if (!photographer) return;
         setDeleting(true);
         try {
-            await deletePhotographer(photographer.id);
+            await deletePhotographer(photographer.id, reassignToId);
             onNotify(`'${photographer.name}' deleted`);
             navigate('/photographers');
         } catch (err) {
@@ -257,7 +286,7 @@ export default function PhotographerDetailPage({ onNotify }: Props) {
                             color="error"
                             variant="outlined"
                             startIcon={<DeleteIcon />}
-                            onClick={() => setDeleteDialogOpen(true)}
+                            onClick={() => { setReassignTarget(null); setDeleteDialogOpen(true); }}
                         >
                             Delete
                         </Button>
@@ -393,28 +422,123 @@ export default function PhotographerDetailPage({ onNotify }: Props) {
                     </Stack>
                 </Box>
             )}
+
+            {/* Galleries */}
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.5 }}>
+                <Typography variant="h6" fontWeight={600}>Galleries</Typography>
+                <Typography component="span" variant="body2" color="text.secondary">
+                    {galleriesLoading ? '…' : galleries.length}
+                </Typography>
+            </Stack>
+
+            {galleriesLoading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                    <CircularProgress size={24} />
+                </Box>
+            ) : galleries.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">No galleries linked to this photographer.</Typography>
+            ) : (
+                <TableContainer component={Paper} variant="outlined">
+                    <Table size="small">
+                        <TableHead>
+                            <TableRow sx={{ '& th': { fontWeight: 700 } }}>
+                                <TableCell>Event</TableCell>
+                                <TableCell>Edition</TableCell>
+                                <TableCell>URL</TableCell>
+                                <TableCell align="right" />
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {galleries.map(gallery => (
+                                <TableRow
+                                    key={gallery.id}
+                                    hover
+                                    sx={{ cursor: 'pointer' }}
+                                    onClick={() => navigate(`/events/${gallery.eventSlug}`)}
+                                >
+                                    <TableCell>
+                                        <Typography variant="body2" fontWeight={600}>{gallery.eventName}</Typography>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Typography variant="body2" color="text.secondary">
+                                            {fmtEdition(gallery.editionYear, gallery.editionDate)}
+                                        </Typography>
+                                    </TableCell>
+                                    <TableCell onClick={e => e.stopPropagation()}>
+                                        <Tooltip title={gallery.url}>
+                                            <IconButton size="small" component="a" href={gallery.url} target="_blank" rel="noopener noreferrer">
+                                                <OpenInNewIcon fontSize="small" />
+                                            </IconButton>
+                                        </Tooltip>
+                                    </TableCell>
+                                    <TableCell align="right">
+                                        <Tooltip title="Open event">
+                                            <IconButton size="small" component={RouterLink} to={`/events/${gallery.eventSlug}`} onClick={e => e.stopPropagation()}>
+                                                <ChevronRightIcon fontSize="small" />
+                                            </IconButton>
+                                        </Tooltip>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </TableContainer>
+            )}
         </Box>
 
         {/* Delete confirmation dialog */}
         <Dialog open={deleteDialogOpen} onClose={() => !deleting && setDeleteDialogOpen(false)} maxWidth="xs" fullWidth>
             <DialogTitle>Delete photographer?</DialogTitle>
             <DialogContent>
-                <Typography>
-                    Are you sure you want to delete <strong>{photographer?.name}</strong>? This action cannot be undone.
-                </Typography>
+                {photographer && photographer.galleryCount > 0 ? (
+                    <>
+                        <Alert severity="warning" sx={{ mb: 2 }}>
+                            This photographer is credited on <strong>{photographer.galleryCount}</strong> photo galler{photographer.galleryCount !== 1 ? 'ies' : 'y'}.
+                            Reassign {photographer.galleryCount !== 1 ? 'them' : 'it'} to another photographer, or delete <strong>{photographer.name}</strong> anyway
+                            — this permanently removes the attribution from {photographer.galleryCount !== 1 ? 'those galleries' : 'that gallery'}.
+                        </Alert>
+                        <Autocomplete<PhotographerRef>
+                            size="small"
+                            fullWidth
+                            options={reassignOptions}
+                            value={reassignTarget}
+                            disabled={deleting}
+                            isOptionEqualToValue={(option, val) => option.id === val.id}
+                            getOptionLabel={(option) => option.name}
+                            onChange={(_, newValue) => setReassignTarget(newValue)}
+                            renderInput={(params) => (
+                                <TextField {...params} label="Reassign galleries to (optional)" placeholder="Search photographers…" />
+                            )}
+                        />
+                    </>
+                ) : (
+                    <Typography>
+                        Are you sure you want to delete <strong>{photographer?.name}</strong>? This action cannot be undone.
+                    </Typography>
+                )}
             </DialogContent>
             <DialogActions>
                 <Button onClick={() => setDeleteDialogOpen(false)} disabled={deleting}>
                     Cancel
                 </Button>
+                {photographer && photographer.galleryCount > 0 && (
+                    <Button
+                        color="error"
+                        variant="outlined"
+                        onClick={() => void handleDelete()}
+                        disabled={deleting}
+                    >
+                        Delete anyway
+                    </Button>
+                )}
                 <Button
                     color="error"
                     variant="contained"
-                    onClick={() => void handleDelete()}
-                    disabled={deleting}
+                    onClick={() => void handleDelete(reassignTarget?.id)}
+                    disabled={deleting || (!!photographer && photographer.galleryCount > 0 && !reassignTarget)}
                     startIcon={deleting ? <CircularProgress size={16} color="inherit" /> : <DeleteIcon />}
                 >
-                    {deleting ? 'Deleting…' : 'Delete'}
+                    {deleting ? 'Deleting…' : reassignTarget ? 'Reassign & delete' : 'Delete'}
                 </Button>
             </DialogActions>
         </Dialog>
