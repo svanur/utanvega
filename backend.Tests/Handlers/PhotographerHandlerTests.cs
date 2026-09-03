@@ -176,6 +176,42 @@ public class PhotographerHandlerTests : IDisposable
     }
 
     [Fact]
+    public async Task Update_Photographer_CollidingSlug_ThrowsDbUpdateException()
+    {
+        // #587 — Update endpoints have no test coverage for the outer try/catch in Program.cs
+        // (that block only fires on a real PostgresException, which SQLite's in-memory test DB
+        // can't produce — the Create-side equivalent left the same gap in #586). This confirms
+        // the precondition the endpoint's catch relies on: IX_Photographers_Slug's unique index
+        // does reject a colliding slug at SaveChangesAsync, surfacing as a DbUpdateException,
+        // exactly like the Create path already covers.
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new CreatePhotographerCommandHandler(ctx);
+            await handler.Handle(new CreatePhotographerCommand(
+                Name: "Jón Jónsson", Website: null, Email: null, Description: null
+            ), CancellationToken.None);
+        }
+
+        Guid otherId;
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new CreatePhotographerCommandHandler(ctx);
+            (otherId, _) = await handler.Handle(new CreatePhotographerCommand(
+                Name: "Some Other Photographer", Website: null, Email: null, Description: null
+            ), CancellationToken.None);
+        }
+
+        using var updateCtx = _factory.CreateContext();
+        var updateHandler = new UpdatePhotographerCommandHandler(updateCtx);
+        // Explicit Slug mirrors "Jon Jonsson" (no diacritics) normalizing to the same slug as
+        // "Jón Jónsson" — the exact ambiguity #561/#586 fixed on the Create side.
+        await Assert.ThrowsAsync<DbUpdateException>(() => updateHandler.Handle(new UpdatePhotographerCommand(
+            Id: otherId, Name: "Some Other Photographer", Website: null, Email: null,
+            Description: null, Slug: "jon-jonsson"
+        ), CancellationToken.None));
+    }
+
+    [Fact]
     public async Task Update_Photographer_Returns_False_ForUnknownId()
     {
         using var ctx = _factory.CreateContext();
