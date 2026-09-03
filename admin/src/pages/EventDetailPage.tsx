@@ -231,6 +231,11 @@ interface EditionDialogProps {
   eventId: string;
   onClose: () => void;
   onSaved: (newEditionId?: string) => void;
+  // Fired after any gallery create/update/delete made via PhotoGalleryManager's own inline
+  // checkmark — independent of Save/Cancel, so the edition meta row's Galleries entry stays
+  // live even if the dialog is later dismissed via Cancel (see handleCancelOrDismiss, which
+  // only warns about a still-*pending* row, not one already persisted this way).
+  onGalleryMutated: () => void;
   onNotify: (msg: ReactNode, sev?: 'success' | 'error') => void;
   initialValues?: EditionFormState;
 }
@@ -249,7 +254,7 @@ function LangToggleButton() {
   );
 }
 
-function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onNotify, initialValues }: EditionDialogProps) {
+function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGalleryMutated, onNotify, initialValues }: EditionDialogProps) {
   const isNew = edition === null;
   const [form, setForm] = useState<EditionFormState>(initialValues ?? (edition ? buildEditionForm(edition) : emptyEditionForm()));
   const [saving, setSaving] = useState(false);
@@ -406,7 +411,7 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onNotify
               check-mark still saves and reorders it immediately, but this dialog's Save/Cancel
               also flush/warn about any row left dirty or new-but-filled, via the ref (see
               handleSave/handleCancelOrDismiss above and PhotoGalleryManager's flushPending). */}
-          <PhotoGalleryManager ref={galleryManagerRef} editionId={edition?.id ?? null} onNotify={onNotify} />
+          <PhotoGalleryManager ref={galleryManagerRef} editionId={edition?.id ?? null} onNotify={onNotify} onGalleryMutated={onGalleryMutated} />
         </Stack>
       </DialogContent>
       <DialogActions>
@@ -1544,6 +1549,27 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                       </Typography>
                     </Box>
                   )}
+                  {edition.galleries.length > 0 && (() => {
+                    // Sort defensively even though ToPublicDtos() already sorts server-side —
+                    // don't assume the ordering contract holds forever.
+                    const sorted = [...edition.galleries].sort((a, b) => a.sortOrder - b.sortOrder);
+                    const first = sorted[0]!;
+                    const extra = sorted.length - 1;
+                    return (
+                      <Box>
+                        <Typography variant="caption" color="text.secondary" display="block">Galleries</Typography>
+                        <Stack direction="row" alignItems="baseline" spacing={0.75}>
+                          <Typography variant="body2" component="a" href={first.url} target="_blank" rel="noopener"
+                            sx={{ color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}>
+                            {(() => { const s = first.url.replace(/^https?:\/\//, ''); return s.length > 40 ? s.slice(0, 40) + '…' : s; })()}
+                          </Typography>
+                          {extra > 0 && (
+                            <Typography variant="body2" color="text.secondary">+{extra} more</Typography>
+                          )}
+                        </Stack>
+                      </Box>
+                    );
+                  })()}
                   {edition.trailName && (
                     <Box>
                       <Typography variant="caption" color="text.secondary" display="block">Trail</Typography>
@@ -1691,6 +1717,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
         eventId={detail.id}
         initialValues={editionInitialValues}
         onClose={() => { setEditionDialogOpen(false); setCloneFromEditionId(null); setEditionInitialValues(undefined); }}
+        onGalleryMutated={refresh}
         onSaved={async (newEditionId) => {
           setEditionDialogOpen(false);
           if (newEditionId && cloneFromEditionId) {

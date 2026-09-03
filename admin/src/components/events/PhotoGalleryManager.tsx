@@ -28,6 +28,11 @@ import { trimToUndefined } from '../../utils/strings';
 interface PhotoGalleryManagerProps {
   editionId: string | null;
   onNotify: (msg: ReactNode, severity?: 'success' | 'error') => void;
+  // Fired after any gallery create/update/delete (including reorder, which goes through
+  // updatePhotoGallery) so a caller displaying a denormalized summary elsewhere — the
+  // Galleries entry in EventDetailPage's edition meta row — can refresh in step, even
+  // when this dialog is dismissed via Cancel rather than Save. See usePhotoGalleries.
+  onGalleryMutated?: () => void;
 }
 
 // Imperative escape hatch for EditionDialogInner's own Save/Cancel: this component's row drafts
@@ -231,8 +236,8 @@ function GalleryRow({ draft, photographers, onCreatePhotographer, onChange, onSa
   );
 }
 
-const PhotoGalleryManager = forwardRef<PhotoGalleryManagerHandle, PhotoGalleryManagerProps>(function PhotoGalleryManager({ editionId, onNotify }, ref) {
-  const { galleries, loading, createPhotoGallery, updatePhotoGallery, deletePhotoGallery, refresh } = usePhotoGalleries(editionId);
+const PhotoGalleryManager = forwardRef<PhotoGalleryManagerHandle, PhotoGalleryManagerProps>(function PhotoGalleryManager({ editionId, onNotify, onGalleryMutated }, ref) {
+  const { galleries, loading, createPhotoGallery, updatePhotoGallery, deletePhotoGallery, refresh } = usePhotoGalleries(editionId, onGalleryMutated);
   const { photographers, createPhotographer } = usePhotographers();
 
   const [drafts, setDrafts] = useState<RowDraft[]>([]);
