@@ -109,11 +109,26 @@ export function usePhotoGalleries(editionId: string | null, onMutated?: () => vo
         onMutated?.();
     };
 
+    // Drag-reorder touches every row between the drag source and target in one gesture, so it
+    // fires this instead of updatePhotoGallery in a loop — one invalidate/onMutated for the whole
+    // batch rather than one per row (see #596). PUTs still run in parallel; only the invalidation
+    // is deferred until they've all settled, and Promise.all's reject-on-first-rejection means a
+    // failed PUT skips invalidation entirely, leaving the caches at their pre-reorder state.
+    const updatePhotoGalleriesBatch = async (inputs: UpdatePhotoGalleryInput[]): Promise<void> => {
+        if (inputs.length === 0) return;
+        await Promise.all(inputs.map(input => apiFetch(`/api/v1/admin/photo-galleries/${input.id}`, {
+            method: 'PUT',
+            body: JSON.stringify(input),
+        })));
+        await invalidate();
+        onMutated?.();
+    };
+
     const deletePhotoGallery = async (id: string): Promise<void> => {
         await apiFetch(`/api/v1/admin/photo-galleries/${id}`, { method: 'DELETE' });
         await invalidate();
         onMutated?.();
     };
 
-    return { galleries, loading, error, refresh: invalidate, createPhotoGallery, updatePhotoGallery, deletePhotoGallery };
+    return { galleries, loading, error, refresh: invalidate, createPhotoGallery, updatePhotoGallery, updatePhotoGalleriesBatch, deletePhotoGallery };
 }

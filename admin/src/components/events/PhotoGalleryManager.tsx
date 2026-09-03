@@ -237,7 +237,7 @@ function GalleryRow({ draft, photographers, onCreatePhotographer, onChange, onSa
 }
 
 const PhotoGalleryManager = forwardRef<PhotoGalleryManagerHandle, PhotoGalleryManagerProps>(function PhotoGalleryManager({ editionId, onNotify, onGalleryMutated }, ref) {
-  const { galleries, loading, createPhotoGallery, updatePhotoGallery, deletePhotoGallery, refresh } = usePhotoGalleries(editionId, onGalleryMutated);
+  const { galleries, loading, createPhotoGallery, updatePhotoGallery, updatePhotoGalleriesBatch, deletePhotoGallery } = usePhotoGalleries(editionId, onGalleryMutated);
   const { photographers, createPhotographer } = usePhotographers();
 
   const [drafts, setDrafts] = useState<RowDraft[]>([]);
@@ -383,17 +383,14 @@ const PhotoGalleryManager = forwardRef<PhotoGalleryManagerHandle, PhotoGalleryMa
     const changed = reordered.map((d, idx) => ({ draft: d, newSortOrder: idx, changed: d.sortOrder !== idx }));
     setDrafts([...reordered.map((d, idx) => ({ ...d, sortOrder: idx })), ...unsaved]);
     try {
-      await Promise.all(changed.filter(c => c.changed).map(c =>
-        updatePhotoGallery({
-          id: c.draft.id!,
-          url: c.draft.url,
-          photographerId: c.draft.photographer?.id ?? null,
-          title: trimToUndefined(c.draft.title) ?? null,
-          titleEn: trimToUndefined(c.draft.titleEn) ?? null,
-          sortOrder: c.newSortOrder,
-        }),
-      ));
-      await refresh();
+      await updatePhotoGalleriesBatch(changed.filter(c => c.changed).map(c => ({
+        id: c.draft.id!,
+        url: c.draft.url,
+        photographerId: c.draft.photographer?.id ?? null,
+        title: trimToUndefined(c.draft.title) ?? null,
+        titleEn: trimToUndefined(c.draft.titleEn) ?? null,
+        sortOrder: c.newSortOrder,
+      })));
     } catch {
       setDrafts([...persisted, ...unsaved]);
       onNotify('Failed to reorder galleries', 'error');
