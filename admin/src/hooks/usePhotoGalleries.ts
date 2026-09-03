@@ -32,6 +32,14 @@ export interface UpdatePhotoGalleryInput {
     sortOrder?: number;
 }
 
+// Per-row outcome of updatePhotoGalleriesBatch — lets a caller reconcile its own optimistic
+// state precisely on partial failure, rather than treating the whole batch as one unit (#608).
+export interface BatchUpdateResult {
+    id: string;
+    success: boolean;
+    error?: string;
+}
+
 export interface PhotoGalleryByPhotographerDto {
     id: string;
     eventEditionId: string;
@@ -111,17 +119,23 @@ export function usePhotoGalleries(editionId: string | null, onMutated?: () => vo
 
     // Drag-reorder touches every row between the drag source and target in one gesture, so it
     // fires this instead of updatePhotoGallery in a loop — one invalidate/onMutated for the whole
-    // batch rather than one per row (see #596). PUTs still run in parallel; only the invalidation
-    // is deferred until they've all settled, and Promise.all's reject-on-first-rejection means a
-    // failed PUT skips invalidation entirely, leaving the caches at their pre-reorder state.
-    const updatePhotoGalleriesBatch = async (inputs: UpdatePhotoGalleryInput[]): Promise<void> => {
-        if (inputs.length === 0) return;
-        await Promise.all(inputs.map(input => apiFetch(`/api/v1/admin/photo-galleries/${input.id}`, {
+    // batch rather than one per row (see #596). PUTs still run in parallel via Promise.allSettled
+    // (not Promise.all) so that a single rejected PUT can't skip invalidation for the rows whose
+    // PUT *did* land — invalidate/onMutated now always run once every request has settled,
+    // regardless of outcome, so the cache never lags behind what's actually persisted (#608).
+    // The caller gets a per-row result back (rather than a thrown error) so it can reconcile its
+    // own optimistic local state precisely — reverting only the rows that failed, not the batch.
+    const updatePhotoGalleriesBatch = async (inputs: UpdatePhotoGalleryInput[]): Promise<BatchUpdateResult[]> => {
+        if (inputs.length === 0) return [];
+        const settled = await Promise.allSettled(inputs.map(input => apiFetch(`/api/v1/admin/photo-galleries/${input.id}`, {
             method: 'PUT',
             body: JSON.stringify(input),
         })));
         await invalidate();
         onMutated?.();
+        return settled.map((result, idx) => result.status === 'fulfilled'
+            ? { id: inputs[idx].id, success: true }
+            : { id: inputs[idx].id, success: false, error: result.reason instanceof Error ? result.reason.message : 'Failed to update gallery' });
     };
 
     const deletePhotoGallery = async (id: string): Promise<void> => {

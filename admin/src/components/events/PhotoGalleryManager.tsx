@@ -382,8 +382,9 @@ const PhotoGalleryManager = forwardRef<PhotoGalleryManagerHandle, PhotoGalleryMa
     const reordered = arrayMove(persisted, oldIndex, newIndex);
     const changed = reordered.map((d, idx) => ({ draft: d, newSortOrder: idx, changed: d.sortOrder !== idx }));
     setDrafts([...reordered.map((d, idx) => ({ ...d, sortOrder: idx })), ...unsaved]);
+    const toUpdate = changed.filter(c => c.changed);
     try {
-      await updatePhotoGalleriesBatch(changed.filter(c => c.changed).map(c => ({
+      const results = await updatePhotoGalleriesBatch(toUpdate.map(c => ({
         id: c.draft.id!,
         url: c.draft.url,
         photographerId: c.draft.photographer?.id ?? null,
@@ -391,9 +392,29 @@ const PhotoGalleryManager = forwardRef<PhotoGalleryManagerHandle, PhotoGalleryMa
         titleEn: trimToUndefined(c.draft.titleEn) ?? null,
         sortOrder: c.newSortOrder,
       })));
-    } catch {
-      setDrafts([...persisted, ...unsaved]);
+      const failedIds = new Set(results.filter(r => !r.success).map(r => r.id));
+      if (failedIds.size === 0) return; // every PUT landed — the optimistic order above is already correct
+      if (failedIds.size === results.length) {
+        // Nothing persisted — revert the whole batch to its pre-reorder order, as before.
+        setDrafts([...persisted, ...unsaved]);
+      } else {
+        // Partial failure: some rows' new sortOrder is genuinely persisted server-side (and the
+        // hook has already invalidated the cache to match), so only the rows whose PUT actually
+        // failed get reverted to their pre-reorder sortOrder — reverting the whole batch would
+        // desync the UI from rows that did land (#608).
+        setDrafts(prev => prev.map(d => {
+          if (!d.id || !failedIds.has(d.id)) return d;
+          const original = persisted.find(p => p.key === d.key);
+          return original ? { ...d, sortOrder: original.sortOrder } : d;
+        }));
+      }
       onNotify('Failed to reorder galleries', 'error');
+    } catch (err) {
+      // updatePhotoGalleriesBatch no longer rejects on a failed PUT (Promise.allSettled), so this
+      // only fires for a genuinely unexpected error — with no per-row info to reconcile with,
+      // fall back to a full revert as before.
+      setDrafts([...persisted, ...unsaved]);
+      onNotify(err instanceof Error ? err.message : 'Failed to reorder galleries', 'error');
     }
   };
 
