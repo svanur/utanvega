@@ -76,6 +76,10 @@ export default function OrganizerDetailPage({ mode, onToggleMode }: OrganizerDet
     }
 
     const description = loc(organizer.description, organizer.descriptionEn);
+    // Stored website values are free text from the admin form and aren't scheme-validated
+    // at write time — a `javascript:` (or other) URI must never reach a clickable href.
+    // Mirrors the social-link filter below.
+    const website = organizer.website && /^https?:\/\//i.test(organizer.website) ? organizer.website : null;
 
     return (
         <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('nav.events'), to: '/events' }, { label: organizer.name }]}>
@@ -89,13 +93,13 @@ export default function OrganizerDetailPage({ mode, onToggleMode }: OrganizerDet
                 </Box>
 
                 {/* Meta row: website + contact + social links */}
-                {(organizer.website || organizer.contactName || (organizer.socialLinks && organizer.socialLinks.length > 0)) && (
+                {(website || organizer.contactName || (organizer.socialLinks && organizer.socialLinks.length > 0)) && (
                     <Stack direction="row" spacing={3} flexWrap="wrap" alignItems="center" sx={{ mb: 2 }}>
-                        {organizer.website && (
+                        {website && (
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                 <LanguageIcon fontSize="small" color="action" />
                                 <Link
-                                    href={organizer.website}
+                                    href={website}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     underline="hover"

@@ -14,8 +14,11 @@ public record OrganizerEventSummaryDto(
     DateOnly? EndDisplayDate
 );
 
+// Narrowed public-facing projection of Organizer — deliberately withholds Id, Kennitala,
+// Phone, Email, TranslationHashes, CreatedAt/UpdatedAt and any other admin-only field.
+// No public frontend caller consumes an organizer/photographer Id, so neither public DTO
+// exposes one; see PhotographerPublicDto for the same pattern applied to photographers.
 public record OrganizerPublicDto(
-    Guid Id,
     string Name,
     string Slug,
     string? Website,

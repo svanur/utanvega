@@ -471,11 +471,10 @@ public class OrganizerHandlerTests : IDisposable
     [Fact]
     public async Task GetOrganizerBySlug_Returns_Organizer()
     {
-        Guid orgId;
         using (var ctx = _factory.CreateContext())
         {
             var handler = new CreateOrganizerCommandHandler(ctx);
-            (orgId, _) = await handler.Handle(new CreateOrganizerCommand(
+            await handler.Handle(new CreateOrganizerCommand(
                 Name: "Slugged Org", Kennitala: null, Phone: null, Email: null,
                 Website: "https://slugged.is", Description: "A description", ContactName: "Sigríður"
             ), CancellationToken.None);
@@ -486,8 +485,7 @@ public class OrganizerHandlerTests : IDisposable
         var org = await handler2.Handle(new GetOrganizerBySlugQuery("slugged-org"), CancellationToken.None);
 
         Assert.NotNull(org);
-        Assert.Equal(orgId, org!.Id);
-        Assert.Equal("Slugged Org", org.Name);
+        Assert.Equal("Slugged Org", org!.Name);
         Assert.Equal("slugged-org", org.Slug);
         Assert.Equal("https://slugged.is", org.Website);
         Assert.Equal("A description", org.Description);
