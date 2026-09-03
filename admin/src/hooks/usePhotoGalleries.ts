@@ -47,7 +47,7 @@ export interface PhotoGalleryByPhotographerDto {
 }
 
 const photoGalleriesQueryKey = (editionId: string) => ['admin', 'photo-galleries', editionId] as const;
-const photoGalleriesByPhotographerQueryKey = (photographerId: string) => ['admin', 'photo-galleries', 'by-photographer', photographerId] as const;
+export const photoGalleriesByPhotographerQueryKey = (photographerId: string) => ['admin', 'photo-galleries', 'by-photographer', photographerId] as const;
 
 // Galleries aren't nested on PhotographerDto either — fetched separately, once, when the
 // photographer detail page is open, rather than per-row in a list.

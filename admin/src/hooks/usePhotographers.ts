@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from './api';
 import type { SocialLink } from './useEvents';
+import { photoGalleriesByPhotographerQueryKey } from './usePhotoGalleries';
 
 export interface PhotographerDto {
     id: string;
@@ -69,6 +70,12 @@ export function usePhotographers() {
         const query = reassignToId ? `?reassignToId=${reassignToId}` : '';
         await apiFetch(`/api/v1/admin/photographers/${id}${query}`, { method: 'DELETE' });
         await invalidate();
+        // Galleries were reassigned to reassignToId on the backend — the target photographer's
+        // gallery-list query is otherwise unrelated to PHOTOGRAPHERS_QUERY_KEY and would keep
+        // serving a stale list until its 30s staleTime elapsed.
+        if (reassignToId) {
+            await queryClient.invalidateQueries({ queryKey: photoGalleriesByPhotographerQueryKey(reassignToId) });
+        }
     };
 
     return { photographers, loading, error, refresh: invalidate, createPhotographer, updatePhotographer, deletePhotographer };
