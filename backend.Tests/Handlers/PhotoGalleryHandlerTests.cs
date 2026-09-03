@@ -159,6 +159,28 @@ public class PhotoGalleryHandlerTests : IDisposable
         cacheInvalidator.Verify(c => c.InvalidateEvent(edition.Event.Slug), Times.Once);
     }
 
+    [Fact]
+    public async Task Create_PhotoGallery_UnknownEditionId_DoesNotInvalidateCache()
+    {
+        // Unlike Update/Delete's "no matching row" no-op, EventEditionId is a required FK
+        // (nullable: false, no ON DELETE SET NULL) — an unknown id can't be inserted at all,
+        // so SaveChangesAsync throws before the `if (edition is not null)` guard is ever
+        // reached. The invariant this test protects — no cache invalidation fires for a
+        // gallery that never made it into the table — still holds either way.
+        var cacheInvalidator = new Mock<ICacheInvalidator>();
+        using var ctx = _factory.CreateContext();
+        var handler = new CreatePhotoGalleryCommandHandler(ctx, cacheInvalidator.Object);
+
+        await Assert.ThrowsAsync<DbUpdateException>(() => handler.Handle(new CreatePhotoGalleryCommand(
+            EventEditionId: Guid.NewGuid(),
+            Url: "https://photos.example.com/ghost-edition",
+            PhotographerId: null,
+            Title: null
+        ), CancellationToken.None));
+
+        cacheInvalidator.Verify(c => c.InvalidateEvent(It.IsAny<string>()), Times.Never);
+    }
+
     // ─── UpdatePhotoGalleryCommand ───
 
     [Fact]
