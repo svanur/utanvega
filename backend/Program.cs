@@ -1941,10 +1941,22 @@ app.MapPut("/api/v1/admin/photographers/{id:guid}", [Authorize(Policy = "AdminOn
 })
 .WithName("UpdatePhotographer");
 
-app.MapDelete("/api/v1/admin/photographers/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, Guid? reassignToId, IMediator mediator) =>
+app.MapDelete("/api/v1/admin/photographers/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, Guid? reassignToId, IMediator mediator, ILogger<Program> logger) =>
 {
-    var success = await mediator.Send(new DeletePhotographerCommand(id, reassignToId));
-    return success ? Results.NoContent() : Results.NotFound();
+    try
+    {
+        var success = await mediator.Send(new DeletePhotographerCommand(id, reassignToId));
+        return success ? Results.NoContent() : Results.NotFound();
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(ex.Message);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Photographer delete failed for {PhotographerId}", id);
+        return Results.Problem("Failed to delete photographer.");
+    }
 })
 .WithName("DeletePhotographer");
 
