@@ -30,11 +30,16 @@ public class CreatePhotoGalleryCommandHandler : IRequestHandler<CreatePhotoGalle
     public async Task<Guid> Handle(CreatePhotoGalleryCommand request, CancellationToken cancellationToken)
     {
         // Resolve the event slug up front so a stale FK can't sneak an entity into the table
-        // without us knowing which public page to invalidate.
+        // without us knowing which public page to invalidate. This also doubles as the
+        // existence check for EventEditionId, since it's a required FK and would otherwise
+        // fail SaveChangesAsync with an opaque DbUpdateException.
         var edition = await _context.EventEditions
             .AsNoTracking()
             .Include(ed => ed.Event)
             .FirstOrDefaultAsync(ed => ed.Id == request.EventEditionId, cancellationToken);
+
+        if (edition is null)
+            throw new InvalidOperationException("Referenced event edition not found.");
 
         var gallery = new PhotoGallery
         {
@@ -50,8 +55,7 @@ public class CreatePhotoGalleryCommandHandler : IRequestHandler<CreatePhotoGalle
         _context.PhotoGalleries.Add(gallery);
         await _context.SaveChangesAsync(cancellationToken);
 
-        if (edition is not null)
-            _cacheInvalidator.InvalidateEvent(edition.Event.Slug);
+        _cacheInvalidator.InvalidateEvent(edition.Event.Slug);
 
         return gallery.Id;
     }
