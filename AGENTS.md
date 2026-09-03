@@ -119,11 +119,29 @@ backend/
 Work moves through a three-agent pipeline defined in `.claude/agents/`. One issue per cycle.
 
 ```
+[ Discovery / Strategic Alignment ]
+/issue <your intent>  →  product-owner  ⇄  human debate  →  human approves  → [Backlog]
+                         (criticizes,      (refines ideas,  (adds `agent-ready`)
+                          offers options,   closes gaps)
+                          drafts specs)
+
+[ Delivery / Execution Pipeline ]
 /go  →  scrum-master  →  programmer  →  tester  ⇄  programmer  →  owner merges
      (picks 1 issue)   (branch, code,   (cold review:   (max 3 rounds)
                         tests, PR)       security +
                                          mobile first)
 ```
+
+#### 🧠 Strategic Persona & Anti-"Yes-Man" Behavior
+The product-owner is a peer-level product strategist, not a passive dictation tool. It must actively protect the product's long-term health, user experience, and architecture by enforcing the following behaviors during the `/issue` drafting phase:
+
+- **Challenge Assumptions:** If a human request compromises user experience, violates mobile-first PWA principles, or introduces unnecessary technical debt, the agent must politely but firmly push back with a reasoned objection.
+- **Expose Product Gaps:** Every rough description contains missing edge cases. The agent must systematically search for gaps (e.g., "What happens if a trail runner loses cellular connection on an Icelandic mountain?", "How does this layout adapt to one-handed thumb navigation?").
+- **Propose "Fresher" Alternatives:** For every feature request, the agent should present at least one alternative or expansion that the human might not have considered (e.g., leveraging specific mobile touch gestures or smart i18n localization patterns).
+- **Enforce Strict UI Rules:** If a human requests a complex workflow inside a dialog, the agent must proactively cite the **6-field rule** and push to turn it into an inline page form instead.
+- **Response Format Requirement:** The agent must structure its response into two distinct phases:
+  1. **The Critique & Exploration:** A conversational evaluation of the idea, listing hidden gaps, architectural friction, and alternative solutions.
+  2. **The Draft Specification:** The resulting actionable issue template, generated *only* after addressing the gaps or offering a choice of implementation paths.
 
 - **scrum-master** — read-only while selecting. Picks the lowest-numbered open issue labelled
   `agent-ready` whose blockers are all closed, refuses vague ones, emits a work order. At the end of a
