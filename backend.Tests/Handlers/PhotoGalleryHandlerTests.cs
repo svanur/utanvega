@@ -162,16 +162,18 @@ public class PhotoGalleryHandlerTests : IDisposable
     [Fact]
     public async Task Create_PhotoGallery_UnknownEditionId_DoesNotInvalidateCache()
     {
-        // Unlike Update/Delete's "no matching row" no-op, EventEditionId is a required FK
-        // (nullable: false, no ON DELETE SET NULL) — an unknown id can't be inserted at all,
-        // so SaveChangesAsync throws before the `if (edition is not null)` guard is ever
-        // reached. The invariant this test protects — no cache invalidation fires for a
-        // gallery that never made it into the table — still holds either way.
+        // #602 — Unlike Update/Delete's "no matching row" no-op, EventEditionId is a required
+        // FK (nullable: false, no ON DELETE SET NULL), so an unknown id used to reach
+        // SaveChangesAsync and blow up with an opaque DbUpdateException / unhandled 500. The
+        // handler now short-circuits on the up-front edition lookup and throws
+        // InvalidOperationException instead, which the endpoint maps to a clean 404. The
+        // invariant this test protects — no cache invalidation fires and no row is created for
+        // a gallery whose edition doesn't exist — still holds either way.
         var cacheInvalidator = new Mock<ICacheInvalidator>();
         using var ctx = _factory.CreateContext();
         var handler = new CreatePhotoGalleryCommandHandler(ctx, cacheInvalidator.Object);
 
-        await Assert.ThrowsAsync<DbUpdateException>(() => handler.Handle(new CreatePhotoGalleryCommand(
+        await Assert.ThrowsAsync<InvalidOperationException>(() => handler.Handle(new CreatePhotoGalleryCommand(
             EventEditionId: Guid.NewGuid(),
             Url: "https://photos.example.com/ghost-edition",
             PhotographerId: null,
@@ -179,6 +181,7 @@ public class PhotoGalleryHandlerTests : IDisposable
         ), CancellationToken.None));
 
         cacheInvalidator.Verify(c => c.InvalidateEvent(It.IsAny<string>()), Times.Never);
+        Assert.Empty(await ctx.PhotoGalleries.Where(g => g.Url == "https://photos.example.com/ghost-edition").ToListAsync());
     }
 
     // ─── UpdatePhotoGalleryCommand ───
