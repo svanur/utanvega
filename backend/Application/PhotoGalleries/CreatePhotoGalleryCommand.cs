@@ -32,6 +32,7 @@ public class CreatePhotoGalleryCommandHandler : IRequestHandler<CreatePhotoGalle
         // Resolve the event slug up front so a stale FK can't sneak an entity into the table
         // without us knowing which public page to invalidate.
         var edition = await _context.EventEditions
+            .AsNoTracking()
             .Include(ed => ed.Event)
             .FirstOrDefaultAsync(ed => ed.Id == request.EventEditionId, cancellationToken);
 
