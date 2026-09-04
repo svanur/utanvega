@@ -42,7 +42,7 @@ import ShareIcon from '@mui/icons-material/Share';
 
 import { useQueryClient } from '@tanstack/react-query';
 import { usePhotographers, type PhotographerDto } from '../hooks/usePhotographers';
-import { usePhotoGalleriesByPhotographer } from '../hooks/usePhotoGalleries';
+import { usePhotoGalleriesByPhotographer, type PhotoGalleryByPhotographerDto } from '../hooks/usePhotoGalleries';
 import type { SocialLink } from '../hooks/useEvents';
 import { usePageShortcuts } from '../hooks/usePageShortcuts';
 import { trimToUndefined } from '../utils/strings';
@@ -75,6 +75,12 @@ interface FormState {
     socialLinks: SocialLink[];
 }
 
+interface GalleryFormState {
+    url: string;
+    title: string;
+    titleEn: string;
+}
+
 export default function PhotographerDetailPage({ onNotify }: Props) {
     const { slug = '' } = useParams<{ slug: string }>();
     const navigate = useNavigate();
@@ -82,7 +88,7 @@ export default function PhotographerDetailPage({ onNotify }: Props) {
     const { photographers, loading, updatePhotographer, deletePhotographer } = usePhotographers();
 
     const photographer = photographers.find(p => p.slug === slug) ?? null;
-    const { galleries, loading: galleriesLoading } = usePhotoGalleriesByPhotographer(photographer?.id ?? null);
+    const { galleries, loading: galleriesLoading, updateGallery } = usePhotoGalleriesByPhotographer(photographer?.id ?? null);
 
     const [editing, setEditing] = useState(false);
     const [slugUnlocked, setSlugUnlocked] = useState(false);
@@ -95,6 +101,11 @@ export default function PhotographerDetailPage({ onNotify }: Props) {
     const [deleting, setDeleting] = useState(false);
     const [reassignTarget, setReassignTarget] = useState<PhotographerRef | null>(null);
     const { translate, translating } = useTranslate(msg => onNotify(msg, 'error'));
+
+    const [editingGallery, setEditingGallery] = useState<PhotoGalleryByPhotographerDto | null>(null);
+    const [galleryForm, setGalleryForm] = useState<GalleryFormState>({ url: '', title: '', titleEn: '' });
+    const [galleryError, setGalleryError] = useState<string | null>(null);
+    const [savingGallery, setSavingGallery] = useState(false);
 
     const reassignOptions: PhotographerRef[] = photographers
         .filter(p => p.id !== photographer?.id)
@@ -158,6 +169,42 @@ export default function PhotographerDetailPage({ onNotify }: Props) {
             onNotify(err instanceof Error ? err.message : 'Failed to delete', 'error');
             setDeleting(false);
             setDeleteDialogOpen(false);
+        }
+    };
+
+    const openEditGallery = (gallery: PhotoGalleryByPhotographerDto) => {
+        setGalleryForm({ url: gallery.url, title: gallery.title ?? '', titleEn: gallery.titleEn ?? '' });
+        setGalleryError(null);
+        setEditingGallery(gallery);
+    };
+
+    const closeEditGallery = () => {
+        if (savingGallery) return;
+        setEditingGallery(null);
+    };
+
+    // photographerId and sortOrder are round-tripped unchanged from the row being edited — this
+    // dialog only ever touches url/title/titleEn — since UpdatePhotoGalleryCommand is a full
+    // overwrite and omitting either would zero the gallery's position or null its attribution.
+    const handleSaveGallery = async () => {
+        if (!editingGallery || !photographer) return;
+        if (!galleryForm.url.trim()) { setGalleryError('URL is required'); return; }
+        setSavingGallery(true);
+        try {
+            await updateGallery({
+                id: editingGallery.id,
+                url: galleryForm.url.trim(),
+                photographerId: photographer.id,
+                title: trimToUndefined(galleryForm.title) ?? null,
+                titleEn: trimToUndefined(galleryForm.titleEn) ?? null,
+                sortOrder: editingGallery.sortOrder,
+            });
+            onNotify('Gallery saved');
+            setEditingGallery(null);
+        } catch (err) {
+            onNotify(err instanceof Error ? err.message : 'Failed to save gallery', 'error');
+        } finally {
+            setSavingGallery(false);
         }
     };
 
@@ -490,6 +537,11 @@ export default function PhotographerDetailPage({ onNotify }: Props) {
                                         </Tooltip>
                                     </TableCell>
                                     <TableCell align="right">
+                                        <Tooltip title="Edit gallery">
+                                            <IconButton size="small" onClick={e => { e.stopPropagation(); openEditGallery(gallery); }}>
+                                                <EditIcon fontSize="small" />
+                                            </IconButton>
+                                        </Tooltip>
                                         <Tooltip title="Open event">
                                             <IconButton size="small" component={RouterLink} to={`/events/${gallery.eventSlug}`} onClick={e => e.stopPropagation()}>
                                                 <ChevronRightIcon fontSize="small" />
@@ -557,6 +609,45 @@ export default function PhotographerDetailPage({ onNotify }: Props) {
                     startIcon={deleting ? <CircularProgress size={16} color="inherit" /> : <DeleteIcon />}
                 >
                     {deleting ? 'Deleting…' : reassignTarget ? 'Reassign & delete' : 'Delete'}
+                </Button>
+            </DialogActions>
+        </Dialog>
+
+        {/* Gallery edit dialog — URL/Title/Title EN only; reassigning the attributed
+            photographer or reordering (sortOrder) isn't exposed here, see PhotoGalleryManager. */}
+        <Dialog open={!!editingGallery} onClose={closeEditGallery} maxWidth="xs" fullWidth>
+            <DialogTitle>Edit gallery</DialogTitle>
+            <DialogContent>
+                <Stack spacing={2} sx={{ mt: 1 }}>
+                    {galleryError && <Alert severity="error">{galleryError}</Alert>}
+                    <TextField
+                        label="URL"
+                        value={galleryForm.url}
+                        onChange={e => setGalleryForm(prev => ({ ...prev, url: e.target.value }))}
+                        placeholder="https://…"
+                        required
+                        fullWidth
+                        autoFocus
+                    />
+                    <BilingualTextField
+                        label="Title (optional)"
+                        valueIs={galleryForm.title}
+                        valueEn={galleryForm.titleEn}
+                        onChangeIs={v => setGalleryForm(prev => ({ ...prev, title: v }))}
+                        onChangeEn={v => setGalleryForm(prev => ({ ...prev, titleEn: v }))}
+                        fullWidth
+                    />
+                </Stack>
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={closeEditGallery} disabled={savingGallery}>Cancel</Button>
+                <Button
+                    variant="contained"
+                    startIcon={savingGallery ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}
+                    onClick={() => void handleSaveGallery()}
+                    disabled={savingGallery}
+                >
+                    Save
                 </Button>
             </DialogActions>
         </Dialog>
