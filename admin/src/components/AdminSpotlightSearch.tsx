@@ -135,7 +135,7 @@ export default function AdminSpotlightSearch({ onEditTrail, onEditEvent, onEditP
                 score: scoreMatch(q, trail.name, trail.slug),
             }))
             .filter(r => r.score > 0)
-            .sort((a, b) => b.score - a.score);
+            .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name, 'is', { numeric: true }));
 
         const eventResults: (SearchResult & { score: number })[] = events
             .map(event => ({
@@ -147,7 +147,7 @@ export default function AdminSpotlightSearch({ onEditTrail, onEditEvent, onEditP
                 score: scoreMatch(q, event.name, event.slug),
             }))
             .filter(r => r.score > 0)
-            .sort((a, b) => b.score - a.score);
+            .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name, 'is', { numeric: true }));
 
         const locationResults: (SearchResult & { score: number })[] = locations
             .map(loc => ({
@@ -159,7 +159,7 @@ export default function AdminSpotlightSearch({ onEditTrail, onEditEvent, onEditP
                 score: scoreMatch(q, loc.name, loc.slug),
             }))
             .filter(r => r.score > 0)
-            .sort((a, b) => b.score - a.score);
+            .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name, 'is', { numeric: true }));
 
         const organizerResults: (SearchResult & { score: number })[] = organizers
             .map(organizer => ({
@@ -171,7 +171,7 @@ export default function AdminSpotlightSearch({ onEditTrail, onEditEvent, onEditP
                 score: scoreMatch(q, organizer.name, organizer.slug),
             }))
             .filter(r => r.score > 0)
-            .sort((a, b) => b.score - a.score);
+            .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name, 'is', { numeric: true }));
 
         const photographerResults: (SearchResult & { score: number })[] = photographers
             .map(photographer => ({
@@ -183,7 +183,7 @@ export default function AdminSpotlightSearch({ onEditTrail, onEditEvent, onEditP
                 score: scoreMatch(q, photographer.name, photographer.slug),
             }))
             .filter(r => r.score > 0)
-            .sort((a, b) => b.score - a.score);
+            .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name, 'is', { numeric: true }));
 
         return [
             ...trailResults.slice(0, 5),
