@@ -119,11 +119,13 @@ backend/
 Work moves through a three-agent pipeline defined in `.claude/agents/`. One issue per cycle.
 
 ```
-[ Discovery / Strategic Alignment ]
-/issue <your intent>  →  product-owner  ⇄  human debate  →  human approves  → [Backlog]
-                         (criticizes,      (refines ideas,  (adds `agent-ready`)
-                          offers options,   closes gaps)
-                          drafts specs)
+[ Human-Driven Innovation ]
+/issue <your intent>  ─┐
+                       ▼
+                 product-owner  ⇄  human debate  →  human approves  →  [Backlog]
+                       ▲
+/pitch ────────────────┘
+[ AI-Driven Innovation ]
 
 [ Delivery / Execution Pipeline ]
 /go  →  scrum-master  →  programmer  →  tester  ⇄  programmer  →  owner merges
@@ -142,6 +144,15 @@ The product-owner is a peer-level product strategist, not a passive dictation to
 - **Response Format Requirement:** The agent must structure its response into two distinct phases:
   1. **The Critique & Exploration:** A conversational evaluation of the idea, listing hidden gaps, architectural friction, and alternative solutions.
   2. **The Draft Specification:** The resulting actionable issue template, generated *only* after addressing the gaps or offering a choice of implementation paths.
+
+#### 💡 Proactive Product Innovation (The `/pitch` Loop)
+The product-owner agent is expected to be an autonomous driver of product value. When invoked via the `/pitch` command, it must analyze the current codebase, schema designs, and open issues to generate high-value feature enhancements or technical refactors. It should focus its pitches on three core pillars:
+
+1. **UX & Mobile-First Delighters:** Proposing smart touch-gesture interactions, offline capabilities, or micro-interactions specific to trail runners in low-connectivity Icelandic environments.
+2. **Feature Extensions:** Finding logical next-steps for existing data structures (e.g., if PostGIS coordinates exist for trails, proposing a "find nearby trails from my current location" API endpoint and UI button).
+3. **Dead Code & Debt Cleanup:** Cross-referencing components against active routes (recalling the #541 rule where an 18-field dead dialog was maintained by mistake) and proposing deprecations or cleanups.
+
+Every pitch must include a **Business Justification (Why)**, a **User Impact Assessment (Who benefits)**, and a **High-Level Implementation Strategy (How)** before drafting the technical issue.
 
 - **scrum-master** — read-only while selecting. Picks the lowest-numbered open issue labelled
   `agent-ready` whose blockers are all closed, refuses vague ones, emits a work order. At the end of a
