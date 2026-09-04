@@ -75,7 +75,7 @@ import { downloadIcs } from '../utils/calendarLinks';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
 import { getTicketStatusColor, groupDistances, isAllSoldOut } from '../utils/ticketStatus';
-import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed } from '../utils/eventUtils';
+import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, isOngoingPastDayTwo } from '../utils/eventUtils';
 import { trackViewModeChange, trackSiteQROpen } from '../utils/analytics';
 import { useLocalize } from '../utils/localize';
 import { ActivityIcons, getActivityIcon } from '../utils/activityIcon';
@@ -1476,12 +1476,14 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                 </Typography>
                                                                 {comp.daysUntil != null && (
                                                                     <Chip
-                                                                        label={getCountdownLabel(comp.daysUntil, t)}
+                                                                        label={isOngoingPastDayTwo(comp.daysUntil, comp.displayDate, comp.endDisplayDate)
+                                                                            ? t('races.ongoing')
+                                                                            : getCountdownLabel(comp.daysUntil, t)}
                                                                         color={getCountdownColor(comp.daysUntil)}
                                                                         size="small"
                                                                         sx={{
                                                                             fontWeight: 700,
-                                                                            ...(comp.daysUntil === 0 && {
+                                                                            ...(comp.daysUntil === 0 && !isOngoingPastDayTwo(comp.daysUntil, comp.displayDate, comp.endDisplayDate) && {
                                                                                 animation: 'pulseToday 1.5s ease-in-out infinite',
                                                                                 '@keyframes pulseToday': {
                                                                                     '0%, 100%': { transform: 'scale(1)', boxShadow: 'none' },

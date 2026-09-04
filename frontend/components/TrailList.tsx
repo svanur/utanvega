@@ -80,6 +80,7 @@ import { trackViewModeChange } from '../utils/analytics';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { useEvents } from '../hooks/useEvents';
+import { isOngoingPastDayTwo } from '../utils/eventUtils';
 import { useOfflineTrails } from '../hooks/useOfflineTrails';
 import OfflinePinIcon from '@mui/icons-material/OfflinePin';
 
@@ -1172,7 +1173,9 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                     <Box display="flex" gap={0.5} mt={0.5} flexWrap="wrap">
                                         {comp.daysUntil != null && comp.daysUntil >= 0 && (
                                             <Chip
-                                                label={comp.daysUntil === 0
+                                                label={isOngoingPastDayTwo(comp.daysUntil, comp.displayDate, comp.endDisplayDate)
+                                                    ? t('races.ongoing')
+                                                    : comp.daysUntil === 0
                                                     ? t('races.today')
                                                     : t('races.daysUntil', { count: comp.daysUntil })}
                                                 size="small"
