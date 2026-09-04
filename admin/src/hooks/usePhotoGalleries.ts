@@ -46,6 +46,7 @@ export interface PhotoGalleryByPhotographerDto {
     url: string;
     title: string | null;
     titleEn: string | null;
+    sortOrder: number;
     eventId: string;
     eventName: string;
     eventNameEn: string | null;
@@ -60,6 +61,8 @@ export const photoGalleriesByPhotographerQueryKey = (photographerId: string) => 
 // Galleries aren't nested on PhotographerDto either — fetched separately, once, when the
 // photographer detail page is open, rather than per-row in a list.
 export function usePhotoGalleriesByPhotographer(photographerId: string | null) {
+    const queryClient = useQueryClient();
+
     const { data: galleries = [], isLoading: loading, error: queryError } = useQuery({
         queryKey: photoGalleriesByPhotographerQueryKey(photographerId ?? ''),
         queryFn: () => apiFetch<PhotoGalleryByPhotographerDto[]>(`/api/v1/admin/photographers/${photographerId}/photo-galleries`),
@@ -69,7 +72,23 @@ export function usePhotoGalleriesByPhotographer(photographerId: string | null) {
 
     const error = queryError instanceof Error ? queryError.message : queryError ? 'Unknown error' : null;
 
-    return { galleries, loading, error };
+    // Edition-agnostic counterpart to usePhotoGalleries' updatePhotoGallery: this page's rows
+    // span multiple editions (one per event a photographer has shot), so there's no single
+    // editionId to scope a query-invalidation to — it invalidates the by-photographer list
+    // instead. photographerId and sortOrder are round-tripped unchanged from the already-loaded
+    // row (UpdatePhotoGalleryCommand is a full overwrite — see the command's own comment), never
+    // recomputed here.
+    const updateGallery = async (input: UpdatePhotoGalleryInput): Promise<void> => {
+        await apiFetch(`/api/v1/admin/photo-galleries/${input.id}`, {
+            method: 'PUT',
+            body: JSON.stringify(input),
+        });
+        if (photographerId) {
+            await queryClient.invalidateQueries({ queryKey: photoGalleriesByPhotographerQueryKey(photographerId) });
+        }
+    };
+
+    return { galleries, loading, error, updateGallery };
 }
 
 // This hook's own PhotoGalleryDto (full CRUD shape, incl. photographerId, createdAt/By) isn't

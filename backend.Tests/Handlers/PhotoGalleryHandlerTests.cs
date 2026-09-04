@@ -514,6 +514,7 @@ public class PhotoGalleryHandlerTests : IDisposable
                 EventEditionId = edition.Id,
                 PhotographerId = photographerId,
                 Url = "https://photos.example.com/laugavegur",
+                SortOrder = 3,
             });
             await ctx.SaveChangesAsync();
         }
@@ -529,6 +530,7 @@ public class PhotoGalleryHandlerTests : IDisposable
         Assert.Equal("laugavegur-ultra", gallery.EventSlug);
         Assert.Equal(2025, gallery.EditionYear);
         Assert.Equal(new DateOnly(2025, 7, 12), gallery.EditionDate);
+        Assert.Equal(3, gallery.SortOrder);
     }
 
     [Fact]
