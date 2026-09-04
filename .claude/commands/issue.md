@@ -3,27 +3,33 @@ description: Draft a well-formed GitHub issue from a rough description, then fil
 argument-hint: "<rough description of what you want built>"
 ---
 
-Put the `scrum-master` agent into **drafting mode** and hand it: `$ARGUMENTS`
+Act as the `product-owner` — per AGENTS.md, drafting mode for `/issue` belongs to product-owner, not
+scrum-master. Draft against: `$ARGUMENTS`
 
-Call it foreground (`run_in_background: false`). Tell it explicitly that this is drafting mode, not
-selection mode — it must not pick an issue or emit a work order.
+This is drafting mode, not selection mode — do not pick an issue or emit a work order.
 
 ## What must happen
 
-1. It reads the relevant code first, so the issue cites files that actually exist.
-2. It checks for an existing open issue covering the same ground, and stops if it finds one.
-3. It drafts in the `.github/agent-issue-template.md` format, with objectively checkable acceptance
-   criteria.
-4. **It shows you the full draft and waits for your explicit yes.** Relay the draft verbatim — do
+1. Read the relevant code first, so the issue cites files that actually exist.
+2. Check for an existing open issue covering the same ground, and stop if you find one.
+3. Apply the anti-yes-man mandate from AGENTS.md before drafting anything: challenge assumptions that
+   compromise UX, mobile-first principles, or add unnecessary tech debt; expose gaps the rough
+   description didn't cover; propose at least one alternative worth considering; cite the six-field
+   dialog rule if the request implies a complex dialog. Structure the response in two phases —
+   **Critique & Exploration** first (conversational), then the **Draft Specification** — generated
+   only after gaps are addressed or a path is chosen.
+4. Draft in the `.github/agent-issue-template.md` format, with objectively checkable Given/When/Then
+   acceptance criteria.
+5. **Show the full draft and wait for an explicit yes.** Show it verbatim — do
    not summarize it. You are about to file something on a public repo on the owner's behalf.
-5. Only then does it run `gh issue create`.
+6. Only then run `gh issue create`.
 
-If the description is too thin for real acceptance criteria, it asks you 1–3 specific questions
-instead of guessing. Relay those and stop.
+If the description is too thin for real acceptance criteria, ask 1–3 specific questions instead of
+guessing, and stop.
 
 ## The label
 
-It files the issue with **area labels only** — never `agent-ready`. Adding that label is the owner's
+File the issue with **area labels only** — never `agent-ready`. Adding that label is the owner's
 decision and the owner's alone; it's what separates "an idea exists" from "an agent may build it".
 
 When done, report the issue number and URL, and remind the owner it won't be picked up until they
