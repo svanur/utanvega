@@ -51,18 +51,38 @@ export default function GalleryCompact({ galleries, variant }: GalleryCompactPro
 
         if (variant === 'chip') {
             return (
-                <Chip
-                    icon={<PhotoCameraIcon />}
-                    label={label}
-                    size="small"
-                    variant="outlined"
-                    clickable
-                    component="a"
-                    href={g.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={e => e.stopPropagation()}
-                />
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                    <Chip
+                        icon={<PhotoCameraIcon />}
+                        label={label}
+                        size="small"
+                        variant="outlined"
+                        clickable
+                        component="a"
+                        href={g.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={e => e.stopPropagation()}
+                    />
+                    {g.photographerName && (
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.68rem' }}>
+                            {t('races.photoByPrefix', { defaultValue: 'Photo:' })}{' '}
+                            {g.photographerSlug ? (
+                                <Link
+                                    component={RouterLink}
+                                    to={`/photographers/${g.photographerSlug}`}
+                                    color="inherit"
+                                    underline="hover"
+                                    onClick={e => e.stopPropagation()}
+                                >
+                                    {g.photographerName}
+                                </Link>
+                            ) : (
+                                g.photographerName
+                            )}
+                        </Typography>
+                    )}
+                </Box>
             );
         }
 
