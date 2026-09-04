@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     Paper, Button, Typography, Box, CircularProgress, IconButton, Chip,
@@ -17,6 +17,7 @@ import { useLocations, LocationDto } from '../hooks/useLocations';
 import { LocationDialog } from '../components/LocationDialog';
 import { apiFetch } from '../hooks/api';
 import { usePageShortcuts, isDialogOpen } from '../hooks/usePageShortcuts';
+import { useRowFocus } from '../hooks/useRowFocus';
 
 interface LocationListProps {
     onNotify: (message: string, severity: 'success' | 'error') => void;
@@ -52,6 +53,20 @@ function buildTree(locations: LocationDto[]): TreeNode[] {
     return roots;
 }
 
+// Walks the tree in the same depth-first order LocationTreeRow renders it, including a
+// node only if all of its ancestors are in `expanded` — i.e. only rows currently visible
+// on screen. Mirrors the "visible rows only" contract expandAll/collapseAll already give.
+function flattenVisibleRows(nodes: TreeNode[], expanded: Set<string>): TreeNode[] {
+    const result: TreeNode[] = [];
+    for (const node of nodes) {
+        result.push(node);
+        if (node.children.length > 0 && expanded.has(node.id)) {
+            result.push(...flattenVisibleRows(node.children, expanded));
+        }
+    }
+    return result;
+}
+
 const typeColors: Record<string, 'error' | 'warning' | 'info' | 'success' | 'primary' | 'secondary'> = {
     Country: 'error',
     Area: 'warning',
@@ -61,25 +76,30 @@ const typeColors: Record<string, 'error' | 'warning' | 'info' | 'success' | 'pri
     Other: 'secondary',
 };
 
-const LocationTreeRow = React.memo(function LocationTreeRow({ node, depth, onEdit, onDelete, expanded, toggleExpand }: {
+const LocationTreeRow = React.memo(function LocationTreeRow({ node, depth, onEdit, onDelete, expanded, toggleExpand, focusedId, focusedRowRef }: {
     node: TreeNode;
     depth: number;
     onEdit: (loc: LocationDto) => void;
     onDelete: (id: string) => void;
     expanded: Set<string>;
     toggleExpand: (id: string) => void;
+    focusedId: string | null;
+    focusedRowRef: React.RefObject<HTMLTableRowElement>;
 }) {
     const isExpanded = expanded.has(node.id);
     const hasChildren = node.children.length > 0;
+    const isFocused = node.id === focusedId;
 
     return (
         <>
             <TableRow
                 hover
-                sx={{
+                ref={isFocused ? focusedRowRef : undefined}
+                sx={(theme) => ({
                     bgcolor: depth === 0 ? 'action.hover' : 'transparent',
                     '& td': { borderBottom: hasChildren && isExpanded ? 'none' : undefined },
-                }}
+                    ...(isFocused && { outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: -2 }),
+                })}
             >
                 <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', pl: depth * 3 }}>
@@ -154,6 +174,8 @@ const LocationTreeRow = React.memo(function LocationTreeRow({ node, depth, onEdi
                     onDelete={onDelete}
                     expanded={expanded}
                     toggleExpand={toggleExpand}
+                    focusedId={focusedId}
+                    focusedRowRef={focusedRowRef}
                 />
             ))}
         </>
@@ -210,6 +232,18 @@ export function LocationList({ onNotify }: LocationListProps) {
         setSelectedLocation(location);
         setDialogOpen(true);
     }, []);
+
+    // Currently-visible rows in tree order (respecting collapsed/expanded state) when
+    // not searching, or the flat search results when searching — one useRowFocus call,
+    // the input array swapped depending on view, onOpen always opens the edit dialog.
+    const visibleTreeRows = useMemo(() => flattenVisibleRows(tree, expanded), [tree, expanded]);
+    const rowFocusRows: LocationDto[] = isSearching ? searchResults.map(r => r.loc) : visibleTreeRows;
+    const { focusedIndex } = useRowFocus(rowFocusRows, handleEdit);
+    const focusedRowRef = useRef<HTMLTableRowElement>(null);
+    useEffect(() => {
+        focusedRowRef.current?.scrollIntoView({ block: 'nearest' });
+    }, [focusedIndex]);
+    const focusedLocationId = rowFocusRows[focusedIndex]?.id ?? null;
 
     const handleDelete = useCallback(async (id: string) => {
         if (!window.confirm('Are you sure you want to delete this location?')) return;
@@ -290,8 +324,15 @@ export function LocationList({ onNotify }: LocationListProps) {
                     </TableHead>
                     <TableBody>
                         {isSearching ? (
-                            searchResults.length > 0 ? searchResults.map(({ loc, parentName }) => (
-                                <TableRow key={loc.id} hover>
+                            searchResults.length > 0 ? searchResults.map(({ loc, parentName }, idx) => (
+                                <TableRow
+                                    key={loc.id}
+                                    ref={idx === focusedIndex ? focusedRowRef : undefined}
+                                    hover
+                                    sx={(theme) => ({
+                                        ...(idx === focusedIndex && { outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: -2 }),
+                                    })}
+                                >
                                     <TableCell>
                                         <Box>
                                             <Typography variant="body2">{loc.name}</Typography>
@@ -347,6 +388,8 @@ export function LocationList({ onNotify }: LocationListProps) {
                                         onDelete={handleDelete}
                                         expanded={expanded}
                                         toggleExpand={toggleExpand}
+                                        focusedId={focusedLocationId}
+                                        focusedRowRef={focusedRowRef}
                                     />
                                 ))}
                                 {tree.length === 0 && (

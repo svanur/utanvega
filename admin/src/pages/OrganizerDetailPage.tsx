@@ -1,4 +1,4 @@
-import { useState, useMemo, type ReactNode } from 'react';
+import { useState, useMemo, useEffect, useRef, type ReactNode } from 'react';
 import dayjs from 'dayjs';
 import 'dayjs/locale/is';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
@@ -44,6 +44,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useOrganizers, type OrganizerDto } from '../hooks/useOrganizers';
 import { useEvents, type EventSummaryDto, type SocialLink } from '../hooks/useEvents';
 import { usePageShortcuts } from '../hooks/usePageShortcuts';
+import { useRowFocus } from '../hooks/useRowFocus';
 import { trimToUndefined } from '../utils/strings';
 import BilingualTextField from '../components/BilingualTextField';
 import { useTranslate } from '../hooks/useTranslate';
@@ -205,6 +206,14 @@ export default function OrganizerDetailPage({ onNotify }: Props) {
 
     const setSocialLinks = (links: SocialLink[]) =>
         setForm(prev => ({ ...prev, socialLinks: links }));
+
+    // j/k row focus + Enter/o to open the event — scrolled into view whenever it
+    // changes, same pattern as OrganizersPage/PhotographersPage.
+    const { focusedIndex: focusedEventIndex } = useRowFocus(organizerEvents, (event) => navigate(`/events/${event.slug}`));
+    const focusedEventRowRef = useRef<HTMLTableRowElement>(null);
+    useEffect(() => {
+        focusedEventRowRef.current?.scrollIntoView({ block: 'nearest' });
+    }, [focusedEventIndex]);
 
     // Prefer navigate(-1) so the list's filter/sort/search state (kept in its URL query
     // string) is restored — matches the 'u' shortcut and the browser back button. Falls
@@ -558,11 +567,15 @@ export default function OrganizerDetailPage({ onNotify }: Props) {
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {organizerEvents.map(event => (
+                            {organizerEvents.map((event, idx) => (
                                 <TableRow
                                     key={event.id}
+                                    ref={idx === focusedEventIndex ? focusedEventRowRef : undefined}
                                     hover
-                                    sx={{ cursor: 'pointer' }}
+                                    sx={(theme) => ({
+                                        cursor: 'pointer',
+                                        ...(idx === focusedEventIndex && { outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: -2 }),
+                                    })}
                                     onClick={() => navigate(`/events/${event.slug}`)}
                                 >
                                     <TableCell>

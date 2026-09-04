@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import dayjs from 'dayjs';
 import 'dayjs/locale/is';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
@@ -45,6 +45,7 @@ import { usePhotographers, type PhotographerDto } from '../hooks/usePhotographer
 import { usePhotoGalleriesByPhotographer, type PhotoGalleryByPhotographerDto } from '../hooks/usePhotoGalleries';
 import type { SocialLink } from '../hooks/useEvents';
 import { usePageShortcuts } from '../hooks/usePageShortcuts';
+import { useRowFocus } from '../hooks/useRowFocus';
 import { trimToUndefined } from '../utils/strings';
 import BilingualTextField from '../components/BilingualTextField';
 import { useTranslate } from '../hooks/useTranslate';
@@ -213,6 +214,14 @@ export default function PhotographerDetailPage({ onNotify }: Props) {
 
     const setSocialLinks = (links: SocialLink[]) =>
         setForm(prev => ({ ...prev, socialLinks: links }));
+
+    // j/k row focus + Enter/o to open the gallery's parent event — scrolled into view
+    // whenever it changes, same pattern as OrganizersPage/PhotographersPage.
+    const { focusedIndex: focusedGalleryIndex } = useRowFocus(galleries, (gallery) => navigate(`/events/${gallery.eventSlug}`));
+    const focusedGalleryRowRef = useRef<HTMLTableRowElement>(null);
+    useEffect(() => {
+        focusedGalleryRowRef.current?.scrollIntoView({ block: 'nearest' });
+    }, [focusedGalleryIndex]);
 
     // Prefer navigate(-1) so the list's filter/sort/search state (kept in its URL query
     // string) is restored — matches the 'u' shortcut and the browser back button. Falls
@@ -514,11 +523,15 @@ export default function PhotographerDetailPage({ onNotify }: Props) {
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {galleries.map(gallery => (
+                            {galleries.map((gallery, idx) => (
                                 <TableRow
                                     key={gallery.id}
+                                    ref={idx === focusedGalleryIndex ? focusedGalleryRowRef : undefined}
                                     hover
-                                    sx={{ cursor: 'pointer' }}
+                                    sx={(theme) => ({
+                                        cursor: 'pointer',
+                                        ...(idx === focusedGalleryIndex && { outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: -2 }),
+                                    })}
                                     onClick={() => navigate(`/events/${gallery.eventSlug}`)}
                                 >
                                     <TableCell>
