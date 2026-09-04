@@ -34,6 +34,7 @@ import ArchiveIcon from '@mui/icons-material/Archive';
 import RestoreIcon from '@mui/icons-material/Restore';
 import { useTrailDetail, useTrailRaces, useInvalidateTrailData, trailStatusLabel, type TrailDetail, type TrailLinkedRace } from '../hooks/useTrails';
 import { usePageShortcuts } from '../hooks/usePageShortcuts';
+import { useBackToList } from '../hooks/useBackToList';
 import { useLocations } from '../hooks/useLocations';
 import { useTags } from '../hooks/useTags';
 import { apiFetch } from '../hooks/api';
@@ -229,18 +230,7 @@ export default function TrailDetailPage({ onNotify }: { onNotify: (message: Reac
   const [showAddTag, setShowAddTag] = useState(false);
   const [statusLegendOpen, setStatusLegendOpen] = useState(false);
 
-  // Prefer navigate(-1) so the list's filter/sort/search state (kept in its URL query
-  // string) is restored — matches the 'u' shortcut and the browser back button. Falls
-  // back to the bare list path when there's no prior in-app history entry to pop to
-  // (e.g. this page was opened directly from a bookmark or shared link).
-  const handleBackToList = () => {
-    const idx = window.history.state?.idx;
-    if (typeof idx === 'number' && idx > 0) {
-      navigate(-1);
-    } else {
-      navigate('/trails');
-    }
-  };
+  const handleBackToList = useBackToList('/trails');
 
   usePageShortcuts([
     { key: 'u', handler: () => navigate(-1) },
