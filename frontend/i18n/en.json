@@ -1399,6 +1399,7 @@
         "justRacedSection": "Recently completed",
         "inProgress": "🏃 In progress",
         "raceFinished": "🏁 Finished",
+        "dayOfTotal": "Day {{day}} of {{total}}",
         "progressBar": {
             "waiting": "Waiting for start...",
             "cutoffReached": "Time limit reached",

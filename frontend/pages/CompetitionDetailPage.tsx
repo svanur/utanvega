@@ -112,7 +112,7 @@ type PreparedEdition = EventEditionDto & {
 import { ACTIVITY_EMOJI } from '../constants/activityEmoji';
 import { googleCalendarUrl, outlookCalendarUrl, downloadIcs } from '../utils/calendarLinks';
 import EventDateBadge from '../components/EventDateBadge';
-import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, editionKeyFor } from '../utils/eventUtils';
+import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, editionKeyFor, getMultiDayEditionProgress, toDateOnlyString } from '../utils/eventUtils';
 import { getTicketStatusColor } from '../utils/ticketStatus';
 import { trackEventQRClick } from '../utils/analytics';
 
@@ -213,6 +213,10 @@ function EditionMeta({
 }) {
     const loc = useLocalize();
     const heading = loc(edition.title?.trim() || null, edition.titleEn) ?? String(edition.year);
+    const dayProgress = useMemo(
+        () => getMultiDayEditionProgress(edition.date, edition.endDate),
+        [edition.date, edition.endDate],
+    );
 
     return (
         <Box>
@@ -234,6 +238,13 @@ function EditionMeta({
                         label={formatDateRange(edition.date, edition.endDate, t)}
                         size="small"
                         variant="outlined"
+                    />
+                )}
+                {dayProgress && (
+                    <Chip
+                        label={t('races.dayOfTotal', { day: dayProgress.day, total: dayProgress.totalDays, defaultValue: `Day ${dayProgress.day} of ${dayProgress.totalDays}` })}
+                        size="small"
+                        color="secondary"
                     />
                 )}
             </Stack>
@@ -996,6 +1007,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                                 editionDate={edition.date}
                                                 eventSlug={event.slug ?? slug}
                                                 now={currentTime}
+                                                isMultiDayOngoingEdition={getMultiDayEditionProgress(edition.date, edition.endDate, currentTime) !== null}
                                             />
                                         ))}
                                     </Stack>
@@ -1022,6 +1034,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 editionDate={event.displayDate ?? event.nextEditionDate}
                                 eventSlug={event.slug ?? slug}
                                 now={currentTime}
+                                isMultiDayOngoingEdition={getMultiDayEditionProgress(currentEditions[0]?.date, currentEditions[0]?.endDate, currentTime) !== null}
                             />
                             ))}
                     </Stack>
@@ -1271,6 +1284,7 @@ function RaceCard({
     editionDate,
     eventSlug,
     now,
+    isMultiDayOngoingEdition,
 }: {
     race: RaceDto;
     anchor: string;
@@ -1284,11 +1298,17 @@ function RaceCard({
     editionDate?: string | null;
     eventSlug?: string | null;
     now: Date;
+    // True when this race belongs to a multi-day edition that is currently ongoing (see
+    // getMultiDayEditionProgress) — narrows the race-day progress bar down to the one race
+    // whose dateOfRace is today, instead of every race in an edition whose daysUntil is pinned
+    // to 0 for its entire span.
+    isMultiDayOngoingEdition?: boolean;
 }) {
     const theme = useTheme();
     const loc = useLocalize();
     const { isEnabled } = useFeatureFlags();
     const raceDateTime = formatRaceDateTime(race.dateOfRace, race.startTime, t);
+    const isLiveStageToday = !!isMultiDayOngoingEdition && race.dateOfRace === toDateOnlyString(now);
 
     // Carries the event as breadcrumb context so the trail page can render
     // Events > {Event} > {Trail} instead of its default Trails > {Trail}.
@@ -1505,8 +1525,13 @@ function RaceCard({
                     </Stack>
                 )}
 
-                {/* Race progress bar on race day */}
-                {daysUntil === 0 && race.status !== 'Cancelled' && race.dateOfRace && race.startTime && race.cutoffMinutes != null && (
+                {/* Race progress bar on race day. For a multi-day edition (daysUntil pinned to 0 for
+                    its whole span) this is further narrowed to the one race whose dateOfRace is
+                    today — otherwise every stage in the edition would show progress/cutoff UI at
+                    once, including stages that already finished on a previous day or haven't
+                    started yet. */}
+                {daysUntil === 0 && race.status !== 'Cancelled' && race.dateOfRace && race.startTime && race.cutoffMinutes != null
+                    && (!isMultiDayOngoingEdition || isLiveStageToday) && (
                     <RaceProgressBar
                         startTime={race.startTime}
                         dateOfRace={race.dateOfRace}

@@ -1399,6 +1399,7 @@
         "justRacedSection": "Nýlega lokið",
         "inProgress": "🏃 Í gangi",
         "raceFinished": "🏁 Lokið",
+        "dayOfTotal": "Dagur {{day}} af {{total}}",
         "progressBar": {
             "waiting": "Bíður eftir byrjun...",
             "cutoffReached": "Tímatakmörk liðin",

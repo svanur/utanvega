@@ -86,6 +86,31 @@ export function getCountdownLabel(daysUntil: number | null, t: TFunc): string {
     return t('races.daysUntil', { count: daysUntil });
 }
 
+export function toDateOnlyString(date: Date): string {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+// For a multi-day edition currently in progress, computes which day of its date/endDate span
+// "today" falls on — powers a "Day X of Y" indicator (e.g. day 2 of a 3-day stage race). Returns
+// null for single-day editions, or when today is outside [date, endDate] (both inclusive) — a
+// multi-day edition that hasn't started yet or has already ended shows no indicator.
+export function getMultiDayEditionProgress(
+    date: string | null | undefined,
+    endDate: string | null | undefined,
+    now: Date = new Date(),
+): { day: number; totalDays: number } | null {
+    if (!date || !endDate || endDate === date) return null;
+    const start = new Date(date + 'T00:00:00');
+    const end = new Date(endDate + 'T00:00:00');
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+    if (today < start || today > end) return null;
+    const msPerDay = 1000 * 60 * 60 * 24;
+    const totalDays = Math.round((end.getTime() - start.getTime()) / msPerDay) + 1;
+    const day = Math.round((today.getTime() - start.getTime()) / msPerDay) + 1;
+    return { day, totalDays };
+}
+
 export function formatRaceDateTime(
     dateOfRace: string | null,
     startTime: string | null,
