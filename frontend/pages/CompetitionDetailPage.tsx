@@ -203,19 +203,21 @@ function getRegistrationStatusColor(status: string | null | undefined): 'success
 function EditionMeta({
     edition,
     t,
+    now,
     showHeader,
     hideMeta,
 }: {
     edition: EventEditionDto;
     t: (key: string, opts?: Record<string, unknown>) => string;
+    now: Date;
     showHeader?: boolean;
     hideMeta?: boolean;
 }) {
     const loc = useLocalize();
     const heading = loc(edition.title?.trim() || null, edition.titleEn) ?? String(edition.year);
     const dayProgress = useMemo(
-        () => getMultiDayEditionProgress(edition.date, edition.endDate),
-        [edition.date, edition.endDate],
+        () => getMultiDayEditionProgress(edition.date, edition.endDate, now),
+        [edition.date, edition.endDate, now],
     );
 
     return (
@@ -921,7 +923,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
 
                     {!showEditionSections && primaryEdition && (
                         <Box sx={{ mt: 2.5 }}>
-                            <EditionMeta edition={primaryEdition} t={t} hideMeta />
+                            <EditionMeta edition={primaryEdition} t={t} now={currentTime} hideMeta />
                         </Box>
                     )}
                 </Paper>
@@ -987,7 +989,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                     <Stack spacing={3}>
                         {currentEditions.map(edition => (
                             <Paper key={edition.id} variant="outlined" sx={{ p: { xs: 2, sm: 2.5 }, borderRadius: 2.5 }}>
-                                <EditionMeta edition={edition} t={t} showHeader />
+                                <EditionMeta edition={edition} t={t} now={currentTime} showHeader />
                                 {edition.visibleRaces.length === 0 ? (
                                     (event.type === 'Race' || event.type === 'Series') && <Alert severity="info" sx={{ mt: 2 }}>{t('races.noRaces')}</Alert>
                                 ) : (
