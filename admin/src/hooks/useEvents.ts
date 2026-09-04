@@ -329,18 +329,11 @@ export function useEvents() {
             method: 'POST',
             body: JSON.stringify(input),
         });
-        if (result.slug) {
-            await invalidate();
-            return { id: result.id, slug: result.slug };
+        if (!result.slug) {
+            throw new Error('Event created but the server did not return a slug — check the event list');
         }
-        // invalidateQueries only refetches queries with active observers, so it can't be
-        // relied on to have refreshed the cache by the time we read it back here. Force a
-        // fresh fetch instead when the API didn't already give us the slug directly.
-        const fresh = await queryClient.fetchQuery({
-            queryKey: EVENTS_QUERY_KEY,
-            queryFn: () => apiFetch<EventSummaryDto[]>('/api/v1/admin/events'),
-        });
-        return { id: result.id, slug: fresh.find(e => e.id === result.id)?.slug ?? result.id };
+        await invalidate();
+        return { id: result.id, slug: result.slug };
     };
 
     const updateEvent = async (id: string, input: Omit<UpdateEventInput, 'id'>) => {
