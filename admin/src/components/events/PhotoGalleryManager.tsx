@@ -392,29 +392,48 @@ const PhotoGalleryManager = forwardRef<PhotoGalleryManagerHandle, PhotoGalleryMa
         titleEn: trimToUndefined(c.draft.titleEn) ?? null,
         sortOrder: c.newSortOrder,
       })));
-      const failedIds = new Set(results.filter(r => !r.success).map(r => r.id));
-      if (failedIds.size === 0) return; // every PUT landed — the optimistic order above is already correct
+      const failedResults = results.filter(r => !r.success);
+      if (failedResults.length === 0) return; // every PUT landed — the optimistic order above is already correct
+      const failedIds = new Set(failedResults.map(r => r.id));
       if (failedIds.size === results.length) {
         // Nothing persisted — revert the whole batch to its pre-reorder order, as before.
         setDrafts([...persisted, ...unsaved]);
       } else {
         // Partial failure: some rows' new sortOrder is genuinely persisted server-side (and the
         // hook has already invalidated the cache to match), so only the rows whose PUT actually
-        // failed get reverted to their pre-reorder sortOrder — reverting the whole batch would
-        // desync the UI from rows that did land (#608).
-        setDrafts(prev => prev.map(d => {
-          if (!d.id || !failedIds.has(d.id)) return d;
-          const original = persisted.find(p => p.key === d.key);
-          return original ? { ...d, sortOrder: original.sortOrder } : d;
-        }));
+        // failed get reverted — both their array position (back to where they sat pre-reorder)
+        // and their sortOrder, together. Reverting sortOrder alone (as before #620) left a failed
+        // row's displayed position and its sortOrder number disagreeing, and that stale number
+        // could collide with whichever surviving row now legitimately owns it. The survivors keep
+        // the new position their (successful) PUT actually persisted, and every row is renumbered
+        // to its final array index afterwards so sortOrder stays a unique, gapless rank.
+        const survivorsInNewOrder = reordered.filter(d => !d.id || !failedIds.has(d.id));
+        const failedInOriginalOrder = reordered
+          .filter(d => d.id && failedIds.has(d.id))
+          .map(draft => ({ draft, originalIndex: persisted.findIndex(p => p.key === draft.key) }))
+          .sort((a, b) => a.originalIndex - b.originalIndex);
+        const reconciled = [...survivorsInNewOrder];
+        failedInOriginalOrder.forEach(({ draft, originalIndex }) => {
+          reconciled.splice(Math.min(originalIndex, reconciled.length), 0, draft);
+        });
+        setDrafts([...reconciled.map((d, idx) => ({ ...d, sortOrder: idx })), ...unsaved]);
       }
-      onNotify('Failed to reorder galleries', 'error');
+      // Surface which row(s) failed and why (per BatchUpdateResult.error), rather than a fixed
+      // generic string that gives the user no way to tell which gallery to retry (#620).
+      const firstError = failedResults[0]?.error;
+      const detail = firstError ? `: ${firstError}` : '';
+      onNotify(
+        results.length === 1
+          ? `Failed to reorder gallery${detail}`
+          : `Failed to reorder ${failedResults.length} of ${results.length} galleries${detail}`,
+        'error',
+      );
     } catch (err) {
       // updatePhotoGalleriesBatch no longer rejects on a failed PUT (Promise.allSettled), so this
       // only fires for a genuinely unexpected error — with no per-row info to reconcile with,
       // fall back to a full revert as before.
       setDrafts([...persisted, ...unsaved]);
-      onNotify(err instanceof Error ? err.message : 'Failed to reorder galleries', 'error');
+      onNotify(err instanceof Error ? `Failed to reorder galleries: ${err.message}` : 'Failed to reorder galleries', 'error');
     }
   };
 
