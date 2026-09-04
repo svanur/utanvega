@@ -158,7 +158,7 @@ export default function SpotlightSearch() {
                 score: scoreMatch(q, trail.name),
             }))
             .filter(r => r.score > 0)
-            .sort((a, b) => b.score - a.score);
+            .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name, 'is', { numeric: true }));
 
         const locationResults: (SearchResult & { score: number })[] = locations
             .map(location => ({
@@ -169,7 +169,7 @@ export default function SpotlightSearch() {
                 score: Math.max(scoreMatch(q, location.name), scoreMatch(q, location.nameEn ?? '')),
             }))
             .filter(r => r.score > 0)
-            .sort((a, b) => b.score - a.score);
+            .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name, 'is', { numeric: true }));
 
         const competitionResults: (SearchResult & { score: number })[] = racesEnabled
             ? competitions
@@ -183,10 +183,10 @@ export default function SpotlightSearch() {
                     score: Math.max(scoreMatch(q, comp.name), scoreMatch(q, comp.nameEn ?? '')),
                 }))
                 .filter(r => r.score > 0)
-                .sort((a, b) => b.score - a.score)
+                .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name, 'is', { numeric: true }))
             : [];
 
-        return [...trailResults.slice(0, 5), ...locationResults.slice(0, 3), ...competitionResults.slice(0, 3)];
+        return [...competitionResults.slice(0, 3), ...trailResults.slice(0, 5), ...locationResults.slice(0, 3)];
     }, [query, trails, locations, competitions, racesEnabled, i18n.language, t, loc]);
 
     useEffect(() => {
@@ -299,13 +299,48 @@ export default function SpotlightSearch() {
                 </Box>
             ) : results.length > 0 ? (
                 <List ref={listRef} dense sx={{ py: 0, maxHeight: '45vh', overflow: 'auto' }}>
+                    {competitionResults.length > 0 && (
+                        <>
+                            <Typography variant="caption" sx={{ px: 2, pt: 1, pb: 0.5, display: 'block', color: 'text.secondary', fontWeight: 600 }}>
+                                {t('spotlight.racesSection')}
+                            </Typography>
+                            {competitionResults.map((result, i) => {
+                                const globalIndex = i;
+                                return (
+                                    <ListItemButton
+                                        key={`comp-${result.slug}`}
+                                        data-index={globalIndex}
+                                        selected={activeIndex === globalIndex}
+                                        onClick={() => handleSelect(result)}
+                                        sx={{ py: 0.5 }}
+                                    >
+                                        <ListItemIcon sx={{ minWidth: 36 }}>
+                                            <EmojiEventsIcon fontSize="small" />
+                                        </ListItemIcon>
+                                        <ListItemText
+                                            primary={result.name}
+                                            secondary={result.subtitle}
+                                            primaryTypographyProps={{ noWrap: true }}
+                                            secondaryTypographyProps={{ noWrap: true, variant: 'caption' }}
+                                        />
+                                        {activeIndex === globalIndex && (
+                                            <KeyboardReturnIcon fontSize="small" sx={{ color: 'text.secondary', ml: 1 }} />
+                                        )}
+                                    </ListItemButton>
+                                );
+                            })}
+                        </>
+                    )}
+
+                    {competitionResults.length > 0 && trailResults.length > 0 && <Divider />}
+
                     {trailResults.length > 0 && (
                         <>
                             <Typography variant="caption" sx={{ px: 2, pt: 1, pb: 0.5, display: 'block', color: 'text.secondary', fontWeight: 600 }}>
                                 {t('spotlight.trailsSection')}
                             </Typography>
                             {trailResults.map((result, i) => {
-                                const globalIndex = i;
+                                const globalIndex = competitionResults.length + i;
                                 return (
                                     <ListItemButton
                                         key={`trail-${result.slug}`}
@@ -332,7 +367,7 @@ export default function SpotlightSearch() {
                         </>
                     )}
 
-                    {trailResults.length > 0 && locationResults.length > 0 && <Divider />}
+                    {(competitionResults.length > 0 || trailResults.length > 0) && locationResults.length > 0 && <Divider />}
 
                     {locationResults.length > 0 && (
                         <>
@@ -340,7 +375,7 @@ export default function SpotlightSearch() {
                                 {t('spotlight.locationsSection')}
                             </Typography>
                             {locationResults.map((result, i) => {
-                                const globalIndex = trailResults.length + i;
+                                const globalIndex = competitionResults.length + trailResults.length + i;
                                 return (
                                     <ListItemButton
                                         key={`loc-${result.slug}`}
@@ -351,41 +386,6 @@ export default function SpotlightSearch() {
                                     >
                                         <ListItemIcon sx={{ minWidth: 36 }}>
                                             <PlaceIcon fontSize="small" />
-                                        </ListItemIcon>
-                                        <ListItemText
-                                            primary={result.name}
-                                            secondary={result.subtitle}
-                                            primaryTypographyProps={{ noWrap: true }}
-                                            secondaryTypographyProps={{ noWrap: true, variant: 'caption' }}
-                                        />
-                                        {activeIndex === globalIndex && (
-                                            <KeyboardReturnIcon fontSize="small" sx={{ color: 'text.secondary', ml: 1 }} />
-                                        )}
-                                    </ListItemButton>
-                                );
-                            })}
-                        </>
-                    )}
-
-                    {(locationResults.length > 0 || trailResults.length > 0) && competitionResults.length > 0 && <Divider />}
-
-                    {competitionResults.length > 0 && (
-                        <>
-                            <Typography variant="caption" sx={{ px: 2, pt: 1, pb: 0.5, display: 'block', color: 'text.secondary', fontWeight: 600 }}>
-                                {t('spotlight.racesSection')}
-                            </Typography>
-                            {competitionResults.map((result, i) => {
-                                const globalIndex = trailResults.length + locationResults.length + i;
-                                return (
-                                    <ListItemButton
-                                        key={`comp-${result.slug}`}
-                                        data-index={globalIndex}
-                                        selected={activeIndex === globalIndex}
-                                        onClick={() => handleSelect(result)}
-                                        sx={{ py: 0.5 }}
-                                    >
-                                        <ListItemIcon sx={{ minWidth: 36 }}>
-                                            <EmojiEventsIcon fontSize="small" />
                                         </ListItemIcon>
                                         <ListItemText
                                             primary={result.name}
