@@ -406,7 +406,9 @@ export default function TrailDetailPage({ onNotify }: { onNotify: (message: Reac
         <Typography
           variant="body2"
           color="text.secondary"
-          onClick={handleBackToList}
+          component={RouterLink}
+          to="/trails"
+          onClick={e => { e.preventDefault(); handleBackToList(); }}
           sx={{ cursor: 'pointer', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
         >
           Trails

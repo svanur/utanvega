@@ -258,7 +258,9 @@ export default function OrganizerDetailPage({ onNotify }: Props) {
                 <Typography
                     variant="body2"
                     color="text.secondary"
-                    onClick={handleBackToList}
+                    component={RouterLink}
+                    to="/organizers"
+                    onClick={e => { e.preventDefault(); handleBackToList(); }}
                     sx={{ cursor: 'pointer', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
                 >
                     Organizers

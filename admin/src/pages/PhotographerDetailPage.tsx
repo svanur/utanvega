@@ -218,7 +218,9 @@ export default function PhotographerDetailPage({ onNotify }: Props) {
                 <Typography
                     variant="body2"
                     color="text.secondary"
-                    onClick={handleBackToList}
+                    component={RouterLink}
+                    to="/photographers"
+                    onClick={e => { e.preventDefault(); handleBackToList(); }}
                     sx={{ cursor: 'pointer', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
                 >
                     Photographers
