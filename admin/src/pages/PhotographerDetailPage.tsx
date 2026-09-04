@@ -220,7 +220,11 @@ export default function PhotographerDetailPage({ onNotify }: Props) {
                     color="text.secondary"
                     component={RouterLink}
                     to="/photographers"
-                    onClick={e => { e.preventDefault(); handleBackToList(); }}
+                    onClick={e => {
+                        if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                        e.preventDefault();
+                        handleBackToList();
+                    }}
                     sx={{ cursor: 'pointer', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
                 >
                     Photographers
