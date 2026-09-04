@@ -25,7 +25,7 @@ import { API_URL } from '../hooks/useTrails';
 import { haversineKm, formatDistanceKm } from '../utils/geo';
 import NearMeIcon from '@mui/icons-material/NearMe';
 import EventDateBadge from './EventDateBadge';
-import { getCountdownColor, getEventTypeColor, formatNextDate, isEffectivelyCancelled } from '../utils/eventUtils';
+import { getCountdownColor, getEventTypeColor, formatNextDate, isEffectivelyCancelled, isOngoingPastDayTwo } from '../utils/eventUtils';
 import { ActivityIcons, getActivityIcon } from '../utils/activityIcon';
 import { useLocalize } from '../utils/localize';
 import { useIcelandicHolidays } from '../hooks/useIcelandicHolidays';
@@ -416,7 +416,8 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation, o
                                                     {event.daysUntil !== null && !isEffectivelyCancelled(event) && (
                                                         <Chip
                                                             label={
-                                                                event.daysUntil === 0 ? t('races.today')
+                                                                isOngoingPastDayTwo(event.daysUntil, event.displayDate, event.endDisplayDate) ? t('races.ongoing')
+                                                                : event.daysUntil === 0 ? t('races.today')
                                                                 : event.daysUntil === 1 ? t('races.tomorrow')
                                                                 : event.daysUntil === -1 ? t('races.yesterday')
                                                                 : event.daysUntil < -1 ? t('races.daysAgo', { count: Math.abs(event.daysUntil) })

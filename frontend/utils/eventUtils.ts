@@ -60,6 +60,23 @@ export function getCountdownColor(daysUntil: number | null): 'success' | 'warnin
     return 'success';
 }
 
+// The backend pins daysUntil to 0 for an edition's entire ongoing span (start through end date),
+// not just race day. Past the 2nd calendar day, a pulsing "Today!" chip is misleading — this
+// distinguishes "just started" (still show Today!) from "still going" (show a calmer Ongoing chip).
+export function isOngoingPastDayTwo(
+    daysUntil: number | null,
+    displayDate: string | null,
+    endDisplayDate: string | null | undefined,
+): boolean {
+    if (daysUntil !== 0) return false;
+    if (!displayDate || !endDisplayDate || endDisplayDate === displayDate) return false;
+    const start = new Date(displayDate + 'T00:00:00');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const elapsedDays = Math.round((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    return elapsedDays >= 2;
+}
+
 export function getCountdownLabel(daysUntil: number | null, t: TFunc): string {
     if (daysUntil === null) return t('races.noDate');
     if (daysUntil === 0) return t('races.today');
