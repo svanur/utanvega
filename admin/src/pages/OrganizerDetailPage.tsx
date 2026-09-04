@@ -44,6 +44,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useOrganizers, type OrganizerDto } from '../hooks/useOrganizers';
 import { useEvents, type EventSummaryDto, type SocialLink } from '../hooks/useEvents';
 import { usePageShortcuts } from '../hooks/usePageShortcuts';
+import { useBackToList } from '../hooks/useBackToList';
 import { useRowFocus } from '../hooks/useRowFocus';
 import { trimToUndefined } from '../utils/strings';
 import BilingualTextField from '../components/BilingualTextField';
@@ -215,18 +216,7 @@ export default function OrganizerDetailPage({ onNotify }: Props) {
         focusedEventRowRef.current?.scrollIntoView({ block: 'nearest' });
     }, [focusedEventIndex]);
 
-    // Prefer navigate(-1) so the list's filter/sort/search state (kept in its URL query
-    // string) is restored — matches the 'u' shortcut and the browser back button. Falls
-    // back to the bare list path when there's no prior in-app history entry to pop to
-    // (e.g. this page was opened directly from a bookmark or shared link).
-    const handleBackToList = () => {
-        const idx = window.history.state?.idx;
-        if (typeof idx === 'number' && idx > 0) {
-            navigate(-1);
-        } else {
-            navigate('/organizers');
-        }
-    };
+    const handleBackToList = useBackToList('/organizers');
 
     usePageShortcuts([
         { key: 'u', handler: () => navigate(-1) },

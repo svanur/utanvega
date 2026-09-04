@@ -45,6 +45,7 @@ import { usePhotographers, type PhotographerDto } from '../hooks/usePhotographer
 import { usePhotoGalleriesByPhotographer, type PhotoGalleryByPhotographerDto } from '../hooks/usePhotoGalleries';
 import type { SocialLink } from '../hooks/useEvents';
 import { usePageShortcuts } from '../hooks/usePageShortcuts';
+import { useBackToList } from '../hooks/useBackToList';
 import { useRowFocus } from '../hooks/useRowFocus';
 import { trimToUndefined } from '../utils/strings';
 import BilingualTextField from '../components/BilingualTextField';
@@ -223,18 +224,7 @@ export default function PhotographerDetailPage({ onNotify }: Props) {
         focusedGalleryRowRef.current?.scrollIntoView({ block: 'nearest' });
     }, [focusedGalleryIndex]);
 
-    // Prefer navigate(-1) so the list's filter/sort/search state (kept in its URL query
-    // string) is restored — matches the 'u' shortcut and the browser back button. Falls
-    // back to the bare list path when there's no prior in-app history entry to pop to
-    // (e.g. this page was opened directly from a bookmark or shared link).
-    const handleBackToList = () => {
-        const idx = window.history.state?.idx;
-        if (typeof idx === 'number' && idx > 0) {
-            navigate(-1);
-        } else {
-            navigate('/photographers');
-        }
-    };
+    const handleBackToList = useBackToList('/photographers');
 
     usePageShortcuts([
         { key: 'u', handler: () => navigate(-1) },

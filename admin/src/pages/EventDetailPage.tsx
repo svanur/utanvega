@@ -66,6 +66,7 @@ import {
 import { useTrails } from '../hooks/useTrails';
 import { apiFetch } from '../hooks/api';
 import { usePageShortcuts, isDialogOpen } from '../hooks/usePageShortcuts';
+import { useBackToList } from '../hooks/useBackToList';
 import { useIdRowFocus } from '../hooks/useIdRowFocus';
 import RaceFormCard from '../components/events/RaceFormCard';
 import EventFormCard from '../components/events/EventFormCard';
@@ -645,18 +646,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
 
   const [editingEvent, setEditingEvent] = useState(false);
 
-  // Prefer navigate(-1) so the list's filter/sort/search state (kept in its URL query
-  // string) is restored — matches the 'u' shortcut and the browser back button. Falls
-  // back to the bare list path when there's no prior in-app history entry to pop to
-  // (e.g. this page was opened directly from a bookmark or shared link).
-  const handleBackToList = () => {
-    const idx = window.history.state?.idx;
-    if (typeof idx === 'number' && idx > 0) {
-      navigate(-1);
-    } else {
-      navigate('/events');
-    }
-  };
+  const handleBackToList = useBackToList('/events');
 
   usePageShortcuts([
     { key: 'u', handler: () => navigate(-1) },
