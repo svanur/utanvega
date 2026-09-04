@@ -406,7 +406,13 @@ export default function TrailDetailPage({ onNotify }: { onNotify: (message: Reac
         <Typography
           variant="body2"
           color="text.secondary"
-          onClick={handleBackToList}
+          component={RouterLink}
+          to="/trails"
+          onClick={e => {
+            if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+            e.preventDefault();
+            handleBackToList();
+          }}
           sx={{ cursor: 'pointer', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
         >
           Trails
