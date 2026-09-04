@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Badge, Box, Button, IconButton, Link, Menu, MenuItem, Tooltip, Typography } from '@mui/material';
+import { Badge, Box, Button, Chip, IconButton, Link, Menu, MenuItem, Tooltip, Typography } from '@mui/material';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
@@ -10,15 +10,18 @@ import type { PublicPhotoGallery } from '../hooks/useEvents';
 interface GalleryCompactProps {
     galleries: PublicPhotoGallery[];
     /** 'icon' is a bare IconButton for a dense table cell; 'button' is a labelled outlined Button
-     *  for a card/list row, styled like the neighbouring results Button. */
-    variant: 'icon' | 'button';
+     *  for a card/list row, styled like the neighbouring results Button; 'chip' is an outlined Chip
+     *  matching GalleryLinks' chip styling, for a row of other Chips (e.g. date/race-count/results). */
+    variant: 'icon' | 'button' | 'chip';
 }
 
 // Single entry point for a dense row: exactly one gallery opens directly in a new tab, same as
 // the neighbouring results link. 2+ galleries collapse behind a count badge that opens a menu
 // instead of fanning out into several buttons/icons — that's what keeps a 3-4 gallery row from
-// growing into a multi-line block on a phone. Used by EditionsHistoryPage.tsx (plural) only;
-// every other render site is roomy enough to use GalleryLinks' one-per-gallery fan-out instead.
+// growing into a multi-line block on a phone. Used wherever a card/table row needs one gallery
+// control regardless of gallery count (EditionsHistoryPage, RacesPage's events list, and
+// CompetitionDetailPage's editions-history grid). The primary/current edition's own action row
+// has room to spare and still uses GalleryLinks' one-per-gallery fan-out instead.
 export default function GalleryCompact({ galleries, variant }: GalleryCompactProps) {
     const { t } = useTranslation();
     const loc = useLocalize();
@@ -43,6 +46,23 @@ export default function GalleryCompact({ galleries, variant }: GalleryCompactPro
                         <PhotoCameraIcon fontSize="small" />
                     </IconButton>
                 </Tooltip>
+            );
+        }
+
+        if (variant === 'chip') {
+            return (
+                <Chip
+                    icon={<PhotoCameraIcon />}
+                    label={label}
+                    size="small"
+                    variant="outlined"
+                    clickable
+                    component="a"
+                    href={g.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={e => e.stopPropagation()}
+                />
             );
         }
 
@@ -99,6 +119,15 @@ export default function GalleryCompact({ galleries, variant }: GalleryCompactPro
                         </Badge>
                     </IconButton>
                 </Tooltip>
+            ) : variant === 'chip' ? (
+                <Chip
+                    icon={<PhotoCameraIcon />}
+                    label={countLabel}
+                    size="small"
+                    variant="outlined"
+                    clickable
+                    onClick={openMenu}
+                />
             ) : (
                 <Button
                     size="small"

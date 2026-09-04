@@ -95,7 +95,7 @@ import { useFavoriteEvents } from '../hooks/useFavoriteEvents';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import EventQRShare from '../components/EventQRShare';
-import GalleryLinks from '../components/GalleryLinks';
+import GalleryCompact from '../components/GalleryCompact';
 import { NewYearSplitter } from '../components/NewYearSplitter';
 
 const EventTableView = lazy(() => import('../components/EventTableView'));
@@ -1259,7 +1259,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                             {t('races.results', 'Results')}
                                                                         </Button>
                                                                     )}
-                                                                    <GalleryLinks galleries={comp.galleries} size="small" stopPropagation />
+                                                                    <GalleryCompact galleries={comp.galleries} variant="button" />
                                                                     {comp.youtubeUrl && (
                                                                         <Button size="small" variant="outlined" href={comp.youtubeUrl} target="_blank" rel="noopener noreferrer" startIcon={<VideocamIcon sx={{ fontSize: 14 }} color="error" />} endIcon={<OpenInNewIcon sx={{ fontSize: 12 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem' }}>
                                                                             360°
@@ -1514,7 +1514,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                 {t('races.results', 'Results')}
                                                             </Button>
                                                         )}
-                                                        <GalleryLinks galleries={comp.galleries} size="small" stopPropagation />
+                                                        <GalleryCompact galleries={comp.galleries} variant="button" />
                                                         {comp.youtubeUrl && (
                                                             <Button size="small" variant="outlined" href={comp.youtubeUrl} target="_blank" rel="noopener noreferrer" startIcon={<VideocamIcon sx={{ fontSize: 14 }} color="error" />} endIcon={<OpenInNewIcon sx={{ fontSize: 12 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem' }}>
                                                                 360°
