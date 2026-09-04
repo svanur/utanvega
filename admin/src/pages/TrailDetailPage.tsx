@@ -229,6 +229,19 @@ export default function TrailDetailPage({ onNotify }: { onNotify: (message: Reac
   const [showAddTag, setShowAddTag] = useState(false);
   const [statusLegendOpen, setStatusLegendOpen] = useState(false);
 
+  // Prefer navigate(-1) so the list's filter/sort/search state (kept in its URL query
+  // string) is restored — matches the 'u' shortcut and the browser back button. Falls
+  // back to the bare list path when there's no prior in-app history entry to pop to
+  // (e.g. this page was opened directly from a bookmark or shared link).
+  const handleBackToList = () => {
+    const idx = window.history.state?.idx;
+    if (typeof idx === 'number' && idx > 0) {
+      navigate(-1);
+    } else {
+      navigate('/trails');
+    }
+  };
+
   usePageShortcuts([
     { key: 'u', handler: () => navigate(-1) },
     { key: 'e', handler: () => setEditingTrail(v => !v) },
@@ -387,15 +400,14 @@ export default function TrailDetailPage({ onNotify }: { onNotify: (message: Reac
     <Box>
       {/* Breadcrumb */}
       <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 2 }}>
-        <IconButton size="small" component={RouterLink} to="/trails">
+        <IconButton size="small" onClick={handleBackToList}>
           <ArrowBackIcon fontSize="small" />
         </IconButton>
         <Typography
           variant="body2"
           color="text.secondary"
-          component={RouterLink}
-          to="/trails"
-          sx={{ textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+          onClick={handleBackToList}
+          sx={{ cursor: 'pointer', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
         >
           Trails
         </Typography>

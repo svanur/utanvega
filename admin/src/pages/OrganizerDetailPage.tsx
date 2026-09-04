@@ -206,6 +206,19 @@ export default function OrganizerDetailPage({ onNotify }: Props) {
     const setSocialLinks = (links: SocialLink[]) =>
         setForm(prev => ({ ...prev, socialLinks: links }));
 
+    // Prefer navigate(-1) so the list's filter/sort/search state (kept in its URL query
+    // string) is restored — matches the 'u' shortcut and the browser back button. Falls
+    // back to the bare list path when there's no prior in-app history entry to pop to
+    // (e.g. this page was opened directly from a bookmark or shared link).
+    const handleBackToList = () => {
+        const idx = window.history.state?.idx;
+        if (typeof idx === 'number' && idx > 0) {
+            navigate(-1);
+        } else {
+            navigate('/organizers');
+        }
+    };
+
     usePageShortcuts([
         { key: 'u', handler: () => navigate(-1) },
         { key: 'e', handler: () => editing ? setEditing(false) : openEdit() },
@@ -239,15 +252,14 @@ export default function OrganizerDetailPage({ onNotify }: Props) {
         <Box>
             {/* Breadcrumb */}
             <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 2 }}>
-                <IconButton size="small" component={RouterLink} to="/organizers">
+                <IconButton size="small" onClick={handleBackToList}>
                     <ArrowBackIcon fontSize="small" />
                 </IconButton>
                 <Typography
                     variant="body2"
                     color="text.secondary"
-                    component={RouterLink}
-                    to="/organizers"
-                    sx={{ textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+                    onClick={handleBackToList}
+                    sx={{ cursor: 'pointer', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
                 >
                     Organizers
                 </Typography>
