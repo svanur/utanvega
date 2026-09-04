@@ -1736,8 +1736,8 @@ app.MapPost("/api/v1/admin/events", [Authorize(Policy = "AdminOnly")] async (Cre
 {
     try
     {
-        var id = await mediator.Send(command);
-        return Results.Created($"/api/v1/events/{id}", new { id });
+        var (id, slug) = await mediator.Send(command);
+        return Results.Created($"/api/v1/events/{slug}", new { id, slug });
     }
     catch (InvalidOperationException ex)
     {

@@ -101,7 +101,7 @@ public class EventHandlerTests : IDisposable
         using var ctx = _factory.CreateContext();
         var handler = new CreateEventCommandHandler(ctx, _cacheInvalidator);
 
-        var id = await handler.Handle(new CreateEventCommand(
+        var (id, slug) = await handler.Handle(new CreateEventCommand(
             Name: "Laugavegur Ultra",
             Slug: "laugavegur-ultra",
             Description: "55K ultra through the highlands",
@@ -119,12 +119,14 @@ public class EventHandlerTests : IDisposable
         ), CancellationToken.None);
 
         Assert.NotEqual(Guid.Empty, id);
+        Assert.Equal("laugavegur-ultra", slug);
 
         using var verifyCtx = _factory.CreateContext();
         var ev = verifyCtx.Events.Find(id);
         Assert.NotNull(ev);
         Assert.Equal("Laugavegur Ultra", ev!.Name);
         Assert.Equal("laugavegur-ultra", ev.Slug);
+        Assert.Equal(slug, ev.Slug);
         Assert.Equal(EventStatus.Confirmed, ev.Status);
         Assert.Equal(EventType.Race, ev.Type);
     }
@@ -135,7 +137,7 @@ public class EventHandlerTests : IDisposable
         using var ctx = _factory.CreateContext();
         var handler = new CreateEventCommandHandler(ctx, _cacheInvalidator);
 
-        var id = await handler.Handle(new CreateEventCommand(
+        var (id, slug) = await handler.Handle(new CreateEventCommand(
             Name: "Reykjavík Marathon",
             Slug: null,
             Description: null,
@@ -152,11 +154,15 @@ public class EventHandlerTests : IDisposable
             SocialLinks: null
         ), CancellationToken.None);
 
+        Assert.NotEmpty(slug);
+        Assert.DoesNotContain(" ", slug);
+
         using var verifyCtx = _factory.CreateContext();
         var ev = verifyCtx.Events.Find(id);
         Assert.NotNull(ev);
         Assert.NotEmpty(ev!.Slug);
         Assert.DoesNotContain(" ", ev.Slug);
+        Assert.Equal(slug, ev.Slug);
     }
 
     // ─── UpdateEventCommand ───

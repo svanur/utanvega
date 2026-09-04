@@ -344,7 +344,11 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
         const dir = sortDir === 'asc' ? 1 : -1;
         let cmp = 0;
         if (sortBy === 'updatedAt') {
-          cmp = (a.updatedAt ? new Date(a.updatedAt).getTime() : 0) - (b.updatedAt ? new Date(b.updatedAt).getTime() : 0);
+          const aDate = a.updatedAt ?? a.createdAt;
+          const bDate = b.updatedAt ?? b.createdAt;
+          const aTime = aDate ? new Date(aDate).getTime() : 0;
+          const bTime = bDate ? new Date(bDate).getTime() : 0;
+          cmp = aTime - bTime;
         } else if (sortBy === 'nextEditionDate') {
           if (!a.nextEditionDate && !b.nextEditionDate) cmp = 0;
           else if (!a.nextEditionDate) cmp = 1;
