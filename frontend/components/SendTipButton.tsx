@@ -56,7 +56,10 @@ async function captureScreenshot(): Promise<string | null> {
     }
 }
 
-export default function SendTipButton({ type, sx, inline = false }: SendTipButtonProps) {
+// `type` is accepted (and passed distinctly as 'trail'/'event' by every call site) but not yet
+// forwarded anywhere below — neither /api/v1/tips nor /api/v1/feedback receives it today. Left
+// wired into the props contract rather than deleted; see PR #570 notes before removing it.
+export default function SendTipButton({ type: _type, sx, inline = false }: SendTipButtonProps) {
     const { t } = useTranslation();
     const [open, setOpen] = useState(inline);
     const [mode, setMode] = useState<Mode>(inline ? 'detailed' : 'simple');

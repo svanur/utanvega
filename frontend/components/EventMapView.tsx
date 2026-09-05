@@ -131,7 +131,7 @@ const EventMapView: React.FC<EventMapViewProps> = ({ events }) => {
                 </Marker>
             ))}
         </MarkerClusterGroup>
-    ), [eventsWithCoords, t]);
+    ), [eventsWithCoords, loc, t]);
 
     return (
         <Box sx={{ height: 500, width: '100%', maxWidth: '100%', borderRadius: 2, overflow: 'hidden', position: 'relative' }}>

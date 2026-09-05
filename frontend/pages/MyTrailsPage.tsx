@@ -10,7 +10,7 @@ import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import Layout from '../components/Layout';
 import TimePickerInput from '../components/TimePickerInput';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../hooks/useAuthContext';
 import { useTickedTrails } from '../hooks/useTickedTrails';
 import { useTrails } from '../hooks/useTrails';
 import { useTrailActivities } from '../hooks/useTrailActivities';
@@ -126,25 +126,6 @@ export default function MyTrailsPage({ mode, onToggleMode }: Props) {
     setFormIsPublic(false);
     setEditingActivityId(null);
     setFormOpen(true);
-  };
-
-  const handleEditActivity = (activityId: string) => {
-    const activity = activities.find(a => a.id === activityId);
-    if (activity) {
-      setFormTrailSlug(activity.trailSlug);
-      setFormTimeStr(formatSeconds(activity.timeInSeconds));
-      setFormDistance(
-        activity.distance != null
-          ? Math.round(Number(activity.distance) * 10) / 10
-          : null
-      );
-      setFormElevationGain(activity.elevationGain || null);
-      setFormLogDate(activity.logDate || new Date().toISOString().split('T')[0]);
-      setFormNotes(activity.notes || '');
-      setFormIsPublic(activity.isPublic);
-      setEditingActivityId(activityId);
-      setFormOpen(true);
-    }
   };
 
   const handleFormSubmit = async () => {

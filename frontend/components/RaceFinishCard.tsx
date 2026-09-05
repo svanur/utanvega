@@ -214,7 +214,7 @@ export default function RaceFinishCard(props: RaceFinishCardProps) {
     const [brandImage, setBrandImage] = useState<HTMLImageElement | null>(null);
     const [openInternal, setOpenInternal] = useState(false);
     const open = openProp !== undefined ? openProp : openInternal;
-    const handleClose = () => { onCloseProp ? onCloseProp() : setOpenInternal(false); };
+    const handleClose = () => { if (onCloseProp) { onCloseProp(); } else { setOpenInternal(false); } };
     const [finishTime, setFinishTime] = useState('');
     const [bibNumber, setBibNumber] = useState('');
     const [customText, setCustomText] = useState('');

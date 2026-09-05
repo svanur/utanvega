@@ -177,7 +177,7 @@ function ScheduleView({ days, loading, today, onEventClick, loc, t }: ScheduleVi
 
                         {/* Events column */}
                         <Stack spacing={1} sx={{ flex: 1, minWidth: 0 }}>
-                            {day.events.map((ev: CalendarEvent, ei: number) => (
+                            {day.events.map((ev: CalendarEvent) => (
                                 <Paper
                                     key={ev.raceName ? `${ev.slug}-${ev.raceName}` : ev.slug}
                                     variant="outlined"
@@ -280,12 +280,13 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
         navigate(`/events/calendar/${y}/${String(m + 1).padStart(2, '0')}`);
     };
 
-    // Month view data
-    const { from: monthFrom, to: monthTo } = useMemo(() => getMonthRange(year, month), [year, month]);
+    // Month view data — cheap string math, not worth memoizing (and today/year/month
+    // are plain values recomputed each render anyway, so a memo here bought nothing).
+    const { from: monthFrom, to: monthTo } = getMonthRange(year, month);
     const { days: monthDays, loading: monthLoading } = useEventCalendar(monthFrom, monthTo, view === 'month');
 
     // Schedule view data — rolling 3 months from today
-    const { from: schedFrom, to: schedTo } = useMemo(() => getScheduleRange(today), []);
+    const { from: schedFrom, to: schedTo } = getScheduleRange(today);
     const { days: schedDays, loading: schedLoading } = useEventCalendar(schedFrom, schedTo, view === 'schedule');
 
     const { getHolidays } = useIcelandicHolidays();
@@ -316,13 +317,13 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
     const startOffset = (firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1);
     const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-    const calendarCells = useMemo(() => {
-        const cells: (number | null)[] = [];
-        for (let i = 0; i < startOffset; i++) cells.push(null);
-        for (let d = 1; d <= daysInMonth; d++) cells.push(d);
-        while (cells.length % 7 !== 0) cells.push(null);
-        return cells;
-    }, [startOffset, daysInMonth]);
+    // Same reasoning as monthFrom/monthTo above: building at most ~42 array entries from plain
+    // numbers isn't worth memoizing, and it's exactly this kind of cheap-derived-from-primitives
+    // computation the compiler flags when wrapped in useMemo.
+    const calendarCells: (number | null)[] = [];
+    for (let i = 0; i < startOffset; i++) calendarCells.push(null);
+    for (let d = 1; d <= daysInMonth; d++) calendarCells.push(d);
+    while (calendarCells.length % 7 !== 0) calendarCells.push(null);
 
     const isToday = (day: number) =>
         day === today.getDate() && month === today.getMonth() && year === today.getFullYear();

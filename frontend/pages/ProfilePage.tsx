@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Box, Button, Container, Paper, Stack, Typography, PaletteMode, Divider } from '@mui/material';
 import LogoutIcon from '@mui/icons-material/Logout';
 import Layout from '../components/Layout';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../hooks/useAuthContext';
 import { useTickedTrails } from '../hooks/useTickedTrails';
 import { useTrailActivities } from '../hooks/useTrailActivities';
 import { getCompletedTrailCount } from '../utils/trailActivityAggregator';

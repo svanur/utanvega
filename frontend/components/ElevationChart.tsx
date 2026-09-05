@@ -74,8 +74,6 @@ const ElevationChart: React.FC<ElevationChartProps> = ({ coordinates, onHover, a
   const strokeGradientId = `steepnessStroke-${uid}`;
   const fillGradientId = `colorEle-${uid}`;
 
-  const calculateDistance = haversineMeters;
-
   const chartData = useMemo(() => {
     let totalDistance = 0;
     let totalGain = 0;
@@ -90,7 +88,7 @@ const ElevationChart: React.FC<ElevationChartProps> = ({ coordinates, onHover, a
       if (i > 0) {
         const prev = coordinates[i - 1];
         const prevElevation = prev.length > 2 ? prev[2] : 0;
-        const dist = calculateDistance(lat, lng, prev[1], prev[0]);
+        const dist = haversineMeters(lat, lng, prev[1], prev[0]);
         totalDistance += dist;
         
         const gain = elevation - prevElevation;

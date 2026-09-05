@@ -35,7 +35,7 @@ import GalleryLinks from '../components/GalleryLinks';
 import type { EventEditionDto, RaceDto } from '../hooks/useEvents';
 import { useLocalize } from '../utils/localize';
 import { splitMinutes } from '../utils/cutoffTime';
-import { formatNextDate, formatDateRange, formatRaceDateTime, editionKeyFor } from '../utils/eventUtils';
+import { formatDateRange, formatRaceDateTime, editionKeyFor } from '../utils/eventUtils';
 import { getTicketStatusColor } from '../utils/ticketStatus';
 
 type EditionHistoryPageProps = {

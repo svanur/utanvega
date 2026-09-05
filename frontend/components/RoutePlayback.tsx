@@ -117,7 +117,7 @@ export default function RoutePlayback({ coordinates, onPointChange, onIndexChang
         };
 
         rafRef.current = requestAnimationFrame(tick);
-    }, [total, emitPoint]);
+    }, [total, emitPoint, cancelRaf]);
 
     const stop = useCallback(() => {
         cancelRaf();
@@ -128,7 +128,7 @@ export default function RoutePlayback({ coordinates, onPointChange, onIndexChang
         posRef.current = 0;
         onPointChange(null);
         onIndexChange?.(null);
-    }, [onPointChange, onIndexChange]);
+    }, [onPointChange, onIndexChange, cancelRaf]);
 
     const play = useCallback(() => {
         const startFrom = indexRef.current >= total - 1 ? 0 : indexRef.current;
@@ -144,12 +144,12 @@ export default function RoutePlayback({ coordinates, onPointChange, onIndexChang
     const pause = useCallback(() => {
         cancelRaf();
         setPlaying(false);
-    }, []);
+    }, [cancelRaf]);
 
     // Cleanup on unmount
     useEffect(() => {
         return () => { cancelRaf(); };
-    }, []);
+    }, [cancelRaf]);
 
     const showStats = playing || currentIndex > 0 || finished;
     const stats = cumulativeStats[currentIndex];

@@ -7,7 +7,6 @@ import {
     Collapse, Box, Skeleton, Button, alpha, useTheme, Link,
 } from '@mui/material';
 import { getTicketStatusColor, groupDistances, isAllSoldOut } from '../utils/ticketStatus';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
@@ -16,7 +15,6 @@ import TimerIcon from '@mui/icons-material/Timer';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import CelebrationIcon from '@mui/icons-material/Celebration';
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import type { EventSummary, EventDetail, RaceDto, SeriesRaceDto } from '../hooks/useEvents';
@@ -26,7 +24,8 @@ import { haversineKm, formatDistanceKm } from '../utils/geo';
 import NearMeIcon from '@mui/icons-material/NearMe';
 import EventDateBadge from './EventDateBadge';
 import { getCountdownColor, getEventTypeColor, formatNextDate, isEffectivelyCancelled, isOngoingPastDayTwo } from '../utils/eventUtils';
-import { ActivityIcons, getActivityIcon } from '../utils/activityIcon';
+import { ActivityIcons } from '../utils/activityIcon';
+import { getActivityIcon } from '../utils/getActivityIcon';
 import { useLocalize } from '../utils/localize';
 import { useIcelandicHolidays } from '../hooks/useIcelandicHolidays';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
@@ -51,7 +50,7 @@ type TableRow =
 
 
 const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation, onToggleFavorite, isFavoriteEvent }) => {
-    const { t, i18n } = useTranslation();
+    const { t } = useTranslation();
     const loc = useLocalize();
     const navigate = useNavigate();
     const theme = useTheme();
@@ -62,6 +61,9 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation, o
     const [detailCache, setDetailCache] = useState<Record<string, EventDetail>>({});
     const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
     const fetchedOrInFlightRef = useRef<Set<string>>(new Set());
+    // Frozen at mount rather than read fresh via Date.now() on every render — a countdown chip
+    // that's off by a few seconds is invisible at day-granularity, and this keeps the render pure.
+    const [nowMs] = useState(() => Date.now());
 
     const toggleExpand = useCallback((event: EventSummary) => {
         const id = event.id;
@@ -91,10 +93,11 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation, o
         }
     };
 
-    const getDistanceKm = (e: EventSummary): number | null =>
+    const getDistanceKm = useCallback((e: EventSummary): number | null =>
         userLocation && e.gpxPointLat != null && e.gpxPointLng != null
             ? haversineKm(userLocation.lat, userLocation.lng, e.gpxPointLat, e.gpxPointLng)
-            : null;
+            : null,
+    [userLocation]);
 
     const sortedRows = useMemo((): TableRow[] => {
         const dir = sortDir === 'asc' ? 1 : -1;
@@ -156,7 +159,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation, o
             });
         }
         return rows;
-    }, [events, sortField, sortDir, userLocation, loc]);
+    }, [events, sortField, sortDir, getDistanceKm, loc]);
 
     const columns: { field: SortField; label: string; align?: 'left' | 'right' | 'center' }[] = [
         { field: 'daysUntil', label: t('races.table.date', 'Date'), align: 'center' },
@@ -249,7 +252,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation, o
                         if (row.kind === 'series-race') {
                             const { event, race } = row;
                             const raceDaysUntil = race.dateOfRace
-                                ? Math.round((new Date(race.dateOfRace + 'T00:00:00').getTime() - Date.now()) / 86400000)
+                                ? Math.round((new Date(race.dateOfRace + 'T00:00:00').getTime() - nowMs) / 86400000)
                                 : null;
                             return (
                                 <React.Fragment key={`${event.id}-${race.raceId}`}>

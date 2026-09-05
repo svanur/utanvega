@@ -20,7 +20,7 @@ import ShowChartIcon from '@mui/icons-material/ShowChart';
 import HorizontalRuleIcon from '@mui/icons-material/HorizontalRule';
 import FilterHdrIcon from '@mui/icons-material/FilterHdr';
 import { formatDistanceKm } from '../utils/geo';
-import { getActivityIcon } from '../utils/activityIcon';
+import { getActivityIcon } from '../utils/getActivityIcon';
 import { estimateDuration, estimateDurationMinutes } from '../utils/estimateDuration';
 import type { Trail } from '../hooks/useTrails';
 

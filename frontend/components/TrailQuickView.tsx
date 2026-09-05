@@ -22,7 +22,7 @@ import { Trail, API_URL } from '../hooks/useTrails';
 import { estimateDuration } from '../utils/estimateDuration';
 import DifficultyInfo from './DifficultyInfo';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
-import { getActivityIcon } from '../utils/activityIcon';
+import { getActivityIcon } from '../utils/getActivityIcon';
 import { useLocalize } from '../utils/localize';
 import type { BreadcrumbContextState } from '../utils/breadcrumbContext';
 

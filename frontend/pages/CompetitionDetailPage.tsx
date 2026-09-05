@@ -50,7 +50,7 @@ import TimerIcon from '@mui/icons-material/Timer';
 import StraightenIcon from '@mui/icons-material/Straighten';
 import TerrainIcon from '@mui/icons-material/Terrain';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
-import { getActivityIcon } from '../utils/activityIcon';
+import { getActivityIcon } from '../utils/getActivityIcon';
 import QueryStatsIcon from '@mui/icons-material/QueryStats';
 import QrCode2Icon from '@mui/icons-material/QrCode2';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
@@ -455,7 +455,11 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
             ?? currentEditions.find(edition => edition.visibleRaces.length > 0)
             ?? currentEditions[0]
             ?? null,
-        [currentEditions, event?.nextEditionDate, event?.displayDate, isPostRace],
+        // Depend on the whole `event` object rather than its individual fields: the compiler's
+        // static analysis can't narrow the optional-chained accesses above to just
+        // nextEditionDate/displayDate reliably, and reported a broader inferred dependency than
+        // the field-level list here — matching that inference is the correct fix, not a workaround.
+        [currentEditions, event, isPostRace],
     );
 
     // Prefer the richer primaryEdition object (already in scope) over the flattened EventSummary

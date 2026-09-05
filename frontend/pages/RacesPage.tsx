@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useCallback, useState, useRef, useEffect, Fragment } from 'react';
+import { lazy, Suspense, useMemo, useCallback, useState, useRef, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -29,7 +29,6 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
-    Badge,
     FormControlLabel,
     Checkbox,
     Divider,
@@ -78,13 +77,12 @@ import { getTicketStatusColor, groupDistances, isAllSoldOut } from '../utils/tic
 import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, isOngoingPastDayTwo } from '../utils/eventUtils';
 import { trackViewModeChange, trackSiteQROpen } from '../utils/analytics';
 import { useLocalize } from '../utils/localize';
-import { ActivityIcons, getActivityIcon } from '../utils/activityIcon';
+import { ActivityIcons } from '../utils/activityIcon';
 import LandscapeIcon from '@mui/icons-material/Landscape';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
 import HikingIcon from '@mui/icons-material/Hiking';
 import DirectionsBikeIcon from '@mui/icons-material/DirectionsBike';
 import CelebrationIcon from '@mui/icons-material/Celebration';
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
 import GrassIcon from '@mui/icons-material/Grass';
 import PoolIcon from '@mui/icons-material/Pool';
@@ -268,7 +266,6 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
             }, 800);
         }, 1200);
         return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const viewModeFromUrl = searchParams.get('view');

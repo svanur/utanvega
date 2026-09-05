@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import {
     Avatar,
     Box,
-    Button,
     CircularProgress,
     Container,
     IconButton,
@@ -26,7 +25,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import Layout from '../components/Layout';
 import { useTrailBySlug, useTrailLeaderboard } from '../hooks/useTrails';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../hooks/useAuthContext';
 import { formatSeconds } from '../utils/timeFormat';
 import { getAvatarFallbackText, getAvatarImageSrc } from '../utils/avatarPresets';
 
