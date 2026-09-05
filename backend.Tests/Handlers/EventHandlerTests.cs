@@ -522,6 +522,43 @@ public class EventHandlerTests : IDisposable
         Assert.Equal(EditionStatus.Completed, edition!.Status);
     }
 
+    [Fact]
+    public async Task Create_Edition_PreservesExplicitHidden_WhenDateInPast()
+    {
+        // Regression test: the past-date-defaults-to-Completed logic (#656) must not silently
+        // override an admin's deliberate Hidden choice — Hidden and Completed have very different
+        // public-visibility semantics (only Hidden is filtered out of public queries), so an admin
+        // creating a past-dated, private/draft historical edition as Hidden must have that respected.
+        var ev = CreateTestEvent();
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            await ctx.SaveChangesAsync();
+        }
+
+        var pastDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-30));
+
+        using var edCtx = _factory.CreateContext();
+        var handler = new CreateEditionCommandHandler(edCtx, _cacheInvalidator);
+        var id = await handler.Handle(new CreateEditionCommand(
+            EventId: ev.Id,
+            Year: pastDate.Year,
+            Date: pastDate,
+            EndDate: null,
+            Title: "Past, deliberately hidden",
+            RegistrationUrl: null,
+            ResultsUrl: null,
+            Notes: null,
+            RegistrationStatus: "NotStarted",
+            TrailId: null,
+            Status: "Hidden"
+        ), CancellationToken.None);
+
+        using var verifyCtx = _factory.CreateContext();
+        var edition = verifyCtx.EventEditions.Find(id);
+        Assert.Equal(EditionStatus.Hidden, edition!.Status);
+    }
+
     // ─── UpdateEditionCommand ───
 
     [Fact]
