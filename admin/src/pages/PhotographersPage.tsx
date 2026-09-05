@@ -36,6 +36,7 @@ import { useUrlFilterState } from '../hooks/useUrlFilterState';
 import { usePageShortcuts, isDialogOpen } from '../hooks/usePageShortcuts';
 import { trimToUndefined } from '../utils/strings';
 import BilingualTextField from '../components/BilingualTextField';
+import { BilingualLangProvider } from '../contexts/BilingualLangContext';
 import { useTranslate } from '../hooks/useTranslate';
 
 interface Props {
@@ -60,7 +61,7 @@ const PHOTOGRAPHERS_FILTER_SCHEMA = {
     sortDir: { default: 'asc', allowed: ['asc', 'desc'] },
 } as const;
 
-export default function PhotographersPage({ onNotify }: Props) {
+function PhotographersPageInner({ onNotify }: Props) {
     const navigate = useNavigate();
     const { photographers, loading, error, createPhotographer } = usePhotographers();
     const { values, setValue, setValues } = useUrlFilterState(PHOTOGRAPHERS_FILTER_SCHEMA);
@@ -311,5 +312,13 @@ export default function PhotographersPage({ onNotify }: Props) {
                 </DialogActions>
             </Dialog>
         </Box>
+    );
+}
+
+export default function PhotographersPage(props: Props) {
+    return (
+        <BilingualLangProvider>
+            <PhotographersPageInner {...props} />
+        </BilingualLangProvider>
     );
 }

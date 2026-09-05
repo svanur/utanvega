@@ -17,6 +17,7 @@ import { apiFetch } from '../hooks/api';
 import { usePageShortcuts, isDialogOpen } from '../hooks/usePageShortcuts';
 import { useRowFocus } from '../hooks/useRowFocus';
 import BilingualTextField from '../components/BilingualTextField';
+import { BilingualLangProvider } from '../contexts/BilingualLangContext';
 import { useTranslate } from '../hooks/useTranslate';
 import TranslateIcon from '@mui/icons-material/Translate';
 import { trimToUndefined } from '../utils/strings';
@@ -30,7 +31,7 @@ interface TagManagementProps {
   onNotify: (message: React.ReactNode, severity?: 'success' | 'error') => void;
 }
 
-export default function TagManagement({ onNotify }: TagManagementProps) {
+function TagManagementInner({ onNotify }: TagManagementProps) {
   const { tags, loading, refresh } = useTags();
   const [editTag, setEditTag] = useState<{ id?: string; name: string; nameEn?: string; color: string | null; slug?: string } | null>(null);
   const [slugUnlocked, setSlugUnlocked] = useState(false);
@@ -291,5 +292,13 @@ export default function TagManagement({ onNotify }: TagManagementProps) {
         </DialogActions>
       </Dialog>
     </Box>
+  );
+}
+
+export default function TagManagement(props: TagManagementProps) {
+  return (
+    <BilingualLangProvider>
+      <TagManagementInner {...props} />
+    </BilingualLangProvider>
   );
 }

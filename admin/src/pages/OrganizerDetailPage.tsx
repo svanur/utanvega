@@ -48,6 +48,7 @@ import { useBackToList } from '../hooks/useBackToList';
 import { useRowFocus } from '../hooks/useRowFocus';
 import { trimToUndefined } from '../utils/strings';
 import BilingualTextField from '../components/BilingualTextField';
+import { BilingualLangProvider } from '../contexts/BilingualLangContext';
 import { useTranslate } from '../hooks/useTranslate';
 import TranslateIcon from '@mui/icons-material/Translate';
 
@@ -102,7 +103,7 @@ function getEventStatusColor(status: EventSummaryDto['status']): 'default' | 'su
     return 'default';
 }
 
-export default function OrganizerDetailPage({ onNotify }: Props) {
+function OrganizerDetailPageInner({ onNotify }: Props) {
     const { slug = '' } = useParams<{ slug: string }>();
     const navigate = useNavigate();
     const queryClient = useQueryClient();
@@ -627,5 +628,13 @@ export default function OrganizerDetailPage({ onNotify }: Props) {
             </DialogActions>
         </Dialog>
     </>
+    );
+}
+
+export default function OrganizerDetailPage(props: Props) {
+    return (
+        <BilingualLangProvider>
+            <OrganizerDetailPageInner {...props} />
+        </BilingualLangProvider>
     );
 }

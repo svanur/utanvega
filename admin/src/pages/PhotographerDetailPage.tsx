@@ -49,6 +49,7 @@ import { useBackToList } from '../hooks/useBackToList';
 import { useRowFocus } from '../hooks/useRowFocus';
 import { trimToUndefined } from '../utils/strings';
 import BilingualTextField from '../components/BilingualTextField';
+import { BilingualLangProvider } from '../contexts/BilingualLangContext';
 import { useTranslate } from '../hooks/useTranslate';
 import TranslateIcon from '@mui/icons-material/Translate';
 
@@ -83,7 +84,7 @@ interface GalleryFormState {
     titleEn: string;
 }
 
-export default function PhotographerDetailPage({ onNotify }: Props) {
+function PhotographerDetailPageInner({ onNotify }: Props) {
     const { slug = '' } = useParams<{ slug: string }>();
     const navigate = useNavigate();
     const queryClient = useQueryClient();
@@ -650,5 +651,13 @@ export default function PhotographerDetailPage({ onNotify }: Props) {
             </DialogActions>
         </Dialog>
     </>
+    );
+}
+
+export default function PhotographerDetailPage(props: Props) {
+    return (
+        <BilingualLangProvider>
+            <PhotographerDetailPageInner {...props} />
+        </BilingualLangProvider>
     );
 }
