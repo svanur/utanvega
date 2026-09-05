@@ -205,4 +205,49 @@ public class TrailQueryHandlerTests : IDisposable
             Assert.NotEqual(default, dto.CreatedAt);
         }
     }
+
+    [Fact]
+    public async Task GetTrailBySlug_ReturnsActualUpdatedAt_WhenSet()
+    {
+        var trail = CreateTrail("Fjord Trail", TrailStatus.Published, ActivityType.Hiking);
+        trail.UpdatedAt = new DateTime(2025, 7, 2, 0, 0, 0, DateTimeKind.Utc);
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Trails.Add(trail);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new GetTrailBySlugQueryHandler(ctx, _scheduleEngine);
+            var dto = await handler.Handle(new GetTrailBySlugQuery("fjord-trail"), CancellationToken.None);
+
+            Assert.NotNull(dto);
+            Assert.Equal(trail.UpdatedAt, dto!.UpdatedAt);
+            Assert.NotEqual(trail.CreatedAt, dto.UpdatedAt);
+        }
+    }
+
+    [Fact]
+    public async Task GetTrailBySlug_ReturnsNullUpdatedAt_WhenNeverUpdated()
+    {
+        var trail = CreateTrail("Glacier Trail", TrailStatus.Published, ActivityType.Hiking);
+        trail.UpdatedAt = null;
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Trails.Add(trail);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new GetTrailBySlugQueryHandler(ctx, _scheduleEngine);
+            var dto = await handler.Handle(new GetTrailBySlugQuery("glacier-trail"), CancellationToken.None);
+
+            Assert.NotNull(dto);
+            Assert.Null(dto!.UpdatedAt);
+        }
+    }
 }
