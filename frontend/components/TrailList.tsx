@@ -468,6 +468,24 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
         return Array.from(tagMap.values()).sort((a, b) => (loc(a.name, a.nameEn) ?? a.name).localeCompare(loc(b.name, b.nameEn) ?? b.name));
     }, [trails, loc]);
 
+    const locationRestored = React.useRef(false);
+
+    // Restore Autocomplete + expand descendants when locationMenuItems first loads from URL params.
+    // Declared above the loading/error early returns below — all hooks in this component must run
+    // on every render (Rules of Hooks), otherwise the hook count differs between the initial loading
+    // render and the later loaded render, which React rejects with "Rendered more hooks than during
+    // the previous render" (crashes to the error boundary on a cold /trails load with no trails cache).
+    React.useEffect(() => {
+        if (locationRestored.current || !locationMenuItems.length || !filters.locationSlugs.length) return;
+        const restored = locationMenuItems.filter(item => filters.locationSlugs.includes(item.slug));
+        if (restored.length > 0) {
+            locationRestored.current = true;
+            handleLocationSelect(restored);
+        }
+    // Run once when menu items first populate; handleLocationSelect is stable
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [locationMenuItems]);
+
     const trailsHeading = null;
 
     if (loading) {
@@ -519,20 +537,6 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
             }
         }
     };
-
-    const locationRestored = React.useRef(false);
-
-    // Restore Autocomplete + expand descendants when locationMenuItems first loads from URL params
-    React.useEffect(() => {
-        if (locationRestored.current || !locationMenuItems.length || !filters.locationSlugs.length) return;
-        const restored = locationMenuItems.filter(item => filters.locationSlugs.includes(item.slug));
-        if (restored.length > 0) {
-            locationRestored.current = true;
-            handleLocationSelect(restored);
-        }
-    // Run once when menu items first populate; handleLocationSelect is stable
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [locationMenuItems]);
 
     const handleLocationSelect = (items: typeof locationMenuItems) => {
         setSelectedLocationItems(items);
