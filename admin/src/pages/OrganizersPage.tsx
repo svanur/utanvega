@@ -38,6 +38,7 @@ import { useUrlFilterState } from '../hooks/useUrlFilterState';
 import { usePageShortcuts, isDialogOpen } from '../hooks/usePageShortcuts';
 import { trimToUndefined } from '../utils/strings';
 import BilingualTextField from '../components/BilingualTextField';
+import { BilingualLangProvider } from '../contexts/BilingualLangContext';
 import { useTranslate } from '../hooks/useTranslate';
 
 const SITE_URL = import.meta.env.VITE_SITE_URL?.trim() || 'https://www.hlaupadagskra.is';
@@ -67,7 +68,7 @@ const ORGANIZERS_FILTER_SCHEMA = {
     sortDir: { default: 'asc', allowed: ['asc', 'desc'] },
 } as const;
 
-export default function OrganizersPage({ onNotify }: Props) {
+function OrganizersPageInner({ onNotify }: Props) {
     const navigate = useNavigate();
     const { organizers, loading, error, createOrganizer } = useOrganizers();
     const { values, setValue, setValues } = useUrlFilterState(ORGANIZERS_FILTER_SCHEMA);
@@ -368,5 +369,13 @@ export default function OrganizersPage({ onNotify }: Props) {
                 </DialogActions>
             </Dialog>
         </Box>
+    );
+}
+
+export default function OrganizersPage(props: Props) {
+    return (
+        <BilingualLangProvider>
+            <OrganizersPageInner {...props} />
+        </BilingualLangProvider>
     );
 }
