@@ -1,10 +1,111 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
+using NetTopologySuite.Geometries;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Core.Services;
 
 namespace Utanvega.Backend.Tests.Services;
 
-public class LocationDetectorTests
+public class LocationDetectorTests : IDisposable
 {
+    // ─── DetectLocationsAsync: real-DB round trip via TestDbContext (#583) ───
+    // Location.Center is an NTS Point; TestDbContext now round-trips it through WKB
+    // (see TestDbContextFactory.cs) instead of ignoring it, so DetectLocationsAsync's
+    // GetAllLocationCenters query (which filters on Center != null && Radius != null)
+    // actually sees seeded locations rather than silently returning an empty list.
+    private readonly TestDbContextFactory _factory = new();
+    private readonly IMemoryCache _memoryCache = new MemoryCache(new MemoryCacheOptions());
+
+    public void Dispose()
+    {
+        _factory.Dispose();
+        _memoryCache.Dispose();
+    }
+
+    [Fact]
+    public async Task DetectLocationsAsync_SeededLocationWithinRadius_IsReturned()
+    {
+        // Öskjuhlíð-ish center, radius covers a point ~200m away.
+        var location = new Core.Entities.Location
+        {
+            Name = "Öskjuhlíð",
+            Slug = "oskjuhlid",
+            Type = LocationType.Place,
+            Center = new Point(-21.9174, 64.1286) { SRID = 4326 },
+            Radius = 500, // meters
+        };
+
+        using (var seedCtx = _factory.CreateContext())
+        {
+            seedCtx.Locations.Add(location);
+            await seedCtx.SaveChangesAsync();
+        }
+
+        using var ctx = _factory.CreateContext();
+        var detector = new LocationDetector(ctx, _memoryCache);
+
+        var results = await detector.DetectLocationsAsync(64.1270, -21.9200);
+
+        var hit = Assert.Single(results);
+        Assert.Equal(location.Id, hit.Id);
+        Assert.Equal("Öskjuhlíð", hit.Name);
+    }
+
+    [Fact]
+    public async Task DetectLocationsAsync_SeededLocationOutsideRadius_IsNotReturned()
+    {
+        var location = new Core.Entities.Location
+        {
+            Name = "Öskjuhlíð",
+            Slug = "oskjuhlid-2",
+            Type = LocationType.Place,
+            Center = new Point(-21.9174, 64.1286) { SRID = 4326 },
+            Radius = 100, // meters — the ~250m query point below is well outside this
+        };
+
+        using (var seedCtx = _factory.CreateContext())
+        {
+            seedCtx.Locations.Add(location);
+            await seedCtx.SaveChangesAsync();
+        }
+
+        using var ctx = _factory.CreateContext();
+        var detector = new LocationDetector(ctx, _memoryCache);
+
+        var results = await detector.DetectLocationsAsync(64.1270, -21.9200);
+
+        Assert.Empty(results);
+    }
+
+    [Fact]
+    public async Task DetectLocationsAsync_LocationWithNullCenter_IsExcluded()
+    {
+        // Confirms GetAllLocationCenters' `Center != null` filter still works now that
+        // Center round-trips via WKB, rather than the pre-#583 behaviour where every
+        // location was excluded regardless of Center being set.
+        var location = new Core.Entities.Location
+        {
+            Name = "No Center",
+            Slug = "no-center",
+            Type = LocationType.Place,
+            Center = null,
+            Radius = null,
+        };
+
+        using (var seedCtx = _factory.CreateContext())
+        {
+            seedCtx.Locations.Add(location);
+            await seedCtx.SaveChangesAsync();
+        }
+
+        using var ctx = _factory.CreateContext();
+        var detector = new LocationDetector(ctx, _memoryCache);
+
+        var results = await detector.DetectLocationsAsync(64.1270, -21.9200);
+
+        Assert.Empty(results);
+    }
+
     // ─── Haversine distance formula ───
 
     [Fact]

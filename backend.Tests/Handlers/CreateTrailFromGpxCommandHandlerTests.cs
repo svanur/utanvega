@@ -164,9 +164,9 @@ public class CreateTrailFromGpxCommandHandlerTests : IDisposable
     // overload exercised above — so fixing ProcessGpx once fixes both create paths. We call it
     // here the same way bulk does, via a GpxFileInfo, rather than exercising the full bulk
     // Handle(): that also calls LocationDetector.DetectAndLinkAsync, which queries Location.Center
-    // — an NTS Point unsupported by the SQLite test double (ignored in TestDbContext, see
-    // TestDbContextFactory.cs) and unrelated to terrain classification, so it isn't something this
-    // issue's test needs to (or should) work around.
+    // (now round-tripped via WKB in TestDbContext, see TestDbContextFactory.cs) and is unrelated
+    // to terrain classification, so it isn't something this issue's test needs to (or should)
+    // cover — a full BulkCreateTrailsFromGpxCommandHandler test suite is tracked separately (#583).
     [Fact]
     public void BulkCreate_UsesSameProcessGpxPath_ClassifiesTerrainType()
     {
