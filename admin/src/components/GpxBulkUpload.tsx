@@ -23,6 +23,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../hooks/api';
+import { GPX_ACTIVITY_TYPES } from '../utils/trailOptions';
 
 interface GpxBulkUploadProps {
   onUploadSuccess: () => void;
@@ -35,7 +36,9 @@ interface GpxFile {
   matches?: SimilarityMatch[];
   // The activity type read from the GPX <type> element, if any. Shown as this file's
   // override so the batch setting only ever applies to files that didn't declare one.
-  detectedActivityType?: string;
+  // Nullable rather than just optional because the backend's ActivityType enum is
+  // nullable and serializes undetected types as JSON null, not an omitted field.
+  detectedActivityType?: string | null;
   // The per-file activity type choice — starts out equal to detectedActivityType, but the
   // user can change it. Empty means "use the batch setting".
   activityTypeOverride?: string;
@@ -48,18 +51,7 @@ interface SimilarityMatch {
   message: string;
 }
 
-const ACTIVITY_TYPES = [
-  { value: 'TrailRunning', label: 'Trail Run' },
-  { value: 'Running', label: 'Road Run' },
-  { value: 'Cycling', label: 'Cycling' },
-  { value: 'Hiking', label: 'Hike' },
-  { value: 'FunRun', label: 'Fun Run' },
-  { value: 'ObstacleCourse', label: 'Obstacle Course' },
-  { value: 'CrossCountryRun', label: 'Cross Country Run' },
-  { value: 'Swim', label: 'Swim' },
-] as const;
-
-const activityTypeLabel = (value?: string) => ACTIVITY_TYPES.find(at => at.value === value)?.label;
+const activityTypeLabel = (value?: string | null) => GPX_ACTIVITY_TYPES.find(at => at.value === value)?.label;
 
 const GpxBulkUpload: React.FC<GpxBulkUploadProps> = ({ onUploadSuccess, onNotify }) => {
   const navigate = useNavigate();
@@ -162,7 +154,7 @@ const GpxBulkUpload: React.FC<GpxBulkUploadProps> = ({ onUploadSuccess, onNotify
     });
 
     try {
-      const results = await apiFetch<{ fileName: string; matches: SimilarityMatch[]; detectedActivityType?: string }[]>('/api/v1/admin/trails/bulk-check-similarity', {
+      const results = await apiFetch<{ fileName: string; matches: SimilarityMatch[]; detectedActivityType?: string | null }[]>('/api/v1/admin/trails/bulk-check-similarity', {
         method: 'POST',
         body: formData,
       });
@@ -177,8 +169,9 @@ const GpxBulkUpload: React.FC<GpxBulkUploadProps> = ({ onUploadSuccess, onNotify
               matches: res.matches,
               detectedActivityType: res.detectedActivityType,
               // A detected type becomes this file's override, so the batch setting only
-              // ever fills in for files that didn't declare one.
-              activityTypeOverride: res.detectedActivityType,
+              // ever fills in for files that didn't declare one. activityTypeOverride stays
+              // string | undefined, so a JSON null (no type detected) collapses to undefined.
+              activityTypeOverride: res.detectedActivityType ?? undefined,
             };
           }
         });
@@ -314,7 +307,7 @@ const GpxBulkUpload: React.FC<GpxBulkUploadProps> = ({ onUploadSuccess, onNotify
                 onChange={(e) => setBatchActivityType(e.target.value)}
               >
                 <MenuItem value=""><em>None selected</em></MenuItem>
-                {ACTIVITY_TYPES.map(at => (
+                {GPX_ACTIVITY_TYPES.map(at => (
                   <MenuItem key={at.value} value={at.value}>{at.label}</MenuItem>
                 ))}
               </Select>
@@ -357,7 +350,7 @@ const GpxBulkUpload: React.FC<GpxBulkUploadProps> = ({ onUploadSuccess, onNotify
                             <MenuItem value="">
                               <em>Use batch setting{batchActivityType ? ` (${activityTypeLabel(batchActivityType)})` : ''}</em>
                             </MenuItem>
-                            {ACTIVITY_TYPES.map(at => (
+                            {GPX_ACTIVITY_TYPES.map(at => (
                               <MenuItem key={at.value} value={at.value}>{at.label}</MenuItem>
                             ))}
                           </Select>

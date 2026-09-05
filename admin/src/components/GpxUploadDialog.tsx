@@ -4,6 +4,7 @@ import UploadFileIcon from '@mui/icons-material/UploadFile';
 
 import { supabase } from '../hooks/supabase';
 import { generateSlug } from '../utils/slugify';
+import { GPX_ACTIVITY_TYPES } from '../utils/trailOptions';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
@@ -20,17 +21,6 @@ interface DetectedLocation {
     type: string;
     distanceMeters: number;
 }
-
-const ACTIVITY_TYPES = [
-  { value: 'TrailRunning', label: 'Trail Run' },
-  { value: 'Running', label: 'Road Run' },
-  { value: 'Cycling', label: 'Cycling' },
-  { value: 'Hiking', label: 'Hike' },
-  { value: 'FunRun', label: 'Fun Run' },
-  { value: 'ObstacleCourse', label: 'Obstacle Course' },
-  { value: 'CrossCountryRun', label: 'Cross Country Run' },
-  { value: 'Swim', label: 'Swim' },
-] as const;
 
 export default function GpxUploadDialog({ open, onClose, onUploadSuccess }: { open: boolean, onClose: () => void, onUploadSuccess: (trail?: { id: string, slug: string, name: string }, detectedLocations?: DetectedLocation[]) => void }) {
     const [name, setName] = useState('');
@@ -242,7 +232,7 @@ export default function GpxUploadDialog({ open, onClose, onUploadSuccess }: { op
                             displayEmpty
                             onChange={(e) => setActivityType(e.target.value)}
                         >
-                            {ACTIVITY_TYPES.map(at => (
+                            {GPX_ACTIVITY_TYPES.map(at => (
                                 <MenuItem key={at.value} value={at.value}>{at.label}</MenuItem>
                             ))}
                         </Select>
