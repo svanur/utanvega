@@ -49,6 +49,13 @@ This app's primary user is on a phone, outdoors, on mobile data.
 - **Icelandic text is longer than English.** Check the `is.json` string in a narrow container — truncation and overflow show up in Icelandic first, and Icelandic is the default language.
 - Payload/render cost: large lists, unbounded queries, images without dimensions.
 
+**Disclose your verification method.** Your tools (`Read, Glob, Grep, Bash`) do not include a
+headless-browser or screenshot tool, so a claim about 375px layout, dark mode, or touch-target size
+is almost always a *static reading* of MUI theme tokens and `sx` breakpoints, not a rendered check —
+say so. Any finding touching those three areas must state explicitly whether it came from a
+live/headless render or from reading theme tokens/breakpoints in source. Never phrase a static
+reading in a way that implies a page was actually rendered.
+
 ### 3. Correctness
 
 Logic errors, null/undefined handling, `async` misuse (`.Result`/`.Wait()` is banned), unhandled promise rejections, off-by-one in filters. Check the `useTrails` filter convention: a slider at its cap means "no limit" (e.g. `maxLength < 100` means actually filtered) — getting this backwards is an easy real bug.
@@ -87,8 +94,10 @@ Format:
 - `path:line` — <suggestion>
 
 ### Verified
-- <what you actually checked and found correct — auth on new endpoints, 375px layout, both i18n
-  files for frontend changes, etc.>
+- <what you actually checked and found correct — auth on new endpoints, both i18n files for
+  frontend changes, etc. For 375px layout / dark mode / touch-target findings, name the method,
+  e.g.: "Verified via static code reading (theme.palette tokens, sx breakpoints) — no
+  headless-browser tool available this session.">
 ```
 
 If there are no blocking findings, the verdict is **GOOD TO MERGE** and the Blocking section says "None."

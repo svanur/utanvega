@@ -53,4 +53,10 @@ checks either way — 375px layout, 44px touch targets, TrailCard gestures, dark
 files, `[Authorize]` on new endpoints, ownership checks, secrets. Use those sections only for things
 specific to *this* issue that it wouldn't otherwise know to look for.
 
+No headless-browser or screenshot tool is currently guaranteed available to agent sessions. When
+the acceptance criteria require a visual-rendering check (375px layout, dark mode, touch-target
+size), the Tester's default is to verify it via static code reading (theme tokens, `sx` breakpoints)
+and say so explicitly in its review — it must not imply a rendered check occurred when it did not
+render anything.
+
 See `AGENTS.md` → **Agent Workflow** for how the issue then moves through the pipeline.

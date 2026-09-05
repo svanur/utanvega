@@ -159,7 +159,10 @@ Every pitch must include a **Business Justification (Why)**, a **User Impact Ass
   cycle it also files the PR's durable "spotted but not fixed" leftovers as **unlabelled** issues, so
   they are tracked rather than left in a PR body.
 - **programmer** — implements the work order, runs the checks, commits, pushes a feature branch, opens the PR, and applies review fixes.
-- **tester** — reviews the PR **cold** (PR number only, never the Programmer's reasoning), posts the review as a PR comment. Cannot edit code.
+- **tester** — reviews the PR **cold** (PR number only, never the Programmer's reasoning), posts the review as a PR comment. Cannot edit code. Its tools (`Read, Glob, Grep, Bash`) do not currently
+  include a headless-browser or screenshot tool, so 375px layout, dark mode, and touch-target
+  findings are, by default, a static reading of theme tokens/`sx` breakpoints rather than a rendered
+  check — the review must say which method was used, not imply a render happened.
 
 ### Creating issues
 
