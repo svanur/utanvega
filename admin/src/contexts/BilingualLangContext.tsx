@@ -6,11 +6,7 @@ interface BilingualLangContextValue {
   setLang: (l: 'is' | 'en') => void;
 }
 
-const BilingualLangContext = createContext<BilingualLangContextValue>({
-  lang: 'is',
-  toggle: () => {},
-  setLang: () => {},
-});
+const BilingualLangContext = createContext<BilingualLangContextValue | null>(null);
 
 export function BilingualLangProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<'is' | 'en'>('is');
@@ -24,5 +20,9 @@ export function BilingualLangProvider({ children }: { children: ReactNode }) {
 }
 
 export function useBilingualLang() {
-  return useContext(BilingualLangContext);
+  const context = useContext(BilingualLangContext);
+  if (context === null) {
+    throw new Error('useBilingualLang must be used within a BilingualLangProvider');
+  }
+  return context;
 }
