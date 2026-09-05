@@ -60,7 +60,12 @@ export const photoGalleriesByPhotographerQueryKey = (photographerId: string) => 
 
 // Galleries aren't nested on PhotographerDto either — fetched separately, once, when the
 // photographer detail page is open, rather than per-row in a list.
-export function usePhotoGalleriesByPhotographer(photographerId: string | null) {
+//
+// onMutated mirrors usePhotoGalleries' escape hatch (see its own comment below), but since this
+// hook's rows span multiple events, there's no single fixed slug to invalidate for the whole
+// hook — it's invoked per-edit with the eventSlug of the specific row just saved, letting the
+// caller invalidate that one event's ['admin','event', slug] entry (#642).
+export function usePhotoGalleriesByPhotographer(photographerId: string | null, onMutated?: (eventSlug: string) => void) {
     const queryClient = useQueryClient();
 
     const { data: galleries = [], isLoading: loading, error: queryError } = useQuery({
@@ -78,7 +83,7 @@ export function usePhotoGalleriesByPhotographer(photographerId: string | null) {
     // instead. photographerId and sortOrder are round-tripped unchanged from the already-loaded
     // row (UpdatePhotoGalleryCommand is a full overwrite — see the command's own comment), never
     // recomputed here.
-    const updateGallery = async (input: UpdatePhotoGalleryInput): Promise<void> => {
+    const updateGallery = async (input: UpdatePhotoGalleryInput, eventSlug: string): Promise<void> => {
         await apiFetch(`/api/v1/admin/photo-galleries/${input.id}`, {
             method: 'PUT',
             body: JSON.stringify(input),
@@ -86,6 +91,7 @@ export function usePhotoGalleriesByPhotographer(photographerId: string | null) {
         if (photographerId) {
             await queryClient.invalidateQueries({ queryKey: photoGalleriesByPhotographerQueryKey(photographerId) });
         }
+        onMutated?.(eventSlug);
     };
 
     return { galleries, loading, error, updateGallery };

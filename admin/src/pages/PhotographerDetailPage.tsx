@@ -91,7 +91,13 @@ function PhotographerDetailPageInner({ onNotify }: Props) {
     const { photographers, loading, updatePhotographer, deletePhotographer } = usePhotographers();
 
     const photographer = photographers.find(p => p.slug === slug) ?? null;
-    const { galleries, loading: galleriesLoading, updateGallery } = usePhotoGalleriesByPhotographer(photographer?.id ?? null);
+    // Invalidates the parent event's own detail cache too — usePhotoGalleriesByPhotographer's
+    // rows span multiple events, so this only ever targets the one event whose gallery was just
+    // edited, never the whole list (#642).
+    const { galleries, loading: galleriesLoading, updateGallery } = usePhotoGalleriesByPhotographer(
+        photographer?.id ?? null,
+        eventSlug => queryClient.invalidateQueries({ queryKey: ['admin', 'event', eventSlug] }),
+    );
 
     const [editing, setEditing] = useState(false);
     const [slugUnlocked, setSlugUnlocked] = useState(false);
@@ -201,7 +207,7 @@ function PhotographerDetailPageInner({ onNotify }: Props) {
                 title: trimToUndefined(galleryForm.title) ?? null,
                 titleEn: trimToUndefined(galleryForm.titleEn) ?? null,
                 sortOrder: editingGallery.sortOrder,
-            });
+            }, editingGallery.eventSlug);
             onNotify('Gallery saved');
             setEditingGallery(null);
         } catch (err) {
