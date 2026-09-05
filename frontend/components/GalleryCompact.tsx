@@ -160,12 +160,17 @@ export default function GalleryCompact({ galleries, variant }: GalleryCompactPro
             )}
             <Menu anchorEl={anchorEl} open={!!anchorEl} onClose={closeMenu} onClick={e => e.stopPropagation()}>
                 {sorted.map(g => (
-                    <MenuItem key={g.url}>
+                    // Row-level onClick restores the pre-nested-link behaviour: clicking anywhere
+                    // in the row (padding, the "Photo:" prefix) — or arrow-navigating to the row
+                    // and pressing Enter, via MUI's own MenuItem keyboard handling — opens the
+                    // gallery, same as the old component="a" MenuItem did. The gallery label and
+                    // the photographer name below are each their OWN real anchor besides that,
+                    // giving each independent Tab access plus native middle/ctrl-click/right-click
+                    // "open in new tab"; both stop the click from bubbling to this row handler so a
+                    // click on either link doesn't also re-trigger it (which would open a second
+                    // tab, or open the gallery instead of the photographer page).
+                    <MenuItem key={g.url} onClick={() => { window.open(g.url, '_blank', 'noopener,noreferrer'); closeMenu(); }}>
                         <Box>
-                            {/* The gallery link and the photographer link below are siblings, not
-                                nested — an <a> can't contain another <a>, so this used to be a
-                                non-anchor span driven only by onClick. Making both real anchors
-                                gives each independent Tab/Enter access and native middle/ctrl-click. */}
                             <Link
                                 component="a"
                                 href={g.url}
@@ -173,7 +178,7 @@ export default function GalleryCompact({ galleries, variant }: GalleryCompactPro
                                 rel="noopener noreferrer"
                                 color="inherit"
                                 underline="hover"
-                                onClick={closeMenu}
+                                onClick={e => { e.stopPropagation(); closeMenu(); }}
                                 sx={{ display: 'block' }}
                             >
                                 <Typography variant="body2">{galleryLabel(g, loc, t)}</Typography>
@@ -188,6 +193,11 @@ export default function GalleryCompact({ galleries, variant }: GalleryCompactPro
                                             color="inherit"
                                             underline="hover"
                                             onClick={e => {
+                                                // Always keep this click from bubbling to the row's
+                                                // handler above — otherwise a modifier/middle-click
+                                                // meant for the photographer link would also fire
+                                                // window.open(g.url), opening the wrong page.
+                                                e.stopPropagation();
                                                 if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
                                                 closeMenu();
                                             }}
