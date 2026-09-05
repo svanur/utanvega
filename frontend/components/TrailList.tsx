@@ -470,6 +470,25 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
 
     const locationRestored = React.useRef(false);
 
+    // Only depends on descendantSlugs (memo above) and stable state setters, so — like the effect
+    // below — it's safe to declare above the loading/error early returns. Declared as a plain const
+    // (not a hook) but it must still sit above those returns: a render that short-circuits at
+    // `if (loading) return` never reaches a `const` declared after that point, leaving it
+    // uninitialized (TDZ) for that render's closures. The effect below closes over this function, so
+    // if that effect instance is later invoked by React, an uninitialized reference here throws a
+    // ReferenceError — the same "reachable through an early-returning render" bug as the hook-order
+    // issue below, just via a TDZ violation instead of a hook-count mismatch.
+    const handleLocationSelect = (items: typeof locationMenuItems) => {
+        setSelectedLocationItems(items);
+        // Expand each selected slug to include its descendants for OR-based filtering
+        const expanded = new Set<string>();
+        for (const item of items) {
+            expanded.add(item.slug);
+            (descendantSlugs.get(item.slug) ?? new Set()).forEach(s => expanded.add(s));
+        }
+        setFilters(f => ({ ...f, locationSlugs: Array.from(expanded) }));
+    };
+
     // Restore Autocomplete + expand descendants when locationMenuItems first loads from URL params.
     // Declared above the loading/error early returns below — all hooks in this component must run
     // on every render (Rules of Hooks), otherwise the hook count differs between the initial loading
@@ -538,19 +557,8 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
         }
     };
 
-    const handleLocationSelect = (items: typeof locationMenuItems) => {
-        setSelectedLocationItems(items);
-        // Expand each selected slug to include its descendants for OR-based filtering
-        const expanded = new Set<string>();
-        for (const item of items) {
-            expanded.add(item.slug);
-            (descendantSlugs.get(item.slug) ?? new Set()).forEach(s => expanded.add(s));
-        }
-        setFilters(f => ({ ...f, locationSlugs: Array.from(expanded) }));
-    };
-
     return (
-        <Container 
+        <Container
             maxWidth={viewMode === 'table' ? 'lg' : 'md'} 
             sx={{ 
                 pt: 1, pb: 2,
