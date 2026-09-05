@@ -1037,7 +1037,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 editionDate={event.displayDate ?? event.nextEditionDate}
                                 eventSlug={event.slug ?? slug}
                                 now={currentTime}
-                                isMultiDayOngoingEdition={getMultiDayEditionProgress(currentEditions[0]?.date, currentEditions[0]?.endDate, currentTime) !== null}
+                                isMultiDayOngoingEdition={getMultiDayEditionProgress(primaryEdition?.date, primaryEdition?.endDate, currentTime) !== null}
                             />
                             ))}
                     </Stack>
