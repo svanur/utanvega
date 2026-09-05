@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from './supabase';
-import { useAuth } from './useAuth';
+import { useAuth } from './useAuthContext';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 const USER_ACTIVITIES_CACHE_TTL_MS = 60_000;
@@ -177,7 +177,7 @@ export function useTrailActivities(trailSlug?: string) {
       console.error('Failed to create activity:', error);
       throw error;
     }
-  }, [user?.id, getAuthToken]);
+  }, [user, getAuthToken]);
 
   const updateActivity = useCallback(async (activityId: string, updates: UpdateActivityInput) => {
     try {
@@ -237,8 +237,17 @@ export function useTrailActivities(trailSlug?: string) {
     }
   }, [getAuthToken, user?.id]);
 
+  // `trailSlug`, when given, scopes the returned activities to that trail. The fetch/cache above
+  // stays per-user (not per-trail) so multiple trail pages share one cache entry; this is a plain
+  // client-side filter over that shared list — see usePersonalBest, which was silently returning
+  // the user's best time across *all* trails before this filter existed (bug found while fixing
+  // the unused-`trailSlug` lint warning, not a pre-existing intentional behaviour).
+  const scopedActivities = trailSlug === undefined
+    ? activities
+    : activities.filter(a => a.trailSlug === trailSlug);
+
   return {
-    activities,
+    activities: scopedActivities,
     loading,
     createActivity,
     updateActivity,

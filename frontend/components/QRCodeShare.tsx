@@ -35,7 +35,7 @@ export default function QRCodeShare({ slug, trailName, open: openProp, onClose }
     const [copied, setCopied] = useState(false);
 
     const open = openProp !== undefined ? openProp : internalOpen;
-    const handleClose = () => { onClose ? onClose() : setInternalOpen(false); };
+    const handleClose = () => { if (onClose) { onClose(); } else { setInternalOpen(false); } };
     
     const baseUrl = window.location.origin;
     const trailUrl = `${baseUrl}/trails/${slug}`;

@@ -16,7 +16,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import ManageIcon from '@mui/icons-material/ManageAccounts';
 import SettingsIcon from '@mui/icons-material/Settings';
 import Layout from '../components/Layout';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../hooks/useAuthContext';
 import { useTickedTrails } from '../hooks/useTickedTrails';
 import { useTrailActivities } from '../hooks/useTrailActivities';
 import { getCompletedTrailCount } from '../utils/trailActivityAggregator';

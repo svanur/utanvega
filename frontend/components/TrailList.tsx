@@ -12,8 +12,6 @@ import {
     IconButton,
     Collapse,
     Button,
-    FormControl,
-    InputLabel,
     Select,
     MenuItem,
     Grid,
@@ -41,8 +39,6 @@ import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
-import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
-import VisibilityIcon from '@mui/icons-material/Visibility';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import SortIcon from '@mui/icons-material/Sort';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
@@ -170,7 +166,10 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
             setTimeout(() => { utadahlaupa.current = false; }, 10000);
         }
     }, [searchQuery]);
-    const [hidingSlugs, setHidingSlugs] = React.useState<string[]>([]);
+    // Nothing currently calls the setter — the swipe-left gesture that used to populate this now
+    // opens the share sheet instead (see TrailCard.tsx), so this transient fade-out state is
+    // permanently empty. Left as read-only scaffolding rather than removed; see PR #570 notes.
+    const [hidingSlugs] = React.useState<string[]>([]);
     const hidingSlugsSet = React.useMemo(() => new Set(hidingSlugs), [hidingSlugs]);
     const [discoveryTab, setDiscoveryTab] = React.useState<'trending' | 'recent' | 'races'>('races');
     const discoveryScrollRef = React.useRef<HTMLDivElement>(null);

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Button, Container, Paper, Stack, Typography, Dialog, DialogTitle,
@@ -13,7 +13,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import Layout from '../components/Layout';
 import ActivityForm from '../components/ActivityForm';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../hooks/useAuthContext';
 import { useTrailActivities } from '../hooks/useTrailActivities';
 import { useTrails } from '../hooks/useTrails';
 import { formatSeconds } from '../utils/timeFormat';
@@ -21,7 +21,6 @@ import { formatSeconds } from '../utils/timeFormat';
 type Props = { mode: PaletteMode; onToggleMode: () => void };
 
 export default function ActivitiesPage({ mode, onToggleMode }: Props) {
-  const navigate = useNavigate();
   const { t } = useTranslation();
   const { user } = useAuth();
   const { activities, createActivity, updateActivity, deleteActivity } = useTrailActivities();

@@ -8,7 +8,7 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import type { TrailLeaderboardEntry } from '../hooks/useTrails';
 import { formatSeconds } from '../utils/timeFormat';
 import { getAvatarFallbackText, getAvatarImageSrc } from '../utils/avatarPresets';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../hooks/useAuthContext';
 
 type TrailLeaderboardCardProps = {
     leaderboard: TrailLeaderboardEntry[];

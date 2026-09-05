@@ -224,7 +224,7 @@ function renderCard(
 }
 
 export default function PredictionShareCard(props: PredictionShareCardProps) {
-    const { open, onClose, trailBName } = props;
+    const { open, onClose, trailAName, trailBName, knownTime, predictedTime } = props;
     const { t } = useTranslation();
     const theme = useTheme();
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -239,7 +239,7 @@ export default function PredictionShareCard(props: PredictionShareCardProps) {
     }, [open]);
 
     const label = t('tools.trailPredictor.shareCardLabel');
-    const basedOnText = t('tools.trailPredictor.shareCardBasedOn', { time: props.knownTime, trail: props.trailAName });
+    const basedOnText = t('tools.trailPredictor.shareCardBasedOn', { time: knownTime, trail: trailAName });
     const distanceLabel = t('compare.distance');
     const elevationLabel = t('compare.elevationGain');
     const elevationLossLabel = t('compare.elevationLoss');
@@ -283,9 +283,9 @@ export default function PredictionShareCard(props: PredictionShareCardProps) {
                 await navigator.share({
                     title: trailBName,
                     text: t('tools.trailPredictor.shareText', {
-                        trail: props.trailBName,
-                        time: props.predictedTime,
-                        fromTrail: props.trailAName,
+                        trail: trailBName,
+                        time: predictedTime,
+                        fromTrail: trailAName,
                     }),
                     files: [file],
                 });
@@ -300,7 +300,7 @@ export default function PredictionShareCard(props: PredictionShareCardProps) {
                 handleDownload();
             }
         }
-    }, [getBlob, handleDownload, trailBName, t]);
+    }, [getBlob, handleDownload, trailBName, predictedTime, trailAName, t]);
 
     return (
         <>

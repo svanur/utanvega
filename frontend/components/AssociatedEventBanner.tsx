@@ -2,7 +2,7 @@ import { Box, Chip, Stack, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getCountdownLabel } from '../utils/eventUtils';
-import { getActivityIcon } from '../utils/activityIcon';
+import { getActivityIcon } from '../utils/getActivityIcon';
 
 interface LinkedRace {
     eventSlug: string;

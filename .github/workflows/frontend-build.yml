@@ -19,6 +19,10 @@ on:
         type: string
         required: false
         default: "npm run build"
+      lint-command:
+        type: string
+        required: false
+        default: "npm run lint"
       artifact-name:
         type: string
         required: false
@@ -50,6 +54,10 @@ jobs:
       - name: Install dependencies
         working-directory: ${{ inputs.working-directory }}
         run: ${{ inputs.install-command }}
+
+      - name: Lint
+        working-directory: ${{ inputs.working-directory }}
+        run: ${{ inputs.lint-command }}
 
       - name: Build
         working-directory: ${{ inputs.working-directory }}

@@ -41,7 +41,7 @@ import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { useLoginEnabled } from '../hooks/useLoginEnabled';
 import { estimateDuration } from '../utils/estimateDuration';
 import { useFavorites } from '../hooks/useFavorites';
-import { getActivityIcon } from '../utils/activityIcon';
+import { getActivityIcon } from '../utils/getActivityIcon';
 import { useTickedTrails } from '../hooks/useTickedTrails';
 import { TrailQuickView } from './TrailQuickView';
 import DifficultyInfo from './DifficultyInfo';
@@ -93,7 +93,6 @@ const TrailCardComponent: React.FC<TrailCardProps> = ({ trail, onToggleFavorite,
     const loc = useLocalize();
     const { isEnabled } = useFeatureFlags();
     const loginEnabled = useLoginEnabled();
-    const locationsPageEnabled = isEnabled('locations_page');
     const tagsEnabled = isEnabled('tags_page');
     const { isFavorite, toggleFavorite } = useFavorites();
     const { tickedSlugs } = useTickedTrails();
