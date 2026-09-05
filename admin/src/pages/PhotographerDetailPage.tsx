@@ -216,9 +216,9 @@ export default function PhotographerDetailPage({ onNotify }: Props) {
     const setSocialLinks = (links: SocialLink[]) =>
         setForm(prev => ({ ...prev, socialLinks: links }));
 
-    // j/k row focus + Enter/o to open the gallery's parent event — scrolled into view
-    // whenever it changes, same pattern as OrganizersPage/PhotographersPage.
-    const { focusedIndex: focusedGalleryIndex } = useRowFocus(galleries, (gallery) => navigate(`/events/${gallery.eventSlug}`));
+    // j/k row focus + Enter/o to open the Edit Gallery dialog for the focused row — scrolled
+    // into view whenever it changes, same pattern as OrganizersPage/PhotographersPage.
+    const { focusedIndex: focusedGalleryIndex } = useRowFocus(galleries, (gallery) => openEditGallery(gallery));
     const focusedGalleryRowRef = useRef<HTMLTableRowElement>(null);
     useEffect(() => {
         focusedGalleryRowRef.current?.scrollIntoView({ block: 'nearest' });
@@ -522,7 +522,7 @@ export default function PhotographerDetailPage({ onNotify }: Props) {
                                         cursor: 'pointer',
                                         ...(idx === focusedGalleryIndex && { outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: -2 }),
                                     })}
-                                    onClick={() => navigate(`/events/${gallery.eventSlug}`)}
+                                    onClick={() => openEditGallery(gallery)}
                                 >
                                     <TableCell>
                                         <Typography variant="body2" fontWeight={600}>{gallery.eventName}</Typography>
@@ -540,11 +540,6 @@ export default function PhotographerDetailPage({ onNotify }: Props) {
                                         </Tooltip>
                                     </TableCell>
                                     <TableCell align="right">
-                                        <Tooltip title="Edit gallery">
-                                            <IconButton size="small" onClick={e => { e.stopPropagation(); openEditGallery(gallery); }}>
-                                                <EditIcon fontSize="small" />
-                                            </IconButton>
-                                        </Tooltip>
                                         <Tooltip title="Open event">
                                             <IconButton size="small" component={RouterLink} to={`/events/${gallery.eventSlug}`} onClick={e => e.stopPropagation()}>
                                                 <ChevronRightIcon fontSize="small" />
