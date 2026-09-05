@@ -100,6 +100,7 @@ public class GetTrailBySlugQueryHandler : IRequestHandler<GetTrailBySlugQuery, T
             YoutubeUrl: trail.YoutubeUrl,
             ElevationProfile: trail.ElevationProfile,
             CreatedAt: trail.CreatedAt,
+            UpdatedAt: trail.UpdatedAt,
             TerrainType: trail.TerrainType?.ToString(),
             NameEn: trail.NameEn,
             DescriptionEn: trail.DescriptionEn,
