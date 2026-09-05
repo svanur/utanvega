@@ -29,14 +29,18 @@ public class CreateTrailFromGpxCommandHandlerTests : IDisposable
 
     // ─── GPX builders ───
 
-    private static string BuildGpx(IEnumerable<(double lat, double lon, double ele)> points)
+    // trkType, when supplied, is embedded as <trk><type>...</type> — matching where
+    // GpxProcessor.Process (line 125) actually reads it from, nested under <trk>, not the GPX root.
+    private static string BuildGpx(IEnumerable<(double lat, double lon, double ele)> points, string? trkType = null)
     {
         var trkpts = string.Concat(points.Select(p =>
             $"<trkpt lat=\"{p.lat.ToString(CultureInfo.InvariantCulture)}\" " +
             $"lon=\"{p.lon.ToString(CultureInfo.InvariantCulture)}\">" +
             $"<ele>{p.ele.ToString(CultureInfo.InvariantCulture)}</ele></trkpt>"));
 
-        return $"<?xml version=\"1.0\"?><gpx xmlns=\"http://www.topografix.com/GPX/1/1\"><trk><trkseg>{trkpts}</trkseg></trk></gpx>";
+        var typeElement = trkType == null ? "" : $"<type>{trkType}</type>";
+
+        return $"<?xml version=\"1.0\"?><gpx xmlns=\"http://www.topografix.com/GPX/1/1\"><trk>{typeElement}<trkseg>{trkpts}</trkseg></trk></gpx>";
     }
 
     // A ~5.5km route climbing steadily from 100m to 800m — well past the 1000m length skip and
@@ -109,6 +113,48 @@ public class CreateTrailFromGpxCommandHandlerTests : IDisposable
         Assert.True(trail.Length > 1000);
         Assert.True(ElevationProfileValidator.IsDegenerate(trail.ElevationProfile));
         Assert.Null(trail.TerrainType);
+    }
+
+    // ─── ProcessGpx / ProcessGpxWithDetection: ActivityType override vs. detection (#581) ───
+
+    [Fact]
+    public void ProcessGpx_ExplicitActivityType_OverridesGpxDeclaredType()
+    {
+        using var ctx = _factory.CreateContext();
+        var handler = CreateHandler(ctx);
+
+        // GPX declares "hiking" (→ ActivityType.Hiking), but the caller explicitly asks for
+        // Cycling — the explicit argument must win, not the GPX-declared type.
+        var trail = handler.ProcessGpx("Explicit Type Trail", BuildGpx(ShortRoute, trkType: "hiking"), ActivityType.Cycling);
+
+        Assert.Equal(ActivityType.Cycling, trail.ActivityTypeId);
+    }
+
+    [Fact]
+    public void ProcessGpxWithDetection_RecognisedType_ReturnsDetectedActivityType()
+    {
+        using var ctx = _factory.CreateContext();
+        var handler = CreateHandler(ctx);
+
+        var (trail, detectedActivityType) = handler.ProcessGpxWithDetection("Detected Type Trail", BuildGpx(ShortRoute, trkType: "hiking"));
+
+        Assert.Equal(ActivityType.Hiking, detectedActivityType);
+        Assert.Equal(ActivityType.Hiking, trail.ActivityTypeId);
+    }
+
+    [Fact]
+    public void ProcessGpxWithDetection_NoTypeElement_ReturnsNullDetectionAndDefaultsToTrailRunning()
+    {
+        using var ctx = _factory.CreateContext();
+        var handler = CreateHandler(ctx);
+
+        var (trail, detectedActivityType) = handler.ProcessGpxWithDetection("Undetected Type Trail", BuildGpx(ShortRoute));
+
+        // No <type> element at all: detection must yield null (not a default) — and the
+        // fallback to ActivityType.TrailRunning only happens on the persisted Trail, per
+        // CreateTrailFromGpxCommand.cs:142 (`activityType ?? result.DetectedActivityType ?? ActivityType.TrailRunning`).
+        Assert.Null(detectedActivityType);
+        Assert.Equal(ActivityType.TrailRunning, trail.ActivityTypeId);
     }
 
     // ─── BulkCreateTrailsFromGpxCommandHandler: same code path via ProcessGpx ───
