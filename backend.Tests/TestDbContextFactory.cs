@@ -76,7 +76,14 @@ internal class TestDbContext : UtanvegaDbContext
             entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
             entity.Property(e => e.Slug).IsRequired().HasMaxLength(250);
             entity.HasIndex(e => e.Slug).IsUnique();
-            entity.Ignore(e => e.Center); // SQLite can't store NTS Point
+            // SQLite has no PostGIS geometry column — round-trip via WKB (2D, no elevation)
+            // the same way GpxData does above, so tests exercising LocationDetector
+            // (GetAllLocationCenters filters on Center != null && Radius != null) see real
+            // geometry instead of it silently vanishing to null.
+            entity.Property(e => e.Center).HasConversion(
+                v => v == null ? null : new WKBWriter { HandleOrdinates = Ordinates.XY }.Write(v),
+                v => v == null ? null : (Point)new WKBReader { HandleOrdinates = Ordinates.XY }.Read(v)
+            );
             entity.Property(e => e.Type).HasConversion<string>();
             entity.HasOne(e => e.Parent)
                   .WithMany(e => e.Children)
