@@ -67,6 +67,7 @@ import RunningLoader from '../components/RunningLoader';
 import LostRunner from '../components/LostRunner';
 import WeatherCard from '../components/WeatherCard';
 import GalleryLinks from '../components/GalleryLinks';
+import GalleryCompact from '../components/GalleryCompact';
 import { useEvents, useEventBySlug } from '../hooks/useEvents';
 import type { EventEditionDto, RaceDto, ScheduleRule } from '../hooks/useEvents';
 import { useFavoriteEvents } from '../hooks/useFavoriteEvents';
@@ -1175,7 +1176,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                                     }}
                                                 />
                                             )}
-                                            <GalleryLinks galleries={edition.galleries} variant="chip" stopPropagation />
+                                            <GalleryCompact galleries={edition.galleries} variant="chip" />
                                         </Stack>
                                     </Paper>
                                 );
