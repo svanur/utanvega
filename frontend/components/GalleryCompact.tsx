@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Badge, Box, Button, Chip, IconButton, Link, Menu, MenuItem, Tooltip, Typography } from '@mui/material';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import { useTranslation } from 'react-i18next';
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
 import { useLocalize } from '../utils/localize';
 import { galleryLabel, sortedGalleries } from '../utils/galleryLabel';
 import type { PublicPhotoGallery } from '../hooks/useEvents';
@@ -25,7 +25,6 @@ interface GalleryCompactProps {
 export default function GalleryCompact({ galleries, variant }: GalleryCompactProps) {
     const { t } = useTranslation();
     const loc = useLocalize();
-    const navigate = useNavigate();
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
     if (galleries.length === 0) return null;
@@ -161,28 +160,41 @@ export default function GalleryCompact({ galleries, variant }: GalleryCompactPro
             )}
             <Menu anchorEl={anchorEl} open={!!anchorEl} onClose={closeMenu} onClick={e => e.stopPropagation()}>
                 {sorted.map(g => (
-                    <MenuItem key={g.url} component="a" href={g.url} target="_blank" rel="noopener noreferrer" onClick={closeMenu}>
+                    <MenuItem key={g.url}>
                         <Box>
-                            <Typography variant="body2">{galleryLabel(g, loc, t)}</Typography>
+                            {/* The gallery link and the photographer link below are siblings, not
+                                nested — an <a> can't contain another <a>, so this used to be a
+                                non-anchor span driven only by onClick. Making both real anchors
+                                gives each independent Tab/Enter access and native middle/ctrl-click. */}
+                            <Link
+                                component="a"
+                                href={g.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                color="inherit"
+                                underline="hover"
+                                onClick={closeMenu}
+                                sx={{ display: 'block' }}
+                            >
+                                <Typography variant="body2">{galleryLabel(g, loc, t)}</Typography>
+                            </Link>
                             {g.photographerName && (
                                 <Typography variant="caption" color="text.secondary" display="block">
                                     {t('races.photoByPrefix', { defaultValue: 'Photo:' })}{' '}
                                     {g.photographerSlug ? (
-                                        // The MenuItem itself is an <a> (component="a", href={g.url}) so a
-                                        // nested RouterLink/<a> here would be invalid HTML and would break
-                                        // click targeting. Navigate imperatively instead of nesting an anchor.
-                                        <Box
-                                            component="span"
+                                        <Link
+                                            component={RouterLink}
+                                            to={`/photographers/${g.photographerSlug}`}
+                                            color="inherit"
+                                            underline="hover"
                                             onClick={e => {
-                                                e.preventDefault();
-                                                e.stopPropagation();
+                                                if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
                                                 closeMenu();
-                                                navigate(`/photographers/${g.photographerSlug}`);
                                             }}
                                             sx={{ textDecoration: 'underline', cursor: 'pointer' }}
                                         >
                                             {g.photographerName}
-                                        </Box>
+                                        </Link>
                                     ) : (
                                         g.photographerName
                                     )}
