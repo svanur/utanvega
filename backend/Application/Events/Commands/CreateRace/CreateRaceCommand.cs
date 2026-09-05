@@ -50,6 +50,21 @@ public class CreateRaceCommandHandler : IRequestHandler<CreateRaceCommand, Guid>
         Enum.TryParse<ResultType>(request.ResultType, ignoreCase: true, out var resultType);
         var activityType = Enum.TryParse<ActivityType>(request.ActivityType, ignoreCase: true, out var at) ? at : (ActivityType?)null;
 
+        var parentEditionStatus = await _context.EventEditions
+            .AsNoTracking()
+            .Where(ed => ed.Id == request.EventEditionId)
+            .Select(ed => ed.Status)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        // A race can't be attached as Active under an edition that's already Completed — force it
+        // to match, overriding whatever the client sent, the same way an edition's own
+        // CompleteWithRaces() would have completed it had it existed before the edition was.
+        if (parentEditionStatus == EditionStatus.Completed)
+        {
+            status = RaceStatus.Completed;
+            ticketStatus = TicketStatus.Closed;
+        }
+
         var race = new Race
         {
             EventEditionId = request.EventEditionId,

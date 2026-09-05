@@ -86,14 +86,14 @@ function RaceFormCardInner({
 }: RaceFormCardProps) {
   const isNew = race === null;
   const [form, setForm] = useState<RaceFormState>(
-    initialValues ?? (race ? buildRaceForm(race) : createEmptyRaceForm(edition.id, edition.races.length)),
+    initialValues ?? (race ? buildRaceForm(race) : createEmptyRaceForm(edition.id, edition.races.length, edition.status)),
   );
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const { translate, translating } = useTranslate(msg => onNotify(msg, 'error'));
 
   useEffect(() => {
-    setForm(initialValues ?? (race ? buildRaceForm(race) : createEmptyRaceForm(edition.id, edition.races.length)));
+    setForm(initialValues ?? (race ? buildRaceForm(race) : createEmptyRaceForm(edition.id, edition.races.length, edition.status)));
     setConfirmDelete(false);
   }, [race, edition, initialValues]);
 
@@ -263,13 +263,16 @@ function RaceFormCardInner({
         <Box>
           <SectionLabel>Status &amp; tickets</SectionLabel>
           <Stack direction="row" spacing={1.5} sx={{ mb: 1.5 }}>
-            <FormControl size="small" fullWidth disabled={edition.status === 'Cancelled'}>
+            <FormControl size="small" fullWidth disabled={edition.status === 'Cancelled' || edition.status === 'Completed'}>
               <InputLabel>Race status</InputLabel>
               <Select value={form.status} label="Race status" onChange={e => set('status', e.target.value as typeof form.status)}>
                 {RACE_STATUSES.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
               </Select>
               {edition.status === 'Cancelled' && (
                 <FormHelperText>Locked — the edition is cancelled</FormHelperText>
+              )}
+              {edition.status === 'Completed' && (
+                <FormHelperText>Locked — the edition is completed</FormHelperText>
               )}
             </FormControl>
             <FormControl size="small" fullWidth disabled={form.status === 'Cancelled'}>

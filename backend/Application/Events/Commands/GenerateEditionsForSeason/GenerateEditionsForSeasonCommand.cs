@@ -63,6 +63,7 @@ public class GenerateEditionsForSeasonCommandHandler : IRequestHandler<GenerateE
             .ToHashSet();
 
         var newDates = dates.Where(d => !existingDateSet.Contains(d)).ToList();
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
         var editions = newDates.Select((date, index) => new EventEdition
         {
@@ -76,6 +77,12 @@ public class GenerateEditionsForSeasonCommandHandler : IRequestHandler<GenerateE
             Status = EditionStatus.Unconfirmed,
             CreatedAt = DateTime.UtcNow,
         }).ToList();
+
+        // No races are attached to these editions in this code path, so completing an
+        // already-past edition is just a status/registration flip via CompleteWithRaces()
+        // (a no-op over its empty Races collection) — kept consistent with CreateEditionCommand.
+        foreach (var edition in editions.Where(e => e.Date.HasValue && e.Date.Value < today))
+            edition.CompleteWithRaces();
 
         _context.EventEditions.AddRange(editions);
 
@@ -122,6 +129,7 @@ public class GenerateEditionsForSeasonCommandHandler : IRequestHandler<GenerateE
             .ToList();
 
         var createdEditionIds = new List<Guid>();
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
         // Load any editions already covering these seasons up front, instead of one query per group below.
         // GroupBy then First() guards against the rare case of duplicate Year values for the same event
@@ -159,11 +167,8 @@ public class GenerateEditionsForSeasonCommandHandler : IRequestHandler<GenerateE
 
             // Check if an edition for this season already exists
             EventEdition edition;
-            if (existingEditionsByYear.TryGetValue(seasonYear, out var existingEdition))
-            {
-                edition = existingEdition;
-            }
-            else
+            var isNewEdition = !existingEditionsByYear.TryGetValue(seasonYear, out var existingEdition);
+            if (isNewEdition)
             {
                 edition = new EventEdition
                 {
@@ -179,11 +184,14 @@ public class GenerateEditionsForSeasonCommandHandler : IRequestHandler<GenerateE
                 _context.EventEditions.Add(edition);
                 createdEditionIds.Add(edition.Id);
             }
+            else
+            {
+                edition = existingEdition!;
+            }
 
             // Create races for each date in the season
             var existingSortOrders = edition.Races.Select(r => r.SortOrder).DefaultIfEmpty(-1).Max();
             var sortOrder = existingSortOrders + 1;
-            var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
             foreach (var date in seasonDates)
             {
@@ -201,6 +209,13 @@ public class GenerateEditionsForSeasonCommandHandler : IRequestHandler<GenerateE
                 _context.Races.Add(race);
                 sortOrder++;
             }
+
+            // A newly created season edition whose entire run has already elapsed (its last
+            // race date is in the past) should read as Completed from creation, consistent with
+            // the Completed status every one of its races just got above — CompleteWithRaces()
+            // is a safe no-op over races that are already Completed, and closes registration too.
+            if (isNewEdition && lastDate < today)
+                edition.CompleteWithRaces();
         }
 
         var totalRacesCreated = newDates.Count;

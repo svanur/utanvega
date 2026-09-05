@@ -61,6 +61,14 @@ public class CreateEditionCommandHandler : IRequestHandler<CreateEditionCommand,
             CreatedAt = DateTime.UtcNow,
         };
 
+        // A newly created edition whose date (or, for multi-day events, end date) has already
+        // passed didn't get a chance to be individually confirmed — it's already over, so it
+        // should read as Completed (and closed for registration) from the moment it's created,
+        // rather than sitting as Unconfirmed until #361's sweep catches up with it later.
+        var effectiveDate = request.EndDate ?? request.Date;
+        if (effectiveDate.HasValue && effectiveDate.Value < DateOnly.FromDateTime(DateTime.UtcNow))
+            edition.CompleteWithRaces();
+
         _context.EventEditions.Add(edition);
         await _context.SaveChangesAsync(cancellationToken);
 

@@ -324,14 +324,18 @@ public class EventHandlerTests : IDisposable
             await ctx.SaveChangesAsync();
         }
 
+        // A future date, not a fixed literal — otherwise this test silently starts exercising
+        // #656's past-date-defaults-to-Completed path once the calendar catches up with it.
+        var futureDate = DateOnly.FromDateTime(DateTime.UtcNow.AddYears(1));
+
         using var edCtx = _factory.CreateContext();
         var handler = new CreateEditionCommandHandler(edCtx, _cacheInvalidator);
         var id = await handler.Handle(new CreateEditionCommand(
             EventId: ev.Id,
-            Year: 2025,
-            Date: new DateOnly(2025, 7, 12),
+            Year: futureDate.Year,
+            Date: futureDate,
             EndDate: null,
-            Title: "2025 Edition",
+            Title: "Edition",
             RegistrationUrl: "https://register.is",
             ResultsUrl: null,
             Notes: null,
@@ -344,8 +348,8 @@ public class EventHandlerTests : IDisposable
         using var verifyCtx = _factory.CreateContext();
         var edition = verifyCtx.EventEditions.Find(id);
         Assert.NotNull(edition);
-        Assert.Equal(2025, edition!.Year);
-        Assert.Equal(new DateOnly(2025, 7, 12), edition.Date);
+        Assert.Equal(futureDate.Year, edition!.Year);
+        Assert.Equal(futureDate, edition.Date);
         Assert.Equal(RegistrationStatus.Open, edition.RegistrationStatus);
     }
 
@@ -359,14 +363,17 @@ public class EventHandlerTests : IDisposable
             await ctx.SaveChangesAsync();
         }
 
+        // Future date: a past one would now (correctly, per #656) default to Completed instead.
+        var futureDate = DateOnly.FromDateTime(DateTime.UtcNow.AddYears(1));
+
         using var edCtx = _factory.CreateContext();
         var handler = new CreateEditionCommandHandler(edCtx, _cacheInvalidator);
         var id = await handler.Handle(new CreateEditionCommand(
             EventId: ev.Id,
-            Year: 2025,
-            Date: new DateOnly(2025, 7, 12),
+            Year: futureDate.Year,
+            Date: futureDate,
             EndDate: null,
-            Title: "2025 Edition",
+            Title: "Edition",
             RegistrationUrl: null,
             ResultsUrl: null,
             Notes: null,
@@ -377,6 +384,108 @@ public class EventHandlerTests : IDisposable
         using var verifyCtx = _factory.CreateContext();
         var edition = verifyCtx.EventEditions.Find(id);
         Assert.Equal(EditionStatus.Unconfirmed, edition!.Status);
+    }
+
+    [Fact]
+    public async Task Create_Edition_DefaultsToCompleted_WhenDateInPast()
+    {
+        var ev = CreateTestEvent();
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            await ctx.SaveChangesAsync();
+        }
+
+        var pastDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-30));
+
+        using var edCtx = _factory.CreateContext();
+        var handler = new CreateEditionCommandHandler(edCtx, _cacheInvalidator);
+        var id = await handler.Handle(new CreateEditionCommand(
+            EventId: ev.Id,
+            Year: pastDate.Year,
+            Date: pastDate,
+            EndDate: null,
+            Title: "Past Edition",
+            RegistrationUrl: null,
+            ResultsUrl: null,
+            Notes: null,
+            RegistrationStatus: "Open",
+            TrailId: null
+        ), CancellationToken.None);
+
+        using var verifyCtx = _factory.CreateContext();
+        var edition = verifyCtx.EventEditions.Find(id);
+        Assert.Equal(EditionStatus.Completed, edition!.Status);
+        Assert.Equal(RegistrationStatus.Closed, edition.RegistrationStatus);
+    }
+
+    [Fact]
+    public async Task Create_Edition_DefaultsToCompleted_WhenEndDateInPast_ButDateInFuture()
+    {
+        // Multi-day event: only the EndDate has actually elapsed, so the effective date used
+        // for the past-check must be EndDate ?? Date, not Date alone.
+        var ev = CreateTestEvent();
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            await ctx.SaveChangesAsync();
+        }
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        using var edCtx = _factory.CreateContext();
+        var handler = new CreateEditionCommandHandler(edCtx, _cacheInvalidator);
+        var id = await handler.Handle(new CreateEditionCommand(
+            EventId: ev.Id,
+            Year: today.Year,
+            Date: today.AddDays(-1),
+            EndDate: today.AddDays(-1),
+            Title: "Multi-day, just ended",
+            RegistrationUrl: null,
+            ResultsUrl: null,
+            Notes: null,
+            RegistrationStatus: "NotStarted",
+            TrailId: null
+        ), CancellationToken.None);
+
+        using var verifyCtx = _factory.CreateContext();
+        var edition = verifyCtx.EventEditions.Find(id);
+        Assert.Equal(EditionStatus.Completed, edition!.Status);
+    }
+
+    [Fact]
+    public async Task Create_Edition_RegistrationNotRequired_StaysNotRequired_WhenDateInPast()
+    {
+        // CompleteWithRaces() closes registration unless it's explicitly NotRequired — that
+        // exception must survive the creation-time completion path too.
+        var ev = CreateTestEvent();
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            await ctx.SaveChangesAsync();
+        }
+
+        var pastDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-30));
+
+        using var edCtx = _factory.CreateContext();
+        var handler = new CreateEditionCommandHandler(edCtx, _cacheInvalidator);
+        var id = await handler.Handle(new CreateEditionCommand(
+            EventId: ev.Id,
+            Year: pastDate.Year,
+            Date: pastDate,
+            EndDate: null,
+            Title: "Past, no registration",
+            RegistrationUrl: null,
+            ResultsUrl: null,
+            Notes: null,
+            RegistrationStatus: "NotRequired",
+            TrailId: null
+        ), CancellationToken.None);
+
+        using var verifyCtx = _factory.CreateContext();
+        var edition = verifyCtx.EventEditions.Find(id);
+        Assert.Equal(EditionStatus.Completed, edition!.Status);
+        Assert.Equal(RegistrationStatus.NotRequired, edition.RegistrationStatus);
     }
 
     [Fact]
@@ -528,6 +637,92 @@ public class EventHandlerTests : IDisposable
         Assert.Equal(720, race.CutoffMinutes);
         Assert.Equal(4, race.ItraPoints);
         Assert.Equal(200, race.MaxParticipants);
+    }
+
+    [Fact]
+    public async Task Create_Race_UnderCompletedEdition_ForcesCompletedAndClosed()
+    {
+        var ev = CreateTestEvent();
+        var edition = CreateTestEdition(ev.Id);
+        edition.Status = EditionStatus.Completed;
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var raceCtx = _factory.CreateContext();
+        var handler = new CreateRaceCommandHandler(raceCtx, _cacheInvalidator);
+        // Client sends Active/Available anyway — the server must override it, the same way a
+        // direct API POST bypassing the admin form's own lock would.
+        var id = await handler.Handle(new CreateRaceCommand(
+            EventEditionId: edition.Id,
+            TrailId: null,
+            Name: "10K Fun Run",
+            DistanceLabel: "10 km",
+            CutoffMinutes: null,
+            Description: null,
+            Status: "Active",
+            SortOrder: 0,
+            TicketStatus: "Available",
+            ResultType: "Time",
+            MaxParticipants: null,
+            ItraPoints: null,
+            CertifiedBy: null,
+            PrizeMoney: 0,
+            ChampionshipCategory: null,
+            DateOfRace: null,
+            StartTime: null
+        ), CancellationToken.None);
+
+        using var verifyCtx = _factory.CreateContext();
+        var race = verifyCtx.Races.Find(id);
+        Assert.NotNull(race);
+        Assert.Equal(RaceStatus.Completed, race!.Status);
+        Assert.Equal(TicketStatus.Closed, race.TicketStatus);
+    }
+
+    [Fact]
+    public async Task Create_Race_UnderActiveEdition_KeepsSubmittedStatus()
+    {
+        var ev = CreateTestEvent();
+        var edition = CreateTestEdition(ev.Id);
+        edition.Status = EditionStatus.Active;
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var raceCtx = _factory.CreateContext();
+        var handler = new CreateRaceCommandHandler(raceCtx, _cacheInvalidator);
+        var id = await handler.Handle(new CreateRaceCommand(
+            EventEditionId: edition.Id,
+            TrailId: null,
+            Name: "10K Fun Run",
+            DistanceLabel: "10 km",
+            CutoffMinutes: null,
+            Description: null,
+            Status: "Active",
+            SortOrder: 0,
+            TicketStatus: "Available",
+            ResultType: "Time",
+            MaxParticipants: null,
+            ItraPoints: null,
+            CertifiedBy: null,
+            PrizeMoney: 0,
+            ChampionshipCategory: null,
+            DateOfRace: null,
+            StartTime: null
+        ), CancellationToken.None);
+
+        using var verifyCtx = _factory.CreateContext();
+        var race = verifyCtx.Races.Find(id);
+        Assert.NotNull(race);
+        Assert.Equal(RaceStatus.Active, race!.Status);
+        Assert.Equal(TicketStatus.Available, race.TicketStatus);
     }
 
     // ─── UpdateRaceCommand ───
@@ -918,12 +1113,16 @@ public class EventHandlerTests : IDisposable
             await ctx.SaveChangesAsync();
         }
 
+        // A future range, not a fixed literal — otherwise this test silently starts exercising
+        // #656's past-date-defaults-to-Completed path once the calendar catches up with it.
+        var futureYear = DateOnly.FromDateTime(DateTime.UtcNow).AddYears(2).Year;
+
         using var genCtx = _factory.CreateContext();
         var handler = new GenerateEditionsForSeasonCommandHandler(genCtx, _scheduleEngine, _cacheInvalidator);
         var result = await handler.Handle(new GenerateEditionsForSeasonCommand(
             EventId: ev.Id,
-            From: new DateOnly(2025, 10, 1),
-            To: new DateOnly(2025, 12, 31)
+            From: new DateOnly(futureYear, 10, 1),
+            To: new DateOnly(futureYear, 12, 31)
         ), CancellationToken.None);
 
         Assert.NotEmpty(result.EditionIds);
@@ -935,6 +1134,43 @@ public class EventHandlerTests : IDisposable
         // Auto-generated editions haven't been individually confirmed by an admin, even though the
         // recurring schedule that produced them was — same as a manually added edition.
         Assert.All(editions, e => Assert.Equal(EditionStatus.Unconfirmed, e.Status));
+    }
+
+    [Fact]
+    public async Task GenerateEditions_Standard_DefaultsToCompleted_WhenDateInPast()
+    {
+        var ev = CreateTestEvent();
+        ev.ScheduleRule = new ScheduleRule
+        {
+            Type = ScheduleType.Seasonal,
+            DayOfWeek = DayOfWeek.Thursday,
+            MonthStart = 10,
+            MonthEnd = 12,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var genCtx = _factory.CreateContext();
+        var handler = new GenerateEditionsForSeasonCommandHandler(genCtx, _scheduleEngine, _cacheInvalidator);
+        var result = await handler.Handle(new GenerateEditionsForSeasonCommand(
+            EventId: ev.Id,
+            From: new DateOnly(2020, 10, 1),
+            To: new DateOnly(2020, 12, 31)
+        ), CancellationToken.None);
+
+        Assert.NotEmpty(result.EditionIds);
+
+        using var verifyCtx = _factory.CreateContext();
+        var editions = verifyCtx.EventEditions.Where(e => e.EventId == ev.Id).ToList();
+        // Every one of these editions is dated well in the past — consistent with a manually
+        // created past-dated edition (#656), it should read as Completed from creation, not
+        // Unconfirmed.
+        Assert.All(editions, e => Assert.Equal(EditionStatus.Completed, e.Status));
+        Assert.All(editions, e => Assert.Equal(RegistrationStatus.Closed, e.RegistrationStatus));
     }
 
     [Fact]
@@ -981,16 +1217,20 @@ public class EventHandlerTests : IDisposable
             await ctx.SaveChangesAsync();
         }
 
+        // A future season, not fixed literals — otherwise this test silently starts exercising
+        // #656's past-date-defaults-to-Completed path once the calendar catches up with it.
+        var seasonYear = DateOnly.FromDateTime(DateTime.UtcNow).AddYears(2).Year;
+
         using var genCtx = _factory.CreateContext();
         var handler = new GenerateEditionsForSeasonCommandHandler(genCtx, _scheduleEngine, _cacheInvalidator);
         var result = await handler.Handle(new GenerateEditionsForSeasonCommand(
             EventId: ev.Id,
-            From: new DateOnly(2025, 10, 1),
-            To: new DateOnly(2026, 3, 31),
+            From: new DateOnly(seasonYear, 10, 1),
+            To: new DateOnly(seasonYear + 1, 3, 31),
             SeasonStartMonth: 10
         ), CancellationToken.None);
 
-        // Should create 1 edition (season 2025–2026) with 6 races (Oct–Mar)
+        // Should create 1 edition (season) with 6 races (Oct–Mar)
         Assert.Single(result.EditionIds);
         Assert.Equal(6, result.RacesCreated);
 
@@ -998,8 +1238,8 @@ public class EventHandlerTests : IDisposable
         var edition = verifyCtx.EventEditions
             .Where(e => e.EventId == ev.Id)
             .Single();
-        Assert.Equal(2025, edition.Year);
-        Assert.Contains("2025", edition.Title!);
+        Assert.Equal(seasonYear, edition.Year);
+        Assert.Contains(seasonYear.ToString(), edition.Title!);
         Assert.Equal(EditionStatus.Unconfirmed, edition.Status);
 
         var races = verifyCtx.Races.Where(r => r.EventEditionId == edition.Id).OrderBy(r => r.SortOrder).ToList();
@@ -1008,6 +1248,51 @@ public class EventHandlerTests : IDisposable
         // First race should be in October, last in March
         Assert.Equal(10, races[0].DateOfRace!.Value.Month);
         Assert.Equal(3, races[^1].DateOfRace!.Value.Month);
+    }
+
+    [Fact]
+    public async Task GenerateEditions_Series_DefaultsToCompleted_WhenSeasonEndsInPast()
+    {
+        var ev = CreateTestEvent("Powerade vetrarhlaup - past");
+        ev.Type = EventType.Series;
+        ev.ScheduleRule = new ScheduleRule
+        {
+            Type = ScheduleType.Seasonal,
+            DayOfWeek = DayOfWeek.Thursday,
+            WeekOfMonth = 2,
+            MonthStart = 10,
+            MonthEnd = 3,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var genCtx = _factory.CreateContext();
+        var handler = new GenerateEditionsForSeasonCommandHandler(genCtx, _scheduleEngine, _cacheInvalidator);
+        var result = await handler.Handle(new GenerateEditionsForSeasonCommand(
+            EventId: ev.Id,
+            From: new DateOnly(2019, 10, 1),
+            To: new DateOnly(2020, 3, 31),
+            SeasonStartMonth: 10
+        ), CancellationToken.None);
+
+        Assert.Single(result.EditionIds);
+
+        using var verifyCtx = _factory.CreateContext();
+        var edition = verifyCtx.EventEditions
+            .Where(e => e.EventId == ev.Id)
+            .Single();
+        // The whole season (its last race date) is long over, consistent with every one of its
+        // races already being Completed — the edition itself should read as Completed too, not
+        // Unconfirmed.
+        Assert.Equal(EditionStatus.Completed, edition.Status);
+
+        var races = verifyCtx.Races.Where(r => r.EventEditionId == edition.Id).ToList();
+        Assert.NotEmpty(races);
+        Assert.All(races, r => Assert.Equal(RaceStatus.Completed, r.Status));
     }
 
     [Fact]

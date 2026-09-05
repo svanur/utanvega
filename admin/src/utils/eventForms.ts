@@ -56,7 +56,11 @@ export const ITRA_VALUES: (number | null)[] = [null, 0, 1, 2, 3, 4, 5, 6];
 export const ACTIVITY_TYPES: ActivityType[] = ['TrailRunning', 'Running', 'Cycling', 'Hiking', 'FunRun', 'ObstacleCourse', 'CrossCountryRun', 'Swim', 'Canicross', 'IronMan', 'Other'];
 export const RESULT_TYPES: ResultType[] = ['Time', 'Distance', 'Laps'];
 
-export function createEmptyRaceForm(eventEditionId = '', sortOrder = 0): RaceFormState {
+export function createEmptyRaceForm(eventEditionId = '', sortOrder = 0, editionStatus?: EditionStatus): RaceFormState {
+  // A race added under an already-Completed edition can't start out Active — mirror the
+  // server-side CreateRaceCommand override so the form doesn't show a value that would be
+  // silently forced to something else on save.
+  const isEditionCompleted = editionStatus === 'Completed';
   return {
     eventEditionId,
     trailId: '',
@@ -68,9 +72,9 @@ export function createEmptyRaceForm(eventEditionId = '', sortOrder = 0): RaceFor
     cutoffTime: '',
     description: '',
     descriptionEn: '',
-    status: 'Active',
+    status: isEditionCompleted ? 'Completed' : 'Active',
     sortOrder: String(sortOrder),
-    ticketStatus: 'Available',
+    ticketStatus: isEditionCompleted ? 'Closed' : 'Available',
     resultType: 'Time',
     maxParticipants: '',
     itraPoints: '',
