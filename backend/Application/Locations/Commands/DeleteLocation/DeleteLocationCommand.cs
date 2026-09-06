@@ -25,10 +25,10 @@ public class DeleteLocationCommandHandler : IRequestHandler<DeleteLocationComman
             .FirstOrDefaultAsync(l => l.Id == request.Id, cancellationToken);
 
         if (location == null)
-            throw new Exception("Location not found");
+            throw new InvalidOperationException($"Location {request.Id} does not exist.");
 
         if (location.Children.Any())
-            throw new Exception("Cannot delete a location that has children. Delete or move children first.");
+            throw new InvalidOperationException("Cannot delete a location that has children. Delete or move children first.");
 
         var slug = location.Slug;
         _context.Locations.Remove(location);

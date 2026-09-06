@@ -1289,9 +1289,9 @@ app.MapDelete("/api/v1/admin/locations/{id:guid}", [Authorize(Policy = "AdminOnl
         await mediator.Send(new DeleteLocationCommand(id, GetAuthenticatedUserId(httpContext)));
         return Results.NoContent();
     }
-    catch (InvalidOperationException)
+    catch (InvalidOperationException ex)
     {
-        return Results.BadRequest("Cannot delete this location. It may have child locations or linked trails.");
+        return Results.BadRequest(ex.Message);
     }
     catch (Exception ex)
     {
