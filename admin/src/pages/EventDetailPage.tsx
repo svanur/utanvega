@@ -17,7 +17,6 @@ import {
   DialogTitle,
   Divider,
   FormControl,
-  FormHelperText,
   IconButton,
   InputLabel,
   MenuItem,
@@ -354,8 +353,6 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
                     if (/^\d{4}$/.test(prev.title.trim())) updates.title = newYear;
                     if (prev.resultsUrl) updates.resultsUrl = prev.resultsUrl.replace(new RegExp(`${oy}(/?)$`), `${newYear}$1`);
                   }
-                  if (isNew && newYear.length === 4 && !isNaN(ny))
-                    updates.status = ny < new Date().getFullYear() ? 'Completed' : 'Unconfirmed';
                   return { ...prev, ...updates };
                 });
               }} />
@@ -379,17 +376,17 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
               onChange={e => set('status', e.target.value as EditionStatus)}>
               {EDITION_STATUSES.map(s => (
                 // Cancelled and Completed are terminal states with their own dedicated, safer
-                // entry points (row-level Cancel/Complete actions) — they must not be landable
-                // on incidentally via this dropdown. Keep the option disabled unless it's already
-                // the current value, so the Select still renders it instead of showing blank.
-                <MenuItem key={s} value={s} disabled={(s === 'Cancelled' || s === 'Completed') && s !== form.status}>
+                // entry points (row-level Cancel/Complete actions) on an *existing* edition —
+                // they must not be landable on incidentally via this dropdown once a row exists.
+                // A brand-new, not-yet-saved edition has no such row to act on yet, so those
+                // options stay open here — e.g. recording a historical edition as Completed at
+                // creation time. Keep the option disabled (when !isNew) unless it's already the
+                // current value, so the Select still renders it instead of showing blank.
+                <MenuItem key={s} value={s} disabled={!isNew && (s === 'Cancelled' || s === 'Completed') && s !== form.status}>
                   {EDITION_STATUS_LABELS[s]}
                 </MenuItem>
               ))}
             </Select>
-            {isNew && (form.status === 'Completed' || form.status === 'Unconfirmed') && (
-              <FormHelperText>Auto-set based on year — you can override</FormHelperText>
-            )}
           </FormControl>
           <FormControl size="small" fullWidth>
             <InputLabel>Registration status</InputLabel>
