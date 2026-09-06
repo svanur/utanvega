@@ -778,7 +778,7 @@
         "changelog": {
             "v1_5_0": {
                 "title": "Ljósmyndarar fá meiri sess og viðburðir mörg myndasöfn - Snjallara „í gangi“ merki fyrir viðburði sem eru 3 dagar eða lengri.",
-                "description": "Ljósmyndarar eru nú sjálfstæð eining á vefnum: viðburðir geta verið með fleiri en eitt myndasafn, hvert og eitt merkt þeim ljósmyndara sem tók myndirnar, og hver ljósmyndari fær sína eigin síðu, þar sem birtast tenglar á öll myndasöfn sem eru srkáð hjá hlaupadagskra.is. Viðburðir sem ná yfir fleiri en 2 daga birta nú „Í gangi“ merki í stað „Í gangi“ eins og áður var. "
+                "description": "Ljósmyndarar eru nú sjálfstæð eining á vefnum: viðburðir geta verið með fleiri en eitt myndasafn, hvert og eitt merkt þeim ljósmyndara sem tók myndirnar, og hver ljósmyndari fær sína eigin síðu, þar sem birtast tenglar á öll myndasöfn sem eru skráð hjá hlaupadagskra.is. Viðburðir sem ná yfir fleiri en 2 daga birta nú „Í gangi“ merki í stað „Í dag!“ eins og áður var."
             },
             "v1_4_0": {
                 "title": "Aldursviðmiðun sem segir satt",
