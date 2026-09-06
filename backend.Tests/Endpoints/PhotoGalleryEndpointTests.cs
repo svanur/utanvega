@@ -19,6 +19,7 @@ namespace Utanvega.Backend.Tests.Endpoints;
 /// different from the fake-authenticated id, and asserts the persisted row has the
 /// server-derived one.
 /// </summary>
+[Collection(TestWebApplicationFactoryCollection.Name)]
 public class PhotoGalleryEndpointTests : IDisposable
 {
     private readonly TestWebApplicationFactory _factory = new();

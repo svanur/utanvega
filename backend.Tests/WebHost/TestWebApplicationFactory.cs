@@ -145,3 +145,32 @@ internal class TestWebApplicationFactory : WebApplicationFactory<Program>
             _dbFactory.Dispose();
     }
 }
+
+/// <summary>
+/// Every test class that constructs a <see cref="TestWebApplicationFactory"/> must be tagged
+/// <c>[Collection(TestWebApplicationFactoryCollection.Name)]</c> — see #677.
+///
+/// The factory's constructor sets four environment variables (<c>SUPABASE_URL</c>,
+/// <c>SUPABASE_JWT_SECRET</c>, <c>IP_HASH_SALT</c>, <c>ConnectionStrings__DefaultConnection</c>) as
+/// real process-wide state, with no restore — see the constructor's comment for why they have to be
+/// set that way. xUnit 2.9.2 (the version pinned in <c>backend.Tests.csproj</c>) has no
+/// <c>xunit.runner.json</c> or other override in this project, so its SDK default applies: test
+/// *collections* run in parallel with each other, though tests within the same collection run
+/// sequentially. Left untagged, two endpoint-test classes building their own
+/// <see cref="TestWebApplicationFactory"/> at the same time would race to set the same process-wide
+/// variables against each other — inert today because only one class (<c>PhotoGalleryEndpointTests</c>)
+/// uses this factory, but real as soon as a second one does.
+///
+/// <see cref="CollectionDefinitionAttribute.DisableParallelization"/> forces every class carrying
+/// this collection's name onto one single-threaded lane, so only one <see cref="TestWebApplicationFactory"/>
+/// is ever mid-construction/mid-host-build at a time — which also sidesteps a subtler problem a
+/// capture-and-restore-in-<c>Dispose</c> approach would have had: <see cref="WebApplicationFactory{TEntryPoint}"/>
+/// builds its host lazily (on first <c>CreateClient()</c>/<c>Server</c> access, not in the
+/// constructor), so one instance's <c>Dispose</c> restoring/clearing a variable could still yank it
+/// out from under another instance whose host hadn't finished booting yet.
+/// </summary>
+[CollectionDefinition(Name, DisableParallelization = true)]
+public class TestWebApplicationFactoryCollection
+{
+    public const string Name = "TestWebApplicationFactory (serial)";
+}
