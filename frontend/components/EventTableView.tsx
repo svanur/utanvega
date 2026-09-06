@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -61,9 +61,14 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation, o
     const [detailCache, setDetailCache] = useState<Record<string, EventDetail>>({});
     const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
     const fetchedOrInFlightRef = useRef<Set<string>>(new Set());
-    // Frozen at mount rather than read fresh via Date.now() on every render — a countdown chip
-    // that's off by a few seconds is invisible at day-granularity, and this keeps the render pure.
-    const [nowMs] = useState(() => Date.now());
+    // Ticks every minute so the "days until" chip (and the registration-button gate that reads
+    // it) rolls over at midnight for tabs left open — day-granularity means sub-minute freshness
+    // isn't needed, so this stays cheap. Mirrors CompetitionDetailPage's currentTime pattern.
+    const [nowMs, setNowMs] = useState(() => Date.now());
+    useEffect(() => {
+        const interval = setInterval(() => setNowMs(Date.now()), 60_000);
+        return () => clearInterval(interval);
+    }, []);
 
     const toggleExpand = useCallback((event: EventSummary) => {
         const id = event.id;
