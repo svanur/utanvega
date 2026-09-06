@@ -21,6 +21,9 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
+import SortIcon from '@mui/icons-material/Sort';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import Layout from '../components/Layout';
 import RunningLoader from '../components/RunningLoader';
 import GalleryCompact from '../components/GalleryCompact';
@@ -73,7 +76,7 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
     const [search, setSearch] = useState('');
     const [showCancelled, setShowCancelled] = useState(true);
     const [sortField, setSortField] = useState<SortField>('date');
-    const [sortDir, setSortDir] = useState<SortDir>('asc');
+    const [sortDir, setSortDir] = useState<SortDir>('desc');
 
     // A non-empty search widens scope to every known year instead of just the selected one —
     // finding something shouldn't require already knowing which year it happened in.
@@ -83,15 +86,16 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
     const rows = isSearching ? allYearsRows : yearRows;
     const loading = isSearching ? allYearsLoading : yearLoading;
 
-    // Browsing one year reads best chronologically (Jan → Dec); a cross-year search reads best
-    // newest-first (you're usually after the most recent occurrence). Deliberately resets to
-    // that mode's default — including overriding any manual column sort — whenever search is
-    // entered or cleared, since those are two distinct browsing contexts and a fresh one
-    // warrants a fresh default view. Only fires on the false↔true transition (isSearching is a
-    // derived boolean), so it does not refire on every keystroke while a search is already active.
+    // Both browsing a single year and a cross-year search read best with the most recent
+    // edition first (you're usually after the most recent occurrence). Resets to that
+    // default — including overriding any manual column sort — whenever search is entered
+    // or cleared, since those are two distinct browsing contexts and a fresh one warrants
+    // a fresh default view. Only fires on the false↔true transition (isSearching is a
+    // derived boolean), so it does not refire on every keystroke while a search is already
+    // active, and it does not fire when only the selected year changes.
     useEffect(() => {
         setSortField('date');
-        setSortDir(isSearching ? 'desc' : 'asc');
+        setSortDir('desc');
     }, [isSearching]);
 
     const handleSort = (field: SortField) => {
@@ -99,7 +103,7 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
             setSortDir(d => d === 'asc' ? 'desc' : 'asc');
         } else {
             setSortField(field);
-            setSortDir(field === 'date' ? (isSearching ? 'desc' : 'asc') : 'asc');
+            setSortDir(field === 'date' ? 'desc' : 'asc');
         }
     };
 
@@ -161,6 +165,26 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                             ) : null,
                         }}
                     />
+                    <Stack direction="row" spacing={0.5} alignItems="center">
+                        <Select
+                            size="small"
+                            value={sortField}
+                            onChange={(e: SelectChangeEvent) => handleSort(e.target.value as SortField)}
+                            startAdornment={<SortIcon fontSize="small" sx={{ mr: 0.5, color: 'text.secondary' }} />}
+                            sx={{ minWidth: 140 }}
+                        >
+                            <MenuItem value="date">{t('sort.date')}</MenuItem>
+                            <MenuItem value="name">{t('sort.name')}</MenuItem>
+                            <MenuItem value="distances">{t('races.table.distances', 'Distances')}</MenuItem>
+                        </Select>
+                        <IconButton
+                            size="small"
+                            onClick={() => setSortDir(d => d === 'asc' ? 'desc' : 'asc')}
+                            aria-label={t('races.editionsHistory.sortDirection', 'Toggle sort direction')}
+                        >
+                            {sortDir === 'asc' ? <ArrowUpwardIcon fontSize="small" /> : <ArrowDownwardIcon fontSize="small" />}
+                        </IconButton>
+                    </Stack>
                     <FormControlLabel
                         control={<Checkbox size="small" checked={showCancelled} onChange={e => setShowCancelled(e.target.checked)} />}
                         label={t('races.editionsHistory.showCancelled', 'Show cancelled')}
@@ -298,6 +322,10 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                                                     <GalleryCompact galleries={row.galleries} variant="button" />
                                                 </Stack>
                                             )}
+
+                                            <Typography variant="caption" color="primary" sx={{ mt: 0.75, display: 'block', fontWeight: 500, textAlign: 'right' }}>
+                                                {t('common.viewDetails')} →
+                                            </Typography>
                                         </CardContent>
                                     </CardActionArea>
                                 </Card>

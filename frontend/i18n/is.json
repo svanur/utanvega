@@ -1465,7 +1465,8 @@
             "noResults": "Engir fyrri viðburðir fundust.",
             "resultsLink": "Úrslit",
             "galleryColumn": "Myndasafn",
-            "searchingAllYears": "öll ár"
+            "searchingAllYears": "öll ár",
+            "sortDirection": "Víxla röðunarátt"
         },
         "table": {
             "name": "Heiti",
