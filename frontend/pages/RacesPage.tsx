@@ -1239,7 +1239,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                     )}
                                                                 </Box>
                                                             </Stack>
-                                                            {(race.registrationUrl || comp.organizerWebsite || comp.resultsUrl || comp.galleries.length > 0 || comp.youtubeUrl) && (
+                                                            {(race.registrationUrl || comp.organizerWebsite || comp.resultsUrl || (comp.galleries?.length ?? 0) > 0 || comp.youtubeUrl) && (
                                                                 <Stack direction="row" alignItems="center" gap={0.5} sx={{ flexShrink: 0 }} flexWrap="wrap" justifyContent="flex-end">
                                                                     {race.registrationUrl && raceDaysUntil != null && raceDaysUntil >= 0 && (
                                                                         <Button size="small" variant="contained" href={race.registrationUrl} target="_blank" rel="noopener noreferrer" endIcon={<OpenInNewIcon sx={{ fontSize: 12 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem' }}>
@@ -1494,7 +1494,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                         )}
                                                     </Box>
                                                 </Stack>
-                                                {(comp.registrationUrl || comp.organizerWebsite || comp.resultsUrl || comp.galleries.length > 0 || comp.youtubeUrl) && (
+                                                {(comp.registrationUrl || comp.organizerWebsite || comp.resultsUrl || (comp.galleries?.length ?? 0) > 0 || comp.youtubeUrl) && (
                                                     <Stack direction="row" alignItems="center" gap={0.5} sx={{ flexShrink: 0 }} flexWrap="wrap" justifyContent="flex-end">
                                                         {comp.registrationUrl && comp.daysUntil != null && comp.daysUntil >= 0 && !isAllSoldOut(comp.distances) && (
                                                             <Button size="small" variant="contained" href={comp.registrationUrl} target="_blank" rel="noopener noreferrer" endIcon={<OpenInNewIcon sx={{ fontSize: 12 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem' }}>

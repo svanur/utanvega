@@ -8,7 +8,7 @@ import { galleryLabel, sortedGalleries } from '../utils/galleryLabel';
 import type { PublicPhotoGallery } from '../hooks/useEvents';
 
 interface GalleryLinksProps {
-    galleries: PublicPhotoGallery[];
+    galleries: PublicPhotoGallery[] | null | undefined;
     /** 'button' matches the outlined action-row Button; 'chip' matches an inline Chip row. */
     variant?: 'button' | 'chip';
     size?: 'small' | 'medium';
@@ -26,7 +26,7 @@ export default function GalleryLinks({ galleries, variant = 'button', size = 'sm
     const { t } = useTranslation();
     const loc = useLocalize();
 
-    if (galleries.length === 0) return null;
+    if (!galleries || galleries.length === 0) return null;
 
     const handleClick = stopPropagation ? (e: React.MouseEvent) => e.stopPropagation() : undefined;
 
