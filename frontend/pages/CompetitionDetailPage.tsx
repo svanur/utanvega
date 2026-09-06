@@ -1035,7 +1035,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 t={t}
                                 showPredict={isEnabled('tool_trail_predictor')}
                                 showShareCard={isRaceWeek && isEnabled('share_trail')}
-                                showFinishCard={isPostRace && isEnabled('share_trail') && currentEditions[0]?.date === event.displayDate}
+                                showFinishCard={isPostRace && isEnabled('share_trail') && primaryEdition?.date === event.displayDate}
                                 daysUntil={event.daysUntil}
                                 activityType={event.activityType}
                                 editionDate={event.displayDate ?? event.nextEditionDate}
