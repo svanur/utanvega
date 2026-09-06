@@ -27,7 +27,10 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
         let detail = response.statusText;
         try {
             const body = await response.json();
-            if (body?.errors && typeof body.errors === 'object') {
+            if (typeof body === 'string') {
+                // Results.BadRequest(ex.Message) format: a bare JSON string
+                detail = body;
+            } else if (body?.errors && typeof body.errors === 'object') {
                 // FluentValidation format: { title, errors: { Field: ["msg"] } }
                 const messages = Object.values<string[]>(body.errors).flat();
                 detail = messages.join('. ');
