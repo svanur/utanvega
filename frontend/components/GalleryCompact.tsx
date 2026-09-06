@@ -8,7 +8,7 @@ import { galleryLabel, sortedGalleries } from '../utils/galleryLabel';
 import type { PublicPhotoGallery } from '../hooks/useEvents';
 
 interface GalleryCompactProps {
-    galleries: PublicPhotoGallery[];
+    galleries: PublicPhotoGallery[] | null | undefined;
     /** 'icon' is a bare IconButton for a dense table cell; 'button' is a labelled outlined Button
      *  for a card/list row, styled like the neighbouring results Button; 'chip' is an outlined Chip
      *  matching GalleryLinks' chip styling, for a row of other Chips (e.g. date/race-count/results). */
@@ -27,7 +27,7 @@ export default function GalleryCompact({ galleries, variant }: GalleryCompactPro
     const loc = useLocalize();
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
-    if (galleries.length === 0) return null;
+    if (!galleries || galleries.length === 0) return null;
 
     const sorted = sortedGalleries(galleries);
 

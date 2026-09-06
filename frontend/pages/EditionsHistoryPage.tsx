@@ -279,7 +279,7 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                                                 </Stack>
                                             )}
 
-                                            {(row.resultsUrl || row.galleries.length > 0) && (
+                                            {(row.resultsUrl || (row.galleries?.length ?? 0) > 0) && (
                                                 <Stack direction="row" flexWrap="wrap" gap={1} sx={{ mt: 0.75 }} alignItems="flex-start">
                                                     {row.resultsUrl && (
                                                         <Button
