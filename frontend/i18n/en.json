@@ -1465,7 +1465,8 @@
             "noResults": "No past events found.",
             "resultsLink": "Results",
             "galleryColumn": "Photo gallery",
-            "searchingAllYears": "all years"
+            "searchingAllYears": "all years",
+            "sortDirection": "Toggle sort direction"
         },
         "table": {
             "name": "Name",
