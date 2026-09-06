@@ -420,10 +420,11 @@ public class EventHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task Create_Edition_DefaultsToCompleted_WhenEndDateInPast_ButDateInFuture()
+    public async Task Create_Edition_DefaultsToCompleted_WhenMultiDayEventEndedYesterday()
     {
-        // Multi-day event: only the EndDate has actually elapsed, so the effective date used
-        // for the past-check must be EndDate ?? Date, not Date alone.
+        // Multi-day event: both Date and EndDate are in the past (the event ran and ended
+        // yesterday), so the effective date used for the past-check — EndDate ?? Date — is
+        // in the past either way and the edition should auto-complete.
         var ev = CreateTestEvent();
         using (var ctx = _factory.CreateContext())
         {
@@ -451,6 +452,42 @@ public class EventHandlerTests : IDisposable
         using var verifyCtx = _factory.CreateContext();
         var edition = verifyCtx.EventEditions.Find(id);
         Assert.Equal(EditionStatus.Completed, edition!.Status);
+    }
+
+    [Fact]
+    public async Task Create_Edition_StaysUnconfirmed_WhenMultiDayEventIsOngoing()
+    {
+        // Multi-day event still in progress: Date is in the past but EndDate is in the future,
+        // so the effective date (EndDate ?? Date) has NOT yet elapsed. This is the case that
+        // actually discriminates EndDate ?? Date from a naive Date-only past check — if the
+        // handler wrongly used Date alone, this edition would be incorrectly auto-completed.
+        var ev = CreateTestEvent();
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            await ctx.SaveChangesAsync();
+        }
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        using var edCtx = _factory.CreateContext();
+        var handler = new CreateEditionCommandHandler(edCtx, _cacheInvalidator);
+        var id = await handler.Handle(new CreateEditionCommand(
+            EventId: ev.Id,
+            Year: today.Year,
+            Date: today.AddDays(-1),
+            EndDate: today.AddDays(1),
+            Title: "Multi-day, still ongoing",
+            RegistrationUrl: null,
+            ResultsUrl: null,
+            Notes: null,
+            RegistrationStatus: "Open",
+            TrailId: null
+        ), CancellationToken.None);
+
+        using var verifyCtx = _factory.CreateContext();
+        var edition = verifyCtx.EventEditions.Find(id);
+        Assert.Equal(EditionStatus.Unconfirmed, edition!.Status);
     }
 
     [Fact]
