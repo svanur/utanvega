@@ -758,6 +758,49 @@ public class EventHandlerTests : IDisposable
     }
 
     [Fact]
+    public async Task Create_Race_UnderCompletedEdition_KeepsExplicitNonActiveStatus()
+    {
+        var ev = CreateTestEvent();
+        var edition = CreateTestEdition(ev.Id);
+        edition.Status = EditionStatus.Completed;
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var raceCtx = _factory.CreateContext();
+        var handler = new CreateRaceCommandHandler(raceCtx, _cacheInvalidator);
+        // Client explicitly sends Cancelled — this must NOT be overridden to Completed, mirroring
+        // CompleteWithRaces()'s own Where(r => r.Status == RaceStatus.Active) rule.
+        var id = await handler.Handle(new CreateRaceCommand(
+            EventEditionId: edition.Id,
+            TrailId: null,
+            Name: "10K Fun Run",
+            DistanceLabel: "10 km",
+            CutoffMinutes: null,
+            Description: null,
+            Status: "Cancelled",
+            SortOrder: 0,
+            TicketStatus: "Available",
+            ResultType: "Time",
+            MaxParticipants: null,
+            ItraPoints: null,
+            CertifiedBy: null,
+            PrizeMoney: 0,
+            ChampionshipCategory: null,
+            DateOfRace: null,
+            StartTime: null
+        ), CancellationToken.None);
+
+        using var verifyCtx = _factory.CreateContext();
+        var race = verifyCtx.Races.Find(id);
+        Assert.NotNull(race);
+        Assert.Equal(RaceStatus.Cancelled, race!.Status);
+    }
+
+    [Fact]
     public async Task Create_Race_UnderActiveEdition_KeepsSubmittedStatus()
     {
         var ev = CreateTestEvent();
