@@ -1,65 +1,113 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Utanvega.Backend.Infrastructure.Persistence;
 
 namespace Utanvega.Backend.Tests.WebHost;
 
 /// <summary>
-/// Covers <see cref="TestWebApplicationFactory.ThrowIfUtanvegaDbContextStillRegistered"/> — the
-/// fail-fast guard added in #678 for the reflection-based sweep in
-/// <see cref="TestWebApplicationFactory.ConfigureWebHost"/>. Exercises the throw path directly
-/// against a minimal <see cref="ServiceCollection"/> rather than through the full
-/// <see cref="TestWebApplicationFactory"/> host-build path, which would require provoking an
-/// actual EF Core / Microsoft.AspNetCore.Mvc.Testing version regression to reach the same code.
+/// Covers <see cref="TestWebApplicationFactory.ValidateServiceProviderOrThrow"/> — the fail-fast
+/// guard added in #678 for the reflection-based sweep in
+/// <see cref="TestWebApplicationFactory.RemoveUtanvegaDbContextRegistrations"/> (called from
+/// <see cref="TestWebApplicationFactory.ConfigureWebHost"/>).
+///
+/// Round 1 of this guard re-scanned <c>services</c> after removal using the exact same predicate
+/// the removal loop had just used — which is tautological: whatever registration shape slips past
+/// that predicate during removal slips past it identically the second time, so the guard could
+/// never catch the actual failure mode #678 describes (a future EF Core internal service shaped
+/// differently from what the predicate anticipates). <see cref="ValidateServiceProviderOrThrow"/>
+/// fixes this by asking .NET's own DI container to resolve the whole graph instead of re-running
+/// the same predicate — see <see cref="RemovalThenValidate_RegistrationNotClosedOverDbContextButDependsOnRemovedOne_StillThrows"/>,
+/// which proves that specifically: it runs the *real* removal loop first, then shows the guard
+/// still catches a leftover registration the removal predicate was blind to.
 /// </summary>
 public class TestWebApplicationFactoryGuardTests
 {
     [Fact]
-    public void ThrowIfUtanvegaDbContextStillRegistered_NoMatchingRegistration_DoesNotThrow()
+    public void ValidateServiceProviderOrThrow_ResolvableGraph_DoesNotThrow()
     {
         var services = new ServiceCollection();
         services.AddSingleton<string>("unrelated");
 
         var exception = Record.Exception(() =>
-            TestWebApplicationFactory.ThrowIfUtanvegaDbContextStillRegistered(services));
+            TestWebApplicationFactory.ValidateServiceProviderOrThrow(services));
 
         Assert.Null(exception);
     }
 
     [Fact]
-    public void ThrowIfUtanvegaDbContextStillRegistered_DirectRegistration_Throws()
+    public void ValidateServiceProviderOrThrow_UnresolvableDependency_Throws()
     {
+        // ServiceWithMissingDependency needs IUnregisteredDependency, which nothing provides.
         var services = new ServiceCollection();
-        services.AddSingleton<UtanvegaDbContext>(_ => null!);
+        services.AddSingleton<ServiceWithMissingDependency>();
 
         var exception = Assert.Throws<InvalidOperationException>(() =>
-            TestWebApplicationFactory.ThrowIfUtanvegaDbContextStillRegistered(services));
+            TestWebApplicationFactory.ValidateServiceProviderOrThrow(services));
 
         Assert.Contains("TestWebApplicationFactory.cs", exception.Message);
+        Assert.NotNull(exception.InnerException);
     }
 
     [Fact]
-    public void ThrowIfUtanvegaDbContextStillRegistered_GenericRegistrationClosedOverDbContext_Throws()
+    public void RemovalThenValidate_RegistrationNotClosedOverDbContextButDependsOnRemovedOne_StillThrows()
     {
-        // EF Core's real internal pooling services (IDbContextPool<T>, IScopedDbContextLease<T>)
-        // aren't accessible from this assembly — that's the whole reason the sweep matches on
-        // "closed over UtanvegaDbContext" rather than by type name. IFakeInternalPoolingService<T>
-        // stands in for one: a generic service type closed over UtanvegaDbContext, matched via
-        // GetGenericArguments() rather than the direct ServiceType == typeof(UtanvegaDbContext) check.
         var services = new ServiceCollection();
-        services.AddSingleton<IFakeInternalPoolingService<UtanvegaDbContext>>(_ => null!);
 
+        // Registered under a ServiceType generic-closed-over-UtanvegaDbContext -- matches
+        // RemoveUtanvegaDbContextRegistrations's predicate, standing in for the real
+        // DbContextOptions<UtanvegaDbContext> registration AddDbContextPool produces.
+        services.AddSingleton<IFakeDbContextOptions<UtanvegaDbContext>>(_ => null!);
+
+        // Registered under a plain, non-generic ServiceType -- does NOT match that predicate, even
+        // though it transitively depends on the registration above. Stands in for a hypothetical
+        // future EF Core internal pooling service shaped so "closed over UtanvegaDbContext"
+        // wouldn't catch it directly.
+        services.AddSingleton<FutureEfInternalPoolingService>();
+
+        TestWebApplicationFactory.RemoveUtanvegaDbContextRegistrations(services);
+
+        // A tautological guard (re-scanning with the same removal predicate) would find zero
+        // matches at this point -- FutureEfInternalPoolingService's own ServiceType was never
+        // closed over UtanvegaDbContext, so removal never touched it and a second predicate-based
+        // scan wouldn't either. ValidateServiceProviderOrThrow instead builds the real graph and
+        // must still catch that FutureEfInternalPoolingService can no longer be constructed, since
+        // its dependency was removed.
         var exception = Assert.Throws<InvalidOperationException>(() =>
-            TestWebApplicationFactory.ThrowIfUtanvegaDbContextStillRegistered(services));
+            TestWebApplicationFactory.ValidateServiceProviderOrThrow(services));
 
         Assert.Contains("TestWebApplicationFactory.cs", exception.Message);
-        Assert.Contains("IFakeInternalPoolingService", exception.Message);
+    }
+
+    /// <summary>Stands in for the missing dependency in <see cref="ValidateServiceProviderOrThrow_UnresolvableDependency_Throws"/>.</summary>
+    private interface IUnregisteredDependency;
+
+    private class ServiceWithMissingDependency
+    {
+        public ServiceWithMissingDependency(IUnregisteredDependency dependency)
+        {
+        }
     }
 
     /// <summary>
-    /// Stands in for an EF Core internal pooling service (e.g. <c>IDbContextPool&lt;T&gt;</c>) in
-    /// <see cref="ThrowIfUtanvegaDbContextStillRegistered_GenericRegistrationClosedOverDbContext_Throws"/> —
-    /// those real types are internal to EF Core's own assembly and can't be referenced here.
+    /// Stands in for EF Core's real <c>DbContextOptions&lt;UtanvegaDbContext&gt;</c> (and the other
+    /// internal pooling types) in
+    /// <see cref="RemovalThenValidate_RegistrationNotClosedOverDbContextButDependsOnRemovedOne_StillThrows"/>
+    /// — a generic service type closed over <see cref="UtanvegaDbContext"/>, which is exactly what
+    /// <c>RemoveUtanvegaDbContextRegistrations</c>'s predicate matches on.
     /// </summary>
-    private interface IFakeInternalPoolingService<T>;
+    private interface IFakeDbContextOptions<T>;
+
+    /// <summary>
+    /// Stands in for a hypothetical future EF Core internal service whose own <c>ServiceType</c>
+    /// isn't closed over <see cref="UtanvegaDbContext"/> — unlike <c>DbContextPool&lt;T&gt;</c>,
+    /// <c>IDbContextPool&lt;T&gt;</c> and <c>IScopedDbContextLease&lt;T&gt;</c>, all of which are
+    /// generic today. Its dependency on <see cref="IFakeDbContextOptions{T}"/> means removing that
+    /// still leaves this unresolvable, even though this type itself never matched the removal
+    /// predicate.
+    /// </summary>
+    private class FutureEfInternalPoolingService
+    {
+        public FutureEfInternalPoolingService(IFakeDbContextOptions<UtanvegaDbContext> options)
+        {
+        }
+    }
 }
