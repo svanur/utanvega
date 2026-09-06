@@ -19,6 +19,8 @@ import ListIcon from '@mui/icons-material/List';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import TerrainIcon from '@mui/icons-material/Terrain';
+import GroupsIcon from '@mui/icons-material/Groups';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import SortIcon from '@mui/icons-material/Sort';
@@ -285,6 +287,28 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                                                                 <Typography variant="body2" color="text.secondary" noWrap>{row.locationName}</Typography>
                                                             </Stack>
                                                         )}
+                                                        {row.organizerName && (
+                                                            <Stack direction="row" alignItems="center" gap={0.5} sx={{ mt: 0.25 }}>
+                                                                <GroupsIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
+                                                                {row.organizerSlug ? (
+                                                                    <Typography
+                                                                        variant="body2"
+                                                                        color="text.secondary"
+                                                                        noWrap
+                                                                        component="a"
+                                                                        href={`/organizers/${row.organizerSlug}`}
+                                                                        onClick={e => e.stopPropagation()}
+                                                                        sx={{ textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+                                                                    >
+                                                                        {loc(row.organizerName, row.organizerNameEn) ?? row.organizerName}
+                                                                    </Typography>
+                                                                ) : (
+                                                                    <Typography variant="body2" color="text.secondary" noWrap>
+                                                                        {loc(row.organizerName, row.organizerNameEn) ?? row.organizerName}
+                                                                    </Typography>
+                                                                )}
+                                                            </Stack>
+                                                        )}
                                                     </Box>
                                                 </Stack>
                                                 <Stack direction="row" alignItems="center" gap={0.5} sx={{ flexShrink: 0 }}>
@@ -296,9 +320,32 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                                             </Stack>
 
                                             {row.distances.length > 0 && (
-                                                <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.75 }}>
+                                                <Stack direction="row" flexWrap="wrap" gap={0.75} sx={{ mt: 0.75 }}>
                                                     {groupDistances(row.distances).map((d, i) => (
-                                                        <Chip key={i} label={d.count > 1 ? `${d.count} × ${d.label}` : d.label} size="small" variant="outlined" />
+                                                        <Stack key={i} direction="row" alignItems="center" gap={0.5} flexWrap="nowrap">
+                                                            <Chip label={d.count > 1 ? `${d.count} × ${d.label}` : d.label} size="small" variant="outlined" />
+                                                            {d.elevationGain != null && (
+                                                                <Tooltip title={t('races.elevationGain', { defaultValue: 'Elevation gain' })}>
+                                                                    <Chip
+                                                                        icon={<TerrainIcon sx={{ fontSize: 14 }} />}
+                                                                        label={`↑ ${Math.round(d.elevationGain)} m`}
+                                                                        size="small"
+                                                                        variant="outlined"
+                                                                        sx={{ fontSize: '0.7rem' }}
+                                                                    />
+                                                                </Tooltip>
+                                                            )}
+                                                            {d.terrainType && (
+                                                                <Tooltip title={t('races.terrainType', { defaultValue: 'Terrain type' })}>
+                                                                    <Chip
+                                                                        label={t(`trail.terrainType.${d.terrainType}`, { defaultValue: d.terrainType })}
+                                                                        size="small"
+                                                                        variant="outlined"
+                                                                        sx={{ fontSize: '0.7rem' }}
+                                                                    />
+                                                                </Tooltip>
+                                                            )}
+                                                        </Stack>
                                                     ))}
                                                 </Stack>
                                             )}
@@ -388,15 +435,54 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                                                         {loc(row.raceName, row.raceNameEn)}
                                                     </Typography>
                                                 )}
+                                                {row.organizerName && (
+                                                    <Typography variant="caption" color="text.secondary" display="block" noWrap>
+                                                        {row.organizerSlug ? (
+                                                            <Box
+                                                                component="a"
+                                                                href={`/organizers/${row.organizerSlug}`}
+                                                                onClick={e => e.stopPropagation()}
+                                                                sx={{ color: 'inherit', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+                                                            >
+                                                                {loc(row.organizerName, row.organizerNameEn) ?? row.organizerName}
+                                                            </Box>
+                                                        ) : (
+                                                            loc(row.organizerName, row.organizerNameEn) ?? row.organizerName
+                                                        )}
+                                                    </Typography>
+                                                )}
                                                 {cancelled && (
                                                     <Chip label={t('races.statusCancelled')} size="small" color="error" sx={{ height: 18, fontSize: '0.65rem', mt: 0.25 }} />
                                                 )}
                                             </TableCell>
                                             <TableCell>
                                                 {row.distances.length > 0 ? (
-                                                    <Stack direction="row" flexWrap="wrap" gap={0.5}>
+                                                    <Stack direction="row" flexWrap="wrap" gap={0.75}>
                                                         {groupDistances(row.distances).map((d, i) => (
-                                                            <Chip key={i} label={d.count > 1 ? `${d.count} × ${d.label}` : d.label} size="small" variant="outlined" />
+                                                            <Stack key={i} direction="row" alignItems="center" gap={0.5} flexWrap="nowrap">
+                                                                <Chip label={d.count > 1 ? `${d.count} × ${d.label}` : d.label} size="small" variant="outlined" />
+                                                                {d.elevationGain != null && (
+                                                                    <Tooltip title={t('races.elevationGain', { defaultValue: 'Elevation gain' })}>
+                                                                        <Chip
+                                                                            icon={<TerrainIcon sx={{ fontSize: 14 }} />}
+                                                                            label={`↑ ${Math.round(d.elevationGain)} m`}
+                                                                            size="small"
+                                                                            variant="outlined"
+                                                                            sx={{ fontSize: '0.7rem' }}
+                                                                        />
+                                                                    </Tooltip>
+                                                                )}
+                                                                {d.terrainType && (
+                                                                    <Tooltip title={t('races.terrainType', { defaultValue: 'Terrain type' })}>
+                                                                        <Chip
+                                                                            label={t(`trail.terrainType.${d.terrainType}`, { defaultValue: d.terrainType })}
+                                                                            size="small"
+                                                                            variant="outlined"
+                                                                            sx={{ fontSize: '0.7rem' }}
+                                                                        />
+                                                                    </Tooltip>
+                                                                )}
+                                                            </Stack>
                                                         ))}
                                                     </Stack>
                                                 ) : (

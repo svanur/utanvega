@@ -9,6 +9,16 @@ using Utanvega.Backend.Infrastructure.Persistence;
 
 namespace Utanvega.Backend.Application.Events.Queries.GetEditionsHistory;
 
+// Scoped to this query rather than reusing GetEventsQuery's RaceDistanceSummaryDto — that DTO also
+// backs RacesPage/EventTableView, and adding fields there would bloat a payload that issue never
+// asked to change.
+public record EditionHistoryRaceDistanceDto(
+    string Label,
+    string? TicketStatus,
+    double? ElevationGain,
+    string? TerrainType
+);
+
 public record EditionHistoryRowDto(
     Guid EventId,
     string EventSlug,
@@ -20,8 +30,11 @@ public record EditionHistoryRowDto(
     DateOnly RowDate,
     DateOnly? RowEndDate,
     string? LocationName,
+    string? OrganizerName,
+    string? OrganizerNameEn,
+    string? OrganizerSlug,
     bool EffectiveCancelled,
-    List<RaceDistanceSummaryDto> Distances,
+    List<EditionHistoryRaceDistanceDto> Distances,
     string? ResultsUrl,
     // #548: measured against local dev data for the (partial, year-to-date) 2026 history response —
     // 9 rows, 3 carrying at least one gallery: 5145 bytes serialized without this field vs. 5659
@@ -44,7 +57,7 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
     private readonly UtanvegaDbContext _context;
     private readonly IMemoryCache _cache;
 
-    private record TrailHistoryData(double Length, Core.Entities.ActivityType ActivityTypeId);
+    private record TrailHistoryData(double Length, double ElevationGain, Core.Entities.TerrainType? TerrainType, Core.Entities.ActivityType ActivityTypeId);
 
     public GetEditionsHistoryQueryHandler(UtanvegaDbContext context, IMemoryCache cache)
     {
@@ -75,6 +88,8 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
             .AsSplitQuery()
             .Include(ed => ed.Event)
                 .ThenInclude(ev => ev.Location)
+            .Include(ed => ed.Event)
+                .ThenInclude(ev => ev.Organizer)
             .Include(ed => ed.Races)
             .Include(ed => ed.PhotoGalleries)
                 .ThenInclude(g => g.Photographer)
@@ -95,9 +110,9 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
         var trailData = trailIds.Count > 0
             ? (await _context.Trails.AsNoTracking()
                 .Where(t => trailIds.Contains(t.Id))
-                .Select(t => new { t.Id, t.Length, t.ActivityTypeId })
+                .Select(t => new { t.Id, t.Length, t.ElevationGain, t.TerrainType, t.ActivityTypeId })
                 .ToListAsync(cancellationToken))
-                .ToDictionary(t => t.Id, t => new TrailHistoryData(t.Length, t.ActivityTypeId))
+                .ToDictionary(t => t.Id, t => new TrailHistoryData(t.Length, t.ElevationGain, t.TerrainType, t.ActivityTypeId))
             : new Dictionary<Guid, TrailHistoryData>();
 
         var rows = new List<EditionHistoryRowDto>();
@@ -150,10 +165,15 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
                     : trail != null && trail.Length > 0
                         ? $"{trail.Length / 1000.0:0.#} km"
                         : null;
-                return label != null ? new RaceDistanceSummaryDto(label, r.TicketStatus.ToString()) : null;
+                // ElevationGain is a non-nullable double on Trail (0 is the "no data" default), so
+                // only surface it once it's actually above zero — otherwise the UI would render a
+                // spurious "+0 m" for trails nobody has measured yet.
+                double? elevationGain = trail is { ElevationGain: > 0 } ? trail.ElevationGain : null;
+                string? terrainType = trail?.TerrainType?.ToString();
+                return label != null ? new EditionHistoryRaceDistanceDto(label, r.TicketStatus.ToString(), elevationGain, terrainType) : null;
             })
             .Where(d => d != null)
-            .Cast<RaceDistanceSummaryDto>()
+            .Cast<EditionHistoryRaceDistanceDto>()
             .ToList();
 
         var activityTypes = races
@@ -175,6 +195,9 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
             rowDate,
             rowEndDate,
             ed.Event.Location?.Name,
+            ed.Event.Organizer?.Name ?? ed.Event.OrganizerName,
+            ed.Event.OrganizerNameEn,
+            ed.Event.Organizer?.Slug,
             effectiveCancelled,
             distances,
             ed.ResultsUrl,
