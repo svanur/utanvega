@@ -104,6 +104,17 @@ internal class TestWebApplicationFactory : WebApplicationFactory<Program>
             foreach (var descriptor in dbDescriptors)
                 services.Remove(descriptor);
 
+            // Fail-fast guard (#678): re-scan with the same predicate after the removal loop above.
+            // If a future EF Core / Microsoft.AspNetCore.Mvc.Testing bump changes what
+            // AddDbContextPool<UtanvegaDbContext> registers internally — e.g. an additional
+            // service type closed over UtanvegaDbContext that this predicate doesn't happen to
+            // catch — this throws here, synchronously, with a message pointing straight back at
+            // TestWebApplicationFactory.cs. Without this, the same leftover registration would
+            // instead surface as an opaque ServiceProviderOptions.ValidateOnBuild exception naming
+            // some internal EF Core type, inside TestServer.Build(), with nothing tying it back to
+            // the reflection sweep above that was supposed to have removed it.
+            ThrowIfUtanvegaDbContextStillRegistered(services);
+
             services.AddScoped<UtanvegaDbContext>(_ => _dbFactory.CreateContext());
 
             // Fake auth: register the "Test" scheme (TestAuthHandler) and make it the default.
@@ -115,6 +126,38 @@ internal class TestWebApplicationFactory : WebApplicationFactory<Program>
             services.AddAuthentication(TestAuthHandler.SchemeName)
                 .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestAuthHandler.SchemeName, _ => { });
         });
+    }
+
+    /// <summary>
+    /// Throws if <paramref name="services"/> still contains a registration closed over
+    /// <see cref="UtanvegaDbContext"/> — see #678 and the call site in <see cref="ConfigureWebHost"/>.
+    /// Extracted as its own method (rather than inlined at the call site) purely so
+    /// <c>TestWebApplicationFactoryGuardTests</c> can exercise the throw path directly against a
+    /// minimal <see cref="ServiceCollection"/>, without needing to provoke an actual EF Core /
+    /// Microsoft.AspNetCore.Mvc.Testing version regression to prove it fires.
+    /// </summary>
+    internal static void ThrowIfUtanvegaDbContextStillRegistered(IServiceCollection services)
+    {
+        var leftoverDbDescriptors = services.Where(d =>
+            d.ServiceType == typeof(UtanvegaDbContext) ||
+            (d.ServiceType.IsGenericType && d.ServiceType.GetGenericArguments().Contains(typeof(UtanvegaDbContext)))
+        ).ToList();
+        if (leftoverDbDescriptors.Count == 0)
+            return;
+
+        throw new InvalidOperationException(
+            $"TestWebApplicationFactory.cs: {leftoverDbDescriptors.Count} service " +
+            "registration(s) still closed over UtanvegaDbContext survived the removal " +
+            "sweep in ConfigureWebHost (matched types: " +
+            string.Join(", ", leftoverDbDescriptors.Select(d => d.ServiceType.FullName)) +
+            "). That sweep matches on \"any service type closed over UtanvegaDbContext\" " +
+            "rather than by internal EF Core type name, because AddDbContextPool<UtanvegaDbContext> " +
+            "(Program.cs) also registers internal pooling services (DbContextPool<T>, " +
+            "IDbContextPool<T>, IScopedDbContextLease<T>) that aren't public API and so can't " +
+            "be named directly. A leftover match here means an EF Core / " +
+            "Microsoft.AspNetCore.Mvc.Testing upgrade introduced a registration this " +
+            "predicate no longer catches — left in place, it would otherwise fail later as " +
+            "an opaque ServiceProviderOptions.ValidateOnBuild error inside TestServer.Build().");
     }
 
     /// <summary>
