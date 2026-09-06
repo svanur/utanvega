@@ -86,6 +86,13 @@ Each test class gets its own `TestWebApplicationFactory` instance (own SQLite co
 — don't share one via `IClassFixture` unless you also take care of resetting state between tests,
 matching the per-test-method isolation the handler-level tests already rely on.
 
+Tag every such class `[Collection(TestWebApplicationFactoryCollection.Name)]` (see
+`WebHost/TestWebApplicationFactory.cs`, bottom of the file). The factory's constructor sets four
+environment variables as real process-wide state with no restore, and xUnit 2.9.2's SDK default runs
+different test collections in parallel — without the shared, `DisableParallelization = true`
+collection, two endpoint-test classes building their factories at the same time would race to set
+the same variables. See #677 and `Endpoints/LocationEndpointTests.cs` for a second example.
+
 ### Why the factory sets environment variables in its constructor
 
 `Program.cs`'s top-level statements read `SUPABASE_URL` / `SUPABASE_JWT_SECRET` / `IP_HASH_SALT` and
