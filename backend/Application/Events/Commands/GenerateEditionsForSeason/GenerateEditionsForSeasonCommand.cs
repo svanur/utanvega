@@ -81,7 +81,7 @@ public class GenerateEditionsForSeasonCommandHandler : IRequestHandler<GenerateE
         // No races are attached to these editions in this code path, so completing an
         // already-past edition is just a status/registration flip via CompleteWithRaces()
         // (a no-op over its empty Races collection) — kept consistent with CreateEditionCommand.
-        foreach (var edition in editions.Where(e => e.Date.HasValue && e.Date.Value < today))
+        foreach (var edition in editions.Where(e => EditionStatusHelpers.IsPast(e.Date, today)))
             edition.CompleteWithRaces();
 
         _context.EventEditions.AddRange(editions);
@@ -195,7 +195,7 @@ public class GenerateEditionsForSeasonCommandHandler : IRequestHandler<GenerateE
 
             foreach (var date in seasonDates)
             {
-                var isPast = date < today;
+                var isPast = EditionStatusHelpers.IsPast(date, today);
                 var race = new Race
                 {
                     EventEditionId = edition.Id,
@@ -214,7 +214,7 @@ public class GenerateEditionsForSeasonCommandHandler : IRequestHandler<GenerateE
             // race date is in the past) should read as Completed from creation, consistent with
             // the Completed status every one of its races just got above — CompleteWithRaces()
             // is a safe no-op over races that are already Completed, and closes registration too.
-            if (isNewEdition && lastDate < today)
+            if (isNewEdition && EditionStatusHelpers.IsPast(lastDate, today))
                 edition.CompleteWithRaces();
         }
 

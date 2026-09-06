@@ -70,9 +70,9 @@ public class CreateEditionCommandHandler : IRequestHandler<CreateEditionCommand,
         // edition (see EventDetailPage's edition-status dropdown) — has that choice respected,
         // the same way UpdateEditionCommand's patch-status semantics never silently override an
         // explicit non-default choice.
-        var effectiveDate = request.EndDate ?? request.Date;
+        var effectiveDate = EditionStatusHelpers.EffectiveDate(request.Date, request.EndDate);
         if (status == EditionStatus.Unconfirmed
-            && effectiveDate.HasValue && effectiveDate.Value < DateOnly.FromDateTime(DateTime.UtcNow))
+            && EditionStatusHelpers.IsPast(effectiveDate, DateOnly.FromDateTime(DateTime.UtcNow)))
             edition.CompleteWithRaces();
 
         _context.EventEditions.Add(edition);
