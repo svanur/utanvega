@@ -72,7 +72,7 @@
         "trails": "Trails",
         "locations": "Locations",
         "about": "About",
-        "races": "Races",
+        "races": "Events",
         "activities": "Activities",
         "disclaimer": "Disclaimer",
         "privacy": "Privacy",
@@ -96,9 +96,9 @@
         "services": "Services",
         "challenge": "Challenge",
         "allTrails": "Trails list",
-        "allEvents": "Next Events",
+        "allEvents": "Next events",
         "eventsCalendar": "Calendar",
-        "editionsHistory": "Past Events",
+        "editionsHistory": "Past events",
         "itraGuide": "ITRA Guide",
         "itraHandbook": "ITRA Handbook",
         "guide": "Guide",
@@ -107,13 +107,13 @@
         "contact": "Contact"
     },
     "spotlight": {
-        "placeholder": "Search trails, locations and races...",
+        "placeholder": "Search events, trails & locations...",
         "trailsSection": "Trails",
         "locationsSection": "Locations",
-        "racesSection": "Races",
+        "racesSection": "Events",
         "trails": "trails",
         "noResults": "No results found",
-        "hint": "Start typing to search trails, locations and races",
+        "hint": "Start typing to search events, trails & locations",
         "shortcutHint": "Search (Ctrl+K)",
         "loading": "Loading search data…"
     },
@@ -776,6 +776,10 @@
             }
         },
         "changelog": {
+            "v1_5_0": {
+                "title": "Photographers get credit, and a smarter \"ongoing\" badge for multi-day events",
+                "description": "Photographers are now their own entity across the site: events and trails can carry multiple photo galleries, each credited to the photographer who shot it, and every photographer has their own public page linking back to everything they've photographed. Multi-day events stopped pretending every day was race day — the pulsing \"Today!\" badge now only shows on the day it means, an \"Ongoing\" badge covers the rest of the event's run, and whichever race is actually happening today is called out on its own. Alongside that, a round of bug fixes across trails, admin, and search."
+            },
             "v1_4_0": {
                 "title": "An age-grading tool that tells the truth",
                 "description": "The age-grading tool has moved from the WMA 2015 tables to the 2025 USATF MLDR road tables. The old standards predated a decade of improvement in distance running, so every score came out too high — women's more than men's, because the women's benchmarks had fallen furthest behind. A half marathon that scored 92.1% now scores 86.1%. The tool also stopped treating everyone under 20 as a 20-year-old and everyone over 80 as an 80-year-old, so juniors and older runners finally get their own standard rather than someone else's; equivalent times can now be read year by year around your own age instead of in five-year steps; a mistyped finish time is flagged instead of returning an impossible score; and the performance tier now says what it is relative to, because \"World Class\" on its own reads as a bigger claim than it is."
@@ -1262,6 +1266,7 @@
         "nextRace": "Next:",
         "lastRace": "Last:",
         "today": "🔥 Today!",
+        "ongoing": "Ongoing",
         "raceDayBadge": "🏁 It's race day!",
         "tomorrow": "Tomorrow!",
         "passed": "Past event",
@@ -1279,6 +1284,11 @@
         "results": "Results",
         "photoGallery": "Photos from {{domain}}",
         "photos": "Photos",
+        "photoBy": "Photo: {{name}}",
+        "photoByPrefix": "Photo:",
+        "galleryCount_one": "{{count}} gallery",
+        "galleryCount_other": "{{count}} galleries",
+        "galleryCount": "{{count}} galleries",
         "organizerSite": "Website",
         "directionsToEvent": "Directions to event",
         "addToCalendar": "Add to Calendar",
@@ -1393,6 +1403,7 @@
         "justRacedSection": "Recently completed",
         "inProgress": "🏃 In progress",
         "raceFinished": "🏁 Finished",
+        "dayOfTotal": "Day {{day}} of {{total}}",
         "progressBar": {
             "waiting": "Waiting for start...",
             "cutoffReached": "Time limit reached",
@@ -1453,6 +1464,7 @@
             "showCancelled": "Show cancelled",
             "noResults": "No past events found.",
             "resultsLink": "Results",
+            "galleryColumn": "Photo gallery",
             "searchingAllYears": "all years"
         },
         "table": {
@@ -1823,5 +1835,14 @@
         "events": "Events",
         "noEvents": "No events found",
         "notFound": "Organizer not found"
+    },
+    "photographerPage": {
+        "website": "Photographer website",
+        "galleries": "Galleries",
+        "noGalleries": "No galleries found",
+        "notFound": "Photographer not found",
+        "openGalleryAriaLabel": "Open the {{event}} photo gallery (opens in a new tab)",
+        "viewEdition": "View edition",
+        "viewEditionAriaLabel": "View the {{event}} edition on this site"
     }
 }

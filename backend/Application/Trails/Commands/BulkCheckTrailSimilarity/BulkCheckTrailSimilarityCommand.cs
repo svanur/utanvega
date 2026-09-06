@@ -1,9 +1,10 @@
 using MediatR;
+using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Application.Trails.Commands.CreateTrailFromGpx;
 
 namespace Utanvega.Backend.Application.Trails.Commands.BulkCheckTrailSimilarity;
 
-public record BulkCheckTrailSimilarityResult(string FileName, string? Name, List<TrailSimilarityMatch> Matches);
+public record BulkCheckTrailSimilarityResult(string FileName, string? Name, List<TrailSimilarityMatch> Matches, ActivityType? DetectedActivityType);
 
 public record BulkCheckTrailSimilarityCommand(List<GpxFileInfo> Files) : IRequest<List<BulkCheckTrailSimilarityResult>>;
 
@@ -28,15 +29,15 @@ public class BulkCheckTrailSimilarityCommandHandler : IRequestHandler<BulkCheckT
         {
             try
             {
-                var trail = _singleHandler.ProcessGpx(file.Name, file.GpxXml);
+                var (trail, detectedActivityType) = _singleHandler.ProcessGpxWithDetection(file.Name, file.GpxXml);
                 var matches = await _singleHandler.CheckSimilarityAsync(trail, cancellationToken);
-                results.Add(new BulkCheckTrailSimilarityResult(file.FileName, trail.Name, matches));
+                results.Add(new BulkCheckTrailSimilarityResult(file.FileName, trail.Name, matches, detectedActivityType));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Similarity check failed for file {FileName}", file.FileName);
                 // We add an empty result or error info for this file so we don't block the whole batch
-                results.Add(new BulkCheckTrailSimilarityResult(file.FileName, file.Name, new List<TrailSimilarityMatch>()));
+                results.Add(new BulkCheckTrailSimilarityResult(file.FileName, file.Name, new List<TrailSimilarityMatch>(), null));
             }
         }
 

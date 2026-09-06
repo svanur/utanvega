@@ -19,7 +19,6 @@ public record CreateEditionCommand(
     Guid? TrailId,
     string? TitleEn = null,
     string? NotesEn = null,
-    string? PhotoGalleryUrl = null,
     string? Status = null
 ) : IRequest<Guid>;
 
@@ -54,7 +53,6 @@ public class CreateEditionCommandHandler : IRequestHandler<CreateEditionCommand,
             TitleEn = request.TitleEn,
             RegistrationUrl = request.RegistrationUrl,
             ResultsUrl = request.ResultsUrl,
-            PhotoGalleryUrl = request.PhotoGalleryUrl,
             Notes = request.Notes,
             NotesEn = request.NotesEn,
             RegistrationStatus = regStatus,
@@ -62,6 +60,20 @@ public class CreateEditionCommandHandler : IRequestHandler<CreateEditionCommand,
             TrailId = request.TrailId,
             CreatedAt = DateTime.UtcNow,
         };
+
+        // A newly created edition whose date (or, for multi-day events, end date) has already
+        // passed didn't get a chance to be individually confirmed — it's already over, so it
+        // should read as Completed (and closed for registration) from the moment it's created,
+        // rather than sitting as Unconfirmed until #361's sweep catches up with it later.
+        // But only when it would otherwise land on that plain Unconfirmed default: an admin who
+        // deliberately chose a different status — e.g. Hidden, for a private/draft historical
+        // edition (see EventDetailPage's edition-status dropdown) — has that choice respected,
+        // the same way UpdateEditionCommand's patch-status semantics never silently override an
+        // explicit non-default choice.
+        var effectiveDate = EditionStatusHelpers.EffectiveDate(request.Date, request.EndDate);
+        if (status == EditionStatus.Unconfirmed
+            && EditionStatusHelpers.IsPast(effectiveDate, DateOnly.FromDateTime(DateTime.UtcNow)))
+            edition.CompleteWithRaces();
 
         _context.EventEditions.Add(edition);
         await _context.SaveChangesAsync(cancellationToken);

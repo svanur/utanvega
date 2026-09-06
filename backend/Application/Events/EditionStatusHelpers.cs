@@ -11,4 +11,12 @@ public static class EditionStatusHelpers
     public static bool ComputeEffectiveCancelled(EditionStatus status, IReadOnlyCollection<RaceStatus> raceStatuses) =>
         status == EditionStatus.Cancelled ||
         (status != EditionStatus.Completed && raceStatuses.Count > 0 && raceStatuses.All(s => s == RaceStatus.Cancelled));
+
+    // For multi-day events, EndDate is what determines whether the whole run is over; single-day
+    // editions fall back to Date. Shared by CreateEditionCommand and GenerateEditionsForSeasonCommand
+    // so both apply "already past on creation" the same way.
+    public static DateOnly? EffectiveDate(DateOnly? date, DateOnly? endDate) => endDate ?? date;
+
+    // A null date (edition with no date set yet) is never "past" — there's nothing to compare.
+    public static bool IsPast(DateOnly? date, DateOnly today) => date.HasValue && date.Value < today;
 }

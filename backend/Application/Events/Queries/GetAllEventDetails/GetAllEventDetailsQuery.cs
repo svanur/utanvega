@@ -2,6 +2,7 @@ using System.Text.Json;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Utanvega.Backend.Application.Events.Queries.GetEvent;
+using Utanvega.Backend.Application.PhotoGalleries;
 using Utanvega.Backend.Infrastructure.Persistence;
 
 namespace Utanvega.Backend.Application.Events.Queries.GetAllEventDetails;
@@ -31,6 +32,9 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
             .Include(e => e.Organizer)
             .Include(e => e.Editions)
                 .ThenInclude(ed => ed.Races)
+            .Include(e => e.Editions)
+                .ThenInclude(ed => ed.PhotoGalleries)
+                    .ThenInclude(g => g.Photographer)
             .OrderBy(e => e.Name)
             .ToListAsync(cancellationToken);
 
@@ -89,7 +93,6 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
                     ed.TitleEn,
                     ed.RegistrationUrl,
                     ed.ResultsUrl,
-                    ed.PhotoGalleryUrl,
                     ed.Notes,
                     ed.NotesEn,
                     ed.RegistrationStatus.ToString(),
@@ -133,6 +136,7 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
                             r.ResultType.ToString()
                         ))
                         .ToList(),
+                    ed.PhotoGalleries.ToPublicDtos(),
                     ed.CreatedAt,
                     ed.UpdatedAt,
                     DeserHashes(ed.TranslationHashes),

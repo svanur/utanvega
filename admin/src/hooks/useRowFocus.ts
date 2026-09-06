@@ -1,12 +1,5 @@
 import { useState } from 'react';
-import { usePageShortcuts, isInputFocused } from './usePageShortcuts';
-
-// A MUI Dialog is open somewhere on the page. Row-focus shortcuts must back off entirely
-// while that's true — Enter in particular needs to reach the dialog's own focused button
-// (e.g. "Create"/"Save") instead of being preventDefault()'d by the row-focus handler.
-function isDialogOpen(): boolean {
-  return document.querySelector('[role="dialog"]') !== null;
-}
+import { usePageShortcuts, isInputFocused, isDialogOpen } from './usePageShortcuts';
 
 /**
  * Local j/k/Enter/o row-focus for list pages. Tracks a cursor position within `rows`,

@@ -1,11 +1,14 @@
 using Utanvega.Backend.Application.Trails.Queries.GetTrails;
+using Utanvega.Backend.Application.Trails.Queries.GetTrailBySlug;
 using Utanvega.Backend.Core.Entities;
+using Utanvega.Backend.Core.Services;
 
 namespace Utanvega.Backend.Tests.Handlers;
 
 public class TrailQueryHandlerTests : IDisposable
 {
     private readonly TestDbContextFactory _factory;
+    private readonly IScheduleRuleEngine _scheduleEngine = new ScheduleRuleEngine();
 
     public TrailQueryHandlerTests()
     {
@@ -99,6 +102,7 @@ public class TrailQueryHandlerTests : IDisposable
         trail.ElevationLoss = 430;
         trail.Type = TrailType.Loop;
         trail.Difficulty = Difficulty.Moderate;
+        trail.CreatedAt = new DateTime(2026, 1, 15, 0, 0, 0, DateTimeKind.Utc);
 
         using (var ctx = _factory.CreateContext())
         {
@@ -122,6 +126,8 @@ public class TrailQueryHandlerTests : IDisposable
             Assert.Equal("TrailRunning", dto.ActivityType);
             Assert.Equal("Loop", dto.TrailType);
             Assert.Equal("Moderate", dto.Difficulty);
+            Assert.Equal(trail.CreatedAt, dto.CreatedAt);
+            Assert.Null(dto.UpdatedAt);
         }
     }
 
@@ -173,5 +179,75 @@ public class TrailQueryHandlerTests : IDisposable
         var handler = new GetTrailsQueryHandler(ctx);
         var result = await handler.Handle(new GetTrailsQuery(), CancellationToken.None);
         Assert.Empty(result);
+    }
+
+    // --- GetTrailBySlug tests ---
+
+    [Fact]
+    public async Task GetTrailBySlug_ReturnsActualCreatedAt_NotClrDefault()
+    {
+        var trail = CreateTrail("River Loop", TrailStatus.Published, ActivityType.Hiking);
+        trail.CreatedAt = new DateTime(2025, 6, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Trails.Add(trail);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new GetTrailBySlugQueryHandler(ctx, _scheduleEngine);
+            var dto = await handler.Handle(new GetTrailBySlugQuery("river-loop"), CancellationToken.None);
+
+            Assert.NotNull(dto);
+            Assert.Equal(trail.CreatedAt, dto!.CreatedAt);
+            Assert.NotEqual(default, dto.CreatedAt);
+        }
+    }
+
+    [Fact]
+    public async Task GetTrailBySlug_ReturnsActualUpdatedAt_WhenSet()
+    {
+        var trail = CreateTrail("Fjord Trail", TrailStatus.Published, ActivityType.Hiking);
+        trail.UpdatedAt = new DateTime(2025, 7, 2, 0, 0, 0, DateTimeKind.Utc);
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Trails.Add(trail);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new GetTrailBySlugQueryHandler(ctx, _scheduleEngine);
+            var dto = await handler.Handle(new GetTrailBySlugQuery("fjord-trail"), CancellationToken.None);
+
+            Assert.NotNull(dto);
+            Assert.Equal(trail.UpdatedAt, dto!.UpdatedAt);
+            Assert.NotEqual(trail.CreatedAt, dto.UpdatedAt);
+        }
+    }
+
+    [Fact]
+    public async Task GetTrailBySlug_ReturnsNullUpdatedAt_WhenNeverUpdated()
+    {
+        var trail = CreateTrail("Glacier Trail", TrailStatus.Published, ActivityType.Hiking);
+        trail.UpdatedAt = null;
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Trails.Add(trail);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new GetTrailBySlugQueryHandler(ctx, _scheduleEngine);
+            var dto = await handler.Handle(new GetTrailBySlugQuery("glacier-trail"), CancellationToken.None);
+
+            Assert.NotNull(dto);
+            Assert.Null(dto!.UpdatedAt);
+        }
     }
 }

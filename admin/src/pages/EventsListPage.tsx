@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Alert,
@@ -59,7 +59,10 @@ import {
 } from '../hooks/useEvents';
 import { useTrails } from '../hooks/useTrails';
 import { useRowFocus } from '../hooks/useRowFocus';
+import { useUrlFilterState } from '../hooks/useUrlFilterState';
+import { usePageShortcuts, isDialogOpen } from '../hooks/usePageShortcuts';
 import CreateEventDialog from '../components/events/CreateEventDialog';
+import { EVENT_STATUS_CYCLE } from '../utils/eventForms';
 import {
   MONTHS,
   MONTHS_SHORT,
@@ -196,6 +199,23 @@ function formatSchedule(rule: ScheduleRule | null): string {
 type SortField = 'name' | 'activityType' | 'type' | 'nextEditionDate' | 'status' | 'editionCount' | 'locationName' | 'updatedAt';
 type AttentionFilter = 'noEdition' | 'seriesMissingReg' | 'pastActive' | null;
 
+// An unrecognized value (stale bookmark, hand-edited URL) falls back to the field's default.
+// locationFilter/yearFilter are left unvalidated — their valid values depend on loaded events.
+// attentionFilter's "null" state is represented by an empty string, since URL params can't hold null.
+const EVENTS_FILTER_SCHEMA = {
+  searchQuery: { default: '' },
+  activityFilter: { default: 'all', allowed: ['all', ...ACTIVITY_TYPES] },
+  typeFilter: { default: 'all', allowed: ['all', ...EVENT_TYPES] },
+  statusFilter: { default: 'all', allowed: ['all', ...EVENT_STATUSES] },
+  locationFilter: { default: 'all' },
+  yearFilter: { default: 'all' },
+  monthFilter: { default: 'all', allowed: ['all', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'] },
+  sortBy: { default: 'updatedAt', allowed: ['name', 'activityType', 'type', 'nextEditionDate', 'status', 'editionCount', 'locationName', 'updatedAt'] },
+  sortDir: { default: 'desc', allowed: ['asc', 'desc'] },
+  attentionFilter: { default: '', allowed: ['noEdition', 'seriesMissingReg', 'pastActive'] },
+  weekFilter: { default: 'all', allowed: ['all', 'next-week'] },
+} as const;
+
 interface EventsListPageProps {
   onNotify: (message: ReactNode, severity?: 'success' | 'error') => void;
   initialCreate?: boolean;
@@ -213,17 +233,21 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
   const { trails } = useTrails();
   const sortedTrails = [...trails].filter(t => t.status === 'Published' || t.status === 'EventOnly').sort((a, b) => a.name.localeCompare(b.name));
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activityFilter, setActivityFilter] = useState<string>('all');
-  const [typeFilter, setTypeFilter] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [locationFilter, setLocationFilter] = useState<string>('all');
-  const [yearFilter, setYearFilter] = useState<string>('all');
-  const [monthFilter, setMonthFilter] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<SortField>('updatedAt');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
-  const [attentionFilter, setAttentionFilter] = useState<AttentionFilter>(null);
-  const [weekFilter, setWeekFilter] = useState<'all' | 'next-week'>('all');
+  const { values, setValue, setValues } = useUrlFilterState(EVENTS_FILTER_SCHEMA);
+  const searchQuery = values.searchQuery;
+  const setSearchQuery = useCallback((v: string) => setValue('searchQuery', v), [setValue]);
+  const activityFilter = values.activityFilter;
+  const typeFilter = values.typeFilter;
+  const statusFilter = values.statusFilter;
+  const locationFilter = values.locationFilter;
+  const yearFilter = values.yearFilter;
+  const monthFilter = values.monthFilter;
+  const sortBy = values.sortBy as SortField;
+  const sortDir = values.sortDir as 'asc' | 'desc';
+  const attentionFilter = (values.attentionFilter || null) as AttentionFilter;
+  const setAttentionFilter = useCallback((v: AttentionFilter) => setValue('attentionFilter', v ?? ''), [setValue]);
+  const weekFilter = values.weekFilter as 'all' | 'next-week';
+  const setWeekFilter = useCallback((v: 'all' | 'next-week') => setValue('weekFilter', v), [setValue]);
   const [showAttentionPanel, setShowAttentionPanel] = useState(true);
   const [cyclingStatusIds, setCyclingStatusIds] = useState<Set<string>>(new Set());
   const [cyclingActivityIds, setCyclingActivityIds] = useState<Set<string>>(new Set());
@@ -257,13 +281,17 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
     || statusFilter !== 'all' || locationFilter !== 'all' || yearFilter !== 'all' || monthFilter !== 'all';
 
   const resetFilters = () => {
-    setActivityFilter('all'); setTypeFilter('all'); setStatusFilter('all'); setLocationFilter('all');
-    setYearFilter('all'); setMonthFilter('all'); setAttentionFilter(null); setWeekFilter('all');
+    // Deliberately leaves searchQuery, sortBy and sortDir untouched — this is the "clear
+    // filters" affordance, not a full reset (see handleResetFilters-equivalent elsewhere).
+    setValues({
+      activityFilter: 'all', typeFilter: 'all', statusFilter: 'all', locationFilter: 'all',
+      yearFilter: 'all', monthFilter: 'all', attentionFilter: '', weekFilter: 'all',
+    });
   };
 
   const handleRequestSort = (field: SortField) => {
-    if (sortBy === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
-    else { setSortBy(field); setSortDir('asc'); }
+    const isAsc = sortBy === field && sortDir === 'asc';
+    setValues({ sortBy: field, sortDir: sortBy === field ? (isAsc ? 'desc' : 'asc') : 'asc' });
   };
 
   // ── Needs attention items ─────────────────────────────────────────────────
@@ -316,7 +344,11 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
         const dir = sortDir === 'asc' ? 1 : -1;
         let cmp = 0;
         if (sortBy === 'updatedAt') {
-          cmp = (a.updatedAt ? new Date(a.updatedAt).getTime() : 0) - (b.updatedAt ? new Date(b.updatedAt).getTime() : 0);
+          const aDate = a.updatedAt ?? a.createdAt;
+          const bDate = b.updatedAt ?? b.createdAt;
+          const aTime = aDate ? new Date(aDate).getTime() : 0;
+          const bTime = bDate ? new Date(bDate).getTime() : 0;
+          cmp = aTime - bTime;
         } else if (sortBy === 'nextEditionDate') {
           if (!a.nextEditionDate && !b.nextEditionDate) cmp = 0;
           else if (!a.nextEditionDate) cmp = 1;
@@ -340,12 +372,19 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
     focusedEventRowRef.current?.scrollIntoView({ block: 'nearest' });
   }, [focusedEventIndex]);
 
+  usePageShortcuts([
+    { key: 'n', alt: true, skip: isDialogOpen, handler: () => setCreateDialogOpen(true) },
+  ]);
+
   // ── Status / activity / type cycling ─────────────────────────────────────
   const handleCycleStatus = async (event: EventSummaryDto) => {
     if (cyclingStatusIds.has(event.id)) return;
     if (event.status !== 'Unconfirmed' && event.status !== 'Confirmed') return;
-    const i = EVENT_STATUSES.indexOf(event.status as EventStatus);
-    const next = EVENT_STATUSES[(i + 1) % EVENT_STATUSES.length]!;
+    // Cancelled is deliberately excluded from the cycle — cancelling cascades to editions and races
+    // (see backend Event.CancelWithEditions), so it's only reachable via the dedicated Cancel Event
+    // confirmation dialog, not a click-through step.
+    const i = EVENT_STATUS_CYCLE.indexOf(event.status as EventStatus);
+    const next = EVENT_STATUS_CYCLE[(i + 1) % EVENT_STATUS_CYCLE.length]!;
     patchEventLocally(event.id, { status: next });
     setCyclingStatusIds(prev => new Set(prev).add(event.id));
     try {
@@ -681,28 +720,28 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
         />
         <FormControl size="small" sx={{ minWidth: 140 }}>
           <InputLabel>Activity</InputLabel>
-          <Select value={activityFilter} label="Activity" onChange={e => setActivityFilter(e.target.value)}>
+          <Select value={activityFilter} label="Activity" onChange={e => setValue('activityFilter', e.target.value)}>
             <MenuItem value="all">All</MenuItem>
             {ACTIVITY_TYPES.map(at => <MenuItem key={at} value={at}>{ACTIVITY_ICONS[at] ?? '🏅'} {at}</MenuItem>)}
           </Select>
         </FormControl>
         <FormControl size="small" sx={{ minWidth: 120 }}>
           <InputLabel>Type</InputLabel>
-          <Select value={typeFilter} label="Type" onChange={e => setTypeFilter(e.target.value)}>
+          <Select value={typeFilter} label="Type" onChange={e => setValue('typeFilter', e.target.value)}>
             <MenuItem value="all">All</MenuItem>
             {EVENT_TYPES.map(t => <MenuItem key={t} value={t}>{t}</MenuItem>)}
           </Select>
         </FormControl>
         <FormControl size="small" sx={{ minWidth: 120 }}>
           <InputLabel>Status</InputLabel>
-          <Select value={statusFilter} label="Status" onChange={e => setStatusFilter(e.target.value)}>
+          <Select value={statusFilter} label="Status" onChange={e => setValue('statusFilter', e.target.value)}>
             <MenuItem value="all">All</MenuItem>
             {EVENT_STATUSES.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
           </Select>
         </FormControl>
         <FormControl size="small" sx={{ minWidth: 140 }}>
           <InputLabel>Location</InputLabel>
-          <Select value={locationFilter} label="Location" onChange={e => setLocationFilter(e.target.value)}>
+          <Select value={locationFilter} label="Location" onChange={e => setValue('locationFilter', e.target.value)}>
             <MenuItem value="all">All</MenuItem>
             <MenuItem value="none"><em>No location</em></MenuItem>
             {eventLocationOptions.map(loc => <MenuItem key={loc} value={loc}>{loc}</MenuItem>)}
@@ -710,14 +749,14 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
         </FormControl>
         <FormControl size="small" sx={{ minWidth: 100 }}>
           <InputLabel>Year</InputLabel>
-          <Select value={yearFilter} label="Year" onChange={e => { setYearFilter(e.target.value); setMonthFilter('all'); }}>
+          <Select value={yearFilter} label="Year" onChange={e => setValues({ yearFilter: e.target.value, monthFilter: 'all' })}>
             <MenuItem value="all">All</MenuItem>
             {yearOptions.map(y => <MenuItem key={y} value={y}>{y}</MenuItem>)}
           </Select>
         </FormControl>
         <FormControl size="small" sx={{ minWidth: 120 }} disabled={yearFilter === 'all'}>
           <InputLabel>Month</InputLabel>
-          <Select value={monthFilter} label="Month" onChange={e => setMonthFilter(e.target.value)}>
+          <Select value={monthFilter} label="Month" onChange={e => setValue('monthFilter', e.target.value)}>
             <MenuItem value="all">All</MenuItem>
             {MONTHS.slice(1).map((m, i) => <MenuItem key={i} value={String(i + 1).padStart(2, '0')}>{m}</MenuItem>)}
           </Select>
@@ -730,8 +769,8 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
           clickable
           onClick={() => {
             const next = weekFilter === 'next-week' ? 'all' : 'next-week';
-            setWeekFilter(next);
-            if (next === 'next-week') { setYearFilter('all'); setMonthFilter('all'); }
+            if (next === 'next-week') setValues({ weekFilter: next, yearFilter: 'all', monthFilter: 'all' });
+            else setWeekFilter(next);
           }}
         />
         {weekFilter === 'next-week' && (
@@ -803,16 +842,34 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
                 key={event.id}
                 ref={idx === focusedEventIndex ? focusedEventRowRef : undefined}
                 hover
-                sx={(theme) => ({
-                  cursor: 'pointer',
-                  ...(event.type === 'Advertisement' && { bgcolor: 'rgba(255, 193, 7, 0.08)' }),
-                  ...(idx === focusedEventIndex && { outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: -2 }),
-                })}
+                sx={(theme) => {
+                  // Hidden/unlisted rows get a neutral background wash instead of a row-wide
+                  // `opacity`: opacity would multiply against MUI's own alpha-based text colors
+                  // (text.secondary is already translucent) and would fade the j/k focus outline
+                  // below, so text colour and the outline are left untouched — only the background
+                  // changes, layered underneath the (unrelated) Advertisement tint via `background`
+                  // so both can show at once.
+                  const bgLayers = [
+                    (event.status === 'Hidden' || event.status === 'Unlisted') && theme.palette.action.selected,
+                    event.type === 'Advertisement' && 'rgba(255, 193, 7, 0.08)',
+                  ].filter((layer): layer is string => Boolean(layer));
+                  return {
+                    cursor: 'pointer',
+                    ...(bgLayers.length > 0 && { background: bgLayers.map(layer => `linear-gradient(${layer}, ${layer})`).join(', ') }),
+                    ...(idx === focusedEventIndex && { outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: -2 }),
+                  };
+                }}
                 onClick={() => navigate(`/events/${event.slug}`)}
               >
                 {/* Name */}
                 <TableCell>
-                  <Typography variant="body2" fontWeight={700}>{event.name}</Typography>
+                  <Typography
+                    variant="body2"
+                    fontWeight={700}
+                    sx={event.status === 'Cancelled' ? { textDecoration: 'line-through' } : undefined}
+                  >
+                    {event.name}
+                  </Typography>
                   <Tooltip title="Click to copy slug">
                     <Typography
                       variant="caption"
@@ -882,7 +939,7 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
 
                 {/* Status — cycles on click */}
                 <TableCell align="center" onClick={e => e.stopPropagation()}>
-                  <Tooltip title={cyclingStatusIds.has(event.id) ? 'Updating…' : cycleTooltip('Status', EVENT_STATUSES, event.status)}>
+                  <Tooltip title={cyclingStatusIds.has(event.id) ? 'Updating…' : cycleTooltip('Status', EVENT_STATUS_CYCLE, event.status)}>
                     <Chip
                       label={event.status}
                       size="small"

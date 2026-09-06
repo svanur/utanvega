@@ -132,7 +132,6 @@ export default function TrailGeoGuesser() {
 
         setup();
         return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [trails, roundTrigger]);
 
     const polylinePositions: LatLngTuple[] = useMemo(() => {

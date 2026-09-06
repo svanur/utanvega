@@ -69,4 +69,29 @@ public class Event
 
     // Navigation
     public ICollection<EventEdition> Editions { get; set; } = new List<EventEdition>();
+
+    // Cancelling an event cascades to its editions, but not indiscriminately: editions that are
+    // already Completed or already Cancelled are left alone (nothing to override), and editions
+    // whose effective date has already passed are also left alone — a past-dated Active or
+    // Unconfirmed edition is stale, unconfirmed data, not an upcoming occurrence, and asserting it
+    // as Cancelled would misrepresent history rather than prevent something from happening. Every
+    // other edition — future-dated or undated — cascades via CancelWithRaces(), so its races and
+    // registration close exactly the way a direct, edition-level cancellation would.
+    public void CancelWithEditions(DateOnly today)
+    {
+        Status = EventStatus.Cancelled;
+        foreach (var edition in Editions.Where(ed =>
+                     ed.Status != EditionStatus.Completed &&
+                     ed.Status != EditionStatus.Cancelled &&
+                     IsFutureOrUndated(ed, today)))
+        {
+            edition.CancelWithRaces();
+        }
+    }
+
+    private static bool IsFutureOrUndated(EventEdition edition, DateOnly today)
+    {
+        var effectiveDate = edition.EndDate ?? edition.Date;
+        return !effectiveDate.HasValue || effectiveDate.Value >= today;
+    }
 }

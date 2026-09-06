@@ -14,8 +14,9 @@ export interface OrganizerEventSummary {
     endDisplayDate: string | null;
 }
 
+// Public projection — deliberately no `id`; the backend's OrganizerPublicDto withholds it
+// (mirrored by PhotographerPublic), and nothing here needs to reference an organizer by id.
 export interface OrganizerPublic {
-    id: string;
     name: string;
     slug: string;
     website: string | null;

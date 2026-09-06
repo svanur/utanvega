@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Alert,
@@ -34,8 +34,11 @@ import SearchIcon from '@mui/icons-material/Search';
 import TranslateIcon from '@mui/icons-material/Translate';
 import { useOrganizers, type OrganizerDto } from '../hooks/useOrganizers';
 import { useRowFocus } from '../hooks/useRowFocus';
+import { useUrlFilterState } from '../hooks/useUrlFilterState';
+import { usePageShortcuts, isDialogOpen } from '../hooks/usePageShortcuts';
 import { trimToUndefined } from '../utils/strings';
 import BilingualTextField from '../components/BilingualTextField';
+import { BilingualLangProvider } from '../contexts/BilingualLangContext';
 import { useTranslate } from '../hooks/useTranslate';
 
 const SITE_URL = import.meta.env.VITE_SITE_URL?.trim() || 'https://www.hlaupadagskra.is';
@@ -57,12 +60,22 @@ const EMPTY_FORM = {
 
 type FormState = typeof EMPTY_FORM;
 
-export default function OrganizersPage({ onNotify }: Props) {
+// Only 'name', 'contactName' and 'eventCount' have a sort control in the table header — an
+// unrecognized value (stale bookmark, hand-edited URL) falls back to 'name'.
+const ORGANIZERS_FILTER_SCHEMA = {
+    search: { default: '' },
+    sortBy: { default: 'name', allowed: ['name', 'contactName', 'eventCount'] },
+    sortDir: { default: 'asc', allowed: ['asc', 'desc'] },
+} as const;
+
+function OrganizersPageInner({ onNotify }: Props) {
     const navigate = useNavigate();
     const { organizers, loading, error, createOrganizer } = useOrganizers();
-    const [search, setSearch] = useState('');
-    const [sortBy, setSortBy] = useState<keyof OrganizerDto>('name');
-    const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+    const { values, setValue, setValues } = useUrlFilterState(ORGANIZERS_FILTER_SCHEMA);
+    const search = values.search;
+    const setSearch = useCallback((v: string) => setValue('search', v), [setValue]);
+    const sortBy = values.sortBy as keyof OrganizerDto;
+    const sortDir = values.sortDir;
     const [dialogOpen, setDialogOpen] = useState(false);
     const [form, setForm] = useState<FormState>(EMPTY_FORM);
     const [saving, setSaving] = useState(false);
@@ -101,12 +114,11 @@ export default function OrganizersPage({ onNotify }: Props) {
     };
 
     const handleSort = (col: keyof OrganizerDto) => {
-        if (sortBy === col) {
-            setSortDir(d => d === 'asc' ? 'desc' : 'asc');
-        } else {
-            setSortBy(col);
-            setSortDir('asc');
-        }
+        const isAsc = sortBy === col && sortDir === 'asc';
+        setValues({
+            sortBy: col as 'name' | 'contactName' | 'eventCount',
+            sortDir: sortBy === col ? (isAsc ? 'desc' : 'asc') : 'asc',
+        });
     };
 
     const filtered = organizers
@@ -126,6 +138,10 @@ export default function OrganizersPage({ onNotify }: Props) {
     useEffect(() => {
         focusedOrgRowRef.current?.scrollIntoView({ block: 'nearest' });
     }, [focusedOrgIndex]);
+
+    usePageShortcuts([
+        { key: 'n', alt: true, skip: isDialogOpen, handler: openCreate },
+    ]);
 
     return (
         <Box sx={{ maxWidth: 1100, mx: 'auto' }}>
@@ -353,5 +369,13 @@ export default function OrganizersPage({ onNotify }: Props) {
                 </DialogActions>
             </Dialog>
         </Box>
+    );
+}
+
+export default function OrganizersPage(props: Props) {
+    return (
+        <BilingualLangProvider>
+            <OrganizersPageInner {...props} />
+        </BilingualLangProvider>
     );
 }

@@ -65,3 +65,16 @@ export function sortEditions(a: EventEditionDto, b: EventEditionDto): number {
   if (a.year != null && b.year != null) return b.year - a.year;
   return 0;
 }
+
+// Mirrors backend Event.CancelWithEditions: an event-level cancellation cascades to editions that
+// are not already Completed, not already Cancelled, and whose effective date (EndDate ?? Date) is
+// either undated or still in the future — past-dated Active/Unconfirmed editions are stale data,
+// not upcoming events, and are left untouched by the cascade.
+export function editionsAffectedByEventCancel(editions: EventEditionDto[]): EventEditionDto[] {
+  const today = new Date().toISOString().slice(0, 10);
+  return editions.filter(ed => {
+    if (ed.status === 'Completed' || ed.status === 'Cancelled') return false;
+    const effectiveDate = ed.endDate ?? ed.date;
+    return !effectiveDate || effectiveDate >= today;
+  });
+}

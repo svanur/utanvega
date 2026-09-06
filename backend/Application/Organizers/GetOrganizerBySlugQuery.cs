@@ -61,7 +61,7 @@ public class GetOrganizerBySlugQueryHandler : IRequestHandler<GetOrganizerBySlug
             .ToListAsync(cancellationToken);
 
         return new OrganizerPublicDto(
-            organizer.Id, organizer.Name, organizer.Slug, organizer.Website,
+            organizer.Name, organizer.Slug, organizer.Website,
             organizer.Description, organizer.DescriptionEn, organizer.ContactName,
             events, organizer.SocialLinks
         );

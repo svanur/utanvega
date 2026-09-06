@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Box, Typography, Paper, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, IconButton, Button, TextField, Chip, Dialog,
@@ -14,7 +14,10 @@ import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import { useTags, TagDto } from '../hooks/useTags';
 import { apiFetch } from '../hooks/api';
+import { usePageShortcuts, isDialogOpen } from '../hooks/usePageShortcuts';
+import { useRowFocus } from '../hooks/useRowFocus';
 import BilingualTextField from '../components/BilingualTextField';
+import { BilingualLangProvider } from '../contexts/BilingualLangContext';
 import { useTranslate } from '../hooks/useTranslate';
 import TranslateIcon from '@mui/icons-material/Translate';
 import { trimToUndefined } from '../utils/strings';
@@ -28,7 +31,7 @@ interface TagManagementProps {
   onNotify: (message: React.ReactNode, severity?: 'success' | 'error') => void;
 }
 
-export default function TagManagement({ onNotify }: TagManagementProps) {
+function TagManagementInner({ onNotify }: TagManagementProps) {
   const { tags, loading, refresh } = useTags();
   const [editTag, setEditTag] = useState<{ id?: string; name: string; nameEn?: string; color: string | null; slug?: string } | null>(null);
   const [slugUnlocked, setSlugUnlocked] = useState(false);
@@ -73,6 +76,28 @@ export default function TagManagement({ onNotify }: TagManagementProps) {
     }
   };
 
+  const openCreate = () => {
+    setEditTag({ name: '', color: PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)] });
+    setSlugUnlocked(false);
+  };
+
+  const openEditTag = (tag: TagDto) => {
+    setEditTag({ id: tag.id, name: tag.name, nameEn: tag.nameEn ?? undefined, color: tag.color, slug: tag.slug });
+    setSlugUnlocked(false);
+  };
+
+  usePageShortcuts([
+    { key: 'n', alt: true, skip: isDialogOpen, handler: openCreate },
+  ]);
+
+  // j/k row focus + Enter/o to open the tag edit dialog — scrolled into view
+  // whenever it changes, same pattern as OrganizersPage/PhotographersPage.
+  const { focusedIndex: focusedTagIndex } = useRowFocus(filteredTags, openEditTag);
+  const focusedTagRowRef = useRef<HTMLTableRowElement>(null);
+  useEffect(() => {
+    focusedTagRowRef.current?.scrollIntoView({ block: 'nearest' });
+  }, [focusedTagIndex]);
+
   const handleDelete = async (tag: TagDto) => {
     if (!confirm(`Delete tag "${tag.name}"? It will be removed from ${tag.trailCount} trail(s).`)) return;
     try {
@@ -114,10 +139,7 @@ export default function TagManagement({ onNotify }: TagManagementProps) {
           <Button
             variant="contained"
             startIcon={<AddIcon />}
-            onClick={() => {
-              setEditTag({ name: '', color: PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)] });
-              setSlugUnlocked(false);
-            }}
+            onClick={openCreate}
           >
             New Tag
           </Button>
@@ -135,8 +157,14 @@ export default function TagManagement({ onNotify }: TagManagementProps) {
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredTags.map(tag => (
-              <TableRow key={tag.id}>
+            {filteredTags.map((tag, idx) => (
+              <TableRow
+                key={tag.id}
+                ref={idx === focusedTagIndex ? focusedTagRowRef : undefined}
+                sx={(theme) => ({
+                  ...(idx === focusedTagIndex && { outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: -2 }),
+                })}
+              >
                 <TableCell>
                   <Chip
                     label={tag.name}
@@ -147,10 +175,7 @@ export default function TagManagement({ onNotify }: TagManagementProps) {
                 <TableCell>{tag.slug}</TableCell>
                 <TableCell align="center">{tag.trailCount}</TableCell>
                 <TableCell align="right">
-                  <IconButton size="small" onClick={() => {
-                    setEditTag({ id: tag.id, name: tag.name, nameEn: tag.nameEn ?? undefined, color: tag.color, slug: tag.slug });
-                    setSlugUnlocked(false);
-                  }}>
+                  <IconButton size="small" onClick={() => openEditTag(tag)}>
                     <EditIcon fontSize="small" />
                   </IconButton>
                   <IconButton size="small" color="error" onClick={() => handleDelete(tag)}>
@@ -267,5 +292,13 @@ export default function TagManagement({ onNotify }: TagManagementProps) {
         </DialogActions>
       </Dialog>
     </Box>
+  );
+}
+
+export default function TagManagement(props: TagManagementProps) {
+  return (
+    <BilingualLangProvider>
+      <TagManagementInner {...props} />
+    </BilingualLangProvider>
   );
 }

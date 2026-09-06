@@ -20,6 +20,7 @@ const TrailDetailsPage = lazy(() => import('./pages/TrailDetailsPage'));
 const LocationsPage = lazy(() => import('./pages/LocationsPage'));
 const LocationDetailsPage = lazy(() => import('./pages/LocationDetailsPage'));
 const OrganizerDetailPage = lazy(() => import('./pages/OrganizerDetailPage'));
+const PhotographerDetailPage = lazy(() => import('./pages/PhotographerDetailPage'));
 const AboutPage = lazy(() => import('./pages/AboutPage'));
 const ChangelogDiaryPage = lazy(() => import('./pages/ChangelogDiaryPage'));
 const MediaPage = lazy(() => import('./pages/MediaPage'));
@@ -152,6 +153,10 @@ export default function App() {
                     <Route
                         path="/organizers/:slug"
                         element={<OrganizerDetailPage mode={mode} onToggleMode={handleToggleMode} />}
+                    />
+                    <Route
+                        path="/photographers/:slug"
+                        element={<PhotographerDetailPage mode={mode} onToggleMode={handleToggleMode} />}
                     />
                     <Route
                         path="/about"

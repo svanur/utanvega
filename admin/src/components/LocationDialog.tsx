@@ -17,6 +17,7 @@ import { apiFetch } from '../hooks/api';
 import { useTranslate } from '../hooks/useTranslate';
 import BilingualTextField from './BilingualTextField';
 import ChangeLogList from './ChangeLogList';
+import { BilingualLangProvider } from '../contexts/BilingualLangContext';
 
 // Fix for default Leaflet marker icon
 // @ts-expect-error - Leaflet internal _getIconUrl not in type definitions
@@ -193,7 +194,7 @@ function MapPicker({ lat, lon, radius, onUpdate, onRadiusUpdate: _onRadiusUpdate
     );
 }
 
-export function LocationDialog({ open, onClose, onSaveSuccess, onNotify, location, allLocations }: LocationDialogProps) {
+function LocationDialogInner({ open, onClose, onSaveSuccess, onNotify, location, allLocations }: LocationDialogProps) {
     const [name, setName] = useState('');
     const [nameEn, setNameEn] = useState('');
     const [slug, setSlug] = useState('');
@@ -371,6 +372,7 @@ export function LocationDialog({ open, onClose, onSaveSuccess, onNotify, locatio
                                             {...params}
                                             label="Name"
                                             required
+                                            autoFocus
                                             InputProps={{
                                                 ...params.InputProps,
                                                 endAdornment: (
@@ -608,5 +610,13 @@ export function LocationDialog({ open, onClose, onSaveSuccess, onNotify, locatio
                 </Box>
             </DialogActions>
         </Dialog>
+    );
+}
+
+export function LocationDialog(props: LocationDialogProps) {
+    return (
+        <BilingualLangProvider>
+            <LocationDialogInner {...props} />
+        </BilingualLangProvider>
     );
 }

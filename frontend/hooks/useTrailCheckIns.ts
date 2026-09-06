@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from './supabase';
-import { useAuth } from './useAuth';
+import { useAuth } from './useAuthContext';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 

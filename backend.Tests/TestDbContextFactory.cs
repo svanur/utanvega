@@ -76,7 +76,14 @@ internal class TestDbContext : UtanvegaDbContext
             entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
             entity.Property(e => e.Slug).IsRequired().HasMaxLength(250);
             entity.HasIndex(e => e.Slug).IsUnique();
-            entity.Ignore(e => e.Center); // SQLite can't store NTS Point
+            // SQLite has no PostGIS geometry column — round-trip via WKB (2D, no elevation)
+            // the same way GpxData does above, so tests exercising LocationDetector
+            // (GetAllLocationCenters filters on Center != null && Radius != null) see real
+            // geometry instead of it silently vanishing to null.
+            entity.Property(e => e.Center).HasConversion(
+                v => v == null ? null : new WKBWriter { HandleOrdinates = Ordinates.XY }.Write(v),
+                v => v == null ? null : (Point)new WKBReader { HandleOrdinates = Ordinates.XY }.Read(v)
+            );
             entity.Property(e => e.Type).HasConversion<string>();
             entity.HasOne(e => e.Parent)
                   .WithMany(e => e.Children)
@@ -185,6 +192,18 @@ internal class TestDbContext : UtanvegaDbContext
             );
         });
 
+        modelBuilder.Entity<Core.Entities.Photographer>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Slug).IsRequired().HasMaxLength(200);
+            entity.HasIndex(e => e.Slug).IsUnique();
+            entity.Property(e => e.SocialLinks).HasConversion(
+                v => v == null ? null : JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                v => v == null ? null : JsonSerializer.Deserialize<System.Collections.Generic.List<Core.Entities.SocialLink>>(v, (JsonSerializerOptions?)null)
+            );
+        });
+
         modelBuilder.Entity<Core.Entities.EventEdition>(entity =>
         {
             entity.HasKey(e => e.Id);
@@ -203,6 +222,23 @@ internal class TestDbContext : UtanvegaDbContext
             entity.HasOne(e => e.Trail)
                   .WithMany()
                   .HasForeignKey(e => e.TrailId)
+                  .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<Core.Entities.PhotoGallery>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Url).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.Title).HasMaxLength(200);
+            entity.Property(e => e.TitleEn).HasMaxLength(200);
+            entity.Property(e => e.CreatedBy).HasMaxLength(200);
+            entity.HasOne(e => e.EventEdition)
+                  .WithMany(ed => ed.PhotoGalleries)
+                  .HasForeignKey(e => e.EventEditionId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Photographer)
+                  .WithMany(p => p.PhotoGalleries)
+                  .HasForeignKey(e => e.PhotographerId)
                   .OnDelete(DeleteBehavior.SetNull);
         });
 

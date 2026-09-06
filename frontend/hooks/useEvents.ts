@@ -17,6 +17,18 @@ export interface SocialLink {
     url: string;
 }
 
+// Mirrors backend's PublicPhotoGalleryDto — a narrowed, public-facing projection of PhotoGallery
+// that deliberately withholds id/createdBy/moderation fields. Always an array (never null) and
+// always pre-sorted by sortOrder by the backend.
+export interface PublicPhotoGallery {
+    url: string;
+    title: string | null;
+    titleEn: string | null;
+    photographerName: string | null;
+    photographerSlug: string | null;
+    sortOrder: number;
+}
+
 export interface SeriesRaceDto {
     raceId: string;
     raceName: string;
@@ -59,7 +71,7 @@ export interface EventSummary {
     registrationUrl: string | null;
     registrationStatus: string | null;
     resultsUrl: string | null;
-    photoGalleryUrl: string | null;
+    galleries: PublicPhotoGallery[];
     certifications: string[] | null;
     youtubeUrl: string | null;
     championshipCategories: string[] | null;
@@ -117,7 +129,7 @@ export interface EventEditionDto {
     titleEn: string | null;
     registrationUrl: string | null;
     resultsUrl: string | null;
-    photoGalleryUrl: string | null;
+    galleries: PublicPhotoGallery[];
     notes: string | null;
     notesEn: string | null;
     registrationStatus: string | null;
@@ -245,7 +257,7 @@ export interface EditionHistoryRow {
     effectiveCancelled: boolean;
     distances: { label: string; ticketStatus: string | null }[];
     resultsUrl: string | null;
-    photoGalleryUrl: string | null;
+    galleries: PublicPhotoGallery[];
     activityTypes: string[] | null;
     eventActivityType: string;
     raceId: string | null;

@@ -158,7 +158,6 @@ export default function GuessByElevation() {
 
         setup();
         return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [trails, roundTrigger]);
 
     // Cycling animation

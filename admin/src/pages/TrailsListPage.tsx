@@ -9,6 +9,7 @@ import { useTrails, Trail } from '../hooks/useTrails';
 import { useTags } from '../hooks/useTags';
 import { useLocations } from '../hooks/useLocations';
 import { useRowFocus } from '../hooks/useRowFocus';
+import { useUrlFilterState } from '../hooks/useUrlFilterState';
 import { apiFetch } from '../hooks/api';
 import TrailToolsPanel from '../components/TrailToolsPanel';
 import TrailFilterBar from '../components/TrailFilterBar';
@@ -17,9 +18,39 @@ import { TrailMapDialog, DeleteTrailDialog, BulkUploadDialog } from '../componen
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
-export default function TrailsListPage({ onNotify, initialSearch }: { onNotify: (message: React.ReactNode, severity?: 'success' | 'error') => void, initialSearch?: string | null }) {
+// Mirrors the options TrailFilterBar actually offers — an unrecognized value (stale bookmark,
+// hand-edited URL) falls back to the field's default rather than silently filtering to nothing.
+const TRAILS_FILTER_SCHEMA = {
+  search: { default: '' },
+  statusFilter: { default: 'all', allowed: ['all', 'Draft', 'Published', 'EventOnly', 'Archived'] },
+  typeFilter: { default: 'all', allowed: ['all', 'Loop', 'OutAndBack', 'PointToPoint'] },
+  activityFilter: { default: 'all', allowed: ['all', 'TrailRunning', 'Running', 'Hiking', 'Cycling'] },
+  locationFilter: { default: 'all' },
+  yearFilter: { default: 'all' },
+  monthFilter: { default: 'all', allowed: ['all', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'] },
+  orderBy: { default: 'updatedAt', allowed: ['name', 'length', 'elevationGain', 'trailType', 'status', 'updatedAt'] },
+  order: { default: 'desc', allowed: ['asc', 'desc'] },
+  needsReviewOnly: { default: 'false', allowed: ['true', 'false'] },
+  includeArchived: { default: 'false', allowed: ['true', 'false'] },
+} as const;
+
+export default function TrailsListPage({ onNotify }: { onNotify: (message: React.ReactNode, severity?: 'success' | 'error') => void }) {
   const navigate = useNavigate();
-  const [includeArchived, setIncludeArchived] = useState(false);
+  const { values, setValue, setValues, reset: resetUrlFilters } = useUrlFilterState(TRAILS_FILTER_SCHEMA);
+  const search = values.search;
+  const setSearch = useCallback((v: string) => setValue('search', v), [setValue]);
+  const statusFilter = values.statusFilter;
+  const typeFilter = values.typeFilter;
+  const activityFilter = values.activityFilter;
+  const locationFilter = values.locationFilter;
+  const yearFilter = values.yearFilter;
+  const monthFilter = values.monthFilter;
+  const orderBy = values.orderBy;
+  const order = values.order as 'asc' | 'desc';
+  const needsReviewOnly = values.needsReviewOnly === 'true';
+  const includeArchived = values.includeArchived === 'true';
+  const setIncludeArchived = useCallback((v: boolean) => setValue('includeArchived', v ? 'true' : 'false'), [setValue]);
+
   const { trails, setTrails, loading, error, refresh } = useTrails(includeArchived);
   const { tags } = useTags();
   const { locations: allLocations } = useLocations();
@@ -38,21 +69,6 @@ export default function TrailsListPage({ onNotify, initialSearch }: { onNotify: 
     return () => window.removeEventListener('admin:toggle-tools', handler);
   }, []);
 
-  const [search, setSearch] = useState(initialSearch || '');
-
-  useEffect(() => {
-    if (initialSearch != null) setSearch(initialSearch);
-  }, [initialSearch]);
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [typeFilter, setTypeFilter] = useState<string>('all');
-  const [activityFilter, setActivityFilter] = useState<string>('all');
-  const [locationFilter, setLocationFilter] = useState<string>('all');
-  const [yearFilter, setYearFilter] = useState<string>('all');
-  const [monthFilter, setMonthFilter] = useState<string>('all');
-  const [orderBy, setOrderBy] = useState<string>('updatedAt');
-  const [order, setOrder] = useState<'asc' | 'desc'>('desc');
-  const [needsReviewOnly, setNeedsReviewOnly] = useState(false);
-
   const locationOptions = useMemo(() => {
     const names = new Set<string>();
     trails.forEach(t => t.locations?.forEach(l => names.add(l.name)));
@@ -61,7 +77,7 @@ export default function TrailsListPage({ onNotify, initialSearch }: { onNotify: 
 
   const yearOptions = useMemo(() => {
     const years = trails
-      .map(t => t.updatedAt?.slice(0, 4))
+      .map(t => (t.updatedAt ?? t.createdAt)?.slice(0, 4))
       .filter((y): y is string => !!y);
     return [...new Set(years)].sort((a, b) => b.localeCompare(a));
   }, [trails]);
@@ -79,8 +95,8 @@ export default function TrailsListPage({ onNotify, initialSearch }: { onNotify: 
         const matchesLocation = locationFilter === 'all'
           || (locationFilter === 'none' && (!trail.locations || trail.locations.length === 0))
           || trail.locations?.some(l => l.name === locationFilter);
-        const matchesYear = yearFilter === 'all' || (trail.updatedAt ?? '').slice(0, 4) === yearFilter;
-        const matchesMonth = monthFilter === 'all' || (trail.updatedAt ?? '').slice(5, 7) === monthFilter;
+        const matchesYear = yearFilter === 'all' || (trail.updatedAt ?? trail.createdAt ?? '').slice(0, 4) === yearFilter;
+        const matchesMonth = monthFilter === 'all' || (trail.updatedAt ?? trail.createdAt ?? '').slice(5, 7) === monthFilter;
         const matchesReview = !needsReviewOnly || trail.needsReview === true;
         return matchesSearch && matchesStatus && matchesType && matchesActivity && matchesLocation && matchesYear && matchesMonth && matchesReview;
       })
@@ -89,8 +105,10 @@ export default function TrailsListPage({ onNotify, initialSearch }: { onNotify: 
         let comparison = 0;
 
         if (orderBy === 'updatedAt') {
-          const aTime = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
-          const bTime = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+          const aDate = a.updatedAt ?? a.createdAt;
+          const bDate = b.updatedAt ?? b.createdAt;
+          const aTime = aDate ? new Date(aDate).getTime() : 0;
+          const bTime = bDate ? new Date(bDate).getTime() : 0;
           comparison = aTime - bTime;
         } else {
           const aValue = (a as unknown as Record<string, string | number>)[orderBy];
@@ -109,22 +127,11 @@ export default function TrailsListPage({ onNotify, initialSearch }: { onNotify: 
 
   const handleRequestSort = (property: string) => {
     const isAsc = orderBy === property && order === 'asc';
-    setOrder(isAsc ? 'desc' : 'asc');
-    setOrderBy(property);
+    setValues({ orderBy: property, order: isAsc ? 'desc' : 'asc' });
   };
 
   const handleResetFilters = () => {
-    setSearch('');
-    setStatusFilter('all');
-    setTypeFilter('all');
-    setActivityFilter('all');
-    setLocationFilter('all');
-    setYearFilter('all');
-    setMonthFilter('all');
-    setOrderBy('updatedAt');
-    setOrder('desc');
-    setIncludeArchived(false);
-    setNeedsReviewOnly(false);
+    resetUrlFilters();
   };
 
   const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -376,27 +383,26 @@ export default function TrailsListPage({ onNotify, initialSearch }: { onNotify: 
         onSearchChange={setSearch}
         statusFilter={statusFilter}
         onStatusFilterChange={(s) => {
-          setStatusFilter(s);
           // The API omits archived trails unless asked for them, so filtering by Archived
           // without this returns an empty table no matter how many archived trails exist.
-          if (s === 'Archived') setIncludeArchived(true);
+          setValues(s === 'Archived' ? { statusFilter: s, includeArchived: 'true' } : { statusFilter: s });
         }}
         typeFilter={typeFilter}
-        onTypeFilterChange={setTypeFilter}
+        onTypeFilterChange={(v) => setValue('typeFilter', v)}
         activityFilter={activityFilter}
-        onActivityFilterChange={setActivityFilter}
+        onActivityFilterChange={(v) => setValue('activityFilter', v)}
         locationFilter={locationFilter}
-        onLocationFilterChange={setLocationFilter}
+        onLocationFilterChange={(v) => setValue('locationFilter', v)}
         locationOptions={locationOptions}
         yearFilter={yearFilter}
-        onYearFilterChange={(y) => { setYearFilter(y); setMonthFilter('all'); }}
+        onYearFilterChange={(y) => setValues({ yearFilter: y, monthFilter: 'all' })}
         monthFilter={monthFilter}
-        onMonthFilterChange={setMonthFilter}
+        onMonthFilterChange={(v) => setValue('monthFilter', v)}
         yearOptions={yearOptions}
         months={MONTHS}
         includeArchived={includeArchived}
         needsReviewOnly={needsReviewOnly}
-        onNeedsReviewOnlyChange={setNeedsReviewOnly}
+        onNeedsReviewOnlyChange={(v) => setValue('needsReviewOnly', v ? 'true' : 'false')}
         onResetFilters={handleResetFilters}
       />
 

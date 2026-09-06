@@ -60,6 +60,23 @@ export function getCountdownColor(daysUntil: number | null): 'success' | 'warnin
     return 'success';
 }
 
+// The backend pins daysUntil to 0 for an edition's entire ongoing span (start through end date),
+// not just race day. Past the 2nd calendar day, a pulsing "Today!" chip is misleading — this
+// distinguishes "just started" (still show Today!) from "still going" (show a calmer Ongoing chip).
+export function isOngoingPastDayTwo(
+    daysUntil: number | null,
+    displayDate: string | null,
+    endDisplayDate: string | null | undefined,
+): boolean {
+    if (daysUntil !== 0) return false;
+    if (!displayDate || !endDisplayDate || endDisplayDate === displayDate) return false;
+    const start = new Date(displayDate + 'T00:00:00');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const elapsedDays = Math.round((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    return elapsedDays >= 2;
+}
+
 export function getCountdownLabel(daysUntil: number | null, t: TFunc): string {
     if (daysUntil === null) return t('races.noDate');
     if (daysUntil === 0) return t('races.today');
@@ -67,6 +84,31 @@ export function getCountdownLabel(daysUntil: number | null, t: TFunc): string {
     if (daysUntil === -1) return t('races.yesterday');
     if (daysUntil < -1) return t('races.daysAgo', { count: Math.abs(daysUntil) });
     return t('races.daysUntil', { count: daysUntil });
+}
+
+export function toDateOnlyString(date: Date): string {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+// For a multi-day edition currently in progress, computes which day of its date/endDate span
+// "today" falls on — powers a "Day X of Y" indicator (e.g. day 2 of a 3-day stage race). Returns
+// null for single-day editions, or when today is outside [date, endDate] (both inclusive) — a
+// multi-day edition that hasn't started yet or has already ended shows no indicator.
+export function getMultiDayEditionProgress(
+    date: string | null | undefined,
+    endDate: string | null | undefined,
+    now: Date = new Date(),
+): { day: number; totalDays: number } | null {
+    if (!date || !endDate || endDate === date) return null;
+    const start = new Date(date + 'T00:00:00');
+    const end = new Date(endDate + 'T00:00:00');
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+    if (today < start || today > end) return null;
+    const msPerDay = 1000 * 60 * 60 * 24;
+    const totalDays = Math.round((end.getTime() - start.getTime()) / msPerDay) + 1;
+    const day = Math.round((today.getTime() - start.getTime()) / msPerDay) + 1;
+    return { day, totalDays };
 }
 
 export function formatRaceDateTime(

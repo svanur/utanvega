@@ -1,3 +1,5 @@
+using Moq;
+using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Application.Events.Commands.PatchEventStatus;
 using Utanvega.Backend.Application.Events.Queries.GetRaceDayEditions;
 using Utanvega.Backend.Application.Events.Queries.GetNextRaceDay;
@@ -9,6 +11,7 @@ namespace Utanvega.Backend.Tests.Handlers;
 public class RaceManagerHandlerTests : IDisposable
 {
     private readonly TestDbContextFactory _factory;
+    private readonly ICacheInvalidator _cacheInvalidator = new Mock<ICacheInvalidator>().Object;
 
     public RaceManagerHandlerTests()
     {
@@ -60,7 +63,7 @@ public class RaceManagerHandlerTests : IDisposable
         db.Events.Add(ev);
         await db.SaveChangesAsync();
 
-        var handler = new PatchEventStatusCommandHandler(_factory.CreateContext());
+        var handler = new PatchEventStatusCommandHandler(_factory.CreateContext(), _cacheInvalidator);
         var result = await handler.Handle(new PatchEventStatusCommand(ev.Id, "Cancelled"), CancellationToken.None);
 
         Assert.True(result);
@@ -72,7 +75,7 @@ public class RaceManagerHandlerTests : IDisposable
     [Fact]
     public async Task PatchEventStatus_ReturnsFalse_ForUnknownEvent()
     {
-        var handler = new PatchEventStatusCommandHandler(_factory.CreateContext());
+        var handler = new PatchEventStatusCommandHandler(_factory.CreateContext(), _cacheInvalidator);
 
         var result = await handler.Handle(new PatchEventStatusCommand(Guid.NewGuid(), "Confirmed"), CancellationToken.None);
 
@@ -94,7 +97,7 @@ public class RaceManagerHandlerTests : IDisposable
         db.Events.Add(ev);
         await db.SaveChangesAsync();
 
-        var handler = new PatchEventStatusCommandHandler(_factory.CreateContext());
+        var handler = new PatchEventStatusCommandHandler(_factory.CreateContext(), _cacheInvalidator);
         var result = await handler.Handle(new PatchEventStatusCommand(ev.Id, "NotAStatus"), CancellationToken.None);
 
         Assert.False(result);
@@ -120,12 +123,106 @@ public class RaceManagerHandlerTests : IDisposable
         db.Events.Add(ev);
         await db.SaveChangesAsync();
 
-        var handler = new PatchEventStatusCommandHandler(_factory.CreateContext());
+        var handler = new PatchEventStatusCommandHandler(_factory.CreateContext(), _cacheInvalidator);
         var result = await handler.Handle(new PatchEventStatusCommand(ev.Id, "confirmed"), CancellationToken.None);
 
         Assert.True(result);
         using var verify = _factory.CreateContext();
         Assert.Equal(EventStatus.Confirmed, (await verify.Events.FindAsync(ev.Id))!.Status);
+    }
+
+    [Fact]
+    public async Task PatchEventStatus_CancellingEvent_CascadesToFutureEdition()
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var (ev, edition) = await SeedEdition(today.AddDays(30));
+        using (var db = _factory.CreateContext())
+        {
+            var found = await db.EventEditions.FindAsync(edition.Id);
+            found!.Status = EditionStatus.Active;
+            await db.SaveChangesAsync();
+        }
+
+        var handler = new PatchEventStatusCommandHandler(_factory.CreateContext(), _cacheInvalidator);
+        var result = await handler.Handle(new PatchEventStatusCommand(ev.Id, "Cancelled"), CancellationToken.None);
+
+        Assert.True(result);
+        using var verify = _factory.CreateContext();
+        Assert.Equal(EventStatus.Cancelled, (await verify.Events.FindAsync(ev.Id))!.Status);
+        Assert.Equal(EditionStatus.Cancelled, (await verify.EventEditions.FindAsync(edition.Id))!.Status);
+    }
+
+    [Fact]
+    public async Task PatchEventStatus_CancellingEvent_InvalidatesEventCache()
+    {
+        // The public site must not keep serving a stale "active" page after a cascade-cancel
+        // through this endpoint — matches CancelEventCommand/CancelEditionCommand's pattern.
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var (ev, _) = await SeedEdition(today.AddDays(30));
+        var cacheInvalidator = new Mock<ICacheInvalidator>();
+
+        var handler = new PatchEventStatusCommandHandler(_factory.CreateContext(), cacheInvalidator.Object);
+        await handler.Handle(new PatchEventStatusCommand(ev.Id, "Cancelled"), CancellationToken.None);
+
+        cacheInvalidator.Verify(c => c.InvalidateEvent(ev.Slug), Times.Once);
+    }
+
+    [Fact]
+    public async Task PatchEventStatus_NonCancellingChange_DoesNotInvalidateEventCache()
+    {
+        // Only the cascade-into-Cancelled path is covered by this endpoint's invalidation — a plain
+        // status change (e.g. Unconfirmed -> Confirmed) doesn't cascade, so there's nothing here
+        // that requires invalidating the event's public cache entry.
+        var (ev, _) = await SeedEdition(DateOnly.FromDateTime(DateTime.UtcNow).AddDays(30), status: EventStatus.Unconfirmed);
+        var cacheInvalidator = new Mock<ICacheInvalidator>();
+
+        var handler = new PatchEventStatusCommandHandler(_factory.CreateContext(), cacheInvalidator.Object);
+        await handler.Handle(new PatchEventStatusCommand(ev.Id, "Confirmed"), CancellationToken.None);
+
+        cacheInvalidator.Verify(c => c.InvalidateEvent(It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task PatchEventStatus_CancellingEvent_LeavesPastDatedEditionUntouched()
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var (ev, edition) = await SeedEdition(today.AddDays(-30));
+        using (var db = _factory.CreateContext())
+        {
+            var found = await db.EventEditions.FindAsync(edition.Id);
+            found!.Status = EditionStatus.Active;
+            await db.SaveChangesAsync();
+        }
+
+        var handler = new PatchEventStatusCommandHandler(_factory.CreateContext(), _cacheInvalidator);
+        await handler.Handle(new PatchEventStatusCommand(ev.Id, "Cancelled"), CancellationToken.None);
+
+        using var verify = _factory.CreateContext();
+        Assert.Equal(EditionStatus.Active, (await verify.EventEditions.FindAsync(edition.Id))!.Status);
+    }
+
+    [Fact]
+    public async Task PatchEventStatus_ReactivatingCancelledEvent_DoesNotCascadeToEditions()
+    {
+        // Reactivation must not be treated symmetrically with cancellation: an edition that was
+        // separately cancelled while the event was cancelled stays cancelled — moving the event
+        // back to Confirmed doesn't imply the editions/races should un-cancel too.
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var (ev, edition) = await SeedEdition(today.AddDays(30), status: EventStatus.Cancelled);
+        using (var db = _factory.CreateContext())
+        {
+            var found = await db.EventEditions.FindAsync(edition.Id);
+            found!.Status = EditionStatus.Cancelled;
+            await db.SaveChangesAsync();
+        }
+
+        var handler = new PatchEventStatusCommandHandler(_factory.CreateContext(), _cacheInvalidator);
+        var result = await handler.Handle(new PatchEventStatusCommand(ev.Id, "Confirmed"), CancellationToken.None);
+
+        Assert.True(result);
+        using var verify = _factory.CreateContext();
+        Assert.Equal(EventStatus.Confirmed, (await verify.Events.FindAsync(ev.Id))!.Status);
+        Assert.Equal(EditionStatus.Cancelled, (await verify.EventEditions.FindAsync(edition.Id))!.Status);
     }
 
     // ── GetRaceDayEditions ────────────────────────────────────────────────────

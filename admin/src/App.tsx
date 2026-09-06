@@ -13,6 +13,7 @@ import ViewDayOutlinedIcon from '@mui/icons-material/ViewDayOutlined';
 import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
 import PoolIcon from '@mui/icons-material/Pool';
 import GroupIcon from '@mui/icons-material/Group';
+import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
@@ -51,6 +52,8 @@ const HeroThemesPage = lazy(() => import('./pages/HeroThemesPage'));
 const SponsorsPage = lazy(() => import('./pages/SponsorsPage'));
 const OrganizersPage = lazy(() => import('./pages/OrganizersPage'));
 const OrganizerDetailPage = lazy(() => import('./pages/OrganizerDetailPage'));
+const PhotographersPage = lazy(() => import('./pages/PhotographersPage'));
+const PhotographerDetailPage = lazy(() => import('./pages/PhotographerDetailPage'));
 const PoolsPage = lazy(() => import('./pages/PoolsPage'));
 const TranslationHealth = lazy(() => import('./pages/TranslationHealth'));
 const RaceDayPage = lazy(() => import('./pages/RaceDayPage'));
@@ -79,6 +82,7 @@ const PAGE_PATHS: Record<PageKey, string> = {
   trails: '/trails',
   locations: '/locations',
   organizers: '/organizers',
+  photographers: '/photographers',
   health: '/health',
   'event-health': '/event-health',
   'edition-health': '/edition-health',
@@ -98,6 +102,7 @@ function pathToPage(pathname: string): PageKey {
   if (pathname.startsWith('/events')) return 'events';
   if (pathname.startsWith('/trails')) return 'trails';
   if (pathname.startsWith('/organizers')) return 'organizers';
+  if (pathname.startsWith('/photographers')) return 'photographers';
   const entry = Object.entries(PAGE_PATHS).find(([, path]) => path === pathname);
   return (entry?.[0] as PageKey) ?? 'dashboard';
 }
@@ -126,7 +131,6 @@ function AdminContent() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [raceDayInitialDate, setRaceDayInitialDate] = useState<string | undefined>(undefined);
   const [createEventIntent, setCreateEventIntent] = useState(false);
-  const [searchTerm, setSearchTerm] = useState<string | null>(null);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [pendingNav, setPendingNav] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean, message: React.ReactNode, severity: 'success' | 'error' }>({
@@ -301,6 +305,7 @@ function AdminContent() {
               { key: 'race-day' as const,            icon: <FlagIcon />,                                      label: 'Race Manager' },
               { key: 'locations' as const,           icon: <LocationOnIcon />,                                label: 'Locations' },
               { key: 'organizers' as const,          icon: <GroupIcon />,                                     label: 'Organizers' },
+              { key: 'photographers' as const,       icon: <CameraAltIcon />,                                 label: 'Photographers' },
               { key: 'tags' as const,                icon: <LocalOfferIcon />,                                label: 'Tags' },
               { key: 'features' as const,            icon: <ToggleOnIcon />,                                  label: 'Features' },
               { key: 'health' as const,              icon: <HealthAndSafetyIcon />,                           label: 'Trail Health' },
@@ -356,7 +361,7 @@ function AdminContent() {
           ) : currentPage === 'trails' ? (
             <Routes>
               <Route path="/trails/:idOrSlug" element={<TrailDetailPage onNotify={notify} />} />
-              <Route path="/trails" element={<TrailsListPage onNotify={notify} initialSearch={searchTerm} />} />
+              <Route path="/trails" element={<TrailsListPage onNotify={notify} />} />
             </Routes>
           ) : currentPage === 'health' ? (
             <TrailHealth onEditTrail={(id) => navigate(`/trails/${id}`)} onNotify={notify} />
@@ -398,6 +403,11 @@ function AdminContent() {
             <Routes>
               <Route path="/organizers/:slug" element={<OrganizerDetailPage onNotify={notify} />} />
               <Route path="/organizers" element={<OrganizersPage onNotify={notify} />} />
+            </Routes>
+          ) : currentPage === 'photographers' ? (
+            <Routes>
+              <Route path="/photographers/:slug" element={<PhotographerDetailPage onNotify={notify} />} />
+              <Route path="/photographers" element={<PhotographersPage onNotify={notify} />} />
             </Routes>
           ) : currentPage === 'race-day' ? (
             <RaceDayPage
@@ -444,8 +454,9 @@ function AdminContent() {
       <AdminSpotlightSearch
         onEditTrail={(id) => navigate(`/trails/${id}`)}
         onEditEvent={(slug) => navigate(`/events/${slug}`)}
+        onEditPhotographer={(slug) => navigate(`/photographers/${slug}`)}
         onNavigate={(page) => setCurrentPage(page as PageKey)}
-        onFilterTrails={(term) => { setSearchTerm(term); setCurrentPage('trails'); }}
+        onFilterTrails={(term) => navigate(`/trails?search=${encodeURIComponent(term)}`)}
       />
       <KeyboardShortcutsDialog open={showShortcuts} onClose={() => setShowShortcuts(false)} />
     </Box>

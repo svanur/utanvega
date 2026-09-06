@@ -48,7 +48,21 @@ Your call.
 
 Escalating is a correct outcome, not a failure. Two agents disagreeing three times means the question is a judgement call, and judgement calls are yours.
 
-## Step 5 — Hand back and stop
+## Step 5 — Capture the leftovers
+
+Before reporting, send the `scrum-master` agent back in — **capture mode** — with the PR number and
+the cycle's "Spotted but not fixed" and out-of-scope notes.
+
+Its job is to turn the durable ones into tracked issues, because a note in a PR body is visible but
+not tracked, and visible-but-untracked is how these get lost.
+
+It files **unlabelled** issues — never `agent-ready`. They are inert: nothing picks them up, and the
+owner closes or labels them at leisure.
+
+Skip this step entirely if the cycle ended `BLOCKED` or escalated — there is no merged work to
+review, and the escalation itself is the report.
+
+## Step 6 — Hand back and stop
 
 On `GOOD_TO_MERGE`, report:
 
@@ -63,10 +77,19 @@ Checks:  <what the Programmer actually ran, and results>
 
 Review verdict: GOOD TO MERGE
 Non-blocking items the Tester raised: <list, or none>
-Spotted but not fixed: <list, or none>
+
+Filed as follow-ups (not agent-ready):
+  <#n  title, or "none">
+
+Needs your attention before the next cycle:
+  <blocking discoveries, or "none">
 
 Merge when you're happy with it. Type /go for the next issue.
 ```
+
+**Keep those two sections distinct.** A follow-up is something the owner can ignore for a month. A
+blocking discovery — a dependency that does not exist, an assumption the work proved wrong — changes
+what the next cycle should do, and belongs in front of them now, not filed and forgotten.
 
 Then **end your turn**. Do not merge. Do not continue.
 

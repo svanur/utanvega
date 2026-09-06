@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Application.Events.Queries.GetEvents;
+using Utanvega.Backend.Application.PhotoGalleries;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Infrastructure.Persistence;
 
@@ -22,7 +23,11 @@ public record EditionHistoryRowDto(
     bool EffectiveCancelled,
     List<RaceDistanceSummaryDto> Distances,
     string? ResultsUrl,
-    string? PhotoGalleryUrl,
+    // #548: measured against local dev data for the (partial, year-to-date) 2026 history response —
+    // 9 rows, 3 carrying at least one gallery: 5145 bytes serialized without this field vs. 5659
+    // bytes with it, a +514 byte (~10%) delta for that sample. Scales with gallery count per edition,
+    // not with row count alone, since most editions still have an empty list.
+    List<PublicPhotoGalleryDto> Galleries,
     List<string>? ActivityTypes,
     string EventActivityType,
     Guid? RaceId,
@@ -71,6 +76,8 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
             .Include(ed => ed.Event)
                 .ThenInclude(ev => ev.Location)
             .Include(ed => ed.Races)
+            .Include(ed => ed.PhotoGalleries)
+                .ThenInclude(g => g.Photographer)
             .Where(ed =>
                 ed.Status != EditionStatus.Hidden &&
                 ed.Event.Status != EventStatus.Hidden &&
@@ -171,7 +178,7 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
             effectiveCancelled,
             distances,
             ed.ResultsUrl,
-            ed.PhotoGalleryUrl,
+            ed.PhotoGalleries.ToPublicDtos(),
             activityTypes.Count > 0 ? activityTypes : null,
             ed.Event.ActivityType.ToString(),
             raceId,

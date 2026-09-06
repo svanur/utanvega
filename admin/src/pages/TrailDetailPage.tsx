@@ -34,6 +34,7 @@ import ArchiveIcon from '@mui/icons-material/Archive';
 import RestoreIcon from '@mui/icons-material/Restore';
 import { useTrailDetail, useTrailRaces, useInvalidateTrailData, trailStatusLabel, type TrailDetail, type TrailLinkedRace } from '../hooks/useTrails';
 import { usePageShortcuts } from '../hooks/usePageShortcuts';
+import { useBackToList } from '../hooks/useBackToList';
 import { useLocations } from '../hooks/useLocations';
 import { useTags } from '../hooks/useTags';
 import { apiFetch } from '../hooks/api';
@@ -229,6 +230,8 @@ export default function TrailDetailPage({ onNotify }: { onNotify: (message: Reac
   const [showAddTag, setShowAddTag] = useState(false);
   const [statusLegendOpen, setStatusLegendOpen] = useState(false);
 
+  const handleBackToList = useBackToList('/trails');
+
   usePageShortcuts([
     { key: 'u', handler: () => navigate(-1) },
     { key: 'e', handler: () => setEditingTrail(v => !v) },
@@ -387,7 +390,7 @@ export default function TrailDetailPage({ onNotify }: { onNotify: (message: Reac
     <Box>
       {/* Breadcrumb */}
       <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 2 }}>
-        <IconButton size="small" component={RouterLink} to="/trails">
+        <IconButton size="small" onClick={handleBackToList}>
           <ArrowBackIcon fontSize="small" />
         </IconButton>
         <Typography
@@ -395,7 +398,12 @@ export default function TrailDetailPage({ onNotify }: { onNotify: (message: Reac
           color="text.secondary"
           component={RouterLink}
           to="/trails"
-          sx={{ textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+          onClick={e => {
+            if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+            e.preventDefault();
+            handleBackToList();
+          }}
+          sx={{ cursor: 'pointer', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
         >
           Trails
         </Typography>

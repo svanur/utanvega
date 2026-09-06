@@ -35,7 +35,6 @@ public class EventEdition
     public string? TitleEn { get; set; }
     public string? RegistrationUrl { get; set; }
     public string? ResultsUrl { get; set; }
-    public string? PhotoGalleryUrl { get; set; }
     public string? Notes { get; set; }
     public string? NotesEn { get; set; }
 
@@ -49,6 +48,7 @@ public class EventEdition
 
     // Navigation
     public ICollection<Race> Races { get; set; } = new List<Race>();
+    public ICollection<PhotoGallery> PhotoGalleries { get; set; } = new List<PhotoGallery>();
 
     // Cancelling an edition always cascades: its races are force-set to Cancelled and registration
     // is closed, regardless of which admin action (dedicated Cancel button, or the generic Status

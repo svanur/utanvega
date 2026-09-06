@@ -12,8 +12,6 @@ import {
     IconButton,
     Collapse,
     Button,
-    FormControl,
-    InputLabel,
     Select,
     MenuItem,
     Grid,
@@ -37,12 +35,10 @@ import FilterIcon from '@mui/icons-material/FilterList';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CheckIcon from '@mui/icons-material/Check';
 import ListIcon from '@mui/icons-material/List';
-import MapIcon from '@mui/icons-material/Map';
+import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
-import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
-import VisibilityIcon from '@mui/icons-material/Visibility';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import SortIcon from '@mui/icons-material/Sort';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
@@ -80,6 +76,7 @@ import { trackViewModeChange } from '../utils/analytics';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { useEvents } from '../hooks/useEvents';
+import { isOngoingPastDayTwo } from '../utils/eventUtils';
 import { useOfflineTrails } from '../hooks/useOfflineTrails';
 import OfflinePinIcon from '@mui/icons-material/OfflinePin';
 
@@ -169,7 +166,10 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
             setTimeout(() => { utadahlaupa.current = false; }, 10000);
         }
     }, [searchQuery]);
-    const [hidingSlugs, setHidingSlugs] = React.useState<string[]>([]);
+    // Nothing currently calls the setter — the swipe-left gesture that used to populate this now
+    // opens the share sheet instead (see TrailCard.tsx), so this transient fade-out state is
+    // permanently empty. Left as read-only scaffolding rather than removed; see PR #570 notes.
+    const [hidingSlugs] = React.useState<string[]>([]);
     const hidingSlugsSet = React.useMemo(() => new Set(hidingSlugs), [hidingSlugs]);
     const [discoveryTab, setDiscoveryTab] = React.useState<'trending' | 'recent' | 'races'>('races');
     const discoveryScrollRef = React.useRef<HTMLDivElement>(null);
@@ -467,6 +467,43 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
         return Array.from(tagMap.values()).sort((a, b) => (loc(a.name, a.nameEn) ?? a.name).localeCompare(loc(b.name, b.nameEn) ?? b.name));
     }, [trails, loc]);
 
+    const locationRestored = React.useRef(false);
+
+    // Only depends on descendantSlugs (memo above) and stable state setters, so — like the effect
+    // below — it's safe to declare above the loading/error early returns. Declared as a plain const
+    // (not a hook) but it must still sit above those returns: a render that short-circuits at
+    // `if (loading) return` never reaches a `const` declared after that point, leaving it
+    // uninitialized (TDZ) for that render's closures. The effect below closes over this function, so
+    // if that effect instance is later invoked by React, an uninitialized reference here throws a
+    // ReferenceError — the same "reachable through an early-returning render" bug as the hook-order
+    // issue below, just via a TDZ violation instead of a hook-count mismatch.
+    const handleLocationSelect = (items: typeof locationMenuItems) => {
+        setSelectedLocationItems(items);
+        // Expand each selected slug to include its descendants for OR-based filtering
+        const expanded = new Set<string>();
+        for (const item of items) {
+            expanded.add(item.slug);
+            (descendantSlugs.get(item.slug) ?? new Set()).forEach(s => expanded.add(s));
+        }
+        setFilters(f => ({ ...f, locationSlugs: Array.from(expanded) }));
+    };
+
+    // Restore Autocomplete + expand descendants when locationMenuItems first loads from URL params.
+    // Declared above the loading/error early returns below — all hooks in this component must run
+    // on every render (Rules of Hooks), otherwise the hook count differs between the initial loading
+    // render and the later loaded render, which React rejects with "Rendered more hooks than during
+    // the previous render" (crashes to the error boundary on a cold /trails load with no trails cache).
+    React.useEffect(() => {
+        if (locationRestored.current || !locationMenuItems.length || !filters.locationSlugs.length) return;
+        const restored = locationMenuItems.filter(item => filters.locationSlugs.includes(item.slug));
+        if (restored.length > 0) {
+            locationRestored.current = true;
+            handleLocationSelect(restored);
+        }
+    // Run once when menu items first populate; handleLocationSelect is stable
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [locationMenuItems]);
+
     const trailsHeading = null;
 
     if (loading) {
@@ -519,33 +556,8 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
         }
     };
 
-    const locationRestored = React.useRef(false);
-
-    // Restore Autocomplete + expand descendants when locationMenuItems first loads from URL params
-    React.useEffect(() => {
-        if (locationRestored.current || !locationMenuItems.length || !filters.locationSlugs.length) return;
-        const restored = locationMenuItems.filter(item => filters.locationSlugs.includes(item.slug));
-        if (restored.length > 0) {
-            locationRestored.current = true;
-            handleLocationSelect(restored);
-        }
-    // Run once when menu items first populate; handleLocationSelect is stable
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [locationMenuItems]);
-
-    const handleLocationSelect = (items: typeof locationMenuItems) => {
-        setSelectedLocationItems(items);
-        // Expand each selected slug to include its descendants for OR-based filtering
-        const expanded = new Set<string>();
-        for (const item of items) {
-            expanded.add(item.slug);
-            (descendantSlugs.get(item.slug) ?? new Set()).forEach(s => expanded.add(s));
-        }
-        setFilters(f => ({ ...f, locationSlugs: Array.from(expanded) }));
-    };
-
     return (
-        <Container 
+        <Container
             maxWidth={viewMode === 'table' ? 'lg' : 'md'} 
             sx={{ 
                 pt: 1, pb: 2,
@@ -956,7 +968,14 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
             </Collapse>
 
             {/* Activity Type pills — Trail Run + Road Run always visible; other types behind feature flag */}
-            <Box display="flex" gap={0.5} mb={2} flexWrap="nowrap" overflow="auto">
+            <Box
+                display="flex"
+                gap={0.5}
+                mb={2}
+                flexWrap="nowrap"
+                overflow="auto"
+                sx={{ minWidth: 0, maxWidth: '100%', overscrollBehaviorX: 'contain' }}
+            >
                 <Chip
                     icon={<LandscapeIcon fontSize="small" />}
                     label={t('difficulty.trailRunning')}
@@ -1098,6 +1117,9 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                             overflowX: 'auto',
                             pb: 1,
                             scrollSnapType: 'x mandatory',
+                            minWidth: 0,
+                            maxWidth: '100%',
+                            overscrollBehaviorX: 'contain',
                             '&::-webkit-scrollbar': { display: 'none' },
                             msOverflowStyle: 'none',
                             scrollbarWidth: 'none',
@@ -1162,7 +1184,9 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                     <Box display="flex" gap={0.5} mt={0.5} flexWrap="wrap">
                                         {comp.daysUntil != null && comp.daysUntil >= 0 && (
                                             <Chip
-                                                label={comp.daysUntil === 0
+                                                label={isOngoingPastDayTwo(comp.daysUntil, comp.displayDate, comp.endDisplayDate)
+                                                    ? t('races.ongoing')
+                                                    : comp.daysUntil === 0
                                                     ? t('races.today')
                                                     : t('races.daysUntil', { count: comp.daysUntil })}
                                                 size="small"
@@ -1246,7 +1270,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                         </Tooltip>
                         <Tooltip title={t('home.mapView')}>
                             <ToggleButton value="map" aria-label={t('home.mapView')}>
-                                <MapIcon fontSize="small" />
+                                <PlaceOutlinedIcon fontSize="small" />
                             </ToggleButton>
                         </Tooltip>
                         <Tooltip title={t('home.tableView')}>

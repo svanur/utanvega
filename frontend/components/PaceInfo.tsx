@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Dialog, DialogTitle, DialogContent, IconButton, Typography, Box, Stack, useTheme } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, IconButton, Typography, Stack, useTheme } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import { useTranslation } from 'react-i18next';

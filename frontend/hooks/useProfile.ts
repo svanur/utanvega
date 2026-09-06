@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from './supabase';
-import { useAuth } from './useAuth';
+import { useAuth } from './useAuthContext';
 
 export interface UserProfile {
   userId: string;

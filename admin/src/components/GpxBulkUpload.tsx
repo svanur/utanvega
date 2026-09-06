@@ -1,22 +1,29 @@
 import React, { useState, useCallback } from 'react';
-import { 
-  Box, 
-  Typography, 
-  Paper, 
-  List, 
-  ListItem, 
-  ListItemText, 
-  ListItemSecondaryAction, 
-  IconButton, 
-  Button, 
+import {
+  Box,
+  Typography,
+  Paper,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemSecondaryAction,
+  IconButton,
+  Button,
   CircularProgress,
   Divider,
   TextField,
-  Alert
+  Alert,
+  Link,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../hooks/api';
+import { GPX_ACTIVITY_TYPES } from '../utils/trailOptions';
 
 interface GpxBulkUploadProps {
   onUploadSuccess: () => void;
@@ -27,6 +34,14 @@ interface GpxFile {
   file: File;
   name: string;
   matches?: SimilarityMatch[];
+  // The activity type read from the GPX <type> element, if any. Shown as this file's
+  // override so the batch setting only ever applies to files that didn't declare one.
+  // Nullable rather than just optional because the backend's ActivityType enum is
+  // nullable and serializes undetected types as JSON null, not an omitted field.
+  detectedActivityType?: string | null;
+  // The per-file activity type choice — starts out equal to detectedActivityType, but the
+  // user can change it. Empty means "use the batch setting".
+  activityTypeOverride?: string;
 }
 
 interface SimilarityMatch {
@@ -36,8 +51,12 @@ interface SimilarityMatch {
   message: string;
 }
 
+const activityTypeLabel = (value?: string | null) => GPX_ACTIVITY_TYPES.find(at => at.value === value)?.label;
+
 const GpxBulkUpload: React.FC<GpxBulkUploadProps> = ({ onUploadSuccess, onNotify }) => {
+  const navigate = useNavigate();
   const [files, setFiles] = useState<GpxFile[]>([]);
+  const [batchActivityType, setBatchActivityType] = useState('');
   const [uploading, setUploading] = useState(false);
   const [checking, setChecking] = useState(false);
   const [dragActive, setDragActive] = useState(false);
@@ -135,7 +154,7 @@ const GpxBulkUpload: React.FC<GpxBulkUploadProps> = ({ onUploadSuccess, onNotify
     });
 
     try {
-      const results = await apiFetch<{ fileName: string; matches: SimilarityMatch[] }[]>('/api/v1/admin/trails/bulk-check-similarity', {
+      const results = await apiFetch<{ fileName: string; matches: SimilarityMatch[]; detectedActivityType?: string | null }[]>('/api/v1/admin/trails/bulk-check-similarity', {
         method: 'POST',
         body: formData,
       });
@@ -145,7 +164,15 @@ const GpxBulkUpload: React.FC<GpxBulkUploadProps> = ({ onUploadSuccess, onNotify
         results.forEach(res => {
           const index = next.findIndex(f => f.file.name === res.fileName);
           if (index !== -1) {
-            next[index] = { ...next[index], matches: res.matches };
+            next[index] = {
+              ...next[index],
+              matches: res.matches,
+              detectedActivityType: res.detectedActivityType,
+              // A detected type becomes this file's override, so the batch setting only
+              // ever fills in for files that didn't declare one. activityTypeOverride stays
+              // string | undefined, so a JSON null (no type detected) collapses to undefined.
+              activityTypeOverride: res.detectedActivityType ?? undefined,
+            };
           }
         });
         return next;
@@ -169,23 +196,55 @@ const GpxBulkUpload: React.FC<GpxBulkUploadProps> = ({ onUploadSuccess, onNotify
     });
   };
 
+  const handleActivityTypeOverrideChange = (index: number, value: string) => {
+    setFiles(prev => {
+      const next = [...prev];
+      // Empty means "use the batch setting" — store as undefined so resolveActivityType falls through.
+      next[index] = { ...next[index], activityTypeOverride: value || undefined };
+      return next;
+    });
+  };
+
+  const resolveActivityType = (item: GpxFile) => item.activityTypeOverride || batchActivityType;
+  const unresolvedFileCount = files.filter(f => !resolveActivityType(f)).length;
+
   const handleSubmit = async () => {
-    if (files.length === 0) return;
+    if (files.length === 0 || unresolvedFileCount > 0) return;
 
     setUploading(true);
     const formData = new FormData();
     files.forEach((item) => {
       formData.append('files', item.file);
       formData.append('names', item.name);
+      formData.append('activityTypes', resolveActivityType(item));
     });
 
     try {
-      await apiFetch('/api/v1/admin/trails/bulk-upload-gpx', {
+      const { count, ids } = await apiFetch<{ count: number; ids: string[] }>('/api/v1/admin/trails/bulk-upload-gpx', {
         method: 'POST',
         body: formData,
       });
-      onNotify(`Successfully uploaded ${files.length} trails`, 'success');
+      const trailWord = count === 1 ? 'trail' : 'trails';
+      if (count === 1 && ids[0]) {
+        onNotify(
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+            <Typography variant="body2">Successfully uploaded 1 {trailWord}.</Typography>
+            <Link
+              component="button"
+              onClick={() => navigate(`/trails/${ids[0]}`)}
+              color="inherit"
+              sx={{ fontWeight: 'bold', textDecoration: 'underline', verticalAlign: 'baseline', fontSize: 'inherit', p: 0 }}
+            >
+              View Trail
+            </Link>
+          </Box>,
+          'success'
+        );
+      } else {
+        onNotify(`Successfully uploaded ${count} ${trailWord}`, 'success');
+      }
       setFiles([]);
+      setBatchActivityType('');
       onUploadSuccess();
     } catch (error) {
       console.error('Upload error:', error);
@@ -236,6 +295,28 @@ const GpxBulkUpload: React.FC<GpxBulkUploadProps> = ({ onUploadSuccess, onNotify
           <Typography variant="subtitle1" gutterBottom sx={{ mt: 2, fontWeight: 'bold' }}>
             Trails ready to be created ({files.length}):
           </Typography>
+
+          <Box sx={{ mb: 2 }}>
+            <FormControl size="small" sx={{ width: { xs: '100%', sm: 280 } }}>
+              <InputLabel>Batch Activity Type</InputLabel>
+              <Select
+                value={batchActivityType}
+                label="Batch Activity Type"
+                displayEmpty
+                disabled={uploading}
+                onChange={(e) => setBatchActivityType(e.target.value)}
+              >
+                <MenuItem value=""><em>None selected</em></MenuItem>
+                {GPX_ACTIVITY_TYPES.map(at => (
+                  <MenuItem key={at.value} value={at.value}>{at.label}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+              Applies only to files below that have no detected or overridden activity type.
+            </Typography>
+          </Box>
+
           <List dense sx={{ maxHeight: 400, overflow: 'auto', bgcolor: 'background.paper', borderRadius: 1, mb: 2 }}>
             {files.map((item, index) => (
               <React.Fragment key={`${item.file.name}-${index}`}>
@@ -256,6 +337,28 @@ const GpxBulkUpload: React.FC<GpxBulkUploadProps> = ({ onUploadSuccess, onNotify
                       <Box component="div">
                         <Typography variant="caption" display="block" color="text.secondary">
                           {item.file.name} ({(item.file.size / 1024).toFixed(1)} KB)
+                        </Typography>
+                        <FormControl size="small" error={!resolveActivityType(item)} sx={{ mt: 1, width: { xs: '100%', sm: 220 } }}>
+                          <InputLabel>Activity Type</InputLabel>
+                          <Select
+                            value={item.activityTypeOverride || ''}
+                            label="Activity Type"
+                            displayEmpty
+                            disabled={uploading}
+                            onChange={(e) => handleActivityTypeOverrideChange(index, e.target.value)}
+                          >
+                            <MenuItem value="">
+                              <em>Use batch setting{batchActivityType ? ` (${activityTypeLabel(batchActivityType)})` : ''}</em>
+                            </MenuItem>
+                            {GPX_ACTIVITY_TYPES.map(at => (
+                              <MenuItem key={at.value} value={at.value}>{at.label}</MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                        <Typography variant="caption" display="block" color={item.detectedActivityType ? 'text.secondary' : 'text.disabled'} sx={{ mt: 0.5 }}>
+                          {item.detectedActivityType
+                            ? `Detected from GPX: ${activityTypeLabel(item.detectedActivityType)}`
+                            : 'No activity type detected in this file.'}
                         </Typography>
                         {item.matches && item.matches.length > 0 && (
                           <Box sx={{ mt: 1 }}>
@@ -294,7 +397,13 @@ const GpxBulkUpload: React.FC<GpxBulkUploadProps> = ({ onUploadSuccess, onNotify
               </React.Fragment>
             ))}
           </List>
-          
+
+          {unresolvedFileCount > 0 && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              {unresolvedFileCount} file{unresolvedFileCount === 1 ? '' : 's'} still need{unresolvedFileCount === 1 ? 's' : ''} an activity type — set a batch type or override it per file.
+            </Alert>
+          )}
+
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
             {checking && (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -304,17 +413,17 @@ const GpxBulkUpload: React.FC<GpxBulkUploadProps> = ({ onUploadSuccess, onNotify
             )}
             <Box sx={{ flexGrow: 1 }} />
             <Box sx={{ display: 'flex', gap: 2 }}>
-              <Button 
-                variant="outlined" 
-                onClick={() => setFiles([])} 
+              <Button
+                variant="outlined"
+                onClick={() => setFiles([])}
                 disabled={uploading}
               >
                 Clear All
               </Button>
-              <Button 
-                variant="contained" 
-                onClick={handleSubmit} 
-                disabled={uploading || checking}
+              <Button
+                variant="contained"
+                onClick={handleSubmit}
+                disabled={uploading || checking || unresolvedFileCount > 0}
                 color={files.some(f => f.matches && f.matches.length > 0) ? "warning" : "primary"}
                 startIcon={uploading ? <CircularProgress size={20} color="inherit" /> : null}
               >

@@ -50,7 +50,7 @@ import TimerIcon from '@mui/icons-material/Timer';
 import StraightenIcon from '@mui/icons-material/Straighten';
 import TerrainIcon from '@mui/icons-material/Terrain';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
-import { getActivityIcon } from '../utils/activityIcon';
+import { getActivityIcon } from '../utils/getActivityIcon';
 import QueryStatsIcon from '@mui/icons-material/QueryStats';
 import QrCode2Icon from '@mui/icons-material/QrCode2';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
@@ -66,6 +66,8 @@ import Layout from '../components/Layout';
 import RunningLoader from '../components/RunningLoader';
 import LostRunner from '../components/LostRunner';
 import WeatherCard from '../components/WeatherCard';
+import GalleryLinks from '../components/GalleryLinks';
+import GalleryCompact from '../components/GalleryCompact';
 import { useEvents, useEventBySlug } from '../hooks/useEvents';
 import type { EventEditionDto, RaceDto, ScheduleRule } from '../hooks/useEvents';
 import { useFavoriteEvents } from '../hooks/useFavoriteEvents';
@@ -111,7 +113,7 @@ type PreparedEdition = EventEditionDto & {
 import { ACTIVITY_EMOJI } from '../constants/activityEmoji';
 import { googleCalendarUrl, outlookCalendarUrl, downloadIcs } from '../utils/calendarLinks';
 import EventDateBadge from '../components/EventDateBadge';
-import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, editionKeyFor } from '../utils/eventUtils';
+import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, editionKeyFor, getMultiDayEditionProgress, toDateOnlyString } from '../utils/eventUtils';
 import { getTicketStatusColor } from '../utils/ticketStatus';
 import { trackEventQRClick } from '../utils/analytics';
 
@@ -202,16 +204,22 @@ function getRegistrationStatusColor(status: string | null | undefined): 'success
 function EditionMeta({
     edition,
     t,
+    now,
     showHeader,
     hideMeta,
 }: {
     edition: EventEditionDto;
     t: (key: string, opts?: Record<string, unknown>) => string;
+    now: Date;
     showHeader?: boolean;
     hideMeta?: boolean;
 }) {
     const loc = useLocalize();
     const heading = loc(edition.title?.trim() || null, edition.titleEn) ?? String(edition.year);
+    const dayProgress = useMemo(
+        () => getMultiDayEditionProgress(edition.date, edition.endDate, now),
+        [edition.date, edition.endDate, now],
+    );
 
     return (
         <Box>
@@ -233,6 +241,13 @@ function EditionMeta({
                         label={formatDateRange(edition.date, edition.endDate, t)}
                         size="small"
                         variant="outlined"
+                    />
+                )}
+                {dayProgress && (
+                    <Chip
+                        label={t('races.dayOfTotal', { day: dayProgress.day, total: dayProgress.totalDays, defaultValue: `Day ${dayProgress.day} of ${dayProgress.totalDays}` })}
+                        size="small"
+                        color="secondary"
                     />
                 )}
             </Stack>
@@ -272,17 +287,7 @@ function EditionMeta({
                             {t('races.results', { defaultValue: 'Results' })}
                         </Button>
                     )}
-                    {edition.photoGalleryUrl && (
-                        <Button
-                            variant="outlined"
-                            size="small"
-                            endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
-                            onClick={() => window.open(edition.photoGalleryUrl!, '_blank', 'noopener')}
-                            sx={{ textTransform: 'none' }}
-                        >
-                            📷 {t('races.photoGallery', { domain: new URL(edition.photoGalleryUrl!).hostname.replace(/^www\./, ''), defaultValue: 'Photos' })}
-                        </Button>
-                    )}
+                    <GalleryLinks galleries={edition.galleries} />
                 </Stack>
             )}
         </Box>
@@ -450,7 +455,11 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
             ?? currentEditions.find(edition => edition.visibleRaces.length > 0)
             ?? currentEditions[0]
             ?? null,
-        [currentEditions, event?.nextEditionDate, event?.displayDate, isPostRace],
+        // Depend on the whole `event` object rather than its individual fields: the compiler's
+        // static analysis can't narrow the optional-chained accesses above to just
+        // nextEditionDate/displayDate reliably, and reported a broader inferred dependency than
+        // the field-level list here — matching that inference is the correct fix, not a workaround.
+        [currentEditions, event, isPostRace],
     );
 
     // Prefer the richer primaryEdition object (already in scope) over the flattened EventSummary
@@ -760,6 +769,8 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 borderRadius: 2,
                                 overflow: 'hidden',
                                 height: 220,
+                                width: '100%',
+                                maxWidth: '100%',
                                 border: '1px solid',
                                 borderColor: 'divider',
                                 position: 'relative',
@@ -852,17 +863,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                     {isPostRace ? `🏁 ${t('races.results', { defaultValue: 'Results' })}` : t('races.results', { defaultValue: 'Results' })}
                                 </Button>
                             )}
-                            {primaryEdition?.photoGalleryUrl && (
-                                <Button
-                                    variant="outlined"
-                                    size="small"
-                                    endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
-                                    onClick={() => window.open(primaryEdition.photoGalleryUrl!, '_blank', 'noopener')}
-                                    sx={{ textTransform: 'none' }}
-                                >
-                                    📷 {t('races.photoGallery', { domain: new URL(primaryEdition.photoGalleryUrl!).hostname.replace(/^www\./, ''), defaultValue: 'Photos' })}
-                                </Button>
-                            )}
+                            <GalleryLinks galleries={primaryEdition?.galleries ?? []} />
                             {event.youtubeUrl && (
                                 <Button
                                     variant="outlined"
@@ -927,7 +928,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
 
                     {!showEditionSections && primaryEdition && (
                         <Box sx={{ mt: 2.5 }}>
-                            <EditionMeta edition={primaryEdition} t={t} hideMeta />
+                            <EditionMeta edition={primaryEdition} t={t} now={currentTime} hideMeta />
                         </Box>
                     )}
                 </Paper>
@@ -993,7 +994,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                     <Stack spacing={3}>
                         {currentEditions.map(edition => (
                             <Paper key={edition.id} variant="outlined" sx={{ p: { xs: 2, sm: 2.5 }, borderRadius: 2.5 }}>
-                                <EditionMeta edition={edition} t={t} showHeader />
+                                <EditionMeta edition={edition} t={t} now={currentTime} showHeader />
                                 {edition.visibleRaces.length === 0 ? (
                                     (event.type === 'Race' || event.type === 'Series') && <Alert severity="info" sx={{ mt: 2 }}>{t('races.noRaces')}</Alert>
                                 ) : (
@@ -1013,6 +1014,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                                 editionDate={edition.date}
                                                 eventSlug={event.slug ?? slug}
                                                 now={currentTime}
+                                                isMultiDayOngoingEdition={getMultiDayEditionProgress(edition.date, edition.endDate, currentTime) !== null}
                                             />
                                         ))}
                                     </Stack>
@@ -1033,12 +1035,13 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 t={t}
                                 showPredict={isEnabled('tool_trail_predictor')}
                                 showShareCard={isRaceWeek && isEnabled('share_trail')}
-                                showFinishCard={isPostRace && isEnabled('share_trail') && currentEditions[0]?.date === event.displayDate}
+                                showFinishCard={isPostRace && isEnabled('share_trail') && primaryEdition?.date === event.displayDate}
                                 daysUntil={event.daysUntil}
                                 activityType={event.activityType}
                                 editionDate={event.displayDate ?? event.nextEditionDate}
                                 eventSlug={event.slug ?? slug}
                                 now={currentTime}
+                                isMultiDayOngoingEdition={getMultiDayEditionProgress(primaryEdition?.date, primaryEdition?.endDate, currentTime) !== null}
                             />
                             ))}
                     </Stack>
@@ -1177,17 +1180,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                                     }}
                                                 />
                                             )}
-                                            {edition.photoGalleryUrl && (
-                                                <Chip
-                                                    label={`📷 ${t('races.photoGallery', { domain: new URL(edition.photoGalleryUrl!).hostname.replace(/^www\./, ''), defaultValue: 'Photos' })}`}
-                                                    size="small"
-                                                    variant="outlined"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        window.open(edition.photoGalleryUrl!, '_blank', 'noopener');
-                                                    }}
-                                                />
-                                            )}
+                                            <GalleryCompact galleries={edition.galleries} variant="chip" />
                                         </Stack>
                                     </Paper>
                                 );
@@ -1298,6 +1291,7 @@ function RaceCard({
     editionDate,
     eventSlug,
     now,
+    isMultiDayOngoingEdition,
 }: {
     race: RaceDto;
     anchor: string;
@@ -1311,11 +1305,17 @@ function RaceCard({
     editionDate?: string | null;
     eventSlug?: string | null;
     now: Date;
+    // True when this race belongs to a multi-day edition that is currently ongoing (see
+    // getMultiDayEditionProgress) — narrows the race-day progress bar down to the one race
+    // whose dateOfRace is today, instead of every race in an edition whose daysUntil is pinned
+    // to 0 for its entire span.
+    isMultiDayOngoingEdition?: boolean;
 }) {
     const theme = useTheme();
     const loc = useLocalize();
     const { isEnabled } = useFeatureFlags();
     const raceDateTime = formatRaceDateTime(race.dateOfRace, race.startTime, t);
+    const isLiveStageToday = !!isMultiDayOngoingEdition && race.dateOfRace === toDateOnlyString(now);
 
     // Carries the event as breadcrumb context so the trail page can render
     // Events > {Event} > {Trail} instead of its default Trails > {Trail}.
@@ -1532,8 +1532,13 @@ function RaceCard({
                     </Stack>
                 )}
 
-                {/* Race progress bar on race day */}
-                {daysUntil === 0 && race.status !== 'Cancelled' && race.dateOfRace && race.startTime && race.cutoffMinutes != null && (
+                {/* Race progress bar on race day. For a multi-day edition (daysUntil pinned to 0 for
+                    its whole span) this is further narrowed to the one race whose dateOfRace is
+                    today — otherwise every stage in the edition would show progress/cutoff UI at
+                    once, including stages that already finished on a previous day or haven't
+                    started yet. */}
+                {daysUntil === 0 && race.status !== 'Cancelled' && race.dateOfRace && race.startTime && race.cutoffMinutes != null
+                    && (!isMultiDayOngoingEdition || isLiveStageToday) && (
                     <RaceProgressBar
                         startTime={race.startTime}
                         dateOfRace={race.dateOfRace}

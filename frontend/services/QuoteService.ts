@@ -92,6 +92,18 @@ export class QuoteService {
         { text: "Gerum bara eitthvað gott og gerum það saman, mér er alveg sama hvað, bara ef það er gaman", author: "Friðrik Dór, Dönsum eins og hálfvitar" },
         { text: "Get stuff done and things will improve slowly", author: "Jon Albon" },
         { text: "This is ten percent luck. Twenty percent skill. Fifteen percent concentrated power of will. Five percent pleasure. Fifty percent pain. And a hundred percent reason to remember the name", author: "Fort Minor, Remember the name" },
+        { text: "No limits to what we can achieve 'cause we got all we need", author: "Mezzoforte" },
+        { text: "Never make a decision when going uphill" },
+        { text: "If you are going through hell, keep going.", author: "Winston Churchill" },
+        { text: "Be here now.", author: "Ram Dass" },
+        { text: "Wherever you go, there you are.", author: "Jon Kabat-Zinn" },
+        { text: "Do not anticipate trouble, or worry about what may never happen. Keep in the sunlight.", author: "Benjamin Franklin" },
+        { text: "Everything worthwhile is uphill", author: "John C. Maxwell" },
+        { text: "Smooth seas do not make skillful sailors", author: "Afrískur málsháttur" },
+        { text: "Never quit on a bad day" },
+        { text: "Don't make permanent decisions on temporary feelings." },
+        { text: "This, too, shall pass." },
+        { text: "You are not your thoughts; you are the observer of your thoughts." },
     ];
 
     static getRandomQuote(): Quote {

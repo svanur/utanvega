@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './supabase';
-import { useAuth } from './useAuth';
+import { useAuth } from './useAuthContext';
 
 const TICKED_TRAILS_CACHE_TTL_MS = 60_000;
 

@@ -776,6 +776,10 @@
             }
         },
         "changelog": {
+            "v1_5_0": {
+                "title": "Ljósmyndarar fá meiri sess og viðburðir mörg myndasöfn - Snjallara „í gangi“ merki fyrir viðburði sem eru 3 dagar eða lengri.",
+                "description": "Ljósmyndarar eru nú sjálfstæð eining á vefnum: viðburðir geta verið með fleiri en eitt myndasafn, hvert og eitt merkt þeim ljósmyndara sem tók myndirnar, og hver ljósmyndari fær sína eigin síðu, þar sem birtast tenglar á öll myndasöfn sem eru skráð hjá hlaupadagskra.is. Viðburðir sem ná yfir fleiri en 2 daga birta nú „Í gangi“ merki í stað „Í dag!“ eins og áður var."
+            },
             "v1_4_0": {
                 "title": "Aldursviðmiðun sem segir satt",
                 "description": "Aldursviðmiðunartólið notar nú 2025 USATF MLDR töflurnar í stað WMA 2015. Eldri viðmiðin voru frá tíma áður en hlaupageta tók stórstígum framförum, svo allar einkunnir voru of háar — og meira hjá konum, því þeirra viðmið höfðu dregist mest aftur úr. Hálfmaraþon sem áður gaf 92,1% gefur nú 86,1%. Tólið hætti einnig að telja alla undir tvítugu sem tvítuga og alla yfir áttræðu sem áttræða, svo ungir og eldri hlauparar fá loksins sitt eigið viðmið; sambærilega tíma má nú lesa ár fyrir ár í kringum eigin aldur í stað fimm ára þrepa; rangt sleginn tími er merktur í stað þess að skila ómögulegri einkunn; og frammistöðuflokkurinn segir nú við hvað er miðað, því „World Class“ eitt og sér hljómar stærra en það er."
@@ -1262,6 +1266,7 @@
         "nextRace": "Næst:",
         "lastRace": "Síðast:",
         "today": "🔥 Í dag!",
+        "ongoing": "Í gangi",
         "raceDayBadge": "🏁 Það er keppnisdagur!",
         "tomorrow": "Á morgun!",
         "passed": "Liðið",
@@ -1279,6 +1284,11 @@
         "results": "Úrslit",
         "photoGallery": "Myndir frá {{domain}}",
         "photos": "Myndir",
+        "photoBy": "Mynd: {{name}}",
+        "photoByPrefix": "Mynd:",
+        "galleryCount_one": "{{count}} myndasafn",
+        "galleryCount_other": "{{count}} myndasöfn",
+        "galleryCount": "{{count}} myndasöfn",
         "organizerSite": "Vefur",
         "directionsToEvent": "Leiðsögn að upphafsstað",
         "addToCalendar": "Setja í dagatal",
@@ -1393,6 +1403,7 @@
         "justRacedSection": "Nýlega lokið",
         "inProgress": "🏃 Í gangi",
         "raceFinished": "🏁 Lokið",
+        "dayOfTotal": "Dagur {{day}} af {{total}}",
         "progressBar": {
             "waiting": "Bíður eftir byrjun...",
             "cutoffReached": "Tímatakmörk liðin",
@@ -1453,6 +1464,7 @@
             "showCancelled": "Sýna aflýst",
             "noResults": "Engir fyrri viðburðir fundust.",
             "resultsLink": "Úrslit",
+            "galleryColumn": "Myndasafn",
             "searchingAllYears": "öll ár"
         },
         "table": {
@@ -1823,5 +1835,14 @@
         "events": "Viðburðir",
         "noEvents": "Engir viðburðir fundust",
         "notFound": "Skipuleggjandi fannst ekki"
+    },
+    "photographerPage": {
+        "website": "Vefur ljósmyndara",
+        "galleries": "Myndasöfn",
+        "noGalleries": "Engin myndasöfn fundust",
+        "notFound": "Ljósmyndari fannst ekki",
+        "openGalleryAriaLabel": "Opna myndasafn fyrir {{event}} (opnast í nýjum flipa)",
+        "viewEdition": "Skoða útgáfu",
+        "viewEditionAriaLabel": "Skoða útgáfu {{event}} á þessari síðu"
     }
 }

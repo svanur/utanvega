@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import LogoutIcon from '@mui/icons-material/Logout';
 import PersonIcon from '@mui/icons-material/Person';
 import LoginIcon from '@mui/icons-material/Login';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../hooks/useAuthContext';
 import LoginModal from './LoginModal';
 
 export default function UserAvatar() {

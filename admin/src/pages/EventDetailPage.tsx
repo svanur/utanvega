@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, type ReactNode } from 'react';
+import { useState, useMemo, useEffect, useRef, type ReactNode } from 'react';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import dayjs, { type Dayjs } from 'dayjs';
@@ -57,7 +57,6 @@ import {
   type EventDetailDto,
   type EventEditionDto,
   type EditionStatus,
-  type EventStatus,
   type RaceDto,
   type RaceStatus,
   type RegistrationStatus,
@@ -66,9 +65,12 @@ import {
 } from '../hooks/useEvents';
 import { useTrails } from '../hooks/useTrails';
 import { apiFetch } from '../hooks/api';
-import { usePageShortcuts } from '../hooks/usePageShortcuts';
+import { usePageShortcuts, isDialogOpen } from '../hooks/usePageShortcuts';
+import { useBackToList } from '../hooks/useBackToList';
+import { useIdRowFocus } from '../hooks/useIdRowFocus';
 import RaceFormCard from '../components/events/RaceFormCard';
 import EventFormCard from '../components/events/EventFormCard';
+import PhotoGalleryManager, { type PhotoGalleryManagerHandle } from '../components/events/PhotoGalleryManager';
 import BilingualTextField from '../components/BilingualTextField';
 import { BilingualLangProvider, useBilingualLang } from '../contexts/BilingualLangContext';
 import {
@@ -81,6 +83,7 @@ import {
   EDITION_STATUSES,
   EDITION_STATUS_LABELS,
   EDITION_STATUS_CYCLE,
+  EVENT_STATUS_CYCLE,
   TICKET_STATUSES,
   ITRA_VALUES,
   type RaceFormState,
@@ -96,6 +99,7 @@ import {
   suggestEditionEndDateForYear,
   computeClonedRaceDate,
   sortEditions,
+  editionsAffectedByEventCancel,
 } from '../utils/eventHelpers';
 
 const PUBLIC_SITE_URL = ((import.meta.env.VITE_PUBLIC_SITE_URL ?? '') as string).replace(/\/$/, '');
@@ -193,7 +197,6 @@ interface EditionFormState {
   titleEn: string;
   registrationUrl: string;
   resultsUrl: string;
-  photoGalleryUrl: string;
   notes: string;
   notesEn: string;
   registrationStatus: RegistrationStatus;
@@ -205,7 +208,7 @@ function emptyEditionForm(): EditionFormState {
   return {
     year: String(new Date().getFullYear()),
     date: '', endDate: '', title: '', titleEn: '',
-    registrationUrl: '', resultsUrl: '', photoGalleryUrl: '', notes: '', notesEn: '',
+    registrationUrl: '', resultsUrl: '', notes: '', notesEn: '',
     registrationStatus: 'NotStarted', trailId: '',
     status: 'Unconfirmed',
   };
@@ -216,7 +219,7 @@ function buildEditionForm(ed: EventEditionDto): EditionFormState {
     year: ed.year?.toString() ?? '',
     date: ed.date ?? '', endDate: ed.endDate ?? '',
     title: ed.title ?? '', titleEn: ed.titleEn ?? '',
-    registrationUrl: ed.registrationUrl ?? '', resultsUrl: ed.resultsUrl ?? '', photoGalleryUrl: ed.photoGalleryUrl ?? '',
+    registrationUrl: ed.registrationUrl ?? '', resultsUrl: ed.resultsUrl ?? '',
     notes: ed.notes ?? '', notesEn: ed.notesEn ?? '',
     registrationStatus: ed.registrationStatus, trailId: ed.trailId ?? '',
     status: ed.status,
@@ -229,6 +232,11 @@ interface EditionDialogProps {
   eventId: string;
   onClose: () => void;
   onSaved: (newEditionId?: string) => void;
+  // Fired after any gallery create/update/delete made via PhotoGalleryManager's own inline
+  // checkmark — independent of Save/Cancel, so the edition meta row's Galleries entry stays
+  // live even if the dialog is later dismissed via Cancel (see handleCancelOrDismiss, which
+  // only warns about a still-*pending* row, not one already persisted this way).
+  onGalleryMutated: () => void;
   onNotify: (msg: ReactNode, sev?: 'success' | 'error') => void;
   initialValues?: EditionFormState;
 }
@@ -247,10 +255,11 @@ function LangToggleButton() {
   );
 }
 
-function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onNotify, initialValues }: EditionDialogProps) {
+function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGalleryMutated, onNotify, initialValues }: EditionDialogProps) {
   const isNew = edition === null;
   const [form, setForm] = useState<EditionFormState>(initialValues ?? (edition ? buildEditionForm(edition) : emptyEditionForm()));
   const [saving, setSaving] = useState(false);
+  const galleryManagerRef = useRef<PhotoGalleryManagerHandle>(null);
 
   const set = <K extends keyof EditionFormState>(k: K, v: EditionFormState[K]) =>
     setForm(prev => ({ ...prev, [k]: v }));
@@ -265,7 +274,6 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onNotify
       titleEn: form.titleEn.trim() || undefined,
       registrationUrl: form.registrationUrl.trim() || undefined,
       resultsUrl: form.resultsUrl.trim() || undefined,
-      photoGalleryUrl: form.photoGalleryUrl.trim() || undefined,
       notes: form.notes.trim() || undefined,
       notesEn: form.notesEn.trim() || undefined,
       registrationStatus: form.registrationStatus,
@@ -278,12 +286,22 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onNotify
         const result = await apiFetch<{ id: string }>(`/api/v1/admin/events/${eventId}/editions`, {
           method: 'POST', body: JSON.stringify(input),
         });
+        // A brand-new edition has no gallery rows to flush yet — PhotoGalleryManager only lets
+        // an admin add one once editionId is non-null (see its own early return) — but flush
+        // through the id we just got anyway, using it rather than the (still-null) editionId
+        // prop, so this stays correct if that gate is ever relaxed.
+        await galleryManagerRef.current?.flushPending(result.id);
         onNotify('Edition created', 'success');
         onSaved(result.id);
       } else {
         await apiFetch(`/api/v1/admin/editions/${edition!.id}`, {
           method: 'PUT', body: JSON.stringify({ id: edition!.id, ...input }),
         });
+        const galleriesOk = await galleryManagerRef.current?.flushPending(edition!.id) ?? true;
+        if (!galleriesOk) {
+          onNotify('Edition saved, but a photo gallery failed to save — fix it and Save again', 'error');
+          return; // keep the dialog open so the admin can retry the gallery save
+        }
         onNotify('Edition saved', 'success');
         onSaved();
       }
@@ -295,8 +313,23 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onNotify
     }
   };
 
+  // Cancel and backdrop/Escape dismissal both discard the dialog the same way — if a gallery
+  // row is filled in or edited but not yet flushed, warn before losing it, mirroring the
+  // confirm() guard TrailFormCard uses for its own "pending selection would be silently
+  // dropped" case rather than introducing a new confirm-dialog component.
+  const handleCancelOrDismiss = () => {
+    if (galleryManagerRef.current?.hasPendingChanges()) {
+      const proceed = confirm(
+        'You have an unsaved photo gallery in this edition — closing now will discard it.\n\n'
+        + 'Cancel to go back and save it, or OK to discard and close.'
+      );
+      if (!proceed) return;
+    }
+    onClose();
+  };
+
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth
+    <Dialog open={open} onClose={handleCancelOrDismiss} maxWidth="sm" fullWidth
       TransitionProps={{ onEnter: () => setForm(initialValues ?? (edition ? buildEditionForm(edition) : emptyEditionForm())) }}>
       <DialogTitle>
         <Stack direction="row" justifyContent="space-between" alignItems="center">
@@ -344,20 +377,18 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onNotify
             <InputLabel>Status</InputLabel>
             <Select value={form.status} label="Status"
               onChange={e => set('status', e.target.value as EditionStatus)}>
-              {EDITION_STATUSES.map(s => <MenuItem key={s} value={s}>{EDITION_STATUS_LABELS[s]}</MenuItem>)}
+              {EDITION_STATUSES.map(s => (
+                // Cancelled and Completed are terminal states with their own dedicated, safer
+                // entry points (row-level Cancel/Complete actions) — they must not be landable
+                // on incidentally via this dropdown. Keep the option disabled unless it's already
+                // the current value, so the Select still renders it instead of showing blank.
+                <MenuItem key={s} value={s} disabled={(s === 'Cancelled' || s === 'Completed') && s !== form.status}>
+                  {EDITION_STATUS_LABELS[s]}
+                </MenuItem>
+              ))}
             </Select>
             {isNew && (form.status === 'Completed' || form.status === 'Unconfirmed') && (
               <FormHelperText>Auto-set based on year — you can override</FormHelperText>
-            )}
-            {!isNew && form.status === 'Completed' && edition?.status !== 'Completed' && (
-              <FormHelperText>
-                Saving will set Active races to Completed and close registration.
-              </FormHelperText>
-            )}
-            {!isNew && form.status === 'Cancelled' && edition?.status !== 'Cancelled' && (
-              <FormHelperText>
-                Saving will also cancel this edition's races and close registration.
-              </FormHelperText>
             )}
           </FormControl>
           <FormControl size="small" fullWidth>
@@ -371,17 +402,21 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onNotify
             onChange={e => set('registrationUrl', e.target.value)} />
           <TextField size="small" fullWidth label="Results URL" value={form.resultsUrl}
             onChange={e => set('resultsUrl', e.target.value)} />
-          <TextField size="small" fullWidth label="Photo Gallery URL" value={form.photoGalleryUrl}
-            onChange={e => set('photoGalleryUrl', e.target.value)} />
           <BilingualTextField
             size="small" fullWidth label="Edition description" multiline rows={2}
             valueIs={form.notes} valueEn={form.notesEn}
             onChangeIs={v => set('notes', v)} onChangeEn={v => set('notesEn', v)}
           />
+          <Divider />
+          {/* Photo galleries are a separate sub-resource (own table/endpoints) — a row's own
+              check-mark still saves and reorders it immediately, but this dialog's Save/Cancel
+              also flush/warn about any row left dirty or new-but-filled, via the ref (see
+              handleSave/handleCancelOrDismiss above and PhotoGalleryManager's flushPending). */}
+          <PhotoGalleryManager ref={galleryManagerRef} editionId={edition?.id ?? null} onNotify={onNotify} onGalleryMutated={onGalleryMutated} />
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={saving}>Cancel</Button>
+        <Button onClick={handleCancelOrDismiss} disabled={saving}>Cancel</Button>
         <Button variant="contained" onClick={() => void handleSave()} disabled={saving}>
           {saving ? 'Saving…' : isNew ? 'Add edition' : 'Save edition'}
         </Button>
@@ -404,6 +439,8 @@ interface SortableRaceRowProps {
   race: RaceDto;
   edition: EventEditionDto;
   isActive: boolean;
+  isFocused: boolean;
+  focusRef?: (el: HTMLTableRowElement | null) => void;
   staleTx: boolean;
   detail: EventDetailDto | null;
   onOpen: () => void;
@@ -422,8 +459,11 @@ function cycleTooltip(label: string, values: string[], current: string) {
   return `${label}: ${values.join(' → ')} (next: ${next})`;
 }
 
-function SortableRaceRow({ race, edition, isActive, staleTx, detail, onOpen, onDuplicate, onCycleStatus, onCycleTicket, onCycleItra, patchRaceInDetail, racePayload, onNotify }: SortableRaceRowProps) {
+function SortableRaceRow({ race, edition, isActive, isFocused, focusRef, staleTx, detail, onOpen, onDuplicate, onCycleStatus, onCycleTicket, onCycleItra, patchRaceInDetail, racePayload, onNotify }: SortableRaceRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: race.id });
+  // Both dnd-kit's sortable node ref and the keyboard-focus scroll-into-view ref need the
+  // same DOM node — dnd-kit doesn't accept a second ref, so merge them into one callback.
+  const setRowRef = (el: HTMLTableRowElement | null) => { setNodeRef(el); focusRef?.(el); };
   const [copyDateAnchor, setCopyDateAnchor] = useState<HTMLElement | null>(null);
   const [copyingDate, setCopyingDate] = useState(false);
 
@@ -456,9 +496,9 @@ function SortableRaceRow({ race, edition, isActive, staleTx, detail, onOpen, onD
 
   return (
     <TableRow
-      ref={setNodeRef}
+      ref={setRowRef}
       hover
-      sx={{
+      sx={(theme) => ({
         cursor: 'pointer',
         bgcolor: isActive ? 'action.selected' : undefined,
         borderLeft: isActive ? '3px solid' : '3px solid transparent',
@@ -466,7 +506,8 @@ function SortableRaceRow({ race, edition, isActive, staleTx, detail, onOpen, onD
         opacity: isDragging ? 0.5 : 1,
         transform: CSS.Transform.toString(transform),
         transition,
-      }}
+        ...(isFocused && { outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: -2 }),
+      })}
       onClick={onOpen}
     >
       <TableCell sx={{ px: 0.5, color: 'text.disabled', cursor: 'grab' }} {...attributes} {...listeners} onClick={e => e.stopPropagation()}>
@@ -584,6 +625,13 @@ interface EventDetailPageProps {
   onNavigateToRaceManager?: (date: string) => void;
 }
 
+// A flat, id-based row for j/k/o/Space keyboard navigation across visible editions and the
+// races of expanded editions — see the useIdRowFocus call below for why this has to be
+// id-based rather than a plain index.
+type FocusRow =
+  | { kind: 'edition'; id: string; edition: EventEditionDto }
+  | { kind: 'race'; id: string; race: RaceDto; edition: EventEditionDto };
+
 export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: EventDetailPageProps) {
   const { slug = '' } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -598,6 +646,8 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
 
   const [editingEvent, setEditingEvent] = useState(false);
 
+  const handleBackToList = useBackToList('/events');
+
   usePageShortcuts([
     { key: 'u', handler: () => navigate(-1) },
     { key: 'e', handler: () => setEditingEvent(v => !v) },
@@ -610,6 +660,17 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
     const trailIds = new Set(detail.editions.flatMap(ed => ed.races.map(r => r.trailId).filter(Boolean)));
     return trails.filter(t => trailIds.has(t.id) && t.startLatitude != null && t.startLongitude != null);
   }, [detail, trails]);
+
+  // Editions the "Cancel Event" cascade will actually touch — previewed in the confirmation dialog
+  // before the admin commits to it. Same rule as backend Event.CancelWithEditions.
+  const editionsAffectedByCancel = useMemo(
+    () => detail ? editionsAffectedByEventCancel(detail.editions) : [],
+    [detail],
+  );
+  const raceCountAffectedByCancel = useMemo(
+    () => editionsAffectedByCancel.reduce((sum, ed) => sum + ed.races.filter(r => r.status !== 'Cancelled').length, 0),
+    [editionsAffectedByCancel],
+  );
 
   const [editionDialogOpen, setEditionDialogOpen] = useState(false);
   const [editingEdition, setEditingEdition] = useState<EventEditionDto | null>(null);
@@ -627,6 +688,8 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
   const [savingBulkDates, setSavingBulkDates] = useState(false);
   const [localRaceOrder, setLocalRaceOrder] = useState<Map<string, string[]>>(new Map());
   const [confirmDeleteEvent, setConfirmDeleteEvent] = useState(false);
+  const [cancelEventDialogOpen, setCancelEventDialogOpen] = useState(false);
+  const [cancellingEvent, setCancellingEvent] = useState(false);
 
   useEffect(() => {
     if (!confirmDeleteEvent) return;
@@ -680,6 +743,58 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
     setRaceForm({ editionId: edition.id, race });
   };
 
+  // Flat, id-based focus list: visible editions plus the (sorted) races of expanded editions,
+  // in the same visual order the render below produces. Id-based rather than index-based
+  // because Space (expand/collapse) inserts/removes rows above the focused one, which would
+  // silently shift a plain index onto the wrong row.
+  const focusRows = useMemo<FocusRow[]>(() => {
+    const rows: FocusRow[] = [];
+    for (const edition of editionsByYear.visible) {
+      rows.push({ kind: 'edition', id: `edition:${edition.id}`, edition });
+      if (expandedEditionIds.has(edition.id)) {
+        const races = localRaceOrder.get(edition.id)
+          ? localRaceOrder.get(edition.id)!.map(id => edition.races.find(r => r.id === id)).filter((r): r is RaceDto => !!r)
+          : [...edition.races].sort(sortRaces);
+        for (const race of races) rows.push({ kind: 'race', id: `race:${race.id}`, race, edition });
+      }
+    }
+    return rows;
+  }, [editionsByYear.visible, expandedEditionIds, localRaceOrder]);
+
+  const { focusedId } = useIdRowFocus(focusRows, row => {
+    if (row.kind === 'edition') { setEditingEdition(row.edition); setEditionDialogOpen(true); }
+    else openRaceForm(row.race, row.edition);
+  });
+
+  // One shared ref registry for both edition header rows and race rows, keyed by the same
+  // `edition:<id>` / `race:<id>` ids used in focusRows — lets scrollIntoView find whichever
+  // DOM node is focused without threading a ref through two differently-shaped rows.
+  const focusRowRefs = useRef<Map<string, HTMLElement>>(new Map());
+  const setFocusRowRef = (id: string) => (el: HTMLElement | null) => {
+    if (el) focusRowRefs.current.set(id, el);
+    else focusRowRefs.current.delete(id);
+  };
+  useEffect(() => {
+    if (!focusedId) return;
+    focusRowRefs.current.get(focusedId)?.scrollIntoView({ block: 'nearest' });
+  }, [focusedId]);
+
+  // Space toggles expand/collapse for a focused edition and does nothing on a focused race.
+  // Kept as its own usePageShortcuts registration (rather than folded into useIdRowFocus)
+  // since expand/collapse is specific to this page's edition/race semantics, not something a
+  // generic id-focus hook should know about. usePageShortcuts calls preventDefault() before
+  // invoking the handler, so this also satisfies "Space must not scroll the page".
+  usePageShortcuts([
+    {
+      key: ' ',
+      skip: isDialogOpen,
+      handler: () => {
+        const row = focusRows.find(r => r.id === focusedId);
+        if (row?.kind === 'edition') toggleEdition(row.edition.id);
+      },
+    },
+  ]);
+
   const [duplicateRaceValues, setDuplicateRaceValues] = useState<RaceFormState | undefined>(undefined);
 
   const openDuplicateRace = (race: RaceDto, edition: EventEditionDto) => {
@@ -704,7 +819,6 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
       titleEn: '',
       registrationUrl: bumpYearInUrl(edition.registrationUrl ?? '', edition.year, nextYear),
       resultsUrl: bumpYearInUrl(edition.resultsUrl ?? '', edition.year, nextYear),
-      photoGalleryUrl: '',
       notes: '',
       notesEn: '',
       registrationStatus: suggestedDate && isPastDate(suggestedDate) ? 'Closed' : 'NotStarted',
@@ -729,10 +843,10 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
     await refresh();
   };
 
-  const EVENT_STATUSES_CYCLE: EventStatus[] = ['Unconfirmed', 'Confirmed', 'Cancelled', 'Hidden', 'Unlisted'];
-
   const handleCycleEventStatus = () => {
-    const next = EVENT_STATUSES_CYCLE[(EVENT_STATUSES_CYCLE.indexOf(detail!.status) + 1) % EVENT_STATUSES_CYCLE.length]!;
+    // Cancelled is deliberately excluded from the cycle — see EVENT_STATUS_CYCLE's doc comment.
+    // Cancelling an event is only reachable via the dedicated Cancel Event confirmation dialog.
+    const next = EVENT_STATUS_CYCLE[(EVENT_STATUS_CYCLE.indexOf(detail!.status) + 1) % EVENT_STATUS_CYCLE.length]!;
     setDetail(prev => prev ? { ...prev, status: next } : prev);
     apiFetch(`/api/v1/admin/events/${detail!.id}`, {
       method: 'PUT',
@@ -938,6 +1052,21 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
     }
   };
 
+  const handleConfirmCancelEvent = async () => {
+    if (!detail) return;
+    setCancellingEvent(true);
+    try {
+      await apiFetch(`/api/v1/admin/events/${detail.id}/cancel`, { method: 'POST' });
+      onNotify('Event cancelled — qualifying editions and races cancelled along with it');
+      setCancelEventDialogOpen(false);
+      await refresh();
+    } catch (err) {
+      onNotify(err instanceof Error ? err.message : 'Failed to cancel event', 'error');
+    } finally {
+      setCancellingEvent(false);
+    }
+  };
+
   const handleCycleRaceStatus = (race: RaceDto) => {
     const next = RACE_STATUSES[(RACE_STATUSES.indexOf(race.status) + 1) % RACE_STATUSES.length]! as RaceStatus;
     patchRaceInDetail(race.id, { status: next });
@@ -1116,7 +1245,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
     <Box>
       {/* Breadcrumb */}
       <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 2 }}>
-        <IconButton size="small" component={RouterLink} to="/events">
+        <IconButton size="small" onClick={handleBackToList}>
           <ArrowBackIcon fontSize="small" />
         </IconButton>
         <Typography
@@ -1124,7 +1253,12 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
           color="text.secondary"
           component={RouterLink}
           to="/events"
-          sx={{ textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+          onClick={e => {
+            if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+            e.preventDefault();
+            handleBackToList();
+          }}
+          sx={{ cursor: 'pointer', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
         >
           Events
         </Typography>
@@ -1138,7 +1272,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
           <Box>
             <Typography variant="h5" fontWeight={600} gutterBottom>{detail.name}</Typography>
             <Stack direction="row" flexWrap="wrap" gap={0.75} alignItems="center" sx={{ mb: 0.5 }}>
-              <Tooltip title={cycleTooltip('Event status', EVENT_STATUSES_CYCLE, detail.status)}>
+              <Tooltip title={cycleTooltip('Event status', EVENT_STATUS_CYCLE, detail.status)}>
                 <Chip label={detail.status} size="small"
                   color={detail.status === 'Confirmed' ? 'success' : detail.status === 'Cancelled' ? 'error' : detail.status === 'Unconfirmed' ? 'warning' : 'default'}
                   onClick={handleCycleEventStatus}
@@ -1197,6 +1331,16 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
               onClick={() => { setEditingEdition(null); setEditionDialogOpen(true); }}>
               Add edition
             </Button>
+            {detail.status !== 'Cancelled' && (
+              <Tooltip title="Cancel event (also cancels its upcoming editions and races)">
+                <Button size="small" color="error" variant="outlined"
+                  startIcon={<EventBusyIcon />}
+                  onClick={() => setCancelEventDialogOpen(true)}
+                >
+                  Cancel event
+                </Button>
+              </Tooltip>
+            )}
             <Tooltip title={confirmDeleteEvent ? 'Click again to confirm — or wait 3 seconds to cancel' : 'Delete event'}>
               <Button size="small" color="error"
                 variant={confirmDeleteEvent ? 'contained' : 'outlined'}
@@ -1234,11 +1378,6 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
             {detail.editions.length} total
           </Typography>
         </Typography>
-        {editionsByYear.hidden > 0 && (
-          <Button size="small" variant="text" onClick={() => setShowOlderEditions(v => !v)}>
-            {showOlderEditions ? 'Hide older' : `Show ${editionsByYear.hidden} older`}
-          </Button>
-        )}
       </Stack>
 
       {editionsByYear.visible.length === 0 && (
@@ -1254,6 +1393,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
         const expanded = expandedEditionIds.has(edition.id);
         const raceCount = edition.races.length;
         const isPast = edition.date ? edition.date < new Date().toISOString().slice(0, 10) : false;
+        const isEditionFocused = focusedId === `edition:${edition.id}`;
 
         return (
           <Box
@@ -1268,15 +1408,17 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
           >
             {/* Edition header */}
             <Stack
+              ref={setFocusRowRef(`edition:${edition.id}`)}
               direction="row"
               alignItems="center"
               spacing={1}
-              sx={{
+              sx={(theme) => ({
                 px: 2, py: 1.25,
                 cursor: 'pointer',
                 bgcolor: expanded ? 'primary.50' : 'background.paper',
                 '&:hover': { bgcolor: expanded ? 'primary.50' : 'action.hover' },
-              }}
+                ...(isEditionFocused && { outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: -2 }),
+              })}
               onClick={() => toggleEdition(edition.id)}
             >
               {expanded
@@ -1415,15 +1557,27 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                       </Typography>
                     </Box>
                   )}
-                  {edition.photoGalleryUrl && (
-                    <Box>
-                      <Typography variant="caption" color="text.secondary" display="block">Photo Gallery</Typography>
-                      <Typography variant="body2" component="a" href={edition.photoGalleryUrl} target="_blank" rel="noopener"
-                        sx={{ color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}>
-                        {(() => { const s = edition.photoGalleryUrl.replace(/^https?:\/\//, ''); return s.length > 40 ? s.slice(0, 40) + '…' : s; })()}
-                      </Typography>
-                    </Box>
-                  )}
+                  {edition.galleries.length > 0 && (() => {
+                    // Sort defensively even though ToPublicDtos() already sorts server-side —
+                    // don't assume the ordering contract holds forever.
+                    const sorted = [...edition.galleries].sort((a, b) => a.sortOrder - b.sortOrder);
+                    const first = sorted[0]!;
+                    const extra = sorted.length - 1;
+                    return (
+                      <Box>
+                        <Typography variant="caption" color="text.secondary" display="block">Galleries</Typography>
+                        <Stack direction="row" alignItems="baseline" spacing={0.75}>
+                          <Typography variant="body2" component="a" href={first.url} target="_blank" rel="noopener"
+                            sx={{ color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}>
+                            {(() => { const s = first.url.replace(/^https?:\/\//, ''); return s.length > 40 ? s.slice(0, 40) + '…' : s; })()}
+                          </Typography>
+                          {extra > 0 && (
+                            <Typography variant="body2" color="text.secondary">+{extra} more</Typography>
+                          )}
+                        </Stack>
+                      </Box>
+                    );
+                  })()}
                   {edition.trailName && (
                     <Box>
                       <Typography variant="caption" color="text.secondary" display="block">Trail</Typography>
@@ -1509,6 +1663,8 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                               race={race}
                               edition={edition}
                               isActive={raceForm?.race?.id === race.id}
+                              isFocused={focusedId === `race:${race.id}`}
+                              focusRef={setFocusRowRef(`race:${race.id}`)}
                               onOpen={() => openRaceForm(race, edition)}
                               onDuplicate={() => openDuplicateRace(race, edition)}
                               onCycleStatus={() => handleCycleRaceStatus(race)}
@@ -1554,6 +1710,14 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
         );
       })}
 
+      {editionsByYear.hidden > 0 && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, mb: 3 }}>
+          <Button size="small" variant="text" onClick={() => setShowOlderEditions(v => !v)}>
+            {showOlderEditions ? 'Hide older' : `Show ${editionsByYear.hidden} older`}
+          </Button>
+        </Box>
+      )}
+
       {/* Edition dialog */}
       <EditionDialog
         open={editionDialogOpen}
@@ -1561,6 +1725,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
         eventId={detail.id}
         initialValues={editionInitialValues}
         onClose={() => { setEditionDialogOpen(false); setCloneFromEditionId(null); setEditionInitialValues(undefined); }}
+        onGalleryMutated={refresh}
         onSaved={async (newEditionId) => {
           setEditionDialogOpen(false);
           if (newEditionId && cloneFromEditionId) {
@@ -1608,6 +1773,47 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
         }}
         onNotify={onNotify}
       />
+
+      {/* Cancel event confirmation — a real dialog, not click-to-arm, because the blast radius is
+          two levels deep (event → editions → races) and isn't summarisable in a tooltip. */}
+      <Dialog open={cancelEventDialogOpen} onClose={() => setCancelEventDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Cancel Event</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2">
+            Cancel <strong>{detail?.name}</strong>?
+          </Typography>
+          {editionsAffectedByCancel.length > 0 ? (
+            <>
+              <Typography variant="body2" sx={{ mt: 1.5 }}>
+                This will also cancel {editionsAffectedByCancel.length} edition{editionsAffectedByCancel.length === 1 ? '' : 's'} and {raceCountAffectedByCancel} race{raceCountAffectedByCancel === 1 ? '' : 's'}:
+              </Typography>
+              <Box component="ul" sx={{ mt: 0.5, mb: 0, pl: 3 }}>
+                {editionsAffectedByCancel.map(ed => {
+                  const raceCount = ed.races.filter(r => r.status !== 'Cancelled').length;
+                  return (
+                    <Typography key={ed.id} component="li" variant="body2">
+                      {ed.title ?? ed.year ?? fmtDate(ed.date)} — {raceCount} race{raceCount === 1 ? '' : 's'}
+                    </Typography>
+                  );
+                })}
+              </Box>
+            </>
+          ) : (
+            <Typography variant="body2" sx={{ mt: 1.5 }} color="text.secondary">
+              No editions qualify for cascade — completed, already-cancelled, and past-dated editions are left untouched.
+            </Typography>
+          )}
+          <Typography variant="body2" sx={{ mt: 1.5 }} color="text.secondary">
+            Reactivating the event later will not restore these editions or races — they will stay Cancelled.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCancelEventDialogOpen(false)}>Back</Button>
+          <Button variant="contained" color="error" onClick={() => void handleConfirmCancelEvent()} disabled={cancellingEvent}>
+            {cancellingEvent ? <CircularProgress size={20} /> : 'Cancel Event'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Copy races confirmation */}
       <Dialog open={!!copyRacesConfirm} onClose={() => setCopyRacesConfirm(null)} maxWidth="sm" fullWidth>

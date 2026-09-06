@@ -1,3 +1,4 @@
+using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Core.Services;
 
 namespace Utanvega.Backend.Tests.Services;
@@ -6,7 +7,7 @@ public class GpxProcessorTests
 {
     // ─── Minimal valid GPX builder ───
 
-    private static string BuildGpx(IEnumerable<(double lat, double lon, double ele)> points, string? name = null)
+    private static string BuildGpx(IEnumerable<(double lat, double lon, double ele)> points, string? name = null, string? type = null)
     {
         var trkpts = string.Concat(points.Select(p =>
             $"<trkpt lat=\"{p.lat.ToString(System.Globalization.CultureInfo.InvariantCulture)}\" " +
@@ -14,7 +15,8 @@ public class GpxProcessorTests
             $"<ele>{p.ele.ToString(System.Globalization.CultureInfo.InvariantCulture)}</ele></trkpt>"));
 
         var namePart = name is not null ? $"<metadata><name>{name}</name></metadata>" : "";
-        return $"<?xml version=\"1.0\"?><gpx xmlns=\"http://www.topografix.com/GPX/1/1\">{namePart}<trk><trkseg>{trkpts}</trkseg></trk></gpx>";
+        var typePart = type is not null ? $"<type>{type}</type>" : "";
+        return $"<?xml version=\"1.0\"?><gpx xmlns=\"http://www.topografix.com/GPX/1/1\">{namePart}<trk>{typePart}<trkseg>{trkpts}</trkseg></trk></gpx>";
     }
 
     // ─── Elevation profile sampling ───
@@ -162,5 +164,62 @@ public class GpxProcessorTests
         var result = GpxProcessor.Process(BuildGpx(points));
 
         Assert.True(result.Length > 0);
+    }
+
+    // ─── Detected activity type from <type> ───
+
+    private static readonly (double lat, double lon, double ele)[] TwoPoints =
+    [
+        (64.0, -18.0, 0.0),
+        (64.01, -18.01, 0.0),
+    ];
+
+    [Theory]
+    [InlineData("trail_running", ActivityType.TrailRunning)]
+    [InlineData("trailrunning", ActivityType.TrailRunning)]
+    [InlineData("trail run", ActivityType.TrailRunning)]
+    [InlineData("running", ActivityType.Running)]
+    [InlineData("run", ActivityType.Running)]
+    [InlineData("road_running", ActivityType.Running)]
+    [InlineData("hiking", ActivityType.Hiking)]
+    [InlineData("hike", ActivityType.Hiking)]
+    [InlineData("walking", ActivityType.Hiking)]
+    [InlineData("cycling", ActivityType.Cycling)]
+    [InlineData("biking", ActivityType.Cycling)]
+    [InlineData("road_biking", ActivityType.Cycling)]
+    [InlineData("mountain_biking", ActivityType.Cycling)]
+    public void DetectedActivityType_MapsKnownGpxTypes(string gpxType, ActivityType expected)
+    {
+        var result = GpxProcessor.Process(BuildGpx(TwoPoints, type: gpxType));
+
+        Assert.Equal(expected, result.DetectedActivityType);
+    }
+
+    [Theory]
+    [InlineData("Trail_Running")]
+    [InlineData("TRAILRUNNING")]
+    [InlineData("  Trail-Running  ")]
+    [InlineData("Road_Biking")]
+    public void DetectedActivityType_IsCaseInsensitiveAndIgnoresSeparators(string gpxType)
+    {
+        var result = GpxProcessor.Process(BuildGpx(TwoPoints, type: gpxType));
+
+        Assert.NotNull(result.DetectedActivityType);
+    }
+
+    [Fact]
+    public void DetectedActivityType_UnrecognisedValue_IsNullNotFallback()
+    {
+        var result = GpxProcessor.Process(BuildGpx(TwoPoints, type: "kayaking"));
+
+        Assert.Null(result.DetectedActivityType);
+    }
+
+    [Fact]
+    public void DetectedActivityType_NoTypeElement_IsNull()
+    {
+        var result = GpxProcessor.Process(BuildGpx(TwoPoints));
+
+        Assert.Null(result.DetectedActivityType);
     }
 }

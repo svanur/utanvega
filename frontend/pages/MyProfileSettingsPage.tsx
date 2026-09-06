@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link as RouterLink, Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Avatar,
@@ -15,7 +15,7 @@ import {
   Typography,
 } from '@mui/material';
 import Layout from '../components/Layout';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../hooks/useAuthContext';
 import { useProfile } from '../hooks/useProfile';
 import {
   AVATAR_PRESETS,

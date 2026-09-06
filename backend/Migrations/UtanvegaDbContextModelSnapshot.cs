@@ -191,9 +191,6 @@ namespace Utanvega.Backend.Migrations
                     b.Property<string>("NotesEn")
                         .HasColumnType("text");
 
-                    b.Property<string>("PhotoGalleryUrl")
-                        .HasColumnType("text");
-
                     b.Property<string>("RegistrationStatus")
                         .IsRequired()
                         .HasColumnType("text");
@@ -477,6 +474,102 @@ namespace Utanvega.Backend.Migrations
                         .IsUnique();
 
                     b.ToTable("Organizers");
+                });
+
+            modelBuilder.Entity("Utanvega.Backend.Core.Entities.PhotoGallery", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("EventEditionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("PhotographerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("TitleEn")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EventEditionId");
+
+                    b.HasIndex("PhotographerId");
+
+                    b.ToTable("PhotoGalleries");
+                });
+
+            modelBuilder.Entity("Utanvega.Backend.Core.Entities.Photographer", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<string>("DescriptionEn")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("SocialLinks")
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("TranslationHashes")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Website")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name");
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
+                    b.ToTable("Photographers");
                 });
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.Profile", b =>
@@ -1017,6 +1110,24 @@ namespace Utanvega.Backend.Migrations
                     b.Navigation("Parent");
                 });
 
+            modelBuilder.Entity("Utanvega.Backend.Core.Entities.PhotoGallery", b =>
+                {
+                    b.HasOne("Utanvega.Backend.Core.Entities.EventEdition", "EventEdition")
+                        .WithMany("PhotoGalleries")
+                        .HasForeignKey("EventEditionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Utanvega.Backend.Core.Entities.Photographer", "Photographer")
+                        .WithMany()
+                        .HasForeignKey("PhotographerId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("EventEdition");
+
+                    b.Navigation("Photographer");
+                });
+
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.Race", b =>
                 {
                     b.HasOne("Utanvega.Backend.Core.Entities.EventEdition", "EventEdition")
@@ -1102,6 +1213,8 @@ namespace Utanvega.Backend.Migrations
 
             modelBuilder.Entity("Utanvega.Backend.Core.Entities.EventEdition", b =>
                 {
+                    b.Navigation("PhotoGalleries");
+
                     b.Navigation("Races");
                 });
 

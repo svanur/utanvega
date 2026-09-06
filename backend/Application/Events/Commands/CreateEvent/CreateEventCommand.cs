@@ -28,9 +28,9 @@ public record CreateEventCommand(
     string? DescriptionEn = null,
     string? OrganizerNameEn = null,
     string? AlertMessageEn = null
-) : IRequest<Guid>;
+) : IRequest<(Guid Id, string Slug)>;
 
-public class CreateEventCommandHandler : IRequestHandler<CreateEventCommand, Guid>
+public class CreateEventCommandHandler : IRequestHandler<CreateEventCommand, (Guid Id, string Slug)>
 {
     private readonly UtanvegaDbContext _context;
     private readonly ICacheInvalidator _cacheInvalidator;
@@ -41,7 +41,7 @@ public class CreateEventCommandHandler : IRequestHandler<CreateEventCommand, Gui
         _cacheInvalidator = cacheInvalidator;
     }
 
-    public async Task<Guid> Handle(CreateEventCommand request, CancellationToken cancellationToken)
+    public async Task<(Guid Id, string Slug)> Handle(CreateEventCommand request, CancellationToken cancellationToken)
     {
         var slug = request.Slug ?? SlugGenerator.Generate(request.Name);
 
@@ -82,6 +82,6 @@ public class CreateEventCommandHandler : IRequestHandler<CreateEventCommand, Gui
         await _context.SaveChangesAsync(cancellationToken);
         _cacheInvalidator.InvalidateEvent(slug);
 
-        return ev.Id;
+        return (ev.Id, slug);
     }
 }

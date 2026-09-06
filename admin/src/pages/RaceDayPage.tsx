@@ -21,10 +21,10 @@ import dayjs, { type Dayjs } from 'dayjs';
 import { apiFetch } from '../hooks/api';
 import type { RaceStatus, TicketStatus } from '../hooks/useEvents';
 import { formatMinutesToHHmm, parseHHmmToMinutes, normalizeCutoffTimeInput, normalizeCutoffTimeOnBlur } from '../utils/cutoffTime';
+import { EVENT_STATUS_CYCLE } from '../utils/eventForms';
 
 const RACE_STATUSES: RaceStatus[] = ['Active', 'Completed', 'Cancelled', 'Hidden'];
 const TICKET_STATUSES: TicketStatus[] = ['Available', 'AlmostSoldOut', 'SoldOut', 'Closed', 'NotStarted', 'Free'];
-const EVENT_STATUSES = ['Unconfirmed', 'Confirmed', 'Cancelled', 'Hidden', 'Unlisted'] as const;
 const REGISTRATION_STATUSES = ['NotStarted', 'Open', 'Closed'] as const;
 
 type Mode = 'setup' | 'wrapup';
@@ -731,7 +731,13 @@ export default function RaceDayPage({ onNotify, initialDate }: RaceDayPageProps)
                                                         onChange={e => updateEventStatus(ed, e.target.value)}
                                                         sx={{ fontSize: '0.75rem', height: 24, '.MuiSelect-select': { py: '2px', px: 1 } }}
                                                     >
-                                                        {EVENT_STATUSES.map(s => (
+                                                        {/* Cancelled is deliberately excluded from the selectable options — cancelling
+                                                            cascades to editions and races (see backend Event.CancelWithEditions), so
+                                                            it's only reachable via the dedicated Cancel Event confirmation dialog on
+                                                            the Event detail page, not a one-click dropdown pick here. An already-
+                                                            cancelled event still shows its current status so it can be moved away
+                                                            from it (which never cascades back). */}
+                                                        {(ed.eventStatus === 'Cancelled' ? ['Cancelled', ...EVENT_STATUS_CYCLE] : EVENT_STATUS_CYCLE).map(s => (
                                                             <MenuItem key={s} value={s} sx={{ fontSize: '0.8rem' }}>
                                                                 <Chip
                                                                     label={s}

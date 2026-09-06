@@ -52,6 +52,7 @@ using Utanvega.Backend.Application.Events.Queries.GetAllEventDetails;
 using Utanvega.Backend.Application.Events.Commands.CreateEvent;
 using Utanvega.Backend.Application.Events.Commands.UpdateEvent;
 using Utanvega.Backend.Application.Events.Commands.DeleteEvent;
+using Utanvega.Backend.Application.Events.Commands.CancelEvent;
 using Utanvega.Backend.Application.Events.Commands.CreateEdition;
 using Utanvega.Backend.Application.Events.Commands.UpdateEdition;
 using Utanvega.Backend.Application.Events.Commands.DeleteEdition;
@@ -61,6 +62,8 @@ using Utanvega.Backend.Application.Events.Commands.UpdateRace;
 using Utanvega.Backend.Application.Events.Commands.DeleteRace;
 using Utanvega.Backend.Application.Events.Commands.GenerateEditionsForSeason;
 using Utanvega.Backend.Application.Organizers;
+using Utanvega.Backend.Application.Photographers;
+using Utanvega.Backend.Application.PhotoGalleries;
 using Utanvega.Backend.Application.Tags;
 using Utanvega.Backend.Application.Activities.Commands.CreateUserTrailActivity;
 using Utanvega.Backend.Application.Activities.Commands.UpdateUserTrailActivity;
@@ -1063,12 +1066,11 @@ app.MapPost("/api/v1/admin/trails/upload-gpx", [Authorize(Policy = "AdminOnly")]
     using var reader = new StreamReader(file.OpenReadStream());
     var gpxXml = await reader.ReadToEndAsync();
     
-    ActivityType parsedActivityType;
-    if (activityType is null)
+    if (string.IsNullOrWhiteSpace(activityType))
     {
-        parsedActivityType = ActivityType.TrailRunning;
+        return Results.BadRequest("activityType is required.");
     }
-    else if (!Enum.TryParse<ActivityType>(activityType, ignoreCase: true, out parsedActivityType))
+    if (!Enum.TryParse<ActivityType>(activityType, ignoreCase: true, out var parsedActivityType))
     {
         return Results.BadRequest($"Invalid activityType '{activityType}'. Valid values: {string.Join(", ", Enum.GetNames<ActivityType>())}");
     }
@@ -1142,15 +1144,19 @@ app.MapPost("/api/v1/admin/trails/check-similarity", [Authorize(Policy = "AdminO
     try 
     {
         var command = new CheckTrailSimilarityCommand(name, gpxXml);
-        var matches = await mediator.Send(command);
-        
-        var response = matches.Select(m => new {
-            trailId = m.TrailId,
-            trailName = m.TrailName,
-            matchPercentage = m.MatchPercentage,
-            message = $"This trail is a {m.MatchPercentage}% match to '{m.TrailName}'"
-        });
-        
+        var result = await mediator.Send(command);
+
+        var response = new
+        {
+            matches = result.Matches.Select(m => new {
+                trailId = m.TrailId,
+                trailName = m.TrailName,
+                matchPercentage = m.MatchPercentage,
+                message = $"This trail is a {m.MatchPercentage}% match to '{m.TrailName}'"
+            }),
+            detectedActivityType = result.DetectedActivityType
+        };
+
         return Results.Ok(response);
     }
     catch (Exception ex)
@@ -1195,7 +1201,8 @@ app.MapPost("/api/v1/admin/trails/bulk-check-similarity", [Authorize(Policy = "A
                 trailName = m.TrailName,
                 matchPercentage = m.MatchPercentage,
                 message = $"This trail is a {m.MatchPercentage}% match to '{m.TrailName}'"
-            })
+            }),
+            detectedActivityType = r.DetectedActivityType
         });
         
         return Results.Ok(response);
@@ -1214,22 +1221,29 @@ app.MapPost("/api/v1/admin/trails/bulk-upload-gpx", [Authorize(Policy = "AdminOn
     var form = await context.Request.ReadFormAsync();
     var files = form.Files.GetFiles("files");
     var names = form.TryGetValue("names", out var namesList) ? namesList.ToList() : new List<string?>();
+    var activityTypes = form.TryGetValue("activityTypes", out var activityTypesList) ? activityTypesList.ToList() : new List<string?>();
 
     if (files == null || files.Count == 0) return Results.BadRequest("No files uploaded.");
-    
+
     var gpxFiles = new List<Utanvega.Backend.Application.Trails.Commands.BulkCreateTrailsFromGpx.GpxFileInfo>();
     for (int i = 0; i < files.Count; i++)
     {
         var file = files[i];
         var name = names.Count > i ? names[i] : null;
+        var activityTypeRaw = activityTypes.Count > i ? activityTypes[i] : null;
+
+        if (string.IsNullOrWhiteSpace(activityTypeRaw) || !Enum.TryParse<ActivityType>(activityTypeRaw, ignoreCase: true, out var activityType))
+        {
+            return Results.BadRequest($"Missing or invalid activityType for file '{file.FileName}'. Valid values: {string.Join(", ", Enum.GetNames<ActivityType>())}");
+        }
 
         using var reader = new StreamReader(file.OpenReadStream());
         var gpxXml = await reader.ReadToEndAsync();
-        
-        gpxFiles.Add(new Utanvega.Backend.Application.Trails.Commands.BulkCreateTrailsFromGpx.GpxFileInfo(name, gpxXml));
+
+        gpxFiles.Add(new Utanvega.Backend.Application.Trails.Commands.BulkCreateTrailsFromGpx.GpxFileInfo(name, gpxXml, activityType));
     }
-    
-    try 
+
+    try
     {
         var command = new BulkCreateTrailsFromGpxCommand(gpxFiles, GetAuthenticatedUserId(context));
         var trailIds = await mediator.Send(command);
@@ -1275,9 +1289,9 @@ app.MapDelete("/api/v1/admin/locations/{id:guid}", [Authorize(Policy = "AdminOnl
         await mediator.Send(new DeleteLocationCommand(id, GetAuthenticatedUserId(httpContext)));
         return Results.NoContent();
     }
-    catch (InvalidOperationException)
+    catch (InvalidOperationException ex)
     {
-        return Results.BadRequest("Cannot delete this location. It may have child locations or linked trails.");
+        return Results.BadRequest(ex.Message);
     }
     catch (Exception ex)
     {
@@ -1722,8 +1736,8 @@ app.MapPost("/api/v1/admin/events", [Authorize(Policy = "AdminOnly")] async (Cre
 {
     try
     {
-        var id = await mediator.Send(command);
-        return Results.Created($"/api/v1/events/{id}", new { id });
+        var (id, slug) = await mediator.Send(command);
+        return Results.Created($"/api/v1/events/{slug}", new { id, slug });
     }
     catch (InvalidOperationException ex)
     {
@@ -1746,6 +1760,13 @@ app.MapDelete("/api/v1/admin/events/{id:guid}", [Authorize(Policy = "AdminOnly")
     return success ? Results.NoContent() : Results.NotFound();
 })
 .WithName("DeleteEvent");
+
+app.MapPost("/api/v1/admin/events/{id:guid}/cancel", [Authorize(Policy = "AdminOnly")] async (Guid id, IMediator mediator) =>
+{
+    var success = await mediator.Send(new CancelEventCommand(id));
+    return success ? Results.NoContent() : Results.NotFound();
+})
+.WithName("CancelEvent");
 
 // Organizers (public list for dropdowns — trimmed DTO, no PII)
 app.MapGet("/api/v1/organizers", async (IMediator mediator) =>
@@ -1772,16 +1793,61 @@ app.MapGet("/api/v1/admin/organizers", [Authorize(Policy = "AdminOnly")] async (
 
 app.MapPost("/api/v1/admin/organizers", [Authorize(Policy = "AdminOnly")] async (CreateOrganizerCommand command, IMediator mediator) =>
 {
-    var (id, slug) = await mediator.Send(command);
-    return Results.Created($"/api/v1/organizers/{slug}", new { id, slug });
+    try
+    {
+        var (id, slug) = await mediator.Send(command);
+        return Results.Created($"/api/v1/organizers/{slug}", new { id, slug });
+    }
+    catch (DbUpdateException ex) when (ex.InnerException is PostgresException pg)
+    {
+        Log.Error(ex, "Database error creating organizer. SqlState={SqlState} Detail={Detail}", pg.SqlState, pg.Detail);
+
+        // Handle unique constraint violation (SQL state 23505) — e.g. two organizer names
+        // that normalize to the same slug ("Jón Jónsson" vs "Jon Jonsson").
+        if (pg.SqlState == "23505" && pg.MessageText.Contains("IX_Organizers_Slug"))
+        {
+            return Results.Conflict(new
+            {
+                message = "An organizer with a matching name/slug already exists. Please choose a different name."
+            });
+        }
+
+        return Results.Problem(
+            title: "Failed to create organizer",
+            detail: "A database error occurred while saving the organizer.",
+            statusCode: StatusCodes.Status500InternalServerError);
+    }
 })
 .WithName("CreateOrganizer");
 
 app.MapPut("/api/v1/admin/organizers/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, UpdateOrganizerCommand command, IMediator mediator) =>
 {
     if (id != command.Id) return Results.BadRequest("ID mismatch");
-    var success = await mediator.Send(command);
-    return success ? Results.NoContent() : Results.NotFound();
+
+    try
+    {
+        var success = await mediator.Send(command);
+        return success ? Results.NoContent() : Results.NotFound();
+    }
+    catch (DbUpdateException ex) when (ex.InnerException is PostgresException pg)
+    {
+        Log.Error(ex, "Database error updating organizer. SqlState={SqlState} Detail={Detail}", pg.SqlState, pg.Detail);
+
+        // Handle unique constraint violation (SQL state 23505) — e.g. two organizer names
+        // that normalize to the same slug ("Jón Jónsson" vs "Jon Jonsson").
+        if (pg.SqlState == "23505" && pg.MessageText.Contains("IX_Organizers_Slug"))
+        {
+            return Results.Conflict(new
+            {
+                message = "An organizer with a matching name/slug already exists. Please choose a different name."
+            });
+        }
+
+        return Results.Problem(
+            title: "Failed to update organizer",
+            detail: "A database error occurred while saving the organizer.",
+            statusCode: StatusCodes.Status500InternalServerError);
+    }
 })
 .WithName("UpdateOrganizer");
 
@@ -1791,6 +1857,153 @@ app.MapDelete("/api/v1/admin/organizers/{id:guid}", [Authorize(Policy = "AdminOn
     return success ? Results.NoContent() : Results.NotFound();
 })
 .WithName("DeleteOrganizer");
+
+// Photographers (public detail page — narrowed DTO, no PII)
+app.MapGet("/api/v1/photographers/{slug}", async (string slug, IMediator mediator) =>
+{
+    var photographer = await mediator.Send(new GetPhotographerPublicBySlugQuery(slug));
+    return photographer is null ? Results.NotFound() : Results.Ok(photographer);
+})
+.WithName("GetPhotographerBySlugPublic");
+
+// Admin Photographer CRUD
+app.MapGet("/api/v1/admin/photographers", [Authorize(Policy = "AdminOnly")] async (IMediator mediator) =>
+{
+    var photographers = await mediator.Send(new GetPhotographersQuery());
+    return Results.Ok(photographers);
+})
+.WithName("GetAdminPhotographers");
+
+app.MapGet("/api/v1/admin/photographers/{slug}", [Authorize(Policy = "AdminOnly")] async (string slug, IMediator mediator) =>
+{
+    var photographer = await mediator.Send(new GetPhotographerBySlugQuery(slug));
+    return photographer is null ? Results.NotFound() : Results.Ok(photographer);
+})
+.WithName("GetAdminPhotographerBySlug");
+
+app.MapPost("/api/v1/admin/photographers", [Authorize(Policy = "AdminOnly")] async (CreatePhotographerCommand command, IMediator mediator) =>
+{
+    try
+    {
+        var (id, slug) = await mediator.Send(command);
+        return Results.Created($"/api/v1/admin/photographers/{slug}", new { id, slug });
+    }
+    catch (DbUpdateException ex) when (ex.InnerException is PostgresException pg)
+    {
+        Log.Error(ex, "Database error creating photographer. SqlState={SqlState} Detail={Detail}", pg.SqlState, pg.Detail);
+
+        // Handle unique constraint violation (SQL state 23505) — e.g. two photographer names
+        // that normalize to the same slug ("Jón Jónsson" vs "Jon Jonsson").
+        if (pg.SqlState == "23505" && pg.MessageText.Contains("IX_Photographers_Slug"))
+        {
+            return Results.Conflict(new
+            {
+                message = "A photographer with a matching name/slug already exists. Please choose a different name."
+            });
+        }
+
+        return Results.Problem(
+            title: "Failed to create photographer",
+            detail: "A database error occurred while saving the photographer.",
+            statusCode: StatusCodes.Status500InternalServerError);
+    }
+})
+.WithName("CreatePhotographer");
+
+app.MapPut("/api/v1/admin/photographers/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, UpdatePhotographerCommand command, IMediator mediator) =>
+{
+    if (id != command.Id) return Results.BadRequest("ID mismatch");
+
+    try
+    {
+        var success = await mediator.Send(command);
+        return success ? Results.NoContent() : Results.NotFound();
+    }
+    catch (DbUpdateException ex) when (ex.InnerException is PostgresException pg)
+    {
+        Log.Error(ex, "Database error updating photographer. SqlState={SqlState} Detail={Detail}", pg.SqlState, pg.Detail);
+
+        // Handle unique constraint violation (SQL state 23505) — e.g. two photographer names
+        // that normalize to the same slug ("Jón Jónsson" vs "Jon Jonsson").
+        if (pg.SqlState == "23505" && pg.MessageText.Contains("IX_Photographers_Slug"))
+        {
+            return Results.Conflict(new
+            {
+                message = "A photographer with a matching name/slug already exists. Please choose a different name."
+            });
+        }
+
+        return Results.Problem(
+            title: "Failed to update photographer",
+            detail: "A database error occurred while saving the photographer.",
+            statusCode: StatusCodes.Status500InternalServerError);
+    }
+})
+.WithName("UpdatePhotographer");
+
+app.MapDelete("/api/v1/admin/photographers/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, Guid? reassignToId, IMediator mediator, ILogger<Program> logger) =>
+{
+    try
+    {
+        var success = await mediator.Send(new DeletePhotographerCommand(id, reassignToId));
+        return success ? Results.NoContent() : Results.NotFound();
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(ex.Message);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Photographer delete failed for {PhotographerId}", id);
+        return Results.Problem("Failed to delete photographer.");
+    }
+})
+.WithName("DeletePhotographer");
+
+app.MapGet("/api/v1/admin/photographers/{id:guid}/photo-galleries", [Authorize(Policy = "AdminOnly")] async (Guid id, IMediator mediator) =>
+{
+    var galleries = await mediator.Send(new GetPhotoGalleriesByPhotographerQuery(id));
+    return Results.Ok(galleries);
+})
+.WithName("GetAdminPhotoGalleriesByPhotographer");
+
+// Admin PhotoGallery CRUD
+app.MapGet("/api/v1/admin/editions/{editionId:guid}/photo-galleries", [Authorize(Policy = "AdminOnly")] async (Guid editionId, IMediator mediator) =>
+{
+    var galleries = await mediator.Send(new GetPhotoGalleriesByEditionQuery(editionId));
+    return Results.Ok(galleries);
+})
+.WithName("GetAdminPhotoGalleriesByEdition");
+
+app.MapPost("/api/v1/admin/editions/{editionId:guid}/photo-galleries", [Authorize(Policy = "AdminOnly")] async (Guid editionId, CreatePhotoGalleryCommand command, IMediator mediator, HttpContext httpContext) =>
+{
+    if (editionId != command.EventEditionId) return Results.BadRequest("EventEditionId mismatch");
+    try
+    {
+        var id = await mediator.Send(command with { CreatedBy = GetAuthenticatedUserId(httpContext) });
+        return Results.Created($"/api/v1/admin/editions/{editionId}/photo-galleries/{id}", new { id });
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.NotFound(new { message = ex.Message });
+    }
+})
+.WithName("CreatePhotoGallery");
+
+app.MapPut("/api/v1/admin/photo-galleries/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, UpdatePhotoGalleryCommand command, IMediator mediator) =>
+{
+    if (id != command.Id) return Results.BadRequest("ID mismatch");
+    var success = await mediator.Send(command);
+    return success ? Results.NoContent() : Results.NotFound();
+})
+.WithName("UpdatePhotoGallery");
+
+app.MapDelete("/api/v1/admin/photo-galleries/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, IMediator mediator) =>
+{
+    var success = await mediator.Send(new DeletePhotoGalleryCommand(id));
+    return success ? Results.NoContent() : Results.NotFound();
+})
+.WithName("DeletePhotoGallery");
 
 // Admin Edition CRUD
 app.MapPost("/api/v1/admin/events/{eventId:guid}/editions", [Authorize(Policy = "AdminOnly")] async (Guid eventId, CreateEditionCommand command, IMediator mediator) =>

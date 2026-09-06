@@ -46,6 +46,8 @@ public class UpdateEventCommandHandler : IRequestHandler<UpdateEventCommand, boo
     public async Task<bool> Handle(UpdateEventCommand request, CancellationToken cancellationToken)
     {
         var ev = await _context.Events
+            .Include(e => e.Editions)
+            .ThenInclude(ed => ed.Races)
             .FirstOrDefaultAsync(e => e.Id == request.Id, cancellationToken);
 
         if (ev == null) return false;
@@ -64,7 +66,13 @@ public class UpdateEventCommandHandler : IRequestHandler<UpdateEventCommand, boo
         ev.DescriptionEn = request.DescriptionEn;
         ev.Type = type;
         ev.ActivityType = activityType;
-        ev.Status = status;
+        if (status == EventStatus.Cancelled && ev.Status != EventStatus.Cancelled)
+            // Transitioning into Cancelled always cascades to qualifying editions (and their races)
+            // regardless of which path (this generic edit, the status patch, or the dedicated
+            // Cancel action) triggered it — overrides the plain Status assignment below.
+            ev.CancelWithEditions(DateOnly.FromDateTime(DateTime.UtcNow));
+        else
+            ev.Status = status;
         ev.OrganizerName = request.OrganizerName;
         ev.OrganizerNameEn = request.OrganizerNameEn;
         ev.OrganizerWebsite = request.OrganizerWebsite;

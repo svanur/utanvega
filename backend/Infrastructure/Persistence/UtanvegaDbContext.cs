@@ -26,6 +26,8 @@ public class UtanvegaDbContext : DbContext
     public DbSet<Profile> Profiles => Set<Profile>();
     public DbSet<TrailCheckIn> TrailCheckIns => Set<TrailCheckIn>();
     public DbSet<Organizer> Organizers => Set<Organizer>();
+    public DbSet<Photographer> Photographers => Set<Photographer>();
+    public DbSet<PhotoGallery> PhotoGalleries => Set<PhotoGallery>();
     public DbSet<Feedback> Feedback => Set<Feedback>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -230,6 +232,29 @@ public class UtanvegaDbContext : DbContext
                   ));
         });
 
+        modelBuilder.Entity<Photographer>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Slug).IsRequired().HasMaxLength(200);
+            entity.HasIndex(e => e.Slug).IsUnique();
+            entity.HasIndex(e => e.Name);
+            entity.Property(e => e.Email).HasMaxLength(200);
+            entity.Property(e => e.Website).HasMaxLength(500);
+
+            entity.Property(e => e.SocialLinks)
+                  .HasColumnType("jsonb")
+                  .HasConversion(
+                      v => v == null ? null : JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                      v => v == null ? null : JsonSerializer.Deserialize<List<SocialLink>>(v, (JsonSerializerOptions?)null)
+                  )
+                  .Metadata.SetValueComparer(new ValueComparer<List<SocialLink>?>(
+                      (a, b) => JsonSerializer.Serialize(a, (JsonSerializerOptions?)null) == JsonSerializer.Serialize(b, (JsonSerializerOptions?)null),
+                      v => v == null ? 0 : JsonSerializer.Serialize(v, (JsonSerializerOptions?)null).GetHashCode(),
+                      v => v == null ? null : JsonSerializer.Deserialize<List<SocialLink>>(JsonSerializer.Serialize(v, (JsonSerializerOptions?)null), (JsonSerializerOptions?)null)
+                  ));
+        });
+
         modelBuilder.Entity<EventEdition>(entity =>
         {
             entity.HasKey(e => e.Id);
@@ -251,6 +276,27 @@ public class UtanvegaDbContext : DbContext
 
             entity.HasIndex(e => e.EventId);
             entity.HasIndex(e => e.Date);
+        });
+
+        modelBuilder.Entity<PhotoGallery>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Url).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.Title).HasMaxLength(200);
+            entity.Property(e => e.TitleEn).HasMaxLength(200);
+            entity.Property(e => e.CreatedBy).HasMaxLength(200);
+
+            entity.HasOne(e => e.EventEdition)
+                  .WithMany(ed => ed.PhotoGalleries)
+                  .HasForeignKey(e => e.EventEditionId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Photographer)
+                  .WithMany(p => p.PhotoGalleries)
+                  .HasForeignKey(e => e.PhotographerId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(e => e.EventEditionId);
         });
 
         modelBuilder.Entity<Race>(entity =>

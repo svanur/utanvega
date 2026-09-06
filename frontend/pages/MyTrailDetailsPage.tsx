@@ -7,13 +7,14 @@ import {
   TextField, PaletteMode, TableSortLabel, Checkbox, FormControlLabel, Tooltip as MuiTooltip,
 } from '@mui/material';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import type { LegendPayload, DotItemDotProps } from 'recharts';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import LockIcon from '@mui/icons-material/Lock';
 import PublicIcon from '@mui/icons-material/Public';
 import Layout from '../components/Layout';
 import TimePickerInput from '../components/TimePickerInput';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../hooks/useAuthContext';
 import { useTrails } from '../hooks/useTrails';
 import { useTrailActivities } from '../hooks/useTrailActivities';
 import { formatDateWithMonths, formatSeconds, parseTimeString } from '../utils/timeFormat';
@@ -235,7 +236,7 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
     setFormOpen(true);
   };
 
-  const handleLegendClick = (e: any) => {
+  const handleLegendClick = (e: LegendPayload) => {
     const dataKey = e.dataKey as keyof typeof visibleMetrics;
     // Prevent hiding all lines - keep at least one visible
     const newState = {
@@ -392,8 +393,9 @@ export default function MyTrailDetailsPage({ mode, onToggleMode }: Props) {
                     dataKey="time" 
                     stroke="#1976d2" 
                     dot={visibleMetrics.time
-                      ? (dotProps: any) => {
-                          const isBestPoint = dotProps?.payload?.time === statistics.bestTime;
+                      ? (dotProps: DotItemDotProps) => {
+                          const payload = dotProps.payload as { time?: number } | undefined;
+                          const isBestPoint = payload?.time === statistics.bestTime;
                           return (
                             <circle
                               cx={dotProps.cx}

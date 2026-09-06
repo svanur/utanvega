@@ -75,4 +75,60 @@ public class EditionStatusHelpersTests
             [RaceStatus.Cancelled, RaceStatus.Cancelled]);
         Assert.False(result);
     }
+
+    [Fact]
+    public void EffectiveDate_EndDateSet_ReturnsEndDate()
+    {
+        var date = new DateOnly(2026, 6, 1);
+        var endDate = new DateOnly(2026, 6, 3);
+        var result = EditionStatusHelpers.EffectiveDate(date, endDate);
+        Assert.Equal(endDate, result);
+    }
+
+    [Fact]
+    public void EffectiveDate_NoEndDate_FallsBackToDate()
+    {
+        var date = new DateOnly(2026, 6, 1);
+        var result = EditionStatusHelpers.EffectiveDate(date, null);
+        Assert.Equal(date, result);
+    }
+
+    [Fact]
+    public void EffectiveDate_BothNull_ReturnsNull()
+    {
+        var result = EditionStatusHelpers.EffectiveDate(null, null);
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void IsPast_DateBeforeToday_ReturnsTrue()
+    {
+        var today = new DateOnly(2026, 6, 5);
+        var result = EditionStatusHelpers.IsPast(new DateOnly(2026, 6, 4), today);
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void IsPast_DateEqualToToday_ReturnsFalse()
+    {
+        var today = new DateOnly(2026, 6, 5);
+        var result = EditionStatusHelpers.IsPast(today, today);
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void IsPast_DateAfterToday_ReturnsFalse()
+    {
+        var today = new DateOnly(2026, 6, 5);
+        var result = EditionStatusHelpers.IsPast(new DateOnly(2026, 6, 6), today);
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void IsPast_NullDate_ReturnsFalse()
+    {
+        // No date to compare — never reads as past.
+        var result = EditionStatusHelpers.IsPast(null, new DateOnly(2026, 6, 5));
+        Assert.False(result);
+    }
 }

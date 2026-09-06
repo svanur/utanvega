@@ -62,6 +62,7 @@ export type Trail = {
     terrainType?: string | null;
     needsReview?: boolean;
     updatedAt?: string | null;
+    createdAt: string;
 };
 
 /**

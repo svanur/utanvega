@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useCallback, useState, useRef, useEffect, Fragment } from 'react';
+import { lazy, Suspense, useMemo, useCallback, useState, useRef, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -29,7 +29,6 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
-    Badge,
     FormControlLabel,
     Checkbox,
     Divider,
@@ -52,7 +51,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import HistoryIcon from '@mui/icons-material/History';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import ListIcon from '@mui/icons-material/List';
-import MapIcon from '@mui/icons-material/Map';
+import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import FilterListIcon from '@mui/icons-material/FilterList';
@@ -75,16 +74,15 @@ import { downloadIcs } from '../utils/calendarLinks';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
 import { getTicketStatusColor, groupDistances, isAllSoldOut } from '../utils/ticketStatus';
-import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed } from '../utils/eventUtils';
+import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, isOngoingPastDayTwo } from '../utils/eventUtils';
 import { trackViewModeChange, trackSiteQROpen } from '../utils/analytics';
 import { useLocalize } from '../utils/localize';
-import { ActivityIcons, getActivityIcon } from '../utils/activityIcon';
+import { ActivityIcons } from '../utils/activityIcon';
 import LandscapeIcon from '@mui/icons-material/Landscape';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
 import HikingIcon from '@mui/icons-material/Hiking';
 import DirectionsBikeIcon from '@mui/icons-material/DirectionsBike';
 import CelebrationIcon from '@mui/icons-material/Celebration';
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
 import GrassIcon from '@mui/icons-material/Grass';
 import PoolIcon from '@mui/icons-material/Pool';
@@ -94,8 +92,8 @@ import { useIcelandicHolidays } from '../hooks/useIcelandicHolidays';
 import { useFavoriteEvents } from '../hooks/useFavoriteEvents';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
-import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import EventQRShare from '../components/EventQRShare';
+import GalleryCompact from '../components/GalleryCompact';
 import { NewYearSplitter } from '../components/NewYearSplitter';
 
 const EventTableView = lazy(() => import('../components/EventTableView'));
@@ -268,7 +266,6 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
             }, 800);
         }, 1200);
         return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const viewModeFromUrl = searchParams.get('view');
@@ -978,7 +975,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                             </Tooltip>
                             <Tooltip title={t('home.mapView')}>
                                 <ToggleButton value="map" aria-label={t('home.mapView')}>
-                                    <MapIcon fontSize="small" />
+                                    <PlaceOutlinedIcon fontSize="small" />
                                 </ToggleButton>
                             </Tooltip>
                             <Tooltip title={t('home.tableView')}>
@@ -1242,7 +1239,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                     )}
                                                                 </Box>
                                                             </Stack>
-                                                            {(race.registrationUrl || comp.organizerWebsite || comp.resultsUrl || comp.photoGalleryUrl || comp.youtubeUrl) && (
+                                                            {(race.registrationUrl || comp.organizerWebsite || comp.resultsUrl || comp.galleries.length > 0 || comp.youtubeUrl) && (
                                                                 <Stack direction="row" alignItems="center" gap={0.5} sx={{ flexShrink: 0 }} flexWrap="wrap" justifyContent="flex-end">
                                                                     {race.registrationUrl && raceDaysUntil != null && raceDaysUntil >= 0 && (
                                                                         <Button size="small" variant="contained" href={race.registrationUrl} target="_blank" rel="noopener noreferrer" endIcon={<OpenInNewIcon sx={{ fontSize: 12 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem' }}>
@@ -1259,11 +1256,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                             {t('races.results', 'Results')}
                                                                         </Button>
                                                                     )}
-                                                                    {comp.photoGalleryUrl && (
-                                                                        <Button size="small" variant="outlined" href={comp.photoGalleryUrl} target="_blank" rel="noopener noreferrer" startIcon={<PhotoCameraIcon sx={{ fontSize: 14 }} />} endIcon={<OpenInNewIcon sx={{ fontSize: 12 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem' }}>
-                                                                            {t('races.photoGallery', { domain: (() => { try { return new URL(comp.photoGalleryUrl!).hostname.replace(/^www\./, ''); } catch { return ''; } })(), defaultValue: 'Photos' })}
-                                                                        </Button>
-                                                                    )}
+                                                                    <GalleryCompact galleries={comp.galleries} variant="button" />
                                                                     {comp.youtubeUrl && (
                                                                         <Button size="small" variant="outlined" href={comp.youtubeUrl} target="_blank" rel="noopener noreferrer" startIcon={<VideocamIcon sx={{ fontSize: 14 }} color="error" />} endIcon={<OpenInNewIcon sx={{ fontSize: 12 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem' }}>
                                                                             360°
@@ -1480,12 +1473,14 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                 </Typography>
                                                                 {comp.daysUntil != null && (
                                                                     <Chip
-                                                                        label={getCountdownLabel(comp.daysUntil, t)}
+                                                                        label={isOngoingPastDayTwo(comp.daysUntil, comp.displayDate, comp.endDisplayDate)
+                                                                            ? t('races.ongoing')
+                                                                            : getCountdownLabel(comp.daysUntil, t)}
                                                                         color={getCountdownColor(comp.daysUntil)}
                                                                         size="small"
                                                                         sx={{
                                                                             fontWeight: 700,
-                                                                            ...(comp.daysUntil === 0 && {
+                                                                            ...(comp.daysUntil === 0 && !isOngoingPastDayTwo(comp.daysUntil, comp.displayDate, comp.endDisplayDate) && {
                                                                                 animation: 'pulseToday 1.5s ease-in-out infinite',
                                                                                 '@keyframes pulseToday': {
                                                                                     '0%, 100%': { transform: 'scale(1)', boxShadow: 'none' },
@@ -1499,7 +1494,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                         )}
                                                     </Box>
                                                 </Stack>
-                                                {(comp.registrationUrl || comp.organizerWebsite || comp.resultsUrl || comp.photoGalleryUrl || comp.youtubeUrl) && (
+                                                {(comp.registrationUrl || comp.organizerWebsite || comp.resultsUrl || comp.galleries.length > 0 || comp.youtubeUrl) && (
                                                     <Stack direction="row" alignItems="center" gap={0.5} sx={{ flexShrink: 0 }} flexWrap="wrap" justifyContent="flex-end">
                                                         {comp.registrationUrl && comp.daysUntil != null && comp.daysUntil >= 0 && !isAllSoldOut(comp.distances) && (
                                                             <Button size="small" variant="contained" href={comp.registrationUrl} target="_blank" rel="noopener noreferrer" endIcon={<OpenInNewIcon sx={{ fontSize: 12 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem' }}>
@@ -1516,11 +1511,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                 {t('races.results', 'Results')}
                                                             </Button>
                                                         )}
-                                                        {comp.photoGalleryUrl && (
-                                                            <Button size="small" variant="outlined" href={comp.photoGalleryUrl} target="_blank" rel="noopener noreferrer" startIcon={<PhotoCameraIcon sx={{ fontSize: 14 }} />} endIcon={<OpenInNewIcon sx={{ fontSize: 12 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem' }}>
-                                                                {t('races.photos', 'Photos')}
-                                                            </Button>
-                                                        )}
+                                                        <GalleryCompact galleries={comp.galleries} variant="button" />
                                                         {comp.youtubeUrl && (
                                                             <Button size="small" variant="outlined" href={comp.youtubeUrl} target="_blank" rel="noopener noreferrer" startIcon={<VideocamIcon sx={{ fontSize: 14 }} color="error" />} endIcon={<OpenInNewIcon sx={{ fontSize: 12 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem' }}>
                                                                 360°
