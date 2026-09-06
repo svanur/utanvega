@@ -59,7 +59,9 @@ public class CreateRaceCommandHandler : IRequestHandler<CreateRaceCommand, Guid>
         // A race can't be attached as Active under an edition that's already Completed — force it
         // to match, overriding whatever the client sent, the same way an edition's own
         // CompleteWithRaces() would have completed it had it existed before the edition was.
-        if (parentEditionStatus == EditionStatus.Completed)
+        // Mirrors CompleteWithRaces()'s own Where(r => r.Status == RaceStatus.Active) rule: any
+        // other status the client explicitly chose (e.g. Cancelled) is left untouched.
+        if (parentEditionStatus == EditionStatus.Completed && status == RaceStatus.Active)
         {
             status = RaceStatus.Completed;
             ticketStatus = TicketStatus.Closed;
