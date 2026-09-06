@@ -97,12 +97,7 @@ internal class TestWebApplicationFactory : WebApplicationFactory<Program>
             // that dependency would fail validation at Build() before a single test runs. Matching
             // on "any service closed over UtanvegaDbContext" catches all of them without needing
             // to name the internal types.
-            var dbDescriptors = services.Where(d =>
-                d.ServiceType == typeof(UtanvegaDbContext) ||
-                (d.ServiceType.IsGenericType && d.ServiceType.GetGenericArguments().Contains(typeof(UtanvegaDbContext)))
-            ).ToList();
-            foreach (var descriptor in dbDescriptors)
-                services.Remove(descriptor);
+            RemoveUtanvegaDbContextRegistrations(services);
 
             services.AddScoped<UtanvegaDbContext>(_ => _dbFactory.CreateContext());
 
@@ -114,7 +109,78 @@ internal class TestWebApplicationFactory : WebApplicationFactory<Program>
             // DefaultScheme assignment is the one that sticks.
             services.AddAuthentication(TestAuthHandler.SchemeName)
                 .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestAuthHandler.SchemeName, _ => { });
+
+            // Fail-fast guard (#678): build a throwaway ServiceProvider from the fully-assembled
+            // collection above, with the same ValidateOnBuild behavior WebApplicationFactory's own
+            // TestServer host always uses. Note this is deliberately *not* another reflection scan
+            // for "anything still closed over UtanvegaDbContext" — re-running the exact predicate
+            // the removal loop above just used would be tautological (whatever shape of
+            // registration slips past that predicate once slips past it identically the second
+            // time). Actually building the provider instead asks .NET's own DI container "can
+            // every registered service's dependency graph actually be resolved?", which catches
+            // *any* leftover dependency on something this factory removed or never replaced —
+            // including a future EF Core internal service shaped so differently from
+            // DbContextPool<T>/IDbContextPool<T>/IScopedDbContextLease<T> that no predicate written
+            // today would anticipate it. Doing this here, synchronously, means that failure surfaces
+            // with a message naming this file and explaining why, rather than only later as a bare
+            // ValidateOnBuild exception inside WebApplicationFactory's own TestServer.Build().
+            ValidateServiceProviderOrThrow(services);
         });
+    }
+
+    /// <summary>
+    /// Removes every DI registration closed over <see cref="UtanvegaDbContext"/> — see the comment
+    /// at the call site in <see cref="ConfigureWebHost"/> for why the predicate is shaped this way.
+    /// Extracted so <c>TestWebApplicationFactoryGuardTests</c> can drive the real removal loop (not
+    /// a reimplementation of it) when proving <see cref="ValidateServiceProviderOrThrow"/> actually
+    /// catches a registration this predicate misses.
+    /// </summary>
+    internal static void RemoveUtanvegaDbContextRegistrations(IServiceCollection services)
+    {
+        var dbDescriptors = services.Where(d =>
+            d.ServiceType == typeof(UtanvegaDbContext) ||
+            (d.ServiceType.IsGenericType && d.ServiceType.GetGenericArguments().Contains(typeof(UtanvegaDbContext)))
+        ).ToList();
+        foreach (var descriptor in dbDescriptors)
+            services.Remove(descriptor);
+    }
+
+    /// <summary>
+    /// Fail-fast guard (#678): attempts to build <paramref name="services"/> into a real
+    /// <see cref="ServiceProvider"/> with <see cref="ServiceProviderOptions.ValidateOnBuild"/> and
+    /// <see cref="ServiceProviderOptions.ValidateScopes"/> both on, and rethrows any failure wrapped
+    /// with a message naming <c>TestWebApplicationFactory.cs</c>. See the comment at the call site
+    /// in <see cref="ConfigureWebHost"/> for why this validates the whole graph instead of re-scanning
+    /// for registrations closed over <see cref="UtanvegaDbContext"/> — that would just repeat the
+    /// removal loop's own predicate and could never catch what that predicate misses.
+    /// Extracted as its own method purely so <c>TestWebApplicationFactoryGuardTests</c> can exercise
+    /// the throw path directly against a synthetic <see cref="ServiceCollection"/>.
+    /// </summary>
+    internal static void ValidateServiceProviderOrThrow(IServiceCollection services)
+    {
+        try
+        {
+            services.BuildServiceProvider(new ServiceProviderOptions
+            {
+                ValidateOnBuild = true,
+                ValidateScopes = true,
+            }).Dispose();
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException(
+                "TestWebApplicationFactory.cs: building the test host's ServiceProvider failed " +
+                "validation after ConfigureWebHost replaced the Npgsql-backed UtanvegaDbContext " +
+                "pool with the in-memory SQLite context (see RemoveUtanvegaDbContextRegistrations). " +
+                "This means some remaining registration depends on a service that removal swept " +
+                "away or never replaced — most likely an EF Core internal pooling service " +
+                "(DbContextPool<T>, IDbContextPool<T>, IScopedDbContextLease<T>, or something an " +
+                "EF Core / Microsoft.AspNetCore.Mvc.Testing upgrade introduced in a shape the " +
+                "removal sweep's \"closed over UtanvegaDbContext\" predicate didn't anticipate). " +
+                "See the inner exception for exactly which service failed to resolve, then extend " +
+                "or rethink that predicate in ConfigureWebHost accordingly.",
+                ex);
+        }
     }
 
     /// <summary>
