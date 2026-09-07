@@ -1453,6 +1453,8 @@
             "backToEvent": "Til baka",
             "editionNotFound": "Útgáfa fannst ekki",
             "pastEdition": "Liðin útgáfa",
+            "upcomingEdition": "Væntanleg útgáfa",
+            "ongoingEdition": "Yfirstandandi útgáfa",
             "completed": "Lokið",
             "older": "Eldri",
             "newer": "Nýrri"

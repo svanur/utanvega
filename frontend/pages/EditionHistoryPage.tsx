@@ -35,7 +35,7 @@ import GalleryLinks from '../components/GalleryLinks';
 import type { EventEditionDto, RaceDto } from '../hooks/useEvents';
 import { useLocalize } from '../utils/localize';
 import { splitMinutes } from '../utils/cutoffTime';
-import { formatDateRange, formatRaceDateTime, editionKeyFor } from '../utils/eventUtils';
+import { formatDateRange, formatRaceDateTime, editionKeyFor, getEditionTimingStatus } from '../utils/eventUtils';
 import { getTicketStatusColor } from '../utils/ticketStatus';
 
 type EditionHistoryPageProps = {
@@ -66,6 +66,13 @@ export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistor
             ?? event.editions.find(ed => ed.id === editionKey)
             ?? null;
     }, [event, editionKey]);
+
+    // null when the edition has no date to compare against (old, dateless historical record) —
+    // falls back to "past" below, matching this page's prior unconditional behaviour for those.
+    const editionTiming = useMemo(
+        () => getEditionTimingStatus(edition?.date, edition?.endDate),
+        [edition],
+    );
 
     const visibleRaces = useMemo(() => {
         if (!edition) return [];
@@ -197,7 +204,13 @@ export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistor
                             </Typography>
                         </Box>
                         <Chip
-                            label={t('races.history.pastEdition', { defaultValue: 'Past edition' })}
+                            label={
+                                editionTiming === 'upcoming'
+                                    ? t('races.history.upcomingEdition', { defaultValue: 'Upcoming edition' })
+                                    : editionTiming === 'ongoing'
+                                        ? t('races.history.ongoingEdition', { defaultValue: 'Ongoing edition' })
+                                        : t('races.history.pastEdition', { defaultValue: 'Past edition' })
+                            }
                             size="small"
                             variant="outlined"
                             color="default"
