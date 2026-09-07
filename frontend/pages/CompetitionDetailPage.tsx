@@ -462,6 +462,18 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
         [currentEditions, event, isPostRace],
     );
 
+    // The most recent past edition that actually has galleries — independent of primaryEdition,
+    // which picks "what's happening next" and may have been superseded by a future edition before
+    // its own photos ever went up. `pastEditions` is already sorted newest-first, so the first
+    // match is exactly the edition we want (#698).
+    const recentPhotoEdition = useMemo(
+        () => pastEditions.find(edition => (edition.galleries?.length ?? 0) > 0) ?? null,
+        [pastEditions],
+    );
+    const showRecentPhotosSection = !!recentPhotoEdition
+        && recentPhotoEdition.id !== primaryEdition?.id
+        && !(primaryEdition?.galleries?.length);
+
     // Prefer the richer primaryEdition object (already in scope) over the flattened EventSummary
     // fields — it reflects exactly the edition this page is displaying.
     const heroCancelled = !!event && isEffectivelyCancelled({ status: event.status, effectiveCancelled: primaryEdition?.effectiveCancelled });
@@ -880,6 +892,20 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 <AddToCalendarButton event={event} endDate={primaryEdition?.endDate ?? event.endDisplayDate} t={t} />
                             )}
                         </Stack>
+
+                        {showRecentPhotosSection && recentPhotoEdition && (
+                            <Box sx={{ mt: 1.5 }}>
+                                <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 0.5 }}>
+                                    {t('races.recentPhotos.title', {
+                                        defaultValue: 'Photos from {{edition}}',
+                                        edition: recentPhotoEdition.title?.trim() || String(recentPhotoEdition.year),
+                                    })}
+                                </Typography>
+                                <Stack direction="row" flexWrap="wrap" gap={1} alignItems="center">
+                                    <GalleryLinks galleries={recentPhotoEdition.galleries} />
+                                </Stack>
+                            </Box>
+                        )}
 
                         {/* Row 2: icon links */}
                         {(isEnabled('directions_to_trailhead') && mapPin) || (event.socialLinks && event.socialLinks.length > 0) ? (

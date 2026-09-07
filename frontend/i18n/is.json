@@ -1459,6 +1459,9 @@
             "older": "Eldri",
             "newer": "Nýrri"
         },
+        "recentPhotos": {
+            "title": "Myndir frá {{edition}}"
+        },
         "editionsHistory": {
             "title": "Fyrri viðburðir",
             "subtitle": "Skoðaðu úrslit og upplýsingar um viðburði sem þegar hafa farið fram.",
