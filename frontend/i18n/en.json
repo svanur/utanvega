@@ -1459,6 +1459,9 @@
             "older": "Older",
             "newer": "Newer"
         },
+        "recentPhotos": {
+            "title": "Photos from {{edition}}"
+        },
         "editionsHistory": {
             "title": "Past Events",
             "subtitle": "Browse results and details from races that have already happened.",
