@@ -22,7 +22,7 @@ export function groupDistances(distances: DistanceEntry[]): GroupedDistance[] {
         const existing = map.get(d.label);
         if (existing) {
             existing.count++;
-            // Escalate ticket status: SoldOut > AlmostSoldOut/WaitingList > Closed > Available > null
+            // Escalate ticket status: SoldOut > AlmostSoldOut > Closed > Available > null
             if (d.ticketStatus === 'SoldOut') existing.ticketStatus = 'SoldOut';
             else if (d.ticketStatus === 'AlmostSoldOut' && existing.ticketStatus !== 'SoldOut') existing.ticketStatus = 'AlmostSoldOut';
             // Two races can share a distance label (e.g. both "10 km") while running different
@@ -55,7 +55,6 @@ export function getTicketStatusColor(status: string | null): 'success' | 'error'
         case 'Free': return 'success';
         case 'Available': return 'success';
         case 'AlmostSoldOut': return 'warning';
-        case 'WaitingList': return 'warning';
         case 'SoldOut': return 'error';
         case 'NotStarted': return 'info';
         case 'Closed': return 'default';
