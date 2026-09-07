@@ -46,7 +46,13 @@ public static class EditionStatusHelpers
         if (registrationOpens.HasValue && registrationCloses.HasValue)
         {
             if (now < registrationOpens.Value) return RegistrationStatus.NotStarted;
-            if (now > registrationCloses.Value) return RegistrationStatus.Closed;
+            // RegistrationCloses is a date-only value under the hood (the admin's DatePicker only
+            // captures a calendar day, stored as midnight UTC via AsUtc) — treat the closes-date
+            // itself as still open through its full 24 hours, i.e. compare against the start of
+            // the *next* day, not the instant stored. Otherwise the entire last intended day of
+            // registration would read as Closed from 00:00 UTC, same class of bug Date/EndDate's
+            // date-granularity IsPast already avoids for this same entity.
+            if (now >= registrationCloses.Value.Date.AddDays(1)) return RegistrationStatus.Closed;
             return RegistrationStatus.Open;
         }
 

@@ -172,6 +172,34 @@ public class EditionStatusHelpersTests
     }
 
     [Fact]
+    public void ComputeEffectiveRegistrationStatus_LateOnTheClosesDateItself_StillReturnsOpen()
+    {
+        // RegistrationCloses is a date-only pick under the hood (midnight UTC via AsUtc) — the
+        // whole calendar day it names must still read as Open, not just the instant of midnight.
+        var opens = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc);
+        var closes = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc);
+        var now = new DateTime(2026, 3, 1, 23, 59, 0, DateTimeKind.Utc);
+
+        var result = EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
+            EditionStatus.Active, RegistrationStatus.Open, opens, closes, now);
+
+        Assert.Equal(RegistrationStatus.Open, result);
+    }
+
+    [Fact]
+    public void ComputeEffectiveRegistrationStatus_MidnightStartingTheDayAfterCloses_ReturnsClosed()
+    {
+        var opens = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc);
+        var closes = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc);
+        var now = new DateTime(2026, 3, 2, 0, 0, 0, DateTimeKind.Utc);
+
+        var result = EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
+            EditionStatus.Active, RegistrationStatus.Open, opens, closes, now);
+
+        Assert.Equal(RegistrationStatus.Closed, result);
+    }
+
+    [Fact]
     public void ComputeEffectiveRegistrationStatus_NeitherDateSet_ReturnsStoredStatusUnchanged()
     {
         var now = new DateTime(2026, 2, 15, 0, 0, 0, DateTimeKind.Utc);
