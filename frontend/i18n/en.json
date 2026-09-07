@@ -1453,6 +1453,8 @@
             "backToEvent": "Back to event",
             "editionNotFound": "Edition not found",
             "pastEdition": "Past edition",
+            "upcomingEdition": "Upcoming edition",
+            "ongoingEdition": "Ongoing edition",
             "completed": "Completed",
             "older": "Older",
             "newer": "Newer"

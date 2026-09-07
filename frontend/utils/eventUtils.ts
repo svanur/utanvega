@@ -135,6 +135,28 @@ export function formatYearRanges(years: number[]): string {
     return parts.join(', ');
 }
 
+export type EditionTimingStatus = 'past' | 'ongoing' | 'upcoming';
+
+// Classifies an edition's date span relative to "today", date-only (calendar dates, never raw
+// instants) so the label can't flip depending on the time of day. `endDate` defaults to `date`
+// for single-day editions, so "ongoing" also covers "today is edition day". Returns null when
+// there's no date to compare against (e.g. an old, dateless historical record) — callers should
+// fall back to their own default in that case.
+export function getEditionTimingStatus(
+    date: string | null | undefined,
+    endDate: string | null | undefined,
+    now: Date = new Date(),
+): EditionTimingStatus | null {
+    if (!date) return null;
+    const start = new Date(date + 'T00:00:00');
+    const end = new Date((endDate ?? date) + 'T00:00:00');
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+    if (today < start) return 'upcoming';
+    if (today > end) return 'past';
+    return 'ongoing';
+}
+
 export function formatRaceDateTime(
     dateOfRace: string | null,
     startTime: string | null,
