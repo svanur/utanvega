@@ -111,6 +111,30 @@ export function getMultiDayEditionProgress(
     return { day, totalDays };
 }
 
+// Collapses a set of years into a gap-tolerant, honest label — consecutive runs become a range
+// (e.g. "2021–2025"), but a gap in the record stays visibly a gap (e.g. "2018, 2021–2025") rather
+// than being smoothed into "2018–2025", which would claim editions that were never recorded.
+export function formatYearRanges(years: number[]): string {
+    const sorted = [...new Set(years)].sort((a, b) => a - b);
+    if (sorted.length === 0) return '';
+
+    const parts: string[] = [];
+    let rangeStart = sorted[0];
+    let rangeEnd = sorted[0];
+    for (let i = 1; i < sorted.length; i++) {
+        const year = sorted[i];
+        if (year === rangeEnd + 1) {
+            rangeEnd = year;
+        } else {
+            parts.push(rangeStart === rangeEnd ? `${rangeStart}` : `${rangeStart}–${rangeEnd}`);
+            rangeStart = year;
+            rangeEnd = year;
+        }
+    }
+    parts.push(rangeStart === rangeEnd ? `${rangeStart}` : `${rangeStart}–${rangeEnd}`);
+    return parts.join(', ');
+}
+
 export function formatRaceDateTime(
     dateOfRace: string | null,
     startTime: string | null,

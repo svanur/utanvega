@@ -273,6 +273,10 @@ export interface EditionHistoryRow {
     raceId: string | null;
     raceName: string | null;
     raceNameEn: string | null;
+    // #546: how many editions of this event are on record, and in which years — see the backend
+    // DTO comment for why this deliberately isn't an ordinal or a "held since" claim.
+    recordedEditionsCount: number;
+    recordedEditionsYears: number[];
 }
 
 export function useEditionsHistory(year: number | undefined, includeCancelled: boolean) {
