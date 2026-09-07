@@ -243,6 +243,13 @@ export function useEventCalendar(from: string, to: string, enabled = true) {
     return { days, loading: isPending, error: queryError instanceof Error ? queryError.message : null };
 }
 
+export interface EditionHistoryRaceDistance {
+    label: string;
+    ticketStatus: string | null;
+    elevationGain: number | null;
+    terrainType: string | null;
+}
+
 export interface EditionHistoryRow {
     eventId: string;
     eventSlug: string;
@@ -254,8 +261,11 @@ export interface EditionHistoryRow {
     rowDate: string;
     rowEndDate: string | null;
     locationName: string | null;
+    organizerName: string | null;
+    organizerNameEn: string | null;
+    organizerSlug: string | null;
     effectiveCancelled: boolean;
-    distances: { label: string; ticketStatus: string | null }[];
+    distances: EditionHistoryRaceDistance[];
     resultsUrl: string | null;
     galleries: PublicPhotoGallery[];
     activityTypes: string[] | null;

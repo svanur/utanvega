@@ -46,7 +46,7 @@ public class EditionsHistoryHandlerTests : IDisposable
         };
     }
 
-    private static Race CreateRace(Guid editionId, string name, RaceStatus status = RaceStatus.Completed, DateOnly? dateOfRace = null, string? distanceLabel = "10K")
+    private static Race CreateRace(Guid editionId, string name, RaceStatus status = RaceStatus.Completed, DateOnly? dateOfRace = null, string? distanceLabel = "10K", Guid? trailId = null)
     {
         return new Race
         {
@@ -58,6 +58,22 @@ public class EditionsHistoryHandlerTests : IDisposable
             TicketStatus = TicketStatus.Closed,
             DateOfRace = dateOfRace,
             DistanceLabel = distanceLabel,
+            TrailId = trailId,
+        };
+    }
+
+    private static Trail CreateTestTrail(string name = "History Test Trail", double elevationGain = 1200, TerrainType? terrainType = TerrainType.Mountainous)
+    {
+        return new Trail
+        {
+            Id = Guid.NewGuid(),
+            Name = name,
+            Slug = name.ToLowerInvariant().Replace(" ", "-"),
+            Length = 21000,
+            ElevationGain = elevationGain,
+            ActivityTypeId = ActivityType.TrailRunning,
+            Status = TrailStatus.Published,
+            TerrainType = terrainType,
         };
     }
 
@@ -556,6 +572,145 @@ public class EditionsHistoryHandlerTests : IDisposable
 
         var row = Assert.Single(result);
         Assert.Null(row.RowEndDate);
+    }
+
+    // ─── Trail-derived elevation/terrain (#545) ───
+
+    [Fact]
+    public async Task History_RaceWithTrail_DistanceCarriesElevationAndTerrain()
+    {
+        var pastYear = DateOnly.FromDateTime(DateTime.UtcNow).Year - 1;
+        var ev = CreateTestEvent("Mountain Trail Race");
+        var edition = CreateEdition(ev.Id, new DateOnly(pastYear, 6, 1));
+        var trail = CreateTestTrail(elevationGain: 1850, terrainType: TerrainType.Mountainous);
+        var race = CreateRace(edition.Id, "21K", distanceLabel: "21K", trailId: trail.Id);
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Trails.Add(trail);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEditionsHistoryQueryHandler(queryCtx, _memoryCache);
+        var result = await handler.Handle(new GetEditionsHistoryQuery(pastYear), CancellationToken.None);
+
+        var row = Assert.Single(result);
+        var distance = Assert.Single(row.Distances);
+        Assert.Equal(1850, distance.ElevationGain);
+        Assert.Equal("Mountainous", distance.TerrainType);
+    }
+
+    [Fact]
+    public async Task History_RaceWithNoLinkedTrail_DistanceHasNoElevationOrTerrain()
+    {
+        var pastYear = DateOnly.FromDateTime(DateTime.UtcNow).Year - 1;
+        var ev = CreateTestEvent("No Trail Race");
+        var edition = CreateEdition(ev.Id, new DateOnly(pastYear, 6, 1));
+        var race = CreateRace(edition.Id, "10K", distanceLabel: "10K", trailId: null);
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEditionsHistoryQueryHandler(queryCtx, _memoryCache);
+        var result = await handler.Handle(new GetEditionsHistoryQuery(pastYear), CancellationToken.None);
+
+        var row = Assert.Single(result);
+        var distance = Assert.Single(row.Distances);
+        Assert.Null(distance.ElevationGain);
+        Assert.Null(distance.TerrainType);
+    }
+
+    [Fact]
+    public async Task History_TrailWithNoElevationData_DistanceOmitsElevation_ButKeepsLabel()
+    {
+        // Trail.ElevationGain is a non-nullable double defaulting to 0 — that must read as "no data",
+        // not a real zero-metre climb, so the field should be omitted rather than surfaced as 0.
+        var pastYear = DateOnly.FromDateTime(DateTime.UtcNow).Year - 1;
+        var ev = CreateTestEvent("Flat Data Gap Race");
+        var edition = CreateEdition(ev.Id, new DateOnly(pastYear, 6, 1));
+        var trail = CreateTestTrail(elevationGain: 0, terrainType: null);
+        var race = CreateRace(edition.Id, "10K", distanceLabel: "10K", trailId: trail.Id);
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Trails.Add(trail);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEditionsHistoryQueryHandler(queryCtx, _memoryCache);
+        var result = await handler.Handle(new GetEditionsHistoryQuery(pastYear), CancellationToken.None);
+
+        var row = Assert.Single(result);
+        var distance = Assert.Single(row.Distances);
+        Assert.Equal("10K", distance.Label);
+        Assert.Null(distance.ElevationGain);
+        Assert.Null(distance.TerrainType);
+    }
+
+    // ─── Organizer (#545) ───
+
+    [Fact]
+    public async Task History_Row_LinkedOrganizer_TakesPrecedenceOverFreeTextName()
+    {
+        var pastYear = DateOnly.FromDateTime(DateTime.UtcNow).Year - 1;
+        var organizer = new Organizer { Id = Guid.NewGuid(), Name = "Hlaupafélagið", Slug = "hlaupafelagid" };
+        var ev = CreateTestEvent("Organized Race");
+        ev.OrganizerName = "Legacy Free Text Name";
+        ev.OrganizerId = organizer.Id;
+        var edition = CreateEdition(ev.Id, new DateOnly(pastYear, 6, 1));
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Organizers.Add(organizer);
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEditionsHistoryQueryHandler(queryCtx, _memoryCache);
+        var result = await handler.Handle(new GetEditionsHistoryQuery(pastYear), CancellationToken.None);
+
+        var row = Assert.Single(result);
+        Assert.Equal("Hlaupafélagið", row.OrganizerName);
+        Assert.Equal("hlaupafelagid", row.OrganizerSlug);
+    }
+
+    [Fact]
+    public async Task History_Row_NoOrganizer_OrganizerFieldsAreNull()
+    {
+        var pastYear = DateOnly.FromDateTime(DateTime.UtcNow).Year - 1;
+        var ev = CreateTestEvent("Unorganized Race");
+        var edition = CreateEdition(ev.Id, new DateOnly(pastYear, 6, 1));
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEditionsHistoryQueryHandler(queryCtx, _memoryCache);
+        var result = await handler.Handle(new GetEditionsHistoryQuery(pastYear), CancellationToken.None);
+
+        var row = Assert.Single(result);
+        Assert.Null(row.OrganizerName);
+        Assert.Null(row.OrganizerSlug);
     }
 
     // ─── Years list ───
