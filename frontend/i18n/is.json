@@ -1466,7 +1466,10 @@
             "resultsLink": "Úrslit",
             "galleryColumn": "Myndasafn",
             "searchingAllYears": "öll ár",
-            "sortDirection": "Víxla röðunarátt"
+            "sortDirection": "Víxla röðunarátt",
+            "recordedEditions_one": "{{count}} viðburður skráður hér · {{years}}",
+            "recordedEditions_other": "{{count}} viðburðir skráðir hér · {{years}}",
+            "recordedEditions": "{{count}} viðburðir skráðir hér · {{years}}"
         },
         "table": {
             "name": "Heiti",

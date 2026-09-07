@@ -45,7 +45,14 @@ public record EditionHistoryRowDto(
     string EventActivityType,
     Guid? RaceId,
     string? RaceName,
-    string? RaceNameEn
+    string? RaceNameEn,
+    // #546: "how many editions of this event are on record, and in which years" — deliberately not
+    // an ordinal ("8th edition") or a "held since" claim, since the DB doesn't contain every historical
+    // edition of every event and either phrasing would overstate what's actually recorded. Always
+    // includes cancelled editions (they happened) regardless of the request's IncludeCancelled flag —
+    // this is a record of what exists, not of what the current view happens to be filtering.
+    int RecordedEditionsCount,
+    List<int> RecordedEditionsYears
 );
 
 // Not ICacheable — the key is parameterized by an arbitrary year, same reasoning as GetEventCalendarQuery
@@ -115,6 +122,37 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
                 .ToDictionary(t => t.Id, t => new TrailHistoryData(t.Length, t.ElevationGain, t.TerrainType, t.ActivityTypeId))
             : new Dictionary<Guid, TrailHistoryData>();
 
+        // #546: one grouped fetch, scoped to only the events already present in this year's result
+        // set — not N+1 per row, and not every edition of every event in the system. Deliberately
+        // ignores request.IncludeCancelled (cancelled editions are still part of the record) and
+        // reuses the same visibility filter as the main `editions` query above, but *not* the same
+        // year range — this one spans an event's entire past, by design.
+        var eventIds = editions.Select(ed => ed.Event.Id).Distinct().ToList();
+        var recordedByEvent = eventIds.Count > 0
+            ? (await _context.EventEditions
+                .AsNoTracking()
+                .Where(ed =>
+                    eventIds.Contains(ed.EventId) &&
+                    ed.Status != EditionStatus.Hidden &&
+                    ed.Event.Status != EventStatus.Hidden &&
+                    ed.Event.Status != EventStatus.Unlisted)
+                .Select(ed => new { ed.EventId, ed.Date, ed.EndDate, ed.Year })
+                .ToListAsync(cancellationToken))
+                .Where(ed => IsPastEdition(ed.Date, ed.EndDate, ed.Year, today))
+                .GroupBy(ed => ed.EventId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => (
+                        Count: g.Count(),
+                        Years: g.Select(ed => ed.Year ?? ed.Date?.Year)
+                            .Where(y => y.HasValue)
+                            .Select(y => y!.Value)
+                            .Distinct()
+                            .OrderBy(y => y)
+                            .ToList()
+                    ))
+            : new Dictionary<Guid, (int Count, List<int> Years)>();
+
         var rows = new List<EditionHistoryRowDto>();
 
         foreach (var ed in editions)
@@ -123,8 +161,12 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
             // treated as past once their whole Year is behind us — this year's dateless editions
             // haven't identifiably "happened" yet, so they're excluded rather than guessed at.
             var effectiveEnd = ed.EndDate ?? ed.Date;
-            var isPast = effectiveEnd.HasValue ? effectiveEnd.Value < today : request.Year < today.Year;
+            var isPast = IsPastEdition(ed.Date, ed.EndDate, ed.Year, today);
             if (!isPast) continue;
+
+            var (recordedCount, recordedYears) = recordedByEvent.TryGetValue(ed.Event.Id, out var recorded)
+                ? recorded
+                : (0, new List<int>());
 
             var visibleRaces = ed.Races.Where(r => r.Status != RaceStatus.Hidden).ToList();
 
@@ -136,7 +178,7 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
                 {
                     var raceCancelled = race.Status == RaceStatus.Cancelled;
                     if (raceCancelled && !request.IncludeCancelled) continue;
-                    rows.Add(BuildRow(ed, race.DateOfRace!.Value, [race], raceCancelled, trailData, raceId: race.Id, raceName: race.Name, raceNameEn: race.NameEn));
+                    rows.Add(BuildRow(ed, race.DateOfRace!.Value, [race], raceCancelled, trailData, recordedCount, recordedYears, raceId: race.Id, raceName: race.Name, raceNameEn: race.NameEn));
                 }
             }
             else
@@ -145,7 +187,7 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
                 var editionCancelled = EditionStatusHelpers.ComputeEffectiveCancelled(ed.Status, raceStatuses);
                 if (editionCancelled && !request.IncludeCancelled) continue;
                 var rowDate = ed.Date ?? effectiveEnd ?? new DateOnly(request.Year, 1, 1);
-                rows.Add(BuildRow(ed, rowDate, visibleRaces, editionCancelled, trailData, ed.EndDate));
+                rows.Add(BuildRow(ed, rowDate, visibleRaces, editionCancelled, trailData, recordedCount, recordedYears, ed.EndDate));
             }
         }
 
@@ -154,7 +196,17 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
         return result;
     }
 
-    private static EditionHistoryRowDto BuildRow(EventEdition ed, DateOnly rowDate, List<Race> races, bool effectiveCancelled, Dictionary<Guid, TrailHistoryData> trailData, DateOnly? rowEndDate = null, Guid? raceId = null, string? raceName = null, string? raceNameEn = null)
+    // Generalized version of the "past cutoff" rule above: dated editions must have actually
+    // concluded; dateless editions are only past once their own Year is behind us. Shared between
+    // the year-scoped main loop and the all-time recorded-editions aggregate below so the two never
+    // drift into disagreeing about what counts as "happened".
+    private static bool IsPastEdition(DateOnly? date, DateOnly? endDate, int? year, DateOnly today)
+    {
+        var effectiveEnd = endDate ?? date;
+        return effectiveEnd.HasValue ? effectiveEnd.Value < today : year.HasValue && year.Value < today.Year;
+    }
+
+    private static EditionHistoryRowDto BuildRow(EventEdition ed, DateOnly rowDate, List<Race> races, bool effectiveCancelled, Dictionary<Guid, TrailHistoryData> trailData, int recordedEditionsCount, List<int> recordedEditionsYears, DateOnly? rowEndDate = null, Guid? raceId = null, string? raceName = null, string? raceNameEn = null)
     {
         var distances = races
             .Select(r =>
@@ -206,7 +258,9 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
             ed.Event.ActivityType.ToString(),
             raceId,
             raceName,
-            raceNameEn
+            raceNameEn,
+            recordedEditionsCount,
+            recordedEditionsYears
         );
     }
 }

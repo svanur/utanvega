@@ -32,7 +32,7 @@ import GalleryCompact from '../components/GalleryCompact';
 import { useEditionsHistory, useEditionsHistoryAllYears, useEditionsHistoryYears } from '../hooks/useEvents';
 import { ActivityIcons } from '../utils/activityIcon';
 import { groupDistances } from '../utils/ticketStatus';
-import { formatNextDate, formatDateRange } from '../utils/eventUtils';
+import { formatNextDate, formatDateRange, formatYearRanges } from '../utils/eventUtils';
 import { useLocalize } from '../utils/localize';
 
 type SortField = 'date' | 'name' | 'distances';
@@ -309,6 +309,14 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                                                                 )}
                                                             </Stack>
                                                         )}
+                                                        {row.recordedEditionsCount > 0 && (
+                                                            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.25, display: 'block' }}>
+                                                                {t('races.editionsHistory.recordedEditions', {
+                                                                    count: row.recordedEditionsCount,
+                                                                    years: formatYearRanges(row.recordedEditionsYears),
+                                                                })}
+                                                            </Typography>
+                                                        )}
                                                     </Box>
                                                 </Stack>
                                                 <Stack direction="row" alignItems="center" gap={0.5} sx={{ flexShrink: 0 }}>
@@ -449,6 +457,14 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                                                         ) : (
                                                             loc(row.organizerName, row.organizerNameEn) ?? row.organizerName
                                                         )}
+                                                    </Typography>
+                                                )}
+                                                {row.recordedEditionsCount > 0 && (
+                                                    <Typography variant="caption" color="text.secondary" display="block" noWrap>
+                                                        {t('races.editionsHistory.recordedEditions', {
+                                                            count: row.recordedEditionsCount,
+                                                            years: formatYearRanges(row.recordedEditionsYears),
+                                                        })}
                                                     </Typography>
                                                 )}
                                                 {cancelled && (

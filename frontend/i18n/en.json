@@ -1466,7 +1466,10 @@
             "resultsLink": "Results",
             "galleryColumn": "Photo gallery",
             "searchingAllYears": "all years",
-            "sortDirection": "Toggle sort direction"
+            "sortDirection": "Toggle sort direction",
+            "recordedEditions_one": "{{count}} edition recorded here · {{years}}",
+            "recordedEditions_other": "{{count}} editions recorded here · {{years}}",
+            "recordedEditions": "{{count}} editions recorded here · {{years}}"
         },
         "table": {
             "name": "Name",
