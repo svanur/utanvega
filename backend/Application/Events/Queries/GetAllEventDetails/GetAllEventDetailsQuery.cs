@@ -57,6 +57,8 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
         static Dictionary<string, string>? DeserHashes(string? json) =>
             json == null ? null : JsonSerializer.Deserialize<Dictionary<string, string>>(json);
 
+        var now = DateTime.UtcNow;
+
         return events.Select(ev => new EventDetailDto(
             ev.Id,
             ev.Name,
@@ -95,7 +97,8 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
                     ed.ResultsUrl,
                     ed.Notes,
                     ed.NotesEn,
-                    ed.RegistrationStatus.ToString(),
+                    EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
+                        ed.Status, ed.RegistrationStatus, ed.RegistrationOpens, ed.RegistrationCloses, now).ToString(),
                     ed.TrailId,
                     GetTrail(ed.TrailId)?.Name,
                     GetTrail(ed.TrailId)?.Slug,
@@ -141,7 +144,9 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
                     ed.UpdatedAt,
                     DeserHashes(ed.TranslationHashes),
                     Status: ed.Status.ToString(),
-                    EffectiveCancelled: EditionStatusHelpers.ComputeEffectiveCancelled(ed.Status, ed.Races.Select(r => r.Status).ToList())
+                    EffectiveCancelled: EditionStatusHelpers.ComputeEffectiveCancelled(ed.Status, ed.Races.Select(r => r.Status).ToList()),
+                    RegistrationOpens: ed.RegistrationOpens,
+                    RegistrationCloses: ed.RegistrationCloses
                 ))
                 .ToList(),
             ev.CreatedAt,

@@ -17,6 +17,7 @@ import {
   DialogTitle,
   Divider,
   FormControl,
+  FormHelperText,
   IconButton,
   InputLabel,
   MenuItem,
@@ -199,6 +200,8 @@ interface EditionFormState {
   notes: string;
   notesEn: string;
   registrationStatus: RegistrationStatus;
+  registrationOpens: string;
+  registrationCloses: string;
   trailId: string;
   status: EditionStatus;
 }
@@ -208,7 +211,7 @@ function emptyEditionForm(): EditionFormState {
     year: String(new Date().getFullYear()),
     date: '', endDate: '', title: '', titleEn: '',
     registrationUrl: '', resultsUrl: '', notes: '', notesEn: '',
-    registrationStatus: 'NotStarted', trailId: '',
+    registrationStatus: 'NotStarted', registrationOpens: '', registrationCloses: '', trailId: '',
     status: 'Unconfirmed',
   };
 }
@@ -220,7 +223,9 @@ function buildEditionForm(ed: EventEditionDto): EditionFormState {
     title: ed.title ?? '', titleEn: ed.titleEn ?? '',
     registrationUrl: ed.registrationUrl ?? '', resultsUrl: ed.resultsUrl ?? '',
     notes: ed.notes ?? '', notesEn: ed.notesEn ?? '',
-    registrationStatus: ed.registrationStatus, trailId: ed.trailId ?? '',
+    registrationStatus: ed.registrationStatus,
+    registrationOpens: ed.registrationOpens ?? '', registrationCloses: ed.registrationCloses ?? '',
+    trailId: ed.trailId ?? '',
     status: ed.status,
   };
 }
@@ -276,6 +281,8 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
       notes: form.notes.trim() || undefined,
       notesEn: form.notesEn.trim() || undefined,
       registrationStatus: form.registrationStatus,
+      registrationOpens: form.registrationOpens || null,
+      registrationCloses: form.registrationCloses || null,
       trailId: form.trailId || null,
       status: form.status,
     };
@@ -370,6 +377,16 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
             valueIs={form.title} valueEn={form.titleEn}
             onChangeIs={v => set('title', v)} onChangeEn={v => set('titleEn', v)}
           />
+          <Stack direction="row" spacing={1.5}>
+            <DatePicker label="Registration opens"
+              value={form.registrationOpens ? dayjs(form.registrationOpens) : null}
+              onChange={v => set('registrationOpens', v ? v.format('YYYY-MM-DD') : '')}
+              slotProps={{ textField: { size: 'small', fullWidth: true } }} />
+            <DatePicker label="Registration closes"
+              value={form.registrationCloses ? dayjs(form.registrationCloses) : null}
+              onChange={v => set('registrationCloses', v ? v.format('YYYY-MM-DD') : '')}
+              slotProps={{ textField: { size: 'small', fullWidth: true } }} />
+          </Stack>
           <FormControl size="small" fullWidth>
             <InputLabel>Status</InputLabel>
             <Select value={form.status} label="Status"
@@ -388,12 +405,15 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
               ))}
             </Select>
           </FormControl>
-          <FormControl size="small" fullWidth>
+          <FormControl size="small" fullWidth disabled={!!form.registrationOpens && !!form.registrationCloses}>
             <InputLabel>Registration status</InputLabel>
             <Select value={form.registrationStatus} label="Registration status"
               onChange={e => set('registrationStatus', e.target.value as RegistrationStatus)}>
               {REGISTRATION_STATUSES.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
             </Select>
+            {!!form.registrationOpens && !!form.registrationCloses && (
+              <FormHelperText>Computed automatically from Registration opens/closes</FormHelperText>
+            )}
           </FormControl>
           <TextField size="small" fullWidth label="Registration URL" value={form.registrationUrl}
             onChange={e => set('registrationUrl', e.target.value)} />
@@ -819,6 +839,11 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
       notes: '',
       notesEn: '',
       registrationStatus: suggestedDate && isPastDate(suggestedDate) ? 'Closed' : 'NotStarted',
+      // Registration opens/closes are a specific-year window, same reasoning as titleEn/notes
+      // above — not meaningfully copyable to next year, so the clone starts blank rather than
+      // carrying over a stale date range.
+      registrationOpens: '',
+      registrationCloses: '',
       trailId: edition.trailId ?? '',
       // A clone is a brand-new edition, so it starts Unconfirmed regardless of the source edition's
       // status (e.g. cloning a Cancelled edition into next year shouldn't carry the cancellation over).

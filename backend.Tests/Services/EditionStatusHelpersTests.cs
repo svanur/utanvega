@@ -131,4 +131,103 @@ public class EditionStatusHelpersTests
         var result = EditionStatusHelpers.IsPast(null, new DateOnly(2026, 6, 5));
         Assert.False(result);
     }
+
+    [Fact]
+    public void ComputeEffectiveRegistrationStatus_BothDatesSet_BeforeOpens_ReturnsNotStarted()
+    {
+        var now = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var opens = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc);
+        var closes = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        var result = EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
+            EditionStatus.Active, RegistrationStatus.Closed, opens, closes, now);
+
+        Assert.Equal(RegistrationStatus.NotStarted, result);
+    }
+
+    [Fact]
+    public void ComputeEffectiveRegistrationStatus_BothDatesSet_WithinWindow_ReturnsOpen()
+    {
+        var opens = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc);
+        var closes = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc);
+        var now = new DateTime(2026, 2, 15, 0, 0, 0, DateTimeKind.Utc);
+
+        var result = EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
+            EditionStatus.Active, RegistrationStatus.NotStarted, opens, closes, now);
+
+        Assert.Equal(RegistrationStatus.Open, result);
+    }
+
+    [Fact]
+    public void ComputeEffectiveRegistrationStatus_BothDatesSet_AfterCloses_ReturnsClosed()
+    {
+        var opens = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc);
+        var closes = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc);
+        var now = new DateTime(2026, 3, 15, 0, 0, 0, DateTimeKind.Utc);
+
+        var result = EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
+            EditionStatus.Active, RegistrationStatus.Open, opens, closes, now);
+
+        Assert.Equal(RegistrationStatus.Closed, result);
+    }
+
+    [Fact]
+    public void ComputeEffectiveRegistrationStatus_NeitherDateSet_ReturnsStoredStatusUnchanged()
+    {
+        var now = new DateTime(2026, 2, 15, 0, 0, 0, DateTimeKind.Utc);
+
+        var result = EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
+            EditionStatus.Active, RegistrationStatus.Open, null, null, now);
+
+        Assert.Equal(RegistrationStatus.Open, result);
+    }
+
+    [Fact]
+    public void ComputeEffectiveRegistrationStatus_StoredNotRequired_ReturnsNotRequiredEvenWithBothDatesSet()
+    {
+        var opens = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc);
+        var closes = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc);
+        var now = new DateTime(2026, 2, 15, 0, 0, 0, DateTimeKind.Utc); // would compute Open
+
+        var result = EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
+            EditionStatus.Active, RegistrationStatus.NotRequired, opens, closes, now);
+
+        Assert.Equal(RegistrationStatus.NotRequired, result);
+    }
+
+    [Theory]
+    [InlineData(EditionStatus.Cancelled)]
+    [InlineData(EditionStatus.Completed)]
+    public void ComputeEffectiveRegistrationStatus_TerminalEditionStatus_ReturnsStoredStatusEvenWithinOpenWindow(EditionStatus status)
+    {
+        // CancelWithRaces()/CompleteWithRaces() already forced RegistrationStatus to Closed as part
+        // of the cascade — that stored value must win over a window that would otherwise compute Open.
+        var opens = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc);
+        var closes = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc);
+        var now = new DateTime(2026, 2, 15, 0, 0, 0, DateTimeKind.Utc); // would compute Open
+
+        var result = EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
+            status, RegistrationStatus.Closed, opens, closes, now);
+
+        Assert.Equal(RegistrationStatus.Closed, result);
+    }
+
+    [Fact]
+    public void AsUtc_NullValue_ReturnsNull()
+    {
+        var result = EditionStatusHelpers.AsUtc(null);
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void AsUtc_UnspecifiedKind_RelabelsAsUtcWithoutShiftingTheValue()
+    {
+        var unspecified = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Unspecified);
+
+        var result = EditionStatusHelpers.AsUtc(unspecified);
+
+        Assert.NotNull(result);
+        Assert.Equal(DateTimeKind.Utc, result!.Value.Kind);
+        Assert.Equal(unspecified.Ticks, result!.Value.Ticks);
+    }
 }

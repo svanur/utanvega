@@ -126,5 +126,7 @@ public record EventEditionDto(
     DateTime? UpdatedAt,
     Dictionary<string, string>? TranslationHashes = null,
     string Status = "Active",
-    bool EffectiveCancelled = false
+    bool EffectiveCancelled = false,
+    DateTime? RegistrationOpens = null,
+    DateTime? RegistrationCloses = null
 );

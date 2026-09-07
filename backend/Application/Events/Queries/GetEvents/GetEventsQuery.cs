@@ -71,7 +71,8 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 ? new TrailSummary(ts.Length, ts.YoutubeUrl, ts.TerrainType, ts.ActivityTypeId)
                 : null;
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var now = DateTime.UtcNow;
+        var today = DateOnly.FromDateTime(now);
         var oneYearAhead = today.AddYears(1);
 
         return events.Select(e =>
@@ -268,7 +269,10 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 displayDate,
                 distances?.Count > 0 ? distances : null,
                 relevantEdition?.RegistrationUrl,
-                relevantEdition?.RegistrationStatus.ToString(),
+                relevantEdition != null
+                    ? EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
+                        relevantEdition.Status, relevantEdition.RegistrationStatus, relevantEdition.RegistrationOpens, relevantEdition.RegistrationCloses, now).ToString()
+                    : null,
                 relevantEdition?.ResultsUrl,
                 certifications?.Count > 0 ? certifications : null,
                 youtubeUrl,
