@@ -21,7 +21,9 @@ public record UpdateEditionCommand(
     string? TitleEn = null,
     string? NotesEn = null,
     Dictionary<string, string>? TranslationHashes = null,
-    string? Status = null
+    string? Status = null,
+    DateTime? RegistrationOpens = null,
+    DateTime? RegistrationCloses = null
 ) : IRequest<bool>;
 
 public class UpdateEditionCommandHandler : IRequestHandler<UpdateEditionCommand, bool>
@@ -57,6 +59,10 @@ public class UpdateEditionCommandHandler : IRequestHandler<UpdateEditionCommand,
         edition.NotesEn = request.NotesEn;
         edition.RegistrationStatus = regStatus;
         edition.TrailId = request.TrailId;
+        // Npgsql requires Kind=Utc for a "timestamp with time zone" column — see
+        // EditionStatusHelpers.AsUtc for why the admin's date-only payload needs relabeling.
+        edition.RegistrationOpens = EditionStatusHelpers.AsUtc(request.RegistrationOpens);
+        edition.RegistrationCloses = EditionStatusHelpers.AsUtc(request.RegistrationCloses);
         // Status is patch-if-provided, not resend-full-snapshot like the other fields: several
         // existing callers (bulk edition updates, translation-sync) PUT here without knowing about
         // Status, and must not silently reset it back to Active.

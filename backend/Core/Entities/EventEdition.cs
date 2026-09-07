@@ -43,6 +43,12 @@ public class EventEdition
     public RegistrationStatus RegistrationStatus { get; set; } = RegistrationStatus.NotStarted;
     public EditionStatus Status { get; set; } = EditionStatus.Unconfirmed;
 
+    // When both are set, EditionStatusHelpers.ComputeEffectiveRegistrationStatus derives
+    // RegistrationStatus live from these instead of trusting the stored enum — see that helper
+    // for the full precedence (terminal EditionStatus and NotRequired still win over the window).
+    public DateTime? RegistrationOpens { get; set; }
+    public DateTime? RegistrationCloses { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
 
