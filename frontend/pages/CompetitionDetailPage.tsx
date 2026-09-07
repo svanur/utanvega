@@ -898,7 +898,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 0.5 }}>
                                     {t('races.recentPhotos.title', {
                                         defaultValue: 'Photos from {{edition}}',
-                                        edition: recentPhotoEdition.title?.trim() || String(recentPhotoEdition.year),
+                                        edition: loc(recentPhotoEdition.title?.trim() || null, recentPhotoEdition.titleEn) ?? String(recentPhotoEdition.year),
                                     })}
                                 </Typography>
                                 <Stack direction="row" flexWrap="wrap" gap={1} alignItems="center">
