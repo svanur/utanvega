@@ -177,7 +177,7 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                             sx={{ minWidth: 140 }}
                         >
                             <MenuItem value="date">{t('sort.date')}</MenuItem>
-                            <MenuItem value="name">{t('sort.name')}</MenuItem>
+                            <MenuItem value="name">{t('races.table.name', 'Name')}</MenuItem>
                             <MenuItem value="distances">{t('races.table.distances', 'Distances')}</MenuItem>
                         </Select>
                         <IconButton
