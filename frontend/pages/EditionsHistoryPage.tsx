@@ -77,6 +77,7 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
 
     const [search, setSearch] = useState('');
     const [showCancelled, setShowCancelled] = useState(true);
+    const [showOnlyWithPhotos, setShowOnlyWithPhotos] = useState(false);
     const [sortField, setSortField] = useState<SortField>('date');
     const [sortDir, setSortDir] = useState<SortDir>('desc');
 
@@ -111,14 +112,14 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
 
     const filteredSorted = useMemo(() => {
         const q = search.toLowerCase().trim();
-        const result = q
-            ? rows.filter(r => {
-                // Prefer the active language's name, but fall back to the other one when
-                // there's no translation — an untranslated edition must still be findable.
-                const name = loc(r.eventName, r.eventNameEn);
-                return name?.toLowerCase().includes(q) || r.locationName?.toLowerCase().includes(q);
-            })
-            : rows;
+        const result = rows.filter(r => {
+            if (showOnlyWithPhotos && (r.galleries?.length ?? 0) === 0) return false;
+            if (!q) return true;
+            // Prefer the active language's name, but fall back to the other one when
+            // there's no translation — an untranslated edition must still be findable.
+            const name = loc(r.eventName, r.eventNameEn);
+            return name?.toLowerCase().includes(q) || r.locationName?.toLowerCase().includes(q);
+        });
 
         return [...result].sort((a, b) => {
             let cmp = 0;
@@ -127,7 +128,7 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
             else if (sortField === 'distances') cmp = (a.distances[0]?.label ?? '').localeCompare(b.distances[0]?.label ?? '');
             return sortDir === 'asc' ? cmp : -cmp;
         });
-    }, [rows, search, sortField, sortDir, loc]);
+    }, [rows, search, showOnlyWithPhotos, sortField, sortDir, loc]);
 
     return (
         <Layout mode={mode} onToggleMode={onToggleMode} maxWidth={viewMode === 'table' ? 'lg' : 'md'} breadcrumb={[{ label: t('nav.events'), to: '/events' }, { label: t('nav.editionsHistory') }]}>
@@ -190,6 +191,11 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                     <FormControlLabel
                         control={<Checkbox size="small" checked={showCancelled} onChange={e => setShowCancelled(e.target.checked)} />}
                         label={t('races.editionsHistory.showCancelled', 'Show cancelled')}
+                        sx={{ whiteSpace: 'nowrap' }}
+                    />
+                    <FormControlLabel
+                        control={<Checkbox size="small" checked={showOnlyWithPhotos} onChange={e => setShowOnlyWithPhotos(e.target.checked)} />}
+                        label={t('races.editionsHistory.hasPhotos', 'Has photos')}
                         sx={{ whiteSpace: 'nowrap' }}
                     />
                 </Stack>

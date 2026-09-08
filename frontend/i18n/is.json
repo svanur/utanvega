@@ -1467,6 +1467,7 @@
             "subtitle": "Skoðaðu úrslit og upplýsingar um viðburði sem þegar hafa farið fram.",
             "searchPlaceholder": "Leita í fyrri viðburðum...",
             "showCancelled": "Sýna aflýst",
+            "hasPhotos": "Aðeins með myndum",
             "noResults": "Engir fyrri viðburðir fundust.",
             "resultsLink": "Úrslit",
             "galleryColumn": "Myndasafn",
