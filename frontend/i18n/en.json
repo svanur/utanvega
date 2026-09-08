@@ -1467,6 +1467,7 @@
             "subtitle": "Browse results and details from races that have already happened.",
             "searchPlaceholder": "Search past events...",
             "showCancelled": "Show cancelled",
+            "hasPhotos": "Has photos",
             "noResults": "No past events found.",
             "resultsLink": "Results",
             "galleryColumn": "Photo gallery",
