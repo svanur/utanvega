@@ -168,26 +168,28 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                             ) : null,
                         }}
                     />
-                    <Stack direction="row" spacing={0.5} alignItems="center">
-                        <Select
-                            size="small"
-                            value={sortField}
-                            onChange={(e: SelectChangeEvent) => handleSort(e.target.value as SortField)}
-                            startAdornment={<SortIcon fontSize="small" sx={{ mr: 0.5, color: 'text.secondary' }} />}
-                            sx={{ minWidth: 140 }}
-                        >
-                            <MenuItem value="date">{t('sort.date')}</MenuItem>
-                            <MenuItem value="name">{t('races.table.name', 'Name')}</MenuItem>
-                            <MenuItem value="distances">{t('races.table.distances', 'Distances')}</MenuItem>
-                        </Select>
-                        <IconButton
-                            size="small"
-                            onClick={() => setSortDir(d => d === 'asc' ? 'desc' : 'asc')}
-                            aria-label={t('races.editionsHistory.sortDirection', 'Toggle sort direction')}
-                        >
-                            {sortDir === 'asc' ? <ArrowUpwardIcon fontSize="small" /> : <ArrowDownwardIcon fontSize="small" />}
-                        </IconButton>
-                    </Stack>
+                    {viewMode === 'list' && (
+                        <Stack direction="row" spacing={0.5} alignItems="center">
+                            <Select
+                                size="small"
+                                value={sortField}
+                                onChange={(e: SelectChangeEvent) => handleSort(e.target.value as SortField)}
+                                startAdornment={<SortIcon fontSize="small" sx={{ mr: 0.5, color: 'text.secondary' }} />}
+                                sx={{ minWidth: 140 }}
+                            >
+                                <MenuItem value="date">{t('sort.date')}</MenuItem>
+                                <MenuItem value="name">{t('races.table.name', 'Name')}</MenuItem>
+                                <MenuItem value="distances">{t('races.table.distances', 'Distances')}</MenuItem>
+                            </Select>
+                            <IconButton
+                                size="small"
+                                onClick={() => setSortDir(d => d === 'asc' ? 'desc' : 'asc')}
+                                aria-label={t('races.editionsHistory.sortDirection', 'Toggle sort direction')}
+                            >
+                                {sortDir === 'asc' ? <ArrowUpwardIcon fontSize="small" /> : <ArrowDownwardIcon fontSize="small" />}
+                            </IconButton>
+                        </Stack>
+                    )}
                     <FormControlLabel
                         control={<Checkbox size="small" checked={showCancelled} onChange={e => setShowCancelled(e.target.checked)} />}
                         label={t('races.editionsHistory.showCancelled', 'Show cancelled')}
