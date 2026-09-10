@@ -213,7 +213,7 @@ const EVENTS_FILTER_SCHEMA = {
   sortBy: { default: 'updatedAt', allowed: ['name', 'activityType', 'type', 'nextEditionDate', 'status', 'editionCount', 'locationName', 'updatedAt'] },
   sortDir: { default: 'desc', allowed: ['asc', 'desc'] },
   attentionFilter: { default: '', allowed: ['noEdition', 'seriesMissingReg', 'pastActive'] },
-  weekFilter: { default: 'all', allowed: ['all', 'next-week'] },
+  weekFilter: { default: 'all', allowed: ['all', 'this-week', 'next-week'] },
 } as const;
 
 interface EventsListPageProps {
@@ -246,8 +246,8 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
   const sortDir = values.sortDir as 'asc' | 'desc';
   const attentionFilter = (values.attentionFilter || null) as AttentionFilter;
   const setAttentionFilter = useCallback((v: AttentionFilter) => setValue('attentionFilter', v ?? ''), [setValue]);
-  const weekFilter = values.weekFilter as 'all' | 'next-week';
-  const setWeekFilter = useCallback((v: 'all' | 'next-week') => setValue('weekFilter', v), [setValue]);
+  const weekFilter = values.weekFilter as 'all' | 'this-week' | 'next-week';
+  const setWeekFilter = useCallback((v: 'all' | 'this-week' | 'next-week') => setValue('weekFilter', v), [setValue]);
   const [showAttentionPanel, setShowAttentionPanel] = useState(true);
   const [cyclingStatusIds, setCyclingStatusIds] = useState<Set<string>>(new Set());
   const [cyclingActivityIds, setCyclingActivityIds] = useState<Set<string>>(new Set());
@@ -267,6 +267,9 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
   const nextWeekMondayOffset = (8 - today.day()) % 7 || 7;
   const nextWeekStart = today.add(nextWeekMondayOffset, 'day').format('YYYY-MM-DD');
   const nextWeekEnd = today.add(nextWeekMondayOffset + 6, 'day').format('YYYY-MM-DD');
+  const thisWeekMondayOffset = (today.day() + 6) % 7;
+  const thisWeekStart = today.subtract(thisWeekMondayOffset, 'day').format('YYYY-MM-DD');
+  const thisWeekEnd = today.subtract(thisWeekMondayOffset, 'day').add(6, 'day').format('YYYY-MM-DD');
 
   const eventLocationOptions = useMemo(
     () => [...new Set(events.map(e => e.locationName).filter(Boolean) as string[])].sort(),
@@ -331,6 +334,10 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
           if (!e.hasFutureEdition) return true;
           if (!e.nextEditionDate || e.nextEditionDate.slice(5, 7) !== monthFilter) return false;
         }
+        if (weekFilter === 'this-week') {
+          if (!e.nextEditionDate) return false;
+          if (e.nextEditionDate < thisWeekStart || e.nextEditionDate > thisWeekEnd) return false;
+        }
         if (weekFilter === 'next-week') {
           if (!e.nextEditionDate) return false;
           if (e.nextEditionDate < nextWeekStart || e.nextEditionDate > nextWeekEnd) return false;
@@ -363,7 +370,7 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
         }
         return cmp !== 0 ? dir * cmp : a.name.localeCompare(b.name);
       });
-  }, [events, searchQuery, activityFilter, typeFilter, statusFilter, locationFilter, yearFilter, monthFilter, sortBy, sortDir, attentionFilter, weekFilter, nextWeekStart, nextWeekEnd, todayStr, in30daysStr]);
+  }, [events, searchQuery, activityFilter, typeFilter, statusFilter, locationFilter, yearFilter, monthFilter, sortBy, sortDir, attentionFilter, weekFilter, thisWeekStart, thisWeekEnd, nextWeekStart, nextWeekEnd, todayStr, in30daysStr]);
 
   // j/k row focus + Enter/o to open — scrolled into view whenever it changes.
   const { focusedIndex: focusedEventIndex } = useRowFocus(filteredEvents, (e) => navigate(`/events/${e.slug}`));
@@ -475,8 +482,8 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
     const sorted = [...byDate.entries()].sort(([a], [b]) => a.localeCompare(b));
     const DAY_NAMES = ['Sun', 'Mán', 'Þri', 'Mið', 'Fim', 'Fös', 'Lau'];
     const MON_FULL = ['', 'janúar', 'febrúar', 'mars', 'apríl', 'maí', 'júní', 'júlí', 'ágúst', 'september', 'október', 'nóvember', 'desember'];
-    const start = dayjs(nextWeekStart);
-    const end = dayjs(nextWeekEnd);
+    const start = dayjs(weekFilter === 'this-week' ? thisWeekStart : nextWeekStart);
+    const end = dayjs(weekFilter === 'this-week' ? thisWeekEnd : nextWeekEnd);
     const sameMonth = start.month() === end.month();
     const header = sameMonth
       ? `${start.date()}. – ${end.date()}. ${MON_FULL[end.month() + 1]} ${end.year()}`
@@ -762,6 +769,18 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
           </Select>
         </FormControl>
         <Chip
+          label="This week"
+          size="small"
+          color={weekFilter === 'this-week' ? 'primary' : 'default'}
+          variant={weekFilter === 'this-week' ? 'filled' : 'outlined'}
+          clickable
+          onClick={() => {
+            const next = weekFilter === 'this-week' ? 'all' : 'this-week';
+            if (next === 'this-week') setValues({ weekFilter: next, yearFilter: 'all', monthFilter: 'all' });
+            else setWeekFilter(next);
+          }}
+        />
+        <Chip
           label="Next week"
           size="small"
           color={weekFilter === 'next-week' ? 'primary' : 'default'}
@@ -773,7 +792,7 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
             else setWeekFilter(next);
           }}
         />
-        {weekFilter === 'next-week' && (
+        {weekFilter !== 'all' && (
           <Tooltip title="Copy agenda to clipboard">
             <IconButton size="small" aria-label="Copy agenda" onClick={handleCopyAgenda}>
               <CopyIcon fontSize="small" />
