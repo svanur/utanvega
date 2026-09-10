@@ -427,6 +427,19 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                             <TableBody>
                                 {filteredSorted.map(row => {
                                     const cancelled = row.effectiveCancelled;
+                                    // Precomputed once per row so the same value can back both the
+                                    // visible (noWrap-clipped) text and its Tooltip — a long Icelandic
+                                    // name/caption must stay recoverable on hover/focus, not silently lost.
+                                    const dateLabel = row.rowEndDate ? formatDateRange(row.rowDate, row.rowEndDate, t) : formatNextDate(row.rowDate, t);
+                                    const eventNameLabel = loc(row.eventName, row.eventNameEn);
+                                    const raceNameLabel = row.raceName ? loc(row.raceName, row.raceNameEn) : null;
+                                    const organizerNameLabel = row.organizerName ? (loc(row.organizerName, row.organizerNameEn) ?? row.organizerName) : null;
+                                    const recordedEditionsLabel = row.recordedEditionsCount > 0
+                                        ? t('races.editionsHistory.recordedEditions', {
+                                            count: row.recordedEditionsCount,
+                                            years: formatYearRanges(row.recordedEditionsYears),
+                                        })
+                                        : null;
                                     return (
                                         <TableRow
                                             key={row.raceId ?? row.editionId}
@@ -438,42 +451,49 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                                                 <ActivityIcons activityTypes={row.activityTypes} activityType={row.activityTypes?.[0] ?? row.eventActivityType} />
                                             </TableCell>
                                             <TableCell>
-                                                <Typography variant="body2" noWrap>
-                                                    {row.rowEndDate ? formatDateRange(row.rowDate, row.rowEndDate, t) : formatNextDate(row.rowDate, t)}
-                                                </Typography>
+                                                <Tooltip title={dateLabel}>
+                                                    <Typography variant="body2" noWrap>
+                                                        {dateLabel}
+                                                    </Typography>
+                                                </Tooltip>
                                             </TableCell>
                                             <TableCell>
-                                                <Typography variant="body2" fontWeight={600} noWrap sx={{ ...(cancelled && { textDecoration: 'line-through' }) }}>
-                                                    {loc(row.eventName, row.eventNameEn)}
-                                                </Typography>
-                                                {row.raceName && (
-                                                    <Typography variant="caption" color="text.secondary" display="block" noWrap>
-                                                        {loc(row.raceName, row.raceNameEn)}
+                                                <Tooltip title={eventNameLabel}>
+                                                    <Typography variant="body2" fontWeight={600} noWrap sx={{ ...(cancelled && { textDecoration: 'line-through' }) }}>
+                                                        {eventNameLabel}
                                                     </Typography>
+                                                </Tooltip>
+                                                {raceNameLabel && (
+                                                    <Tooltip title={raceNameLabel}>
+                                                        <Typography variant="caption" color="text.secondary" display="block" noWrap>
+                                                            {raceNameLabel}
+                                                        </Typography>
+                                                    </Tooltip>
                                                 )}
-                                                {row.organizerName && (
-                                                    <Typography variant="caption" color="text.secondary" display="block" noWrap>
-                                                        {row.organizerSlug ? (
-                                                            <Box
-                                                                component="a"
-                                                                href={`/organizers/${row.organizerSlug}`}
-                                                                onClick={e => e.stopPropagation()}
-                                                                sx={{ color: 'inherit', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
-                                                            >
-                                                                {loc(row.organizerName, row.organizerNameEn) ?? row.organizerName}
-                                                            </Box>
-                                                        ) : (
-                                                            loc(row.organizerName, row.organizerNameEn) ?? row.organizerName
-                                                        )}
-                                                    </Typography>
+                                                {organizerNameLabel && (
+                                                    <Tooltip title={organizerNameLabel}>
+                                                        <Typography variant="caption" color="text.secondary" display="block" noWrap>
+                                                            {row.organizerSlug ? (
+                                                                <Box
+                                                                    component="a"
+                                                                    href={`/organizers/${row.organizerSlug}`}
+                                                                    onClick={e => e.stopPropagation()}
+                                                                    sx={{ color: 'inherit', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+                                                                >
+                                                                    {organizerNameLabel}
+                                                                </Box>
+                                                            ) : (
+                                                                organizerNameLabel
+                                                            )}
+                                                        </Typography>
+                                                    </Tooltip>
                                                 )}
-                                                {row.recordedEditionsCount > 0 && (
-                                                    <Typography variant="caption" color="text.secondary" display="block" noWrap>
-                                                        {t('races.editionsHistory.recordedEditions', {
-                                                            count: row.recordedEditionsCount,
-                                                            years: formatYearRanges(row.recordedEditionsYears),
-                                                        })}
-                                                    </Typography>
+                                                {recordedEditionsLabel && (
+                                                    <Tooltip title={recordedEditionsLabel}>
+                                                        <Typography variant="caption" color="text.secondary" display="block" noWrap>
+                                                            {recordedEditionsLabel}
+                                                        </Typography>
+                                                    </Tooltip>
                                                 )}
                                                 {cancelled && (
                                                     <Chip label={t('races.statusCancelled')} size="small" color="error" sx={{ height: 18, fontSize: '0.65rem', mt: 0.25 }} />
