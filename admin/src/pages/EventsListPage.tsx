@@ -482,12 +482,19 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
     const sorted = [...byDate.entries()].sort(([a], [b]) => a.localeCompare(b));
     const DAY_NAMES = ['Sun', 'Mán', 'Þri', 'Mið', 'Fim', 'Fös', 'Lau'];
     const MON_FULL = ['', 'janúar', 'febrúar', 'mars', 'apríl', 'maí', 'júní', 'júlí', 'ágúst', 'september', 'október', 'nóvember', 'desember'];
-    const start = dayjs(weekFilter === 'this-week' ? thisWeekStart : nextWeekStart);
-    const end = dayjs(weekFilter === 'this-week' ? thisWeekEnd : nextWeekEnd);
-    const sameMonth = start.month() === end.month();
-    const header = sameMonth
-      ? `${start.date()}. – ${end.date()}. ${MON_FULL[end.month() + 1]} ${end.year()}`
-      : `${start.date()}. ${MON_FULL[start.month() + 1]} – ${end.date()}. ${MON_FULL[end.month() + 1]} ${end.year()}`;
+    let header: string;
+    if (weekFilter !== 'all') {
+      const start = dayjs(weekFilter === 'this-week' ? thisWeekStart : nextWeekStart);
+      const end = dayjs(weekFilter === 'this-week' ? thisWeekEnd : nextWeekEnd);
+      const sameMonth = start.month() === end.month();
+      header = sameMonth
+        ? `${start.date()}. – ${end.date()}. ${MON_FULL[end.month() + 1]} ${end.year()}`
+        : `${start.date()}. ${MON_FULL[start.month() + 1]} – ${end.date()}. ${MON_FULL[end.month() + 1]} ${end.year()}`;
+    } else if (yearFilter !== 'all' && monthFilter !== 'all') {
+      header = `${MON_FULL[Number(monthFilter)]} ${yearFilter}`;
+    } else {
+      header = yearFilter;
+    }
     const lines: string[] = [header, ''];
     for (const [date, names] of sorted) {
       const d = dayjs(date);
@@ -792,7 +799,7 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
             else setWeekFilter(next);
           }}
         />
-        {weekFilter !== 'all' && (
+        {(weekFilter !== 'all' || yearFilter !== 'all') && (
           <Tooltip title="Copy agenda to clipboard">
             <IconButton size="small" aria-label="Copy agenda" onClick={handleCopyAgenda}>
               <CopyIcon fontSize="small" />
