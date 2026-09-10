@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Container,
@@ -67,11 +67,19 @@ export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistor
             ?? null;
     }, [event, editionKey]);
 
+    // Ticking clock so the timing chip below updates as time passes (e.g. across midnight)
+    // instead of freezing at whatever was true on first render.
+    const [currentTime, setCurrentTime] = useState(() => new Date());
+    useEffect(() => {
+        const interval = setInterval(() => setCurrentTime(new Date()), 10_000);
+        return () => clearInterval(interval);
+    }, []);
+
     // null when the edition has no date to compare against (old, dateless historical record) —
     // falls back to "past" below, matching this page's prior unconditional behaviour for those.
     const editionTiming = useMemo(
-        () => getEditionTimingStatus(edition?.date, edition?.endDate),
-        [edition],
+        () => getEditionTimingStatus(edition?.date, edition?.endDate, currentTime),
+        [edition, currentTime],
     );
 
     const visibleRaces = useMemo(() => {
