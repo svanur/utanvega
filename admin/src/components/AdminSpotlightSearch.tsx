@@ -24,6 +24,8 @@ import type { EventSummaryDto } from '../hooks/useEvents';
 import type { OrganizerDto } from '../hooks/useOrganizers';
 import type { PhotographerDto } from '../hooks/usePhotographers';
 
+const STALE_TIME_MS = 30_000;
+
 interface Trail {
     id: string;
     name: string;
@@ -86,7 +88,7 @@ export default function AdminSpotlightSearch({ onEditTrail, onEditEvent, onEditP
     const [locations, setLocations] = useState<Location[]>([]);
     const [organizers, setOrganizers] = useState<OrganizerDto[]>([]);
     const [photographers, setPhotographers] = useState<PhotographerDto[]>([]);
-    const [loaded, setLoaded] = useState(false);
+    const lastFetchedRef = useRef<number | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const listRef = useRef<HTMLUListElement>(null);
 
@@ -102,7 +104,9 @@ export default function AdminSpotlightSearch({ onEditTrail, onEditEvent, onEditP
     }, []);
 
     useEffect(() => {
-        if (!open || loaded) return;
+        if (!open) return;
+        const isStale = lastFetchedRef.current === null || Date.now() - lastFetchedRef.current > STALE_TIME_MS;
+        if (!isStale) return;
         Promise.all([
             apiFetch<Trail[]>('/api/v1/admin/trails'),
             apiFetch<EventSummaryDto[]>('/api/v1/admin/events'),
@@ -115,11 +119,11 @@ export default function AdminSpotlightSearch({ onEditTrail, onEditEvent, onEditP
             setLocations(locationData);
             setOrganizers(organizerData);
             setPhotographers(photographerData);
-            setLoaded(true);
+            lastFetchedRef.current = Date.now();
         }).catch(() => {
-            setLoaded(true);
+            lastFetchedRef.current = Date.now();
         });
-    }, [open, loaded]);
+    }, [open]);
 
     const results = useMemo((): SearchResult[] => {
         if (!query.trim()) return [];
