@@ -186,8 +186,8 @@ export default function AdminSpotlightSearch({ onEditTrail, onEditEvent, onEditP
             .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name, 'is', { numeric: true }));
 
         return [
-            ...trailResults.slice(0, 5),
             ...eventResults.slice(0, 5),
+            ...trailResults.slice(0, 5),
             ...locationResults.slice(0, 3),
             ...organizerResults.slice(0, 3),
             ...photographerResults.slice(0, 3),
@@ -301,21 +301,21 @@ export default function AdminSpotlightSearch({ onEditTrail, onEditEvent, onEditP
 
             {results.length > 0 ? (
                 <List ref={listRef} dense sx={{ py: 0, maxHeight: '45vh', overflow: 'auto' }}>
-                    {trailResults.length > 0 && (
+                    {eventResults.length > 0 && (
                         <>
                             <Typography variant="caption" sx={{ px: 2, pt: 1, pb: 0.5, display: 'block', color: 'text.secondary', fontWeight: 600 }}>
-                                Trails
+                                Events
                             </Typography>
-                            {trailResults.map((result, i) => (
+                            {eventResults.map((result, i) => (
                                 <ListItemButton
-                                    key={`trail-${result.id}`}
+                                    key={`event-${result.id}`}
                                     data-index={i}
                                     selected={activeIndex === i}
                                     onClick={() => handleSelect(result)}
                                     sx={{ py: 0.5 }}
                                 >
                                     <ListItemIcon sx={{ minWidth: 36 }}>
-                                        <DashboardIcon fontSize="small" />
+                                        <EmojiEventsIcon fontSize="small" />
                                     </ListItemIcon>
                                     <ListItemText
                                         primary={result.name}
@@ -331,25 +331,25 @@ export default function AdminSpotlightSearch({ onEditTrail, onEditEvent, onEditP
                         </>
                     )}
 
-                    {trailResults.length > 0 && eventResults.length > 0 && <Divider />}
+                    {eventResults.length > 0 && trailResults.length > 0 && <Divider />}
 
-                    {eventResults.length > 0 && (
+                    {trailResults.length > 0 && (
                         <>
                             <Typography variant="caption" sx={{ px: 2, pt: 1, pb: 0.5, display: 'block', color: 'text.secondary', fontWeight: 600 }}>
-                                Events
+                                Trails
                             </Typography>
-                            {eventResults.map((result, i) => {
-                                const globalIndex = trailResults.length + i;
+                            {trailResults.map((result, i) => {
+                                const globalIndex = eventResults.length + i;
                                 return (
                                     <ListItemButton
-                                        key={`event-${result.id}`}
+                                        key={`trail-${result.id}`}
                                         data-index={globalIndex}
                                         selected={activeIndex === globalIndex}
                                         onClick={() => handleSelect(result)}
                                         sx={{ py: 0.5 }}
                                     >
                                         <ListItemIcon sx={{ minWidth: 36 }}>
-                                            <EmojiEventsIcon fontSize="small" />
+                                            <DashboardIcon fontSize="small" />
                                         </ListItemIcon>
                                         <ListItemText
                                             primary={result.name}
@@ -366,7 +366,7 @@ export default function AdminSpotlightSearch({ onEditTrail, onEditEvent, onEditP
                         </>
                     )}
 
-                    {(trailResults.length > 0 || eventResults.length > 0) && locationResults.length > 0 && <Divider />}
+                    {(eventResults.length > 0 || trailResults.length > 0) && locationResults.length > 0 && <Divider />}
 
                     {locationResults.length > 0 && (
                         <>
@@ -374,7 +374,7 @@ export default function AdminSpotlightSearch({ onEditTrail, onEditEvent, onEditP
                                 Locations
                             </Typography>
                             {locationResults.map((result, i) => {
-                                const globalIndex = trailResults.length + eventResults.length + i;
+                                const globalIndex = eventResults.length + trailResults.length + i;
                                 return (
                                     <ListItemButton
                                         key={`loc-${result.id}`}
@@ -401,7 +401,7 @@ export default function AdminSpotlightSearch({ onEditTrail, onEditEvent, onEditP
                         </>
                     )}
 
-                    {(trailResults.length > 0 || eventResults.length > 0 || locationResults.length > 0) && organizerResults.length > 0 && <Divider />}
+                    {(eventResults.length > 0 || trailResults.length > 0 || locationResults.length > 0) && organizerResults.length > 0 && <Divider />}
 
                     {organizerResults.length > 0 && (
                         <>
@@ -409,7 +409,7 @@ export default function AdminSpotlightSearch({ onEditTrail, onEditEvent, onEditP
                                 Organizers
                             </Typography>
                             {organizerResults.map((result, i) => {
-                                const globalIndex = trailResults.length + eventResults.length + locationResults.length + i;
+                                const globalIndex = eventResults.length + trailResults.length + locationResults.length + i;
                                 return (
                                     <ListItemButton
                                         key={`organizer-${result.id}`}
@@ -436,7 +436,7 @@ export default function AdminSpotlightSearch({ onEditTrail, onEditEvent, onEditP
                         </>
                     )}
 
-                    {(trailResults.length > 0 || eventResults.length > 0 || locationResults.length > 0 || organizerResults.length > 0) && photographerResults.length > 0 && <Divider />}
+                    {(eventResults.length > 0 || trailResults.length > 0 || locationResults.length > 0 || organizerResults.length > 0) && photographerResults.length > 0 && <Divider />}
 
                     {photographerResults.length > 0 && (
                         <>
@@ -444,7 +444,7 @@ export default function AdminSpotlightSearch({ onEditTrail, onEditEvent, onEditP
                                 Photographers
                             </Typography>
                             {photographerResults.map((result, i) => {
-                                const globalIndex = trailResults.length + eventResults.length + locationResults.length + organizerResults.length + i;
+                                const globalIndex = eventResults.length + trailResults.length + locationResults.length + organizerResults.length + i;
                                 return (
                                     <ListItemButton
                                         key={`photographer-${result.id}`}
