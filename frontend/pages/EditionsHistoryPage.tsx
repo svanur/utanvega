@@ -452,27 +452,30 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                                             </TableCell>
                                             <TableCell>
                                                 <Tooltip title={dateLabel}>
-                                                    <Typography variant="body2" noWrap>
+                                                    <Typography variant="body2" noWrap tabIndex={0}>
                                                         {dateLabel}
                                                     </Typography>
                                                 </Tooltip>
                                             </TableCell>
                                             <TableCell>
                                                 <Tooltip title={eventNameLabel}>
-                                                    <Typography variant="body2" fontWeight={600} noWrap sx={{ ...(cancelled && { textDecoration: 'line-through' }) }}>
+                                                    <Typography variant="body2" fontWeight={600} noWrap tabIndex={0} sx={{ ...(cancelled && { textDecoration: 'line-through' }) }}>
                                                         {eventNameLabel}
                                                     </Typography>
                                                 </Tooltip>
                                                 {raceNameLabel && (
                                                     <Tooltip title={raceNameLabel}>
-                                                        <Typography variant="caption" color="text.secondary" display="block" noWrap>
+                                                        <Typography variant="caption" color="text.secondary" display="block" noWrap tabIndex={0}>
                                                             {raceNameLabel}
                                                         </Typography>
                                                     </Tooltip>
                                                 )}
                                                 {organizerNameLabel && (
                                                     <Tooltip title={organizerNameLabel}>
-                                                        <Typography variant="caption" color="text.secondary" display="block" noWrap>
+                                                        {/* When organizerSlug is set the anchor below is already a tab stop —
+                                                            only add one to the Typography itself for the plain-text case,
+                                                            otherwise keyboard users would hit two stops for one cell. */}
+                                                        <Typography variant="caption" color="text.secondary" display="block" noWrap tabIndex={row.organizerSlug ? undefined : 0}>
                                                             {row.organizerSlug ? (
                                                                 <Box
                                                                     component="a"
@@ -490,7 +493,7 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                                                 )}
                                                 {recordedEditionsLabel && (
                                                     <Tooltip title={recordedEditionsLabel}>
-                                                        <Typography variant="caption" color="text.secondary" display="block" noWrap>
+                                                        <Typography variant="caption" color="text.secondary" display="block" noWrap tabIndex={0}>
                                                             {recordedEditionsLabel}
                                                         </Typography>
                                                     </Tooltip>
