@@ -71,14 +71,10 @@ export function computeClonedRaceDate(
 // silently filter to "this month, any year" rather than doing nothing, which is what the
 // (disabled) Month dropdown implies. See #734.
 export function matchesYearMonthFilter(e: YearMonthFilterable, yearFilter: string, monthFilter: string): boolean {
-  if (yearFilter !== 'all') {
-    if (!e.hasFutureEdition) return true;
-    if (!e.nextEditionDate || e.nextEditionDate.slice(0, 4) !== yearFilter) return false;
-  }
-  if (yearFilter !== 'all' && monthFilter !== 'all') {
-    if (!e.hasFutureEdition) return true;
-    if (!e.nextEditionDate || e.nextEditionDate.slice(5, 7) !== monthFilter) return false;
-  }
+  if (yearFilter === 'all') return true;
+  if (!e.hasFutureEdition) return true;
+  if (!e.nextEditionDate || e.nextEditionDate.slice(0, 4) !== yearFilter) return false;
+  if (monthFilter !== 'all' && e.nextEditionDate.slice(5, 7) !== monthFilter) return false;
   return true;
 }
 
