@@ -460,7 +460,7 @@
         "screenshotExclude": "Án",
         "screenshotViewFull": "Skoða skjámynd í fullri stærð",
         "capturingScreen": "Tek skjámynd...",
-        "autoCapture": "Ítarlegar tilkynningar innihalda alltaf tæknilegar upplýsingar ({{items}}) til að hjálpa okkur að rannsaka málið. Ef þú hakar við þennan reit fylgir einnig skjámynd af núverandi skjá þínum."
+        "autoCapture": "Ítarlegar tilkynningar innihalda alltaf tæknilegar upplýsingar ({{items}}) til að hjálpa okkur að rannsaka málið. Ef þú vilt einnig senda skjámynd með, smelltu þá á 'Án' hnappinn hér að ofan, þá breytist hann í 'Með' og þá fylgir skjáskot með. Þú getur skoðað skjáskotið með því að smella á myndina hér að ofan."
     },
     "betaComments": {
         "title": "Vefur í þróun",
@@ -778,7 +778,7 @@
         },
         "changelog": {
             "v1_5_0": {
-                "title": "Ljósmyndarar fá meiri sess og viðburðir mörg myndasöfn - Snjallara „í gangi“ merki fyrir viðburði sem eru 3 dagar eða lengri.",
+                "title": "Ljósmyndarar fá meiri sess. Viðburðir geta nú haft mörg myndasöfn - Snjallara „í gangi“ merki fyrir viðburði sem eru 3 dagar eða lengri.",
                 "description": "Ljósmyndarar eru nú sjálfstæð eining á vefnum: viðburðir geta verið með fleiri en eitt myndasafn, hvert og eitt merkt þeim ljósmyndara sem tók myndirnar, og hver ljósmyndari fær sína eigin síðu, þar sem birtast tenglar á öll myndasöfn sem eru skráð hjá hlaupadagskra.is. Viðburðir sem ná yfir fleiri en 2 daga birta nú „Í gangi“ merki í stað „Í dag!“ eins og áður var."
             },
             "v1_4_0": {
