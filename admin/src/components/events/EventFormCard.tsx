@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
 import {
   Alert,
   Autocomplete,
@@ -234,6 +234,7 @@ function TrailStartPicker({ trails, onPick }: { trails: Trail[]; onPick: (lat: n
 
 
 function EventFormCardInner({ event, linkedTrails = [], onClose, onSaved, onNotify, onUpdateEvent }: EventFormCardProps) {
+  const eventStatusHelperId = useId();
   const [form, setForm] = useState<EventFormState>(buildForm(event));
   const [saving, setSaving] = useState(false);
   const [slugUnlocked, setSlugUnlocked] = useState(false);
@@ -385,11 +386,12 @@ function EventFormCardInner({ event, linkedTrails = [], onClose, onSaved, onNoti
             </FormControl>
             <FormControl size="small" fullWidth>
               <InputLabel>Status</InputLabel>
-              <Select value={form.status} label="Status" onChange={e => set('status', e.target.value as EventStatus)}>
+              <Select value={form.status} label="Status" onChange={e => set('status', e.target.value as EventStatus)}
+                aria-describedby={event.status === 'Cancelled' && form.status !== 'Cancelled' ? eventStatusHelperId : undefined}>
                 {EVENT_STATUSES.map(st => <MenuItem key={st} value={st}>{EVENT_STATUS_LABELS[st]}</MenuItem>)}
               </Select>
               {event.status === 'Cancelled' && form.status !== 'Cancelled' && (
-                <FormHelperText>Reactivating won't restore cancelled editions or races.</FormHelperText>
+                <FormHelperText id={eventStatusHelperId}>Reactivating won't restore cancelled editions or races.</FormHelperText>
               )}
             </FormControl>
           </Stack>

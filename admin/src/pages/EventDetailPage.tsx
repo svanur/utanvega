@@ -380,7 +380,8 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
           <FormControl size="small" fullWidth>
             <InputLabel>Status</InputLabel>
             <Select value={form.status} label="Status"
-              onChange={e => set('status', e.target.value as EditionStatus)}>
+              onChange={e => set('status', e.target.value as EditionStatus)}
+              aria-describedby={!isNew && form.status !== 'Cancelled' && form.status !== 'Completed' ? 'edition-status-helper-text' : undefined}>
               {EDITION_STATUSES.map(s => (
                 // Cancelled and Completed are terminal states with their own dedicated, safer
                 // entry points (row-level Cancel/Complete actions) on an *existing* edition —
@@ -395,7 +396,7 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
               ))}
             </Select>
             {!isNew && form.status !== 'Cancelled' && form.status !== 'Completed' && (
-              <FormHelperText>Use the ✓/✕ icons on the edition row to complete or cancel this edition.</FormHelperText>
+              <FormHelperText id="edition-status-helper-text">Use the ✓/✕ icons on the edition row to complete or cancel this edition.</FormHelperText>
             )}
           </FormControl>
           <Typography
@@ -418,11 +419,12 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
           <FormControl size="small" fullWidth disabled={!!form.registrationOpens && !!form.registrationCloses}>
             <InputLabel>Registration status</InputLabel>
             <Select value={form.registrationStatus} label="Registration status"
-              onChange={e => set('registrationStatus', e.target.value as RegistrationStatus)}>
+              onChange={e => set('registrationStatus', e.target.value as RegistrationStatus)}
+              aria-describedby={!!form.registrationOpens && !!form.registrationCloses ? 'registration-status-helper-text' : undefined}>
               {REGISTRATION_STATUSES.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
             </Select>
             {!!form.registrationOpens && !!form.registrationCloses && (
-              <FormHelperText>Computed automatically from Registration opens/closes</FormHelperText>
+              <FormHelperText id="registration-status-helper-text">Computed automatically from Registration opens/closes</FormHelperText>
             )}
           </FormControl>
           <TextField size="small" fullWidth label="Registration URL" value={form.registrationUrl}
