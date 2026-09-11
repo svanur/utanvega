@@ -67,12 +67,27 @@ export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistor
             ?? null;
     }, [event, editionKey]);
 
-    // Ticking clock so the timing chip below updates as time passes (e.g. across midnight)
-    // instead of freezing at whatever was true on first render.
+    // Clock so the timing chip below updates as time passes (e.g. across midnight) instead of
+    // freezing at whatever was true on first render. getEditionTimingStatus is day-granularity
+    // only (it zeroes time-of-day before comparing — see eventUtils.ts), so its result can only
+    // ever change at a local-midnight crossing. Rather than polling every few seconds forever
+    // (wasted wake-ups on a phone with the PWA left open in the background), schedule a single
+    // timeout for the next midnight and re-arm it after it fires.
     const [currentTime, setCurrentTime] = useState(() => new Date());
     useEffect(() => {
-        const interval = setInterval(() => setCurrentTime(new Date()), 10_000);
-        return () => clearInterval(interval);
+        let timeoutId: ReturnType<typeof setTimeout>;
+        const scheduleNextMidnightTick = () => {
+            const now = new Date();
+            const nextMidnight = new Date(now);
+            nextMidnight.setHours(24, 0, 0, 0);
+            const msUntilNextMidnight = nextMidnight.getTime() - now.getTime();
+            timeoutId = setTimeout(() => {
+                setCurrentTime(new Date());
+                scheduleNextMidnightTick();
+            }, msUntilNextMidnight);
+        };
+        scheduleNextMidnightTick();
+        return () => clearTimeout(timeoutId);
     }, []);
 
     // null when the edition has no date to compare against (old, dateless historical record) —
