@@ -72,6 +72,7 @@ import {
   suggestEditionDateForYear,
   suggestEditionEndDateForYear,
   computeClonedRaceDate,
+  matchesYearMonthFilter,
   sortEditions,
 } from '../utils/eventHelpers';
 
@@ -326,14 +327,7 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
           if (locationFilter === 'none' && e.locationName) return false;
           if (locationFilter !== 'none' && e.locationName !== locationFilter) return false;
         }
-        if (yearFilter !== 'all') {
-          if (!e.hasFutureEdition) return true;
-          if (!e.nextEditionDate || e.nextEditionDate.slice(0, 4) !== yearFilter) return false;
-        }
-        if (monthFilter !== 'all') {
-          if (!e.hasFutureEdition) return true;
-          if (!e.nextEditionDate || e.nextEditionDate.slice(5, 7) !== monthFilter) return false;
-        }
+        if (!matchesYearMonthFilter(e, yearFilter, monthFilter)) return false;
         if (weekFilter === 'this-week') {
           if (!e.nextEditionDate) return false;
           if (e.nextEditionDate < thisWeekStart || e.nextEditionDate > thisWeekEnd) return false;
