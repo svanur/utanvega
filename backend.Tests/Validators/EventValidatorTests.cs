@@ -426,6 +426,100 @@ public class EventValidatorTests : IDisposable
         result.ShouldNotHaveValidationErrorFor(x => x.RegistrationCloses);
     }
 
+    [Fact]
+    public void CreateEdition_RegistrationOpensAfterEndDate_Fails()
+    {
+        var cmd = ValidCreateEditionCommand with
+        {
+            Date = new DateOnly(2025, 8, 1),
+            EndDate = new DateOnly(2025, 8, 3),
+            RegistrationOpens = new DateTime(2025, 8, 4)
+        };
+        var result = _createEditionValidator.TestValidate(cmd);
+        result.ShouldHaveValidationErrorFor(x => x.RegistrationOpens);
+    }
+
+    [Fact]
+    public void CreateEdition_RegistrationOpensAfterDate_NullEndDate_Fails()
+    {
+        var cmd = ValidCreateEditionCommand with
+        {
+            Date = new DateOnly(2025, 8, 1),
+            EndDate = null,
+            RegistrationOpens = new DateTime(2025, 8, 2)
+        };
+        var result = _createEditionValidator.TestValidate(cmd);
+        result.ShouldHaveValidationErrorFor(x => x.RegistrationOpens);
+    }
+
+    [Fact]
+    public void CreateEdition_RegistrationOpensSameAsEndDate_Passes()
+    {
+        var cmd = ValidCreateEditionCommand with
+        {
+            Date = new DateOnly(2025, 8, 1),
+            EndDate = new DateOnly(2025, 8, 3),
+            RegistrationOpens = new DateTime(2025, 8, 3)
+        };
+        var result = _createEditionValidator.TestValidate(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.RegistrationOpens);
+    }
+
+    [Fact]
+    public void CreateEdition_RegistrationOpensSameAsDate_NullEndDate_Passes()
+    {
+        var cmd = ValidCreateEditionCommand with
+        {
+            Date = new DateOnly(2025, 8, 1),
+            EndDate = null,
+            RegistrationOpens = new DateTime(2025, 8, 1)
+        };
+        var result = _createEditionValidator.TestValidate(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.RegistrationOpens);
+    }
+
+    [Fact]
+    public void CreateEdition_RegistrationOpensNull_DateAndEndDateSet_Passes()
+    {
+        var cmd = ValidCreateEditionCommand with
+        {
+            Date = new DateOnly(2025, 8, 1),
+            EndDate = new DateOnly(2025, 8, 3),
+            RegistrationOpens = null
+        };
+        var result = _createEditionValidator.TestValidate(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.RegistrationOpens);
+    }
+
+    [Fact]
+    public void CreateEdition_RegistrationOpensSet_DateAndEndDateNull_Passes()
+    {
+        var cmd = ValidCreateEditionCommand with
+        {
+            Date = null,
+            EndDate = null,
+            RegistrationOpens = new DateTime(2025, 8, 1)
+        };
+        var result = _createEditionValidator.TestValidate(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.RegistrationOpens);
+    }
+
+    [Fact]
+    public void CreateEdition_RegistrationClosesAfterEndDate_Passes()
+    {
+        // RegistrationCloses is not constrained by the edition's Date/EndDate — day-of/walk-up
+        // registration must remain valid.
+        var cmd = ValidCreateEditionCommand with
+        {
+            Date = new DateOnly(2025, 8, 1),
+            EndDate = new DateOnly(2025, 8, 3),
+            RegistrationOpens = new DateTime(2025, 7, 1),
+            RegistrationCloses = new DateTime(2025, 8, 3, 23, 59, 0)
+        };
+        var result = _createEditionValidator.TestValidate(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.RegistrationCloses);
+    }
+
     // ─── UpdateEditionCommandValidator ───
 
     private readonly UpdateEditionCommandValidator _updateEditionValidator = new();
@@ -530,6 +624,100 @@ public class EventValidatorTests : IDisposable
     public void UpdateEdition_RegistrationClosesNull_Passes()
     {
         var cmd = ValidUpdateEditionCommand with { RegistrationOpens = new DateTime(2025, 6, 1), RegistrationCloses = null };
+        var result = _updateEditionValidator.TestValidate(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.RegistrationCloses);
+    }
+
+    [Fact]
+    public void UpdateEdition_RegistrationOpensAfterEndDate_Fails()
+    {
+        var cmd = ValidUpdateEditionCommand with
+        {
+            Date = new DateOnly(2025, 8, 1),
+            EndDate = new DateOnly(2025, 8, 3),
+            RegistrationOpens = new DateTime(2025, 8, 4)
+        };
+        var result = _updateEditionValidator.TestValidate(cmd);
+        result.ShouldHaveValidationErrorFor(x => x.RegistrationOpens);
+    }
+
+    [Fact]
+    public void UpdateEdition_RegistrationOpensAfterDate_NullEndDate_Fails()
+    {
+        var cmd = ValidUpdateEditionCommand with
+        {
+            Date = new DateOnly(2025, 8, 1),
+            EndDate = null,
+            RegistrationOpens = new DateTime(2025, 8, 2)
+        };
+        var result = _updateEditionValidator.TestValidate(cmd);
+        result.ShouldHaveValidationErrorFor(x => x.RegistrationOpens);
+    }
+
+    [Fact]
+    public void UpdateEdition_RegistrationOpensSameAsEndDate_Passes()
+    {
+        var cmd = ValidUpdateEditionCommand with
+        {
+            Date = new DateOnly(2025, 8, 1),
+            EndDate = new DateOnly(2025, 8, 3),
+            RegistrationOpens = new DateTime(2025, 8, 3)
+        };
+        var result = _updateEditionValidator.TestValidate(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.RegistrationOpens);
+    }
+
+    [Fact]
+    public void UpdateEdition_RegistrationOpensSameAsDate_NullEndDate_Passes()
+    {
+        var cmd = ValidUpdateEditionCommand with
+        {
+            Date = new DateOnly(2025, 8, 1),
+            EndDate = null,
+            RegistrationOpens = new DateTime(2025, 8, 1)
+        };
+        var result = _updateEditionValidator.TestValidate(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.RegistrationOpens);
+    }
+
+    [Fact]
+    public void UpdateEdition_RegistrationOpensNull_DateAndEndDateSet_Passes()
+    {
+        var cmd = ValidUpdateEditionCommand with
+        {
+            Date = new DateOnly(2025, 8, 1),
+            EndDate = new DateOnly(2025, 8, 3),
+            RegistrationOpens = null
+        };
+        var result = _updateEditionValidator.TestValidate(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.RegistrationOpens);
+    }
+
+    [Fact]
+    public void UpdateEdition_RegistrationOpensSet_DateAndEndDateNull_Passes()
+    {
+        var cmd = ValidUpdateEditionCommand with
+        {
+            Date = null,
+            EndDate = null,
+            RegistrationOpens = new DateTime(2025, 8, 1)
+        };
+        var result = _updateEditionValidator.TestValidate(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.RegistrationOpens);
+    }
+
+    [Fact]
+    public void UpdateEdition_RegistrationClosesAfterEndDate_Passes()
+    {
+        // RegistrationCloses is not constrained by the edition's Date/EndDate — day-of/walk-up
+        // registration must remain valid.
+        var cmd = ValidUpdateEditionCommand with
+        {
+            Date = new DateOnly(2025, 8, 1),
+            EndDate = new DateOnly(2025, 8, 3),
+            RegistrationOpens = new DateTime(2025, 7, 1),
+            RegistrationCloses = new DateTime(2025, 8, 3, 23, 59, 0)
+        };
         var result = _updateEditionValidator.TestValidate(cmd);
         result.ShouldNotHaveValidationErrorFor(x => x.RegistrationCloses);
     }
