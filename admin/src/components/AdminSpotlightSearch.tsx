@@ -288,7 +288,7 @@ export default function AdminSpotlightSearch({ onEditTrail, onEditEvent, onEditP
                     inputRef={inputRef}
                     autoFocus
                     fullWidth
-                    placeholder="Search trails, events, locations, organizers and photographers..."
+                    placeholder="Search events, trails, locations, organizers and photographers..."
                     value={query}
                     onChange={e => handleQueryChange(e.target.value)}
                     onKeyDown={handleKeyDown}
@@ -524,7 +524,7 @@ export default function AdminSpotlightSearch({ onEditTrail, onEditEvent, onEditP
                 </List>
             ) : (
                 <Box sx={{ p: 3, textAlign: 'center' }}>
-                    <Typography color="text.secondary" variant="body2">Start typing to search trails, events, locations, organizers and photographers</Typography>
+                    <Typography color="text.secondary" variant="body2">Start typing to search events, trails, locations, organizers and photographers</Typography>
                 </Box>
             )}
         </Dialog>
