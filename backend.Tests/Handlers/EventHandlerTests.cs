@@ -10,6 +10,10 @@ using Utanvega.Backend.Application.Events.Commands.CreateEdition;
 using Utanvega.Backend.Application.Events.Commands.UpdateEdition;
 using Utanvega.Backend.Application.Events.Commands.DeleteEdition;
 using Utanvega.Backend.Application.Events.Commands.CancelEdition;
+using Utanvega.Backend.Application.Events.Commands.CompleteEdition;
+using Utanvega.Backend.Application.Events.Commands.PatchEditionRegistrationStatus;
+using Utanvega.Backend.Application.Events.Commands.PatchEditionResultsUrl;
+using Utanvega.Backend.Application.Events.Commands.PatchEditionRegistrationUrl;
 using Utanvega.Backend.Application.Events.Commands.CreateRace;
 using Utanvega.Backend.Application.Events.Commands.UpdateRace;
 using Utanvega.Backend.Application.Events.Commands.DeleteRace;
@@ -2525,6 +2529,261 @@ public class EventHandlerTests : IDisposable
             var updatedRace = ctx.Races.Find(race.Id);
             Assert.Equal(TicketStatus.NotStarted, updatedRace!.TicketStatus);
         }
+    }
+
+    // ─── CompleteEditionCommand ───
+    // Issue #741: RaceDayPage and EventDetailPage's "Mark Completed" actions used to resend the
+    // generic UpdateEditionCommand PUT with Year/TitleEn/Notes/NotesEn/TrailId hardcoded to null,
+    // silently wiping them. CompleteEditionCommand mirrors CancelEditionCommand's narrow shape —
+    // it must never touch anything but Status/RegistrationStatus/race fields.
+
+    [Fact]
+    public async Task CompleteEdition_LeavesUnrelatedFieldsUnchanged()
+    {
+        var trail = CreateTestTrail();
+        var ev = CreateTestEvent();
+        var edition = CreateTestEdition(ev.Id);
+        edition.TitleEn = "2025 Edition (EN)";
+        edition.Notes = "Some notes";
+        edition.NotesEn = "Some notes (EN)";
+        edition.RegistrationUrl = "https://motus.is/register";
+        edition.ResultsUrl = "https://timataka.is/results";
+        edition.EndDate = edition.Date!.Value.AddDays(1);
+        edition.TrailId = trail.Id;
+        edition.RegistrationStatus = RegistrationStatus.Open;
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Trails.Add(trail);
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new CompleteEditionCommandHandler(ctx, _cacheInvalidator);
+            var result = await handler.Handle(new CompleteEditionCommand(edition.Id), CancellationToken.None);
+            Assert.True(result);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        var updated = verifyCtx.EventEditions.Find(edition.Id)!;
+        Assert.Equal(EditionStatus.Completed, updated.Status);
+        Assert.Equal(RegistrationStatus.Closed, updated.RegistrationStatus);
+        Assert.Equal(edition.Year, updated.Year);
+        Assert.Equal(edition.Date, updated.Date);
+        Assert.Equal(edition.EndDate, updated.EndDate);
+        Assert.Equal(edition.Title, updated.Title);
+        Assert.Equal(edition.TitleEn, updated.TitleEn);
+        Assert.Equal(edition.RegistrationUrl, updated.RegistrationUrl);
+        Assert.Equal(edition.ResultsUrl, updated.ResultsUrl);
+        Assert.Equal(edition.Notes, updated.Notes);
+        Assert.Equal(edition.NotesEn, updated.NotesEn);
+        Assert.Equal(edition.TrailId, updated.TrailId);
+    }
+
+    [Fact]
+    public async Task CompleteEdition_CascadesToActiveRacesOnly()
+    {
+        var ev = CreateTestEvent();
+        var edition = CreateTestEdition(ev.Id);
+        var activeRace = new Race { Id = Guid.NewGuid(), EventEditionId = edition.Id, Name = "10K", SortOrder = 0, Status = RaceStatus.Active, TicketStatus = TicketStatus.Available };
+        var cancelledRace = new Race { Id = Guid.NewGuid(), EventEditionId = edition.Id, Name = "5K", SortOrder = 1, Status = RaceStatus.Cancelled, TicketStatus = TicketStatus.Closed };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.AddRange(activeRace, cancelledRace);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new CompleteEditionCommandHandler(ctx, _cacheInvalidator);
+            await handler.Handle(new CompleteEditionCommand(edition.Id), CancellationToken.None);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        Assert.Equal(RaceStatus.Completed, verifyCtx.Races.Find(activeRace.Id)!.Status);
+        Assert.Equal(RaceStatus.Cancelled, verifyCtx.Races.Find(cancelledRace.Id)!.Status);
+    }
+
+    [Fact]
+    public async Task CompleteEdition_NonExistentEdition_ReturnsFalse()
+    {
+        using var ctx = _factory.CreateContext();
+        var handler = new CompleteEditionCommandHandler(ctx, _cacheInvalidator);
+        var result = await handler.Handle(new CompleteEditionCommand(Guid.NewGuid()), CancellationToken.None);
+        Assert.False(result);
+    }
+
+    // ─── PatchEditionRegistrationStatusCommand ───
+    // Narrow endpoint backing the Race Day page's registration-status toggle (single edition and
+    // bulk open/close-all) — see issue #741.
+
+    [Fact]
+    public async Task PatchEditionRegistrationStatus_LeavesUnrelatedFieldsUnchanged()
+    {
+        var trail = CreateTestTrail();
+        var ev = CreateTestEvent();
+        var edition = CreateTestEdition(ev.Id);
+        edition.TitleEn = "2025 Edition (EN)";
+        edition.Notes = "Some notes";
+        edition.NotesEn = "Some notes (EN)";
+        edition.TrailId = trail.Id;
+        edition.RegistrationStatus = RegistrationStatus.NotStarted;
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Trails.Add(trail);
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new PatchEditionRegistrationStatusCommandHandler(ctx, _cacheInvalidator);
+            var result = await handler.Handle(new PatchEditionRegistrationStatusCommand(edition.Id, "Open"), CancellationToken.None);
+            Assert.True(result);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        var updated = verifyCtx.EventEditions.Find(edition.Id)!;
+        Assert.Equal(RegistrationStatus.Open, updated.RegistrationStatus);
+        Assert.Equal(edition.Year, updated.Year);
+        Assert.Equal(edition.Title, updated.Title);
+        Assert.Equal(edition.TitleEn, updated.TitleEn);
+        Assert.Equal(edition.Notes, updated.Notes);
+        Assert.Equal(edition.NotesEn, updated.NotesEn);
+        Assert.Equal(edition.TrailId, updated.TrailId);
+    }
+
+    [Fact]
+    public async Task PatchEditionRegistrationStatus_InvalidStatus_ReturnsFalse()
+    {
+        var ev = CreateTestEvent();
+        var edition = CreateTestEdition(ev.Id);
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var ctx2 = _factory.CreateContext();
+        var handler = new PatchEditionRegistrationStatusCommandHandler(ctx2, _cacheInvalidator);
+        var result = await handler.Handle(new PatchEditionRegistrationStatusCommand(edition.Id, "NotARealStatus"), CancellationToken.None);
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task PatchEditionRegistrationStatus_NonExistentEdition_ReturnsFalse()
+    {
+        using var ctx = _factory.CreateContext();
+        var handler = new PatchEditionRegistrationStatusCommandHandler(ctx, _cacheInvalidator);
+        var result = await handler.Handle(new PatchEditionRegistrationStatusCommand(Guid.NewGuid(), "Open"), CancellationToken.None);
+        Assert.False(result);
+    }
+
+    // ─── PatchEditionResultsUrlCommand ───
+    // Narrow endpoint backing the Race Day page's results-URL field — see issue #741.
+
+    [Fact]
+    public async Task PatchEditionResultsUrl_LeavesUnrelatedFieldsUnchanged()
+    {
+        var trail = CreateTestTrail();
+        var ev = CreateTestEvent();
+        var edition = CreateTestEdition(ev.Id);
+        edition.TitleEn = "2025 Edition (EN)";
+        edition.Notes = "Some notes";
+        edition.NotesEn = "Some notes (EN)";
+        edition.TrailId = trail.Id;
+        edition.ResultsUrl = null;
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Trails.Add(trail);
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new PatchEditionResultsUrlCommandHandler(ctx, _cacheInvalidator);
+            var result = await handler.Handle(new PatchEditionResultsUrlCommand(edition.Id, "https://timataka.is/results"), CancellationToken.None);
+            Assert.True(result);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        var updated = verifyCtx.EventEditions.Find(edition.Id)!;
+        Assert.Equal("https://timataka.is/results", updated.ResultsUrl);
+        Assert.Equal(edition.Year, updated.Year);
+        Assert.Equal(edition.TitleEn, updated.TitleEn);
+        Assert.Equal(edition.Notes, updated.Notes);
+        Assert.Equal(edition.NotesEn, updated.NotesEn);
+        Assert.Equal(edition.TrailId, updated.TrailId);
+    }
+
+    [Fact]
+    public async Task PatchEditionResultsUrl_NonExistentEdition_ReturnsFalse()
+    {
+        using var ctx = _factory.CreateContext();
+        var handler = new PatchEditionResultsUrlCommandHandler(ctx, _cacheInvalidator);
+        var result = await handler.Handle(new PatchEditionResultsUrlCommand(Guid.NewGuid(), "https://timataka.is/results"), CancellationToken.None);
+        Assert.False(result);
+    }
+
+    // ─── PatchEditionRegistrationUrlCommand ───
+    // Narrow endpoint backing the Race Day page's registration-URL field — see issue #741.
+
+    [Fact]
+    public async Task PatchEditionRegistrationUrl_LeavesUnrelatedFieldsUnchanged()
+    {
+        var trail = CreateTestTrail();
+        var ev = CreateTestEvent();
+        var edition = CreateTestEdition(ev.Id);
+        edition.TitleEn = "2025 Edition (EN)";
+        edition.Notes = "Some notes";
+        edition.NotesEn = "Some notes (EN)";
+        edition.TrailId = trail.Id;
+        edition.RegistrationUrl = null;
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Trails.Add(trail);
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new PatchEditionRegistrationUrlCommandHandler(ctx, _cacheInvalidator);
+            var result = await handler.Handle(new PatchEditionRegistrationUrlCommand(edition.Id, "https://motus.is/register"), CancellationToken.None);
+            Assert.True(result);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        var updated = verifyCtx.EventEditions.Find(edition.Id)!;
+        Assert.Equal("https://motus.is/register", updated.RegistrationUrl);
+        Assert.Equal(edition.Year, updated.Year);
+        Assert.Equal(edition.TitleEn, updated.TitleEn);
+        Assert.Equal(edition.Notes, updated.Notes);
+        Assert.Equal(edition.NotesEn, updated.NotesEn);
+        Assert.Equal(edition.TrailId, updated.TrailId);
+    }
+
+    [Fact]
+    public async Task PatchEditionRegistrationUrl_NonExistentEdition_ReturnsFalse()
+    {
+        using var ctx = _factory.CreateContext();
+        var handler = new PatchEditionRegistrationUrlCommandHandler(ctx, _cacheInvalidator);
+        var result = await handler.Handle(new PatchEditionRegistrationUrlCommand(Guid.NewGuid(), "https://motus.is/register"), CancellationToken.None);
+        Assert.False(result);
     }
 
     // ─── UpdateEditionCommand — Status field ───
