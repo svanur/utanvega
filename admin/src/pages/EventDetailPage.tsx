@@ -1158,10 +1158,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
       return;
     }
     try {
-      await apiFetch(`/api/v1/admin/editions/${edition.id}`, {
-        method: 'PUT',
-        body: JSON.stringify({ id: edition.id, eventId: edition.eventId, status: 'Completed', registrationStatus: edition.registrationStatus }),
-      });
+      await apiFetch(`/api/v1/admin/editions/${edition.id}/complete`, { method: 'POST' });
       onNotify('Edition marked Completed — Active races completed along with it', 'success');
       setCompletingEditionId(null);
       await refresh();

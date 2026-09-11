@@ -228,9 +228,24 @@ export default function RaceDayPage({ onNotify, initialDate }: RaceDayPageProps)
         })));
     };
 
+    // ── Narrow single-field edition patches ───────────────────────────────────
+    // These call dedicated endpoints that only ever touch the one field named — see issue #741.
+    // RaceDayEditionDto never carries Year/TitleEn/Notes/NotesEn/TrailId, so there is no correct
+    // way to resend those through the generic UpdateEdition PUT from this page; the old code
+    // hardcoded them to null and silently wiped them in production.
+    const patchRegistrationStatus = (editionId: string, registrationStatus: string) =>
+        apiFetch(`/api/v1/admin/editions/${editionId}/registration-status`, {
+            method: 'PATCH',
+            body: JSON.stringify({ registrationStatus }),
+        });
+
+    const completeEdition = (editionId: string) =>
+        apiFetch(`/api/v1/admin/editions/${editionId}/complete`, { method: 'POST' });
+
     // ── Shared bulk edition helper ────────────────────────────────────────────
     const bulkUpdateEditions = async (
         eds: RaceDayEdition[],
+        action: (ed: RaceDayEdition) => Promise<unknown>,
         patch: (ed: RaceDayEdition) => object,
         successMsg: (n: number) => string
     ) => {
@@ -239,15 +254,7 @@ export default function RaceDayPage({ onNotify, initialDate }: RaceDayPageProps)
         let ok = 0; let fail = 0;
         await Promise.all(eds.map(async ed => {
             try {
-                await apiFetch(`/api/v1/admin/editions/${ed.id}`, {
-                    method: 'PUT',
-                    body: JSON.stringify({
-                        id: ed.id, year: null, date: ed.date, endDate: ed.endDate,
-                        title: ed.title, titleEn: null, registrationUrl: ed.registrationUrl,
-                        resultsUrl: resultsUrls[ed.id] || null, notes: null, notesEn: null,
-                        trailId: null, ...patch(ed),
-                    }),
-                });
+                await action(ed);
                 ok++;
             } catch { fail++; }
         }));
@@ -272,6 +279,7 @@ export default function RaceDayPage({ onNotify, initialDate }: RaceDayPageProps)
     const closeAllRegistrations = () =>
         bulkUpdateEditions(
             editions.filter(ed => ed.registrationStatus !== 'Closed' && ed.registrationStatus !== 'NotRequired'),
+            ed => patchRegistrationStatus(ed.id, 'Closed'),
             () => ({ registrationStatus: 'Closed' }),
             n => `Registration closed for ${n} edition${n > 1 ? 's' : ''}`
         );
@@ -279,7 +287,10 @@ export default function RaceDayPage({ onNotify, initialDate }: RaceDayPageProps)
     const markEditionsCompleted = () =>
         bulkUpdateEditions(
             editions.filter(ed => ed.editionStatus !== 'Completed' && ed.editionStatus !== 'Cancelled'),
-            ed => ({ status: 'Completed', registrationStatus: ed.registrationStatus }),
+            ed => completeEdition(ed.id),
+            // CompleteWithRaces() on the backend closes registration too, unless it's NotRequired —
+            // mirror that here so the optimistic local update matches what actually landed.
+            ed => ({ editionStatus: 'Completed', registrationStatus: ed.registrationStatus === 'NotRequired' ? ed.registrationStatus : 'Closed' }),
             n => `${n} edition${n > 1 ? 's' : ''} marked as Completed`
         );
 
@@ -295,6 +306,7 @@ export default function RaceDayPage({ onNotify, initialDate }: RaceDayPageProps)
     const openAllRegistrations = () =>
         bulkUpdateEditions(
             editions.filter(ed => ed.registrationStatus !== 'Open' && ed.registrationStatus !== 'NotRequired'),
+            ed => patchRegistrationStatus(ed.id, 'Open'),
             () => ({ registrationStatus: 'Open' }),
             n => `Registration opened for ${n} edition${n > 1 ? 's' : ''}`
         );
@@ -322,20 +334,19 @@ export default function RaceDayPage({ onNotify, initialDate }: RaceDayPageProps)
     };
 
     // ── Individual field updates ──────────────────────────────────────────────
+    // Each hits a narrow endpoint that only touches its own field — see issue #741. The old code
+    // resent the full UpdateEdition PUT body with year/titleEn/notes/notesEn/trailId hardcoded to
+    // null, which silently wiped those fields since RaceDayEditionDto never gives this page the
+    // real values to resend.
     const saveResultsUrl = async (editionId: string) => {
         const edition = editions.find(ed => ed.id === editionId);
         if (!edition) return;
         const url = resultsUrls[editionId] ?? '';
         setSavingEditions(prev => new Set(prev).add(editionId));
         try {
-            await apiFetch(`/api/v1/admin/editions/${editionId}`, {
-                method: 'PUT',
-                body: JSON.stringify({
-                    id: editionId, year: null, date: edition.date, endDate: edition.endDate,
-                    title: edition.title, titleEn: null, registrationUrl: edition.registrationUrl,
-                    resultsUrl: url || null, notes: null, notesEn: null,
-                    registrationStatus: edition.registrationStatus, trailId: null,
-                }),
+            await apiFetch(`/api/v1/admin/editions/${editionId}/results-url`, {
+                method: 'PATCH',
+                body: JSON.stringify({ resultsUrl: url || null }),
             });
             onNotify('Results URL saved');
             setEditions(prev => prev.map(ed => ed.id === editionId ? { ...ed, resultsUrl: url || null } : ed));
@@ -352,14 +363,9 @@ export default function RaceDayPage({ onNotify, initialDate }: RaceDayPageProps)
         const url = registrationUrls[editionId] ?? '';
         setSavingEditions(prev => new Set(prev).add(editionId));
         try {
-            await apiFetch(`/api/v1/admin/editions/${editionId}`, {
-                method: 'PUT',
-                body: JSON.stringify({
-                    id: editionId, year: null, date: edition.date, endDate: edition.endDate,
-                    title: edition.title, titleEn: null, registrationUrl: url || null,
-                    resultsUrl: edition.resultsUrl, notes: null, notesEn: null,
-                    registrationStatus: edition.registrationStatus, trailId: null,
-                }),
+            await apiFetch(`/api/v1/admin/editions/${editionId}/registration-url`, {
+                method: 'PATCH',
+                body: JSON.stringify({ registrationUrl: url || null }),
             });
             onNotify('Registration URL saved');
             setEditions(prev => prev.map(ed => ed.id === editionId ? { ...ed, registrationUrl: url || null } : ed));
@@ -411,18 +417,10 @@ export default function RaceDayPage({ onNotify, initialDate }: RaceDayPageProps)
     };
 
     const updateEditionField = async (ed: RaceDayEdition, patch: { registrationStatus?: string }) => {
+        if (patch.registrationStatus === undefined) return;
         setUpdatingEditions(prev => new Set(prev).add(ed.id));
         try {
-            await apiFetch(`/api/v1/admin/editions/${ed.id}`, {
-                method: 'PUT',
-                body: JSON.stringify({
-                    id: ed.id, year: null, date: ed.date, endDate: ed.endDate,
-                    title: ed.title, titleEn: null, registrationUrl: ed.registrationUrl,
-                    resultsUrl: resultsUrls[ed.id] || null, notes: null, notesEn: null,
-                    registrationStatus: patch.registrationStatus ?? ed.registrationStatus,
-                    trailId: null,
-                }),
-            });
+            await patchRegistrationStatus(ed.id, patch.registrationStatus);
             onNotify('Edition updated');
             setEditions(prev => prev.map(e => e.id === ed.id ? { ...e, ...patch } : e));
         } catch {

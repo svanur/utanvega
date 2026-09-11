@@ -57,6 +57,10 @@ using Utanvega.Backend.Application.Events.Commands.CreateEdition;
 using Utanvega.Backend.Application.Events.Commands.UpdateEdition;
 using Utanvega.Backend.Application.Events.Commands.DeleteEdition;
 using Utanvega.Backend.Application.Events.Commands.CancelEdition;
+using Utanvega.Backend.Application.Events.Commands.CompleteEdition;
+using Utanvega.Backend.Application.Events.Commands.PatchEditionRegistrationStatus;
+using Utanvega.Backend.Application.Events.Commands.PatchEditionResultsUrl;
+using Utanvega.Backend.Application.Events.Commands.PatchEditionRegistrationUrl;
 using Utanvega.Backend.Application.Events.Commands.CreateRace;
 using Utanvega.Backend.Application.Events.Commands.UpdateRace;
 using Utanvega.Backend.Application.Events.Commands.DeleteRace;
@@ -2035,6 +2039,37 @@ app.MapPost("/api/v1/admin/editions/{id:guid}/cancel", [Authorize(Policy = "Admi
     return success ? Results.NoContent() : Results.NotFound();
 })
 .WithName("CancelEdition");
+
+app.MapPost("/api/v1/admin/editions/{id:guid}/complete", [Authorize(Policy = "AdminOnly")] async (Guid id, IMediator mediator) =>
+{
+    var success = await mediator.Send(new CompleteEditionCommand(id));
+    return success ? Results.NoContent() : Results.NotFound();
+})
+.WithName("CompleteEdition");
+
+// Narrow single-field patches for the Race Day page (issue #741) — the generic UpdateEdition PUT
+// is a full-resend contract, and RaceDayEditionDto never carries Year/TitleEn/Notes/NotesEn/
+// TrailId, so RaceDayPage had no data to correctly resend and was nulling those fields on every save.
+app.MapPatch("/api/v1/admin/editions/{id:guid}/registration-status", [Authorize(Policy = "AdminOnly")] async (Guid id, PatchEditionRegistrationStatusCommand body, IMediator mediator) =>
+{
+    var success = await mediator.Send(body with { Id = id });
+    return success ? Results.NoContent() : Results.NotFound();
+})
+.WithName("PatchEditionRegistrationStatus");
+
+app.MapPatch("/api/v1/admin/editions/{id:guid}/results-url", [Authorize(Policy = "AdminOnly")] async (Guid id, PatchEditionResultsUrlCommand body, IMediator mediator) =>
+{
+    var success = await mediator.Send(body with { Id = id });
+    return success ? Results.NoContent() : Results.NotFound();
+})
+.WithName("PatchEditionResultsUrl");
+
+app.MapPatch("/api/v1/admin/editions/{id:guid}/registration-url", [Authorize(Policy = "AdminOnly")] async (Guid id, PatchEditionRegistrationUrlCommand body, IMediator mediator) =>
+{
+    var success = await mediator.Send(body with { Id = id });
+    return success ? Results.NoContent() : Results.NotFound();
+})
+.WithName("PatchEditionRegistrationUrl");
 
 app.MapPost("/api/v1/admin/events/{eventId:guid}/editions/generate", [Authorize(Policy = "AdminOnly")] async (Guid eventId, GenerateEditionsForSeasonCommand command, IMediator mediator) =>
 {
