@@ -394,6 +394,9 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
                 </MenuItem>
               ))}
             </Select>
+            {!isNew && form.status !== 'Cancelled' && form.status !== 'Completed' && (
+              <FormHelperText>Use the ✓/✕ icons on the edition row to complete or cancel this edition.</FormHelperText>
+            )}
           </FormControl>
           <Typography
             variant="caption" fontWeight={600} letterSpacing={0.6}
