@@ -14,7 +14,12 @@ internal record TrailSummary(double Length, string? YoutubeUrl, Core.Entities.Te
 public record GetEventsQuery(bool IncludeHidden = false) : IRequest<List<EventSummaryDto>>, ICacheable
 {
     public string CacheKey => CacheKeys.Events(IncludeHidden);
-    public TimeSpan CacheDuration => TimeSpan.FromHours(1);
+
+    // Admin (IncludeHidden) reads must never be cached: on a multi-instance deployment,
+    // invalidation on the writing instance does not reach the in-process caches of the others,
+    // leaving the admin events list stale for up to the cache duration. TimeSpan.Zero tells
+    // CachingBehavior to skip caching entirely for this variant.
+    public TimeSpan CacheDuration => IncludeHidden ? TimeSpan.Zero : TimeSpan.FromHours(1);
 }
 
 public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventSummaryDto>>
