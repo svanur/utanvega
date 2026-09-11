@@ -458,8 +458,9 @@
         "screenshot": "Page screenshot",
         "screenshotInclude": "Include",
         "screenshotExclude": "Excluded",
+        "screenshotViewFull": "View full-size screenshot",
         "capturingScreen": "Capturing screenshot...",
-        "autoCapture": "Also auto-captured: {{items}}"
+        "autoCapture": "Detailed reports always include technical data ({{items}}) to help us investigate. Checking this box also attaches a screenshot of your current view."
     },
     "betaComments": {
         "title": "Our web is in development",
