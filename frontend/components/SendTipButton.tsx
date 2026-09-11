@@ -1,13 +1,14 @@
 import { useState, useRef } from 'react';
 import {
-    Box, Button, CircularProgress, Collapse, IconButton, TextField, Tooltip,
-    Typography, Divider, MenuItem, Select, FormControl, InputLabel, Chip,
-    ToggleButton, ToggleButtonGroup, LinearProgress,
+    Box, Button, ButtonBase, CircularProgress, Collapse, Dialog, DialogContent, DialogTitle,
+    IconButton, TextField, Tooltip, Typography, Divider, MenuItem, Select, FormControl,
+    InputLabel, Chip, ToggleButton, ToggleButtonGroup, LinearProgress,
 } from '@mui/material';
 import TipsAndUpdatesOutlinedIcon from '@mui/icons-material/TipsAndUpdatesOutlined';
 import CloseIcon from '@mui/icons-material/Close';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import CameraAltOutlinedIcon from '@mui/icons-material/CameraAltOutlined';
+import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import { useTranslation } from 'react-i18next';
 import type { SxProps, Theme } from '@mui/material';
@@ -71,9 +72,12 @@ export default function SendTipButton({ type: _type, sx, inline = false }: SendT
     const [status, setStatus] = useState<'idle' | 'capturing' | 'sending' | 'sent' | 'error'>('idle');
     const [screenshotDataUrl, setScreenshotDataUrl] = useState<string | null>(null);
     const [includeScreenshot, setIncludeScreenshot] = useState(false);
+    const [screenshotPreviewOpen, setScreenshotPreviewOpen] = useState(false);
     const screenshotTakenRef = useRef(false);
 
-    // Auto-capture when switching to detailed mode (before user sees the form)
+    // Auto-capture when switching to detailed mode (before user sees the form). Capturing only
+    // makes the screenshot available to preview — it is never marked for inclusion on its own;
+    // the reporter opts in explicitly via the include/exclude chip below.
     async function switchToDetailed() {
         if (mode === 'detailed') return;
         setMode('detailed');
@@ -82,7 +86,6 @@ export default function SendTipButton({ type: _type, sx, inline = false }: SendT
             setStatus('capturing');
             const dataUrl = await captureScreenshot();
             setScreenshotDataUrl(dataUrl);
-            setIncludeScreenshot(!!dataUrl);
             setStatus('idle');
         }
     }
@@ -137,6 +140,7 @@ export default function SendTipButton({ type: _type, sx, inline = false }: SendT
         setMode('simple');
         setScreenshotDataUrl(null);
         setIncludeScreenshot(false);
+        setScreenshotPreviewOpen(false);
         screenshotTakenRef.current = false;
     }
 
@@ -242,7 +246,8 @@ export default function SendTipButton({ type: _type, sx, inline = false }: SendT
                                         sx={{ mb: 1 }}
                                     />
 
-                                    {/* Screenshot preview / toggle */}
+                                    {/* Screenshot preview / toggle — viewing is always available once captured; */}
+                                    {/* inclusion in the report is a separate, explicit opt-in via the chip. */}
                                     {screenshotDataUrl && (
                                         <Box sx={{ mb: 1 }}>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
@@ -256,15 +261,26 @@ export default function SendTipButton({ type: _type, sx, inline = false }: SendT
                                                     onClick={() => setIncludeScreenshot(v => !v)}
                                                     sx={{ cursor: 'pointer', fontSize: '0.7rem' }}
                                                 />
+                                                <Tooltip title={t('tip.screenshotViewFull')}>
+                                                    <IconButton size="small" onClick={() => setScreenshotPreviewOpen(true)} sx={{ ml: 'auto' }}>
+                                                        <OpenInFullIcon sx={{ fontSize: 14 }} />
+                                                    </IconButton>
+                                                </Tooltip>
                                             </Box>
-                                            {includeScreenshot && (
-                                                <Box
-                                                    component="img"
-                                                    src={screenshotDataUrl}
-                                                    alt="screenshot"
-                                                    sx={{ width: '100%', borderRadius: 1, border: 1, borderColor: 'divider', maxHeight: 120, objectFit: 'cover', objectPosition: 'top' }}
-                                                />
-                                            )}
+                                            <Tooltip title={t('tip.screenshotViewFull')}>
+                                                <ButtonBase
+                                                    onClick={() => setScreenshotPreviewOpen(true)}
+                                                    aria-label={t('tip.screenshotViewFull')}
+                                                    sx={{ width: '100%', display: 'block', borderRadius: 1 }}
+                                                >
+                                                    <Box
+                                                        component="img"
+                                                        src={screenshotDataUrl}
+                                                        alt={t('tip.screenshot')}
+                                                        sx={{ width: '100%', borderRadius: 1, border: 1, borderColor: 'divider', maxHeight: 120, objectFit: 'cover', objectPosition: 'top' }}
+                                                    />
+                                                </ButtonBase>
+                                            </Tooltip>
                                         </Box>
                                     )}
 
@@ -298,6 +314,24 @@ export default function SendTipButton({ type: _type, sx, inline = false }: SendT
                     )}
                 </Box>
             </Collapse>
+
+            {/* Full-size screenshot view — viewable regardless of the include/exclude opt-in above. */}
+            <Dialog open={screenshotPreviewOpen} onClose={() => setScreenshotPreviewOpen(false)} maxWidth="md" fullWidth>
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', py: 1 }}>
+                    {t('tip.screenshot')}
+                    <IconButton size="small" onClick={() => setScreenshotPreviewOpen(false)}><CloseIcon fontSize="small" /></IconButton>
+                </DialogTitle>
+                <DialogContent sx={{ p: 0 }}>
+                    {screenshotDataUrl && (
+                        <Box
+                            component="img"
+                            src={screenshotDataUrl}
+                            alt={t('tip.screenshot')}
+                            sx={{ width: '100%', display: 'block' }}
+                        />
+                    )}
+                </DialogContent>
+            </Dialog>
         </Box>
     );
 }

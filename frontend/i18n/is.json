@@ -458,8 +458,9 @@
         "screenshot": "Skjámynd af síðu",
         "screenshotInclude": "Með",
         "screenshotExclude": "Án",
+        "screenshotViewFull": "Skoða skjámynd í fullri stærð",
         "capturingScreen": "Tek skjámynd...",
-        "autoCapture": "Einnig safnað sjálfkrafa: {{items}}"
+        "autoCapture": "Ef þú hakar við þennan reit fylgir skjámynd af núverandi skjá þínum með, ásamt tæknilegum upplýsingum ({{items}}), til að hjálpa okkur að rannsaka málið."
     },
     "betaComments": {
         "title": "Vefur í þróun",
