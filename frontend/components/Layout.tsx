@@ -166,7 +166,7 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
     }
 
     return (
-        <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default', overflowX: 'hidden' }}>
+        <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
             {isStaging && (
                 <Box sx={{
                     position: 'sticky',
@@ -394,17 +394,26 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
                     </Container>
                 </Box>
             )}
-            <SponsorStrip position="top" />
+            {/*
+                overflow-x: hidden lives here rather than on the root Box: it's a safety net
+                against horizontal overflow from page content (see #562), but on an ancestor
+                it also disables `position: sticky` on descendants. Scoping it to just the
+                scrollable content — below the sticky header/breadcrumb/staging banner — keeps
+                the overflow containment without breaking their stickiness (#721).
+            */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, overflowX: 'hidden' }}>
+                <SponsorStrip position="top" />
 
-            <Container maxWidth={maxWidth} sx={{ py: 4, flex: 1 }}>
-                {isEnabled('hero_band') && heroTheme && <Box sx={{ mb: 3 }}><HeroBand theme={heroTheme} isDark={mode === 'dark'} /></Box>}
-                <PromoStrip position="top" />
-                {isEnabled('event_day_banner') && <EventDayBanner />}
-                <div id="main-content" />
-                {children}
-                <PromoStrip position="bottom" />
-            </Container>
-            <SponsorStrip position="bottom" />
+                <Container maxWidth={maxWidth} sx={{ py: 4, flex: 1 }}>
+                    {isEnabled('hero_band') && heroTheme && <Box sx={{ mb: 3 }}><HeroBand theme={heroTheme} isDark={mode === 'dark'} /></Box>}
+                    <PromoStrip position="top" />
+                    {isEnabled('event_day_banner') && <EventDayBanner />}
+                    <div id="main-content" />
+                    {children}
+                    <PromoStrip position="bottom" />
+                </Container>
+                <SponsorStrip position="bottom" />
+            </Box>
 
             {bottomContent}
 
