@@ -54,7 +54,12 @@ public record EventDetailDto(
 public record GetEventQuery(string Slug, bool IncludeHidden = false) : IRequest<EventDetailDto?>, ICacheable
 {
     public string CacheKey => CacheKeys.Event(Slug, IncludeHidden);
-    public TimeSpan CacheDuration => TimeSpan.FromHours(1);
+
+    // Admin (IncludeHidden) reads must never be cached: on a multi-instance deployment,
+    // invalidation on the writing instance does not reach the in-process caches of the others,
+    // leaving admin views stale for up to the cache duration. TimeSpan.Zero tells
+    // CachingBehavior to skip caching entirely for this variant.
+    public TimeSpan CacheDuration => IncludeHidden ? TimeSpan.Zero : TimeSpan.FromHours(1);
 }
 
 public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDto?>

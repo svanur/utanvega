@@ -26,6 +26,12 @@ public class CachingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, 
         if (request is not ICacheable cacheable)
             return await next(cancellationToken);
 
+        // A non-positive duration (e.g. TimeSpan.Zero) means "don't cache this variant" —
+        // used by admin (IncludeHidden) query variants that must never serve stale data
+        // on a multi-instance deployment where cache invalidation only reaches one machine.
+        if (cacheable.CacheDuration <= TimeSpan.Zero)
+            return await next(cancellationToken);
+
         var key = cacheable.CacheKey;
 
         if (_cache.TryGetValue(key, out TResponse? cached) && cached is not null)
