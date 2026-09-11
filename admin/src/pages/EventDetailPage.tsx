@@ -377,16 +377,6 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
             valueIs={form.title} valueEn={form.titleEn}
             onChangeIs={v => set('title', v)} onChangeEn={v => set('titleEn', v)}
           />
-          <Stack direction="row" spacing={1.5}>
-            <DatePicker label="Registration opens"
-              value={form.registrationOpens ? dayjs(form.registrationOpens) : null}
-              onChange={v => set('registrationOpens', v ? v.format('YYYY-MM-DD') : '')}
-              slotProps={{ textField: { size: 'small', fullWidth: true } }} />
-            <DatePicker label="Registration closes"
-              value={form.registrationCloses ? dayjs(form.registrationCloses) : null}
-              onChange={v => set('registrationCloses', v ? v.format('YYYY-MM-DD') : '')}
-              slotProps={{ textField: { size: 'small', fullWidth: true } }} />
-          </Stack>
           <FormControl size="small" fullWidth>
             <InputLabel>Status</InputLabel>
             <Select value={form.status} label="Status"
@@ -405,6 +395,23 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
               ))}
             </Select>
           </FormControl>
+          <Typography
+            variant="caption" fontWeight={600} letterSpacing={0.6}
+            textTransform="uppercase" color="text.secondary"
+            sx={{ display: 'block', mb: 1, mt: 0.5 }}
+          >
+            Registration
+          </Typography>
+          <Stack direction="row" spacing={1.5}>
+            <DatePicker label="Registration opens"
+              value={form.registrationOpens ? dayjs(form.registrationOpens) : null}
+              onChange={v => set('registrationOpens', v ? v.format('YYYY-MM-DD') : '')}
+              slotProps={{ textField: { size: 'small', fullWidth: true } }} />
+            <DatePicker label="Registration closes"
+              value={form.registrationCloses ? dayjs(form.registrationCloses) : null}
+              onChange={v => set('registrationCloses', v ? v.format('YYYY-MM-DD') : '')}
+              slotProps={{ textField: { size: 'small', fullWidth: true } }} />
+          </Stack>
           <FormControl size="small" fullWidth disabled={!!form.registrationOpens && !!form.registrationCloses}>
             <InputLabel>Registration status</InputLabel>
             <Select value={form.registrationStatus} label="Registration status"
