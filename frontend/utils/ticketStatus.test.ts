@@ -33,6 +33,20 @@ describe('groupDistances', () => {
         expect(group.terrainType).toBeNull();
     });
 
+    it('keeps elevationGain cleared for a 3rd entry sharing the label, even one matching the original value', () => {
+        const distances: DistanceEntry[] = [
+            { label: '10 km', ticketStatus: 'Available', elevationGain: 250, terrainType: 'Trail' },
+            { label: '10 km', ticketStatus: 'Available', elevationGain: 400, terrainType: 'Trail' },
+            // Matches entry 1's original 250 exactly — must not "un-clear" the group value, since
+            // clearing compares against the already-cleared group state, not entry 1's raw value.
+            { label: '10 km', ticketStatus: 'Available', elevationGain: 250, terrainType: 'Trail' },
+        ];
+        const [group] = groupDistances(distances);
+        expect(group.count).toBe(3);
+        expect(group.elevationGain).toBeNull();
+        expect(group.terrainType).toBe('Trail');
+    });
+
     it('passes elevationGain/terrainType through unchanged for a single (unmerged) entry', () => {
         const distances: DistanceEntry[] = [
             { label: 'Half Marathon', ticketStatus: 'SoldOut', elevationGain: 900, terrainType: 'Mountain' },
