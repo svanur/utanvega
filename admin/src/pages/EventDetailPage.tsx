@@ -376,6 +376,7 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
         <Stack spacing={2} sx={{ mt: 1 }}>
           <Stack direction="row" spacing={1.5}>
             <TextField size="small" fullWidth label="Year" type="number" value={form.year}
+              inputProps={{ min: 1900, max: 2100 }}
               onChange={e => {
                 const newYear = e.target.value;
                 const oldYear = form.year;
