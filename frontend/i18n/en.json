@@ -778,8 +778,8 @@
         },
         "changelog": {
             "v1_6_0": {
-                "title": "Registration status you can trust, and a fuller history for every event",
-                "description": "Registration status is now calculated live from an edition's actual opening and closing dates instead of being set by hand, so \"Open\", \"Not started\", and \"Closed\" always match reality. The editions history page grew up too — it now shows elevation, terrain, and organiser for past races, how many years an event has been recorded here, and a filter for editions with photos; if the newest edition doesn't have photos yet, the site points you to the most recent one that does. Alongside that, a round of bug fixes across trails, admin, and event editions."
+                "title": "Changes on the admin web, and a fuller history for every event. Opt-in approach added to send comments form",
+                "description": "Many changes on Admin web. The editions history page grew up too — it now shows elevation, terrain, and organiser for past races, how many years an event has been recorded here, and a filter for editions with photos; if the newest edition doesn't have photos yet, the site points you to the most recent one that does. Alongside that, a round of bug fixes across trails, admin, and event editions. Send detailed comment form updated to opt-in regarding sending the screenshot."
             },
             "v1_5_0": {
                 "title": "Photographers get credit, and a smarter \"ongoing\" badge for multi-day events",

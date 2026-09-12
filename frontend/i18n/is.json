@@ -778,8 +778,8 @@
         },
         "changelog": {
             "v1_6_0": {
-                "title": "Skráningarstaða sem þú getur treyst, og fyllri saga hvers viðburðar",
-                "description": "Skráningarstaða er nú reiknuð sjálfkrafa út frá raunverulegum dagsetningum skráningar hjá hverri útgáfu í stað þess að vera stillt handvirkt, svo að „Skráning opin“, „Skráning væntanleg“ og „Skráning lokuð“ endurspegla alltaf raunveruleikann. Síðan um fyrri viðburði fékk líka viðbætur — hún sýnir núna hækkun, landslag og skipuleggjanda fyrri hlaupa, hversu mörg ár viðburðurinn hefur verið skráður hér, og síu fyrir útgáfur með myndum; ef nýjasta útgáfan er ekki komin með myndir enn þá bendir síðan á nýjustu útgáfuna sem er með þær. Auk þess fylgir hópur af villuleiðréttingum í leiðum, stjórnborði og útgáfum viðburða."
+                "title": "Breytingar á stjórnborði. Meiri upplýsingar í sögu viðburða. Senda ítarlega athugasemd breytt",
+                "description": "Margar umbætur á stjórnborði. Fleiri upplýsingar birtar fyrir fyrri viðburði — hún sýnir núna hækkun, landslag og skipuleggjanda fyrri hlaupa, hversu mörg ár viðburðurinn hefur verið skráður hér, og síu fyrir útgáfur með myndum; ef nýjasta útgáfan er ekki komin með myndir en þá bendir viðburðurinn á nýjustu útgáfuna sem er með þær. Auk þess margar villuleiðréttingar í leiðum, stjórnborði og útgáfum viðburða. Uppfærsla á 'Senda inn ítarlega athugasemd' forminu þar sem notandi þarf sérstaklega að samþykkja að senda skjáskot með athugasemd, opt-in í stað opt-out eins og það var áður."
             },
             "v1_5_0": {
                 "title": "Ljósmyndarar fá meiri sess. Viðburðir geta nú haft mörg myndasöfn - Snjallara „í gangi“ merki fyrir viðburði sem eru 3 dagar eða lengri.",
