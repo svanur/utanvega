@@ -880,6 +880,11 @@
                 "title": "Febrúar, 2025",
                 "description": "Hinn upprunalegi hlaupadagskra.is vefur fer í loftið með lista yfir öll hlaup á Íslandi."
             }
+        },
+        "changelogDiary": {
+            "searchPlaceholder": "Leita í breytingaskrá…",
+            "searchLabel": "Leita í breytingaskrá",
+            "noResults": "Engar færslur passa við valdar síur."
         }
     },
     "presets": {

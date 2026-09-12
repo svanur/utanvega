@@ -1,4 +1,14 @@
-﻿import { Chip, Container, Divider, Paper, Stack, Typography, type PaletteMode } from '@mui/material';
+﻿import { useMemo, useState } from 'react';
+import {
+    Chip,
+    Container,
+    Divider,
+    Paper,
+    Stack,
+    TextField,
+    Typography,
+    type PaletteMode,
+} from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import Layout from '../components/Layout';
 import { usePageTitle } from '../hooks/usePageTitle';
@@ -58,6 +68,16 @@ const RELEASE_DATES: Record<string, string> = {
  */
 const GITHUB_RELEASES = new Set(['v1_6_0', 'v1_5_0', 'v1_4_0', 'v1_3_0', 'v1_2_0', 'v1_1_1', 'v1_1_0', 'v1_0_0']);
 
+/**
+ * Tags per version, for filtering. Only versions worth surfacing this way are
+ * listed here — most historical entries have none, and that's fine: the tag
+ * row is simply omitted for them. Add a version here to make it filterable;
+ * no other code change is needed.
+ */
+const TAGS: Partial<Record<string, string[]>> = {
+    v1_6_0: ['Admin', 'Registration Opens', 'Registration Closes'],
+};
+
 const RELEASES_URL = 'https://github.com/svanur/utanvega/releases/tag';
 
 /**
@@ -90,6 +110,35 @@ export default function ChangelogDiaryPage({ mode, onToggleMode }: ChangelogDiar
     const { t, i18n } = useTranslation();
     usePageTitle('Changelog diary');
 
+    const [activeTags, setActiveTags] = useState<string[]>([]);
+    const [searchText, setSearchText] = useState('');
+
+    // Derived from the values actually present in TAGS, not a second hardcoded
+    // list — a new tag on a future version becomes filterable on its own.
+    const allTags = useMemo(
+        () => Array.from(new Set(Object.values(TAGS).flatMap(tags => tags ?? []))),
+        [],
+    );
+
+    function toggleTag(tag: string) {
+        setActiveTags(current =>
+            current.includes(tag) ? current.filter(activeTag => activeTag !== tag) : [...current, tag],
+        );
+    }
+
+    const filteredVersions = useMemo(() => {
+        const search = searchText.trim().toLowerCase();
+        return VERSIONS.filter(key => {
+            const tags = TAGS[key] ?? [];
+            const matchesTags = activeTags.length === 0 || tags.some(tag => activeTags.includes(tag));
+            if (!matchesTags) return false;
+            if (!search) return true;
+            const title = t(`about.changelog.${key}.title`).toLowerCase();
+            const description = t(`about.changelog.${key}.description`).toLowerCase();
+            return title.includes(search) || description.includes(search);
+        });
+    }, [activeTags, searchText, t]);
+
     return (
         <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: 'Changelog diary' }]}>
             <Container maxWidth="md" sx={{ py: 3 }}>
@@ -103,64 +152,106 @@ export default function ChangelogDiaryPage({ mode, onToggleMode }: ChangelogDiar
                     </Typography>
                 </Stack>
 
-                <Stack spacing={2.5}>
-                    {VERSIONS.map(key => {
-                        const date = RELEASE_DATES[key];
-                        const isGoLive = key === GO_LIVE_VERSION;
-                        const version = formatVersion(key);
-                        const releaseUrl = GITHUB_RELEASES.has(key)
-                            ? `${RELEASES_URL}/${version}`
-                            : null;
-                        const isPredecessor = key === PREDECESSOR_VERSION;
-                        return (
-                            <Paper key={key} elevation={2} sx={{ p: { xs: 2, sm: 3 } }}>
-                                <Stack
-                                    direction="row"
-                                    alignItems="center"
-                                    spacing={1.5}
-                                    flexWrap="wrap"
-                                    useFlexGap
-                                >
-                                    <Chip
-                                        label={version}
-                                        color={isPredecessor ? 'default' : 'primary'}
-                                        size="small"
-                                        sx={{ fontWeight: 700 }}
-                                        {...(releaseUrl
-                                            ? {
-                                                component: 'a',
-                                                href: releaseUrl,
-                                                target: '_blank',
-                                                rel: 'noopener noreferrer',
-                                                clickable: true,
-                                            }
-                                            : {})}
-                                    />
-                                    {date && (
-                                        <Typography variant="body2" color="text.secondary">
-                                            {formatDate(date, i18n.language)}
-                                        </Typography>
-                                    )}
-                                    {isGoLive && (
-                                        <Chip label="Went live" color="success" size="small" variant="outlined" />
-                                    )}
-                                    {isPredecessor && (
-                                        <Chip label="Previous site" size="small" variant="outlined" />
-                                    )}
-                                </Stack>
-
-                                <Divider sx={{ my: 1.5 }} />
-
-                                <Typography variant="subtitle1" fontWeight={700} gutterBottom>
-                                    {t(`about.changelog.${key}.title`)}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    {t(`about.changelog.${key}.description`)}
-                                </Typography>
-                            </Paper>
-                        );
-                    })}
+                <Stack spacing={2} sx={{ mb: 3 }}>
+                    <TextField
+                        size="small"
+                        fullWidth
+                        label={t('about.changelogDiary.searchLabel')}
+                        placeholder={t('about.changelogDiary.searchPlaceholder')}
+                        value={searchText}
+                        onChange={e => setSearchText(e.target.value)}
+                    />
+                    {allTags.length > 0 && (
+                        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                            {allTags.map(tag => (
+                                <Chip
+                                    key={tag}
+                                    label={tag}
+                                    size="small"
+                                    clickable
+                                    onClick={() => toggleTag(tag)}
+                                    color={activeTags.includes(tag) ? 'primary' : 'default'}
+                                    variant={activeTags.includes(tag) ? 'filled' : 'outlined'}
+                                    sx={{ minHeight: 44 }}
+                                />
+                            ))}
+                        </Stack>
+                    )}
                 </Stack>
+
+                {filteredVersions.length === 0 ? (
+                    <Typography variant="body2" color="text.secondary">
+                        {t('about.changelogDiary.noResults')}
+                    </Typography>
+                ) : (
+                    <Stack spacing={2.5}>
+                        {filteredVersions.map(key => {
+                            const date = RELEASE_DATES[key];
+                            const isGoLive = key === GO_LIVE_VERSION;
+                            const version = formatVersion(key);
+                            const releaseUrl = GITHUB_RELEASES.has(key)
+                                ? `${RELEASES_URL}/${version}`
+                                : null;
+                            const isPredecessor = key === PREDECESSOR_VERSION;
+                            const tags = TAGS[key];
+                            return (
+                                <Paper key={key} elevation={2} sx={{ p: { xs: 2, sm: 3 } }}>
+                                    <Stack
+                                        direction="row"
+                                        alignItems="center"
+                                        spacing={1.5}
+                                        flexWrap="wrap"
+                                        useFlexGap
+                                    >
+                                        <Chip
+                                            label={version}
+                                            color={isPredecessor ? 'default' : 'primary'}
+                                            size="small"
+                                            sx={{ fontWeight: 700 }}
+                                            {...(releaseUrl
+                                                ? {
+                                                    component: 'a',
+                                                    href: releaseUrl,
+                                                    target: '_blank',
+                                                    rel: 'noopener noreferrer',
+                                                    clickable: true,
+                                                }
+                                                : {})}
+                                        />
+                                        {date && (
+                                            <Typography variant="body2" color="text.secondary">
+                                                {formatDate(date, i18n.language)}
+                                            </Typography>
+                                        )}
+                                        {isGoLive && (
+                                            <Chip label="Went live" color="success" size="small" variant="outlined" />
+                                        )}
+                                        {isPredecessor && (
+                                            <Chip label="Previous site" size="small" variant="outlined" />
+                                        )}
+                                    </Stack>
+
+                                    {tags && tags.length > 0 && (
+                                        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mt: 1 }}>
+                                            {tags.map(tag => (
+                                                <Chip key={tag} label={tag} size="small" variant="outlined" />
+                                            ))}
+                                        </Stack>
+                                    )}
+
+                                    <Divider sx={{ my: 1.5 }} />
+
+                                    <Typography variant="subtitle1" fontWeight={700} gutterBottom>
+                                        {t(`about.changelog.${key}.title`)}
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary">
+                                        {t(`about.changelog.${key}.description`)}
+                                    </Typography>
+                                </Paper>
+                            );
+                        })}
+                    </Stack>
+                )}
             </Container>
         </Layout>
     );
