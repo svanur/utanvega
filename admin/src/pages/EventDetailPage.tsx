@@ -212,7 +212,7 @@ function emptyEditionForm(): EditionFormState {
     date: '', endDate: '', title: '', titleEn: '',
     registrationUrl: '', resultsUrl: '', notes: '', notesEn: '',
     registrationStatus: 'NotStarted', registrationOpens: '', registrationCloses: '', trailId: '',
-    status: 'Unconfirmed',
+    status: 'Hidden',
   };
 }
 
@@ -359,6 +359,19 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
                     if (prev.endDate) updates.endDate = prev.endDate.replace(/^\d{4}/, newYear);
                     if (/^\d{4}$/.test(prev.title.trim())) updates.title = newYear;
                     if (prev.resultsUrl) updates.resultsUrl = prev.resultsUrl.replace(new RegExp(`${oy}(/?)$`), `${newYear}$1`);
+                  }
+                  // A brand-new edition has no saved Status/RegistrationStatus for the admin to
+                  // disturb yet, so nudge both toward a sensible initial value based on whether
+                  // the typed year is in the past — an existing edition's Year is just a label
+                  // at this point and must not touch either field.
+                  if (isNew && newYear.length === 4 && !isNaN(ny)) {
+                    if (ny < new Date().getFullYear()) {
+                      updates.status = 'Completed';
+                      updates.registrationStatus = 'Closed';
+                    } else {
+                      updates.status = 'Hidden';
+                      updates.registrationStatus = 'NotStarted';
+                    }
                   }
                   return { ...prev, ...updates };
                 });

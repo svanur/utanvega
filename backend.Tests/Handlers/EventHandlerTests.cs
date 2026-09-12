@@ -564,12 +564,13 @@ public class EventHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task Create_Edition_PreservesExplicitHidden_WhenDateInPast()
+    public async Task Create_Edition_DefaultsToCompleted_WhenHiddenAndDateInPast()
     {
-        // Regression test: the past-date-defaults-to-Completed logic (#656) must not silently
-        // override an admin's deliberate Hidden choice — Hidden and Completed have very different
-        // public-visibility semantics (only Hidden is filtered out of public queries), so an admin
-        // creating a past-dated, private/draft historical edition as Hidden must have that respected.
+        // #760: Hidden is now the admin form's own default Status for a brand-new edition (see
+        // emptyEditionForm/the Year-field nudge in EventDetailPage), so a past-dated draft edition
+        // created that way must auto-complete exactly like the plain Unconfirmed default did before
+        // it — otherwise every past-dated edition created through the normal "Add edition" flow
+        // would sit as a hidden draft forever instead of reading as Completed from the start.
         var ev = CreateTestEvent();
         using (var ctx = _factory.CreateContext())
         {
@@ -586,7 +587,7 @@ public class EventHandlerTests : IDisposable
             Year: pastDate.Year,
             Date: pastDate,
             EndDate: null,
-            Title: "Past, deliberately hidden",
+            Title: "Past, admin-default hidden",
             RegistrationUrl: null,
             ResultsUrl: null,
             Notes: null,
@@ -597,7 +598,45 @@ public class EventHandlerTests : IDisposable
 
         using var verifyCtx = _factory.CreateContext();
         var edition = verifyCtx.EventEditions.Find(id);
-        Assert.Equal(EditionStatus.Hidden, edition!.Status);
+        Assert.Equal(EditionStatus.Completed, edition!.Status);
+        Assert.Equal(RegistrationStatus.Closed, edition.RegistrationStatus);
+    }
+
+    [Fact]
+    public async Task Create_Edition_PreservesExplicitCancelled_WhenDateInPast()
+    {
+        // Unlike Hidden (see Create_Edition_DefaultsToCompleted_WhenHiddenAndDateInPast above),
+        // Cancelled is never an admin-form default — it's only reachable via the dedicated
+        // row-level Cancel action on an existing edition, so a past date alongside an explicit
+        // Cancelled status must still be respected rather than silently promoted to Completed.
+        var ev = CreateTestEvent();
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            await ctx.SaveChangesAsync();
+        }
+
+        var pastDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-30));
+
+        using var edCtx = _factory.CreateContext();
+        var handler = new CreateEditionCommandHandler(edCtx, _cacheInvalidator);
+        var id = await handler.Handle(new CreateEditionCommand(
+            EventId: ev.Id,
+            Year: pastDate.Year,
+            Date: pastDate,
+            EndDate: null,
+            Title: "Past, deliberately cancelled",
+            RegistrationUrl: null,
+            ResultsUrl: null,
+            Notes: null,
+            RegistrationStatus: "NotStarted",
+            TrailId: null,
+            Status: "Cancelled"
+        ), CancellationToken.None);
+
+        using var verifyCtx = _factory.CreateContext();
+        var edition = verifyCtx.EventEditions.Find(id);
+        Assert.Equal(EditionStatus.Cancelled, edition!.Status);
     }
 
     // ─── UpdateEditionCommand ───
