@@ -153,6 +153,19 @@ export function editionStatusForYear(year: number, currentYear: number = new Dat
     : { status: 'Hidden', registrationStatus: 'NotStarted' };
 }
 
+// #778: a cloned edition is created via the same "isNew" (create) path as a plain Add, but
+// handleCloneEdition deliberately seeds Status as Unconfirmed (and RegistrationStatus from
+// whether the suggested date is already past) regardless of the year-bucket default above — so
+// the Year nudge above must not re-fire for a clone the way it does for a plain Add, or it
+// silently discards that seed the moment the admin corrects the suggested year. Manually touching
+// Status/RegistrationStatus must still win over both "isNew" and "isClone", same as before.
+// Pulled out as a pure function (rather than left inline in the Year onChange) so the gating
+// decision is unit-testable — see eventForms.test.ts — independently of the refs that track
+// dialog-open-scoped state in EventDetailPage.
+export function shouldNudgeStatusForYear(isNew: boolean, isClone: boolean, statusManuallySet: boolean): boolean {
+  return isNew && !isClone && !statusManuallySet;
+}
+
 export function getEditionStatusColor(status: EditionStatus): 'default' | 'success' | 'warning' | 'error' | 'info' {
   if (status === 'Active') return 'success';
   if (status === 'Unconfirmed') return 'warning'; // matches getEventStatusColor's Unconfirmed mapping

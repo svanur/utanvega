@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { editionStatusForYear } from './eventForms';
+import { editionStatusForYear, shouldNudgeStatusForYear } from './eventForms';
 
 // #760: on a brand-new edition, typing a Year nudges Status/RegistrationStatus toward a sensible
 // initial value — a past year reads as an already-completed historical edition, a current-or-future
@@ -24,5 +24,30 @@ describe('editionStatusForYear', () => {
     expect(editionStatusForYear(currentYear - 1)).toEqual({ status: 'Completed', registrationStatus: 'Closed' });
     expect(editionStatusForYear(currentYear)).toEqual({ status: 'Hidden', registrationStatus: 'NotStarted' });
     expect(editionStatusForYear(currentYear + 1)).toEqual({ status: 'Hidden', registrationStatus: 'NotStarted' });
+  });
+});
+
+// #778: a cloned edition takes the same "isNew" (create) path as a plain Add, but
+// handleCloneEdition deliberately seeds Status/RegistrationStatus itself (Unconfirmed, plus a
+// RegistrationStatus derived from the suggested date), so the Year nudge must not re-fire and
+// clobber that seed the way it does for a plain Add — while a manual Status/RegistrationStatus
+// change must still win regardless of isNew/isClone, same as before.
+describe('shouldNudgeStatusForYear', () => {
+  it('fires for a plain new edition that has not been manually touched', () => {
+    expect(shouldNudgeStatusForYear(true, false, false)).toBe(true);
+  });
+
+  it('does not fire for a cloned edition, even though isNew is also true', () => {
+    expect(shouldNudgeStatusForYear(true, true, false)).toBe(false);
+  });
+
+  it('does not fire once the admin has manually touched Status/RegistrationStatus, clone or not', () => {
+    expect(shouldNudgeStatusForYear(true, false, true)).toBe(false);
+    expect(shouldNudgeStatusForYear(true, true, true)).toBe(false);
+  });
+
+  it('does not fire for an existing (non-new) edition', () => {
+    expect(shouldNudgeStatusForYear(false, false, false)).toBe(false);
+    expect(shouldNudgeStatusForYear(false, true, false)).toBe(false);
   });
 });
