@@ -71,13 +71,12 @@ function clampItraPoints(value: string): string {
 // an onChange with the exact same shape (previous value "", next value "1"), and 1 is
 // a legitimate, common ITRA points value that must not be silently overwritten.
 //
-// The two ARE distinguishable one level up, though: a spin-button click never fires a
-// keydown on the input, whereas every real keystroke (including the arrow keys) does.
-// So `cameFromKeydown` — set by a ref on keydown and read/cleared on the very next
+// A spin-button click never fires a keydown on the input, whereas every real keystroke
+// does. So `cameFromKeydown` — set by a ref on keydown and read/cleared on the very next
 // onChange — lets us apply the "snap to 0" correction only when no keystroke preceded
-// the change, i.e. only for an actual spin-button click. A side effect: pressing the
-// physical ArrowUp key on an empty field is treated as a keystroke too, so it still
-// shows 1 rather than 0 — accepted deliberately so that typing "1" is never touched.
+// the change, i.e. only for an actual spin-button click, never for a typed digit. The
+// physical ArrowUp key is handled separately (see the onKeyDown handler where this is
+// used) since, unlike a digit key, it can never be a legitimate typed value.
 function correctEmptyToOneFromSpinner(previous: string, next: string, cameFromKeydown: boolean): string {
   if (cameFromKeydown) return next;
   return previous.trim() === '' && next === '1' ? '0' : next;
@@ -341,7 +340,19 @@ function RaceFormCardInner({
             </FormControl>
             <TextField size="small" fullWidth label="ITRA points" type="number" value={form.itraPoints}
               inputProps={{ min: 0, max: 6, step: 1 }}
-              onKeyDown={() => { itraKeydownRef.current = true; }}
+              onKeyDown={e => {
+                // The ArrowUp key is unambiguous (unlike a digit key, it can never be a
+                // legitimate typed value), so it can be special-cased directly here,
+                // ahead of and independent of the keydown/onChange ref below: stop the
+                // browser's native step (which would otherwise land on 1, not 0 — see
+                // correctEmptyToOneFromSpinner above) and snap straight to the minimum.
+                if (e.key === 'ArrowUp' && form.itraPoints.trim() === '') {
+                  e.preventDefault();
+                  set('itraPoints', '0');
+                  return;
+                }
+                itraKeydownRef.current = true;
+              }}
               onChange={e => {
                 const cameFromKeydown = itraKeydownRef.current;
                 itraKeydownRef.current = false;
