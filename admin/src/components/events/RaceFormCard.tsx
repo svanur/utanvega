@@ -52,6 +52,13 @@ interface RaceFormCardProps {
   initialValues?: RaceFormState;
 }
 
+function clampItraPoints(value: string): string {
+  if (value.trim() === '') return value;
+  const num = Number(value);
+  if (Number.isNaN(num)) return value;
+  return String(Math.min(6, Math.max(0, num)));
+}
+
 function SectionLabel({ children }: { children: ReactNode }) {
   return (
     <Typography
@@ -308,7 +315,15 @@ function RaceFormCardInner({
               </Select>
             </FormControl>
             <TextField size="small" fullWidth label="ITRA points" type="number" value={form.itraPoints}
-              onChange={e => set('itraPoints', e.target.value)} />
+              inputProps={{ min: 0, max: 6, step: 1 }}
+              onChange={e => set('itraPoints', e.target.value)}
+              onBlur={e => set('itraPoints', clampItraPoints(e.target.value))}
+              onKeyDown={e => {
+                if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && form.itraPoints.trim() === '') {
+                  e.preventDefault();
+                  set('itraPoints', '0');
+                }
+              }} />
             <FormControl size="small" fullWidth>
               <InputLabel>Result type</InputLabel>
               <Select value={form.resultType} label="Result type" onChange={e => set('resultType', e.target.value as typeof form.resultType)}>
