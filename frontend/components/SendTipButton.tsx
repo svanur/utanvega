@@ -287,7 +287,13 @@ export default function SendTipButton({ type: _type, sx, inline = false }: SendT
                                     <Divider sx={{ mb: 1 }} />
                                     <Typography variant="caption" color="text.disabled">
                                         {t('tip.autoCapture', {
-                                            items: ['browser', 'OS', 'screen size', 'language', 'timezone'].join(', ')
+                                            items: [
+                                                t('tip.autoCaptureItems.browser'),
+                                                t('tip.autoCaptureItems.os'),
+                                                t('tip.autoCaptureItems.screenSize'),
+                                                t('tip.autoCaptureItems.language'),
+                                                t('tip.autoCaptureItems.timezone')
+                                            ].join(', ')
                                         })}
                                     </Typography>
                                 </>

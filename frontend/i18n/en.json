@@ -460,7 +460,14 @@
         "screenshotExclude": "Excluded",
         "screenshotViewFull": "View full-size screenshot",
         "capturingScreen": "Capturing screenshot...",
-        "autoCapture": "Detailed reports always include technical data ({{items}}) to help us investigate the issue. If you also wish to include a screenshot, click the 'Excluded' button above; it will change to 'Include', and a screenshot will be saved with your comments. You can view the screenshot by clicking the above image."
+        "autoCapture": "Detailed reports always include technical data ({{items}}) to help us investigate the issue. If you also wish to include a screenshot, click the 'Excluded' button above; it will change to 'Include', and a screenshot will be saved with your comments. You can view the screenshot by clicking the above image.",
+        "autoCaptureItems": {
+            "browser": "browser",
+            "os": "OS",
+            "screenSize": "screen size",
+            "language": "language",
+            "timezone": "timezone"
+        }
     },
     "betaComments": {
         "title": "Our web is in development",
