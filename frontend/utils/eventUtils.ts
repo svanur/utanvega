@@ -157,6 +157,17 @@ export function getEditionTimingStatus(
     return 'ongoing';
 }
 
+// Milliseconds from `now` until the next local midnight (00:00:00.000 of the following day).
+// Powers EditionHistoryPage's self-re-arming setTimeout, which re-checks getEditionTimingStatus
+// once per midnight crossing instead of polling. Extracted as a pure function so the boundary
+// math (an exact-midnight `now` must still yield a full 24h, not 0) is unit-testable without a
+// setTimeout/setState harness.
+export function msUntilNextMidnight(now: Date = new Date()): number {
+    const nextMidnight = new Date(now);
+    nextMidnight.setHours(24, 0, 0, 0);
+    return nextMidnight.getTime() - now.getTime();
+}
+
 export function formatRaceDateTime(
     dateOfRace: string | null,
     startTime: string | null,

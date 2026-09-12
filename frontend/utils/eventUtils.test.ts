@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatYearRanges, getEditionTimingStatus } from './eventUtils';
+import { formatYearRanges, getEditionTimingStatus, msUntilNextMidnight } from './eventUtils';
 
 // #546: the recorded-editions badge must be gap-tolerant — a missing year in the middle of the
 // record must stay visible as a gap, never smoothed into a continuous range.
@@ -74,5 +74,24 @@ describe('getEditionTimingStatus', () => {
     it('compares dates only, ignoring time of day — a late "now" on edition day is still "ongoing"', () => {
         const now = new Date('2026-03-15T23:59:59');
         expect(getEditionTimingStatus('2026-03-15', undefined, now)).toBe('ongoing');
+    });
+});
+
+// #759: extracted from EditionHistoryPage's midnight-scheduling useEffect so the boundary math
+// (an exact-midnight `now` must still yield a full 24h, not 0) is unit-testable.
+describe('msUntilNextMidnight', () => {
+    it('returns a small positive value for a "now" just before midnight', () => {
+        const now = new Date('2026-03-15T23:59:59.500');
+        expect(msUntilNextMidnight(now)).toBe(500);
+    });
+
+    it('returns a full 24h when "now" is exactly midnight', () => {
+        const now = new Date('2026-03-15T00:00:00.000');
+        expect(msUntilNextMidnight(now)).toBe(86400000);
+    });
+
+    it('returns the remaining ms in the day for a "now" mid-day', () => {
+        const now = new Date('2026-03-15T12:00:00.000');
+        expect(msUntilNextMidnight(now)).toBe(12 * 60 * 60 * 1000);
     });
 });
