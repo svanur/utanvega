@@ -1,3 +1,5 @@
+import type { Dayjs } from 'dayjs';
+import dayjs from 'dayjs';
 import type { ActivityType, EditionStatus, EventStatus, RaceDto, RaceStatus, RegistrationStatus, ResultType, TicketStatus } from '../hooks/useEvents';
 import { formatMinutesToHHmm, normalizeCutoffTimeOnBlur, parseHHmmToMinutes } from './cutoffTime';
 import { trimToUndefined } from './strings';
@@ -164,6 +166,26 @@ export function editionStatusForYear(year: number, currentYear: number = new Dat
 // dialog-open-scoped state in EventDetailPage.
 export function shouldNudgeStatusForYear(isNew: boolean, isClone: boolean, statusManuallySet: boolean): boolean {
   return isNew && !isClone && !statusManuallySet;
+}
+
+// #780: the Year field's onChange also auto-syncs Title/titleEn to the typed year, but only while
+// the title still looks like it was left at a previous auto-synced value (empty, or a bare 4-digit
+// year) — once the admin has typed a real title, a later Year edit must not clobber it. Pulled out
+// as a pure function (rather than left inline in the Year onChange) so this decision is
+// unit-testable — see eventForms.test.ts — independently of the setForm state update it feeds.
+export function titleSyncForYear(newYear: string, currentTitle: string): { title: string; titleEn: string } | null {
+  if (newYear.length !== 4 || isNaN(parseInt(newYear, 10))) return null;
+  if (currentTitle.trim() !== '' && !/^\d{4}$/.test(currentTitle.trim())) return null;
+  return { title: newYear, titleEn: newYear };
+}
+
+// #780: drives which month/year the four edition date pickers open on when they have no value of
+// their own yet — a not-yet-4-digit or invalid Year leaves their default (today) behaviour
+// unchanged. Pulled out as a pure function so it's unit-testable independently of the form state
+// it's derived from — see eventForms.test.ts.
+export function referenceDateForYear(year: string): Dayjs | undefined {
+  const parsed = parseInt(year, 10);
+  return year.length === 4 && !isNaN(parsed) ? dayjs().year(parsed) : undefined;
 }
 
 export function getEditionStatusColor(status: EditionStatus): 'default' | 'success' | 'warning' | 'error' | 'info' {

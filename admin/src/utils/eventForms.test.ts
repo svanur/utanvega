@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { editionStatusForYear, shouldNudgeStatusForYear } from './eventForms';
+import { editionStatusForYear, shouldNudgeStatusForYear, titleSyncForYear, referenceDateForYear } from './eventForms';
 
 // #760: on a brand-new edition, typing a Year nudges Status/RegistrationStatus toward a sensible
 // initial value — a past year reads as an already-completed historical edition, a current-or-future
@@ -49,5 +49,45 @@ describe('shouldNudgeStatusForYear', () => {
   it('does not fire for an existing (non-new) edition', () => {
     expect(shouldNudgeStatusForYear(false, false, false)).toBe(false);
     expect(shouldNudgeStatusForYear(false, true, false)).toBe(false);
+  });
+});
+
+// #780: the Year field's onChange also auto-syncs Title/titleEn to the typed year, but only while
+// the title still looks like it was left at a previous auto-synced value (empty, or a bare
+// 4-digit year) — once the admin has typed a real title, a later Year edit must not clobber it.
+describe('titleSyncForYear', () => {
+  it('syncs when the title is empty and the year is complete', () => {
+    expect(titleSyncForYear('2026', '')).toEqual({ title: '2026', titleEn: '2026' });
+  });
+
+  it('does not sync when the title is a real, non-year value', () => {
+    expect(titleSyncForYear('2026', 'Reykjavik Marathon')).toBeNull();
+  });
+
+  it('syncs when the title is still a bare 4-digit year (a previous auto-sync)', () => {
+    expect(titleSyncForYear('2027', '2026')).toEqual({ title: '2027', titleEn: '2027' });
+  });
+
+  it('does not sync when the year is incomplete or invalid', () => {
+    expect(titleSyncForYear('202', '')).toBeNull();
+    expect(titleSyncForYear('abcd', '')).toBeNull();
+  });
+});
+
+// #780: drives which month/year the four edition date pickers open on when they have no value of
+// their own yet — a not-yet-4-digit or invalid Year leaves their default (today) behaviour
+// unchanged, signalled by returning undefined.
+describe('referenceDateForYear', () => {
+  it('returns a Dayjs anchored to the given year for a complete 4-digit year', () => {
+    const result = referenceDateForYear('2030');
+    expect(result?.year()).toBe(2030);
+  });
+
+  it('returns undefined for an incomplete year', () => {
+    expect(referenceDateForYear('202')).toBeUndefined();
+  });
+
+  it('returns undefined for a non-numeric year', () => {
+    expect(referenceDateForYear('abcd')).toBeUndefined();
   });
 });

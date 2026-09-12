@@ -77,6 +77,8 @@ import {
   buildRaceForm,
   editionStatusForYear,
   shouldNudgeStatusForYear,
+  titleSyncForYear,
+  referenceDateForYear,
   getRaceStatusColor,
   getEditionStatusColor,
   getTicketStatusColor,
@@ -289,10 +291,7 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
   // Drives which month/year the four date pickers below open on when they have no value of
   // their own yet — undefined falls back to their default (today), so a not-yet-4-digit or
   // invalid Year leaves that behaviour unchanged.
-  const yearForYear = parseInt(form.year, 10);
-  const referenceDate = form.year.length === 4 && !isNaN(yearForYear)
-    ? dayjs().year(yearForYear)
-    : undefined;
+  const referenceDate = referenceDateForYear(form.year);
 
   const handleSave = async () => {
     const input = {
@@ -389,10 +388,10 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
                   // gated behind oldYear being a complete 4-digit value. This is what lets it fire
                   // on a brand-new edition, where the year is typed character-by-character into an
                   // initially empty field (oldYear is never 4 digits long until after this update).
-                  if (newYear.length === 4 && !isNaN(ny)
-                    && (prev.title.trim() === '' || /^\d{4}$/.test(prev.title.trim()))) {
-                    updates.title = newYear;
-                    updates.titleEn = newYear;
+                  const titleSync = titleSyncForYear(newYear, prev.title);
+                  if (titleSync) {
+                    updates.title = titleSync.title;
+                    updates.titleEn = titleSync.titleEn;
                   }
                   if (newYear.length === 4 && !isNaN(ny) && oldYear.length === 4 && !isNaN(oy)) {
                     if (prev.date) updates.date = prev.date.replace(/^\d{4}/, newYear);
