@@ -76,6 +76,7 @@ import { BilingualLangProvider, useBilingualLang } from '../contexts/BilingualLa
 import {
   buildRaceForm,
   editionStatusForYear,
+  shouldNudgeStatusForYear,
   getRaceStatusColor,
   getEditionStatusColor,
   getTicketStatusColor,
@@ -244,6 +245,11 @@ interface EditionDialogProps {
   onGalleryMutated: () => void;
   onNotify: (msg: ReactNode, sev?: 'success' | 'error') => void;
   initialValues?: EditionFormState;
+  // #778: distinguishes "Clone edition" from a plain "Add edition" — both open the dialog via the
+  // same isNew (create) path, but a clone deliberately seeds Status/RegistrationStatus itself
+  // (see handleCloneEdition), so the Year nudge below must not re-derive and overwrite them the
+  // way it does for a plain Add.
+  isClone?: boolean;
 }
 
 function LangToggleButton() {
@@ -260,7 +266,7 @@ function LangToggleButton() {
   );
 }
 
-function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGalleryMutated, onNotify, initialValues }: EditionDialogProps) {
+function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGalleryMutated, onNotify, initialValues, isClone = false }: EditionDialogProps) {
   const isNew = edition === null;
   const [form, setForm] = useState<EditionFormState>(initialValues ?? (edition ? buildEditionForm(edition) : emptyEditionForm()));
   const [saving, setSaving] = useState(false);
@@ -270,6 +276,10 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
   // field on further Year edits, so a deliberate manual choice always wins. A ref rather than
   // state because flipping it must never itself trigger a render.
   const statusManuallySetRef = useRef(false);
+  // Captures the isClone prop at the moment this dialog opens (see onEnter below), same
+  // dialog-open-scoped lifetime as statusManuallySetRef — so it can't leak into the next
+  // "Add edition" open even if this instance is reused across opens.
+  const isCloneRef = useRef(false);
   const editionStatusHelperId = useId();
   const registrationStatusHelperId = useId();
 
@@ -355,6 +365,7 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
       TransitionProps={{ onEnter: () => {
         setForm(initialValues ?? (edition ? buildEditionForm(edition) : emptyEditionForm()));
         statusManuallySetRef.current = false;
+        isCloneRef.current = isClone;
       } }}>
       <DialogTitle>
         <Stack direction="row" justifyContent="space-between" alignItems="center">
@@ -393,8 +404,10 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
                   // the typed year is in the past — an existing edition's Year is just a label
                   // at this point and must not touch either field. Once the admin has manually
                   // picked a Status/RegistrationStatus of their own, a later Year edit (e.g.
-                  // fixing a typo) must not silently clobber that choice again.
-                  if (isNew && !statusManuallySetRef.current && newYear.length === 4 && !isNaN(ny)) {
+                  // fixing a typo) must not silently clobber that choice again. A clone is also
+                  // "new" in the isNew sense but handleCloneEdition already seeded a deliberate
+                  // Status/RegistrationStatus (see #778), so it's excluded here too.
+                  if (shouldNudgeStatusForYear(isNew, isCloneRef.current, statusManuallySetRef.current) && newYear.length === 4 && !isNaN(ny)) {
                     const nudged = editionStatusForYear(ny);
                     updates.status = nudged.status;
                     updates.registrationStatus = nudged.registrationStatus;
@@ -1804,6 +1817,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
         edition={editingEdition}
         eventId={detail.id}
         initialValues={editionInitialValues}
+        isClone={cloneFromEditionId !== null}
         onClose={() => { setEditionDialogOpen(false); setCloneFromEditionId(null); setEditionInitialValues(undefined); }}
         onGalleryMutated={refresh}
         onSaved={async (newEditionId) => {
