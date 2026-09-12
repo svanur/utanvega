@@ -183,9 +183,16 @@ export function titleSyncForYear(newYear: string, currentTitle: string): { title
 // their own yet — a not-yet-4-digit or invalid Year leaves their default (today) behaviour
 // unchanged. Pulled out as a pure function so it's unit-testable independently of the form state
 // it's derived from — see eventForms.test.ts.
+// #781: a 4-character year string can still be negative, zero, or wildly out of range (e.g.
+// '-100', '0000') and still parse as a non-NaN number, so a sane bound is required before handing
+// it to dayjs().year() — otherwise the date pickers open on an implausible calendar.
+const MIN_REFERENCE_YEAR = 1900;
+const MAX_REFERENCE_YEAR = 2100;
+
 export function referenceDateForYear(year: string): Dayjs | undefined {
   const parsed = parseInt(year, 10);
-  return year.length === 4 && !isNaN(parsed) ? dayjs().year(parsed) : undefined;
+  const inRange = parsed >= MIN_REFERENCE_YEAR && parsed <= MAX_REFERENCE_YEAR;
+  return year.length === 4 && !isNaN(parsed) && inRange ? dayjs().year(parsed) : undefined;
 }
 
 export function getEditionStatusColor(status: EditionStatus): 'default' | 'success' | 'warning' | 'error' | 'info' {

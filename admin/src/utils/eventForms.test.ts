@@ -90,4 +90,19 @@ describe('referenceDateForYear', () => {
   it('returns undefined for a non-numeric year', () => {
     expect(referenceDateForYear('abcd')).toBeUndefined();
   });
+
+  // #781: '-100' and '0000' are both 4 characters long and parse as non-NaN numbers, so the
+  // length/isNaN checks above alone let them through to dayjs().year() — a sane range guard is
+  // needed to catch these and years like '9999' that are still nonsensical as a race edition.
+  it('returns undefined for a negative year, even though it is 4 characters and parses as a number', () => {
+    expect(referenceDateForYear('-100')).toBeUndefined();
+  });
+
+  it('returns undefined for a zero year', () => {
+    expect(referenceDateForYear('0000')).toBeUndefined();
+  });
+
+  it('returns undefined for a year outside the sane range', () => {
+    expect(referenceDateForYear('9999')).toBeUndefined();
+  });
 });
