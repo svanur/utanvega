@@ -75,6 +75,7 @@ import BilingualTextField from '../components/BilingualTextField';
 import { BilingualLangProvider, useBilingualLang } from '../contexts/BilingualLangContext';
 import {
   buildRaceForm,
+  editionStatusForYear,
   getRaceStatusColor,
   getEditionStatusColor,
   getTicketStatusColor,
@@ -212,7 +213,7 @@ function emptyEditionForm(): EditionFormState {
     date: '', endDate: '', title: '', titleEn: '',
     registrationUrl: '', resultsUrl: '', notes: '', notesEn: '',
     registrationStatus: 'NotStarted', registrationOpens: '', registrationCloses: '', trailId: '',
-    status: 'Unconfirmed',
+    status: 'Hidden',
   };
 }
 
@@ -264,6 +265,11 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
   const [form, setForm] = useState<EditionFormState>(initialValues ?? (edition ? buildEditionForm(edition) : emptyEditionForm()));
   const [saving, setSaving] = useState(false);
   const galleryManagerRef = useRef<PhotoGalleryManagerHandle>(null);
+  // Tracks whether the admin has manually touched Status or RegistrationStatus since the last
+  // time the Year-field nudge (below) set them — once true, the nudge stops overwriting either
+  // field on further Year edits, so a deliberate manual choice always wins. A ref rather than
+  // state because flipping it must never itself trigger a render.
+  const statusManuallySetRef = useRef(false);
 
   const set = <K extends keyof EditionFormState>(k: K, v: EditionFormState[K]) =>
     setForm(prev => ({ ...prev, [k]: v }));
@@ -336,7 +342,10 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
 
   return (
     <Dialog open={open} onClose={handleCancelOrDismiss} maxWidth="sm" fullWidth
-      TransitionProps={{ onEnter: () => setForm(initialValues ?? (edition ? buildEditionForm(edition) : emptyEditionForm())) }}>
+      TransitionProps={{ onEnter: () => {
+        setForm(initialValues ?? (edition ? buildEditionForm(edition) : emptyEditionForm()));
+        statusManuallySetRef.current = false;
+      } }}>
       <DialogTitle>
         <Stack direction="row" justifyContent="space-between" alignItems="center">
           {isNew ? 'Add edition' : 'Edit edition'}
@@ -360,6 +369,17 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
                     if (/^\d{4}$/.test(prev.title.trim())) updates.title = newYear;
                     if (prev.resultsUrl) updates.resultsUrl = prev.resultsUrl.replace(new RegExp(`${oy}(/?)$`), `${newYear}$1`);
                   }
+                  // A brand-new edition has no saved Status/RegistrationStatus for the admin to
+                  // disturb yet, so nudge both toward a sensible initial value based on whether
+                  // the typed year is in the past — an existing edition's Year is just a label
+                  // at this point and must not touch either field. Once the admin has manually
+                  // picked a Status/RegistrationStatus of their own, a later Year edit (e.g.
+                  // fixing a typo) must not silently clobber that choice again.
+                  if (isNew && !statusManuallySetRef.current && newYear.length === 4 && !isNaN(ny)) {
+                    const nudged = editionStatusForYear(ny);
+                    updates.status = nudged.status;
+                    updates.registrationStatus = nudged.registrationStatus;
+                  }
                   return { ...prev, ...updates };
                 });
               }} />
@@ -380,7 +400,10 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
           <FormControl size="small" fullWidth>
             <InputLabel>Status</InputLabel>
             <Select value={form.status} label="Status"
-              onChange={e => set('status', e.target.value as EditionStatus)}
+              onChange={e => {
+                statusManuallySetRef.current = true;
+                set('status', e.target.value as EditionStatus);
+              }}
               aria-describedby={!isNew && form.status !== 'Cancelled' && form.status !== 'Completed' ? 'edition-status-helper-text' : undefined}>
               {EDITION_STATUSES.map(s => (
                 // Cancelled and Completed are terminal states with their own dedicated, safer
@@ -419,7 +442,10 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
           <FormControl size="small" fullWidth disabled={!!form.registrationOpens && !!form.registrationCloses}>
             <InputLabel>Registration status</InputLabel>
             <Select value={form.registrationStatus} label="Registration status"
-              onChange={e => set('registrationStatus', e.target.value as RegistrationStatus)}
+              onChange={e => {
+                statusManuallySetRef.current = true;
+                set('registrationStatus', e.target.value as RegistrationStatus);
+              }}
               aria-describedby={!!form.registrationOpens && !!form.registrationCloses ? 'registration-status-helper-text' : undefined}>
               {REGISTRATION_STATUSES.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
             </Select>

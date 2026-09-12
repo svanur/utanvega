@@ -1,4 +1,4 @@
-import type { ActivityType, EditionStatus, EventStatus, RaceDto, RaceStatus, ResultType, TicketStatus } from '../hooks/useEvents';
+import type { ActivityType, EditionStatus, EventStatus, RaceDto, RaceStatus, RegistrationStatus, ResultType, TicketStatus } from '../hooks/useEvents';
 import { formatMinutesToHHmm, normalizeCutoffTimeOnBlur, parseHHmmToMinutes } from './cutoffTime';
 import { trimToUndefined } from './strings';
 import { hashText } from './translationHash';
@@ -139,6 +139,18 @@ export function getRaceStatusColor(status: RaceStatus): 'default' | 'success' | 
   if (status === 'Completed') return 'info';
   if (status === 'Cancelled') return 'error';
   return 'default';
+}
+
+// #760: on a brand-new edition, the Year field nudges Status/RegistrationStatus toward a
+// sensible initial value — a past year reads as an already-completed historical edition, a
+// current-or-future year reads as a still-hidden draft. Pulled out as a pure function (rather
+// than left inline in EventDetailPage's Year onChange) so the year-bucket decision itself is
+// unit-testable — see eventForms.test.ts — independently of the stateful "has the admin
+// manually overridden this since" gating that has to live alongside the form's own state.
+export function editionStatusForYear(year: number, currentYear: number = new Date().getFullYear()): { status: EditionStatus; registrationStatus: RegistrationStatus } {
+  return year < currentYear
+    ? { status: 'Completed', registrationStatus: 'Closed' }
+    : { status: 'Hidden', registrationStatus: 'NotStarted' };
 }
 
 export function getEditionStatusColor(status: EditionStatus): 'default' | 'success' | 'warning' | 'error' | 'info' {
