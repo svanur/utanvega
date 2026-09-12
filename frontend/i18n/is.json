@@ -460,7 +460,14 @@
         "screenshotExclude": "Án",
         "screenshotViewFull": "Skoða skjámynd í fullri stærð",
         "capturingScreen": "Tek skjámynd...",
-        "autoCapture": "Ítarlegar tilkynningar innihalda alltaf tæknilegar upplýsingar ({{items}}) til að hjálpa okkur að rannsaka málið. Ef þú vilt einnig senda skjámynd með, smelltu þá á 'Án' hnappinn hér að ofan, þá breytist hann í 'Með' og þá fylgir skjáskot með. Þú getur skoðað skjáskotið með því að smella á myndina hér að ofan."
+        "autoCapture": "Ítarlegar tilkynningar innihalda alltaf tæknilegar upplýsingar ({{items}}) til að hjálpa okkur að rannsaka málið. Ef þú vilt einnig senda skjámynd með, smelltu þá á 'Án' hnappinn hér að ofan, þá breytist hann í 'Með' og þá fylgir skjáskot með. Þú getur skoðað skjáskotið með því að smella á myndina hér að ofan.",
+        "autoCaptureItems": {
+            "browser": "vafri",
+            "os": "stýrikerfi",
+            "screenSize": "skjástærð",
+            "language": "tungumál",
+            "timezone": "tímabelti"
+        }
     },
     "betaComments": {
         "title": "Vefur í þróun",
