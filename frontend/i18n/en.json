@@ -880,6 +880,11 @@
                 "title": "February, 2025",
                 "description": "The original hlaupadagskra.is site is released, listing all runs in Iceland in one place."
             }
+        },
+        "changelogDiary": {
+            "searchPlaceholder": "Search changelog…",
+            "searchLabel": "Search changelog",
+            "noResults": "No entries match your filters."
         }
     },
     "presets": {
