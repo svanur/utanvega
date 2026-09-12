@@ -59,6 +59,18 @@ function clampItraPoints(value: string): string {
   return String(Math.min(6, Math.max(0, num)));
 }
 
+// The native <input type="number" min="0"> stepping algorithm treats an empty field as
+// though it held 0, then applies the step BEFORE clamping to min — so stepping up once
+// from empty lands on 1 (0 + step), never on min (0) itself. That happens identically
+// whether the step is triggered by clicking the browser's spin-up button (unreachable
+// from React — there's no DOM element to hook) or by the ArrowUp key, so it has to be
+// corrected after the fact, once the resulting value reaches onChange. Stepping down
+// from empty is unaffected: 0 - step = -1, which *is* below min and so the browser
+// already clamps it to 0 on its own.
+function stepUpFromEmptyToZero(previous: string, next: string): string {
+  return previous.trim() === '' && next === '1' ? '0' : next;
+}
+
 function SectionLabel({ children }: { children: ReactNode }) {
   return (
     <Typography
@@ -316,14 +328,8 @@ function RaceFormCardInner({
             </FormControl>
             <TextField size="small" fullWidth label="ITRA points" type="number" value={form.itraPoints}
               inputProps={{ min: 0, max: 6, step: 1 }}
-              onChange={e => set('itraPoints', e.target.value)}
-              onBlur={e => set('itraPoints', clampItraPoints(e.target.value))}
-              onKeyDown={e => {
-                if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && form.itraPoints.trim() === '') {
-                  e.preventDefault();
-                  set('itraPoints', '0');
-                }
-              }} />
+              onChange={e => set('itraPoints', stepUpFromEmptyToZero(form.itraPoints, e.target.value))}
+              onBlur={e => set('itraPoints', clampItraPoints(e.target.value))} />
             <FormControl size="small" fullWidth>
               <InputLabel>Result type</InputLabel>
               <Select value={form.resultType} label="Result type" onChange={e => set('resultType', e.target.value as typeof form.resultType)}>
