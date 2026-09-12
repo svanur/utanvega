@@ -274,6 +274,14 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
   const set = <K extends keyof EditionFormState>(k: K, v: EditionFormState[K]) =>
     setForm(prev => ({ ...prev, [k]: v }));
 
+  // Drives which month/year the four date pickers below open on when they have no value of
+  // their own yet — undefined falls back to their default (today), so a not-yet-4-digit or
+  // invalid Year leaves that behaviour unchanged.
+  const yearForYear = parseInt(form.year, 10);
+  const referenceDate = form.year.length === 4 && !isNaN(yearForYear)
+    ? dayjs().year(yearForYear)
+    : undefined;
+
   const handleSave = async () => {
     const input = {
       eventId,
@@ -363,10 +371,19 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
                   const updates: Partial<EditionFormState> = { year: newYear };
                   const ny = parseInt(newYear, 10);
                   const oy = parseInt(oldYear, 10);
+                  // Title/titleEn sync only needs a complete new year — unlike the date/resultsUrl
+                  // replacements below, it doesn't need an old year to replace, so it must not be
+                  // gated behind oldYear being a complete 4-digit value. This is what lets it fire
+                  // on a brand-new edition, where the year is typed character-by-character into an
+                  // initially empty field (oldYear is never 4 digits long until after this update).
+                  if (newYear.length === 4 && !isNaN(ny)
+                    && (prev.title.trim() === '' || /^\d{4}$/.test(prev.title.trim()))) {
+                    updates.title = newYear;
+                    updates.titleEn = newYear;
+                  }
                   if (newYear.length === 4 && !isNaN(ny) && oldYear.length === 4 && !isNaN(oy)) {
                     if (prev.date) updates.date = prev.date.replace(/^\d{4}/, newYear);
                     if (prev.endDate) updates.endDate = prev.endDate.replace(/^\d{4}/, newYear);
-                    if (/^\d{4}$/.test(prev.title.trim())) updates.title = newYear;
                     if (prev.resultsUrl) updates.resultsUrl = prev.resultsUrl.replace(new RegExp(`${oy}(/?)$`), `${newYear}$1`);
                   }
                   // A brand-new edition has no saved Status/RegistrationStatus for the admin to
@@ -386,10 +403,12 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
             <DatePicker label="Start date"
               value={form.date ? dayjs(form.date) : null}
               onChange={v => set('date', v ? v.format('YYYY-MM-DD') : '')}
+              referenceDate={referenceDate}
               slotProps={{ textField: { size: 'small', fullWidth: true } }} />
             <DatePicker label="End date (multi-day)"
               value={form.endDate ? dayjs(form.endDate) : null}
               onChange={v => set('endDate', v ? v.format('YYYY-MM-DD') : '')}
+              referenceDate={referenceDate}
               slotProps={{ textField: { size: 'small', fullWidth: true } }} />
           </Stack>
           <BilingualTextField
@@ -433,10 +452,12 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
             <DatePicker label="Registration opens"
               value={form.registrationOpens ? dayjs(form.registrationOpens) : null}
               onChange={v => set('registrationOpens', v ? v.format('YYYY-MM-DD') : '')}
+              referenceDate={referenceDate}
               slotProps={{ textField: { size: 'small', fullWidth: true } }} />
             <DatePicker label="Registration closes"
               value={form.registrationCloses ? dayjs(form.registrationCloses) : null}
               onChange={v => set('registrationCloses', v ? v.format('YYYY-MM-DD') : '')}
+              referenceDate={referenceDate}
               slotProps={{ textField: { size: 'small', fullWidth: true } }} />
           </Stack>
           <FormControl size="small" fullWidth disabled={!!form.registrationOpens && !!form.registrationCloses}>
