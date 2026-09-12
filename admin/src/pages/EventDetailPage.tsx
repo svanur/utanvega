@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, type ReactNode } from 'react';
+import { useState, useMemo, useEffect, useId, useRef, type ReactNode } from 'react';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import dayjs, { type Dayjs } from 'dayjs';
@@ -270,6 +270,8 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
   // field on further Year edits, so a deliberate manual choice always wins. A ref rather than
   // state because flipping it must never itself trigger a render.
   const statusManuallySetRef = useRef(false);
+  const editionStatusHelperId = useId();
+  const registrationStatusHelperId = useId();
 
   const set = <K extends keyof EditionFormState>(k: K, v: EditionFormState[K]) =>
     setForm(prev => ({ ...prev, [k]: v }));
@@ -423,7 +425,7 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
                 statusManuallySetRef.current = true;
                 set('status', e.target.value as EditionStatus);
               }}
-              aria-describedby={!isNew && form.status !== 'Cancelled' && form.status !== 'Completed' ? 'edition-status-helper-text' : undefined}>
+              aria-describedby={!isNew && form.status !== 'Cancelled' && form.status !== 'Completed' ? editionStatusHelperId : undefined}>
               {EDITION_STATUSES.map(s => (
                 // Cancelled and Completed are terminal states with their own dedicated, safer
                 // entry points (row-level Cancel/Complete actions) on an *existing* edition —
@@ -438,7 +440,7 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
               ))}
             </Select>
             {!isNew && form.status !== 'Cancelled' && form.status !== 'Completed' && (
-              <FormHelperText id="edition-status-helper-text">Use the ✓/✕ icons on the edition row to complete or cancel this edition.</FormHelperText>
+              <FormHelperText id={editionStatusHelperId}>Use the ✓/✕ icons on the edition row to complete or cancel this edition.</FormHelperText>
             )}
           </FormControl>
           <Typography
@@ -467,11 +469,11 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
                 statusManuallySetRef.current = true;
                 set('registrationStatus', e.target.value as RegistrationStatus);
               }}
-              aria-describedby={!!form.registrationOpens && !!form.registrationCloses ? 'registration-status-helper-text' : undefined}>
+              aria-describedby={!!form.registrationOpens && !!form.registrationCloses ? registrationStatusHelperId : undefined}>
               {REGISTRATION_STATUSES.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
             </Select>
             {!!form.registrationOpens && !!form.registrationCloses && (
-              <FormHelperText id="registration-status-helper-text">Computed automatically from Registration opens/closes</FormHelperText>
+              <FormHelperText id={registrationStatusHelperId}>Computed automatically from Registration opens/closes</FormHelperText>
             )}
           </FormControl>
           <TextField size="small" fullWidth label="Registration URL" value={form.registrationUrl}
