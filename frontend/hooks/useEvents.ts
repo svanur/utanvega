@@ -243,6 +243,13 @@ export function useEventCalendar(from: string, to: string, enabled = true) {
     return { days, loading: isPending, error: queryError instanceof Error ? queryError.message : null };
 }
 
+export interface EditionHistoryRaceDistance {
+    label: string;
+    ticketStatus: string | null;
+    elevationGain: number | null;
+    terrainType: string | null;
+}
+
 export interface EditionHistoryRow {
     eventId: string;
     eventSlug: string;
@@ -254,8 +261,11 @@ export interface EditionHistoryRow {
     rowDate: string;
     rowEndDate: string | null;
     locationName: string | null;
+    organizerName: string | null;
+    organizerNameEn: string | null;
+    organizerSlug: string | null;
     effectiveCancelled: boolean;
-    distances: { label: string; ticketStatus: string | null }[];
+    distances: EditionHistoryRaceDistance[];
     resultsUrl: string | null;
     galleries: PublicPhotoGallery[];
     activityTypes: string[] | null;
@@ -263,6 +273,10 @@ export interface EditionHistoryRow {
     raceId: string | null;
     raceName: string | null;
     raceNameEn: string | null;
+    // #546: how many editions of this event are on record, and in which years — see the backend
+    // DTO comment for why this deliberately isn't an ordinal or a "held since" claim.
+    recordedEditionsCount: number;
+    recordedEditionsYears: number[];
 }
 
 export function useEditionsHistory(year: number | undefined, includeCancelled: boolean) {

@@ -113,6 +113,11 @@ backend/
   only**. The `admin` app is English-only: there is no `admin/src/i18n`, no `react-i18next`, and
   no translation files. Admin strings are written inline in English. Do not add an i18n layer to
   `admin` to satisfy this rule; it does not apply there.
+- Readable and usable at a 375px viewport for any *new* interactive flow — page, dialog, or wizard
+  step — in both `frontend` and `admin`. This is not a retrofit requirement: `admin`'s existing
+  dense list/table views and bulk-operation panels remain reasonably desktop-shaped and are not in
+  scope. It applies going forward, starting with the event-creation wizard (milestone "Event
+  creation wizard").
 
 ## Agent Workflow
 
@@ -244,3 +249,19 @@ Outside the pipeline (an ad-hoc interactive session), ask before pushing.
 - **Supabase Auth**: Admin uses `@supabase/supabase-js` for authentication. Auth context is in `admin/src/hooks/useAuth.tsx`.
 - **Collapsible sidebar**: Drawer width toggles between 220px (open) and 56px (collapsed). Uses permanent variant with CSS transitions.
 - **Bulk operations**: Tools panel is collapsible. When items are selected and panel is closed, an inline selection bar appears.
+- **Mobile-first for new work**: admin was long treated as desktop-only in practice, but that was
+  never an actual documented exclusion — CLAUDE.md's mobile-first convention already covers both
+  `frontend` and `admin`. Admins use this app on the go (status updates, adding races, editing
+  trails), not just at a desk. New admin pages/dialogs/flows should be checked at 375px, same as
+  frontend (see Definition of Done). This does not mean retrofitting admin's existing dense
+  list/table views or bulk-operation panels, which are reasonably desktop-shaped as-is.
+- **When a dense admin table eventually needs a mobile story**: don't reach for a separate `/mobile`
+  route tree (drifts out of sync with the desktop version — the classic "m.site.com" problem), and
+  don't try to force an 8-column table to reflow via responsive CSS alone (it won't look good at
+  375px no matter how much `sx` goes into it). Reuse the `viewMode` pattern already proven twice in
+  `frontend` — `RacesPage.tsx` and `EditionsHistoryPage.tsx` both toggle between a card-based list
+  and a dense table (`EventTableView`, lazy-loaded as its own component) on the *same* route, same
+  data, same URL, persisted via URL param + `localStorage`. When a dense admin table needs a mobile
+  presentation, give it a card-list sibling component the page swaps in — by viewport, by explicit
+  toggle, or both — rather than forking the route or the data-fetching. No admin page has this yet;
+  it's a "when you get there" pattern to follow, not a currently-open task.

@@ -9,6 +9,16 @@ using Utanvega.Backend.Infrastructure.Persistence;
 
 namespace Utanvega.Backend.Application.Events.Queries.GetEditionsHistory;
 
+// Scoped to this query rather than reusing GetEventsQuery's RaceDistanceSummaryDto — that DTO also
+// backs RacesPage/EventTableView, and adding fields there would bloat a payload that issue never
+// asked to change.
+public record EditionHistoryRaceDistanceDto(
+    string Label,
+    string? TicketStatus,
+    double? ElevationGain,
+    string? TerrainType
+);
+
 public record EditionHistoryRowDto(
     Guid EventId,
     string EventSlug,
@@ -20,8 +30,11 @@ public record EditionHistoryRowDto(
     DateOnly RowDate,
     DateOnly? RowEndDate,
     string? LocationName,
+    string? OrganizerName,
+    string? OrganizerNameEn,
+    string? OrganizerSlug,
     bool EffectiveCancelled,
-    List<RaceDistanceSummaryDto> Distances,
+    List<EditionHistoryRaceDistanceDto> Distances,
     string? ResultsUrl,
     // #548: measured against local dev data for the (partial, year-to-date) 2026 history response —
     // 9 rows, 3 carrying at least one gallery: 5145 bytes serialized without this field vs. 5659
@@ -32,7 +45,14 @@ public record EditionHistoryRowDto(
     string EventActivityType,
     Guid? RaceId,
     string? RaceName,
-    string? RaceNameEn
+    string? RaceNameEn,
+    // #546: "how many editions of this event are on record, and in which years" — deliberately not
+    // an ordinal ("8th edition") or a "held since" claim, since the DB doesn't contain every historical
+    // edition of every event and either phrasing would overstate what's actually recorded. Always
+    // includes cancelled editions (they happened) regardless of the request's IncludeCancelled flag —
+    // this is a record of what exists, not of what the current view happens to be filtering.
+    int RecordedEditionsCount,
+    List<int> RecordedEditionsYears
 );
 
 // Not ICacheable — the key is parameterized by an arbitrary year, same reasoning as GetEventCalendarQuery
@@ -44,7 +64,7 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
     private readonly UtanvegaDbContext _context;
     private readonly IMemoryCache _cache;
 
-    private record TrailHistoryData(double Length, Core.Entities.ActivityType ActivityTypeId);
+    private record TrailHistoryData(double Length, double ElevationGain, Core.Entities.TerrainType? TerrainType, Core.Entities.ActivityType ActivityTypeId);
 
     public GetEditionsHistoryQueryHandler(UtanvegaDbContext context, IMemoryCache cache)
     {
@@ -75,6 +95,8 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
             .AsSplitQuery()
             .Include(ed => ed.Event)
                 .ThenInclude(ev => ev.Location)
+            .Include(ed => ed.Event)
+                .ThenInclude(ev => ev.Organizer)
             .Include(ed => ed.Races)
             .Include(ed => ed.PhotoGalleries)
                 .ThenInclude(g => g.Photographer)
@@ -95,10 +117,41 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
         var trailData = trailIds.Count > 0
             ? (await _context.Trails.AsNoTracking()
                 .Where(t => trailIds.Contains(t.Id))
-                .Select(t => new { t.Id, t.Length, t.ActivityTypeId })
+                .Select(t => new { t.Id, t.Length, t.ElevationGain, t.TerrainType, t.ActivityTypeId })
                 .ToListAsync(cancellationToken))
-                .ToDictionary(t => t.Id, t => new TrailHistoryData(t.Length, t.ActivityTypeId))
+                .ToDictionary(t => t.Id, t => new TrailHistoryData(t.Length, t.ElevationGain, t.TerrainType, t.ActivityTypeId))
             : new Dictionary<Guid, TrailHistoryData>();
+
+        // #546: one grouped fetch, scoped to only the events already present in this year's result
+        // set — not N+1 per row, and not every edition of every event in the system. Deliberately
+        // ignores request.IncludeCancelled (cancelled editions are still part of the record) and
+        // reuses the same visibility filter as the main `editions` query above, but *not* the same
+        // year range — this one spans an event's entire past, by design.
+        var eventIds = editions.Select(ed => ed.Event.Id).Distinct().ToList();
+        var recordedByEvent = eventIds.Count > 0
+            ? (await _context.EventEditions
+                .AsNoTracking()
+                .Where(ed =>
+                    eventIds.Contains(ed.EventId) &&
+                    ed.Status != EditionStatus.Hidden &&
+                    ed.Event.Status != EventStatus.Hidden &&
+                    ed.Event.Status != EventStatus.Unlisted)
+                .Select(ed => new { ed.EventId, ed.Date, ed.EndDate, ed.Year })
+                .ToListAsync(cancellationToken))
+                .Where(ed => IsPastEdition(ed.Date, ed.EndDate, ed.Year, today))
+                .GroupBy(ed => ed.EventId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => (
+                        Count: g.Count(),
+                        Years: g.Select(ed => ed.Year ?? ed.Date?.Year)
+                            .Where(y => y.HasValue)
+                            .Select(y => y!.Value)
+                            .Distinct()
+                            .OrderBy(y => y)
+                            .ToList()
+                    ))
+            : new Dictionary<Guid, (int Count, List<int> Years)>();
 
         var rows = new List<EditionHistoryRowDto>();
 
@@ -108,8 +161,12 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
             // treated as past once their whole Year is behind us — this year's dateless editions
             // haven't identifiably "happened" yet, so they're excluded rather than guessed at.
             var effectiveEnd = ed.EndDate ?? ed.Date;
-            var isPast = effectiveEnd.HasValue ? effectiveEnd.Value < today : request.Year < today.Year;
+            var isPast = IsPastEdition(ed.Date, ed.EndDate, ed.Year, today);
             if (!isPast) continue;
+
+            var (recordedCount, recordedYears) = recordedByEvent.TryGetValue(ed.Event.Id, out var recorded)
+                ? recorded
+                : (0, new List<int>());
 
             var visibleRaces = ed.Races.Where(r => r.Status != RaceStatus.Hidden).ToList();
 
@@ -121,7 +178,7 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
                 {
                     var raceCancelled = race.Status == RaceStatus.Cancelled;
                     if (raceCancelled && !request.IncludeCancelled) continue;
-                    rows.Add(BuildRow(ed, race.DateOfRace!.Value, [race], raceCancelled, trailData, raceId: race.Id, raceName: race.Name, raceNameEn: race.NameEn));
+                    rows.Add(BuildRow(ed, race.DateOfRace!.Value, [race], raceCancelled, trailData, recordedCount, recordedYears, raceId: race.Id, raceName: race.Name, raceNameEn: race.NameEn));
                 }
             }
             else
@@ -130,7 +187,7 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
                 var editionCancelled = EditionStatusHelpers.ComputeEffectiveCancelled(ed.Status, raceStatuses);
                 if (editionCancelled && !request.IncludeCancelled) continue;
                 var rowDate = ed.Date ?? effectiveEnd ?? new DateOnly(request.Year, 1, 1);
-                rows.Add(BuildRow(ed, rowDate, visibleRaces, editionCancelled, trailData, ed.EndDate));
+                rows.Add(BuildRow(ed, rowDate, visibleRaces, editionCancelled, trailData, recordedCount, recordedYears, ed.EndDate));
             }
         }
 
@@ -139,7 +196,17 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
         return result;
     }
 
-    private static EditionHistoryRowDto BuildRow(EventEdition ed, DateOnly rowDate, List<Race> races, bool effectiveCancelled, Dictionary<Guid, TrailHistoryData> trailData, DateOnly? rowEndDate = null, Guid? raceId = null, string? raceName = null, string? raceNameEn = null)
+    // Generalized version of the "past cutoff" rule above: dated editions must have actually
+    // concluded; dateless editions are only past once their own Year is behind us. Shared between
+    // the year-scoped main loop and the all-time recorded-editions aggregate below so the two never
+    // drift into disagreeing about what counts as "happened".
+    private static bool IsPastEdition(DateOnly? date, DateOnly? endDate, int? year, DateOnly today)
+    {
+        var effectiveEnd = endDate ?? date;
+        return effectiveEnd.HasValue ? effectiveEnd.Value < today : year.HasValue && year.Value < today.Year;
+    }
+
+    private static EditionHistoryRowDto BuildRow(EventEdition ed, DateOnly rowDate, List<Race> races, bool effectiveCancelled, Dictionary<Guid, TrailHistoryData> trailData, int recordedEditionsCount, List<int> recordedEditionsYears, DateOnly? rowEndDate = null, Guid? raceId = null, string? raceName = null, string? raceNameEn = null)
     {
         var distances = races
             .Select(r =>
@@ -150,10 +217,15 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
                     : trail != null && trail.Length > 0
                         ? $"{trail.Length / 1000.0:0.#} km"
                         : null;
-                return label != null ? new RaceDistanceSummaryDto(label, r.TicketStatus.ToString()) : null;
+                // ElevationGain is a non-nullable double on Trail (0 is the "no data" default), so
+                // only surface it once it's actually above zero — otherwise the UI would render a
+                // spurious "+0 m" for trails nobody has measured yet.
+                double? elevationGain = trail is { ElevationGain: > 0 } ? trail.ElevationGain : null;
+                string? terrainType = trail?.TerrainType?.ToString();
+                return label != null ? new EditionHistoryRaceDistanceDto(label, r.TicketStatus.ToString(), elevationGain, terrainType) : null;
             })
             .Where(d => d != null)
-            .Cast<RaceDistanceSummaryDto>()
+            .Cast<EditionHistoryRaceDistanceDto>()
             .ToList();
 
         var activityTypes = races
@@ -175,6 +247,9 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
             rowDate,
             rowEndDate,
             ed.Event.Location?.Name,
+            ed.Event.Organizer?.Name ?? ed.Event.OrganizerName,
+            ed.Event.OrganizerNameEn,
+            ed.Event.Organizer?.Slug,
             effectiveCancelled,
             distances,
             ed.ResultsUrl,
@@ -183,7 +258,9 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
             ed.Event.ActivityType.ToString(),
             raceId,
             raceName,
-            raceNameEn
+            raceNameEn,
+            recordedEditionsCount,
+            recordedEditionsYears
         );
     }
 }

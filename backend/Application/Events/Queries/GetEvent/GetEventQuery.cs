@@ -54,7 +54,12 @@ public record EventDetailDto(
 public record GetEventQuery(string Slug, bool IncludeHidden = false) : IRequest<EventDetailDto?>, ICacheable
 {
     public string CacheKey => CacheKeys.Event(Slug, IncludeHidden);
-    public TimeSpan CacheDuration => TimeSpan.FromHours(1);
+
+    // Admin (IncludeHidden) reads must never be cached: on a multi-instance deployment,
+    // invalidation on the writing instance does not reach the in-process caches of the others,
+    // leaving admin views stale for up to the cache duration. TimeSpan.Zero tells
+    // CachingBehavior to skip caching entirely for this variant.
+    public TimeSpan CacheDuration => IncludeHidden ? TimeSpan.Zero : TimeSpan.FromHours(1);
 }
 
 public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDto?>
@@ -112,7 +117,8 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
 
         TrailDetail? GetTrail(Guid? id) => id.HasValue && trailDetails.TryGetValue(id.Value, out var td) ? td : null;
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var now = DateTime.UtcNow;
+        var today = DateOnly.FromDateTime(now);
 
         // Hidden editions are admin-only and must never surface in public-facing computations below.
         // The admin path (IncludeHidden=true) keeps the full picture, same as GetEventsQuery.
@@ -189,7 +195,8 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
                 ed.ResultsUrl,
                 ed.Notes,
                 ed.NotesEn,
-                ed.RegistrationStatus.ToString(),
+                EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
+                    ed.Status, ed.RegistrationStatus, ed.RegistrationOpens, ed.RegistrationCloses, now).ToString(),
                 ed.TrailId,
                 GetTrail(ed.TrailId)?.Name,
                 GetTrail(ed.TrailId)?.Slug,
@@ -234,7 +241,9 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
                 ed.CreatedAt,
                 ed.UpdatedAt,
                 Status: ed.Status.ToString(),
-                EffectiveCancelled: EditionStatusHelpers.ComputeEffectiveCancelled(ed.Status, ed.Races.Select(r => r.Status).ToList())
+                EffectiveCancelled: EditionStatusHelpers.ComputeEffectiveCancelled(ed.Status, ed.Races.Select(r => r.Status).ToList()),
+                RegistrationOpens: ed.RegistrationOpens,
+                RegistrationCloses: ed.RegistrationCloses
             ))
             .ToList();
 

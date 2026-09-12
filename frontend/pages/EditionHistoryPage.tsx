@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Container,
@@ -35,7 +35,7 @@ import GalleryLinks from '../components/GalleryLinks';
 import type { EventEditionDto, RaceDto } from '../hooks/useEvents';
 import { useLocalize } from '../utils/localize';
 import { splitMinutes } from '../utils/cutoffTime';
-import { formatDateRange, formatRaceDateTime, editionKeyFor } from '../utils/eventUtils';
+import { formatDateRange, formatRaceDateTime, editionKeyFor, getEditionTimingStatus } from '../utils/eventUtils';
 import { getTicketStatusColor } from '../utils/ticketStatus';
 
 type EditionHistoryPageProps = {
@@ -66,6 +66,36 @@ export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistor
             ?? event.editions.find(ed => ed.id === editionKey)
             ?? null;
     }, [event, editionKey]);
+
+    // Clock so the timing chip below updates as time passes (e.g. across midnight) instead of
+    // freezing at whatever was true on first render. getEditionTimingStatus is day-granularity
+    // only (it zeroes time-of-day before comparing — see eventUtils.ts), so its result can only
+    // ever change at a local-midnight crossing. Rather than polling every few seconds forever
+    // (wasted wake-ups on a phone with the PWA left open in the background), schedule a single
+    // timeout for the next midnight and re-arm it after it fires.
+    const [currentTime, setCurrentTime] = useState(() => new Date());
+    useEffect(() => {
+        let timeoutId: ReturnType<typeof setTimeout>;
+        const scheduleNextMidnightTick = () => {
+            const now = new Date();
+            const nextMidnight = new Date(now);
+            nextMidnight.setHours(24, 0, 0, 0);
+            const msUntilNextMidnight = nextMidnight.getTime() - now.getTime();
+            timeoutId = setTimeout(() => {
+                setCurrentTime(new Date());
+                scheduleNextMidnightTick();
+            }, msUntilNextMidnight);
+        };
+        scheduleNextMidnightTick();
+        return () => clearTimeout(timeoutId);
+    }, []);
+
+    // null when the edition has no date to compare against (old, dateless historical record) —
+    // falls back to "past" below, matching this page's prior unconditional behaviour for those.
+    const editionTiming = useMemo(
+        () => getEditionTimingStatus(edition?.date, edition?.endDate, currentTime),
+        [edition, currentTime],
+    );
 
     const visibleRaces = useMemo(() => {
         if (!edition) return [];
@@ -197,7 +227,13 @@ export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistor
                             </Typography>
                         </Box>
                         <Chip
-                            label={t('races.history.pastEdition', { defaultValue: 'Past edition' })}
+                            label={
+                                editionTiming === 'upcoming'
+                                    ? t('races.history.upcomingEdition', { defaultValue: 'Upcoming edition' })
+                                    : editionTiming === 'ongoing'
+                                        ? t('races.history.ongoingEdition', { defaultValue: 'Ongoing edition' })
+                                        : t('races.history.pastEdition', { defaultValue: 'Past edition' })
+                            }
                             size="small"
                             variant="outlined"
                             color="default"

@@ -19,15 +19,20 @@ import ListIcon from '@mui/icons-material/List';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import TerrainIcon from '@mui/icons-material/Terrain';
+import GroupsIcon from '@mui/icons-material/Groups';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
+import SortIcon from '@mui/icons-material/Sort';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import Layout from '../components/Layout';
 import RunningLoader from '../components/RunningLoader';
 import GalleryCompact from '../components/GalleryCompact';
 import { useEditionsHistory, useEditionsHistoryAllYears, useEditionsHistoryYears } from '../hooks/useEvents';
 import { ActivityIcons } from '../utils/activityIcon';
 import { groupDistances } from '../utils/ticketStatus';
-import { formatNextDate, formatDateRange } from '../utils/eventUtils';
+import { formatNextDate, formatDateRange, formatYearRanges } from '../utils/eventUtils';
 import { useLocalize } from '../utils/localize';
 
 type SortField = 'date' | 'name' | 'distances';
@@ -72,8 +77,9 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
 
     const [search, setSearch] = useState('');
     const [showCancelled, setShowCancelled] = useState(true);
+    const [showOnlyWithPhotos, setShowOnlyWithPhotos] = useState(false);
     const [sortField, setSortField] = useState<SortField>('date');
-    const [sortDir, setSortDir] = useState<SortDir>('asc');
+    const [sortDir, setSortDir] = useState<SortDir>('desc');
 
     // A non-empty search widens scope to every known year instead of just the selected one —
     // finding something shouldn't require already knowing which year it happened in.
@@ -83,15 +89,16 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
     const rows = isSearching ? allYearsRows : yearRows;
     const loading = isSearching ? allYearsLoading : yearLoading;
 
-    // Browsing one year reads best chronologically (Jan → Dec); a cross-year search reads best
-    // newest-first (you're usually after the most recent occurrence). Deliberately resets to
-    // that mode's default — including overriding any manual column sort — whenever search is
-    // entered or cleared, since those are two distinct browsing contexts and a fresh one
-    // warrants a fresh default view. Only fires on the false↔true transition (isSearching is a
-    // derived boolean), so it does not refire on every keystroke while a search is already active.
+    // Both browsing a single year and a cross-year search read best with the most recent
+    // edition first (you're usually after the most recent occurrence). Resets to that
+    // default — including overriding any manual column sort — whenever search is entered
+    // or cleared, since those are two distinct browsing contexts and a fresh one warrants
+    // a fresh default view. Only fires on the false↔true transition (isSearching is a
+    // derived boolean), so it does not refire on every keystroke while a search is already
+    // active, and it does not fire when only the selected year changes.
     useEffect(() => {
         setSortField('date');
-        setSortDir(isSearching ? 'desc' : 'asc');
+        setSortDir('desc');
     }, [isSearching]);
 
     const handleSort = (field: SortField) => {
@@ -99,20 +106,20 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
             setSortDir(d => d === 'asc' ? 'desc' : 'asc');
         } else {
             setSortField(field);
-            setSortDir(field === 'date' ? (isSearching ? 'desc' : 'asc') : 'asc');
+            setSortDir(field === 'date' ? 'desc' : 'asc');
         }
     };
 
     const filteredSorted = useMemo(() => {
         const q = search.toLowerCase().trim();
-        const result = q
-            ? rows.filter(r => {
-                // Prefer the active language's name, but fall back to the other one when
-                // there's no translation — an untranslated edition must still be findable.
-                const name = loc(r.eventName, r.eventNameEn);
-                return name?.toLowerCase().includes(q) || r.locationName?.toLowerCase().includes(q);
-            })
-            : rows;
+        const result = rows.filter(r => {
+            if (showOnlyWithPhotos && (r.galleries?.length ?? 0) === 0) return false;
+            if (!q) return true;
+            // Prefer the active language's name, but fall back to the other one when
+            // there's no translation — an untranslated edition must still be findable.
+            const name = loc(r.eventName, r.eventNameEn);
+            return name?.toLowerCase().includes(q) || r.locationName?.toLowerCase().includes(q);
+        });
 
         return [...result].sort((a, b) => {
             let cmp = 0;
@@ -121,7 +128,7 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
             else if (sortField === 'distances') cmp = (a.distances[0]?.label ?? '').localeCompare(b.distances[0]?.label ?? '');
             return sortDir === 'asc' ? cmp : -cmp;
         });
-    }, [rows, search, sortField, sortDir, loc]);
+    }, [rows, search, showOnlyWithPhotos, sortField, sortDir, loc]);
 
     return (
         <Layout mode={mode} onToggleMode={onToggleMode} maxWidth={viewMode === 'table' ? 'lg' : 'md'} breadcrumb={[{ label: t('nav.events'), to: '/events' }, { label: t('nav.editionsHistory') }]}>
@@ -161,9 +168,36 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                             ) : null,
                         }}
                     />
+                    {viewMode === 'list' && (
+                        <Stack direction="row" spacing={0.5} alignItems="center">
+                            <Select
+                                size="small"
+                                value={sortField}
+                                onChange={(e: SelectChangeEvent) => handleSort(e.target.value as SortField)}
+                                startAdornment={<SortIcon fontSize="small" sx={{ mr: 0.5, color: 'text.secondary' }} />}
+                                sx={{ minWidth: 140 }}
+                            >
+                                <MenuItem value="date">{t('sort.date')}</MenuItem>
+                                <MenuItem value="name">{t('races.table.name', 'Name')}</MenuItem>
+                                <MenuItem value="distances">{t('races.table.distances', 'Distances')}</MenuItem>
+                            </Select>
+                            <IconButton
+                                size="small"
+                                onClick={() => setSortDir(d => d === 'asc' ? 'desc' : 'asc')}
+                                aria-label={t('races.editionsHistory.sortDirection', 'Toggle sort direction')}
+                            >
+                                {sortDir === 'asc' ? <ArrowUpwardIcon fontSize="small" /> : <ArrowDownwardIcon fontSize="small" />}
+                            </IconButton>
+                        </Stack>
+                    )}
                     <FormControlLabel
                         control={<Checkbox size="small" checked={showCancelled} onChange={e => setShowCancelled(e.target.checked)} />}
                         label={t('races.editionsHistory.showCancelled', 'Show cancelled')}
+                        sx={{ whiteSpace: 'nowrap' }}
+                    />
+                    <FormControlLabel
+                        control={<Checkbox size="small" checked={showOnlyWithPhotos} onChange={e => setShowOnlyWithPhotos(e.target.checked)} />}
+                        label={t('races.editionsHistory.hasPhotos', 'Has photos')}
                         sx={{ whiteSpace: 'nowrap' }}
                     />
                 </Stack>
@@ -261,6 +295,36 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                                                                 <Typography variant="body2" color="text.secondary" noWrap>{row.locationName}</Typography>
                                                             </Stack>
                                                         )}
+                                                        {row.organizerName && (
+                                                            <Stack direction="row" alignItems="center" gap={0.5} sx={{ mt: 0.25 }}>
+                                                                <GroupsIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
+                                                                {row.organizerSlug ? (
+                                                                    <Typography
+                                                                        variant="body2"
+                                                                        color="text.secondary"
+                                                                        noWrap
+                                                                        component="a"
+                                                                        href={`/organizers/${row.organizerSlug}`}
+                                                                        onClick={e => e.stopPropagation()}
+                                                                        sx={{ textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+                                                                    >
+                                                                        {loc(row.organizerName, row.organizerNameEn) ?? row.organizerName}
+                                                                    </Typography>
+                                                                ) : (
+                                                                    <Typography variant="body2" color="text.secondary" noWrap>
+                                                                        {loc(row.organizerName, row.organizerNameEn) ?? row.organizerName}
+                                                                    </Typography>
+                                                                )}
+                                                            </Stack>
+                                                        )}
+                                                        {row.recordedEditionsCount > 0 && (
+                                                            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.25, display: 'block' }}>
+                                                                {t('races.editionsHistory.recordedEditions', {
+                                                                    count: row.recordedEditionsCount,
+                                                                    years: formatYearRanges(row.recordedEditionsYears),
+                                                                })}
+                                                            </Typography>
+                                                        )}
                                                     </Box>
                                                 </Stack>
                                                 <Stack direction="row" alignItems="center" gap={0.5} sx={{ flexShrink: 0 }}>
@@ -272,9 +336,32 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                                             </Stack>
 
                                             {row.distances.length > 0 && (
-                                                <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.75 }}>
+                                                <Stack direction="row" flexWrap="wrap" gap={0.75} sx={{ mt: 0.75 }}>
                                                     {groupDistances(row.distances).map((d, i) => (
-                                                        <Chip key={i} label={d.count > 1 ? `${d.count} × ${d.label}` : d.label} size="small" variant="outlined" />
+                                                        <Stack key={i} direction="row" alignItems="center" gap={0.5} flexWrap="nowrap">
+                                                            <Chip label={d.count > 1 ? `${d.count} × ${d.label}` : d.label} size="small" variant="outlined" />
+                                                            {d.elevationGain != null && (
+                                                                <Tooltip title={t('races.elevationGain', { defaultValue: 'Elevation gain' })}>
+                                                                    <Chip
+                                                                        icon={<TerrainIcon sx={{ fontSize: 14 }} />}
+                                                                        label={`↑ ${Math.round(d.elevationGain)} m`}
+                                                                        size="small"
+                                                                        variant="outlined"
+                                                                        sx={{ fontSize: '0.7rem' }}
+                                                                    />
+                                                                </Tooltip>
+                                                            )}
+                                                            {d.terrainType && (
+                                                                <Tooltip title={t('races.terrainType', { defaultValue: 'Terrain type' })}>
+                                                                    <Chip
+                                                                        label={t(`trail.terrainType.${d.terrainType}`, { defaultValue: d.terrainType })}
+                                                                        size="small"
+                                                                        variant="outlined"
+                                                                        sx={{ fontSize: '0.7rem' }}
+                                                                    />
+                                                                </Tooltip>
+                                                            )}
+                                                        </Stack>
                                                     ))}
                                                 </Stack>
                                             )}
@@ -298,6 +385,10 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                                                     <GalleryCompact galleries={row.galleries} variant="button" />
                                                 </Stack>
                                             )}
+
+                                            <Typography variant="caption" color="primary" sx={{ mt: 0.75, display: 'block', fontWeight: 500, textAlign: 'right' }}>
+                                                {t('common.viewDetails')} →
+                                            </Typography>
                                         </CardContent>
                                     </CardActionArea>
                                 </Card>
@@ -336,6 +427,19 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                             <TableBody>
                                 {filteredSorted.map(row => {
                                     const cancelled = row.effectiveCancelled;
+                                    // Precomputed once per row so the same value can back both the
+                                    // visible (noWrap-clipped) text and its Tooltip — a long Icelandic
+                                    // name/caption must stay recoverable on hover/focus, not silently lost.
+                                    const dateLabel = row.rowEndDate ? formatDateRange(row.rowDate, row.rowEndDate, t) : formatNextDate(row.rowDate, t);
+                                    const eventNameLabel = loc(row.eventName, row.eventNameEn);
+                                    const raceNameLabel = row.raceName ? loc(row.raceName, row.raceNameEn) : null;
+                                    const organizerNameLabel = row.organizerName ? (loc(row.organizerName, row.organizerNameEn) ?? row.organizerName) : null;
+                                    const recordedEditionsLabel = row.recordedEditionsCount > 0
+                                        ? t('races.editionsHistory.recordedEditions', {
+                                            count: row.recordedEditionsCount,
+                                            years: formatYearRanges(row.recordedEditionsYears),
+                                        })
+                                        : null;
                                     return (
                                         <TableRow
                                             key={row.raceId ?? row.editionId}
@@ -347,18 +451,52 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                                                 <ActivityIcons activityTypes={row.activityTypes} activityType={row.activityTypes?.[0] ?? row.eventActivityType} />
                                             </TableCell>
                                             <TableCell>
-                                                <Typography variant="body2" noWrap>
-                                                    {row.rowEndDate ? formatDateRange(row.rowDate, row.rowEndDate, t) : formatNextDate(row.rowDate, t)}
-                                                </Typography>
+                                                <Tooltip title={dateLabel}>
+                                                    <Typography variant="body2" noWrap tabIndex={0}>
+                                                        {dateLabel}
+                                                    </Typography>
+                                                </Tooltip>
                                             </TableCell>
                                             <TableCell>
-                                                <Typography variant="body2" fontWeight={600} noWrap sx={{ ...(cancelled && { textDecoration: 'line-through' }) }}>
-                                                    {loc(row.eventName, row.eventNameEn)}
-                                                </Typography>
-                                                {row.raceName && (
-                                                    <Typography variant="caption" color="text.secondary" display="block" noWrap>
-                                                        {loc(row.raceName, row.raceNameEn)}
+                                                <Tooltip title={eventNameLabel}>
+                                                    <Typography variant="body2" fontWeight={600} noWrap tabIndex={0} sx={{ ...(cancelled && { textDecoration: 'line-through' }) }}>
+                                                        {eventNameLabel}
                                                     </Typography>
+                                                </Tooltip>
+                                                {raceNameLabel && (
+                                                    <Tooltip title={raceNameLabel}>
+                                                        <Typography variant="caption" color="text.secondary" display="block" noWrap tabIndex={0}>
+                                                            {raceNameLabel}
+                                                        </Typography>
+                                                    </Tooltip>
+                                                )}
+                                                {organizerNameLabel && (
+                                                    <Tooltip title={organizerNameLabel}>
+                                                        {/* When organizerSlug is set the anchor below is already a tab stop —
+                                                            only add one to the Typography itself for the plain-text case,
+                                                            otherwise keyboard users would hit two stops for one cell. */}
+                                                        <Typography variant="caption" color="text.secondary" display="block" noWrap tabIndex={row.organizerSlug ? undefined : 0}>
+                                                            {row.organizerSlug ? (
+                                                                <Box
+                                                                    component="a"
+                                                                    href={`/organizers/${row.organizerSlug}`}
+                                                                    onClick={e => e.stopPropagation()}
+                                                                    sx={{ color: 'inherit', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+                                                                >
+                                                                    {organizerNameLabel}
+                                                                </Box>
+                                                            ) : (
+                                                                organizerNameLabel
+                                                            )}
+                                                        </Typography>
+                                                    </Tooltip>
+                                                )}
+                                                {recordedEditionsLabel && (
+                                                    <Tooltip title={recordedEditionsLabel}>
+                                                        <Typography variant="caption" color="text.secondary" display="block" noWrap tabIndex={0}>
+                                                            {recordedEditionsLabel}
+                                                        </Typography>
+                                                    </Tooltip>
                                                 )}
                                                 {cancelled && (
                                                     <Chip label={t('races.statusCancelled')} size="small" color="error" sx={{ height: 18, fontSize: '0.65rem', mt: 0.25 }} />
@@ -366,9 +504,32 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                                             </TableCell>
                                             <TableCell>
                                                 {row.distances.length > 0 ? (
-                                                    <Stack direction="row" flexWrap="wrap" gap={0.5}>
+                                                    <Stack direction="row" flexWrap="wrap" gap={0.75}>
                                                         {groupDistances(row.distances).map((d, i) => (
-                                                            <Chip key={i} label={d.count > 1 ? `${d.count} × ${d.label}` : d.label} size="small" variant="outlined" />
+                                                            <Stack key={i} direction="row" alignItems="center" gap={0.5} flexWrap="nowrap">
+                                                                <Chip label={d.count > 1 ? `${d.count} × ${d.label}` : d.label} size="small" variant="outlined" />
+                                                                {d.elevationGain != null && (
+                                                                    <Tooltip title={t('races.elevationGain', { defaultValue: 'Elevation gain' })}>
+                                                                        <Chip
+                                                                            icon={<TerrainIcon sx={{ fontSize: 14 }} />}
+                                                                            label={`↑ ${Math.round(d.elevationGain)} m`}
+                                                                            size="small"
+                                                                            variant="outlined"
+                                                                            sx={{ fontSize: '0.7rem' }}
+                                                                        />
+                                                                    </Tooltip>
+                                                                )}
+                                                                {d.terrainType && (
+                                                                    <Tooltip title={t('races.terrainType', { defaultValue: 'Terrain type' })}>
+                                                                        <Chip
+                                                                            label={t(`trail.terrainType.${d.terrainType}`, { defaultValue: d.terrainType })}
+                                                                            size="small"
+                                                                            variant="outlined"
+                                                                            sx={{ fontSize: '0.7rem' }}
+                                                                        />
+                                                                    </Tooltip>
+                                                                )}
+                                                            </Stack>
                                                         ))}
                                                     </Stack>
                                                 ) : (

@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Utanvega.Backend.Application.Events;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Infrastructure.Persistence;
 
@@ -83,6 +84,8 @@ public class GetRaceDayEditionsQueryHandler : IRequestHandler<GetRaceDayEditions
                 .ToDictionaryAsync(t => t.Id, t => t.Name, cancellationToken)
             : [];
 
+        var now = DateTime.UtcNow;
+
         return editions.Select(ed => new RaceDayEditionDto(
             ed.Id,
             ed.EventId,
@@ -96,7 +99,8 @@ public class GetRaceDayEditionsQueryHandler : IRequestHandler<GetRaceDayEditions
             ed.Title,
             ed.ResultsUrl,
             ed.RegistrationUrl,
-            ed.RegistrationStatus.ToString(),
+            EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
+                ed.Status, ed.RegistrationStatus, ed.RegistrationOpens, ed.RegistrationCloses, now).ToString(),
             ed.Races
                 .OrderBy(r => r.SortOrder)
                 .Select(r => new RaceDayRaceDto(

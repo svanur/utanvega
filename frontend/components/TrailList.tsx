@@ -1225,7 +1225,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                         ({filteredTrails.length})
                     </Typography>
                 </Typography>
-                <Box display="flex" alignItems="center" gap={1}>
+                <Box display="flex" alignItems="center" flexWrap="wrap" rowGap={1} gap={1}>
                     {!userLocation && viewMode === 'list' && (
                         <Tooltip title={locationDenied ? t('home.locationDenied') : t('home.enableLocation')}>
                             <IconButton

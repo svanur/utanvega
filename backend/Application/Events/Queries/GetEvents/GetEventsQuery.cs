@@ -14,7 +14,12 @@ internal record TrailSummary(double Length, string? YoutubeUrl, Core.Entities.Te
 public record GetEventsQuery(bool IncludeHidden = false) : IRequest<List<EventSummaryDto>>, ICacheable
 {
     public string CacheKey => CacheKeys.Events(IncludeHidden);
-    public TimeSpan CacheDuration => TimeSpan.FromHours(1);
+
+    // Admin (IncludeHidden) reads must never be cached: on a multi-instance deployment,
+    // invalidation on the writing instance does not reach the in-process caches of the others,
+    // leaving the admin events list stale for up to the cache duration. TimeSpan.Zero tells
+    // CachingBehavior to skip caching entirely for this variant.
+    public TimeSpan CacheDuration => IncludeHidden ? TimeSpan.Zero : TimeSpan.FromHours(1);
 }
 
 public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventSummaryDto>>
@@ -71,7 +76,8 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 ? new TrailSummary(ts.Length, ts.YoutubeUrl, ts.TerrainType, ts.ActivityTypeId)
                 : null;
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var now = DateTime.UtcNow;
+        var today = DateOnly.FromDateTime(now);
         var oneYearAhead = today.AddYears(1);
 
         return events.Select(e =>
@@ -268,7 +274,10 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 displayDate,
                 distances?.Count > 0 ? distances : null,
                 relevantEdition?.RegistrationUrl,
-                relevantEdition?.RegistrationStatus.ToString(),
+                relevantEdition != null
+                    ? EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
+                        relevantEdition.Status, relevantEdition.RegistrationStatus, relevantEdition.RegistrationOpens, relevantEdition.RegistrationCloses, now).ToString()
+                    : null,
                 relevantEdition?.ResultsUrl,
                 certifications?.Count > 0 ? certifications : null,
                 youtubeUrl,

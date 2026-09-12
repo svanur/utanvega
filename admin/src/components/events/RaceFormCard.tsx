@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useId, useState, type ReactNode } from 'react';
 import {
   Alert,
   Autocomplete,
@@ -85,6 +85,8 @@ function RaceFormCardInner({
   initialValues,
 }: RaceFormCardProps) {
   const isNew = race === null;
+  const raceStatusHelperId = useId();
+  const ticketStatusHelperId = useId();
   const [form, setForm] = useState<RaceFormState>(
     initialValues ?? (race ? buildRaceForm(race) : createEmptyRaceForm(edition.id, edition.races.length, edition.status)),
   );
@@ -265,23 +267,25 @@ function RaceFormCardInner({
           <Stack direction="row" spacing={1.5} sx={{ mb: 1.5 }}>
             <FormControl size="small" fullWidth disabled={edition.status === 'Cancelled' || edition.status === 'Completed'}>
               <InputLabel>Race status</InputLabel>
-              <Select value={form.status} label="Race status" onChange={e => set('status', e.target.value as typeof form.status)}>
+              <Select value={form.status} label="Race status" onChange={e => set('status', e.target.value as typeof form.status)}
+                aria-describedby={edition.status === 'Cancelled' || edition.status === 'Completed' ? raceStatusHelperId : undefined}>
                 {RACE_STATUSES.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
               </Select>
               {edition.status === 'Cancelled' && (
-                <FormHelperText>Locked — the edition is cancelled</FormHelperText>
+                <FormHelperText id={raceStatusHelperId}>Locked — the edition is cancelled</FormHelperText>
               )}
               {edition.status === 'Completed' && (
-                <FormHelperText>Locked — the edition is completed</FormHelperText>
+                <FormHelperText id={raceStatusHelperId}>Locked — the edition is completed</FormHelperText>
               )}
             </FormControl>
             <FormControl size="small" fullWidth disabled={form.status === 'Cancelled'}>
               <InputLabel>Ticket status</InputLabel>
-              <Select value={form.ticketStatus} label="Ticket status" onChange={e => set('ticketStatus', e.target.value as typeof form.ticketStatus)}>
+              <Select value={form.ticketStatus} label="Ticket status" onChange={e => set('ticketStatus', e.target.value as typeof form.ticketStatus)}
+                aria-describedby={form.status === 'Cancelled' ? ticketStatusHelperId : undefined}>
                 {TICKET_STATUSES.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
               </Select>
               {form.status === 'Cancelled' && (
-                <FormHelperText>Locked — the race is cancelled</FormHelperText>
+                <FormHelperText id={ticketStatusHelperId}>Locked — the race is cancelled</FormHelperText>
               )}
             </FormControl>
           </Stack>

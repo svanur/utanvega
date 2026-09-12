@@ -458,8 +458,9 @@
         "screenshot": "Page screenshot",
         "screenshotInclude": "Include",
         "screenshotExclude": "Excluded",
+        "screenshotViewFull": "View full-size screenshot",
         "capturingScreen": "Capturing screenshot...",
-        "autoCapture": "Also auto-captured: {{items}}"
+        "autoCapture": "Detailed reports always include technical data ({{items}}) to help us investigate the issue. If you also wish to include a screenshot, click the 'Excluded' button above; it will change to 'Include', and a screenshot will be saved with your comments. You can view the screenshot by clicking the above image."
     },
     "betaComments": {
         "title": "Our web is in development",
@@ -776,6 +777,10 @@
             }
         },
         "changelog": {
+            "v1_6_0": {
+                "title": "Changes on the admin web, and a fuller history for every event. Opt-in approach added to send comments form",
+                "description": "Many changes on Admin web. The editions history page grew up too — it now shows elevation, terrain, and organiser for past races, how many years an event has been recorded here, and a filter for editions with photos; if the newest edition doesn't have photos yet, the site points you to the most recent one that does. Alongside that, a round of bug fixes across trails, admin, and event editions. Send detailed comment form updated to opt-in regarding sending the screenshot."
+            },
             "v1_5_0": {
                 "title": "Photographers get credit, and a smarter \"ongoing\" badge for multi-day events",
                 "description": "Photographers are now their own entity across the site: events and trails can carry multiple photo galleries, each credited to the photographer who shot it, and every photographer has their own public page linking back to everything they've photographed. Multi-day events stopped pretending every day was race day — the pulsing \"Today!\" badge now only shows on the day it means, an \"Ongoing\" badge covers the rest of the event's run, and whichever race is actually happening today is called out on its own. Alongside that, a round of bug fixes across trails, admin, and search."
@@ -1453,19 +1458,29 @@
             "backToEvent": "Back to event",
             "editionNotFound": "Edition not found",
             "pastEdition": "Past edition",
+            "upcomingEdition": "Upcoming edition",
+            "ongoingEdition": "Ongoing edition",
             "completed": "Completed",
             "older": "Older",
             "newer": "Newer"
+        },
+        "recentPhotos": {
+            "title": "Photos from {{edition}}"
         },
         "editionsHistory": {
             "title": "Past Events",
             "subtitle": "Browse results and details from races that have already happened.",
             "searchPlaceholder": "Search past events...",
             "showCancelled": "Show cancelled",
+            "hasPhotos": "Has photos",
             "noResults": "No past events found.",
             "resultsLink": "Results",
             "galleryColumn": "Photo gallery",
-            "searchingAllYears": "all years"
+            "searchingAllYears": "all years",
+            "sortDirection": "Toggle sort direction",
+            "recordedEditions_one": "{{count}} edition recorded here · {{years}}",
+            "recordedEditions_other": "{{count}} editions recorded here · {{years}}",
+            "recordedEditions": "{{count}} editions recorded here · {{years}}"
         },
         "table": {
             "name": "Name",

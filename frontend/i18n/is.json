@@ -458,8 +458,9 @@
         "screenshot": "Skjámynd af síðu",
         "screenshotInclude": "Með",
         "screenshotExclude": "Án",
+        "screenshotViewFull": "Skoða skjámynd í fullri stærð",
         "capturingScreen": "Tek skjámynd...",
-        "autoCapture": "Einnig safnað sjálfkrafa: {{items}}"
+        "autoCapture": "Ítarlegar tilkynningar innihalda alltaf tæknilegar upplýsingar ({{items}}) til að hjálpa okkur að rannsaka málið. Ef þú vilt einnig senda skjámynd með, smelltu þá á 'Án' hnappinn hér að ofan, þá breytist hann í 'Með' og þá fylgir skjáskot með. Þú getur skoðað skjáskotið með því að smella á myndina hér að ofan."
     },
     "betaComments": {
         "title": "Vefur í þróun",
@@ -776,8 +777,12 @@
             }
         },
         "changelog": {
+            "v1_6_0": {
+                "title": "Breytingar á stjórnborði. Meiri upplýsingar í sögu viðburða. Senda ítarlega athugasemd breytt",
+                "description": "Margar umbætur á stjórnborði. Fleiri upplýsingar birtar fyrir fyrri viðburði — hún sýnir núna hækkun, landslag og skipuleggjanda fyrri hlaupa, hversu mörg ár viðburðurinn hefur verið skráður hér, og síu fyrir útgáfur með myndum; ef nýjasta útgáfan er ekki komin með myndir en þá bendir viðburðurinn á nýjustu útgáfuna sem er með þær. Auk þess margar villuleiðréttingar í leiðum, stjórnborði og útgáfum viðburða. Uppfærsla á 'Senda inn ítarlega athugasemd' forminu þar sem notandi þarf sérstaklega að samþykkja að senda skjáskot með athugasemd, opt-in í stað opt-out eins og það var áður."
+            },
             "v1_5_0": {
-                "title": "Ljósmyndarar fá meiri sess og viðburðir mörg myndasöfn - Snjallara „í gangi“ merki fyrir viðburði sem eru 3 dagar eða lengri.",
+                "title": "Ljósmyndarar fá meiri sess. Viðburðir geta nú haft mörg myndasöfn - Snjallara „í gangi“ merki fyrir viðburði sem eru 3 dagar eða lengri.",
                 "description": "Ljósmyndarar eru nú sjálfstæð eining á vefnum: viðburðir geta verið með fleiri en eitt myndasafn, hvert og eitt merkt þeim ljósmyndara sem tók myndirnar, og hver ljósmyndari fær sína eigin síðu, þar sem birtast tenglar á öll myndasöfn sem eru skráð hjá hlaupadagskra.is. Viðburðir sem ná yfir fleiri en 2 daga birta nú „Í gangi“ merki í stað „Í dag!“ eins og áður var."
             },
             "v1_4_0": {
@@ -1453,19 +1458,29 @@
             "backToEvent": "Til baka",
             "editionNotFound": "Útgáfa fannst ekki",
             "pastEdition": "Liðin útgáfa",
+            "upcomingEdition": "Væntanleg útgáfa",
+            "ongoingEdition": "Yfirstandandi útgáfa",
             "completed": "Lokið",
             "older": "Eldri",
             "newer": "Nýrri"
+        },
+        "recentPhotos": {
+            "title": "Myndir frá {{edition}}"
         },
         "editionsHistory": {
             "title": "Fyrri viðburðir",
             "subtitle": "Skoðaðu úrslit og upplýsingar um viðburði sem þegar hafa farið fram.",
             "searchPlaceholder": "Leita í fyrri viðburðum...",
             "showCancelled": "Sýna aflýst",
+            "hasPhotos": "Aðeins með myndum",
             "noResults": "Engir fyrri viðburðir fundust.",
             "resultsLink": "Úrslit",
             "galleryColumn": "Myndasafn",
-            "searchingAllYears": "öll ár"
+            "searchingAllYears": "öll ár",
+            "sortDirection": "Víxla röðunarátt",
+            "recordedEditions_one": "{{count}} viðburður skráður hér · {{years}}",
+            "recordedEditions_other": "{{count}} viðburðir skráðir hér · {{years}}",
+            "recordedEditions": "{{count}} viðburðir skráðir hér · {{years}}"
         },
         "table": {
             "name": "Heiti",

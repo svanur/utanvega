@@ -200,6 +200,8 @@ interface EditionFormState {
   notes: string;
   notesEn: string;
   registrationStatus: RegistrationStatus;
+  registrationOpens: string;
+  registrationCloses: string;
   trailId: string;
   status: EditionStatus;
 }
@@ -209,7 +211,7 @@ function emptyEditionForm(): EditionFormState {
     year: String(new Date().getFullYear()),
     date: '', endDate: '', title: '', titleEn: '',
     registrationUrl: '', resultsUrl: '', notes: '', notesEn: '',
-    registrationStatus: 'NotStarted', trailId: '',
+    registrationStatus: 'NotStarted', registrationOpens: '', registrationCloses: '', trailId: '',
     status: 'Unconfirmed',
   };
 }
@@ -221,7 +223,9 @@ function buildEditionForm(ed: EventEditionDto): EditionFormState {
     title: ed.title ?? '', titleEn: ed.titleEn ?? '',
     registrationUrl: ed.registrationUrl ?? '', resultsUrl: ed.resultsUrl ?? '',
     notes: ed.notes ?? '', notesEn: ed.notesEn ?? '',
-    registrationStatus: ed.registrationStatus, trailId: ed.trailId ?? '',
+    registrationStatus: ed.registrationStatus,
+    registrationOpens: ed.registrationOpens ?? '', registrationCloses: ed.registrationCloses ?? '',
+    trailId: ed.trailId ?? '',
     status: ed.status,
   };
 }
@@ -277,6 +281,8 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
       notes: form.notes.trim() || undefined,
       notesEn: form.notesEn.trim() || undefined,
       registrationStatus: form.registrationStatus,
+      registrationOpens: form.registrationOpens || null,
+      registrationCloses: form.registrationCloses || null,
       trailId: form.trailId || null,
       status: form.status,
     };
@@ -354,8 +360,6 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
                     if (/^\d{4}$/.test(prev.title.trim())) updates.title = newYear;
                     if (prev.resultsUrl) updates.resultsUrl = prev.resultsUrl.replace(new RegExp(`${oy}(/?)$`), `${newYear}$1`);
                   }
-                  if (isNew && newYear.length === 4 && !isNaN(ny))
-                    updates.status = ny < new Date().getFullYear() ? 'Completed' : 'Unconfirmed';
                   return { ...prev, ...updates };
                 });
               }} />
@@ -376,27 +380,52 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
           <FormControl size="small" fullWidth>
             <InputLabel>Status</InputLabel>
             <Select value={form.status} label="Status"
-              onChange={e => set('status', e.target.value as EditionStatus)}>
+              onChange={e => set('status', e.target.value as EditionStatus)}
+              aria-describedby={!isNew && form.status !== 'Cancelled' && form.status !== 'Completed' ? 'edition-status-helper-text' : undefined}>
               {EDITION_STATUSES.map(s => (
                 // Cancelled and Completed are terminal states with their own dedicated, safer
-                // entry points (row-level Cancel/Complete actions) — they must not be landable
-                // on incidentally via this dropdown. Keep the option disabled unless it's already
-                // the current value, so the Select still renders it instead of showing blank.
-                <MenuItem key={s} value={s} disabled={(s === 'Cancelled' || s === 'Completed') && s !== form.status}>
+                // entry points (row-level Cancel/Complete actions) on an *existing* edition —
+                // they must not be landable on incidentally via this dropdown once a row exists.
+                // A brand-new, not-yet-saved edition has no such row to act on yet, so those
+                // options stay open here — e.g. recording a historical edition as Completed at
+                // creation time. Keep the option disabled (when !isNew) unless it's already the
+                // current value, so the Select still renders it instead of showing blank.
+                <MenuItem key={s} value={s} disabled={!isNew && (s === 'Cancelled' || s === 'Completed') && s !== form.status}>
                   {EDITION_STATUS_LABELS[s]}
                 </MenuItem>
               ))}
             </Select>
-            {isNew && (form.status === 'Completed' || form.status === 'Unconfirmed') && (
-              <FormHelperText>Auto-set based on year — you can override</FormHelperText>
+            {!isNew && form.status !== 'Cancelled' && form.status !== 'Completed' && (
+              <FormHelperText id="edition-status-helper-text">Use the ✓/✕ icons on the edition row to complete or cancel this edition.</FormHelperText>
             )}
           </FormControl>
-          <FormControl size="small" fullWidth>
+          <Typography
+            variant="caption" fontWeight={600} letterSpacing={0.6}
+            textTransform="uppercase" color="text.secondary"
+            sx={{ display: 'block', mb: 1, mt: 0.5 }}
+          >
+            Registration
+          </Typography>
+          <Stack direction="row" spacing={1.5}>
+            <DatePicker label="Registration opens"
+              value={form.registrationOpens ? dayjs(form.registrationOpens) : null}
+              onChange={v => set('registrationOpens', v ? v.format('YYYY-MM-DD') : '')}
+              slotProps={{ textField: { size: 'small', fullWidth: true } }} />
+            <DatePicker label="Registration closes"
+              value={form.registrationCloses ? dayjs(form.registrationCloses) : null}
+              onChange={v => set('registrationCloses', v ? v.format('YYYY-MM-DD') : '')}
+              slotProps={{ textField: { size: 'small', fullWidth: true } }} />
+          </Stack>
+          <FormControl size="small" fullWidth disabled={!!form.registrationOpens && !!form.registrationCloses}>
             <InputLabel>Registration status</InputLabel>
             <Select value={form.registrationStatus} label="Registration status"
-              onChange={e => set('registrationStatus', e.target.value as RegistrationStatus)}>
+              onChange={e => set('registrationStatus', e.target.value as RegistrationStatus)}
+              aria-describedby={!!form.registrationOpens && !!form.registrationCloses ? 'registration-status-helper-text' : undefined}>
               {REGISTRATION_STATUSES.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
             </Select>
+            {!!form.registrationOpens && !!form.registrationCloses && (
+              <FormHelperText id="registration-status-helper-text">Computed automatically from Registration opens/closes</FormHelperText>
+            )}
           </FormControl>
           <TextField size="small" fullWidth label="Registration URL" value={form.registrationUrl}
             onChange={e => set('registrationUrl', e.target.value)} />
@@ -822,6 +851,11 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
       notes: '',
       notesEn: '',
       registrationStatus: suggestedDate && isPastDate(suggestedDate) ? 'Closed' : 'NotStarted',
+      // Registration opens/closes are a specific-year window, same reasoning as titleEn/notes
+      // above — not meaningfully copyable to next year, so the clone starts blank rather than
+      // carrying over a stale date range.
+      registrationOpens: '',
+      registrationCloses: '',
       trailId: edition.trailId ?? '',
       // A clone is a brand-new edition, so it starts Unconfirmed regardless of the source edition's
       // status (e.g. cloning a Cancelled edition into next year shouldn't carry the cancellation over).
@@ -1136,10 +1170,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
       return;
     }
     try {
-      await apiFetch(`/api/v1/admin/editions/${edition.id}`, {
-        method: 'PUT',
-        body: JSON.stringify({ id: edition.id, eventId: edition.eventId, status: 'Completed', registrationStatus: edition.registrationStatus }),
-      });
+      await apiFetch(`/api/v1/admin/editions/${edition.id}/complete`, { method: 'POST' });
       onNotify('Edition marked Completed — Active races completed along with it', 'success');
       setCompletingEditionId(null);
       await refresh();

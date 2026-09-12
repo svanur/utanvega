@@ -87,6 +87,8 @@ export interface EventEditionDto {
     notes: string | null;
     notesEn: string | null;
     registrationStatus: RegistrationStatus;
+    registrationOpens: string | null;
+    registrationCloses: string | null;
     trailId: string | null;
     trailName: string | null;
     trailSlug: string | null;
@@ -215,6 +217,8 @@ export interface CreateEditionInput {
     notes?: string;
     notesEn?: string;
     registrationStatus: RegistrationStatus;
+    registrationOpens?: string | null;
+    registrationCloses?: string | null;
     trailId?: string | null;
 }
 
@@ -230,6 +234,8 @@ export interface UpdateEditionInput {
     notes?: string;
     notesEn?: string;
     registrationStatus: RegistrationStatus;
+    registrationOpens?: string | null;
+    registrationCloses?: string | null;
     trailId?: string | null;
     translationHashes?: Record<string, string>;
     // Optional, patch-if-provided (unlike the other fields here, which are always resent as a full

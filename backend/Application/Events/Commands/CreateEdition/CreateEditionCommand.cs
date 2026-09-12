@@ -19,7 +19,9 @@ public record CreateEditionCommand(
     Guid? TrailId,
     string? TitleEn = null,
     string? NotesEn = null,
-    string? Status = null
+    string? Status = null,
+    DateTime? RegistrationOpens = null,
+    DateTime? RegistrationCloses = null
 ) : IRequest<Guid>;
 
 public class CreateEditionCommandHandler : IRequestHandler<CreateEditionCommand, Guid>
@@ -58,6 +60,10 @@ public class CreateEditionCommandHandler : IRequestHandler<CreateEditionCommand,
             RegistrationStatus = regStatus,
             Status = status,
             TrailId = request.TrailId,
+            // Npgsql requires Kind=Utc for a "timestamp with time zone" column — the admin sends
+            // a date-only value with no offset, which System.Text.Json deserializes as Unspecified.
+            RegistrationOpens = EditionStatusHelpers.AsUtc(request.RegistrationOpens),
+            RegistrationCloses = EditionStatusHelpers.AsUtc(request.RegistrationCloses),
             CreatedAt = DateTime.UtcNow,
         };
 

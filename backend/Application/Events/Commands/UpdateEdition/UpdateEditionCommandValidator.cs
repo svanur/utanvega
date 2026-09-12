@@ -43,5 +43,14 @@ public class UpdateEditionCommandValidator : AbstractValidator<UpdateEditionComm
         RuleFor(x => x.EndDate)
             .Must((cmd, endDate) => endDate == null || cmd.Date == null || endDate >= cmd.Date)
             .WithMessage("EndDate must be on or after Date.");
+
+        RuleFor(x => x.RegistrationCloses)
+            .Must((cmd, closes) => closes == null || cmd.RegistrationOpens == null || closes >= cmd.RegistrationOpens)
+            .WithMessage("RegistrationCloses must be on or after RegistrationOpens.");
+
+        RuleFor(x => x.RegistrationOpens)
+            .Must((cmd, opens) => opens == null || (cmd.EndDate ?? cmd.Date) == null
+                || DateOnly.FromDateTime(opens.Value) <= (cmd.EndDate ?? cmd.Date))
+            .WithMessage("RegistrationOpens must be on or before the edition's end date.");
     }
 }

@@ -111,6 +111,52 @@ export function getMultiDayEditionProgress(
     return { day, totalDays };
 }
 
+// Collapses a set of years into a gap-tolerant, honest label — consecutive runs become a range
+// (e.g. "2021–2025"), but a gap in the record stays visibly a gap (e.g. "2018, 2021–2025") rather
+// than being smoothed into "2018–2025", which would claim editions that were never recorded.
+export function formatYearRanges(years: number[]): string {
+    const sorted = [...new Set(years)].sort((a, b) => a - b);
+    if (sorted.length === 0) return '';
+
+    const parts: string[] = [];
+    let rangeStart = sorted[0];
+    let rangeEnd = sorted[0];
+    for (let i = 1; i < sorted.length; i++) {
+        const year = sorted[i];
+        if (year === rangeEnd + 1) {
+            rangeEnd = year;
+        } else {
+            parts.push(rangeStart === rangeEnd ? `${rangeStart}` : `${rangeStart}–${rangeEnd}`);
+            rangeStart = year;
+            rangeEnd = year;
+        }
+    }
+    parts.push(rangeStart === rangeEnd ? `${rangeStart}` : `${rangeStart}–${rangeEnd}`);
+    return parts.join(', ');
+}
+
+export type EditionTimingStatus = 'past' | 'ongoing' | 'upcoming';
+
+// Classifies an edition's date span relative to "today", date-only (calendar dates, never raw
+// instants) so the label can't flip depending on the time of day. `endDate` defaults to `date`
+// for single-day editions, so "ongoing" also covers "today is edition day". Returns null when
+// there's no date to compare against (e.g. an old, dateless historical record) — callers should
+// fall back to their own default in that case.
+export function getEditionTimingStatus(
+    date: string | null | undefined,
+    endDate: string | null | undefined,
+    now: Date = new Date(),
+): EditionTimingStatus | null {
+    if (!date) return null;
+    const start = new Date(date + 'T00:00:00');
+    const end = new Date((endDate ?? date) + 'T00:00:00');
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+    if (today < start) return 'upcoming';
+    if (today > end) return 'past';
+    return 'ongoing';
+}
+
 export function formatRaceDateTime(
     dateOfRace: string | null,
     startTime: string | null,

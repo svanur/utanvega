@@ -1,5 +1,10 @@
 import type { EventEditionDto } from '../hooks/useEvents';
 
+export interface YearMonthFilterable {
+  hasFutureEdition: boolean;
+  nextEditionDate: string | null;
+}
+
 export const MONTHS = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 export const MONTHS_SHORT = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -56,6 +61,21 @@ export function computeClonedRaceDate(
   const newDate = new Date(newEditionDate + 'T00:00:00');
   newDate.setDate(newDate.getDate() + offsetDays);
   return newDate.toISOString().slice(0, 10);
+}
+
+// The Month <Select> on the events list (EventsListPage) is disabled whenever yearFilter is
+// 'all', and the Year <Select>'s onChange resets monthFilter back to 'all' the moment Year
+// changes — so click-through can never produce "Month set, Year = 'all'". A hand-edited or
+// bookmarked URL (e.g. ?monthFilter=09 with no yearFilter) can still reach that state, though,
+// since useUrlFilterState validates each param independently. Without this guard that would
+// silently filter to "this month, any year" rather than doing nothing, which is what the
+// (disabled) Month dropdown implies. See #734.
+export function matchesYearMonthFilter(e: YearMonthFilterable, yearFilter: string, monthFilter: string): boolean {
+  if (yearFilter === 'all') return true;
+  if (!e.hasFutureEdition) return true;
+  if (!e.nextEditionDate || e.nextEditionDate.slice(0, 4) !== yearFilter) return false;
+  if (monthFilter !== 'all' && e.nextEditionDate.slice(5, 7) !== monthFilter) return false;
+  return true;
 }
 
 export function sortEditions(a: EventEditionDto, b: EventEditionDto): number {
