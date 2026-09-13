@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { addDays, formatYearRanges, getEditionTimingStatus, getWeekRange, msUntilNextMidnight } from './eventUtils';
+import { addDays, formatYearRanges, getEditionTimingStatus, getWeekRange, msUntilNextMidnight, shortestUniqueEditionKey } from './eventUtils';
 
 // #546: the recorded-editions badge must be gap-tolerant — a missing year in the middle of the
 // record must stay visible as a gap, never smoothed into a continuous range.
@@ -111,6 +111,41 @@ describe('addDays', () => {
         expect(result.getFullYear()).toBe(2026);
         expect(result.getMonth()).toBe(0); // January
         expect(result.getDate()).toBe(3);
+    });
+});
+
+// #783: shortestUniqueEditionKey shortens the /history/:editionKey URL to the year alone when
+// that's unambiguous among sibling editions of the same event, only falling back to the full date
+// (and then the id) as needed to stay unique — same-year and even same-date collisions are legal
+// (EventEdition.Year/Date have no unique constraint), so uniqueness must be checked, not assumed.
+describe('shortestUniqueEditionKey', () => {
+    it('prefers the year when no sibling shares it, even if the edition has an exact date', () => {
+        const edition = { id: 'a', date: '2025-06-14', year: 2025 };
+        const siblings = [edition, { id: 'b', date: '2024-06-15', year: 2024 }];
+        expect(shortestUniqueEditionKey(edition, siblings)).toBe('2025');
+    });
+
+    it('falls back to the full date when a sibling shares the year but not the date', () => {
+        const edition = { id: 'a', date: '2025-06-14', year: 2025 };
+        const siblings = [edition, { id: 'b', date: '2025-09-20', year: 2025 }];
+        expect(shortestUniqueEditionKey(edition, siblings)).toBe('2025-06-14');
+    });
+
+    it('falls back to the id when siblings share both year and date', () => {
+        const edition = { id: 'a', date: '2025-06-14', year: 2025 };
+        const siblings = [edition, { id: 'b', date: '2025-06-14', year: 2025 }];
+        expect(shortestUniqueEditionKey(edition, siblings)).toBe('a');
+    });
+
+    it('falls back to the id when the edition has neither date nor year', () => {
+        const edition = { id: 'a', date: null, year: null };
+        const siblings = [edition, { id: 'b', date: null, year: null }];
+        expect(shortestUniqueEditionKey(edition, siblings)).toBe('a');
+    });
+
+    it('treats a single-edition series (one edition per season) as unambiguous — year-only', () => {
+        const edition = { id: 'a', date: '2025-06-14', year: 2025 };
+        expect(shortestUniqueEditionKey(edition, [edition])).toBe('2025');
     });
 });
 
