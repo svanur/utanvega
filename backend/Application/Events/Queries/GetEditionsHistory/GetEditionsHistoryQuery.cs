@@ -275,9 +275,12 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
 
         // #806: primary race = among this row's races, the one whose linked trail has the greatest
         // Length. Races with no linked trail, or whose trail isn't in trailData, aren't eligible.
+        // #815: ties on Length are broken by Race.Id (arbitrary but deterministic) so the outcome
+        // doesn't depend on ed.Races' unordered load order.
         var primaryTrailId = races
             .Where(r => r.TrailId.HasValue && trailData.ContainsKey(r.TrailId.Value))
             .OrderByDescending(r => trailData[r.TrailId!.Value].Length)
+            .ThenBy(r => r.Id)
             .Select(r => r.TrailId)
             .FirstOrDefault();
         var primaryTerrainType = primaryTrailId.HasValue && trailData.TryGetValue(primaryTrailId.Value, out var primaryTrail)

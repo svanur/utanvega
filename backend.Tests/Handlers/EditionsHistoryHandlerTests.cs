@@ -1081,4 +1081,42 @@ public class EditionsHistoryHandlerTests : IDisposable
         Assert.Equal(primaryTrail.ElevationProfile, row.PrimaryElevationProfile);
         Assert.NotEqual(nonPrimaryTrail.ElevationProfile, row.PrimaryElevationProfile);
     }
+
+    [Fact]
+    public async Task History_TwoRacesWithEqualTrailLength_PrimaryRaceTiebreakIsDeterministicByRaceId()
+    {
+        // #815: when linked trails tie on Length, the primary race must be chosen by a
+        // deterministic secondary key (Race.Id) rather than by whatever order ed.Races
+        // happened to load in. CreateRace assigns a random Guid, so which race actually
+        // has the lower Id is computed after creation rather than assumed from insertion order.
+        var pastYear = DateOnly.FromDateTime(DateTime.UtcNow).Year - 1;
+        var ev = CreateTestEvent("Equal Length Tiebreak Race");
+        var edition = CreateEdition(ev.Id, new DateOnly(pastYear, 6, 1));
+        var trailA = CreateTestTrail("Trail A", length: 21000, terrainType: TerrainType.Flat, elevationProfile: [1, 2, 3]);
+        var trailB = CreateTestTrail("Trail B", length: 21000, terrainType: TerrainType.Mountainous, elevationProfile: [4, 5, 6]);
+        var raceA = CreateRace(edition.Id, "21K A", distanceLabel: "21K", trailId: trailA.Id);
+        var raceB = CreateRace(edition.Id, "21K B", distanceLabel: "21K", trailId: trailB.Id);
+
+        var (expectedTrail, otherTrail) = raceA.Id.CompareTo(raceB.Id) < 0
+            ? (trailA, trailB)
+            : (trailB, trailA);
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Trails.AddRange(trailA, trailB);
+            ctx.Races.AddRange(raceA, raceB);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEditionsHistoryQueryHandler(queryCtx, _memoryCache);
+        var result = await handler.Handle(new GetEditionsHistoryQuery(pastYear), CancellationToken.None);
+
+        var row = Assert.Single(result);
+        Assert.Equal(expectedTrail.TerrainType.ToString(), row.PrimaryTerrainType);
+        Assert.Equal(expectedTrail.ElevationProfile, row.PrimaryElevationProfile);
+        Assert.NotEqual(otherTrail.ElevationProfile, row.PrimaryElevationProfile);
+    }
 }
