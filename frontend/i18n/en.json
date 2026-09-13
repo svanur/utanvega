@@ -882,9 +882,18 @@
             }
         },
         "changelogDiary": {
+            "heading": "Changelog diary",
+            "subtitle": "Full release history, in more detail than the milestone timeline on the About page. Unlisted and not indexed.",
             "searchPlaceholder": "Search changelog…",
             "searchLabel": "Search changelog",
-            "noResults": "No entries match your filters."
+            "noResults": "No entries match your filters.",
+            "wentLive": "Went live",
+            "previousSite": "Previous site",
+            "tags": {
+                "admin": "Admin",
+                "registrationOpens": "Registration Opens",
+                "registrationCloses": "Registration Closes"
+            }
         }
     },
     "presets": {

@@ -882,9 +882,18 @@
             }
         },
         "changelogDiary": {
+            "heading": "Breytingadagbók",
+            "subtitle": "Öll útgáfusagan, ítarlegri en tímalínan á Um síðunni. Ekki í valmynd og ekki skráð hjá leitarvélum.",
             "searchPlaceholder": "Leita í breytingaskrá…",
             "searchLabel": "Leita í breytingaskrá",
-            "noResults": "Engar færslur passa við valdar síur."
+            "noResults": "Engar færslur passa við valdar síur.",
+            "wentLive": "Fór í loftið",
+            "previousSite": "Fyrri vefur",
+            "tags": {
+                "admin": "Stjórnborð",
+                "registrationOpens": "Skráning hefst",
+                "registrationCloses": "Skráningu lýkur"
+            }
         }
     },
     "presets": {

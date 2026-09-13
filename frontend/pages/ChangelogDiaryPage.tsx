@@ -69,13 +69,14 @@ const RELEASE_DATES: Record<string, string> = {
 const GITHUB_RELEASES = new Set(['v1_6_0', 'v1_5_0', 'v1_4_0', 'v1_3_0', 'v1_2_0', 'v1_1_1', 'v1_1_0', 'v1_0_0']);
 
 /**
- * Tags per version, for filtering. Only versions worth surfacing this way are
- * listed here — most historical entries have none, and that's fine: the tag
- * row is simply omitted for them. Add a version here to make it filterable;
- * no other code change is needed.
+ * Tags per version, for filtering. Values are keys into
+ * `about.changelogDiary.tags` in the i18n files, not display labels — a new
+ * tag needs an entry there in both locales as well as here. Only versions
+ * worth surfacing this way are listed here — most historical entries have
+ * none, and that's fine: the tag row is simply omitted for them.
  */
 const TAGS: Partial<Record<string, string[]>> = {
-    v1_6_0: ['Admin', 'Registration Opens', 'Registration Closes'],
+    v1_6_0: ['admin', 'registrationOpens', 'registrationCloses'],
 };
 
 const RELEASES_URL = 'https://github.com/svanur/utanvega/releases/tag';
@@ -144,11 +145,10 @@ export default function ChangelogDiaryPage({ mode, onToggleMode }: ChangelogDiar
             <Container maxWidth="md" sx={{ py: 3 }}>
                 <Stack spacing={1} sx={{ mb: 4 }}>
                     <Typography variant="h4" component="h1" fontWeight="bold">
-                        Changelog diary
+                        {t('about.changelogDiary.heading')}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                        Full release history, in more detail than the milestone timeline on the
-                        About page. Unlisted and not indexed.
+                        {t('about.changelogDiary.subtitle')}
                     </Typography>
                 </Stack>
 
@@ -166,7 +166,7 @@ export default function ChangelogDiaryPage({ mode, onToggleMode }: ChangelogDiar
                             {allTags.map(tag => (
                                 <Chip
                                     key={tag}
-                                    label={tag}
+                                    label={t(`about.changelogDiary.tags.${tag}`)}
                                     size="small"
                                     clickable
                                     onClick={() => toggleTag(tag)}
@@ -224,17 +224,27 @@ export default function ChangelogDiaryPage({ mode, onToggleMode }: ChangelogDiar
                                             </Typography>
                                         )}
                                         {isGoLive && (
-                                            <Chip label="Went live" color="success" size="small" variant="outlined" />
+                                            <Chip
+                                                label={t('about.changelogDiary.wentLive')}
+                                                color="success"
+                                                size="small"
+                                                variant="outlined"
+                                            />
                                         )}
                                         {isPredecessor && (
-                                            <Chip label="Previous site" size="small" variant="outlined" />
+                                            <Chip label={t('about.changelogDiary.previousSite')} size="small" variant="outlined" />
                                         )}
                                     </Stack>
 
                                     {tags && tags.length > 0 && (
                                         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mt: 1 }}>
                                             {tags.map(tag => (
-                                                <Chip key={tag} label={tag} size="small" variant="outlined" />
+                                                <Chip
+                                                    key={tag}
+                                                    label={t(`about.changelogDiary.tags.${tag}`)}
+                                                    size="small"
+                                                    variant="outlined"
+                                                />
                                             ))}
                                         </Stack>
                                     )}
