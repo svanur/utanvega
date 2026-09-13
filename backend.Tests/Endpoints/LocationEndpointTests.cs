@@ -14,16 +14,19 @@ namespace Utanvega.Backend.Tests.Endpoints;
 /// process-wide env-var races between concurrently-constructed factories — see
 /// <see cref="TestWebApplicationFactoryCollection"/>.
 ///
-/// <c>Program.cs</c>'s <c>UpdateLocation</c> endpoint (Program.cs:1276-1283) discards whatever
+/// <c>Program.cs</c>'s <c>UpdateLocation</c> endpoint (Program.cs:1285-1292) discards whatever
 /// <c>UpdatedBy</c> the client sent in the body and substitutes the JWT-derived user id
 /// (<c>command with { UpdatedBy = GetAuthenticatedUserId(httpContext) }</c>) — a handler-level test
 /// can't prove that override happens, because it never goes through the endpoint at all.
 ///
-/// <c>CreateLocation</c> (Program.cs:1269-1274) and <c>DeleteLocation</c> (Program.cs:1285-1302) do
-/// the same override, but route the actor id into <c>SaveChangesWithAuditAsync</c> instead of an
-/// entity column — there is no <c>CreatedBy</c>/<c>DeletedBy</c> field on <see cref="Location"/> for
-/// either command, so those two tests assert against the resulting <see cref="ChangeLog"/> row
-/// (<c>EntityName == "Location"</c>) rather than a <see cref="Location"/> field — see #690.
+/// <c>CreateLocation</c> (Program.cs:1273-1283) also overrides the client-supplied <c>CreatedBy</c>
+/// with the JWT-derived user id, and it lands on a real <see cref="Location.CreatedBy"/> column, so
+/// that test asserts against the persisted <see cref="Location"/> row directly — see #829.
+///
+/// <c>DeleteLocation</c> (Program.cs:1294-1311) overrides the actor id the same way, but routes it
+/// into <c>SaveChangesWithAuditAsync</c> instead of an entity column — there is no <c>DeletedBy</c>
+/// field on <see cref="Location"/>, so that test asserts against the resulting <see cref="ChangeLog"/>
+/// row (<c>EntityName == "Location"</c>) instead — see #690.
 /// </summary>
 [Collection(TestWebApplicationFactoryCollection.Name)]
 public class LocationEndpointTests : IDisposable
@@ -140,6 +143,7 @@ public class LocationEndpointTests : IDisposable
     {
         const string authenticatedUserId = "auth-user-real";
         const string clientSuppliedActorUserId = "someone-else-entirely";
+        const string clientSuppliedCreatedBy = "seed-user";
 
         var client = _factory.CreateAuthenticatedClient(authenticatedUserId);
 
@@ -155,7 +159,7 @@ public class LocationEndpointTests : IDisposable
                 Latitude = (double?)null,
                 Longitude = (double?)null,
                 Radius = (double?)null,
-                CreatedBy = "seed-user",
+                CreatedBy = clientSuppliedCreatedBy,
                 ActorUserId = clientSuppliedActorUserId,
             });
 
@@ -169,6 +173,13 @@ public class LocationEndpointTests : IDisposable
         Assert.NotNull(changeLog);
         Assert.Equal(authenticatedUserId, changeLog!.UserId);
         Assert.NotEqual(clientSuppliedActorUserId, changeLog.UserId);
+
+        // #829: CreateLocation.CreatedBy is a real Location column (unlike DeleteLocation, which has
+        // no DeletedBy column), so it must be asserted directly rather than via ChangeLog.
+        var location = await db.Locations.FindAsync(body!.Id);
+        Assert.NotNull(location);
+        Assert.Equal(authenticatedUserId, location!.CreatedBy);
+        Assert.NotEqual(clientSuppliedCreatedBy, location.CreatedBy);
     }
 
     [Fact]
