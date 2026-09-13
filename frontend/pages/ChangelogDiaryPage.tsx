@@ -110,7 +110,7 @@ function formatDate(iso: string, language: string) {
 
 export default function ChangelogDiaryPage({ mode, onToggleMode }: ChangelogDiaryPageProps) {
     const { t, i18n } = useTranslation();
-    usePageTitle('Changelog diary');
+    usePageTitle(t('about.changelogDiary.heading'));
 
     const [activeTags, setActiveTags] = useState<string[]>([]);
     const [searchText, setSearchText] = useState('');
@@ -134,7 +134,7 @@ export default function ChangelogDiaryPage({ mode, onToggleMode }: ChangelogDiar
     );
 
     return (
-        <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: 'Changelog diary' }]}>
+        <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('about.changelogDiary.heading') }]}>
             <Container maxWidth="md" sx={{ py: 3 }}>
                 <Stack spacing={1} sx={{ mb: 4 }}>
                     <Typography variant="h4" component="h1" fontWeight="bold">
