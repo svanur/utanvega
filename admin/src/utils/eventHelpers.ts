@@ -1,3 +1,4 @@
+import type { Dayjs } from 'dayjs';
 import type { EventEditionDto } from '../hooks/useEvents';
 
 export interface YearMonthFilterable {
@@ -7,6 +8,11 @@ export interface YearMonthFilterable {
 
 export const MONTHS = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 export const MONTHS_SHORT = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+// Icelandic full month names, used for the copy-to-clipboard agenda text (handleCopyAgenda) —
+// that text is pasted into public-facing Icelandic content, unlike the rest of admin's
+// English-only UI, so it intentionally does not reuse MONTHS/MONTHS_SHORT above.
+export const MONTHS_IS_FULL = ['', 'janúar', 'febrúar', 'mars', 'apríl', 'maí', 'júní', 'júlí', 'ágúst', 'september', 'október', 'nóvember', 'desember'];
 
 export function fmtDate(iso: string | null | undefined): string {
   if (!iso) return '';
@@ -97,4 +103,22 @@ export function editionsAffectedByEventCancel(editions: EventEditionDto[]): Even
     const effectiveDate = ed.endDate ?? ed.date;
     return !effectiveDate || effectiveDate >= today;
   });
+}
+
+// dayjs().day() is 0 (Sun) – 6 (Sat). Plain `(8 - today.day()) % 7` gives 0 rather than 7 when
+// today is Monday (day() === 1: (8-1)%7 === 0), which would resolve "next week" to today instead
+// of 7 days out — the `|| 7` guards that case. Result is always 1–7, never 0/negative, so
+// `today.add(offset, 'day')` always lands on the following week's Monday. See #836.
+export function nextWeekMondayOffset(today: Dayjs): number {
+  return (8 - today.day()) % 7 || 7;
+}
+
+// Header for the copy-to-clipboard agenda (handleCopyAgenda on EventsListPage) when a week
+// filter ('this-week' | 'next-week') is active — e.g. "13. – 20. september 2026" for a range
+// within one month, or "29. desember – 4. janúar 2027" across a month/year boundary. See #836.
+export function formatAgendaHeader(start: Dayjs, end: Dayjs): string {
+  const sameMonth = start.month() === end.month();
+  return sameMonth
+    ? `${start.date()}. – ${end.date()}. ${MONTHS_IS_FULL[end.month() + 1]} ${end.year()}`
+    : `${start.date()}. ${MONTHS_IS_FULL[start.month() + 1]} – ${end.date()}. ${MONTHS_IS_FULL[end.month() + 1]} ${end.year()}`;
 }
