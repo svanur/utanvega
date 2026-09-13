@@ -164,6 +164,7 @@
         "closeFullscreen": "Close fullscreen",
         "getDirections": "Get directions to trailhead",
         "downloadGpx": "Download GPX file",
+        "gpxLabel": "GPX",
         "relatedTrails": "Related Trails",
         "outAndBack": "Out and Back",
         "loop": "Loop",
