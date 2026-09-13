@@ -64,7 +64,6 @@ public class UpdateLocationCommandHandler : IRequestHandler<UpdateLocationComman
         location.ParentId = request.ParentId;
         location.Center = center;
         location.Radius = request.Radius;
-        location.UpdatedBy = request.UpdatedBy;
         if (request.TranslationHashes != null)
             location.TranslationHashes = JsonSerializer.Serialize(request.TranslationHashes);
         location.UpdatedAt = DateTime.UtcNow;

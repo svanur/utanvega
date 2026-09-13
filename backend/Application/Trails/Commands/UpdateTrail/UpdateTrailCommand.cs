@@ -121,7 +121,6 @@ public class UpdateTrailCommandHandler : IRequestHandler<UpdateTrailCommand, boo
         if (request.NeedsReview is not null)
             trail.NeedsReview = request.NeedsReview.Value;
 
-        trail.UpdatedBy = request.UpdatedBy;
         trail.UpdatedAt = DateTime.UtcNow;
 
         // Sync Locations
