@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { formatYearRanges, getEditionTimingStatus, msUntilNextMidnight } from './eventUtils';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { addDays, formatYearRanges, getEditionTimingStatus, getWeekRange, msUntilNextMidnight } from './eventUtils';
 
 // #546: the recorded-editions badge must be gap-tolerant — a missing year in the middle of the
 // record must stay visible as a gap, never smoothed into a continuous range.
@@ -93,5 +93,63 @@ describe('msUntilNextMidnight', () => {
     it('returns the remaining ms in the day for a "now" mid-day', () => {
         const now = new Date('2026-03-15T12:00:00.000');
         expect(msUntilNextMidnight(now)).toBe(12 * 60 * 60 * 1000);
+    });
+});
+
+// #843: addDays and getWeekRange were previously local, unexported helpers duplicated between
+// RacesPage.tsx and eventUtils.ts (toDateOnlyString) — moved here so they're shared and tested.
+describe('addDays', () => {
+    it('crosses a month boundary', () => {
+        const result = addDays(new Date('2026-01-28T00:00:00'), 5);
+        expect(result.getFullYear()).toBe(2026);
+        expect(result.getMonth()).toBe(1); // February
+        expect(result.getDate()).toBe(2);
+    });
+
+    it('crosses a year boundary', () => {
+        const result = addDays(new Date('2025-12-29T00:00:00'), 5);
+        expect(result.getFullYear()).toBe(2026);
+        expect(result.getMonth()).toBe(0); // January
+        expect(result.getDate()).toBe(3);
+    });
+});
+
+// #843: getWeekRange reads `new Date()` internally (unlike the other functions in this file, which
+// take an injectable `now`), so "today" is pinned with fake timers rather than passed as an argument.
+describe('getWeekRange', () => {
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
+    it('"this" week returns Monday start / Sunday end six days later, for a Tue "now"', () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date('2026-03-10T09:00:00')); // Tuesday
+        expect(getWeekRange('this')).toEqual({ start: '2026-03-09', end: '2026-03-15' });
+    });
+
+    it('"this" week returns the same Monday start / Sunday end for a Sat "now" in the same week', () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date('2026-03-14T09:00:00')); // Saturday
+        expect(getWeekRange('this')).toEqual({ start: '2026-03-09', end: '2026-03-15' });
+    });
+
+    it('"next" week returns the Monday immediately after the current week\'s Sunday', () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date('2026-03-10T09:00:00')); // Tuesday, this week ends Sun 2026-03-15
+        expect(getWeekRange('next')).toEqual({ start: '2026-03-16', end: '2026-03-22' });
+    });
+
+    it('boundary: "now" is a Sunday — "this" week starts the preceding Monday and ends today', () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date('2026-03-15T09:00:00')); // Sunday
+        expect(getWeekRange('this')).toEqual({ start: '2026-03-09', end: '2026-03-15' });
+        expect(getWeekRange('next')).toEqual({ start: '2026-03-16', end: '2026-03-22' });
+    });
+
+    it('boundary: "now" is a Monday — "this" week starts today', () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date('2026-03-16T09:00:00')); // Monday
+        expect(getWeekRange('this')).toEqual({ start: '2026-03-16', end: '2026-03-22' });
+        expect(getWeekRange('next')).toEqual({ start: '2026-03-23', end: '2026-03-29' });
     });
 });
