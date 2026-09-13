@@ -25,6 +25,14 @@ describe('editionStatusForYear', () => {
     expect(editionStatusForYear(currentYear)).toEqual({ status: 'Hidden', registrationStatus: 'NotStarted' });
     expect(editionStatusForYear(currentYear + 1)).toEqual({ status: 'Hidden', registrationStatus: 'NotStarted' });
   });
+
+  // #797: a negative, zero, or wildly out-of-range year must not bucket into either nudge, or a
+  // typo like '-100' would silently nudge Status/RegistrationStatus on a brand-new edition.
+  it('returns null for a year outside the sane range, instead of bucketing it', () => {
+    expect(editionStatusForYear(-100, 2026)).toBeNull();
+    expect(editionStatusForYear(0, 2026)).toBeNull();
+    expect(editionStatusForYear(9999, 2026)).toBeNull();
+  });
 });
 
 // #778: a cloned edition takes the same "isNew" (create) path as a plain Add, but
@@ -71,6 +79,15 @@ describe('titleSyncForYear', () => {
   it('does not sync when the year is incomplete or invalid', () => {
     expect(titleSyncForYear('202', '')).toBeNull();
     expect(titleSyncForYear('abcd', '')).toBeNull();
+  });
+
+  // #797: '-100' and '0000' are both 4 characters long and parse as non-NaN numbers, so the
+  // length/isNaN checks above alone let them through to auto-fill Title/titleEn — a sane range
+  // guard is needed to catch these and years like '9999', mirroring referenceDateForYear's guard.
+  it('does not sync when the year is outside the sane range, even though it is 4 characters and parses as a number', () => {
+    expect(titleSyncForYear('-100', '')).toBeNull();
+    expect(titleSyncForYear('0000', '')).toBeNull();
+    expect(titleSyncForYear('9999', '')).toBeNull();
   });
 });
 

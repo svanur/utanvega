@@ -408,9 +408,14 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
                   // "new" in the isNew sense but handleCloneEdition already seeded a deliberate
                   // Status/RegistrationStatus (see #778), so it's excluded here too.
                   if (shouldNudgeStatusForYear(isNew, isCloneRef.current, statusManuallySetRef.current) && newYear.length === 4 && !isNaN(ny)) {
+                    // #797: editionStatusForYear returns null for an out-of-range year (e.g.
+                    // '-100', '0000', '9999') — same "leave it alone" behaviour as the other
+                    // guard failures below, so an implausible typed year doesn't nudge Status.
                     const nudged = editionStatusForYear(ny);
-                    updates.status = nudged.status;
-                    updates.registrationStatus = nudged.registrationStatus;
+                    if (nudged) {
+                      updates.status = nudged.status;
+                      updates.registrationStatus = nudged.registrationStatus;
+                    }
                   }
                   return { ...prev, ...updates };
                 });
