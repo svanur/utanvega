@@ -1,0 +1,77 @@
+// @vitest-environment jsdom
+import { afterEach, describe, expect, it } from 'vitest';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import RaceFormCard from './RaceFormCard';
+import type { EventEditionDto } from '../../hooks/useEvents';
+
+// #809: unit tests in utils/itraPoints.test.ts cover correctEmptyToOneFromSpinner as a pure
+// function, but that only proves the decision logic is correct given a boolean — not that
+// RaceFormCard's onPaste handler actually sets itraRealInputRef before onChange reads it (see
+// RaceFormCard.tsx:315-344). This renders the real card and dispatches a real paste event to
+// verify the wiring end to end, not just the function it feeds.
+
+const edition: EventEditionDto = {
+  id: 'edition-1',
+  eventId: 'event-1',
+  year: 2026,
+  date: '2026-06-01',
+  endDate: null,
+  title: 'Test Edition',
+  titleEn: null,
+  registrationUrl: null,
+  resultsUrl: null,
+  notes: null,
+  notesEn: null,
+  registrationStatus: 'NotStarted',
+  registrationOpens: null,
+  registrationCloses: null,
+  trailId: null,
+  trailName: null,
+  trailSlug: null,
+  races: [],
+  galleries: [],
+  createdAt: '2026-01-01T00:00:00Z',
+  updatedAt: null,
+  status: 'Active',
+  effectiveCancelled: false,
+};
+
+function renderRaceFormCard() {
+  return render(
+    <LocalizationProvider dateAdapter={AdapterDayjs}>
+      <RaceFormCard
+        race={null}
+        edition={edition}
+        trails={[]}
+        onClose={() => {}}
+        onSaved={() => {}}
+        onDeleted={() => {}}
+        onNotify={() => {}}
+        onCreateRace={async () => ''}
+        onUpdateRace={async () => {}}
+        onDeleteRace={async () => {}}
+      />
+    </LocalizationProvider>,
+  );
+}
+
+describe('RaceFormCard — ITRA points paste wiring', () => {
+  afterEach(cleanup);
+
+  it('keeps a pasted "1" in an empty field instead of correcting it to "0" like a spinner click', () => {
+    renderRaceFormCard();
+    const input = screen.getByLabelText('ITRA points') as HTMLInputElement;
+    expect(input.value).toBe('');
+
+    // A real paste always fires a native 'paste' event on the input before the browser applies
+    // the pasted text and fires 'change' — this dispatches both, in that order, the same way a
+    // real right-click → Paste would, to prove onPaste sets itraRealInputRef before onChange
+    // reads it (rather than only asserting the pure function in isolation).
+    fireEvent.paste(input, { clipboardData: { getData: () => '1' } });
+    fireEvent.change(input, { target: { value: '1' } });
+
+    expect(input.value).toBe('1');
+  });
+});
