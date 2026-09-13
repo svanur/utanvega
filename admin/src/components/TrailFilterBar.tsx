@@ -22,7 +22,6 @@ interface TrailFilterBarProps {
   onMonthFilterChange: (value: string) => void;
   yearOptions: string[];
   months: string[];
-  includeArchived: boolean;
   needsReviewOnly: boolean;
   onNeedsReviewOnlyChange: (value: boolean) => void;
   onResetFilters: () => void;
@@ -46,7 +45,6 @@ export default function TrailFilterBar({
   onMonthFilterChange,
   yearOptions,
   months,
-  includeArchived,
   needsReviewOnly,
   onNeedsReviewOnlyChange,
   onResetFilters,

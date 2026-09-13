@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Typography } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
@@ -31,12 +31,18 @@ export default function GpxMapPicker({ open, initialLat, initialLng, onConfirm, 
   const [pin, setPin] = useState<[number, number] | null>(
     initialLat != null && initialLng != null ? [initialLat, initialLng] : null
   );
+  const [wasOpen, setWasOpen] = useState(open);
 
-  useEffect(() => {
+  // Reset the pin from the latest initial coordinates on the open transition. Adjusting state
+  // directly during render (rather than in an effect) avoids the extra commit-then-render pass
+  // an effect would cost, and is the pattern React itself recommends for "reset state when a
+  // prop changes" — see https://react.dev/learn/you-might-not-need-an-effect.
+  if (open !== wasOpen) {
+    setWasOpen(open);
     if (open) {
       setPin(initialLat != null && initialLng != null ? [initialLat, initialLng] : null);
     }
-  }, [open, initialLat, initialLng]);
+  }
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>

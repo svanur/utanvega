@@ -30,7 +30,7 @@ function isPast(dateStr: string | null): boolean {
   return new Date(dateStr) < today;
 }
 
-function getEditionChecks(edition: EventEditionDto, eventName: string): HealthCheck[] {
+function getEditionChecks(edition: EventEditionDto): HealthCheck[] {
   const hasPastDate = isPast(edition.endDate ?? edition.date);
   const allRacesHaveTrail = edition.races.length > 0 && edition.races.every(r => r.trailId != null);
 
@@ -144,7 +144,7 @@ interface EditionHealthProps {
   onNotify: (message: React.ReactNode, severity?: 'success' | 'error') => void;
 }
 
-export default function EditionHealth({ onViewEvent, onNotify }: EditionHealthProps) {
+export default function EditionHealth({ onViewEvent, onNotify: _onNotify }: EditionHealthProps) {
   const theme = useTheme();
   const { data: events = [], isLoading: loading } = useQuery({
     queryKey: ['admin', 'event-details'],
@@ -162,7 +162,7 @@ export default function EditionHealth({ onViewEvent, onNotify }: EditionHealthPr
     for (const event of events) {
       if (event.status === 'Cancelled') continue;
       for (const edition of event.editions) {
-        const editionChecks = getEditionChecks(edition, event.name);
+        const editionChecks = getEditionChecks(edition);
         const raceRows = edition.races.map(r => {
           const checks = getRaceChecks(r);
           return { race: r, checks, score: scoreFromChecks(checks) };
@@ -255,7 +255,7 @@ export default function EditionHealth({ onViewEvent, onNotify }: EditionHealthPr
   const toggleExpand = (id: string) => {
     setExpandedEditions(prev => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
   };

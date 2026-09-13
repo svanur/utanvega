@@ -2,7 +2,7 @@ import { TextField, InputAdornment, Chip, Tooltip, IconButton, Box } from '@mui/
 import type { TextFieldProps } from '@mui/material';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import BilingualExpandDialog from './BilingualExpandDialog';
-import { useBilingualLang } from '../contexts/BilingualLangContext';
+import { useBilingualLang } from '../hooks/useBilingualLang';
 import { useState } from 'react';
 
 type BilingualTextFieldProps = Omit<TextFieldProps, 'value' | 'onChange'> & {

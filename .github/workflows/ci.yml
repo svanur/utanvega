@@ -25,6 +25,14 @@ jobs:
     uses: ./.github/workflows/frontend-build.yml
     secrets: inherit
 
+  admin:
+    name: Admin
+    uses: ./.github/workflows/frontend-build.yml
+    with:
+      working-directory: admin
+      artifact-name: admin-build
+    secrets: inherit
+
   sync-check:
     name: Data sync check
     runs-on: ubuntu-latest

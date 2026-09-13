@@ -242,20 +242,6 @@ export default function TrailsListPage({ onNotify }: { onNotify: (message: React
     }
   }, [onNotify, setTrails]);
 
-  const handleUpdateStatus = useCallback(async (trailId: string, newStatus: string) => {
-    try {
-        await apiFetch(`/api/v1/admin/trails/${trailId}/status`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(newStatus),
-        });
-        onNotify(`Trail status updated to ${newStatus}`);
-        setTrails(prev => prev.map(t => t.id === trailId ? { ...t, status: newStatus as Trail['status'] } : t));
-    } catch (_err) {
-        onNotify('Failed to update trail status', 'error');
-    }
-  }, [onNotify, setTrails]);
-
   const handlePatchTrail = useCallback(async (trailId: string, field: string, value: string) => {
     await apiFetch(`/api/v1/admin/trails/${trailId}`, {
         method: 'PATCH',
@@ -400,7 +386,6 @@ export default function TrailsListPage({ onNotify }: { onNotify: (message: React
         onMonthFilterChange={(v) => setValue('monthFilter', v)}
         yearOptions={yearOptions}
         months={MONTHS}
-        includeArchived={includeArchived}
         needsReviewOnly={needsReviewOnly}
         onNeedsReviewOnlyChange={(v) => setValue('needsReviewOnly', v ? 'true' : 'false')}
         onResetFilters={handleResetFilters}

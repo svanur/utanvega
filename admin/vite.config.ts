@@ -7,7 +7,9 @@ import { resolve } from 'path';
 let gitHash = 'unknown';
 try {
   gitHash = execSync('git rev-parse --short HEAD').toString().trim();
-} catch {}
+} catch {
+  // Not a git checkout (e.g. some deploy environments) — fall back to 'unknown'.
+}
 
 function readVersion(path: string): string {
   try {

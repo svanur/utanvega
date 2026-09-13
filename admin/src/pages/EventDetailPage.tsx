@@ -72,7 +72,8 @@ import RaceFormCard from '../components/events/RaceFormCard';
 import EventFormCard from '../components/events/EventFormCard';
 import PhotoGalleryManager, { type PhotoGalleryManagerHandle } from '../components/events/PhotoGalleryManager';
 import BilingualTextField from '../components/BilingualTextField';
-import { BilingualLangProvider, useBilingualLang } from '../contexts/BilingualLangContext';
+import { BilingualLangProvider } from '../contexts/BilingualLangContext';
+import { useBilingualLang } from '../hooks/useBilingualLang';
 import {
   buildRaceForm,
   editionStatusForYear,
@@ -830,7 +831,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
   const toggleEdition = (id: string) =>
     setExpandedEditionIds(prev => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
 
