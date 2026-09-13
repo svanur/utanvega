@@ -12,6 +12,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import Layout from '../components/Layout';
 import { usePageTitle } from '../hooks/usePageTitle';
+import { filterChangelogVersions, getAllChangelogTags } from '../utils/changelogDiary';
 
 interface ChangelogDiaryPageProps {
     mode: PaletteMode;
@@ -116,10 +117,7 @@ export default function ChangelogDiaryPage({ mode, onToggleMode }: ChangelogDiar
 
     // Derived from the values actually present in TAGS, not a second hardcoded
     // list — a new tag on a future version becomes filterable on its own.
-    const allTags = useMemo(
-        () => Array.from(new Set(Object.values(TAGS).flatMap(tags => tags ?? []))),
-        [],
-    );
+    const allTags = useMemo(() => getAllChangelogTags(TAGS), []);
 
     function toggleTag(tag: string) {
         setActiveTags(current =>
@@ -127,18 +125,13 @@ export default function ChangelogDiaryPage({ mode, onToggleMode }: ChangelogDiar
         );
     }
 
-    const filteredVersions = useMemo(() => {
-        const search = searchText.trim().toLowerCase();
-        return VERSIONS.filter(key => {
-            const tags = TAGS[key] ?? [];
-            const matchesTags = activeTags.length === 0 || tags.some(tag => activeTags.includes(tag));
-            if (!matchesTags) return false;
-            if (!search) return true;
-            const title = t(`about.changelog.${key}.title`).toLowerCase();
-            const description = t(`about.changelog.${key}.description`).toLowerCase();
-            return title.includes(search) || description.includes(search);
-        });
-    }, [activeTags, searchText, t]);
+    const filteredVersions = useMemo(
+        () => filterChangelogVersions(VERSIONS, TAGS, activeTags, searchText, key => ({
+            title: t(`about.changelog.${key}.title`),
+            description: t(`about.changelog.${key}.description`),
+        })),
+        [activeTags, searchText, t],
+    );
 
     return (
         <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: 'Changelog diary' }]}>
