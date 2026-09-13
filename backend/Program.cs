@@ -1272,7 +1272,12 @@ app.MapGet("/api/v1/admin/locations", [Authorize(Policy = "AdminOnly")] async (G
 
 app.MapPost("/api/v1/admin/locations", [Authorize(Policy = "AdminOnly")] async (CreateLocationCommand command, IMediator mediator, HttpContext httpContext) =>
 {
-    var id = await mediator.Send(command with { ActorUserId = GetAuthenticatedUserId(httpContext) });
+    // CreatedBy must reflect who actually authenticated the request, not whatever the client body claims.
+    var id = await mediator.Send(command with
+    {
+        CreatedBy = GetAuthenticatedUserId(httpContext),
+        ActorUserId = GetAuthenticatedUserId(httpContext)
+    });
     return Results.Created($"/api/v1/admin/locations/{id}", new { id });
 })
 .WithName("CreateLocation");
