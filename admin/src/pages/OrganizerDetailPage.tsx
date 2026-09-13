@@ -47,6 +47,7 @@ import { usePageShortcuts } from '../hooks/usePageShortcuts';
 import { useBackToList } from '../hooks/useBackToList';
 import { useRowFocus } from '../hooks/useRowFocus';
 import { trimToUndefined } from '../utils/strings';
+import { detectSocialTypeFromUrl } from '../utils/socialLinks';
 import BilingualTextField from '../components/BilingualTextField';
 import { BilingualLangProvider } from '../contexts/BilingualLangContext';
 import { useTranslate } from '../hooks/useTranslate';
@@ -479,7 +480,15 @@ function OrganizerDetailPageInner({ onNotify }: Props) {
                                             />
                                             <TextField
                                                 size="small" fullWidth label="URL" value={link.url}
-                                                onChange={e => setSocialLinks(form.socialLinks.map((l, j) => j === i ? { ...l, url: e.target.value } : l))}
+                                                onChange={e => {
+                                                    const url = e.target.value;
+                                                    setSocialLinks(form.socialLinks.map((l, j) => {
+                                                        if (j !== i) return l;
+                                                        if (l.type.trim()) return { ...l, url };
+                                                        const detected = detectSocialTypeFromUrl(url);
+                                                        return detected ? { ...l, url, type: detected } : { ...l, url };
+                                                    }));
+                                                }}
                                                 placeholder="https://…"
                                             />
                                             <IconButton size="small" color="error"
