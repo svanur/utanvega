@@ -1321,9 +1321,9 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                             )}
                                                         </Stack>
                                                         {/* Series type · name · location · km away */}
-                                                        <Stack direction="row" alignItems="center" gap={0.5} sx={{ mt: 0.25 }} flexWrap="wrap">
+                                                        <Stack direction="row" alignItems="center" gap={0.5} sx={{ mt: 0.25, ...(isEffectivelyCancelled(comp) && { opacity: 0.65 }) }} flexWrap="wrap">
                                                             <Chip label={t('races.eventTypes.Series', 'Series')} size="small" color={getEventTypeColor('Series')} variant="outlined" sx={{ height: 18, fontSize: '0.65rem' }} />
-                                                            <Typography variant="caption" color="text.secondary" noWrap>{loc(comp.name, comp.nameEn)}</Typography>
+                                                            <Typography variant="caption" color="text.secondary" noWrap sx={{ ...(isEffectivelyCancelled(comp) ? { textDecoration: 'line-through' } : {}) }}>{loc(comp.name, comp.nameEn)}</Typography>
                                                             {(comp.locationName || (userLocation && comp.gpxPointLat != null)) && (
                                                                 <FiberManualRecordIcon sx={{ fontSize: 5, color: 'text.disabled' }} />
                                                             )}
