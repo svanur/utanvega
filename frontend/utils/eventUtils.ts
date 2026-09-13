@@ -90,6 +90,22 @@ export function toDateOnlyString(date: Date): string {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
+export function addDays(d: Date, days: number): Date {
+    const copy = new Date(d);
+    copy.setDate(copy.getDate() + days);
+    return copy;
+}
+
+// Monday-start week range for 'this'/'next' week, relative to today.
+// Offset formula ported from admin/src/pages/EventsListPage.tsx (native Date instead of dayjs).
+export function getWeekRange(which: 'this' | 'next'): { start: string; end: string } {
+    const today = new Date();
+    const day = today.getDay(); // 0 = Sunday .. 6 = Saturday
+    const mondayOffset = which === 'this' ? (day + 6) % 7 : (8 - day) % 7 || 7;
+    const start = addDays(today, which === 'this' ? -mondayOffset : mondayOffset);
+    return { start: toDateOnlyString(start), end: toDateOnlyString(addDays(start, 6)) };
+}
+
 // For a multi-day edition currently in progress, computes which day of its date/endDate span
 // "today" falls on — powers a "Day X of Y" indicator (e.g. day 2 of a 3-day stage race). Returns
 // null for single-day editions, or when today is outside [date, endDate] (both inclusive) — a

@@ -74,7 +74,7 @@ import { downloadIcs } from '../utils/calendarLinks';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
 import { getTicketStatusColor, groupDistances, isAllSoldOut } from '../utils/ticketStatus';
-import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, isOngoingPastDayTwo } from '../utils/eventUtils';
+import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor, getWeekRange, isEffectivelyCancelled, isEffectivelyUnconfirmed, isOngoingPastDayTwo } from '../utils/eventUtils';
 import { trackViewModeChange, trackSiteQROpen } from '../utils/analytics';
 import { useLocalize } from '../utils/localize';
 import { ActivityIcons } from '../utils/activityIcon';
@@ -154,26 +154,6 @@ function matchesDistanceBucket(km: number, bucket: RaceDistanceBucket): boolean 
     if (bucket === '21-42') return km >= 21.1 && km < 42.195;
     if (bucket === '42-100') return km >= 42.195 && km < 100;
     return km >= 100;
-}
-
-function addDays(d: Date, days: number): Date {
-    const copy = new Date(d);
-    copy.setDate(copy.getDate() + days);
-    return copy;
-}
-
-function toDateStr(d: Date): string {
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-// Monday-start week range for 'this'/'next' week, relative to today.
-// Offset formula ported from admin/src/pages/EventsListPage.tsx (native Date instead of dayjs).
-function getWeekRange(which: 'this' | 'next'): { start: string; end: string } {
-    const today = new Date();
-    const day = today.getDay(); // 0 = Sunday .. 6 = Saturday
-    const mondayOffset = which === 'this' ? (day + 6) % 7 : (8 - day) % 7 || 7;
-    const start = addDays(today, which === 'this' ? -mondayOffset : mondayOffset);
-    return { start: toDateStr(start), end: toDateStr(addDays(start, 6)) };
 }
 
 const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
