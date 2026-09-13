@@ -319,7 +319,10 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                                         overflow: 'hidden',
                                         '@media (hover: hover)': { transition: 'transform 0.15s, box-shadow 0.15s', '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] } },
                                         ...(cancelled && { opacity: 0.65 }),
-                                        ...(terrainAccentColor && { borderLeftWidth: 4, borderLeftColor: terrainAccentColor }),
+                                        // #816: always reserve the same 4px left border so accented and
+                                        // non-accented cards align identically — only the color toggles.
+                                        borderLeftWidth: 4,
+                                        borderLeftColor: terrainAccentColor ?? theme.palette.divider,
                                     }}
                                 >
                                     {row.primaryElevationProfile && (
