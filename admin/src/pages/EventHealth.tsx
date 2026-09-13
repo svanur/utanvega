@@ -97,14 +97,15 @@ function scoreColor(score: number): 'success' | 'warning' | 'error' {
 }
 
 type SortField = 'name' | 'score' | 'status' | 'type';
-type QuickFilter = 'critical' | 'perfect' | 'no-date' | 'no-location' | 'no-gpx';
+export type QuickFilter = 'critical' | 'perfect' | 'no-date' | 'no-location' | 'no-gpx';
 
 interface EventHealthProps {
   onViewEvent?: (eventSlug: string) => void;
   onNotify: (message: React.ReactNode, severity?: 'success' | 'error') => void;
+  initialFilter?: QuickFilter;
 }
 
-export default function EventHealth({ onViewEvent, onNotify }: EventHealthProps) {
+export default function EventHealth({ onViewEvent, onNotify, initialFilter }: EventHealthProps) {
   const theme = useTheme();
   const queryClient = useQueryClient();
   const { events, loading } = useEvents();
@@ -113,7 +114,7 @@ export default function EventHealth({ onViewEvent, onNotify }: EventHealthProps)
   const [search, setSearch] = useState('');
   const [detectingGpx, setDetectingGpx] = useState(false);
   const [gpxDialogOpen, setGpxDialogOpen] = useState(false);
-  const [activeFilter, setActiveFilter] = useState<QuickFilter | null>(null);
+  const [activeFilter, setActiveFilter] = useState<QuickFilter | null>(initialFilter ?? null);
 
   const handleDetectGpx = async () => {
     setDetectingGpx(true);
