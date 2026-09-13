@@ -143,7 +143,7 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                     </Typography>
                 </Box>
 
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ xs: 'stretch', sm: 'center' }} sx={{ mb: 2 }}>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ xs: 'stretch', sm: 'center' }} sx={{ mb: 1.5 }}>
                     <Select
                         size="small"
                         value={activeYear ?? ''}
@@ -190,6 +190,9 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                             </IconButton>
                         </Stack>
                     )}
+                </Stack>
+
+                <Stack direction="row" flexWrap="wrap" spacing={1.5} alignItems="center" sx={{ mb: 2 }}>
                     <FormControlLabel
                         control={<Checkbox size="small" checked={showCancelled} onChange={e => setShowCancelled(e.target.checked)} />}
                         label={t('races.editionsHistory.showCancelled', 'Show cancelled')}
