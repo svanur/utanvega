@@ -75,3 +75,22 @@ describe('RaceFormCard — ITRA points paste wiring', () => {
     expect(input.value).toBe('1');
   });
 });
+
+// #810: same failure class as #809 above, but for drag-and-drop text insertion instead of paste —
+// dropping text into the field also fires onChange with no preceding keydown or paste, so it needs
+// its own onDrop wiring (RaceFormCard.tsx:335) to be recognized as real input rather than a
+// spinner click. This dispatches a real 'drop' + 'change' event to prove that wiring end to end.
+describe('RaceFormCard — ITRA points drag-and-drop wiring', () => {
+  afterEach(cleanup);
+
+  it('keeps a dropped "1" in an empty field instead of correcting it to "0" like a spinner click', () => {
+    renderRaceFormCard();
+    const input = screen.getByLabelText('ITRA points') as HTMLInputElement;
+    expect(input.value).toBe('');
+
+    fireEvent.drop(input, { dataTransfer: { getData: () => '1' } });
+    fireEvent.change(input, { target: { value: '1' } });
+
+    expect(input.value).toBe('1');
+  });
+});

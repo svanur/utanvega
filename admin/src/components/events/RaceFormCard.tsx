@@ -333,6 +333,10 @@ function RaceFormCardInner({
               // own ref-setting handler to be recognized as real input. (Ctrl+V is
               // already covered by onKeyDown above, since the 'v' keydown fires first.)
               onPaste={() => { itraRealInputRef.current = true; }}
+              // Dragging text into the field (drag-and-drop insertion) also fires onChange
+              // with no preceding keydown or paste event, same as a spin-button click — so
+              // it needs the same ref-setting treatment as onPaste above.
+              onDrop={() => { itraRealInputRef.current = true; }}
               onChange={e => {
                 const realUserInputOccurred = itraRealInputRef.current;
                 itraRealInputRef.current = false;
