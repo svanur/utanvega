@@ -192,7 +192,7 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                     )}
                 </Stack>
 
-                <Stack direction="row" flexWrap="wrap" spacing={1.5} alignItems="center" sx={{ mb: 2 }}>
+                <Stack direction={{ xs: 'column', sm: 'row' }} flexWrap="wrap" spacing={1.5} alignItems={{ xs: 'flex-start', sm: 'center' }} sx={{ mb: 2 }}>
                     <FormControlLabel
                         control={<Checkbox size="small" checked={showCancelled} onChange={e => setShowCancelled(e.target.checked)} />}
                         label={t('races.editionsHistory.showCancelled', 'Show cancelled')}
