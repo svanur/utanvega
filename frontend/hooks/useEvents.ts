@@ -277,6 +277,11 @@ export interface EditionHistoryRow {
     // DTO comment for why this deliberately isn't an ordinal or a "held since" claim.
     recordedEditionsCount: number;
     recordedEditionsYears: number[];
+    // #806: derived from this row's "primary race" (the visible race whose linked trail has the
+    // greatest Length) — see the backend DTO comment. Both null when no race links to a trail;
+    // primaryTerrainType can still be set alongside a null primaryElevationProfile.
+    primaryElevationProfile: number[] | null;
+    primaryTerrainType: string | null;
 }
 
 export function useEditionsHistory(year: number | undefined, includeCancelled: boolean) {

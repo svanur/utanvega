@@ -62,18 +62,19 @@ public class EditionsHistoryHandlerTests : IDisposable
         };
     }
 
-    private static Trail CreateTestTrail(string name = "History Test Trail", double elevationGain = 1200, TerrainType? terrainType = TerrainType.Mountainous)
+    private static Trail CreateTestTrail(string name = "History Test Trail", double elevationGain = 1200, TerrainType? terrainType = TerrainType.Mountainous, double length = 21000, double[]? elevationProfile = null)
     {
         return new Trail
         {
             Id = Guid.NewGuid(),
             Name = name,
             Slug = name.ToLowerInvariant().Replace(" ", "-"),
-            Length = 21000,
+            Length = length,
             ElevationGain = elevationGain,
             ActivityTypeId = ActivityType.TrailRunning,
             Status = TrailStatus.Published,
             TerrainType = terrainType,
+            ElevationProfile = elevationProfile,
         };
     }
 
@@ -964,5 +965,120 @@ public class EditionsHistoryHandlerTests : IDisposable
 
         Assert.Equal(2, result.Count);
         Assert.All(result, r => Assert.Equal(1, r.RecordedEditionsCount));
+    }
+
+    // ─── Primary race / elevation profile card treatment (#806) ───
+
+    [Fact]
+    public async Task History_MultipleRaces_PrimaryFieldsComeFromTheLongestLinkedTrail()
+    {
+        var pastYear = DateOnly.FromDateTime(DateTime.UtcNow).Year - 1;
+        var ev = CreateTestEvent("Mixed Trail Lengths Race");
+        var edition = CreateEdition(ev.Id, new DateOnly(pastYear, 6, 1));
+        var shortTrail = CreateTestTrail("Short Loop", length: 5000, terrainType: TerrainType.Flat, elevationProfile: [10, 12, 11]);
+        var longTrail = CreateTestTrail("Long Ridge", length: 42000, terrainType: TerrainType.Mountainous, elevationProfile: [100, 250, 400, 180]);
+        var shortRace = CreateRace(edition.Id, "5K", distanceLabel: "5K", trailId: shortTrail.Id);
+        var longRace = CreateRace(edition.Id, "42K", distanceLabel: "42K", trailId: longTrail.Id);
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Trails.AddRange(shortTrail, longTrail);
+            ctx.Races.AddRange(shortRace, longRace);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEditionsHistoryQueryHandler(queryCtx, _memoryCache);
+        var result = await handler.Handle(new GetEditionsHistoryQuery(pastYear), CancellationToken.None);
+
+        var row = Assert.Single(result);
+        Assert.Equal("Mountainous", row.PrimaryTerrainType);
+        Assert.Equal(longTrail.ElevationProfile, row.PrimaryElevationProfile);
+    }
+
+    [Fact]
+    public async Task History_NoRaceLinkedToAnyTrail_PrimaryFieldsAreBothNull()
+    {
+        var pastYear = DateOnly.FromDateTime(DateTime.UtcNow).Year - 1;
+        var ev = CreateTestEvent("No Trail Linked Race");
+        var edition = CreateEdition(ev.Id, new DateOnly(pastYear, 6, 1));
+        var race = CreateRace(edition.Id, "10K", distanceLabel: "10K", trailId: null);
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEditionsHistoryQueryHandler(queryCtx, _memoryCache);
+        var result = await handler.Handle(new GetEditionsHistoryQuery(pastYear), CancellationToken.None);
+
+        var row = Assert.Single(result);
+        Assert.Null(row.PrimaryTerrainType);
+        Assert.Null(row.PrimaryElevationProfile);
+    }
+
+    [Fact]
+    public async Task History_PrimaryTrailHasTerrainButNoElevationProfile_TerrainStillPopulated()
+    {
+        var pastYear = DateOnly.FromDateTime(DateTime.UtcNow).Year - 1;
+        var ev = CreateTestEvent("Terrain Without Profile Race");
+        var edition = CreateEdition(ev.Id, new DateOnly(pastYear, 6, 1));
+        var trail = CreateTestTrail(terrainType: TerrainType.Hilly, elevationProfile: null);
+        var race = CreateRace(edition.Id, "21K", distanceLabel: "21K", trailId: trail.Id);
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Trails.Add(trail);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEditionsHistoryQueryHandler(queryCtx, _memoryCache);
+        var result = await handler.Handle(new GetEditionsHistoryQuery(pastYear), CancellationToken.None);
+
+        var row = Assert.Single(result);
+        Assert.Equal("Hilly", row.PrimaryTerrainType);
+        Assert.Null(row.PrimaryElevationProfile);
+    }
+
+    [Fact]
+    public async Task History_ElevationProfileFetch_IsScopedToPrimaryTrail_NonPrimaryTrailProfileDoesNotLeak()
+    {
+        // Regression for the scoped fetch: the non-primary (shorter) trail here has its own
+        // ElevationProfile set, but it must never surface on the row — only the primary
+        // (longer) trail's profile should.
+        var pastYear = DateOnly.FromDateTime(DateTime.UtcNow).Year - 1;
+        var ev = CreateTestEvent("Scoped Fetch Race");
+        var edition = CreateEdition(ev.Id, new DateOnly(pastYear, 6, 1));
+        var nonPrimaryTrail = CreateTestTrail("Non Primary Trail", length: 3000, elevationProfile: [999, 998, 997]);
+        var primaryTrail = CreateTestTrail("Primary Trail", length: 15000, elevationProfile: [50, 60, 70]);
+        var nonPrimaryRace = CreateRace(edition.Id, "3K", distanceLabel: "3K", trailId: nonPrimaryTrail.Id);
+        var primaryRace = CreateRace(edition.Id, "15K", distanceLabel: "15K", trailId: primaryTrail.Id);
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Trails.AddRange(nonPrimaryTrail, primaryTrail);
+            ctx.Races.AddRange(nonPrimaryRace, primaryRace);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEditionsHistoryQueryHandler(queryCtx, _memoryCache);
+        var result = await handler.Handle(new GetEditionsHistoryQuery(pastYear), CancellationToken.None);
+
+        var row = Assert.Single(result);
+        Assert.Equal(primaryTrail.ElevationProfile, row.PrimaryElevationProfile);
+        Assert.NotEqual(nonPrimaryTrail.ElevationProfile, row.PrimaryElevationProfile);
     }
 }

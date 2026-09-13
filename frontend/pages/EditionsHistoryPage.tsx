@@ -9,7 +9,8 @@ import {
     useTheme, type SelectChangeEvent,
     ToggleButtonGroup, ToggleButton, Card, CardActionArea, CardContent, Button,
 } from '@mui/material';
-import type { PaletteMode } from '@mui/material';
+import { alpha } from '@mui/material/styles';
+import type { PaletteMode, Theme } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
 import HistoryIcon from '@mui/icons-material/History';
@@ -43,6 +44,54 @@ type EditionsHistoryPageProps = {
     mode: PaletteMode;
     onToggleMode: () => void;
 };
+
+// #806: list-view card only — keyed to the same three TerrainType enum values the backend
+// exposes (Trail.cs TerrainType), roughly ordered by how demanding the terrain reads: steepest
+// first. Table view intentionally gets none of this (see EventTableView).
+function getTerrainAccentColor(terrainType: string | null, theme: Theme): string | undefined {
+    switch (terrainType) {
+        case 'Mountainous': return theme.palette.error.main;
+        case 'Hilly': return theme.palette.warning.main;
+        case 'Flat': return theme.palette.success.main;
+        default: return undefined;
+    }
+}
+
+// Faint, absolutely-positioned, non-interactive elevation curve rendered behind a history card's
+// content. Deliberately not a chart library dependency — this is a decorative background, not a
+// readable data visualization (that's what the per-race elevation-gain chip already is).
+function ElevationCurveBackground({ profile, color }: { profile: number[]; color: string }) {
+    if (profile.length < 2) return null;
+    const min = Math.min(...profile);
+    const max = Math.max(...profile);
+    const range = max - min || 1;
+    const width = 100;
+    const height = 100;
+    const points = profile
+        .map((v, i) => `${(i / (profile.length - 1)) * width},${height - ((v - min) / range) * height}`)
+        .join(' ');
+    const areaPoints = `0,${height} ${points} ${width},${height}`;
+
+    return (
+        <Box
+            component="svg"
+            viewBox={`0 0 ${width} ${height}`}
+            preserveAspectRatio="none"
+            aria-hidden="true"
+            sx={{
+                position: 'absolute',
+                inset: 0,
+                width: '100%',
+                height: '100%',
+                zIndex: 0,
+                pointerEvents: 'none',
+            }}
+        >
+            <polygon points={areaPoints} fill={alpha(color, 0.06)} stroke="none" />
+            <polyline points={points} fill="none" stroke={alpha(color, 0.25)} strokeWidth={2} vectorEffect="non-scaling-stroke" />
+        </Box>
+    );
+}
 
 export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHistoryPageProps) {
     const { t } = useTranslation();
@@ -260,17 +309,27 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                     <Stack spacing={1.5}>
                         {filteredSorted.map(row => {
                             const cancelled = row.effectiveCancelled;
+                            const terrainAccentColor = getTerrainAccentColor(row.primaryTerrainType, theme);
                             return (
                                 <Card
                                     key={row.raceId ?? row.editionId}
                                     variant="outlined"
                                     sx={{
+                                        position: 'relative',
+                                        overflow: 'hidden',
                                         '@media (hover: hover)': { transition: 'transform 0.15s, box-shadow 0.15s', '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] } },
                                         ...(cancelled && { opacity: 0.65 }),
+                                        ...(terrainAccentColor && { borderLeftWidth: 4, borderLeftColor: terrainAccentColor }),
                                     }}
                                 >
+                                    {row.primaryElevationProfile && (
+                                        <ElevationCurveBackground
+                                            profile={row.primaryElevationProfile}
+                                            color={terrainAccentColor ?? theme.palette.text.primary}
+                                        />
+                                    )}
                                     <CardActionArea onClick={() => navigate(`/events/${row.eventSlug}/history/${row.editionYear ?? row.editionId}`)}>
-                                        <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                                        <CardContent sx={{ p: { xs: 1.5, sm: 2 }, position: 'relative', zIndex: 1 }}>
                                             <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'flex-start' }} gap={0.5}>
                                                 <Stack direction="row" alignItems="flex-start" gap={1} sx={{ minWidth: 0, width: '100%' }}>
                                                     <ActivityIcons activityTypes={row.activityTypes} activityType={row.activityTypes?.[0] ?? row.eventActivityType} />
