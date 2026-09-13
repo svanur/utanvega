@@ -36,7 +36,8 @@ import {
   type RaceFormState,
 } from '../../utils/eventForms';
 import BilingualTextField from '../BilingualTextField';
-import { BilingualLangProvider, useBilingualLang } from '../../contexts/BilingualLangContext';
+import { BilingualLangProvider } from '../../contexts/BilingualLangContext';
+import { useBilingualLang } from '../../hooks/useBilingualLang';
 import { clampItraPoints, correctEmptyToOneFromSpinner } from '../../utils/itraPoints';
 
 interface RaceFormCardProps {

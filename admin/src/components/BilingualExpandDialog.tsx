@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
     Dialog, DialogTitle, DialogContent,
     Button, TextField, Box, Typography, CircularProgress,
@@ -27,14 +27,20 @@ export default function BilingualExpandDialog({
 }: BilingualExpandDialogProps) {
     const [draftIs, setDraftIs] = useState('');
     const [draftEn, setDraftEn] = useState('');
+    const [wasOpen, setWasOpen] = useState(open);
     const { translate, translating } = useTranslate();
 
-    useEffect(() => {
+    // Reset the draft from the latest saved values on the open transition. Adjusting state
+    // directly during render (rather than in an effect) avoids the extra commit-then-render
+    // pass an effect would cost, and is the pattern React itself recommends for "reset state
+    // when a prop changes" — see https://react.dev/learn/you-might-not-need-an-effect.
+    if (open !== wasOpen) {
+        setWasOpen(open);
         if (open) {
             setDraftIs(valueIs);
             setDraftEn(valueEn);
         }
-    }, [open, valueIs, valueEn]);
+    }
 
     const handleSave = () => {
         onSave(draftIs, draftEn);

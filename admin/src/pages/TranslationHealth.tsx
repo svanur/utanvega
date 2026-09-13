@@ -80,11 +80,6 @@ const TAG_FIELDS: FieldDef[] = [
   { label: 'Name', getIs: r => (r.raw as TagDto).name, getEn: r => (r.raw as TagDto).nameEn },
 ];
 
-const FIELDS_BY_KIND: Record<EntityKind, FieldDef[]> = {
-  Event: EVENT_FIELDS, Edition: EDITION_FIELDS, Race: RACE_FIELDS, Trail: TRAIL_FIELDS,
-  Location: LOCATION_FIELDS, Organizer: ORGANIZER_FIELDS, Tag: TAG_FIELDS,
-};
-
 // EN field key map for building PATCH payloads
 const EN_FIELD_MAP: Record<EntityKind, Record<string, string>> = {
   Event:     { Name: 'nameEn', Description: 'descriptionEn', Organizer: 'organizerNameEn', Alert: 'alertMessageEn' },

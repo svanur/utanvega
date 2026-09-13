@@ -129,7 +129,7 @@ function AdminContent() {
   const setCurrentPage = useCallback((page: PageKey) => navigate(PAGE_PATHS[page]), [navigate]);
   const [drawerOpen, setDrawerOpen] = useState(true);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [, setRefreshTrigger] = useState(0);
   const [raceDayInitialDate, setRaceDayInitialDate] = useState<string | undefined>(undefined);
   const [eventHealthInitialFilter, setEventHealthInitialFilter] = useState<QuickFilter | undefined>(undefined);
   const [createEventIntent, setCreateEventIntent] = useState(false);

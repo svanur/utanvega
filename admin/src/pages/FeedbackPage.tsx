@@ -98,33 +98,43 @@ function formatHours(hours: number) {
     return rem > 0 ? `${days}d ${rem}h` : `${days}d`;
 }
 
-function BrowserInfoPanel({ raw }: { raw: string }) {
+// Parsing (which can throw on malformed JSON) is kept separate from JSX construction below —
+// building JSX inside a try/catch doesn't actually catch rendering errors, since React defers
+// rendering the returned elements until later (see react-hooks/error-boundaries).
+function parseBrowserInfo(raw: string) {
     try {
-        const info = JSON.parse(raw);
-        const rows: [string, string][] = [
-            ['Browser / OS', info.userAgent],
-            ['Screen', `${info.screenW}×${info.screenH} (${info.devicePixelRatio}x)`],
-            ['Viewport', `${info.viewportW}×${info.viewportH}`],
-            ['Mobile', info.isMobile ? 'Yes' : 'No'],
-            ['Language', info.language],
-            ['Timezone', info.timezone],
-            ['Connection', info.connection ?? '—'],
-            ['Online', info.online ? 'Yes' : 'No'],
-            ['Page title', info.pageTitle],
-        ];
-        return (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                {rows.map(([label, value]) => (
-                    <Box key={label} sx={{ display: 'flex', gap: 1 }}>
-                        <Typography variant="caption" color="text.secondary" sx={{ minWidth: 90, flexShrink: 0 }}>{label}</Typography>
-                        <Typography variant="caption" sx={{ wordBreak: 'break-all' }}>{value}</Typography>
-                    </Box>
-                ))}
-            </Box>
-        );
+        return JSON.parse(raw);
     } catch {
+        return null;
+    }
+}
+
+function BrowserInfoPanel({ raw }: { raw: string }) {
+    const info = parseBrowserInfo(raw);
+    if (!info) {
         return <Typography variant="caption" color="text.secondary">{raw}</Typography>;
     }
+    const rows: [string, string][] = [
+        ['Browser / OS', info.userAgent],
+        ['Screen', `${info.screenW}×${info.screenH} (${info.devicePixelRatio}x)`],
+        ['Viewport', `${info.viewportW}×${info.viewportH}`],
+        ['Mobile', info.isMobile ? 'Yes' : 'No'],
+        ['Language', info.language],
+        ['Timezone', info.timezone],
+        ['Connection', info.connection ?? '—'],
+        ['Online', info.online ? 'Yes' : 'No'],
+        ['Page title', info.pageTitle],
+    ];
+    return (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+            {rows.map(([label, value]) => (
+                <Box key={label} sx={{ display: 'flex', gap: 1 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ minWidth: 90, flexShrink: 0 }}>{label}</Typography>
+                    <Typography variant="caption" sx={{ wordBreak: 'break-all' }}>{value}</Typography>
+                </Box>
+            ))}
+        </Box>
+    );
 }
 
 export default function FeedbackPage({ onNotify }: { onNotify: (msg: string, severity?: 'success' | 'error') => void }) {

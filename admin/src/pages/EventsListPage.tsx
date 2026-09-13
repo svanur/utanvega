@@ -46,8 +46,6 @@ import SearchIcon from '@mui/icons-material/Search';
 import {
   useEvents,
   type ActivityType,
-  type CreateEditionInput,
-  type CreateRaceInput,
   type EventDetailDto,
   type EventEditionDto,
   type EventStatus,

@@ -21,7 +21,8 @@ import type { CreateEventInput } from '../../hooks/useEvents';
 import { useTranslate } from '../../hooks/useTranslate';
 import { trimToUndefined } from '../../utils/strings';
 import BilingualTextField from '../BilingualTextField';
-import { BilingualLangProvider, useBilingualLang } from '../../contexts/BilingualLangContext';
+import { BilingualLangProvider } from '../../contexts/BilingualLangContext';
+import { useBilingualLang } from '../../hooks/useBilingualLang';
 
 function LangToggleButton() {
   const { lang, toggle } = useBilingualLang();

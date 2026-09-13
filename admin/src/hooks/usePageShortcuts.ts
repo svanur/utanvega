@@ -38,7 +38,9 @@ export function isDialogOpen(): boolean {
  */
 export function usePageShortcuts(shortcuts: PageShortcut[]) {
   const ref = useRef(shortcuts);
-  ref.current = shortcuts;
+  useEffect(() => {
+    ref.current = shortcuts;
+  }, [shortcuts]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {

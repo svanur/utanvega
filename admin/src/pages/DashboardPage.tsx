@@ -6,7 +6,6 @@ import {
 } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
-import SearchIcon from '@mui/icons-material/Search';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
@@ -175,6 +174,15 @@ export default function DashboardPage({ onNewEvent, onUploadTrail, onNavigate }:
     const [feedbackCounts, setFeedbackCounts] = useState<FeedbackCounts | null>(null);
     const [note, setNote] = useState(() => localStorage.getItem('admin_dashboard_note') ?? '');
     const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    // Lazy-initialized once on mount rather than recomputed from Date.now() on every render —
+    // the "next 30 days" window doesn't need to track wall-clock time down to the render.
+    const [{ today, in30days }] = useState(() => {
+        const now = new Date();
+        return {
+            today: now.toISOString().slice(0, 10),
+            in30days: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+        };
+    });
 
     const handleNoteChange = (value: string) => {
         setNote(value);
@@ -215,9 +223,6 @@ export default function DashboardPage({ onNewEvent, onUploadTrail, onNavigate }:
             .then(d => setFeedbackCounts(d.counts))
             .catch(() => {});
     }, []);
-
-    const today = new Date().toISOString().slice(0, 10);
-    const in30days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
     const activeEvents = events.filter(e => e.status !== 'Cancelled' && e.type !== 'Advertisement');
     const needsAttention = activeEvents.filter(e => getEventHealthScore(e) < 80);
