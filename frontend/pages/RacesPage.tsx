@@ -1247,7 +1247,14 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                             }
                                             revealWidth={120}
                                         >
-                                            <Card variant="outlined" sx={{ position: 'relative', '@media (hover: hover)': { transition: 'transform 0.15s, box-shadow 0.15s', '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] } } }}>
+                                            <Card
+                                                variant="outlined"
+                                                sx={{
+                                                    position: 'relative',
+                                                    '@media (hover: hover)': { transition: 'transform 0.15s, box-shadow 0.15s', '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] } },
+                                                    ...(isEffectivelyCancelled(comp) && { opacity: 0.65 }),
+                                                }}
+                                            >
                                                 <CardActionArea onClick={() => navigate(`/events/${comp.slug}`)} onMouseEnter={() => prefetchEvent(comp.slug)}>
                                                     <CardContent sx={{ p: { xs: 1.5, sm: 2 }, pr: { xs: 6, sm: 6 } }}>
                                                         {/* Name + countdown */}
