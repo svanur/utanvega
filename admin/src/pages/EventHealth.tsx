@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Box, Typography, Paper, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, TableSortLabel, Chip, LinearProgress, Card,
@@ -103,9 +103,10 @@ interface EventHealthProps {
   onViewEvent?: (eventSlug: string) => void;
   onNotify: (message: React.ReactNode, severity?: 'success' | 'error') => void;
   initialFilter?: QuickFilter;
+  onInitialFilterConsumed?: () => void;
 }
 
-export default function EventHealth({ onViewEvent, onNotify, initialFilter }: EventHealthProps) {
+export default function EventHealth({ onViewEvent, onNotify, initialFilter, onInitialFilterConsumed }: EventHealthProps) {
   const theme = useTheme();
   const queryClient = useQueryClient();
   const { events, loading } = useEvents();
@@ -115,6 +116,17 @@ export default function EventHealth({ onViewEvent, onNotify, initialFilter }: Ev
   const [detectingGpx, setDetectingGpx] = useState(false);
   const [gpxDialogOpen, setGpxDialogOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<QuickFilter | null>(initialFilter ?? null);
+
+  // initialFilter only ever seeds state on mount (see useState above), so it must be
+  // consumed here — otherwise a value set by an earlier dashboard navigation would
+  // leak into a later, unrelated visit to this page (it never expires on its own,
+  // since App.tsx only clears it from the dashboard's own onNavigate wrapper).
+  useEffect(() => {
+    if (initialFilter !== undefined) {
+      onInitialFilterConsumed?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleDetectGpx = async () => {
     setDetectingGpx(true);

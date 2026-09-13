@@ -375,6 +375,7 @@ function AdminContent() {
               onViewEvent={(slug) => { setCurrentPage('events'); navigate(`/events/${slug}`); }}
               onNotify={notify}
               initialFilter={eventHealthInitialFilter}
+              onInitialFilterConsumed={() => setEventHealthInitialFilter(undefined)}
             />
           ) : currentPage === 'edition-health' ? (
             <EditionHealth onViewEvent={(slug) => { setCurrentPage('events'); navigate(`/events/${slug}`); }} onNotify={notify} />
