@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import dayjs from 'dayjs';
-import { matchesYearMonthFilter, nextWeekMondayOffset, formatAgendaHeader, type YearMonthFilterable } from './eventHelpers';
+import { matchesYearMonthFilter, nextWeekMondayOffset, thisWeekMondayOffset, formatAgendaHeader, type YearMonthFilterable } from './eventHelpers';
 
 // #734: the Month <Select> on the events list is disabled whenever yearFilter === 'all', and
 // the Year <Select>'s onChange resets monthFilter back to 'all' the moment Year changes — so
@@ -66,6 +66,30 @@ describe('nextWeekMondayOffset', () => {
     const monday = sunday.add(1, 'day');
     expect(monday.day()).toBe(1);
     expect(nextWeekMondayOffset(monday)).toBe(7);
+  });
+});
+
+// #847: mirrors nextWeekMondayOffset above, but for the current week's Monday rather than next
+// week's — `(today.day() + 6) % 7` maps Monday itself to 0 (no offset needed) and walks backwards
+// through the rest of the week.
+describe('thisWeekMondayOffset', () => {
+  // 2026-09-06 is a Sunday, so today.add(i, 'day') walks through all 7 weekdays in order.
+  const sunday = dayjs('2026-09-06');
+
+  it('returns a value in 0–6 for every weekday, landing on this week\'s Monday', () => {
+    for (let i = 0; i < 7; i++) {
+      const today = sunday.add(i, 'day');
+      const offset = thisWeekMondayOffset(today);
+      expect(offset).toBeGreaterThanOrEqual(0);
+      expect(offset).toBeLessThanOrEqual(6);
+      expect(today.subtract(offset, 'day').day()).toBe(1); // Monday
+    }
+  });
+
+  it('returns 0 when today is already Monday', () => {
+    const monday = sunday.add(1, 'day');
+    expect(monday.day()).toBe(1);
+    expect(thisWeekMondayOffset(monday)).toBe(0);
   });
 });
 

@@ -113,6 +113,14 @@ export function nextWeekMondayOffset(today: Dayjs): number {
   return (8 - today.day()) % 7 || 7;
 }
 
+// dayjs().day() is 0 (Sun) – 6 (Sat). `(today.day() + 6) % 7` maps Monday (1) to 0, Tuesday (2)
+// to 1, ..., Sunday (0) to 6 — i.e. how many days to go back to reach this week's Monday. Result
+// is always 0–6, so `today.subtract(offset, 'day')` always lands on the current week's Monday.
+// Mirrors nextWeekMondayOffset above. See #847.
+export function thisWeekMondayOffset(today: Dayjs): number {
+  return (today.day() + 6) % 7;
+}
+
 // Header for the copy-to-clipboard agenda (handleCopyAgenda on EventsListPage) when a week
 // filter ('this-week' | 'next-week') is active — e.g. "13. – 20. september 2026" for a range
 // within one month, or "29. desember – 4. janúar 2027" across a month/year boundary. See #836.

@@ -76,6 +76,7 @@ import {
   matchesYearMonthFilter,
   sortEditions,
   nextWeekMondayOffset,
+  thisWeekMondayOffset,
   formatAgendaHeader,
 } from '../utils/eventHelpers';
 
@@ -271,9 +272,9 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
   const nextWeekOffset = nextWeekMondayOffset(today);
   const nextWeekStart = today.add(nextWeekOffset, 'day').format('YYYY-MM-DD');
   const nextWeekEnd = today.add(nextWeekOffset + 6, 'day').format('YYYY-MM-DD');
-  const thisWeekMondayOffset = (today.day() + 6) % 7;
-  const thisWeekStart = today.subtract(thisWeekMondayOffset, 'day').format('YYYY-MM-DD');
-  const thisWeekEnd = today.subtract(thisWeekMondayOffset, 'day').add(6, 'day').format('YYYY-MM-DD');
+  const thisWeekOffset = thisWeekMondayOffset(today);
+  const thisWeekStart = today.subtract(thisWeekOffset, 'day').format('YYYY-MM-DD');
+  const thisWeekEnd = today.subtract(thisWeekOffset, 'day').add(6, 'day').format('YYYY-MM-DD');
 
   const eventLocationOptions = useMemo(
     () => [...new Set(events.map(e => e.locationName).filter(Boolean) as string[])].sort(),
