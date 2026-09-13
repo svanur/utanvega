@@ -158,6 +158,7 @@ export default function ChangelogDiaryPage({ mode, onToggleMode }: ChangelogDiar
                         fullWidth
                         label={t('about.changelogDiary.searchLabel')}
                         placeholder={t('about.changelogDiary.searchPlaceholder')}
+                        InputLabelProps={{ shrink: true }}
                         value={searchText}
                         onChange={e => setSearchText(e.target.value)}
                     />
