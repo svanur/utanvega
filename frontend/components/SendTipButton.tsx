@@ -262,7 +262,7 @@ export default function SendTipButton({ type: _type, sx, inline = false }: SendT
                                                     sx={{ cursor: 'pointer', fontSize: '0.7rem' }}
                                                 />
                                                 <Tooltip title={t('tip.screenshotViewFull')}>
-                                                    <IconButton size="small" onClick={() => setScreenshotPreviewOpen(true)} sx={{ ml: 'auto' }}>
+                                                    <IconButton size="small" onClick={() => setScreenshotPreviewOpen(true)} sx={{ ml: 'auto', minWidth: 44, minHeight: 44 }}>
                                                         <OpenInFullIcon sx={{ fontSize: 14 }} />
                                                     </IconButton>
                                                 </Tooltip>
