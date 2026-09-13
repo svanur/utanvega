@@ -28,7 +28,7 @@ import FeedbackIcon from '@mui/icons-material/Feedback';
 interface DashboardPageProps {
     onNewEvent: () => void;
     onUploadTrail: () => void;
-    onNavigate: (page: PageKey) => void;
+    onNavigate: (page: PageKey, filter?: string) => void;
 }
 
 interface DailyViews {
@@ -483,7 +483,7 @@ export default function DashboardPage({ onNewEvent, onUploadTrail, onNavigate }:
                                 {noUpcomingDate.length > 0 && (
                                     <Box
                                         component="button"
-                                        onClick={() => onNavigate('event-health')}
+                                        onClick={() => onNavigate('event-health', 'no-date')}
                                         sx={{
                                             display: 'flex', alignItems: 'center', gap: 1.5,
                                             p: 1.5, borderRadius: 1, border: '1px solid', borderColor: 'error.light',

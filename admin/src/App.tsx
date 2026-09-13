@@ -29,6 +29,7 @@ import LoginPage from './pages/LoginPage';
 import ErrorBoundary from './components/ErrorBoundary';
 import AdminSpotlightSearch from './components/AdminSpotlightSearch';
 import type { PageKey } from './types/PageKey';
+import type { QuickFilter } from './pages/EventHealth';
 import KeyboardShortcutsDialog from './components/KeyboardShortcutsDialog';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { useAdminShortcuts, GO_TO_PAGES } from './hooks/useAdminShortcuts';
@@ -130,6 +131,7 @@ function AdminContent() {
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [raceDayInitialDate, setRaceDayInitialDate] = useState<string | undefined>(undefined);
+  const [eventHealthInitialFilter, setEventHealthInitialFilter] = useState<QuickFilter | undefined>(undefined);
   const [createEventIntent, setCreateEventIntent] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [pendingNav, setPendingNav] = useState(false);
@@ -356,7 +358,10 @@ function AdminContent() {
             <DashboardPage
               onNewEvent={() => { setCreateEventIntent(true); setCurrentPage('events'); }}
               onUploadTrail={() => setIsUploadOpen(true)}
-              onNavigate={setCurrentPage}
+              onNavigate={(page, filter) => {
+                setEventHealthInitialFilter(page === 'event-health' && filter === 'no-date' ? 'no-date' : undefined);
+                setCurrentPage(page);
+              }}
             />
           ) : currentPage === 'trails' ? (
             <Routes>
@@ -366,7 +371,11 @@ function AdminContent() {
           ) : currentPage === 'health' ? (
             <TrailHealth onEditTrail={(id) => navigate(`/trails/${id}`)} onNotify={notify} />
           ) : currentPage === 'event-health' ? (
-            <EventHealth onViewEvent={(slug) => { setCurrentPage('events'); navigate(`/events/${slug}`); }} onNotify={notify} />
+            <EventHealth
+              onViewEvent={(slug) => { setCurrentPage('events'); navigate(`/events/${slug}`); }}
+              onNotify={notify}
+              initialFilter={eventHealthInitialFilter}
+            />
           ) : currentPage === 'edition-health' ? (
             <EditionHealth onViewEvent={(slug) => { setCurrentPage('events'); navigate(`/events/${slug}`); }} onNotify={notify} />
           ) : currentPage === 'map' ? (
