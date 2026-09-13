@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import {
   Alert,
   Autocomplete,
@@ -52,6 +52,36 @@ interface RaceFormCardProps {
   initialValues?: RaceFormState;
 }
 
+function clampItraPoints(value: string): string {
+  if (value.trim() === '') return value;
+  const num = Number(value);
+  if (Number.isNaN(num)) return value;
+  return String(Math.min(6, Math.max(0, num)));
+}
+
+// The native <input type="number" min="0"> stepping algorithm treats an empty field as
+// though it held 0, then applies the step BEFORE clamping to min — so clicking the
+// spin-up button once on an empty field lands on 1 (0 + step), never on min (0) itself.
+// (Stepping down from empty is unaffected: 0 - step = -1, which *is* below min, so the
+// browser clamps that to 0 on its own — no JS needed for that direction.)
+//
+// There's no DOM element for the spin-up button itself to hook a click handler on —
+// the only thing React can observe is the resulting onChange with the input's new
+// value. The problem is that typing the digit "1" directly into an empty field fires
+// an onChange with the exact same shape (previous value "", next value "1"), and 1 is
+// a legitimate, common ITRA points value that must not be silently overwritten.
+//
+// A spin-button click never fires a keydown on the input, whereas every real keystroke
+// does. So `cameFromKeydown` — set by a ref on keydown and read/cleared on the very next
+// onChange — lets us apply the "snap to 0" correction only when no keystroke preceded
+// the change, i.e. only for an actual spin-button click, never for a typed digit. The
+// physical ArrowUp key is handled separately (see the onKeyDown handler where this is
+// used) since, unlike a digit key, it can never be a legitimate typed value.
+function correctEmptyToOneFromSpinner(previous: string, next: string, cameFromKeydown: boolean): string {
+  if (cameFromKeydown) return next;
+  return previous.trim() === '' && next === '1' ? '0' : next;
+}
+
 function SectionLabel({ children }: { children: ReactNode }) {
   return (
     <Typography
@@ -93,6 +123,7 @@ function RaceFormCardInner({
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const { translate, translating } = useTranslate(msg => onNotify(msg, 'error'));
+  const itraKeydownRef = useRef(false);
 
   useEffect(() => {
     setForm(initialValues ?? (race ? buildRaceForm(race) : createEmptyRaceForm(edition.id, edition.races.length, edition.status)));
@@ -308,7 +339,29 @@ function RaceFormCardInner({
               </Select>
             </FormControl>
             <TextField size="small" fullWidth label="ITRA points" type="number" value={form.itraPoints}
-              onChange={e => set('itraPoints', e.target.value)} />
+              inputProps={{ min: 0, max: 6, step: 1 }}
+              onKeyDown={e => {
+                // The ArrowUp key is unambiguous (unlike a digit key, it can never be a
+                // legitimate typed value), so it can be special-cased directly here,
+                // ahead of and independent of the keydown/onChange ref below: stop the
+                // browser's native step (which would otherwise land on 1, not 0 — see
+                // correctEmptyToOneFromSpinner above) and snap straight to the minimum.
+                if (e.key === 'ArrowUp' && form.itraPoints.trim() === '') {
+                  e.preventDefault();
+                  set('itraPoints', '0');
+                  return;
+                }
+                itraKeydownRef.current = true;
+              }}
+              onChange={e => {
+                const cameFromKeydown = itraKeydownRef.current;
+                itraKeydownRef.current = false;
+                set('itraPoints', correctEmptyToOneFromSpinner(form.itraPoints, e.target.value, cameFromKeydown));
+              }}
+              onBlur={e => {
+                itraKeydownRef.current = false;
+                set('itraPoints', clampItraPoints(e.target.value));
+              }} />
             <FormControl size="small" fullWidth>
               <InputLabel>Result type</InputLabel>
               <Select value={form.resultType} label="Result type" onChange={e => set('resultType', e.target.value as typeof form.resultType)}>
