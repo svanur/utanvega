@@ -58,6 +58,7 @@ import {
 import { useTrails } from '../hooks/useTrails';
 import { useRowFocus } from '../hooks/useRowFocus';
 import { useUrlFilterState } from '../hooks/useUrlFilterState';
+import { useDebouncedUrlSearch } from '../hooks/useDebouncedUrlSearch';
 import { usePageShortcuts, isDialogOpen } from '../hooks/usePageShortcuts';
 import CreateEventDialog from '../components/events/CreateEventDialog';
 import { EVENT_STATUS_CYCLE } from '../utils/eventForms';
@@ -237,8 +238,8 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
   const sortedTrails = [...trails].filter(t => t.status === 'Published' || t.status === 'EventOnly').sort((a, b) => a.name.localeCompare(b.name));
 
   const { values, setValue, setValues } = useUrlFilterState(EVENTS_FILTER_SCHEMA);
-  const searchQuery = values.searchQuery;
-  const setSearchQuery = useCallback((v: string) => setValue('searchQuery', v), [setValue]);
+  const setSearchQueryUrl = useCallback((v: string) => setValue('searchQuery', v), [setValue]);
+  const { value: searchQuery, onChange: setSearchQuery, clear: clearSearchQuery } = useDebouncedUrlSearch(values.searchQuery, setSearchQueryUrl);
   const activityFilter = values.activityFilter;
   const typeFilter = values.typeFilter;
   const statusFilter = values.statusFilter;
@@ -719,7 +720,7 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
             startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment>,
             endAdornment: searchQuery ? (
               <InputAdornment position="end">
-                <IconButton size="small" onClick={() => setSearchQuery('')}><ClearIcon fontSize="small" /></IconButton>
+                <IconButton size="small" onClick={clearSearchQuery}><ClearIcon fontSize="small" /></IconButton>
               </InputAdornment>
             ) : undefined,
           }}
