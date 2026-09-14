@@ -119,8 +119,8 @@ export function addDays(d: Date, days: number): Date {
 
 // Monday-start week range for 'this'/'next' week, relative to today.
 // Offset formula ported from admin/src/pages/EventsListPage.tsx (native Date instead of dayjs).
-export function getWeekRange(which: 'this' | 'next'): { start: string; end: string } {
-    const today = new Date();
+export function getWeekRange(which: 'this' | 'next', now: Date = new Date()): { start: string; end: string } {
+    const today = new Date(now);
     const day = today.getDay(); // 0 = Sunday .. 6 = Saturday
     const mondayOffset = which === 'this' ? (day + 6) % 7 : (8 - day) % 7 || 7;
     const start = addDays(today, which === 'this' ? -mondayOffset : mondayOffset);

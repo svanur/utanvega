@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { addDays, formatYearRanges, getEditionTimingStatus, getWeekRange, msUntilNextMidnight, shortestUniqueEditionKey } from './eventUtils';
 
 // #546: the recorded-editions badge must be gap-tolerant — a missing year in the middle of the
@@ -149,42 +149,33 @@ describe('shortestUniqueEditionKey', () => {
     });
 });
 
-// #843: getWeekRange reads `new Date()` internally (unlike the other functions in this file, which
-// take an injectable `now`), so "today" is pinned with fake timers rather than passed as an argument.
+// #855: getWeekRange takes an injectable `now`, matching the other functions in this file, so
+// "today" is passed directly as an argument rather than pinned with fake timers.
 describe('getWeekRange', () => {
-    afterEach(() => {
-        vi.useRealTimers();
-    });
-
     it('"this" week returns Monday start / Sunday end six days later, for a Tue "now"', () => {
-        vi.useFakeTimers();
-        vi.setSystemTime(new Date('2026-03-10T09:00:00')); // Tuesday
-        expect(getWeekRange('this')).toEqual({ start: '2026-03-09', end: '2026-03-15' });
+        const now = new Date('2026-03-10T09:00:00'); // Tuesday
+        expect(getWeekRange('this', now)).toEqual({ start: '2026-03-09', end: '2026-03-15' });
     });
 
     it('"this" week returns the same Monday start / Sunday end for a Sat "now" in the same week', () => {
-        vi.useFakeTimers();
-        vi.setSystemTime(new Date('2026-03-14T09:00:00')); // Saturday
-        expect(getWeekRange('this')).toEqual({ start: '2026-03-09', end: '2026-03-15' });
+        const now = new Date('2026-03-14T09:00:00'); // Saturday
+        expect(getWeekRange('this', now)).toEqual({ start: '2026-03-09', end: '2026-03-15' });
     });
 
     it('"next" week returns the Monday immediately after the current week\'s Sunday', () => {
-        vi.useFakeTimers();
-        vi.setSystemTime(new Date('2026-03-10T09:00:00')); // Tuesday, this week ends Sun 2026-03-15
-        expect(getWeekRange('next')).toEqual({ start: '2026-03-16', end: '2026-03-22' });
+        const now = new Date('2026-03-10T09:00:00'); // Tuesday, this week ends Sun 2026-03-15
+        expect(getWeekRange('next', now)).toEqual({ start: '2026-03-16', end: '2026-03-22' });
     });
 
     it('boundary: "now" is a Sunday — "this" week starts the preceding Monday and ends today', () => {
-        vi.useFakeTimers();
-        vi.setSystemTime(new Date('2026-03-15T09:00:00')); // Sunday
-        expect(getWeekRange('this')).toEqual({ start: '2026-03-09', end: '2026-03-15' });
-        expect(getWeekRange('next')).toEqual({ start: '2026-03-16', end: '2026-03-22' });
+        const now = new Date('2026-03-15T09:00:00'); // Sunday
+        expect(getWeekRange('this', now)).toEqual({ start: '2026-03-09', end: '2026-03-15' });
+        expect(getWeekRange('next', now)).toEqual({ start: '2026-03-16', end: '2026-03-22' });
     });
 
     it('boundary: "now" is a Monday — "this" week starts today', () => {
-        vi.useFakeTimers();
-        vi.setSystemTime(new Date('2026-03-16T09:00:00')); // Monday
-        expect(getWeekRange('this')).toEqual({ start: '2026-03-16', end: '2026-03-22' });
-        expect(getWeekRange('next')).toEqual({ start: '2026-03-23', end: '2026-03-29' });
+        const now = new Date('2026-03-16T09:00:00'); // Monday
+        expect(getWeekRange('this', now)).toEqual({ start: '2026-03-16', end: '2026-03-22' });
+        expect(getWeekRange('next', now)).toEqual({ start: '2026-03-23', end: '2026-03-29' });
     });
 });
