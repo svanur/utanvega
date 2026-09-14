@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
 using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Core.Entities;
@@ -36,7 +37,11 @@ public class CreateLocationCommandHandler : IRequestHandler<CreateLocationComman
     public async Task<Guid> Handle(CreateLocationCommand request, CancellationToken cancellationToken)
     {
         var slug = request.Slug ?? SlugGenerator.Generate(request.Name);
-        
+
+        var slugExists = await _context.Locations.AnyAsync(l => l.Slug == slug, cancellationToken);
+        if (slugExists)
+            throw new InvalidOperationException($"A location with slug '{slug}' already exists.");
+
         Enum.TryParse<LocationType>(request.Type, true, out var type);
 
         Point? center = null;

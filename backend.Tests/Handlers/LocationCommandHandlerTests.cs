@@ -72,6 +72,65 @@ public class LocationCommandHandlerTests : IDisposable
         Assert.Equal("Create", entry.Action);
     }
 
+    [Fact]
+    public async Task Create_DuplicateDerivedSlug_ThrowsInvalidOperationException()
+    {
+        using var ctx = _factory.CreateContext();
+        var handler = new CreateLocationCommandHandler(ctx, _cacheInvalidator);
+        var command = new CreateLocationCommand(
+            Name: "Vik",
+            Slug: null,
+            Description: "A village",
+            Type: "Place",
+            ParentId: null,
+            Latitude: null,
+            Longitude: null,
+            Radius: null,
+            CreatedBy: "test-user"
+        );
+
+        await handler.Handle(command, CancellationToken.None);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            handler.Handle(command, CancellationToken.None));
+        Assert.Contains("vik", ex.Message);
+    }
+
+    [Fact]
+    public async Task Create_DuplicateExplicitSlug_ThrowsInvalidOperationException()
+    {
+        using var ctx = _factory.CreateContext();
+        var handler = new CreateLocationCommandHandler(ctx, _cacheInvalidator);
+
+        await handler.Handle(new CreateLocationCommand(
+            Name: "Vik",
+            Slug: "custom-slug",
+            Description: "A village",
+            Type: "Place",
+            ParentId: null,
+            Latitude: null,
+            Longitude: null,
+            Radius: null,
+            CreatedBy: "test-user"
+        ), CancellationToken.None);
+
+        var duplicateCommand = new CreateLocationCommand(
+            Name: "Vik 2",
+            Slug: "custom-slug",
+            Description: "Another village",
+            Type: "Place",
+            ParentId: null,
+            Latitude: null,
+            Longitude: null,
+            Radius: null,
+            CreatedBy: "test-user"
+        );
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            handler.Handle(duplicateCommand, CancellationToken.None));
+        Assert.Contains("custom-slug", ex.Message);
+    }
+
     // ─── DeleteLocationCommandHandler ───
 
     [Fact]
