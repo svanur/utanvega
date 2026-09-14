@@ -68,7 +68,7 @@ import LostRunner from '../components/LostRunner';
 import WeatherCard from '../components/WeatherCard';
 import GalleryLinks from '../components/GalleryLinks';
 import GalleryCompact from '../components/GalleryCompact';
-import { useEvents, useEventBySlug } from '../hooks/useEvents';
+import { useEventBySlug, useEventSuggestions } from '../hooks/useEvents';
 import type { EventEditionDto, RaceDto, ScheduleRule } from '../hooks/useEvents';
 import { useFavoriteEvents } from '../hooks/useFavoriteEvents';
 import StarIcon from '@mui/icons-material/Star';
@@ -300,7 +300,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     const loc = useLocalize();
     const { event, loading, error } = useEventBySlug(slug);
     usePageTitle(event ? (loc(event.name, event.nameEn) ?? event.name) : undefined);
-    const { events, loading: eventsLoading } = useEvents();
+    const { suggestions } = useEventSuggestions(slug, !!error || (!loading && !event));
     const navigate = useNavigate();
     const theme = useTheme();
     const { isEnabled } = useFeatureFlags();
@@ -555,13 +555,6 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     }
 
     if (error || !event) {
-        const normalize = (s: string) =>
-            s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-        const slugWords = (slug ?? '').split('-').filter(w => w.length > 2);
-        const suggestions = eventsLoading ? [] : events
-            .filter(candidate => !['Hidden', 'Unlisted'].includes(candidate.status) && slugWords.some(word => normalize(candidate.name).includes(word)))
-            .slice(0, 6);
-
         return (
             <Layout mode={mode} onToggleMode={onToggleMode}>
                 <LostRunner
@@ -577,7 +570,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                         <Stack spacing={1}>
                             {suggestions.map(candidate => (
                                 <Paper
-                                    key={candidate.id}
+                                    key={candidate.slug}
                                     elevation={1}
                                     sx={{
                                         p: 2,
