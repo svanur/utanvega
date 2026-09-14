@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Core.Services;
@@ -79,7 +80,16 @@ public class CreateEventCommandHandler : IRequestHandler<CreateEventCommand, (Gu
         };
 
         _context.Events.Add(ev);
-        await _context.SaveChangesAsync(cancellationToken);
+
+        try
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException pg && pg.SqlState == "23505")
+        {
+            throw new InvalidOperationException($"An event with slug '{slug}' already exists.");
+        }
+
         _cacheInvalidator.InvalidateEvent(slug);
 
         return (ev.Id, slug);
