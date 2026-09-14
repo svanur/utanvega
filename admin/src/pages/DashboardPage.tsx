@@ -99,6 +99,17 @@ function getEventHealthScore(event: EventSummaryDto): number {
     return Math.round((applicable.filter(c => c.passed).length / applicable.length) * 100);
 }
 
+/** Recomputes the "today" / "30 days from now" window. Only ever called from inside an
+ *  effect (initial lazy useState + periodic/visibility-triggered recompute) — never directly
+ *  in the render body, to preserve the react-hooks/purity fix from issue #556. */
+function computeUpcomingWindow(): { today: string; in30days: string } {
+    const now = new Date();
+    return {
+        today: now.toISOString().slice(0, 10),
+        in30days: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+    };
+}
+
 function formatDate(iso: string): string {
     return new Date(iso).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' });
 }
@@ -175,15 +186,26 @@ export default function DashboardPage({ onNewEvent, onUploadTrail, onNavigate }:
     const [feedbackCounts, setFeedbackCounts] = useState<FeedbackCounts | null>(null);
     const [note, setNote] = useState(() => localStorage.getItem('admin_dashboard_note') ?? '');
     const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-    // Lazy-initialized once on mount rather than recomputed from Date.now() on every render —
-    // the "next 30 days" window doesn't need to track wall-clock time down to the render.
-    const [{ today, in30days }] = useState(() => {
-        const now = new Date();
-        return {
-            today: now.toISOString().slice(0, 10),
-            in30days: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+    // Lazy-initialized on mount rather than recomputed from Date.now() on every render (see
+    // issue #556) — but the Dashboard can stay mounted across a day boundary in a long-lived
+    // tab, so an effect below periodically refreshes this via setState, keeping the render body
+    // itself free of direct Date.now()/new Date() calls (issue #861).
+    const [{ today, in30days }, setUpcomingWindow] = useState(() => computeUpcomingWindow());
+
+    useEffect(() => {
+        const recompute = () => setUpcomingWindow(computeUpcomingWindow());
+        // Hourly is far more often than needed for a day-granularity window, but cheap and
+        // guarantees the window can never be more than an hour stale.
+        const intervalId = setInterval(recompute, 60 * 60 * 1000);
+        const onVisibilityChange = () => {
+            if (document.visibilityState === 'visible') recompute();
         };
-    });
+        document.addEventListener('visibilitychange', onVisibilityChange);
+        return () => {
+            clearInterval(intervalId);
+            document.removeEventListener('visibilitychange', onVisibilityChange);
+        };
+    }, []);
 
     const handleNoteChange = (value: string) => {
         setNote(value);
