@@ -22,12 +22,13 @@ import { apiFetch } from '../hooks/api';
 import type { PageKey } from '../types/PageKey';
 import type { EventSummaryDto } from '../hooks/useEvents';
 import type { Trail } from '../hooks/useTrails';
+import type { QuickFilter } from './EventHealth';
 import FeedbackIcon from '@mui/icons-material/Feedback';
 
 interface DashboardPageProps {
     onNewEvent: () => void;
     onUploadTrail: () => void;
-    onNavigate: (page: PageKey, filter?: string) => void;
+    onNavigate: (page: PageKey, filter?: QuickFilter) => void;
 }
 
 interface DailyViews {
