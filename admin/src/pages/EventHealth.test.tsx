@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import EventHealth from './EventHealth';
 
@@ -42,6 +42,12 @@ describe('EventHealth — initialFilter mount/consume wiring', () => {
     const { onInitialFilterConsumed } = renderEventHealth('no-date');
 
     await waitFor(() => expect(onInitialFilterConsumed).toHaveBeenCalledTimes(1));
+  });
+
+  it('seeds activeFilter from initialFilter on mount, rendering the Filtered chip', async () => {
+    renderEventHealth('no-date');
+
+    await waitFor(() => expect(screen.getByText('Filtered: no date')).toBeTruthy());
   });
 
   it('does not call onInitialFilterConsumed when initialFilter is undefined', async () => {
