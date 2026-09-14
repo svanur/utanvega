@@ -21,6 +21,27 @@ export function editionKeyFor(edition: { date?: string | null; year?: number | n
     return edition.date ?? String(edition.year ?? edition.id);
 }
 
+// Same URL slot as editionKeyFor(), but shortens to the year alone when that's unambiguous among
+// the edition's siblings — same-year collisions are legal (EventEdition.Year has no unique
+// constraint, see EventEdition.cs), so this only drops to the year when no sibling shares it, falls
+// back to the full date when siblings share the year but not the date, and finally to the id when
+// even the date collides (or neither date nor year is on file). The existing date → year → id
+// matching chain in EditionHistoryPage resolves either shape, so shortening here never breaks a
+// previously-generated/bookmarked full-date URL.
+export function shortestUniqueEditionKey(
+    edition: { date?: string | null; year?: number | null; id: string },
+    siblingEditions: { date?: string | null; year?: number | null; id: string }[],
+): string {
+    const others = siblingEditions.filter(sibling => sibling.id !== edition.id);
+    if (edition.year != null && !others.some(sibling => sibling.year === edition.year)) {
+        return String(edition.year);
+    }
+    if (edition.date != null && !others.some(sibling => sibling.date === edition.date)) {
+        return edition.date;
+    }
+    return edition.id;
+}
+
 export function getEventTypeColor(type: string): 'primary' | 'secondary' | 'success' | 'warning' | 'info' | 'error' | 'default' {
     switch (type) {
         case 'Race': return 'primary';
