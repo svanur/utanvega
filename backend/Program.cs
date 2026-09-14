@@ -1257,13 +1257,20 @@ app.MapGet("/api/v1/admin/locations", [Authorize(Policy = "AdminOnly")] async (G
 
 app.MapPost("/api/v1/admin/locations", [Authorize(Policy = "AdminOnly")] async (CreateLocationCommand command, IMediator mediator, HttpContext httpContext) =>
 {
-    // CreatedBy must reflect who actually authenticated the request, not whatever the client body claims.
-    var id = await mediator.Send(command with
+    try
     {
-        CreatedBy = GetAuthenticatedUserId(httpContext),
-        ActorUserId = GetAuthenticatedUserId(httpContext)
-    });
-    return Results.Created($"/api/v1/admin/locations/{id}", new { id });
+        // CreatedBy must reflect who actually authenticated the request, not whatever the client body claims.
+        var id = await mediator.Send(command with
+        {
+            CreatedBy = GetAuthenticatedUserId(httpContext),
+            ActorUserId = GetAuthenticatedUserId(httpContext)
+        });
+        return Results.Created($"/api/v1/admin/locations/{id}", new { id });
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.Conflict(new { error = ex.Message });
+    }
 })
 .WithName("CreateLocation");
 
