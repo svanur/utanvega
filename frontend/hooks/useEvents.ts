@@ -195,6 +195,24 @@ export function useEvents() {
     return { events, loading: isPending, error: queryError instanceof Error ? queryError.message : null, refresh: refetch };
 }
 
+export interface EventSuggestion {
+    name: string;
+    slug: string;
+    locationName: string | null;
+    editionCount: number;
+}
+
+export function useEventSuggestions(slug?: string, enabled = false) {
+    const { data: suggestions = [], isPending } = useQuery<EventSuggestion[]>({
+        queryKey: ['event-suggestions', slug],
+        queryFn: () => fetch(`${API_URL}/api/v1/events/suggestions?slug=${encodeURIComponent(slug!)}`)
+            .then(res => res.ok ? res.json() as Promise<EventSuggestion[]> : []),
+        enabled: !!slug && enabled,
+        staleTime: 10 * 60 * 1000,
+    });
+    return { suggestions, loading: isPending && !!slug && enabled };
+}
+
 export function useEventBySlug(slug: string | undefined) {
     const { data: event = null, isPending, error: queryError } = useQuery<EventDetail | null>({
         queryKey: ['event', slug],

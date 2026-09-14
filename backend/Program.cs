@@ -42,6 +42,7 @@ using Utanvega.Backend.Application.Weather.Queries;
 using Utanvega.Backend.Core.Services;
 using Utanvega.Backend.Application.Events.Queries.GetEvents;
 using Utanvega.Backend.Application.Events.Queries.GetEvent;
+using Utanvega.Backend.Application.Events.Queries.GetEventSuggestions;
 using Utanvega.Backend.Application.Events.Queries.GetEventCalendar;
 using Utanvega.Backend.Application.Events.Queries.GetEditionsHistory;
 using Utanvega.Backend.Application.Events.Queries.GetRaceDayEditions;
@@ -1671,6 +1672,13 @@ app.MapGet("/api/v1/events/calendar.ics", async (IMediator mediator, IConfigurat
     return Results.Text(icsContent!, "text/calendar; charset=utf-8");
 })
 .WithName("GetEventCalendarIcs");
+
+app.MapGet("/api/v1/events/suggestions", async (string slug, IMediator mediator) =>
+{
+    var suggestions = await mediator.Send(new GetEventSuggestionsQuery(slug));
+    return Results.Ok(suggestions);
+})
+.WithName("GetEventSuggestions");
 
 app.MapGet("/api/v1/events/{slug}", async (string slug, IMediator mediator) =>
 {
