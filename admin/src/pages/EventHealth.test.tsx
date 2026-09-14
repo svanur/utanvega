@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import EventHealth from './EventHealth';
 
@@ -53,9 +53,9 @@ describe('EventHealth — initialFilter mount/consume wiring', () => {
   it('does not call onInitialFilterConsumed when initialFilter is undefined', async () => {
     const { onInitialFilterConsumed } = renderEventHealth(undefined);
 
-    // There's nothing async to await for the negative case, so give any stray effect a tick
-    // to fire before asserting it never did.
-    await new Promise(resolve => setTimeout(resolve, 0));
+    // There's nothing async to await for the negative case, so deterministically flush any
+    // pending mount effects/microtasks before asserting one never fired.
+    await act(async () => {});
     expect(onInitialFilterConsumed).not.toHaveBeenCalled();
   });
 });
