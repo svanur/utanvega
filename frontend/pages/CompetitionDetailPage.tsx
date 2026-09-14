@@ -1155,7 +1155,10 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             {pastEditions.map(edition => {
                                 const heading = edition.title?.trim() || String(edition.year);
                                 const raceCount = edition.visibleRaces.length;
-                                const editionKey = shortestUniqueEditionKey(edition, pastEditions);
+                                // Sibling list must be the full edition set, not pastEditions — a past
+                                // edition sharing a year with a future one is still a collision, and
+                                // pastEditions (filtered to past/current, see lines ~403-428) can't see it.
+                                const editionKey = shortestUniqueEditionKey(edition, preparedEditions);
                                 return (
                                     <Paper
                                         key={edition.id}
