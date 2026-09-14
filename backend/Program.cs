@@ -953,21 +953,6 @@ app.MapDelete("/api/v1/admin/trails/{trailId}/locations/{locationId}", [Authoriz
 })
 .WithName("RemoveTrailLocation");
 
-app.MapPatch("/api/v1/admin/trails/{id:guid}/status", [Authorize(Policy = "AdminOnly")] async (Guid id, [Microsoft.AspNetCore.Mvc.FromBody] string status, UtanvegaDbContext context, HttpContext httpContext) =>
-{
-    var trail = await context.Trails.FindAsync(id);
-    if (trail == null) return Results.NotFound();
-
-    if (Enum.TryParse<Utanvega.Backend.Core.Entities.TrailStatus>(status, true, out var trailStatus))
-    {
-        trail.Status = trailStatus;
-        await context.SaveChangesWithAuditAsync(GetAuthenticatedUserId(httpContext));
-        return Results.NoContent();
-    }
-    return Results.BadRequest("Invalid status");
-})
-.WithName("UpdateTrailStatus");
-
 app.MapPost("/api/v1/admin/trails/bulk-action", [Authorize(Policy = "AdminOnly")] async (BulkTrailActionCommand command, IMediator mediator, HttpContext httpContext) =>
 {
     var count = await mediator.Send(command with { ActorUserId = GetAuthenticatedUserId(httpContext) });
