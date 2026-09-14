@@ -169,6 +169,39 @@ public class EventHandlerTests : IDisposable
         Assert.Equal(slug, ev.Slug);
     }
 
+    [Fact]
+    public async Task Create_ConcurrentDuplicateSlug_ThrowsInvalidOperationException()
+    {
+        // #880: the proactive AnyAsync check above only catches the common case. Under a genuine
+        // race, two requests can both pass that check before either insert commits, and the loser's
+        // insert fails at the DB with a Postgres unique-violation (23505) instead. The handler must
+        // catch that at SaveChanges time and rethrow as InvalidOperationException so the admin
+        // endpoint's existing `catch (InvalidOperationException) -> 409` path handles it, rather
+        // than letting a raw DbUpdateException bubble up as an unhandled 500.
+        using var ctx = TestDbContextFactory.CreateThrowingUniqueViolationContext();
+        var handler = new CreateEventCommandHandler(ctx, _cacheInvalidator);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            handler.Handle(new CreateEventCommand(
+                Name: "Laugavegur Ultra",
+                Slug: "laugavegur-ultra",
+                Description: "55K ultra through the highlands",
+                Type: "Race",
+                ActivityType: "TrailRunning",
+                Status: "Confirmed",
+                OrganizerName: "ÍSÍ",
+                OrganizerWebsite: "https://marathon.is",
+                OrganizerId: null,
+                AlertMessage: null,
+                AlertSeverity: null,
+                LocationId: null,
+                ScheduleRule: new ScheduleRule { Type = ScheduleType.Yearly, Month = 7, WeekOfMonth = 2, DayOfWeek = DayOfWeek.Saturday },
+                SocialLinks: null
+            ), CancellationToken.None));
+
+        Assert.Contains("laugavegur-ultra", ex.Message);
+    }
+
     // ─── UpdateEventCommand ───
 
     [Fact]

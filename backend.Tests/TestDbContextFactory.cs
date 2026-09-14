@@ -2,6 +2,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.IO;
+using Npgsql;
 using System.Text.Json;
 using Utanvega.Backend.Infrastructure.Persistence;
 
@@ -30,6 +31,27 @@ public class TestDbContextFactory : IDisposable
     }
 
     public UtanvegaDbContext CreateContext() => new TestDbContext(_options);
+
+    /// <summary>
+    /// Creates a standalone context whose SaveChangesAsync always fails with a fabricated Postgres
+    /// unique-violation (SQLState 23505) wrapped in a DbUpdateException, for #880's DB-level race
+    /// tests. SQLite's own unique-constraint exception is a Microsoft.Data.Sqlite.SqliteException,
+    /// not a Npgsql.PostgresException, so the actual concurrent-insert race that the production
+    /// catch clause guards against can't be reproduced by inserting a real conflicting row here —
+    /// this context fakes the exception shape that Postgres produces instead.
+    /// </summary>
+    public static UtanvegaDbContext CreateThrowingUniqueViolationContext()
+    {
+        var connection = new SqliteConnection("DataSource=:memory:");
+        connection.Open();
+        var options = new DbContextOptionsBuilder<UtanvegaDbContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        var context = new ThrowingUniqueViolationDbContext(options);
+        context.Database.EnsureCreated();
+        return context;
+    }
 
     public void Dispose()
     {
@@ -356,5 +378,24 @@ internal class TestDbContext : UtanvegaDbContext
                       v => v.HasValue ? (long?)v.Value.UtcTicks : null,
                       v => v.HasValue ? (DateTimeOffset?)new DateTimeOffset(v.Value, TimeSpan.Zero) : null);
         });
+    }
+}
+
+/// <summary>
+/// Backs TestDbContextFactory.CreateThrowingUniqueViolationContext() — see that method's doc
+/// comment for why this fakes the exception rather than triggering a real SQLite one.
+/// </summary>
+internal class ThrowingUniqueViolationDbContext : TestDbContext
+{
+    public ThrowingUniqueViolationDbContext(DbContextOptions<UtanvegaDbContext> options) : base(options) { }
+
+    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        var pgException = new PostgresException(
+            "duplicate key value violates unique constraint",
+            "ERROR",
+            "ERROR",
+            "23505");
+        throw new DbUpdateException("Unique constraint violation", pgException);
     }
 }
