@@ -18,6 +18,14 @@ const DEFAULT_DELAY_MS = 300;
  * `urlValue` changing from outside this hook's own writes — a filter reset, browser
  * back/forward, or a bookmarked link — re-syncs local state to match. A write this hook just
  * made lands here too, but as a same-value no-op, since local state already holds it.
+ *
+ * Split into two effects, both keyed on `urlValue`, rather than one: the state-sync effect
+ * is kept to that single `setValue` call so it reads as the plain "mirror a prop into state"
+ * idiom; ref access (reading/clearing the pending debounce timer) lives in its own effect,
+ * since refs may only be touched in effects/handlers, never during render. Without the
+ * second effect, a debounce timer already in flight when `urlValue` changes externally would
+ * still fire later with the stale pre-change value, silently overwriting the external change
+ * right back into the URL and the input a moment after it took effect.
  */
 export function useDebouncedUrlSearch(urlValue: string, setUrlValue: (value: string) => void, delayMs = DEFAULT_DELAY_MS) {
   const [value, setValue] = useState(urlValue);
@@ -25,6 +33,13 @@ export function useDebouncedUrlSearch(urlValue: string, setUrlValue: (value: str
 
   useEffect(() => {
     setValue(urlValue);
+  }, [urlValue]);
+
+  useEffect(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
   }, [urlValue]);
 
   useEffect(() => () => {
