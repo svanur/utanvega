@@ -624,7 +624,7 @@ function SortableRaceRow({ race, edition, isActive, isFocused, focusRef, staleTx
         <Typography variant="body2" color="text.secondary">{race.distanceLabel ?? '—'}</Typography>
       </TableCell>
       <TableCell>
-        <Typography variant="body2" color="text.secondary">{race.resultType ?? '—'}</Typography>
+        <Typography variant="body2" color="text.secondary">{effectiveActivityType ?? '—'} · {race.resultType ?? '—'}</Typography>
       </TableCell>
       <TableCell>
         {race.trailName
@@ -1739,7 +1739,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                         <TableCell sx={{ width: 24, px: 0.5 }} />
                         <TableCell>Name</TableCell>
                         <TableCell>Distance Label</TableCell>
-                        <TableCell>Result type</TableCell>
+                        <TableCell>Activity / Result</TableCell>
                         <TableCell>Route</TableCell>
                         <TableCell>Date / Start / Limit</TableCell>
                         <TableCell>Status</TableCell>
