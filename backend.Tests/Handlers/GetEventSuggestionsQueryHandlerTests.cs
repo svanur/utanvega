@@ -66,6 +66,27 @@ public class GetEventSuggestionsQueryHandlerTests : IDisposable
     }
 
     [Fact]
+    public async Task ReturnsWordOverlapMatch_WhenOnlyOneOfSeveralWordsShared()
+    {
+        // "esjan-hlidarfjall" has two significant words; the only candidate in the database
+        // shares just one of them ("esjan") and not the other. Under the old AND-chained
+        // .Where() semantics this candidate would never surface — only under OR semantics
+        // does it become a tier-3 match.
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(CreateEvent("Esjan Vestari", "esjan-vestari"));
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventSuggestionsQueryHandler(queryCtx);
+        var result = await handler.Handle(new GetEventSuggestionsQuery("esjan-hlidarfjall"), CancellationToken.None);
+
+        Assert.Single(result);
+        Assert.Equal("esjan-vestari", result[0].Slug);
+    }
+
+    [Fact]
     public async Task ReturnsNoSuggestions_WhenNoNearMiss()
     {
         using (var ctx = _factory.CreateContext())

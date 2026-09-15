@@ -56,15 +56,17 @@ public class GetTrailSuggestionsQueryHandler : IRequestHandler<GetTrailSuggestio
         {
             var alreadyFound = prefixMatches.Concat(containsMatches).Select(t => t.Id).ToHashSet();
 
-            // Build a query that matches any significant word
-            var candidates = published.Where(t => !alreadyFound.Contains(t.Id));
+            // Build a query that matches any significant word — union the per-word
+            // candidate sets (OR) rather than chaining .Where() (which composes as AND).
+            IQueryable<Trail>? candidates = null;
             foreach (var word in words.Take(3))
             {
                 var w = word; // capture for closure
-                candidates = candidates.Where(t => t.Slug.Contains(w));
+                var wordQuery = published.Where(t => !alreadyFound.Contains(t.Id) && t.Slug.Contains(w));
+                candidates = candidates == null ? wordQuery : candidates.Union(wordQuery);
             }
 
-            wordMatches = await candidates
+            wordMatches = await candidates!
                 .OrderBy(t => t.Slug)
                 .Take(5)
                 .ToListAsync(cancellationToken);
