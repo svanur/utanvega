@@ -91,6 +91,11 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
 
         if (ev == null) return null;
 
+        // Hidden events are admin-only. Without this, a hidden event's slug was fully
+        // readable by anyone via the public GET /api/v1/events/{slug} endpoint.
+        // Unlisted stays reachable by direct link — it's only excluded from listings.
+        if (!request.IncludeHidden && ev.Status == EventStatus.Hidden) return null;
+
         // Collect all trail IDs from editions (ed.TrailId) and races (r.TrailId)
         var trailIds = ev.Editions
             .SelectMany(ed => ed.Races.Select(r => r.TrailId).Append(ed.TrailId))
