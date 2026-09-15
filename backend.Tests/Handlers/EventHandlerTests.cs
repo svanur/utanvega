@@ -3537,6 +3537,72 @@ public class EventHandlerTests : IDisposable
         Assert.Equal(2025, editionDto.Year);
     }
 
+    [Fact]
+    public async Task GetEvent_BySlug_ReturnsNull_ForHiddenEvent_WhenNotIncludeHidden()
+    {
+        // Security regression: a Hidden-status event must be unreachable via the public
+        // GET /api/v1/events/{slug} endpoint, even if the slug is known/guessed.
+        var ev = CreateTestEvent("Hidden Detail Event");
+        ev.Slug = "hidden-detail-event";
+        ev.Status = EventStatus.Hidden;
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventQuery("hidden-detail-event"), CancellationToken.None);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task GetEvent_BySlug_ReturnsEvent_ForHiddenEvent_WhenIncludeHiddenTrue()
+    {
+        // The admin endpoint (IncludeHidden: true) must keep working unchanged.
+        var ev = CreateTestEvent("Hidden Detail Event Admin");
+        ev.Slug = "hidden-detail-event-admin";
+        ev.Status = EventStatus.Hidden;
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventQuery("hidden-detail-event-admin", IncludeHidden: true), CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Equal("Hidden", result!.Status);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task GetEvent_BySlug_ReturnsEvent_ForUnlistedEvent_RegardlessOfIncludeHidden(bool includeHidden)
+    {
+        // Unlisted is only excluded from listings (GetEventsQuery) — it must remain reachable
+        // by direct link on the public endpoint, unlike Hidden.
+        var ev = CreateTestEvent("Unlisted Detail Event");
+        ev.Slug = $"unlisted-detail-event-{includeHidden}";
+        ev.Status = EventStatus.Unlisted;
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventQuery(ev.Slug, IncludeHidden: includeHidden), CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Equal("Unlisted", result!.Status);
+    }
+
     // ─── CancelEventCommand ───
 
     [Fact]
