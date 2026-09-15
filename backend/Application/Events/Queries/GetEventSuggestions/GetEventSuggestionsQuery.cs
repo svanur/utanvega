@@ -58,15 +58,17 @@ public class GetEventSuggestionsQueryHandler : IRequestHandler<GetEventSuggestio
         {
             var alreadyFound = prefixMatches.Concat(containsMatches).Select(e => e.Id).ToHashSet();
 
-            // Build a query that matches any significant word
-            var candidates = published.Where(e => !alreadyFound.Contains(e.Id));
+            // Build a query that matches any significant word — union the per-word
+            // candidate sets (OR) rather than chaining .Where() (which composes as AND).
+            IQueryable<Event>? candidates = null;
             foreach (var word in words.Take(3))
             {
                 var w = word; // capture for closure
-                candidates = candidates.Where(e => e.Slug.Contains(w));
+                var wordQuery = published.Where(e => !alreadyFound.Contains(e.Id) && e.Slug.Contains(w));
+                candidates = candidates == null ? wordQuery : candidates.Union(wordQuery);
             }
 
-            wordMatches = await candidates
+            wordMatches = await candidates!
                 .OrderBy(e => e.Slug)
                 .Take(5)
                 .ToListAsync(cancellationToken);
