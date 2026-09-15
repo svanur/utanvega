@@ -55,7 +55,7 @@ public class TestDbContextFactory : IDisposable
             .UseSqlite(connection)
             .Options;
 
-        var context = new ThrowingUniqueViolationDbContext(options, constraintName);
+        var context = new ThrowingUniqueViolationDbContext(options, constraintName, connection);
         context.Database.EnsureCreated();
         return context;
     }
@@ -395,11 +395,34 @@ internal class TestDbContext : UtanvegaDbContext
 internal class ThrowingUniqueViolationDbContext : TestDbContext
 {
     private readonly string _constraintName;
+    // CreateThrowingUniqueViolationContext hands this context a standalone, pre-opened
+    // SqliteConnection via UseSqlite(connection) — EF only auto-closes connections it opened
+    // itself, so ownership of this one is ours. Track it here and close/dispose it alongside
+    // the context so disposing the returned UtanvegaDbContext doesn't leak the connection.
+    private readonly SqliteConnection _connection;
 
-    public ThrowingUniqueViolationDbContext(DbContextOptions<UtanvegaDbContext> options, string constraintName)
+    public ThrowingUniqueViolationDbContext(
+        DbContextOptions<UtanvegaDbContext> options,
+        string constraintName,
+        SqliteConnection connection)
         : base(options)
     {
         _constraintName = constraintName;
+        _connection = connection;
+    }
+
+    public override void Dispose()
+    {
+        base.Dispose();
+        _connection.Close();
+        _connection.Dispose();
+    }
+
+    public override async ValueTask DisposeAsync()
+    {
+        await base.DisposeAsync();
+        await _connection.CloseAsync();
+        await _connection.DisposeAsync();
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
