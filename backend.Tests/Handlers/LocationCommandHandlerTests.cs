@@ -1,4 +1,6 @@
 using Moq;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Application.Locations.Commands.CreateLocation;
 using Utanvega.Backend.Application.Locations.Commands.DeleteLocation;
@@ -140,7 +142,10 @@ public class LocationCommandHandlerTests : IDisposable
         // catch that at SaveChanges time and rethrow as InvalidOperationException so the admin
         // endpoint's existing `catch (InvalidOperationException) -> 409` path handles it, rather
         // than letting a raw DbUpdateException bubble up as an unhandled 500.
-        using var ctx = TestDbContextFactory.CreateThrowingUniqueViolationContext();
+        // #885: the fabricated exception's ConstraintName must match the real Slug index name
+        // (IX_Locations_Slug) — this is what proves the handler is keying off that specific index,
+        // not any 23505 on the Locations table.
+        using var ctx = TestDbContextFactory.CreateThrowingUniqueViolationContext("IX_Locations_Slug");
         var handler = new CreateLocationCommandHandler(ctx, _cacheInvalidator);
         var command = new CreateLocationCommand(
             Name: "Vik",
@@ -157,6 +162,31 @@ public class LocationCommandHandlerTests : IDisposable
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             handler.Handle(command, CancellationToken.None));
         Assert.Contains("vik", ex.Message);
+    }
+
+    [Fact]
+    public async Task Create_UnrelatedUniqueViolation_IsNotReportedAsSlugConflict()
+    {
+        // #885: a 23505 on the Locations table that isn't a Slug-index violation (e.g. a future
+        // second unique constraint) must not be mislabeled as "slug already exists" — it should
+        // propagate as-is so it surfaces as an unhandled 500 rather than a misleading 409.
+        using var ctx = TestDbContextFactory.CreateThrowingUniqueViolationContext("IX_Locations_SomeOtherColumn");
+        var handler = new CreateLocationCommandHandler(ctx, _cacheInvalidator);
+        var command = new CreateLocationCommand(
+            Name: "Vik",
+            Slug: "vik",
+            Description: "A village",
+            Type: "Place",
+            ParentId: null,
+            Latitude: null,
+            Longitude: null,
+            Radius: null,
+            CreatedBy: "test-user"
+        );
+
+        var ex = await Assert.ThrowsAsync<DbUpdateException>(() =>
+            handler.Handle(command, CancellationToken.None));
+        Assert.IsType<PostgresException>(ex.InnerException);
     }
 
     // ─── DeleteLocationCommandHandler ───
