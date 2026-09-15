@@ -26,6 +26,12 @@ public record CreateLocationCommand(
 
 public class CreateLocationCommandHandler : IRequestHandler<CreateLocationCommand, Guid>
 {
+    // Must match the unique index EF Core generates for Location.Slug (see
+    // backend/Migrations/UtanvegaDbContextModelSnapshot.cs) — the default naming convention gives
+    // "IX_{Table}_{Property}", i.e. IX_Locations_Slug, since neither the entity config nor the
+    // migration overrides it with HasDatabaseName.
+    private const string SlugUniqueIndexName = "IX_Locations_Slug";
+
     private readonly UtanvegaDbContext _context;
     private readonly ICacheInvalidator _cacheInvalidator;
 
@@ -72,7 +78,8 @@ public class CreateLocationCommandHandler : IRequestHandler<CreateLocationComman
         {
             await _context.SaveChangesWithAuditAsync(request.ActorUserId);
         }
-        catch (DbUpdateException ex) when (ex.InnerException is PostgresException pg && pg.SqlState == "23505")
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException
+               { SqlState: "23505", ConstraintName: SlugUniqueIndexName })
         {
             throw new InvalidOperationException($"A location with slug '{slug}' already exists.");
         }

@@ -1,5 +1,7 @@
 using Moq;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using Npgsql;
 using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Application.Events.Commands.CreateEvent;
 using Utanvega.Backend.Application.Events.Commands.UpdateEvent;
@@ -178,7 +180,10 @@ public class EventHandlerTests : IDisposable
         // catch that at SaveChanges time and rethrow as InvalidOperationException so the admin
         // endpoint's existing `catch (InvalidOperationException) -> 409` path handles it, rather
         // than letting a raw DbUpdateException bubble up as an unhandled 500.
-        using var ctx = TestDbContextFactory.CreateThrowingUniqueViolationContext();
+        // #885: the fabricated exception's ConstraintName must match the real Slug index name
+        // (IX_Events_Slug) — this is what proves the handler is keying off that specific index,
+        // not any 23505 on the Events table.
+        using var ctx = TestDbContextFactory.CreateThrowingUniqueViolationContext("IX_Events_Slug");
         var handler = new CreateEventCommandHandler(ctx, _cacheInvalidator);
 
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
@@ -200,6 +205,36 @@ public class EventHandlerTests : IDisposable
             ), CancellationToken.None));
 
         Assert.Contains("laugavegur-ultra", ex.Message);
+    }
+
+    [Fact]
+    public async Task Create_UnrelatedUniqueViolation_IsNotReportedAsSlugConflict()
+    {
+        // #885: a 23505 on the Events table that isn't a Slug-index violation (e.g. a future
+        // second unique constraint) must not be mislabeled as "slug already exists" — it should
+        // propagate as-is so it surfaces as an unhandled 500 rather than a misleading 409.
+        using var ctx = TestDbContextFactory.CreateThrowingUniqueViolationContext("IX_Events_SomeOtherColumn");
+        var handler = new CreateEventCommandHandler(ctx, _cacheInvalidator);
+
+        var ex = await Assert.ThrowsAsync<DbUpdateException>(() =>
+            handler.Handle(new CreateEventCommand(
+                Name: "Laugavegur Ultra",
+                Slug: "laugavegur-ultra",
+                Description: "55K ultra through the highlands",
+                Type: "Race",
+                ActivityType: "TrailRunning",
+                Status: "Confirmed",
+                OrganizerName: "ÍSÍ",
+                OrganizerWebsite: "https://marathon.is",
+                OrganizerId: null,
+                AlertMessage: null,
+                AlertSeverity: null,
+                LocationId: null,
+                ScheduleRule: new ScheduleRule { Type = ScheduleType.Yearly, Month = 7, WeekOfMonth = 2, DayOfWeek = DayOfWeek.Saturday },
+                SocialLinks: null
+            ), CancellationToken.None));
+
+        Assert.IsType<PostgresException>(ex.InnerException);
     }
 
     // ─── UpdateEventCommand ───

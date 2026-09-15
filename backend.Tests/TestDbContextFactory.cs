@@ -40,7 +40,14 @@ public class TestDbContextFactory : IDisposable
     /// catch clause guards against can't be reproduced by inserting a real conflicting row here —
     /// this context fakes the exception shape that Postgres produces instead.
     /// </summary>
-    public static UtanvegaDbContext CreateThrowingUniqueViolationContext()
+    /// <param name="constraintName">
+    /// The fabricated exception's ConstraintName. #885's production catch clauses only translate a
+    /// 23505 into "already exists" when this matches the table's Slug unique index (IX_Events_Slug /
+    /// IX_Locations_Slug) — callers pass a non-matching name to prove an unrelated unique violation
+    /// is not mislabeled as a slug conflict. No default: callers must state which constraint they're
+    /// fabricating, since the "right" constraint name differs per table.
+    /// </param>
+    public static UtanvegaDbContext CreateThrowingUniqueViolationContext(string constraintName)
     {
         var connection = new SqliteConnection("DataSource=:memory:");
         connection.Open();
@@ -48,7 +55,7 @@ public class TestDbContextFactory : IDisposable
             .UseSqlite(connection)
             .Options;
 
-        var context = new ThrowingUniqueViolationDbContext(options);
+        var context = new ThrowingUniqueViolationDbContext(options, constraintName);
         context.Database.EnsureCreated();
         return context;
     }
@@ -387,15 +394,38 @@ internal class TestDbContext : UtanvegaDbContext
 /// </summary>
 internal class ThrowingUniqueViolationDbContext : TestDbContext
 {
-    public ThrowingUniqueViolationDbContext(DbContextOptions<UtanvegaDbContext> options) : base(options) { }
+    private readonly string _constraintName;
+
+    public ThrowingUniqueViolationDbContext(DbContextOptions<UtanvegaDbContext> options, string constraintName)
+        : base(options)
+    {
+        _constraintName = constraintName;
+    }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
+        // PostgresException's ConstraintName is a get-only property with no public setter — the
+        // 18-arg constructor below (mirroring the fields Npgsql populates when parsing a real
+        // wire-protocol error response) is the only public way to set it from test code.
         var pgException = new PostgresException(
-            "duplicate key value violates unique constraint",
-            "ERROR",
-            "ERROR",
-            "23505");
+            messageText: "duplicate key value violates unique constraint",
+            severity: "ERROR",
+            invariantSeverity: "ERROR",
+            sqlState: "23505",
+            detail: null,
+            hint: null,
+            position: 0,
+            internalPosition: 0,
+            internalQuery: null,
+            where: null,
+            schemaName: null,
+            tableName: null,
+            columnName: null,
+            dataTypeName: null,
+            constraintName: _constraintName,
+            file: null,
+            line: null,
+            routine: null);
         throw new DbUpdateException("Unique constraint violation", pgException);
     }
 }
