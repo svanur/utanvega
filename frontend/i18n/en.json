@@ -1492,6 +1492,9 @@
         "recentPhotos": {
             "title": "Photos from {{edition}}"
         },
+        "recentResults": {
+            "title": "Results from {{edition}}"
+        },
         "editionsHistory": {
             "title": "Past Events",
             "subtitle": "Browse results and details from races that have already happened.",
