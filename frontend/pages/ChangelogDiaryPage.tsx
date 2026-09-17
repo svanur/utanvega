@@ -78,8 +78,8 @@ const GITHUB_RELEASES = new Set(['v1_7_0', 'v1_6_0', 'v1_5_0', 'v1_4_0', 'v1_3_0
  * none, and that's fine: the tag row is simply omitted for them.
  */
 const TAGS: Partial<Record<string, string[]>> = {
-    v1_7_0: ['admin'],
-    v1_6_0: ['admin', 'registrationOpens', 'registrationCloses'],
+    v1_7_0: ['admin', 'frontend', 'events', 'historyPage'],
+    v1_6_0: ['admin', 'frontend', 'editions', 'photographers', 'historyPage'],
 };
 
 const RELEASES_URL = 'https://github.com/svanur/utanvega/releases/tag';

@@ -786,8 +786,8 @@
         },
         "changelog": {
             "v1_7_0": {
-                "title": "Tillögur þegar tengill er rangt stafsettur, vikusíur fyrir viðburði, og öryggislagfæring",
-                "description": "Ef þú stafsetur viðburðartengil rangt birtast núna alvöru tillögur — sama snjalla samsvörun og leiðasíðan hefur nú þegar. Á opinberu viðburðasíðunni bættust við síurnar 'Þessi vika' og 'Næsta vika', aflýst hlaup fá nú sjónræna merkingu í dagatalinu og raðakortum, og samfélagsmiðlatenglar geta sjálfkrafa greint tegund sína út frá vefslóðinni. Í stjórnborði sleppir leitarreiturinn ekki lengur stöfum á meðan þú skrifar, og stór hreinsun á lint-villum kom með nýju CI-verkefni til að halda því þannig. Við lokuðum líka öryggisveikleika sem gerði duldum viðburðum kleift að sjást með beinum tengli. Auk þess margar villuleiðréttingar í sögu útgáfa, ITRA-stiga innslátt og meðhöndlun tvítekinna nafna."
+                "title": "Uppfærð 404 síða fyrir viðburði - fleiri síur og hæðarlína sem bakgrunnur fyrri viðburða",
+                "description": "Uppfærð 404 síða fyrir viðburði með uppástungum um svipaða viðburði. Nýtt í 'ítarlegum síum': 'Þessi vika' og 'næsta vika'. Listayfirlit fyrri viðburða fá 'andlitslyftingu' með hæðarlínu sem bakgrunn. Öryggisuppfærlur og fleira."
             },
             "v1_6_0": {
                 "title": "Breytingar á stjórnborði. Meiri upplýsingar í sögu viðburða. Senda ítarlega athugasemd breytt",
@@ -887,17 +887,22 @@
             }
         },
         "changelogDiary": {
-            "heading": "Breytingadagbók",
-            "subtitle": "Öll útgáfusagan, ítarlegri en tímalínan á Um síðunni. Ekki í valmynd og ekki skráð hjá leitarvélum.",
-            "searchPlaceholder": "Leita í breytingaskrá…",
-            "searchLabel": "Leita í breytingaskrá",
+            "heading": "Breytingasaga",
+            "subtitle": "Öll útgáfusagan, ítarlegri en tímalínan á Um síðunni.",
+            "searchPlaceholder": "Leita í breytingasögu…",
+            "searchLabel": "Leita í breytingasögu",
             "noResults": "Engar færslur passa við valdar síur.",
             "wentLive": "Fór í loftið",
             "previousSite": "Fyrri vefur",
             "tags": {
                 "admin": "Stjórnborð",
-                "registrationOpens": "Skráning hefst",
-                "registrationCloses": "Skráningu lýkur"
+                "frontend": "Framendi",
+                "events": "Viðburðir",
+                "editions": "Útgáfur",
+                "races": "Keppni",
+                "trails": "Leiðir",
+                "historyPage": "Fyrri viðburðir",
+                "photographers": "Ljósmyndarar"
             }
         }
     },
@@ -1368,12 +1373,12 @@
             "3.",
             "4."
         ],
-        "ordinalLast": "síðasta",
+        "ordinalLast": "síðasti",
         "scheduleSeasonal": "{{count}} hlaup - {{ordinal}} {{day}} í mánuði frá {{monthStart}} til {{monthEnd}}",
         "scheduleYearly": "Haldið árlega - {{ordinal}} {{day}} í {{month}}",
         "scheduleFixed": "Stakur viðburður: {{date}}",
         "scheduleApproximate": "Venjulega haldið í {{month}}",
-        "scheduleApproximateRange": "Venjulega haldið í {{monthStart}}–{{monthEnd}}",
+        "scheduleApproximateRange": "Venjulega haldið í {{monthStart}} – {{monthEnd}}",
         "statusCancelled": "Aflýst",
         "newYear": "{{year}} hefst",
         "certifiedBy": "Vottað af",
@@ -1550,11 +1555,11 @@
         },
         "ticketStatus": {
             "Free": "Skráning: Frítt",
-            "NotStarted": "Skráning: Bráðum í sölu",
-            "Available": "Skráning: Í sölu",
-            "AlmostSoldOut": "Skráning: Næstum uppselt",
-            "SoldOut": "Skráning: Uppselt",
-            "Closed": "Skráning: Lokuð"
+            "NotStarted": "Skráning: ekki hafin",
+            "Available": "Skráning: hafin",
+            "AlmostSoldOut": "Skráning: næstum uppselt",
+            "SoldOut": "Skráning: fullt",
+            "Closed": "Skráning: lokuð"
         }
     },
     "calendar": {

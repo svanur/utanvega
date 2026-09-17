@@ -896,8 +896,13 @@
             "previousSite": "Previous site",
             "tags": {
                 "admin": "Admin",
-                "registrationOpens": "Registration Opens",
-                "registrationCloses": "Registration Closes"
+                "frontend": "Website",
+                "events": "Events",
+                "editions": "Editions",
+                "races": "Races",
+                "trails": "Trails",
+                "historyPage": "Past Events",
+                "photographers": "Photographers"
             }
         }
     },
@@ -1550,8 +1555,8 @@
         },
         "ticketStatus": {
             "Free": "Registration: Free",
-            "NotStarted": "Registration: Coming Soon",
-            "Available": "Registration: Available",
+            "NotStarted": "Registration: Not started",
+            "Available": "Registration: Open",
             "AlmostSoldOut": "Registration: Almost Full",
             "SoldOut": "Registration: Sold Out",
             "Closed": "Registration: Closed"
