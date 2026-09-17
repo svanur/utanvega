@@ -1479,12 +1479,18 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
         </Typography>
       </Stack>
 
-      {editionsByYear.visible.length === 0 && (
+      {detail.editions.length === 0 && (
         <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary', border: '1px dashed', borderColor: 'divider', borderRadius: 2 }}>
           <Typography variant="body2">No editions yet.</Typography>
           <Button size="small" sx={{ mt: 1 }} onClick={() => { setEditingEdition(null); setEditionDialogOpen(true); }}>
             Add first edition
           </Button>
+        </Box>
+      )}
+
+      {editionsByYear.visible.length === 0 && detail.editions.length > 0 && (
+        <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary', border: '1px dashed', borderColor: 'divider', borderRadius: 2 }}>
+          <Typography variant="body2">All editions are from past years.</Typography>
         </Box>
       )}
 
