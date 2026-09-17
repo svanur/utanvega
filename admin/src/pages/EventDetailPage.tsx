@@ -253,6 +253,10 @@ interface EditionDialogProps {
   // (see handleCloneEdition), so the Year nudge below must not re-derive and overwrite them the
   // way it does for a plain Add.
   isClone?: boolean;
+  // #892: the other editions of this same event, used only for the advisory duplicate-Title
+  // warning below — never for validation, since Title has no uniqueness constraint by design
+  // (same-year reruns/reschedules are legitimate).
+  siblingEditions: EventEditionDto[];
 }
 
 function LangToggleButton() {
@@ -269,7 +273,7 @@ function LangToggleButton() {
   );
 }
 
-function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGalleryMutated, onNotify, initialValues, isClone = false }: EditionDialogProps) {
+function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGalleryMutated, onNotify, initialValues, isClone = false, siblingEditions }: EditionDialogProps) {
   const isNew = edition === null;
   const [form, setForm] = useState<EditionFormState>(initialValues ?? (edition ? buildEditionForm(edition) : emptyEditionForm()));
   const [saving, setSaving] = useState(false);
@@ -285,6 +289,9 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
   const isCloneRef = useRef(false);
   const editionStatusHelperId = useId();
   const registrationStatusHelperId = useId();
+  // Which of IS/EN is currently shown in the Title BilingualTextField below — the #892
+  // duplicate-Title match must follow this so it always compares what's actually on screen.
+  const { lang } = useBilingualLang();
 
   const set = <K extends keyof EditionFormState>(k: K, v: EditionFormState[K]) =>
     setForm(prev => ({ ...prev, [k]: v }));
@@ -293,6 +300,25 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
   // their own yet — undefined falls back to their default (today), so a not-yet-4-digit or
   // invalid Year leaves that behaviour unchanged.
   const referenceDate = referenceDateForYear(form.year);
+
+  // #892: advisory-only — a Title exactly matching (case-insensitive, trimmed) a sibling
+  // edition's Title is flagged near the field below, but never blocks Save (Title has no
+  // uniqueness constraint by design; same-year reruns/reschedules are legitimate). The Title
+  // field is a BilingualTextField, which swaps between form.title (IS) and form.titleEn (EN)
+  // depending on the dialog's own lang toggle — so the match must follow `lang` too, comparing
+  // whichever value is actually visible on screen against the sibling's same-language value,
+  // rather than always checking IS regardless of what's shown. Recomputed on every render so
+  // it tracks both form.title/titleEn and lang live without needing to close/reopen the dialog.
+  // An empty trimmed Title never matches — that's the pre-#761 auto-fill state, not a duplicate.
+  const visibleTitle = lang === 'en' ? form.titleEn : form.title;
+  const trimmedTitle = visibleTitle.trim();
+  const duplicateTitleMatch = trimmedTitle
+    ? siblingEditions.find(sibling => {
+        if (sibling.id === edition?.id) return false;
+        const siblingTitle = (lang === 'en' ? sibling.titleEn : sibling.title) ?? '';
+        return siblingTitle.trim().toLowerCase() === trimmedTitle.toLowerCase();
+      })
+    : undefined;
 
   const handleSave = async () => {
     const input = {
@@ -437,6 +463,12 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
             valueIs={form.title} valueEn={form.titleEn}
             onChangeIs={v => set('title', v)} onChangeEn={v => set('titleEn', v)}
           />
+          {duplicateTitleMatch && (
+            <Alert severity="warning">
+              Another edition of this event is already titled
+              &quot;{lang === 'en' ? duplicateTitleMatch.titleEn : duplicateTitleMatch.title}&quot;
+            </Alert>
+          )}
           <FormControl size="small" fullWidth>
             <InputLabel>Status</InputLabel>
             <Select value={form.status} label="Status"
@@ -1830,6 +1862,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
         eventId={detail.id}
         initialValues={editionInitialValues}
         isClone={cloneFromEditionId !== null}
+        siblingEditions={detail.editions}
         onClose={() => { setEditionDialogOpen(false); setCloneFromEditionId(null); setEditionInitialValues(undefined); }}
         onGalleryMutated={refresh}
         onSaved={async (newEditionId) => {
