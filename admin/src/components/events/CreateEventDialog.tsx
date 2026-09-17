@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import {
+  Alert,
   Box,
   Button,
   Chip,
@@ -16,7 +17,7 @@ import {
   TextField,
 } from '@mui/material';
 import TranslateIcon from '@mui/icons-material/Translate';
-import type { ActivityType, EventStatus, EventType } from '../../hooks/useEvents';
+import type { ActivityType, EventStatus, EventSummaryDto, EventType } from '../../hooks/useEvents';
 import type { CreateEventInput } from '../../hooks/useEvents';
 import { useTranslate } from '../../hooks/useTranslate';
 import { trimToUndefined } from '../../utils/strings';
@@ -72,14 +73,39 @@ interface CreateEventDialogProps {
   onCreated: (slug: string) => void;
   onNotify: (msg: ReactNode, sev?: 'success' | 'error') => void;
   createEvent: (input: CreateEventInput) => Promise<{ id: string; slug: string }>;
+  // #899: existing events, used only for the advisory duplicate-Name warning below — never for
+  // validation, since Name has no application-level uniqueness constraint (the backend's slug-based
+  // hard block is a separate, unrelated failure mode two same-named events with different slugs
+  // can otherwise bypass entirely).
+  events: EventSummaryDto[];
 }
 
-function CreateEventDialogInner({ open, onClose, onCreated, onNotify, createEvent }: CreateEventDialogProps) {
+function CreateEventDialogInner({ open, onClose, onCreated, onNotify, createEvent, events }: CreateEventDialogProps) {
   const [form, setForm] = useState<FormState>(empty());
   const [saving, setSaving] = useState(false);
   const { translate, translating } = useTranslate(msg => onNotify(msg, 'error'));
+  // Which of IS/EN is currently shown in the Name BilingualTextField below — the #899
+  // duplicate-Name match must follow this so it always compares what's actually on screen.
+  const { lang } = useBilingualLang();
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm(p => ({ ...p, [k]: v }));
+
+  // #899: advisory-only — a Name exactly matching (case-insensitive, trimmed) an existing event's
+  // name is flagged near the field below, but never blocks Create. The Name field is a
+  // BilingualTextField, which swaps between form.name (IS) and form.nameEn (EN) depending on the
+  // dialog's own lang toggle — so the match must follow `lang` too, comparing whichever value is
+  // actually visible on screen against the existing event's same-language name, rather than always
+  // checking IS regardless of what's shown. Recomputed on every render so it tracks both
+  // form.name/nameEn and lang live without needing to close/reopen the dialog. An empty trimmed
+  // Name never matches.
+  const visibleName = lang === 'en' ? form.nameEn : form.name;
+  const trimmedName = visibleName.trim();
+  const duplicateNameMatch = trimmedName
+    ? events.find(event => {
+        const eventName = (lang === 'en' ? event.nameEn : event.name) ?? '';
+        return eventName.trim().toLowerCase() === trimmedName.toLowerCase();
+      })
+    : undefined;
 
   const handleSave = async () => {
     if (!form.name.trim()) return;
@@ -130,6 +156,11 @@ function CreateEventDialogInner({ open, onClose, onCreated, onNotify, createEven
             valueIs={form.name} valueEn={form.nameEn}
             onChangeIs={v => set('name', v)} onChangeEn={v => set('nameEn', v)}
           />
+          {duplicateNameMatch && (
+            <Alert severity="warning">
+              An event named &quot;{lang === 'en' ? duplicateNameMatch.nameEn : duplicateNameMatch.name}&quot; already exists
+            </Alert>
+          )}
 
           <TextField
             size="small" fullWidth label="Slug" value={form.slug}
