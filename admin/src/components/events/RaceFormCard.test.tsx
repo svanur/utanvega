@@ -36,6 +36,7 @@ const edition: EventEditionDto = {
   updatedAt: null,
   status: 'Active',
   effectiveCancelled: false,
+  needsReview: false,
 };
 
 function renderRaceFormCard() {

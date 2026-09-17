@@ -66,7 +66,12 @@ public record EventSummaryDto(
     string? EditionStatus = null,
     bool EditionEffectiveCancelled = false,
     string? OrganizerSlug = null,
-    List<PublicPhotoGalleryDto>? Galleries = null
+    List<PublicPhotoGalleryDto>? Galleries = null,
+    // Aggregate across this event's editions, not the same thing as EventEditionDto.NeedsReview
+    // (a single edition's own flag) — true when at least one edition is bookmarked for review, so
+    // the admin events list can filter to "events with something to look at" without fetching the
+    // full edition list per row.
+    bool AnyEditionNeedsReview = false
 );
 
 public record RaceDto(
@@ -128,5 +133,6 @@ public record EventEditionDto(
     string Status = "Active",
     bool EffectiveCancelled = false,
     DateTime? RegistrationOpens = null,
-    DateTime? RegistrationCloses = null
+    DateTime? RegistrationCloses = null,
+    bool NeedsReview = false
 );

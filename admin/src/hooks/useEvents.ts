@@ -99,6 +99,7 @@ export interface EventEditionDto {
     translationHashes?: Record<string, string>;
     status: EditionStatus;
     effectiveCancelled: boolean;
+    needsReview: boolean;
 }
 
 export interface SeriesRaceDto {
@@ -149,6 +150,9 @@ export interface EventSummaryDto {
     translationHashes?: Record<string, string>;
     editionStatus: EditionStatus | null;
     editionEffectiveCancelled: boolean;
+    // Aggregate across this event's editions, not the same thing as EventEditionDto.needsReview
+    // (a single edition's own flag) — true when at least one edition is bookmarked for review.
+    anyEditionNeedsReview: boolean;
 }
 
 export interface EventDetailDto extends EventSummaryDto {
@@ -242,6 +246,9 @@ export interface UpdateEditionInput {
     // snapshot): most UpdateEditionInput callers don't touch edition status and must not accidentally
     // reset it. Only pass this when you actually intend to change the status.
     status?: EditionStatus;
+    // Optional, patch-if-provided for the same reason as status above — TranslationHealth's bulk
+    // translation-sync PUT doesn't own this flag and must not silently clear it.
+    needsReview?: boolean;
 }
 
 export interface CreateRaceInput {

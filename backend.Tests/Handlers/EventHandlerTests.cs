@@ -3138,6 +3138,93 @@ public class EventHandlerTests : IDisposable
         Assert.Equal(RaceStatus.Cancelled, verifyCtx.Races.Find(race.Id)!.Status);
     }
 
+    // ─── UpdateEditionCommand — NeedsReview field ───
+
+    private UpdateEditionCommand BuildUpdateEditionCommand(EventEdition edition, bool? needsReview) => new(
+        Id: edition.Id,
+        Year: edition.Year,
+        Date: edition.Date,
+        EndDate: edition.EndDate,
+        Title: edition.Title,
+        RegistrationUrl: edition.RegistrationUrl,
+        ResultsUrl: edition.ResultsUrl,
+        Notes: edition.Notes,
+        RegistrationStatus: edition.RegistrationStatus.ToString(),
+        TrailId: edition.TrailId,
+        NeedsReview: needsReview
+    );
+
+    [Fact]
+    public async Task UpdateEdition_OmittingNeedsReview_LeavesNeedsReviewUnchanged()
+    {
+        // Mirrors TranslationHealth.tsx's bulk translation-sync PUT: a partial payload that
+        // doesn't own this flag must not silently clear a bookmark set from the edit dialog.
+        var ev = CreateTestEvent();
+        var edition = CreateTestEdition(ev.Id);
+        edition.NeedsReview = true;
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new UpdateEditionCommandHandler(ctx, _cacheInvalidator);
+            await handler.Handle(BuildUpdateEditionCommand(edition, needsReview: null), CancellationToken.None);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        Assert.True(verifyCtx.EventEditions.Find(edition.Id)!.NeedsReview);
+    }
+
+    [Fact]
+    public async Task UpdateEdition_SettingNeedsReviewTrue_Persists()
+    {
+        var ev = CreateTestEvent();
+        var edition = CreateTestEdition(ev.Id);
+        edition.NeedsReview = false;
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new UpdateEditionCommandHandler(ctx, _cacheInvalidator);
+            await handler.Handle(BuildUpdateEditionCommand(edition, needsReview: true), CancellationToken.None);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        Assert.True(verifyCtx.EventEditions.Find(edition.Id)!.NeedsReview);
+    }
+
+    [Fact]
+    public async Task UpdateEdition_SettingNeedsReviewFalse_Persists()
+    {
+        var ev = CreateTestEvent();
+        var edition = CreateTestEdition(ev.Id);
+        edition.NeedsReview = true;
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new UpdateEditionCommandHandler(ctx, _cacheInvalidator);
+            await handler.Handle(BuildUpdateEditionCommand(edition, needsReview: false), CancellationToken.None);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        Assert.False(verifyCtx.EventEditions.Find(edition.Id)!.NeedsReview);
+    }
+
     // ─── UpdateRaceCommand — TicketStatus forced on Cancelled ───
 
     [Fact]

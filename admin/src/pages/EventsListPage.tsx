@@ -36,6 +36,7 @@ import {
 import dayjs from 'dayjs';
 import AddIcon from '@mui/icons-material/Add';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import BookmarkIcon from '@mui/icons-material/Bookmark';
 import ClearIcon from '@mui/icons-material/Clear';
 import CopyIcon from '@mui/icons-material/ContentCopy';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
@@ -218,6 +219,7 @@ const EVENTS_FILTER_SCHEMA = {
   sortDir: { default: 'desc', allowed: ['asc', 'desc'] },
   attentionFilter: { default: '', allowed: ['noEdition', 'seriesMissingReg', 'pastActive'] },
   weekFilter: { default: 'all', allowed: ['all', 'this-week', 'next-week'] },
+  needsReviewOnly: { default: 'false', allowed: ['true', 'false'] },
 } as const;
 
 interface EventsListPageProps {
@@ -252,6 +254,8 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
   const setAttentionFilter = useCallback((v: AttentionFilter) => setValue('attentionFilter', v ?? ''), [setValue]);
   const weekFilter = values.weekFilter as 'all' | 'this-week' | 'next-week';
   const setWeekFilter = useCallback((v: 'all' | 'this-week' | 'next-week') => setValue('weekFilter', v), [setValue]);
+  const needsReviewOnly = values.needsReviewOnly === 'true';
+  const setNeedsReviewOnly = useCallback((v: boolean) => setValue('needsReviewOnly', v ? 'true' : 'false'), [setValue]);
   const [showAttentionPanel, setShowAttentionPanel] = useState(true);
   const [cyclingStatusIds, setCyclingStatusIds] = useState<Set<string>>(new Set());
   const [cyclingActivityIds, setCyclingActivityIds] = useState<Set<string>>(new Set());
@@ -285,7 +289,7 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
   }, [events]);
 
   const hasActiveFilters = weekFilter !== 'all' || attentionFilter !== null || activityFilter !== 'all' || typeFilter !== 'all'
-    || statusFilter !== 'all' || locationFilter !== 'all' || yearFilter !== 'all' || monthFilter !== 'all';
+    || statusFilter !== 'all' || locationFilter !== 'all' || yearFilter !== 'all' || monthFilter !== 'all' || needsReviewOnly;
 
   const resetFilters = () => {
     // Deliberately leaves searchQuery, sortBy and sortDir untouched — this is the "clear
@@ -293,6 +297,7 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
     setValues({
       activityFilter: 'all', typeFilter: 'all', statusFilter: 'all', locationFilter: 'all',
       yearFilter: 'all', monthFilter: 'all', attentionFilter: '', weekFilter: 'all',
+      needsReviewOnly: 'false',
     });
   };
 
@@ -342,6 +347,7 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
         if (attentionFilter === 'noEdition' && !(!e.hasFutureEdition && (e.type === 'Race' || e.type === 'Series') && e.status !== 'Cancelled')) return false;
         if (attentionFilter === 'seriesMissingReg' && !(e.type === 'Series' && e.nextEditionDate && e.nextEditionDate <= in30daysStr && e.seriesRaces?.some(r => !r.registrationUrl))) return false;
         if (attentionFilter === 'pastActive' && !(e.status === 'Confirmed' && e.nextEditionDate && e.nextEditionDate < todayStr)) return false;
+        if (needsReviewOnly && !e.anyEditionNeedsReview) return false;
         return true;
       })
       .sort((a, b) => {
@@ -367,7 +373,7 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
         }
         return cmp !== 0 ? dir * cmp : a.name.localeCompare(b.name);
       });
-  }, [events, searchQuery, activityFilter, typeFilter, statusFilter, locationFilter, yearFilter, monthFilter, sortBy, sortDir, attentionFilter, weekFilter, thisWeekStart, thisWeekEnd, nextWeekStart, nextWeekEnd, todayStr, in30daysStr]);
+  }, [events, searchQuery, activityFilter, typeFilter, statusFilter, locationFilter, yearFilter, monthFilter, sortBy, sortDir, attentionFilter, weekFilter, needsReviewOnly, thisWeekStart, thisWeekEnd, nextWeekStart, nextWeekEnd, todayStr, in30daysStr]);
 
   // j/k row focus + Enter/o to open — scrolled into view whenever it changes.
   const { focusedIndex: focusedEventIndex } = useRowFocus(filteredEvents, (e) => navigate(`/events/${e.slug}`));
@@ -792,6 +798,17 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
             else setWeekFilter(next);
           }}
         />
+        <Tooltip title="Show only events with an edition marked for review">
+          <Chip
+            icon={<BookmarkIcon />}
+            label="Needs review"
+            size="small"
+            color={needsReviewOnly ? 'warning' : 'default'}
+            variant={needsReviewOnly ? 'filled' : 'outlined'}
+            clickable
+            onClick={() => setNeedsReviewOnly(!needsReviewOnly)}
+          />
+        </Tooltip>
         {(weekFilter !== 'all' || yearFilter !== 'all') && (
           <Tooltip title="Copy agenda to clipboard">
             <IconButton size="small" aria-label="Copy agenda" onClick={handleCopyAgenda}>
