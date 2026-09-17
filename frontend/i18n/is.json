@@ -1492,6 +1492,9 @@
         "recentPhotos": {
             "title": "Myndir frá {{edition}}"
         },
+        "recentResults": {
+            "title": "Úrslit frá {{edition}}"
+        },
         "editionsHistory": {
             "title": "Fyrri viðburðir",
             "subtitle": "Skoðaðu úrslit og upplýsingar um viðburði sem þegar hafa farið fram.",

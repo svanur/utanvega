@@ -113,7 +113,7 @@ type PreparedEdition = EventEditionDto & {
 import { ACTIVITY_EMOJI } from '../constants/activityEmoji';
 import { googleCalendarUrl, outlookCalendarUrl, downloadIcs } from '../utils/calendarLinks';
 import EventDateBadge from '../components/EventDateBadge';
-import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, shortestUniqueEditionKey, getMultiDayEditionProgress, toDateOnlyString } from '../utils/eventUtils';
+import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, shortestUniqueEditionKey, getMultiDayEditionProgress, toDateOnlyString, getEditionTimingStatus } from '../utils/eventUtils';
 import { getTicketStatusColor } from '../utils/ticketStatus';
 import { trackEventQRClick } from '../utils/analytics';
 
@@ -473,6 +473,20 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     const showRecentPhotosSection = !!recentPhotoEdition
         && recentPhotoEdition.id !== primaryEdition?.id
         && !(primaryEdition?.galleries?.length);
+
+    // Mirrors recentPhotoEdition above: organizers frequently pre-fill resultsUrl for a future
+    // edition before the actual results page exists, so the hero button is gated on the edition's
+    // race having actually happened (#898) — this is the fallback to a past edition's own results
+    // when that gate hides the primary one.
+    const recentResultsEdition = useMemo(
+        () => pastEditions.find(edition => !!edition.resultsUrl) ?? null,
+        [pastEditions],
+    );
+    const showPrimaryResultsButton = !!primaryEdition?.resultsUrl
+        && getEditionTimingStatus(primaryEdition.date, primaryEdition.endDate) !== 'upcoming';
+    const showRecentResultsSection = !!recentResultsEdition
+        && recentResultsEdition.id !== primaryEdition?.id
+        && !showPrimaryResultsButton;
 
     // Prefer the richer primaryEdition object (already in scope) over the flattened EventSummary
     // fields — it reflects exactly the edition this page is displaying.
@@ -856,7 +870,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                     {t('races.organizerSite')}
                                 </Button>
                             )}
-                            {!showEditionSections && primaryEdition?.resultsUrl && (
+                            {!showEditionSections && showPrimaryResultsButton && (
                                 <Button
                                     variant={isPostRace ? 'contained' : 'outlined'}
                                     color={isPostRace ? 'success' : 'primary'}
@@ -885,6 +899,28 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 <AddToCalendarButton event={event} endDate={primaryEdition?.endDate ?? event.endDisplayDate} t={t} />
                             )}
                         </Stack>
+
+                        {showRecentResultsSection && recentResultsEdition && (
+                            <Box sx={{ mt: 1.5 }}>
+                                <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 0.5 }}>
+                                    {t('races.recentResults.title', {
+                                        defaultValue: 'Results from {{edition}}',
+                                        edition: loc(recentResultsEdition.title?.trim() || null, recentResultsEdition.titleEn) ?? String(recentResultsEdition.year),
+                                    })}
+                                </Typography>
+                                <Stack direction="row" flexWrap="wrap" gap={1} alignItems="center">
+                                    <Button
+                                        variant="outlined"
+                                        size="small"
+                                        endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
+                                        onClick={() => window.open(recentResultsEdition.resultsUrl!, '_blank', 'noopener')}
+                                        sx={{ textTransform: 'none' }}
+                                    >
+                                        {t('races.results', { defaultValue: 'Results' })}
+                                    </Button>
+                                </Stack>
+                            </Box>
+                        )}
 
                         {showRecentPhotosSection && recentPhotoEdition && (
                             <Box sx={{ mt: 1.5 }}>
