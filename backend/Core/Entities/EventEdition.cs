@@ -49,6 +49,11 @@ public class EventEdition
     public DateTime? RegistrationOpens { get; set; }
     public DateTime? RegistrationCloses { get; set; }
 
+    // Admin-only bookmark: "come back and look at this". Deliberately independent of Status
+    // so an edition can be marked for review without changing whether the public site shows it.
+    // Mirrors Trail.NeedsReview.
+    public bool NeedsReview { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
 

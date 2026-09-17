@@ -248,7 +248,8 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
                 Status: ed.Status.ToString(),
                 EffectiveCancelled: EditionStatusHelpers.ComputeEffectiveCancelled(ed.Status, ed.Races.Select(r => r.Status).ToList()),
                 RegistrationOpens: ed.RegistrationOpens,
-                RegistrationCloses: ed.RegistrationCloses
+                RegistrationCloses: ed.RegistrationCloses,
+                NeedsReview: ed.NeedsReview
             ))
             .ToList();
 

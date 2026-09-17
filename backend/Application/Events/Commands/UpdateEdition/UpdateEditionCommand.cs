@@ -23,7 +23,8 @@ public record UpdateEditionCommand(
     Dictionary<string, string>? TranslationHashes = null,
     string? Status = null,
     DateTime? RegistrationOpens = null,
-    DateTime? RegistrationCloses = null
+    DateTime? RegistrationCloses = null,
+    bool? NeedsReview = null
 ) : IRequest<bool>;
 
 public class UpdateEditionCommandHandler : IRequestHandler<UpdateEditionCommand, bool>
@@ -81,6 +82,11 @@ public class UpdateEditionCommandHandler : IRequestHandler<UpdateEditionCommand,
         }
         if (request.TranslationHashes != null)
             edition.TranslationHashes = JsonSerializer.Serialize(request.TranslationHashes);
+        // NeedsReview is patch-if-provided, not resend-full-snapshot — same reasoning as Status
+        // above: TranslationHealth's bulk translation-sync PUT sends a partial payload that
+        // doesn't own this flag, and must not silently clear a bookmark set from the edit dialog.
+        if (request.NeedsReview is not null)
+            edition.NeedsReview = request.NeedsReview.Value;
         edition.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync(cancellationToken);

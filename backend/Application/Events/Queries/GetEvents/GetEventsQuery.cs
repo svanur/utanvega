@@ -295,7 +295,8 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 EditionEffectiveCancelled: relevantEdition != null
                     && EditionStatusHelpers.ComputeEffectiveCancelled(relevantEdition.Status, relevantEdition.Races.Select(r => r.Status).ToList()),
                 OrganizerSlug: e.Organizer != null ? e.Organizer.Slug : null,
-                Galleries: relevantEdition?.PhotoGalleries.ToPublicDtos() ?? []
+                Galleries: relevantEdition?.PhotoGalleries.ToPublicDtos() ?? [],
+                AnyEditionNeedsReview: editionsForCalc.Any(ed => ed.NeedsReview)
             );
         }).ToList();
     }
