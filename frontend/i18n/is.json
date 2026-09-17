@@ -785,6 +785,10 @@
             }
         },
         "changelog": {
+            "v1_7_0": {
+                "title": "Tillögur þegar tengill er rangt stafsettur, vikusíur fyrir viðburði, og öryggislagfæring",
+                "description": "Ef þú stafsetur viðburðartengil rangt birtast núna alvöru tillögur — sama snjalla samsvörun og leiðasíðan hefur nú þegar. Á opinberu viðburðasíðunni bættust við síurnar 'Þessi vika' og 'Næsta vika', aflýst hlaup fá nú sjónræna merkingu í dagatalinu og raðakortum, og samfélagsmiðlatenglar geta sjálfkrafa greint tegund sína út frá vefslóðinni. Í stjórnborði sleppir leitarreiturinn ekki lengur stöfum á meðan þú skrifar, og stór hreinsun á lint-villum kom með nýju CI-verkefni til að halda því þannig. Við lokuðum líka öryggisveikleika sem gerði duldum viðburðum kleift að sjást með beinum tengli. Auk þess margar villuleiðréttingar í sögu útgáfa, ITRA-stiga innslátt og meðhöndlun tvítekinna nafna."
+            },
             "v1_6_0": {
                 "title": "Breytingar á stjórnborði. Meiri upplýsingar í sögu viðburða. Senda ítarlega athugasemd breytt",
                 "description": "Margar umbætur á stjórnborði. Fleiri upplýsingar birtar fyrir fyrri viðburði — hún sýnir núna hækkun, landslag og skipuleggjanda fyrri hlaupa, hversu mörg ár viðburðurinn hefur verið skráður hér, og síu fyrir útgáfur með myndum; ef nýjasta útgáfan er ekki komin með myndir en þá bendir viðburðurinn á nýjustu útgáfuna sem er með þær. Auk þess margar villuleiðréttingar í leiðum, stjórnborði og útgáfum viðburða. Uppfærsla á 'Senda inn ítarlega athugasemd' forminu þar sem notandi þarf sérstaklega að samþykkja að senda skjáskot með athugasemd, opt-in í stað opt-out eins og það var áður."
