@@ -1028,6 +1028,7 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
         onCreated={(slug) => { setCreateDialogOpen(false); navigate(`/events/${slug}`); }}
         onNotify={onNotify}
         createEvent={createEvent}
+        events={events}
       />
 
       {/* Bulk create missing editions dialog */}
