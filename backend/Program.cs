@@ -377,6 +377,9 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton(new TrailViewRetentionOptions());
 builder.Services.AddHostedService<TrailViewRetentionService>();
 
+builder.Services.AddSingleton(new EditionCompletionSweepOptions());
+builder.Services.AddHostedService<EditionCompletionSweepService>();
+
 builder.Services.AddRateLimiter(options =>
 {
     options.AddPolicy("trail-view", httpContext =>
