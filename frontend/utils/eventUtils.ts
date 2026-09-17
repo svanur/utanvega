@@ -21,6 +21,27 @@ export function editionKeyFor(edition: { date?: string | null; year?: number | n
     return edition.date ?? String(edition.year ?? edition.id);
 }
 
+// Same URL slot as editionKeyFor(), but shortens to the year alone when that's unambiguous among
+// the edition's siblings — same-year collisions are legal (EventEdition.Year has no unique
+// constraint, see EventEdition.cs), so this only drops to the year when no sibling shares it, falls
+// back to the full date when siblings share the year but not the date, and finally to the id when
+// even the date collides (or neither date nor year is on file). The existing date → year → id
+// matching chain in EditionHistoryPage resolves either shape, so shortening here never breaks a
+// previously-generated/bookmarked full-date URL.
+export function shortestUniqueEditionKey(
+    edition: { date?: string | null; year?: number | null; id: string },
+    siblingEditions: { date?: string | null; year?: number | null; id: string }[],
+): string {
+    const others = siblingEditions.filter(sibling => sibling.id !== edition.id);
+    if (edition.year != null && !others.some(sibling => sibling.year === edition.year)) {
+        return String(edition.year);
+    }
+    if (edition.date != null && !others.some(sibling => sibling.date === edition.date)) {
+        return edition.date;
+    }
+    return edition.id;
+}
+
 export function getEventTypeColor(type: string): 'primary' | 'secondary' | 'success' | 'warning' | 'info' | 'error' | 'default' {
     switch (type) {
         case 'Race': return 'primary';
@@ -90,6 +111,22 @@ export function toDateOnlyString(date: Date): string {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
+export function addDays(d: Date, days: number): Date {
+    const copy = new Date(d);
+    copy.setDate(copy.getDate() + days);
+    return copy;
+}
+
+// Monday-start week range for 'this'/'next' week, relative to today.
+// Offset formula ported from admin/src/pages/EventsListPage.tsx (native Date instead of dayjs).
+export function getWeekRange(which: 'this' | 'next', now: Date = new Date()): { start: string; end: string } {
+    const today = new Date(now);
+    const day = today.getDay(); // 0 = Sunday .. 6 = Saturday
+    const mondayOffset = which === 'this' ? (day + 6) % 7 : (8 - day) % 7 || 7;
+    const start = addDays(today, which === 'this' ? -mondayOffset : mondayOffset);
+    return { start: toDateOnlyString(start), end: toDateOnlyString(addDays(start, 6)) };
+}
+
 // For a multi-day edition currently in progress, computes which day of its date/endDate span
 // "today" falls on — powers a "Day X of Y" indicator (e.g. day 2 of a 3-day stage race). Returns
 // null for single-day editions, or when today is outside [date, endDate] (both inclusive) — a
@@ -155,6 +192,17 @@ export function getEditionTimingStatus(
     if (today < start) return 'upcoming';
     if (today > end) return 'past';
     return 'ongoing';
+}
+
+// Milliseconds from `now` until the next local midnight (00:00:00.000 of the following day).
+// Powers EditionHistoryPage's self-re-arming setTimeout, which re-checks getEditionTimingStatus
+// once per midnight crossing instead of polling. Extracted as a pure function so the boundary
+// math (an exact-midnight `now` must still yield a full 24h, not 0) is unit-testable without a
+// setTimeout/setState harness.
+export function msUntilNextMidnight(now: Date = new Date()): number {
+    const nextMidnight = new Date(now);
+    nextMidnight.setHours(24, 0, 0, 0);
+    return nextMidnight.getTime() - now.getTime();
 }
 
 export function formatRaceDateTime(

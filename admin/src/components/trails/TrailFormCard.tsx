@@ -34,7 +34,8 @@ import { useLocations } from '../../hooks/useLocations';
 import { useTags } from '../../hooks/useTags';
 import { useTranslate } from '../../hooks/useTranslate';
 import BilingualTextField from '../BilingualTextField';
-import { BilingualLangProvider, useBilingualLang } from '../../contexts/BilingualLangContext';
+import { BilingualLangProvider } from '../../contexts/BilingualLangContext';
+import { useBilingualLang } from '../../hooks/useBilingualLang';
 import type { EventDetailDto, EventEditionDto, EventSummaryDto, RaceDto } from '../../hooks/useEvents';
 import { hashText } from '../../utils/translationHash';
 import {

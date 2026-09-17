@@ -164,6 +164,7 @@
         "closeFullscreen": "Close fullscreen",
         "getDirections": "Get directions to trailhead",
         "downloadGpx": "Download GPX file",
+        "gpxLabel": "GPX",
         "relatedTrails": "Related Trails",
         "outAndBack": "Out and Back",
         "loop": "Loop",
@@ -460,7 +461,14 @@
         "screenshotExclude": "Excluded",
         "screenshotViewFull": "View full-size screenshot",
         "capturingScreen": "Capturing screenshot...",
-        "autoCapture": "Detailed reports always include technical data ({{items}}) to help us investigate the issue. If you also wish to include a screenshot, click the 'Excluded' button above; it will change to 'Include', and a screenshot will be saved with your comments. You can view the screenshot by clicking the above image."
+        "autoCapture": "Detailed reports always include technical data ({{items}}) to help us investigate the issue. If you also wish to include a screenshot, click the 'Excluded' button above; it will change to 'Include', and a screenshot will be saved with your comments. You can view the screenshot by clicking the above image.",
+        "autoCaptureItems": {
+            "browser": "browser",
+            "os": "OS",
+            "screenSize": "screen size",
+            "language": "language",
+            "timezone": "timezone"
+        }
     },
     "betaComments": {
         "title": "Our web is in development",
@@ -777,6 +785,10 @@
             }
         },
         "changelog": {
+            "v1_7_0": {
+                "title": "Did-you-mean suggestions for mistyped event links, quick week filters, and a security fix",
+                "description": "Mistype an event link and you'll now get real \"did you mean\" suggestions, the same smart matching the trails 404 page already had. The public events page gained \"This week\"/\"Next week\" quick filters, cancelled races are now visually flagged in the calendar and series cards, and social links can auto-detect their platform from the URL. On admin, search boxes no longer drop keystrokes while typing, and a full lint cleanup came with a new CI job to keep it that way. We also closed a security issue that let hidden events be read directly by URL. Alongside that, a broad round of bug fixes across editions history, ITRA points input, and duplicate-name handling."
+            },
             "v1_6_0": {
                 "title": "Changes on the admin web, and a fuller history for every event. Opt-in approach added to send comments form",
                 "description": "Many changes on Admin web. The editions history page grew up too — it now shows elevation, terrain, and organiser for past races, how many years an event has been recorded here, and a filter for editions with photos; if the newest edition doesn't have photos yet, the site points you to the most recent one that does. Alongside that, a round of bug fixes across trails, admin, and event editions. Send detailed comment form updated to opt-in regarding sending the screenshot."
@@ -872,6 +884,25 @@
             "v0_0_0": {
                 "title": "February, 2025",
                 "description": "The original hlaupadagskra.is site is released, listing all runs in Iceland in one place."
+            }
+        },
+        "changelogDiary": {
+            "heading": "Changelog diary",
+            "subtitle": "Full release history, in more detail than the milestone timeline on the About page. Unlisted and not indexed.",
+            "searchPlaceholder": "Search changelog…",
+            "searchLabel": "Search changelog",
+            "noResults": "No entries match your filters.",
+            "wentLive": "Went live",
+            "previousSite": "Previous site",
+            "tags": {
+                "admin": "Admin",
+                "frontend": "Website",
+                "events": "Events",
+                "editions": "Editions",
+                "races": "Races",
+                "trails": "Trails",
+                "historyPage": "Past Events",
+                "photographers": "Photographers"
             }
         }
     },
@@ -1427,6 +1458,9 @@
             "allLocations": "All locations",
             "month": "Month",
             "allMonths": "All",
+            "week": "Week",
+            "thisWeek": "This week",
+            "nextWeek": "Next week",
             "weekendOnly": "Weekend only",
             "favoritesOnly": "Show favorites only",
             "reset": "Reset filters",
@@ -1466,6 +1500,9 @@
         },
         "recentPhotos": {
             "title": "Photos from {{edition}}"
+        },
+        "recentResults": {
+            "title": "Results from {{edition}}"
         },
         "editionsHistory": {
             "title": "Past Events",
@@ -1518,8 +1555,8 @@
         },
         "ticketStatus": {
             "Free": "Registration: Free",
-            "NotStarted": "Registration: Coming Soon",
-            "Available": "Registration: Available",
+            "NotStarted": "Registration: Not started",
+            "Available": "Registration: Open",
             "AlmostSoldOut": "Registration: Almost Full",
             "SoldOut": "Registration: Sold Out",
             "Closed": "Registration: Closed"

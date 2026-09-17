@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Core.Services;
@@ -32,6 +33,12 @@ public record CreateEventCommand(
 
 public class CreateEventCommandHandler : IRequestHandler<CreateEventCommand, (Guid Id, string Slug)>
 {
+    // Must match the unique index EF Core generates for Event.Slug (see
+    // backend/Migrations/UtanvegaDbContextModelSnapshot.cs) — the default naming convention gives
+    // "IX_{Table}_{Property}", i.e. IX_Events_Slug, since neither the entity config nor the
+    // migration overrides it with HasDatabaseName.
+    private const string SlugUniqueIndexName = "IX_Events_Slug";
+
     private readonly UtanvegaDbContext _context;
     private readonly ICacheInvalidator _cacheInvalidator;
 
@@ -79,7 +86,17 @@ public class CreateEventCommandHandler : IRequestHandler<CreateEventCommand, (Gu
         };
 
         _context.Events.Add(ev);
-        await _context.SaveChangesAsync(cancellationToken);
+
+        try
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException
+               { SqlState: "23505", ConstraintName: SlugUniqueIndexName })
+        {
+            throw new InvalidOperationException($"An event with slug '{slug}' already exists.");
+        }
+
         _cacheInvalidator.InvalidateEvent(slug);
 
         return (ev.Id, slug);

@@ -104,6 +104,10 @@ export class QuoteService {
         { text: "Don't make permanent decisions on temporary feelings." },
         { text: "This, too, shall pass." },
         { text: "You are not your thoughts; you are the observer of your thoughts." },
+        { text: "Grab your coat, put on your shoes, let′s go", author: "Krummi Björgvins." },
+        { text: "It is not about the start. It is about the finish", author: "Andy Glaze." },
+        { text: "The only way through is forward...", author: "Andy Glaze." },
+        { text: "þetta eru ekki kálfar... Þetta eru naut!", author: "Guðbrandur Benediktsson um kálfana á Tomma G." },
     ];
 
     static getRandomQuote(): Quote {

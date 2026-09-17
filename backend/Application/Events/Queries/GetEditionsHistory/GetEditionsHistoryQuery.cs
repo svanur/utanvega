@@ -52,7 +52,15 @@ public record EditionHistoryRowDto(
     // includes cancelled editions (they happened) regardless of the request's IncludeCancelled flag —
     // this is a record of what exists, not of what the current view happens to be filtering.
     int RecordedEditionsCount,
-    List<int> RecordedEditionsYears
+    List<int> RecordedEditionsYears,
+    // #806: derived from the row's "primary race" — among this row's visible races, the one whose
+    // linked trail has the greatest Length. Both null when no race is linked to a trail; a non-null
+    // PrimaryTerrainType can still accompany a null PrimaryElevationProfile if the primary trail has
+    // terrain data but no sampled profile. ElevationProfile is deliberately not part of trailData's
+    // bulk projection above (payload-weight reasons) — it's fetched separately, scoped to only the
+    // primary trail ids actually selected across this response's rows.
+    double[]? PrimaryElevationProfile,
+    string? PrimaryTerrainType
 );
 
 // Not ICacheable — the key is parameterized by an arbitrary year, same reasoning as GetEventCalendarQuery
@@ -65,6 +73,11 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
     private readonly IMemoryCache _cache;
 
     private record TrailHistoryData(double Length, double ElevationGain, Core.Entities.TerrainType? TerrainType, Core.Entities.ActivityType ActivityTypeId);
+
+    // #806: carries the row alongside its primary trail id (if any) between the main build loop and
+    // the post-loop elevation-profile fetch, which needs the full set of primary trail ids across all
+    // rows before it can run. PrimaryElevationProfile on the row itself is filled in afterward.
+    private record RowBuildResult(EditionHistoryRowDto Row, Guid? PrimaryTrailId);
 
     public GetEditionsHistoryQueryHandler(UtanvegaDbContext context, IMemoryCache cache)
     {
@@ -153,7 +166,7 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
                     ))
             : new Dictionary<Guid, (int Count, List<int> Years)>();
 
-        var rows = new List<EditionHistoryRowDto>();
+        var rows = new List<RowBuildResult>();
 
         foreach (var ed in editions)
         {
@@ -191,7 +204,31 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
             }
         }
 
-        var result = rows.OrderByDescending(r => r.RowDate).ToList();
+        // #806: elevation profile is fetched only for the distinct primary trail ids actually
+        // selected across this response's rows — not every trail referenced in trailIds — since
+        // most rows' non-primary races never surface a profile at all.
+        var primaryTrailIds = rows
+            .Select(r => r.PrimaryTrailId)
+            .Where(id => id.HasValue)
+            .Select(id => id!.Value)
+            .Distinct()
+            .ToHashSet();
+
+        var elevationProfiles = primaryTrailIds.Count > 0
+            ? (await _context.Trails
+                .AsNoTracking()
+                .Where(t => primaryTrailIds.Contains(t.Id))
+                .Select(t => new { t.Id, t.ElevationProfile })
+                .ToListAsync(cancellationToken))
+                .ToDictionary(t => t.Id, t => t.ElevationProfile)
+            : new Dictionary<Guid, double[]?>();
+
+        var result = rows
+            .Select(r => r.PrimaryTrailId.HasValue && elevationProfiles.TryGetValue(r.PrimaryTrailId.Value, out var profile)
+                ? r.Row with { PrimaryElevationProfile = profile }
+                : r.Row)
+            .OrderByDescending(r => r.RowDate)
+            .ToList();
         _cache.Set(cacheKey, result, TimeSpan.FromHours(12));
         return result;
     }
@@ -206,7 +243,7 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
         return effectiveEnd.HasValue ? effectiveEnd.Value < today : year.HasValue && year.Value < today.Year;
     }
 
-    private static EditionHistoryRowDto BuildRow(EventEdition ed, DateOnly rowDate, List<Race> races, bool effectiveCancelled, Dictionary<Guid, TrailHistoryData> trailData, int recordedEditionsCount, List<int> recordedEditionsYears, DateOnly? rowEndDate = null, Guid? raceId = null, string? raceName = null, string? raceNameEn = null)
+    private static RowBuildResult BuildRow(EventEdition ed, DateOnly rowDate, List<Race> races, bool effectiveCancelled, Dictionary<Guid, TrailHistoryData> trailData, int recordedEditionsCount, List<int> recordedEditionsYears, DateOnly? rowEndDate = null, Guid? raceId = null, string? raceName = null, string? raceNameEn = null)
     {
         var distances = races
             .Select(r =>
@@ -236,7 +273,21 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
             .Cast<string>()
             .ToList();
 
-        return new EditionHistoryRowDto(
+        // #806: primary race = among this row's races, the one whose linked trail has the greatest
+        // Length. Races with no linked trail, or whose trail isn't in trailData, aren't eligible.
+        // #815: ties on Length are broken by Race.Id (arbitrary but deterministic) so the outcome
+        // doesn't depend on ed.Races' unordered load order.
+        var primaryTrailId = races
+            .Where(r => r.TrailId.HasValue && trailData.ContainsKey(r.TrailId.Value))
+            .OrderByDescending(r => trailData[r.TrailId!.Value].Length)
+            .ThenBy(r => r.Id)
+            .Select(r => r.TrailId)
+            .FirstOrDefault();
+        var primaryTerrainType = primaryTrailId.HasValue && trailData.TryGetValue(primaryTrailId.Value, out var primaryTrail)
+            ? primaryTrail.TerrainType?.ToString()
+            : null;
+
+        var row = new EditionHistoryRowDto(
             ed.Event.Id,
             ed.Event.Slug,
             ed.Event.Name,
@@ -260,7 +311,12 @@ public class GetEditionsHistoryQueryHandler : IRequestHandler<GetEditionsHistory
             raceName,
             raceNameEn,
             recordedEditionsCount,
-            recordedEditionsYears
+            recordedEditionsYears,
+            // Filled in after the post-loop elevation-profile fetch, keyed by PrimaryTrailId below.
+            null,
+            primaryTerrainType
         );
+
+        return new RowBuildResult(row, primaryTrailId);
     }
 }

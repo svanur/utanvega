@@ -52,7 +52,6 @@ public class UpdateTrailGpxCommandHandler : IRequestHandler<UpdateTrailGpxComman
         // existing value — to match the "never silently overwrite a manual value" rule that
         // applies to create as well.
         trail.UpdatedAt = DateTime.UtcNow;
-        trail.UpdatedBy = request.ActorUserId;
 
         await _context.SaveChangesWithAuditAsync(request.ActorUserId);
         _cacheInvalidator.InvalidateTrail(trail.Slug);

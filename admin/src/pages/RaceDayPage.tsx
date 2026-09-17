@@ -172,7 +172,7 @@ export default function RaceDayPage({ onNotify, initialDate }: RaceDayPageProps)
     const toggleRace = (id: string) => {
         setSelectedRaceIds(prev => {
             const next = new Set(prev);
-            next.has(id) ? next.delete(id) : next.add(id);
+            if (next.has(id)) next.delete(id); else next.add(id);
             return next;
         });
     };

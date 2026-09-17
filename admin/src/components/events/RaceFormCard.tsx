@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import {
   Alert,
   Autocomplete,
@@ -36,7 +36,9 @@ import {
   type RaceFormState,
 } from '../../utils/eventForms';
 import BilingualTextField from '../BilingualTextField';
-import { BilingualLangProvider, useBilingualLang } from '../../contexts/BilingualLangContext';
+import { BilingualLangProvider } from '../../contexts/BilingualLangContext';
+import { useBilingualLang } from '../../hooks/useBilingualLang';
+import { clampItraPoints, correctEmptyToOneFromSpinner } from '../../utils/itraPoints';
 
 interface RaceFormCardProps {
   race: RaceDto | null;
@@ -93,6 +95,10 @@ function RaceFormCardInner({
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const { translate, translating } = useTranslate(msg => onNotify(msg, 'error'));
+  // Tracks whether the pending ITRA points change was preceded by real user input
+  // (a keystroke or a paste) rather than a native spin-button click — see
+  // correctEmptyToOneFromSpinner in utils/itraPoints.ts for why this distinction matters.
+  const itraRealInputRef = useRef(false);
 
   useEffect(() => {
     setForm(initialValues ?? (race ? buildRaceForm(race) : createEmptyRaceForm(edition.id, edition.races.length, edition.status)));
@@ -308,7 +314,39 @@ function RaceFormCardInner({
               </Select>
             </FormControl>
             <TextField size="small" fullWidth label="ITRA points" type="number" value={form.itraPoints}
-              onChange={e => set('itraPoints', e.target.value)} />
+              inputProps={{ min: 0, max: 6, step: 1 }}
+              onKeyDown={e => {
+                // The ArrowUp key is unambiguous (unlike a digit key, it can never be a
+                // legitimate typed value), so it can be special-cased directly here,
+                // ahead of and independent of the keydown/paste/onChange ref below: stop
+                // the browser's native step (which would otherwise land on 1, not 0 — see
+                // correctEmptyToOneFromSpinner in utils/itraPoints.ts) and snap straight
+                // to the minimum.
+                if (e.key === 'ArrowUp' && form.itraPoints.trim() === '') {
+                  e.preventDefault();
+                  set('itraPoints', '0');
+                  return;
+                }
+                itraRealInputRef.current = true;
+              }}
+              // A mouse-only context-menu paste (right-click → Paste) fires onChange
+              // with no preceding keydown, same as a spin-button click — so it needs its
+              // own ref-setting handler to be recognized as real input. (Ctrl+V is
+              // already covered by onKeyDown above, since the 'v' keydown fires first.)
+              onPaste={() => { itraRealInputRef.current = true; }}
+              // Dragging text into the field (drag-and-drop insertion) also fires onChange
+              // with no preceding keydown or paste event, same as a spin-button click — so
+              // it needs the same ref-setting treatment as onPaste above.
+              onDrop={() => { itraRealInputRef.current = true; }}
+              onChange={e => {
+                const realUserInputOccurred = itraRealInputRef.current;
+                itraRealInputRef.current = false;
+                set('itraPoints', correctEmptyToOneFromSpinner(form.itraPoints, e.target.value, realUserInputOccurred));
+              }}
+              onBlur={e => {
+                itraRealInputRef.current = false;
+                set('itraPoints', clampItraPoints(e.target.value));
+              }} />
             <FormControl size="small" fullWidth>
               <InputLabel>Result type</InputLabel>
               <Select value={form.resultType} label="Result type" onChange={e => set('resultType', e.target.value as typeof form.resultType)}>

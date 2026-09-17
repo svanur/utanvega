@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Utanvega.Backend.Core.Entities;
 
 namespace Utanvega.Backend.Infrastructure.Persistence;
@@ -21,6 +22,27 @@ public static class DbContextExtensions
 
         foreach (var entry in entries)
         {
+            // Populate CreatedBy/UpdatedBy generically for any tracked entity that exposes these
+            // properties (Trail, Event, Location, ...) — set before the Modified diff below runs
+            // so the change actually shows up in the ChangeLog's "changes" payload. Entities that
+            // don't expose one or both properties (e.g. PhotoGallery has no UpdatedBy, ChangeLog
+            // has neither) are left alone; FindProperty returns null and we skip.
+            //
+            // CreatedBy is only filled in when the entity didn't already set it itself — a couple
+            // of create handlers (e.g. CreateLocationCommand) still assign CreatedBy explicitly
+            // from their own request field, and this path must not stomp on that. UpdatedBy has no
+            // such pre-existing per-handler convention left after #813 removed the last three
+            // manual assignments, so it's always overwritten with the current save's userId.
+            switch (entry.State)
+            {
+                case EntityState.Added:
+                    SetAuditUserId(entry, "CreatedBy", userId, overwriteExisting: false);
+                    break;
+                case EntityState.Modified:
+                    SetAuditUserId(entry, "UpdatedBy", userId, overwriteExisting: true);
+                    break;
+            }
+
             var entityName = entry.Entity.GetType().Name;
             var entityIdProperty = entry.Metadata.FindProperty("Id");
             var entityId = "unknown";
@@ -137,5 +159,17 @@ public static class DbContextExtensions
         }
 
         await db.SaveChangesAsync();
+    }
+
+    private static void SetAuditUserId(EntityEntry entry, string propertyName, string? userId, bool overwriteExisting)
+    {
+        if (entry.Metadata.FindProperty(propertyName) == null)
+            return;
+
+        var property = entry.Property(propertyName);
+        if (!overwriteExisting && property.CurrentValue != null)
+            return;
+
+        property.CurrentValue = userId;
     }
 }

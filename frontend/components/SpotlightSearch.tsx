@@ -18,9 +18,7 @@ import {
     InputAdornment,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
-import HikingIcon from '@mui/icons-material/Hiking';
 import PlaceIcon from '@mui/icons-material/Place';
-import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import KeyboardReturnIcon from '@mui/icons-material/KeyboardReturn';
 import CloseIcon from '@mui/icons-material/Close';
 import { useNavigate } from 'react-router-dom';
@@ -30,12 +28,14 @@ import { Location } from '../hooks/useLocations';
 import { EventSummary } from '../hooks/useEvents';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { useLocalize } from '../utils/localize';
+import { getActivityIcon } from '../utils/getActivityIcon';
 
 interface SearchResult {
     type: 'trail' | 'location' | 'competition';
     name: string;
     slug: string;
     subtitle?: string;
+    activityType: string;
 }
 
 function normalizeIcelandic(s: string): string {
@@ -155,6 +155,7 @@ export default function SpotlightSearch() {
                 name: trail.name,
                 slug: trail.slug,
                 subtitle: `${formatDistance(trail.length)} · ${Math.round(trail.elevationGain)}m ↑`,
+                activityType: trail.activityType,
                 score: scoreMatch(q, trail.name),
             }))
             .filter(r => r.score > 0)
@@ -166,6 +167,7 @@ export default function SpotlightSearch() {
                 name: loc(location.name, location.nameEn) ?? location.name,
                 slug: location.slug,
                 subtitle: location.parentName ? `${loc(location.parentName, location.parentNameEn) ?? location.parentName} · ${location.trailsCount} ${t('spotlight.trails')}` : `${location.trailsCount} ${t('spotlight.trails')}`,
+                activityType: '',
                 score: Math.max(scoreMatch(q, location.name), scoreMatch(q, location.nameEn ?? '')),
             }))
             .filter(r => r.score > 0)
@@ -180,6 +182,7 @@ export default function SpotlightSearch() {
                     subtitle: (comp.displayDate ?? comp.nextEditionDate)
                         ? new Date((comp.displayDate ?? comp.nextEditionDate)! + 'T00:00:00').toLocaleDateString(i18n.language === 'is' ? 'is-IS' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })
                         : (comp.organizerName ?? comp.locationName ?? undefined),
+                    activityType: comp.activityTypes?.[0] ?? comp.activityType,
                     score: Math.max(scoreMatch(q, comp.name), scoreMatch(q, comp.nameEn ?? '')),
                 }))
                 .filter(r => r.score > 0)
@@ -315,7 +318,7 @@ export default function SpotlightSearch() {
                                         sx={{ py: 0.5 }}
                                     >
                                         <ListItemIcon sx={{ minWidth: 36 }}>
-                                            <EmojiEventsIcon fontSize="small" />
+                                            {getActivityIcon(result.activityType)}
                                         </ListItemIcon>
                                         <ListItemText
                                             primary={result.name}
@@ -350,7 +353,7 @@ export default function SpotlightSearch() {
                                         sx={{ py: 0.5 }}
                                     >
                                         <ListItemIcon sx={{ minWidth: 36 }}>
-                                            <HikingIcon fontSize="small" />
+                                            {getActivityIcon(result.activityType)}
                                         </ListItemIcon>
                                         <ListItemText
                                             primary={result.name}

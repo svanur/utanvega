@@ -1,5 +1,7 @@
 using Moq;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using Npgsql;
 using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Application.Events.Commands.CreateEvent;
 using Utanvega.Backend.Application.Events.Commands.UpdateEvent;
@@ -167,6 +169,72 @@ public class EventHandlerTests : IDisposable
         Assert.NotEmpty(ev!.Slug);
         Assert.DoesNotContain(" ", ev.Slug);
         Assert.Equal(slug, ev.Slug);
+    }
+
+    [Fact]
+    public async Task Create_ConcurrentDuplicateSlug_ThrowsInvalidOperationException()
+    {
+        // #880: the proactive AnyAsync check above only catches the common case. Under a genuine
+        // race, two requests can both pass that check before either insert commits, and the loser's
+        // insert fails at the DB with a Postgres unique-violation (23505) instead. The handler must
+        // catch that at SaveChanges time and rethrow as InvalidOperationException so the admin
+        // endpoint's existing `catch (InvalidOperationException) -> 409` path handles it, rather
+        // than letting a raw DbUpdateException bubble up as an unhandled 500.
+        // #885: the fabricated exception's ConstraintName must match the real Slug index name
+        // (IX_Events_Slug) — this is what proves the handler is keying off that specific index,
+        // not any 23505 on the Events table.
+        using var ctx = TestDbContextFactory.CreateThrowingUniqueViolationContext("IX_Events_Slug");
+        var handler = new CreateEventCommandHandler(ctx, _cacheInvalidator);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            handler.Handle(new CreateEventCommand(
+                Name: "Laugavegur Ultra",
+                Slug: "laugavegur-ultra",
+                Description: "55K ultra through the highlands",
+                Type: "Race",
+                ActivityType: "TrailRunning",
+                Status: "Confirmed",
+                OrganizerName: "ÍSÍ",
+                OrganizerWebsite: "https://marathon.is",
+                OrganizerId: null,
+                AlertMessage: null,
+                AlertSeverity: null,
+                LocationId: null,
+                ScheduleRule: new ScheduleRule { Type = ScheduleType.Yearly, Month = 7, WeekOfMonth = 2, DayOfWeek = DayOfWeek.Saturday },
+                SocialLinks: null
+            ), CancellationToken.None));
+
+        Assert.Contains("laugavegur-ultra", ex.Message);
+    }
+
+    [Fact]
+    public async Task Create_UnrelatedUniqueViolation_IsNotReportedAsSlugConflict()
+    {
+        // #885: a 23505 on the Events table that isn't a Slug-index violation (e.g. a future
+        // second unique constraint) must not be mislabeled as "slug already exists" — it should
+        // propagate as-is so it surfaces as an unhandled 500 rather than a misleading 409.
+        using var ctx = TestDbContextFactory.CreateThrowingUniqueViolationContext("IX_Events_SomeOtherColumn");
+        var handler = new CreateEventCommandHandler(ctx, _cacheInvalidator);
+
+        var ex = await Assert.ThrowsAsync<DbUpdateException>(() =>
+            handler.Handle(new CreateEventCommand(
+                Name: "Laugavegur Ultra",
+                Slug: "laugavegur-ultra",
+                Description: "55K ultra through the highlands",
+                Type: "Race",
+                ActivityType: "TrailRunning",
+                Status: "Confirmed",
+                OrganizerName: "ÍSÍ",
+                OrganizerWebsite: "https://marathon.is",
+                OrganizerId: null,
+                AlertMessage: null,
+                AlertSeverity: null,
+                LocationId: null,
+                ScheduleRule: new ScheduleRule { Type = ScheduleType.Yearly, Month = 7, WeekOfMonth = 2, DayOfWeek = DayOfWeek.Saturday },
+                SocialLinks: null
+            ), CancellationToken.None));
+
+        Assert.IsType<PostgresException>(ex.InnerException);
     }
 
     // ─── UpdateEventCommand ───
@@ -564,12 +632,13 @@ public class EventHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task Create_Edition_PreservesExplicitHidden_WhenDateInPast()
+    public async Task Create_Edition_DefaultsToCompleted_WhenHiddenAndDateInPast()
     {
-        // Regression test: the past-date-defaults-to-Completed logic (#656) must not silently
-        // override an admin's deliberate Hidden choice — Hidden and Completed have very different
-        // public-visibility semantics (only Hidden is filtered out of public queries), so an admin
-        // creating a past-dated, private/draft historical edition as Hidden must have that respected.
+        // #760: Hidden is now the admin form's own default Status for a brand-new edition (see
+        // emptyEditionForm/the Year-field nudge in EventDetailPage), so a past-dated draft edition
+        // created that way must auto-complete exactly like the plain Unconfirmed default did before
+        // it — otherwise every past-dated edition created through the normal "Add edition" flow
+        // would sit as a hidden draft forever instead of reading as Completed from the start.
         var ev = CreateTestEvent();
         using (var ctx = _factory.CreateContext())
         {
@@ -586,7 +655,7 @@ public class EventHandlerTests : IDisposable
             Year: pastDate.Year,
             Date: pastDate,
             EndDate: null,
-            Title: "Past, deliberately hidden",
+            Title: "Past, admin-default hidden",
             RegistrationUrl: null,
             ResultsUrl: null,
             Notes: null,
@@ -597,7 +666,45 @@ public class EventHandlerTests : IDisposable
 
         using var verifyCtx = _factory.CreateContext();
         var edition = verifyCtx.EventEditions.Find(id);
-        Assert.Equal(EditionStatus.Hidden, edition!.Status);
+        Assert.Equal(EditionStatus.Completed, edition!.Status);
+        Assert.Equal(RegistrationStatus.Closed, edition.RegistrationStatus);
+    }
+
+    [Fact]
+    public async Task Create_Edition_PreservesExplicitCancelled_WhenDateInPast()
+    {
+        // Unlike Hidden (see Create_Edition_DefaultsToCompleted_WhenHiddenAndDateInPast above),
+        // Cancelled is never an admin-form default — it's only reachable via the dedicated
+        // row-level Cancel action on an existing edition, so a past date alongside an explicit
+        // Cancelled status must still be respected rather than silently promoted to Completed.
+        var ev = CreateTestEvent();
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            await ctx.SaveChangesAsync();
+        }
+
+        var pastDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-30));
+
+        using var edCtx = _factory.CreateContext();
+        var handler = new CreateEditionCommandHandler(edCtx, _cacheInvalidator);
+        var id = await handler.Handle(new CreateEditionCommand(
+            EventId: ev.Id,
+            Year: pastDate.Year,
+            Date: pastDate,
+            EndDate: null,
+            Title: "Past, deliberately cancelled",
+            RegistrationUrl: null,
+            ResultsUrl: null,
+            Notes: null,
+            RegistrationStatus: "NotStarted",
+            TrailId: null,
+            Status: "Cancelled"
+        ), CancellationToken.None);
+
+        using var verifyCtx = _factory.CreateContext();
+        var edition = verifyCtx.EventEditions.Find(id);
+        Assert.Equal(EditionStatus.Cancelled, edition!.Status);
     }
 
     // ─── UpdateEditionCommand ───
@@ -3428,6 +3535,72 @@ public class EventHandlerTests : IDisposable
 
         var editionDto = Assert.Single(result!.Editions);
         Assert.Equal(2025, editionDto.Year);
+    }
+
+    [Fact]
+    public async Task GetEvent_BySlug_ReturnsNull_ForHiddenEvent_WhenNotIncludeHidden()
+    {
+        // Security regression: a Hidden-status event must be unreachable via the public
+        // GET /api/v1/events/{slug} endpoint, even if the slug is known/guessed.
+        var ev = CreateTestEvent("Hidden Detail Event");
+        ev.Slug = "hidden-detail-event";
+        ev.Status = EventStatus.Hidden;
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventQuery("hidden-detail-event"), CancellationToken.None);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task GetEvent_BySlug_ReturnsEvent_ForHiddenEvent_WhenIncludeHiddenTrue()
+    {
+        // The admin endpoint (IncludeHidden: true) must keep working unchanged.
+        var ev = CreateTestEvent("Hidden Detail Event Admin");
+        ev.Slug = "hidden-detail-event-admin";
+        ev.Status = EventStatus.Hidden;
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventQuery("hidden-detail-event-admin", IncludeHidden: true), CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Equal("Hidden", result!.Status);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task GetEvent_BySlug_ReturnsEvent_ForUnlistedEvent_RegardlessOfIncludeHidden(bool includeHidden)
+    {
+        // Unlisted is only excluded from listings (GetEventsQuery) — it must remain reachable
+        // by direct link on the public endpoint, unlike Hidden.
+        var ev = CreateTestEvent("Unlisted Detail Event");
+        ev.Slug = $"unlisted-detail-event-{includeHidden}";
+        ev.Status = EventStatus.Unlisted;
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventQuery(ev.Slug, IncludeHidden: includeHidden), CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Equal("Unlisted", result!.Status);
     }
 
     // ─── CancelEventCommand ───

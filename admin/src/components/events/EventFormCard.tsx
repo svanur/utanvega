@@ -51,7 +51,8 @@ import { useTranslate } from '../../hooks/useTranslate';
 import { usePageShortcuts } from '../../hooks/usePageShortcuts';
 import { trimToUndefined, parseCoordPaste } from '../../utils/strings';
 import BilingualTextField from '../BilingualTextField';
-import { BilingualLangProvider, useBilingualLang } from '../../contexts/BilingualLangContext';
+import { BilingualLangProvider } from '../../contexts/BilingualLangContext';
+import { useBilingualLang } from '../../hooks/useBilingualLang';
 
 const EVENT_TYPES: EventType[] = ['Race', 'Series', 'Social', 'Advertisement', 'Festival', 'Other'];
 const ACTIVITY_TYPES: ActivityType[] = ['TrailRunning', 'Running', 'Cycling', 'Hiking', 'FunRun', 'ObstacleCourse', 'CrossCountryRun', 'Swim', 'Canicross', 'IronMan', 'Other'];

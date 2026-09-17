@@ -42,6 +42,7 @@ using Utanvega.Backend.Application.Weather.Queries;
 using Utanvega.Backend.Core.Services;
 using Utanvega.Backend.Application.Events.Queries.GetEvents;
 using Utanvega.Backend.Application.Events.Queries.GetEvent;
+using Utanvega.Backend.Application.Events.Queries.GetEventSuggestions;
 using Utanvega.Backend.Application.Events.Queries.GetEventCalendar;
 using Utanvega.Backend.Application.Events.Queries.GetEditionsHistory;
 using Utanvega.Backend.Application.Events.Queries.GetRaceDayEditions;
@@ -953,21 +954,6 @@ app.MapDelete("/api/v1/admin/trails/{trailId}/locations/{locationId}", [Authoriz
 })
 .WithName("RemoveTrailLocation");
 
-app.MapPatch("/api/v1/admin/trails/{id:guid}/status", [Authorize(Policy = "AdminOnly")] async (Guid id, [Microsoft.AspNetCore.Mvc.FromBody] string status, UtanvegaDbContext context, HttpContext httpContext) =>
-{
-    var trail = await context.Trails.FindAsync(id);
-    if (trail == null) return Results.NotFound();
-
-    if (Enum.TryParse<Utanvega.Backend.Core.Entities.TrailStatus>(status, true, out var trailStatus))
-    {
-        trail.Status = trailStatus;
-        await context.SaveChangesWithAuditAsync(GetAuthenticatedUserId(httpContext));
-        return Results.NoContent();
-    }
-    return Results.BadRequest("Invalid status");
-})
-.WithName("UpdateTrailStatus");
-
 app.MapPost("/api/v1/admin/trails/bulk-action", [Authorize(Policy = "AdminOnly")] async (BulkTrailActionCommand command, IMediator mediator, HttpContext httpContext) =>
 {
     var count = await mediator.Send(command with { ActorUserId = GetAuthenticatedUserId(httpContext) });
@@ -1272,8 +1258,20 @@ app.MapGet("/api/v1/admin/locations", [Authorize(Policy = "AdminOnly")] async (G
 
 app.MapPost("/api/v1/admin/locations", [Authorize(Policy = "AdminOnly")] async (CreateLocationCommand command, IMediator mediator, HttpContext httpContext) =>
 {
-    var id = await mediator.Send(command with { ActorUserId = GetAuthenticatedUserId(httpContext) });
-    return Results.Created($"/api/v1/admin/locations/{id}", new { id });
+    try
+    {
+        // CreatedBy must reflect who actually authenticated the request, not whatever the client body claims.
+        var id = await mediator.Send(command with
+        {
+            CreatedBy = GetAuthenticatedUserId(httpContext),
+            ActorUserId = GetAuthenticatedUserId(httpContext)
+        });
+        return Results.Created($"/api/v1/admin/locations/{id}", new { id });
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.Conflict(new { error = ex.Message });
+    }
 })
 .WithName("CreateLocation");
 
@@ -1674,6 +1672,13 @@ app.MapGet("/api/v1/events/calendar.ics", async (IMediator mediator, IConfigurat
     return Results.Text(icsContent!, "text/calendar; charset=utf-8");
 })
 .WithName("GetEventCalendarIcs");
+
+app.MapGet("/api/v1/events/suggestions", async (string slug, IMediator mediator) =>
+{
+    var suggestions = await mediator.Send(new GetEventSuggestionsQuery(slug));
+    return Results.Ok(suggestions);
+})
+.WithName("GetEventSuggestions");
 
 app.MapGet("/api/v1/events/{slug}", async (string slug, IMediator mediator) =>
 {

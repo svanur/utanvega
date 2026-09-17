@@ -164,6 +164,7 @@
         "closeFullscreen": "Loka heilskjá",
         "getDirections": "Leiðsögn að upphafsstað",
         "downloadGpx": "Hlaða niður GPX skrá",
+        "gpxLabel": "GPX",
         "relatedTrails": "Tengdar leiðir",
         "outAndBack": "Fram og til baka",
         "loop": "Hringur",
@@ -460,7 +461,14 @@
         "screenshotExclude": "Án",
         "screenshotViewFull": "Skoða skjámynd í fullri stærð",
         "capturingScreen": "Tek skjámynd...",
-        "autoCapture": "Ítarlegar tilkynningar innihalda alltaf tæknilegar upplýsingar ({{items}}) til að hjálpa okkur að rannsaka málið. Ef þú vilt einnig senda skjámynd með, smelltu þá á 'Án' hnappinn hér að ofan, þá breytist hann í 'Með' og þá fylgir skjáskot með. Þú getur skoðað skjáskotið með því að smella á myndina hér að ofan."
+        "autoCapture": "Ítarlegar tilkynningar innihalda alltaf tæknilegar upplýsingar ({{items}}) til að hjálpa okkur að rannsaka málið. Ef þú vilt einnig senda skjámynd með, smelltu þá á 'Án' hnappinn hér að ofan, þá breytist hann í 'Með' og þá fylgir skjáskot með. Þú getur skoðað skjáskotið með því að smella á myndina hér að ofan.",
+        "autoCaptureItems": {
+            "browser": "vafri",
+            "os": "stýrikerfi",
+            "screenSize": "skjástærð",
+            "language": "tungumál",
+            "timezone": "tímabelti"
+        }
     },
     "betaComments": {
         "title": "Vefur í þróun",
@@ -777,6 +785,10 @@
             }
         },
         "changelog": {
+            "v1_7_0": {
+                "title": "Uppfærð 404 síða fyrir viðburði - fleiri síur og hæðarlína sem bakgrunnur fyrri viðburða",
+                "description": "Uppfærð 404 síða fyrir viðburði með uppástungum um svipaða viðburði. Nýtt í 'ítarlegum síum': 'Þessi vika' og 'næsta vika'. Listayfirlit fyrri viðburða fá 'andlitslyftingu' með hæðarlínu sem bakgrunn. Öryggisuppfærlur og fleira."
+            },
             "v1_6_0": {
                 "title": "Breytingar á stjórnborði. Meiri upplýsingar í sögu viðburða. Senda ítarlega athugasemd breytt",
                 "description": "Margar umbætur á stjórnborði. Fleiri upplýsingar birtar fyrir fyrri viðburði — hún sýnir núna hækkun, landslag og skipuleggjanda fyrri hlaupa, hversu mörg ár viðburðurinn hefur verið skráður hér, og síu fyrir útgáfur með myndum; ef nýjasta útgáfan er ekki komin með myndir en þá bendir viðburðurinn á nýjustu útgáfuna sem er með þær. Auk þess margar villuleiðréttingar í leiðum, stjórnborði og útgáfum viðburða. Uppfærsla á 'Senda inn ítarlega athugasemd' forminu þar sem notandi þarf sérstaklega að samþykkja að senda skjáskot með athugasemd, opt-in í stað opt-out eins og það var áður."
@@ -872,6 +884,25 @@
             "v0_0_0": {
                 "title": "Febrúar, 2025",
                 "description": "Hinn upprunalegi hlaupadagskra.is vefur fer í loftið með lista yfir öll hlaup á Íslandi."
+            }
+        },
+        "changelogDiary": {
+            "heading": "Breytingasaga",
+            "subtitle": "Öll útgáfusagan, ítarlegri en tímalínan á Um síðunni.",
+            "searchPlaceholder": "Leita í breytingasögu…",
+            "searchLabel": "Leita í breytingasögu",
+            "noResults": "Engar færslur passa við valdar síur.",
+            "wentLive": "Fór í loftið",
+            "previousSite": "Fyrri vefur",
+            "tags": {
+                "admin": "Stjórnborð",
+                "frontend": "Framendi",
+                "events": "Viðburðir",
+                "editions": "Útgáfur",
+                "races": "Keppni",
+                "trails": "Leiðir",
+                "historyPage": "Fyrri viðburðir",
+                "photographers": "Ljósmyndarar"
             }
         }
     },
@@ -1342,12 +1373,12 @@
             "3.",
             "4."
         ],
-        "ordinalLast": "síðasta",
+        "ordinalLast": "síðasti",
         "scheduleSeasonal": "{{count}} hlaup - {{ordinal}} {{day}} í mánuði frá {{monthStart}} til {{monthEnd}}",
         "scheduleYearly": "Haldið árlega - {{ordinal}} {{day}} í {{month}}",
         "scheduleFixed": "Stakur viðburður: {{date}}",
         "scheduleApproximate": "Venjulega haldið í {{month}}",
-        "scheduleApproximateRange": "Venjulega haldið í {{monthStart}}–{{monthEnd}}",
+        "scheduleApproximateRange": "Venjulega haldið í {{monthStart}} – {{monthEnd}}",
         "statusCancelled": "Aflýst",
         "newYear": "{{year}} hefst",
         "certifiedBy": "Vottað af",
@@ -1427,6 +1458,9 @@
             "allLocations": "Allar staðsetningar",
             "month": "Mánuður",
             "allMonths": "Allir",
+            "week": "Vika",
+            "thisWeek": "Þessi vika",
+            "nextWeek": "Næsta vika",
             "weekendOnly": "Aðeins um helgar",
             "favoritesOnly": "Sýna eingöngu eftirlæti",
             "reset": "Hreinsa síur",
@@ -1466,6 +1500,9 @@
         },
         "recentPhotos": {
             "title": "Myndir frá {{edition}}"
+        },
+        "recentResults": {
+            "title": "Úrslit frá {{edition}}"
         },
         "editionsHistory": {
             "title": "Fyrri viðburðir",
@@ -1518,11 +1555,11 @@
         },
         "ticketStatus": {
             "Free": "Skráning: Frítt",
-            "NotStarted": "Skráning: Bráðum í sölu",
-            "Available": "Skráning: Í sölu",
-            "AlmostSoldOut": "Skráning: Næstum uppselt",
-            "SoldOut": "Skráning: Uppselt",
-            "Closed": "Skráning: Lokuð"
+            "NotStarted": "Skráning: ekki hafin",
+            "Available": "Skráning: hafin",
+            "AlmostSoldOut": "Skráning: næstum uppselt",
+            "SoldOut": "Skráning: fullt",
+            "Closed": "Skráning: lokuð"
         }
     },
     "calendar": {

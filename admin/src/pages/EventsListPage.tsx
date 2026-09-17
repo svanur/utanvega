@@ -46,8 +46,6 @@ import SearchIcon from '@mui/icons-material/Search';
 import {
   useEvents,
   type ActivityType,
-  type CreateEditionInput,
-  type CreateRaceInput,
   type EventDetailDto,
   type EventEditionDto,
   type EventStatus,
@@ -60,12 +58,14 @@ import {
 import { useTrails } from '../hooks/useTrails';
 import { useRowFocus } from '../hooks/useRowFocus';
 import { useUrlFilterState } from '../hooks/useUrlFilterState';
+import { useDebouncedUrlSearch } from '../hooks/useDebouncedUrlSearch';
 import { usePageShortcuts, isDialogOpen } from '../hooks/usePageShortcuts';
 import CreateEventDialog from '../components/events/CreateEventDialog';
 import { EVENT_STATUS_CYCLE } from '../utils/eventForms';
 import {
   MONTHS,
   MONTHS_SHORT,
+  MONTHS_IS_FULL,
   fmtDate,
   isPastDate,
   bumpYearInUrl,
@@ -74,6 +74,9 @@ import {
   computeClonedRaceDate,
   matchesYearMonthFilter,
   sortEditions,
+  nextWeekMondayOffset,
+  thisWeekMondayOffset,
+  formatAgendaHeader,
 } from '../utils/eventHelpers';
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -235,8 +238,8 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
   const sortedTrails = [...trails].filter(t => t.status === 'Published' || t.status === 'EventOnly').sort((a, b) => a.name.localeCompare(b.name));
 
   const { values, setValue, setValues } = useUrlFilterState(EVENTS_FILTER_SCHEMA);
-  const searchQuery = values.searchQuery;
-  const setSearchQuery = useCallback((v: string) => setValue('searchQuery', v), [setValue]);
+  const setSearchQueryUrl = useCallback((v: string) => setValue('searchQuery', v), [setValue]);
+  const { value: searchQuery, onChange: setSearchQuery, clear: clearSearchQuery } = useDebouncedUrlSearch(values.searchQuery, setSearchQueryUrl);
   const activityFilter = values.activityFilter;
   const typeFilter = values.typeFilter;
   const statusFilter = values.statusFilter;
@@ -265,12 +268,12 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
   const todayStr = new Date().toISOString().slice(0, 10);
   const in30daysStr = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const today = dayjs();
-  const nextWeekMondayOffset = (8 - today.day()) % 7 || 7;
-  const nextWeekStart = today.add(nextWeekMondayOffset, 'day').format('YYYY-MM-DD');
-  const nextWeekEnd = today.add(nextWeekMondayOffset + 6, 'day').format('YYYY-MM-DD');
-  const thisWeekMondayOffset = (today.day() + 6) % 7;
-  const thisWeekStart = today.subtract(thisWeekMondayOffset, 'day').format('YYYY-MM-DD');
-  const thisWeekEnd = today.subtract(thisWeekMondayOffset, 'day').add(6, 'day').format('YYYY-MM-DD');
+  const nextWeekOffset = nextWeekMondayOffset(today);
+  const nextWeekStart = today.add(nextWeekOffset, 'day').format('YYYY-MM-DD');
+  const nextWeekEnd = today.add(nextWeekOffset + 6, 'day').format('YYYY-MM-DD');
+  const thisWeekOffset = thisWeekMondayOffset(today);
+  const thisWeekStart = today.subtract(thisWeekOffset, 'day').format('YYYY-MM-DD');
+  const thisWeekEnd = today.subtract(thisWeekOffset, 'day').add(6, 'day').format('YYYY-MM-DD');
 
   const eventLocationOptions = useMemo(
     () => [...new Set(events.map(e => e.locationName).filter(Boolean) as string[])].sort(),
@@ -475,24 +478,20 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
     }
     const sorted = [...byDate.entries()].sort(([a], [b]) => a.localeCompare(b));
     const DAY_NAMES = ['Sun', 'Mán', 'Þri', 'Mið', 'Fim', 'Fös', 'Lau'];
-    const MON_FULL = ['', 'janúar', 'febrúar', 'mars', 'apríl', 'maí', 'júní', 'júlí', 'ágúst', 'september', 'október', 'nóvember', 'desember'];
     let header: string;
     if (weekFilter !== 'all') {
       const start = dayjs(weekFilter === 'this-week' ? thisWeekStart : nextWeekStart);
       const end = dayjs(weekFilter === 'this-week' ? thisWeekEnd : nextWeekEnd);
-      const sameMonth = start.month() === end.month();
-      header = sameMonth
-        ? `${start.date()}. – ${end.date()}. ${MON_FULL[end.month() + 1]} ${end.year()}`
-        : `${start.date()}. ${MON_FULL[start.month() + 1]} – ${end.date()}. ${MON_FULL[end.month() + 1]} ${end.year()}`;
+      header = formatAgendaHeader(start, end);
     } else if (yearFilter !== 'all' && monthFilter !== 'all') {
-      header = `${MON_FULL[Number(monthFilter)]} ${yearFilter}`;
+      header = `${MONTHS_IS_FULL[Number(monthFilter)]} ${yearFilter}`;
     } else {
       header = yearFilter;
     }
     const lines: string[] = [header, ''];
     for (const [date, names] of sorted) {
       const d = dayjs(date);
-      lines.push(`${DAY_NAMES[d.day()]} ${d.date()}. ${MON_FULL[d.month() + 1]}`);
+      lines.push(`${DAY_NAMES[d.day()]} ${d.date()}. ${MONTHS_IS_FULL[d.month() + 1]}`);
       names.forEach(n => lines.push(`  • ${n}`));
       lines.push('');
     }
@@ -721,7 +720,7 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
             startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment>,
             endAdornment: searchQuery ? (
               <InputAdornment position="end">
-                <IconButton size="small" onClick={() => setSearchQuery('')}><ClearIcon fontSize="small" /></IconButton>
+                <IconButton size="small" onClick={clearSearchQuery}><ClearIcon fontSize="small" /></IconButton>
               </InputAdornment>
             ) : undefined,
           }}
@@ -1029,6 +1028,7 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
         onCreated={(slug) => { setCreateDialogOpen(false); navigate(`/events/${slug}`); }}
         onNotify={onNotify}
         createEvent={createEvent}
+        events={events}
       />
 
       {/* Bulk create missing editions dialog */}

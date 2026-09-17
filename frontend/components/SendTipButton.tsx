@@ -262,7 +262,7 @@ export default function SendTipButton({ type: _type, sx, inline = false }: SendT
                                                     sx={{ cursor: 'pointer', fontSize: '0.7rem' }}
                                                 />
                                                 <Tooltip title={t('tip.screenshotViewFull')}>
-                                                    <IconButton size="small" onClick={() => setScreenshotPreviewOpen(true)} sx={{ ml: 'auto' }}>
+                                                    <IconButton size="small" onClick={() => setScreenshotPreviewOpen(true)} sx={{ ml: 'auto', minWidth: 44, minHeight: 44 }}>
                                                         <OpenInFullIcon sx={{ fontSize: 14 }} />
                                                     </IconButton>
                                                 </Tooltip>
@@ -287,7 +287,13 @@ export default function SendTipButton({ type: _type, sx, inline = false }: SendT
                                     <Divider sx={{ mb: 1 }} />
                                     <Typography variant="caption" color="text.disabled">
                                         {t('tip.autoCapture', {
-                                            items: ['browser', 'OS', 'screen size', 'language', 'timezone'].join(', ')
+                                            items: [
+                                                t('tip.autoCaptureItems.browser'),
+                                                t('tip.autoCaptureItems.os'),
+                                                t('tip.autoCaptureItems.screenSize'),
+                                                t('tip.autoCaptureItems.language'),
+                                                t('tip.autoCaptureItems.timezone')
+                                            ].join(', ')
                                         })}
                                     </Typography>
                                 </>

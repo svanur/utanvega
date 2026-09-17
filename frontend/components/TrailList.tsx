@@ -607,7 +607,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                 <TextField
                     fullWidth
                     size="small"
-                    placeholder={t('filters.searchTrails', 'Search trails...')}
+                    placeholder={t('filters.searchPlaceholder')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     InputProps={{

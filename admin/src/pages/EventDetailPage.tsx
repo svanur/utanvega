@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, type ReactNode } from 'react';
+import { useState, useMemo, useEffect, useId, useRef, type ReactNode } from 'react';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import dayjs, { type Dayjs } from 'dayjs';
@@ -72,9 +72,14 @@ import RaceFormCard from '../components/events/RaceFormCard';
 import EventFormCard from '../components/events/EventFormCard';
 import PhotoGalleryManager, { type PhotoGalleryManagerHandle } from '../components/events/PhotoGalleryManager';
 import BilingualTextField from '../components/BilingualTextField';
-import { BilingualLangProvider, useBilingualLang } from '../contexts/BilingualLangContext';
+import { BilingualLangProvider } from '../contexts/BilingualLangContext';
+import { useBilingualLang } from '../hooks/useBilingualLang';
 import {
   buildRaceForm,
+  editionStatusForYear,
+  shouldNudgeStatusForYear,
+  titleSyncForYear,
+  referenceDateForYear,
   getRaceStatusColor,
   getEditionStatusColor,
   getTicketStatusColor,
@@ -212,7 +217,7 @@ function emptyEditionForm(): EditionFormState {
     date: '', endDate: '', title: '', titleEn: '',
     registrationUrl: '', resultsUrl: '', notes: '', notesEn: '',
     registrationStatus: 'NotStarted', registrationOpens: '', registrationCloses: '', trailId: '',
-    status: 'Unconfirmed',
+    status: 'Hidden',
   };
 }
 
@@ -243,6 +248,15 @@ interface EditionDialogProps {
   onGalleryMutated: () => void;
   onNotify: (msg: ReactNode, sev?: 'success' | 'error') => void;
   initialValues?: EditionFormState;
+  // #778: distinguishes "Clone edition" from a plain "Add edition" — both open the dialog via the
+  // same isNew (create) path, but a clone deliberately seeds Status/RegistrationStatus itself
+  // (see handleCloneEdition), so the Year nudge below must not re-derive and overwrite them the
+  // way it does for a plain Add.
+  isClone?: boolean;
+  // #892: the other editions of this same event, used only for the advisory duplicate-Title
+  // warning below — never for validation, since Title has no uniqueness constraint by design
+  // (same-year reruns/reschedules are legitimate).
+  siblingEditions: EventEditionDto[];
 }
 
 function LangToggleButton() {
@@ -259,14 +273,52 @@ function LangToggleButton() {
   );
 }
 
-function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGalleryMutated, onNotify, initialValues }: EditionDialogProps) {
+function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGalleryMutated, onNotify, initialValues, isClone = false, siblingEditions }: EditionDialogProps) {
   const isNew = edition === null;
   const [form, setForm] = useState<EditionFormState>(initialValues ?? (edition ? buildEditionForm(edition) : emptyEditionForm()));
   const [saving, setSaving] = useState(false);
   const galleryManagerRef = useRef<PhotoGalleryManagerHandle>(null);
+  // Tracks whether the admin has manually touched Status or RegistrationStatus since the last
+  // time the Year-field nudge (below) set them — once true, the nudge stops overwriting either
+  // field on further Year edits, so a deliberate manual choice always wins. A ref rather than
+  // state because flipping it must never itself trigger a render.
+  const statusManuallySetRef = useRef(false);
+  // Captures the isClone prop at the moment this dialog opens (see onEnter below), same
+  // dialog-open-scoped lifetime as statusManuallySetRef — so it can't leak into the next
+  // "Add edition" open even if this instance is reused across opens.
+  const isCloneRef = useRef(false);
+  const editionStatusHelperId = useId();
+  const registrationStatusHelperId = useId();
+  // Which of IS/EN is currently shown in the Title BilingualTextField below — the #892
+  // duplicate-Title match must follow this so it always compares what's actually on screen.
+  const { lang } = useBilingualLang();
 
   const set = <K extends keyof EditionFormState>(k: K, v: EditionFormState[K]) =>
     setForm(prev => ({ ...prev, [k]: v }));
+
+  // Drives which month/year the four date pickers below open on when they have no value of
+  // their own yet — undefined falls back to their default (today), so a not-yet-4-digit or
+  // invalid Year leaves that behaviour unchanged.
+  const referenceDate = referenceDateForYear(form.year);
+
+  // #892: advisory-only — a Title exactly matching (case-insensitive, trimmed) a sibling
+  // edition's Title is flagged near the field below, but never blocks Save (Title has no
+  // uniqueness constraint by design; same-year reruns/reschedules are legitimate). The Title
+  // field is a BilingualTextField, which swaps between form.title (IS) and form.titleEn (EN)
+  // depending on the dialog's own lang toggle — so the match must follow `lang` too, comparing
+  // whichever value is actually visible on screen against the sibling's same-language value,
+  // rather than always checking IS regardless of what's shown. Recomputed on every render so
+  // it tracks both form.title/titleEn and lang live without needing to close/reopen the dialog.
+  // An empty trimmed Title never matches — that's the pre-#761 auto-fill state, not a duplicate.
+  const visibleTitle = lang === 'en' ? form.titleEn : form.title;
+  const trimmedTitle = visibleTitle.trim();
+  const duplicateTitleMatch = trimmedTitle
+    ? siblingEditions.find(sibling => {
+        if (sibling.id === edition?.id) return false;
+        const siblingTitle = (lang === 'en' ? sibling.titleEn : sibling.title) ?? '';
+        return siblingTitle.trim().toLowerCase() === trimmedTitle.toLowerCase();
+      })
+    : undefined;
 
   const handleSave = async () => {
     const input = {
@@ -336,7 +388,11 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
 
   return (
     <Dialog open={open} onClose={handleCancelOrDismiss} maxWidth="sm" fullWidth
-      TransitionProps={{ onEnter: () => setForm(initialValues ?? (edition ? buildEditionForm(edition) : emptyEditionForm())) }}>
+      TransitionProps={{ onEnter: () => {
+        setForm(initialValues ?? (edition ? buildEditionForm(edition) : emptyEditionForm()));
+        statusManuallySetRef.current = false;
+        isCloneRef.current = isClone;
+      } }}>
       <DialogTitle>
         <Stack direction="row" justifyContent="space-between" alignItems="center">
           {isNew ? 'Add edition' : 'Edit edition'}
@@ -347,6 +403,7 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
         <Stack spacing={2} sx={{ mt: 1 }}>
           <Stack direction="row" spacing={1.5}>
             <TextField size="small" fullWidth label="Year" type="number" value={form.year}
+              inputProps={{ min: 1900, max: 2100 }}
               onChange={e => {
                 const newYear = e.target.value;
                 const oldYear = form.year;
@@ -354,11 +411,38 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
                   const updates: Partial<EditionFormState> = { year: newYear };
                   const ny = parseInt(newYear, 10);
                   const oy = parseInt(oldYear, 10);
+                  // Title/titleEn sync only needs a complete new year — unlike the date/resultsUrl
+                  // replacements below, it doesn't need an old year to replace, so it must not be
+                  // gated behind oldYear being a complete 4-digit value. This is what lets it fire
+                  // on a brand-new edition, where the year is typed character-by-character into an
+                  // initially empty field (oldYear is never 4 digits long until after this update).
+                  const titleSync = titleSyncForYear(newYear, prev.title);
+                  if (titleSync) {
+                    updates.title = titleSync.title;
+                    updates.titleEn = titleSync.titleEn;
+                  }
                   if (newYear.length === 4 && !isNaN(ny) && oldYear.length === 4 && !isNaN(oy)) {
                     if (prev.date) updates.date = prev.date.replace(/^\d{4}/, newYear);
                     if (prev.endDate) updates.endDate = prev.endDate.replace(/^\d{4}/, newYear);
-                    if (/^\d{4}$/.test(prev.title.trim())) updates.title = newYear;
                     if (prev.resultsUrl) updates.resultsUrl = prev.resultsUrl.replace(new RegExp(`${oy}(/?)$`), `${newYear}$1`);
+                  }
+                  // A brand-new edition has no saved Status/RegistrationStatus for the admin to
+                  // disturb yet, so nudge both toward a sensible initial value based on whether
+                  // the typed year is in the past — an existing edition's Year is just a label
+                  // at this point and must not touch either field. Once the admin has manually
+                  // picked a Status/RegistrationStatus of their own, a later Year edit (e.g.
+                  // fixing a typo) must not silently clobber that choice again. A clone is also
+                  // "new" in the isNew sense but handleCloneEdition already seeded a deliberate
+                  // Status/RegistrationStatus (see #778), so it's excluded here too.
+                  if (shouldNudgeStatusForYear(isNew, isCloneRef.current, statusManuallySetRef.current) && newYear.length === 4 && !isNaN(ny)) {
+                    // #797: editionStatusForYear returns null for an out-of-range year (e.g.
+                    // '-100', '0000', '9999') — same "leave it alone" behaviour as the other
+                    // guard failures below, so an implausible typed year doesn't nudge Status.
+                    const nudged = editionStatusForYear(ny);
+                    if (nudged) {
+                      updates.status = nudged.status;
+                      updates.registrationStatus = nudged.registrationStatus;
+                    }
                   }
                   return { ...prev, ...updates };
                 });
@@ -366,10 +450,12 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
             <DatePicker label="Start date"
               value={form.date ? dayjs(form.date) : null}
               onChange={v => set('date', v ? v.format('YYYY-MM-DD') : '')}
+              referenceDate={referenceDate}
               slotProps={{ textField: { size: 'small', fullWidth: true } }} />
             <DatePicker label="End date (multi-day)"
               value={form.endDate ? dayjs(form.endDate) : null}
               onChange={v => set('endDate', v ? v.format('YYYY-MM-DD') : '')}
+              referenceDate={referenceDate}
               slotProps={{ textField: { size: 'small', fullWidth: true } }} />
           </Stack>
           <BilingualTextField
@@ -377,11 +463,20 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
             valueIs={form.title} valueEn={form.titleEn}
             onChangeIs={v => set('title', v)} onChangeEn={v => set('titleEn', v)}
           />
+          {duplicateTitleMatch && (
+            <Alert severity="warning">
+              Another edition of this event is already titled
+              &quot;{lang === 'en' ? duplicateTitleMatch.titleEn : duplicateTitleMatch.title}&quot;
+            </Alert>
+          )}
           <FormControl size="small" fullWidth>
             <InputLabel>Status</InputLabel>
             <Select value={form.status} label="Status"
-              onChange={e => set('status', e.target.value as EditionStatus)}
-              aria-describedby={!isNew && form.status !== 'Cancelled' && form.status !== 'Completed' ? 'edition-status-helper-text' : undefined}>
+              onChange={e => {
+                statusManuallySetRef.current = true;
+                set('status', e.target.value as EditionStatus);
+              }}
+              aria-describedby={!isNew && form.status !== 'Cancelled' && form.status !== 'Completed' ? editionStatusHelperId : undefined}>
               {EDITION_STATUSES.map(s => (
                 // Cancelled and Completed are terminal states with their own dedicated, safer
                 // entry points (row-level Cancel/Complete actions) on an *existing* edition —
@@ -396,7 +491,7 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
               ))}
             </Select>
             {!isNew && form.status !== 'Cancelled' && form.status !== 'Completed' && (
-              <FormHelperText id="edition-status-helper-text">Use the ✓/✕ icons on the edition row to complete or cancel this edition.</FormHelperText>
+              <FormHelperText id={editionStatusHelperId}>Use the ✓/✕ icons on the edition row to complete or cancel this edition.</FormHelperText>
             )}
           </FormControl>
           <Typography
@@ -410,21 +505,26 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
             <DatePicker label="Registration opens"
               value={form.registrationOpens ? dayjs(form.registrationOpens) : null}
               onChange={v => set('registrationOpens', v ? v.format('YYYY-MM-DD') : '')}
+              referenceDate={referenceDate}
               slotProps={{ textField: { size: 'small', fullWidth: true } }} />
             <DatePicker label="Registration closes"
               value={form.registrationCloses ? dayjs(form.registrationCloses) : null}
               onChange={v => set('registrationCloses', v ? v.format('YYYY-MM-DD') : '')}
+              referenceDate={referenceDate}
               slotProps={{ textField: { size: 'small', fullWidth: true } }} />
           </Stack>
           <FormControl size="small" fullWidth disabled={!!form.registrationOpens && !!form.registrationCloses}>
             <InputLabel>Registration status</InputLabel>
             <Select value={form.registrationStatus} label="Registration status"
-              onChange={e => set('registrationStatus', e.target.value as RegistrationStatus)}
-              aria-describedby={!!form.registrationOpens && !!form.registrationCloses ? 'registration-status-helper-text' : undefined}>
+              onChange={e => {
+                statusManuallySetRef.current = true;
+                set('registrationStatus', e.target.value as RegistrationStatus);
+              }}
+              aria-describedby={!!form.registrationOpens && !!form.registrationCloses ? registrationStatusHelperId : undefined}>
               {REGISTRATION_STATUSES.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
             </Select>
             {!!form.registrationOpens && !!form.registrationCloses && (
-              <FormHelperText id="registration-status-helper-text">Computed automatically from Registration opens/closes</FormHelperText>
+              <FormHelperText id={registrationStatusHelperId}>Computed automatically from Registration opens/closes</FormHelperText>
             )}
           </FormControl>
           <TextField size="small" fullWidth label="Registration URL" value={form.registrationUrl}
@@ -556,7 +656,7 @@ function SortableRaceRow({ race, edition, isActive, isFocused, focusRef, staleTx
         <Typography variant="body2" color="text.secondary">{race.distanceLabel ?? '—'}</Typography>
       </TableCell>
       <TableCell>
-        <Typography variant="body2" color="text.secondary">{race.resultType ?? '—'}</Typography>
+        <Typography variant="body2" color="text.secondary">{effectiveActivityType ?? '—'} · {race.resultType ?? '—'}</Typography>
       </TableCell>
       <TableCell>
         {race.trailName
@@ -763,7 +863,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
   const toggleEdition = (id: string) =>
     setExpandedEditionIds(prev => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
 
@@ -1411,12 +1511,18 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
         </Typography>
       </Stack>
 
-      {editionsByYear.visible.length === 0 && (
+      {detail.editions.length === 0 && (
         <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary', border: '1px dashed', borderColor: 'divider', borderRadius: 2 }}>
           <Typography variant="body2">No editions yet.</Typography>
           <Button size="small" sx={{ mt: 1 }} onClick={() => { setEditingEdition(null); setEditionDialogOpen(true); }}>
             Add first edition
           </Button>
+        </Box>
+      )}
+
+      {editionsByYear.visible.length === 0 && detail.editions.length > 0 && (
+        <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary', border: '1px dashed', borderColor: 'divider', borderRadius: 2 }}>
+          <Typography variant="body2">All editions are from past years.</Typography>
         </Box>
       )}
 
@@ -1671,7 +1777,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                         <TableCell sx={{ width: 24, px: 0.5 }} />
                         <TableCell>Name</TableCell>
                         <TableCell>Distance Label</TableCell>
-                        <TableCell>Result type</TableCell>
+                        <TableCell>Activity / Result</TableCell>
                         <TableCell>Route</TableCell>
                         <TableCell>Date / Start / Limit</TableCell>
                         <TableCell>Status</TableCell>
@@ -1755,6 +1861,8 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
         edition={editingEdition}
         eventId={detail.id}
         initialValues={editionInitialValues}
+        isClone={cloneFromEditionId !== null}
+        siblingEditions={detail.editions}
         onClose={() => { setEditionDialogOpen(false); setCloneFromEditionId(null); setEditionInitialValues(undefined); }}
         onGalleryMutated={refresh}
         onSaved={async (newEditionId) => {

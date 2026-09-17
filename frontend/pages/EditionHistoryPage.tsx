@@ -35,7 +35,7 @@ import GalleryLinks from '../components/GalleryLinks';
 import type { EventEditionDto, RaceDto } from '../hooks/useEvents';
 import { useLocalize } from '../utils/localize';
 import { splitMinutes } from '../utils/cutoffTime';
-import { formatDateRange, formatRaceDateTime, editionKeyFor, getEditionTimingStatus } from '../utils/eventUtils';
+import { formatDateRange, formatRaceDateTime, shortestUniqueEditionKey, getEditionTimingStatus, msUntilNextMidnight } from '../utils/eventUtils';
 import { getTicketStatusColor } from '../utils/ticketStatus';
 
 type EditionHistoryPageProps = {
@@ -77,14 +77,10 @@ export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistor
     useEffect(() => {
         let timeoutId: ReturnType<typeof setTimeout>;
         const scheduleNextMidnightTick = () => {
-            const now = new Date();
-            const nextMidnight = new Date(now);
-            nextMidnight.setHours(24, 0, 0, 0);
-            const msUntilNextMidnight = nextMidnight.getTime() - now.getTime();
             timeoutId = setTimeout(() => {
                 setCurrentTime(new Date());
                 scheduleNextMidnightTick();
-            }, msUntilNextMidnight);
+            }, msUntilNextMidnight());
         };
         scheduleNextMidnightTick();
         return () => clearTimeout(timeoutId);
@@ -125,8 +121,8 @@ export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistor
         ? sortedEditions[currentIndex + 1] : null;
 
     const goToEdition = useCallback((ed: EventEditionDto) => {
-        navigate(`/events/${slug}/history/${editionKeyFor(ed)}`, { replace: true });
-    }, [navigate, slug]);
+        navigate(`/events/${slug}/history/${shortestUniqueEditionKey(ed, event?.editions ?? [])}`, { replace: true });
+    }, [navigate, slug, event]);
 
     // Swipe left/right to navigate editions
     const touchStartX = useRef<number | null>(null);

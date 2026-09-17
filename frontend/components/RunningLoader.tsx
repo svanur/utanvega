@@ -26,6 +26,12 @@ const loadingMessages: { is: string; en: string }[] = [
     { is: "Hoppum á staðnum...", en: "Jumping in place..." },
     { is: "Rólegt skokk...", en: "Easy jogging..." },
     { is: "Af stað...", en: "Let's go..." },
+    { is: "Getið þið endalaust talað um hlaup?", en: "Can you endlessly talk about running?" },
+    { is: "Bara hægri vinstri, hægri vinstri til skiptis...", en: "Just alternating, right-left, right-left..." },
+    { is: "Er þetta ekki vont fyrir hnén?", en: "Isn't this bad for your knees?" },
+    { is: "Ok, ferðu \"bara\" upp að Steini?", en: "Okay, are you \"just\" going up to Steinn?" },
+    { is: "Förum í gufu", en: "Let's go Sauna." },
+    { is: "Hlaup í dag, hlaup á morgun, og hinn og hinn og hinn og hinn..", en: "Running today, running tomorrow, and the next day, and the next, and the next, and the next..." },
 
     // Before heading out
     { is: "Skoða veðurspána í síðasta sinn...", en: "Checking the forecast one last time..." },
@@ -73,6 +79,7 @@ const loadingMessages: { is: string; en: string }[] = [
     { is: "Anda inn ...anda út", en: "Breathe in ...breathe out." },
     { is: "Ást er ...að fara í fjallgöngu saman.", en: "Love is ...go hiking together." },
     { is: "Ást er ...að fara út að hlaupa saman.", en: "Love is ...go running together." },
+    { is: "Mundu, þú ert frábær!", en: "Remember, you are amazing!" },
 
     // Trail truths
     { is: "Þessi hæð virtist minni á kortinu.", en: "That hill looked smaller on the map." },

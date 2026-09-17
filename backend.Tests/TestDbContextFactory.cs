@@ -2,6 +2,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.IO;
+using Npgsql;
 using System.Text.Json;
 using Utanvega.Backend.Infrastructure.Persistence;
 
@@ -30,6 +31,34 @@ public class TestDbContextFactory : IDisposable
     }
 
     public UtanvegaDbContext CreateContext() => new TestDbContext(_options);
+
+    /// <summary>
+    /// Creates a standalone context whose SaveChangesAsync always fails with a fabricated Postgres
+    /// unique-violation (SQLState 23505) wrapped in a DbUpdateException, for #880's DB-level race
+    /// tests. SQLite's own unique-constraint exception is a Microsoft.Data.Sqlite.SqliteException,
+    /// not a Npgsql.PostgresException, so the actual concurrent-insert race that the production
+    /// catch clause guards against can't be reproduced by inserting a real conflicting row here —
+    /// this context fakes the exception shape that Postgres produces instead.
+    /// </summary>
+    /// <param name="constraintName">
+    /// The fabricated exception's ConstraintName. #885's production catch clauses only translate a
+    /// 23505 into "already exists" when this matches the table's Slug unique index (IX_Events_Slug /
+    /// IX_Locations_Slug) — callers pass a non-matching name to prove an unrelated unique violation
+    /// is not mislabeled as a slug conflict. No default: callers must state which constraint they're
+    /// fabricating, since the "right" constraint name differs per table.
+    /// </param>
+    public static UtanvegaDbContext CreateThrowingUniqueViolationContext(string constraintName)
+    {
+        var connection = new SqliteConnection("DataSource=:memory:");
+        connection.Open();
+        var options = new DbContextOptionsBuilder<UtanvegaDbContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        var context = new ThrowingUniqueViolationDbContext(options, constraintName, connection);
+        context.Database.EnsureCreated();
+        return context;
+    }
 
     public void Dispose()
     {
@@ -356,5 +385,70 @@ internal class TestDbContext : UtanvegaDbContext
                       v => v.HasValue ? (long?)v.Value.UtcTicks : null,
                       v => v.HasValue ? (DateTimeOffset?)new DateTimeOffset(v.Value, TimeSpan.Zero) : null);
         });
+    }
+}
+
+/// <summary>
+/// Backs TestDbContextFactory.CreateThrowingUniqueViolationContext() — see that method's doc
+/// comment for why this fakes the exception rather than triggering a real SQLite one.
+/// </summary>
+internal class ThrowingUniqueViolationDbContext : TestDbContext
+{
+    private readonly string _constraintName;
+    // CreateThrowingUniqueViolationContext hands this context a standalone, pre-opened
+    // SqliteConnection via UseSqlite(connection) — EF only auto-closes connections it opened
+    // itself, so ownership of this one is ours. Track it here and close/dispose it alongside
+    // the context so disposing the returned UtanvegaDbContext doesn't leak the connection.
+    private readonly SqliteConnection _connection;
+
+    public ThrowingUniqueViolationDbContext(
+        DbContextOptions<UtanvegaDbContext> options,
+        string constraintName,
+        SqliteConnection connection)
+        : base(options)
+    {
+        _constraintName = constraintName;
+        _connection = connection;
+    }
+
+    public override void Dispose()
+    {
+        base.Dispose();
+        _connection.Close();
+        _connection.Dispose();
+    }
+
+    public override async ValueTask DisposeAsync()
+    {
+        await base.DisposeAsync();
+        await _connection.CloseAsync();
+        await _connection.DisposeAsync();
+    }
+
+    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        // PostgresException's ConstraintName is a get-only property with no public setter — the
+        // 18-arg constructor below (mirroring the fields Npgsql populates when parsing a real
+        // wire-protocol error response) is the only public way to set it from test code.
+        var pgException = new PostgresException(
+            messageText: "duplicate key value violates unique constraint",
+            severity: "ERROR",
+            invariantSeverity: "ERROR",
+            sqlState: "23505",
+            detail: null,
+            hint: null,
+            position: 0,
+            internalPosition: 0,
+            internalQuery: null,
+            where: null,
+            schemaName: null,
+            tableName: null,
+            columnName: null,
+            dataTypeName: null,
+            constraintName: _constraintName,
+            file: null,
+            line: null,
+            routine: null);
+        throw new DbUpdateException("Unique constraint violation", pgException);
     }
 }

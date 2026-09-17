@@ -10,6 +10,7 @@ import { useTags } from '../hooks/useTags';
 import { useLocations } from '../hooks/useLocations';
 import { useRowFocus } from '../hooks/useRowFocus';
 import { useUrlFilterState } from '../hooks/useUrlFilterState';
+import { useDebouncedUrlSearch } from '../hooks/useDebouncedUrlSearch';
 import { apiFetch } from '../hooks/api';
 import TrailToolsPanel from '../components/TrailToolsPanel';
 import TrailFilterBar from '../components/TrailFilterBar';
@@ -37,8 +38,8 @@ const TRAILS_FILTER_SCHEMA = {
 export default function TrailsListPage({ onNotify }: { onNotify: (message: React.ReactNode, severity?: 'success' | 'error') => void }) {
   const navigate = useNavigate();
   const { values, setValue, setValues, reset: resetUrlFilters } = useUrlFilterState(TRAILS_FILTER_SCHEMA);
-  const search = values.search;
-  const setSearch = useCallback((v: string) => setValue('search', v), [setValue]);
+  const setSearchUrl = useCallback((v: string) => setValue('search', v), [setValue]);
+  const { value: search, onChange: setSearch, clear: clearSearch } = useDebouncedUrlSearch(values.search, setSearchUrl);
   const statusFilter = values.statusFilter;
   const typeFilter = values.typeFilter;
   const activityFilter = values.activityFilter;
@@ -242,20 +243,6 @@ export default function TrailsListPage({ onNotify }: { onNotify: (message: React
     }
   }, [onNotify, setTrails]);
 
-  const handleUpdateStatus = useCallback(async (trailId: string, newStatus: string) => {
-    try {
-        await apiFetch(`/api/v1/admin/trails/${trailId}/status`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(newStatus),
-        });
-        onNotify(`Trail status updated to ${newStatus}`);
-        setTrails(prev => prev.map(t => t.id === trailId ? { ...t, status: newStatus as Trail['status'] } : t));
-    } catch (_err) {
-        onNotify('Failed to update trail status', 'error');
-    }
-  }, [onNotify, setTrails]);
-
   const handlePatchTrail = useCallback(async (trailId: string, field: string, value: string) => {
     await apiFetch(`/api/v1/admin/trails/${trailId}`, {
         method: 'PATCH',
@@ -381,6 +368,7 @@ export default function TrailsListPage({ onNotify }: { onNotify: (message: React
       <TrailFilterBar
         search={search}
         onSearchChange={setSearch}
+        onSearchClear={clearSearch}
         statusFilter={statusFilter}
         onStatusFilterChange={(s) => {
           // The API omits archived trails unless asked for them, so filtering by Archived
@@ -400,7 +388,6 @@ export default function TrailsListPage({ onNotify }: { onNotify: (message: React
         onMonthFilterChange={(v) => setValue('monthFilter', v)}
         yearOptions={yearOptions}
         months={MONTHS}
-        includeArchived={includeArchived}
         needsReviewOnly={needsReviewOnly}
         onNeedsReviewOnlyChange={(v) => setValue('needsReviewOnly', v ? 'true' : 'false')}
         onResetFilters={handleResetFilters}

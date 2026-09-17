@@ -1,4 +1,6 @@
-import type { ActivityType, EditionStatus, EventStatus, RaceDto, RaceStatus, ResultType, TicketStatus } from '../hooks/useEvents';
+import type { Dayjs } from 'dayjs';
+import dayjs from 'dayjs';
+import type { ActivityType, EditionStatus, EventStatus, RaceDto, RaceStatus, RegistrationStatus, ResultType, TicketStatus } from '../hooks/useEvents';
 import { formatMinutesToHHmm, normalizeCutoffTimeOnBlur, parseHHmmToMinutes } from './cutoffTime';
 import { trimToUndefined } from './strings';
 import { hashText } from './translationHash';
@@ -139,6 +141,74 @@ export function getRaceStatusColor(status: RaceStatus): 'default' | 'success' | 
   if (status === 'Completed') return 'info';
   if (status === 'Cancelled') return 'error';
   return 'default';
+}
+
+// #781: a 4-character year string (or the number parsed from one) can still be negative, zero, or
+// wildly out of range (e.g. '-100', '0000', '9999') and still parse as a non-NaN number, so a sane
+// bound is required before it drives the Status nudge below, the Title auto-fill in
+// titleSyncForYear, or the date-picker default in referenceDateForYear — otherwise typing an
+// implausible year still clobbers real data. Shared across all three so they stay consistent
+// rather than diverging.
+const MIN_PLAUSIBLE_YEAR = 1900;
+const MAX_PLAUSIBLE_YEAR = 2100;
+
+function isPlausibleYear(year: number): boolean {
+  return year >= MIN_PLAUSIBLE_YEAR && year <= MAX_PLAUSIBLE_YEAR;
+}
+
+// #760: on a brand-new edition, the Year field nudges Status/RegistrationStatus toward a
+// sensible initial value — a past year reads as an already-completed historical edition, a
+// current-or-future year reads as a still-hidden draft. Pulled out as a pure function (rather
+// than left inline in EventDetailPage's Year onChange) so the year-bucket decision itself is
+// unit-testable — see eventForms.test.ts — independently of the stateful "has the admin
+// manually overridden this since" gating that has to live alongside the form's own state.
+// #797: an out-of-range year (see isPlausibleYear above) returns null instead of bucketing, so an
+// implausible typed year does not nudge Status/RegistrationStatus at all.
+export function editionStatusForYear(year: number, currentYear: number = new Date().getFullYear()): { status: EditionStatus; registrationStatus: RegistrationStatus } | null {
+  if (!isPlausibleYear(year)) return null;
+  return year < currentYear
+    ? { status: 'Completed', registrationStatus: 'Closed' }
+    : { status: 'Hidden', registrationStatus: 'NotStarted' };
+}
+
+// #778: a cloned edition is created via the same "isNew" (create) path as a plain Add, but
+// handleCloneEdition deliberately seeds Status as Unconfirmed (and RegistrationStatus from
+// whether the suggested date is already past) regardless of the year-bucket default above — so
+// the Year nudge above must not re-fire for a clone the way it does for a plain Add, or it
+// silently discards that seed the moment the admin corrects the suggested year. Manually touching
+// Status/RegistrationStatus must still win over both "isNew" and "isClone", same as before.
+// Pulled out as a pure function (rather than left inline in the Year onChange) so the gating
+// decision is unit-testable — see eventForms.test.ts — independently of the refs that track
+// dialog-open-scoped state in EventDetailPage.
+export function shouldNudgeStatusForYear(isNew: boolean, isClone: boolean, statusManuallySet: boolean): boolean {
+  return isNew && !isClone && !statusManuallySet;
+}
+
+// #780: the Year field's onChange also auto-syncs Title/titleEn to the typed year, but only while
+// the title still looks like it was left at a previous auto-synced value (empty, or a bare 4-digit
+// year) — once the admin has typed a real title, a later Year edit must not clobber it. Pulled out
+// as a pure function (rather than left inline in the Year onChange) so this decision is
+// unit-testable — see eventForms.test.ts — independently of the setForm state update it feeds.
+// #797: an out-of-range year (see isPlausibleYear above) is treated the same as an incomplete or
+// non-numeric one — no sync — so it does not auto-fill Title/titleEn with an implausible literal.
+export function titleSyncForYear(newYear: string, currentTitle: string): { title: string; titleEn: string } | null {
+  const parsed = parseInt(newYear, 10);
+  if (newYear.length !== 4 || isNaN(parsed) || !isPlausibleYear(parsed)) return null;
+  if (currentTitle.trim() !== '' && !/^\d{4}$/.test(currentTitle.trim())) return null;
+  return { title: newYear, titleEn: newYear };
+}
+
+// #780: drives which month/year the four edition date pickers open on when they have no value of
+// their own yet — a not-yet-4-digit or invalid Year leaves their default (today) behaviour
+// unchanged. Pulled out as a pure function so it's unit-testable independently of the form state
+// it's derived from — see eventForms.test.ts.
+// #781: a 4-character year string can still be negative, zero, or wildly out of range (e.g.
+// '-100', '0000') and still parse as a non-NaN number, so a sane bound (isPlausibleYear, above) is
+// required before handing it to dayjs().year() — otherwise the date pickers open on an implausible
+// calendar.
+export function referenceDateForYear(year: string): Dayjs | undefined {
+  const parsed = parseInt(year, 10);
+  return year.length === 4 && !isNaN(parsed) && isPlausibleYear(parsed) ? dayjs().year(parsed) : undefined;
 }
 
 export function getEditionStatusColor(status: EditionStatus): 'default' | 'success' | 'warning' | 'error' | 'info' {

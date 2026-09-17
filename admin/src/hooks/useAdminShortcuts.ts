@@ -57,7 +57,9 @@ export function useAdminShortcuts({
     const pendingG = useRef(false);
     const pendingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
     const onPendingNavigationRef = useRef(onPendingNavigation);
-    onPendingNavigationRef.current = onPendingNavigation;
+    useEffect(() => {
+        onPendingNavigationRef.current = onPendingNavigation;
+    }, [onPendingNavigation]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {

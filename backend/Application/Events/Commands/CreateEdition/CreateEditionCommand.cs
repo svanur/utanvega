@@ -71,13 +71,14 @@ public class CreateEditionCommandHandler : IRequestHandler<CreateEditionCommand,
         // passed didn't get a chance to be individually confirmed — it's already over, so it
         // should read as Completed (and closed for registration) from the moment it's created,
         // rather than sitting as Unconfirmed until #361's sweep catches up with it later.
-        // But only when it would otherwise land on that plain Unconfirmed default: an admin who
-        // deliberately chose a different status — e.g. Hidden, for a private/draft historical
-        // edition (see EventDetailPage's edition-status dropdown) — has that choice respected,
-        // the same way UpdateEditionCommand's patch-status semantics never silently override an
+        // This also covers Hidden, the admin form's own default for a brand-new edition (see
+        // emptyEditionForm/the Year-field nudge in EventDetailPage) — a draft edition dated in
+        // the past is still over, so it should complete rather than sit hidden indefinitely.
+        // Any other explicit non-default status choice — e.g. Cancelled — is left alone, the
+        // same way UpdateEditionCommand's patch-status semantics never silently override an
         // explicit non-default choice.
         var effectiveDate = EditionStatusHelpers.EffectiveDate(request.Date, request.EndDate);
-        if (status == EditionStatus.Unconfirmed
+        if ((status == EditionStatus.Unconfirmed || status == EditionStatus.Hidden)
             && EditionStatusHelpers.IsPast(effectiveDate, DateOnly.FromDateTime(DateTime.UtcNow)))
             edition.CompleteWithRaces();
 

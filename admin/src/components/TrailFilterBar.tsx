@@ -7,6 +7,7 @@ import BookmarkIcon from '@mui/icons-material/Bookmark';
 interface TrailFilterBarProps {
   search: string;
   onSearchChange: (value: string) => void;
+  onSearchClear: () => void;
   statusFilter: string;
   onStatusFilterChange: (value: string) => void;
   typeFilter: string;
@@ -22,7 +23,6 @@ interface TrailFilterBarProps {
   onMonthFilterChange: (value: string) => void;
   yearOptions: string[];
   months: string[];
-  includeArchived: boolean;
   needsReviewOnly: boolean;
   onNeedsReviewOnlyChange: (value: boolean) => void;
   onResetFilters: () => void;
@@ -31,6 +31,7 @@ interface TrailFilterBarProps {
 export default function TrailFilterBar({
   search,
   onSearchChange,
+  onSearchClear,
   statusFilter,
   onStatusFilterChange,
   typeFilter,
@@ -46,7 +47,6 @@ export default function TrailFilterBar({
   onMonthFilterChange,
   yearOptions,
   months,
-  includeArchived,
   needsReviewOnly,
   onNeedsReviewOnlyChange,
   onResetFilters,
@@ -67,7 +67,7 @@ export default function TrailFilterBar({
           ),
           endAdornment: search ? (
             <InputAdornment position="end">
-              <IconButton size="small" aria-label="Clear search" onClick={() => onSearchChange('')}>
+              <IconButton size="small" aria-label="Clear search" onClick={onSearchClear}>
                 <ClearIcon fontSize="small" />
               </IconButton>
             </InputAdornment>

@@ -6,7 +6,6 @@ import {
 } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
-import SearchIcon from '@mui/icons-material/Search';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
@@ -23,12 +22,13 @@ import { apiFetch } from '../hooks/api';
 import type { PageKey } from '../types/PageKey';
 import type { EventSummaryDto } from '../hooks/useEvents';
 import type { Trail } from '../hooks/useTrails';
+import type { QuickFilter } from './EventHealth';
 import FeedbackIcon from '@mui/icons-material/Feedback';
 
 interface DashboardPageProps {
     onNewEvent: () => void;
     onUploadTrail: () => void;
-    onNavigate: (page: PageKey) => void;
+    onNavigate: (page: PageKey, filter?: QuickFilter) => void;
 }
 
 interface DailyViews {
@@ -97,6 +97,17 @@ function getEventHealthScore(event: EventSummaryDto): number {
     const applicable = checks.filter(c => !c.na);
     if (applicable.length === 0) return 100;
     return Math.round((applicable.filter(c => c.passed).length / applicable.length) * 100);
+}
+
+/** Recomputes the "today" / "30 days from now" window. Only ever called from inside an
+ *  effect (initial lazy useState + periodic/visibility-triggered recompute) — never directly
+ *  in the render body, to preserve the react-hooks/purity fix from issue #556. */
+function computeUpcomingWindow(): { today: string; in30days: string } {
+    const now = new Date();
+    return {
+        today: now.toISOString().slice(0, 10),
+        in30days: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+    };
 }
 
 function formatDate(iso: string): string {
@@ -175,6 +186,26 @@ export default function DashboardPage({ onNewEvent, onUploadTrail, onNavigate }:
     const [feedbackCounts, setFeedbackCounts] = useState<FeedbackCounts | null>(null);
     const [note, setNote] = useState(() => localStorage.getItem('admin_dashboard_note') ?? '');
     const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    // Lazy-initialized on mount rather than recomputed from Date.now() on every render (see
+    // issue #556) — but the Dashboard can stay mounted across a day boundary in a long-lived
+    // tab, so an effect below periodically refreshes this via setState, keeping the render body
+    // itself free of direct Date.now()/new Date() calls (issue #861).
+    const [{ today, in30days }, setUpcomingWindow] = useState(() => computeUpcomingWindow());
+
+    useEffect(() => {
+        const recompute = () => setUpcomingWindow(computeUpcomingWindow());
+        // Hourly is far more often than needed for a day-granularity window, but cheap and
+        // guarantees the window can never be more than an hour stale.
+        const intervalId = setInterval(recompute, 60 * 60 * 1000);
+        const onVisibilityChange = () => {
+            if (document.visibilityState === 'visible') recompute();
+        };
+        document.addEventListener('visibilitychange', onVisibilityChange);
+        return () => {
+            clearInterval(intervalId);
+            document.removeEventListener('visibilitychange', onVisibilityChange);
+        };
+    }, []);
 
     const handleNoteChange = (value: string) => {
         setNote(value);
@@ -215,9 +246,6 @@ export default function DashboardPage({ onNewEvent, onUploadTrail, onNavigate }:
             .then(d => setFeedbackCounts(d.counts))
             .catch(() => {});
     }, []);
-
-    const today = new Date().toISOString().slice(0, 10);
-    const in30days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
     const activeEvents = events.filter(e => e.status !== 'Cancelled' && e.type !== 'Advertisement');
     const needsAttention = activeEvents.filter(e => getEventHealthScore(e) < 80);
@@ -483,7 +511,7 @@ export default function DashboardPage({ onNewEvent, onUploadTrail, onNavigate }:
                                 {noUpcomingDate.length > 0 && (
                                     <Box
                                         component="button"
-                                        onClick={() => onNavigate('event-health')}
+                                        onClick={() => onNavigate('event-health', 'no-date')}
                                         sx={{
                                             display: 'flex', alignItems: 'center', gap: 1.5,
                                             p: 1.5, borderRadius: 1, border: '1px solid', borderColor: 'error.light',

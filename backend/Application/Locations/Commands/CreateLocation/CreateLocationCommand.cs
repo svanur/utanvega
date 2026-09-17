@@ -1,5 +1,7 @@
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
+using Npgsql;
 using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Core.Services;
@@ -24,6 +26,12 @@ public record CreateLocationCommand(
 
 public class CreateLocationCommandHandler : IRequestHandler<CreateLocationCommand, Guid>
 {
+    // Must match the unique index EF Core generates for Location.Slug (see
+    // backend/Migrations/UtanvegaDbContextModelSnapshot.cs) — the default naming convention gives
+    // "IX_{Table}_{Property}", i.e. IX_Locations_Slug, since neither the entity config nor the
+    // migration overrides it with HasDatabaseName.
+    private const string SlugUniqueIndexName = "IX_Locations_Slug";
+
     private readonly UtanvegaDbContext _context;
     private readonly ICacheInvalidator _cacheInvalidator;
 
@@ -36,7 +44,11 @@ public class CreateLocationCommandHandler : IRequestHandler<CreateLocationComman
     public async Task<Guid> Handle(CreateLocationCommand request, CancellationToken cancellationToken)
     {
         var slug = request.Slug ?? SlugGenerator.Generate(request.Name);
-        
+
+        var slugExists = await _context.Locations.AnyAsync(l => l.Slug == slug, cancellationToken);
+        if (slugExists)
+            throw new InvalidOperationException($"A location with slug '{slug}' already exists.");
+
         Enum.TryParse<LocationType>(request.Type, true, out var type);
 
         Point? center = null;
@@ -61,7 +73,17 @@ public class CreateLocationCommandHandler : IRequestHandler<CreateLocationComman
         };
 
         _context.Locations.Add(location);
-        await _context.SaveChangesWithAuditAsync(request.ActorUserId);
+
+        try
+        {
+            await _context.SaveChangesWithAuditAsync(request.ActorUserId);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException
+               { SqlState: "23505", ConstraintName: SlugUniqueIndexName })
+        {
+            throw new InvalidOperationException($"A location with slug '{slug}' already exists.");
+        }
+
         _cacheInvalidator.InvalidateLocation(slug);
 
         return location.Id;

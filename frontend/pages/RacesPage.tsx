@@ -74,7 +74,7 @@ import { downloadIcs } from '../utils/calendarLinks';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
 import { getTicketStatusColor, groupDistances, isAllSoldOut } from '../utils/ticketStatus';
-import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, isOngoingPastDayTwo } from '../utils/eventUtils';
+import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor, getWeekRange, isEffectivelyCancelled, isEffectivelyUnconfirmed, isOngoingPastDayTwo } from '../utils/eventUtils';
 import { trackViewModeChange, trackSiteQROpen } from '../utils/analytics';
 import { useLocalize } from '../utils/localize';
 import { ActivityIcons } from '../utils/activityIcon';
@@ -120,6 +120,8 @@ interface EventFilters {
     certifications: string[];
     championships: string[];
     weekendOnly: boolean;
+    thisWeekOnly: boolean;
+    nextWeekOnly: boolean;
     mountainRaceOnly: boolean;
     favoritesOnly: boolean;
     distanceBuckets: RaceDistanceBucket[];
@@ -134,6 +136,8 @@ const DEFAULT_FILTERS: EventFilters = {
     certifications: [],
     championships: [],
     weekendOnly: false,
+    thisWeekOnly: false,
+    nextWeekOnly: false,
     mountainRaceOnly: false,
     favoritesOnly: false,
     distanceBuckets: [],
@@ -303,6 +307,8 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         const VALID_BUCKETS: RaceDistanceBucket[] = ['<10', '10-21', '21-42', '42-100', '100+'];
         if (distance) updates.distanceBuckets = distance.split(',').filter((b): b is RaceDistanceBucket => VALID_BUCKETS.includes(b as RaceDistanceBucket));
         if (searchParams.get('weekend') === 'true') updates.weekendOnly = true;
+        if (searchParams.get('thisWeek') === 'true') updates.thisWeekOnly = true;
+        if (searchParams.get('nextWeek') === 'true') updates.nextWeekOnly = true;
         if (searchParams.get('mountain') === 'true') updates.mountainRaceOnly = true;
         if (searchParams.get('favorites') === 'true') updates.favoritesOnly = true;
 
@@ -331,6 +337,8 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         set('champs', filters.championships.length ? filters.championships.join(',') : null);
         set('distance', filters.distanceBuckets.length ? filters.distanceBuckets.join(',') : null);
         set('weekend', filters.weekendOnly ? 'true' : null);
+        set('thisWeek', filters.thisWeekOnly ? 'true' : null);
+        set('nextWeek', filters.nextWeekOnly ? 'true' : null);
         set('mountain', filters.mountainRaceOnly ? 'true' : null);
         set('favorites', filters.favoritesOnly ? 'true' : null);
 
@@ -349,6 +357,8 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         filters.certifications.length +
         filters.championships.length +
         (filters.weekendOnly ? 1 : 0) +
+        (filters.thisWeekOnly ? 1 : 0) +
+        (filters.nextWeekOnly ? 1 : 0) +
         (filters.mountainRaceOnly ? 1 : 0) +
         (filters.favoritesOnly ? 1 : 0) +
         filters.distanceBuckets.length,
@@ -402,6 +412,8 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         if (f.certifications.length > 0) result = result.filter(c => c.certifications?.some(cert => f.certifications.includes(cert)));
         if (f.championships.length > 0) result = result.filter(c => c.championshipCategories?.some(ch => f.championships.includes(ch)));
         if (f.weekendOnly) result = result.filter(c => { const d = c.displayDate ?? c.nextEditionDate; if (!d) return false; const day = new Date(d + 'T00:00:00').getDay(); return day === 0 || day === 6; });
+        if (f.thisWeekOnly) { const { start, end } = getWeekRange('this'); result = result.filter(c => { const d = c.displayDate ?? c.nextEditionDate; return !!d && d >= start && d <= end; }); }
+        if (f.nextWeekOnly) { const { start, end } = getWeekRange('next'); result = result.filter(c => { const d = c.displayDate ?? c.nextEditionDate; return !!d && d >= start && d <= end; }); }
         if (f.mountainRaceOnly) result = result.filter(c => c.isMountainRace === true);
         if (f.favoritesOnly) result = result.filter(c => favoriteEvents.includes(c.slug));
         if (f.distanceBuckets.length > 0) result = result.filter(c => {
@@ -722,6 +734,29 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                         />
                                     );
                                 })}
+                            </Box>
+                        </Box>
+
+                        {/* Week */}
+                        <Box sx={{ mb: 1.5 }}>
+                            <Typography variant="caption" color="text.secondary" fontWeight={600}>{t('races.filters.week', 'Week')}</Typography>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                                <Chip
+                                    label={t('races.filters.thisWeek', 'This week')}
+                                    size="small"
+                                    variant={filters.thisWeekOnly ? 'filled' : 'outlined'}
+                                    color={filters.thisWeekOnly ? 'primary' : 'default'}
+                                    onClick={() => setFilters(f => ({ ...f, thisWeekOnly: !f.thisWeekOnly, nextWeekOnly: false }))}
+                                    sx={{ cursor: 'pointer' }}
+                                />
+                                <Chip
+                                    label={t('races.filters.nextWeek', 'Next week')}
+                                    size="small"
+                                    variant={filters.nextWeekOnly ? 'filled' : 'outlined'}
+                                    color={filters.nextWeekOnly ? 'primary' : 'default'}
+                                    onClick={() => setFilters(f => ({ ...f, nextWeekOnly: !f.nextWeekOnly, thisWeekOnly: false }))}
+                                    sx={{ cursor: 'pointer' }}
+                                />
                             </Box>
                         </Box>
 
@@ -1212,7 +1247,14 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                             }
                                             revealWidth={120}
                                         >
-                                            <Card variant="outlined" sx={{ position: 'relative', '@media (hover: hover)': { transition: 'transform 0.15s, box-shadow 0.15s', '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] } } }}>
+                                            <Card
+                                                variant="outlined"
+                                                sx={{
+                                                    position: 'relative',
+                                                    '@media (hover: hover)': { transition: 'transform 0.15s, box-shadow 0.15s', '&:hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows[4] } },
+                                                    ...(isEffectivelyCancelled(comp) && { opacity: 0.65 }),
+                                                }}
+                                            >
                                                 <CardActionArea onClick={() => navigate(`/events/${comp.slug}`)} onMouseEnter={() => prefetchEvent(comp.slug)}>
                                                     <CardContent sx={{ p: { xs: 1.5, sm: 2 }, pr: { xs: 6, sm: 6 } }}>
                                                         {/* Name + countdown */}
@@ -1268,7 +1310,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                         {/* Series type · name · location · km away */}
                                                         <Stack direction="row" alignItems="center" gap={0.5} sx={{ mt: 0.25 }} flexWrap="wrap">
                                                             <Chip label={t('races.eventTypes.Series', 'Series')} size="small" color={getEventTypeColor('Series')} variant="outlined" sx={{ height: 18, fontSize: '0.65rem' }} />
-                                                            <Typography variant="caption" color="text.secondary" noWrap>{loc(comp.name, comp.nameEn)}</Typography>
+                                                            <Typography variant="caption" color="text.secondary" noWrap sx={{ ...(isEffectivelyCancelled(comp) ? { textDecoration: 'line-through' } : {}) }}>{loc(comp.name, comp.nameEn)}</Typography>
                                                             {(comp.locationName || (userLocation && comp.gpxPointLat != null)) && (
                                                                 <FiberManualRecordIcon sx={{ fontSize: 5, color: 'text.disabled' }} />
                                                             )}

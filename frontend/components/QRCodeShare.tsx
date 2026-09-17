@@ -46,7 +46,7 @@ export default function QRCodeShare({ slug, trailName, open: openProp, onClose }
         <>
             {openProp === undefined && (
                 <Tooltip title={t('qr.showQR')}>
-                    <IconButton onClick={() => { trackTrailQRClick(slug); setInternalOpen(true); }} color="primary" size="small">
+                    <IconButton onClick={() => { trackTrailQRClick(slug); setInternalOpen(true); }} color="primary" size="small" sx={{ minWidth: 44, minHeight: 44 }}>
                         <QrCode2Icon fontSize="small" />
                     </IconButton>
                 </Tooltip>

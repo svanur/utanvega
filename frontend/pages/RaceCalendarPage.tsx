@@ -191,21 +191,35 @@ function ScheduleView({ days, loading, today, onEventClick, loc, t }: ScheduleVi
                                         justifyContent: 'space-between',
                                         gap: 1,
                                         '&:hover': { bgcolor: alpha(theme.palette.action.hover, 0.25) },
+                                        ...(ev.effectiveCancelled && { opacity: 0.65 }),
                                     }}
                                 >
                                     <Box sx={{ minWidth: 0 }}>
-                                        <Typography
-                                            variant="body2"
-                                            fontWeight={500}
-                                            sx={{ mb: 0.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                                        >
-                                            {loc(ev.name, ev.nameEn) ?? ev.name}
-                                            {ev.raceName && (
-                                                <Typography component="span" variant="body2" color="text.secondary" fontWeight={400}>
-                                                    {' · '}{ev.raceName}
-                                                </Typography>
+                                        <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 0.5 }}>
+                                            <Typography
+                                                variant="body2"
+                                                fontWeight={500}
+                                                sx={{
+                                                    minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                                    ...(ev.effectiveCancelled && { textDecoration: 'line-through' }),
+                                                }}
+                                            >
+                                                {loc(ev.name, ev.nameEn) ?? ev.name}
+                                                {ev.raceName && (
+                                                    <Typography component="span" variant="body2" color="text.secondary" fontWeight={400}>
+                                                        {' · '}{ev.raceName}
+                                                    </Typography>
+                                                )}
+                                            </Typography>
+                                            {ev.effectiveCancelled && (
+                                                <Chip
+                                                    label={t('races.statusCancelled')}
+                                                    size="small"
+                                                    color="error"
+                                                    sx={{ height: 18, fontSize: '0.65rem', flexShrink: 0 }}
+                                                />
                                             )}
-                                        </Typography>
+                                        </Stack>
                                         <Stack direction="row" flexWrap="wrap" gap={0.5} alignItems="center">
                                             {ev.activityTypes && ev.activityTypes.length > 0 && (
                                                 <ActivityIcons activityTypes={ev.activityTypes} activityType={ev.activityTypes[0]} />
@@ -570,15 +584,33 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
                                 )}
                                 <List dense disablePadding>
                                     {selectedDay.events.map((ev, i) => (
-                                        <ListItemButton key={i} onClick={() => navigate(`/events/${ev.slug}`)} sx={{ borderRadius: 1 }}>
+                                        <ListItemButton
+                                            key={i}
+                                            onClick={() => navigate(`/events/${ev.slug}`)}
+                                            sx={{ borderRadius: 1, ...(ev.effectiveCancelled && { opacity: 0.65 }) }}
+                                        >
                                             <ListItemText
                                                 primary={
-                                                    <Stack direction="row" alignItems="center" spacing={0.5}>
+                                                    <Stack direction="row" alignItems="center" spacing={0.5} flexWrap="wrap">
                                                         {ev.activityTypes && ev.activityTypes.length > 0
                                                             ? <ActivityIcons activityTypes={ev.activityTypes} activityType={ev.activityTypes[0]} />
                                                             : <EmojiEventsIcon sx={{ fontSize: 16, color: 'warning.main' }} />
                                                         }
-                                                        <Typography variant="body2" fontWeight={600}>{loc(ev.name, ev.nameEn) ?? ev.name}</Typography>
+                                                        <Typography
+                                                            variant="body2"
+                                                            fontWeight={600}
+                                                            sx={ev.effectiveCancelled ? { textDecoration: 'line-through' } : undefined}
+                                                        >
+                                                            {loc(ev.name, ev.nameEn) ?? ev.name}
+                                                        </Typography>
+                                                        {ev.effectiveCancelled && (
+                                                            <Chip
+                                                                label={t('races.statusCancelled')}
+                                                                size="small"
+                                                                color="error"
+                                                                sx={{ height: 18, fontSize: '0.65rem' }}
+                                                            />
+                                                        )}
                                                     </Stack>
                                                 }
                                                 secondary={

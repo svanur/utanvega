@@ -604,15 +604,18 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                         {isEnabled('qr_code') && <QRCodeShare slug={trail.slug} trailName={trail.name} />}
                         {isEnabled('download_trail') && (
                         <Tooltip title={t('trail.downloadGpx')} arrow>
-                            <IconButton
+                            <Button
                                 size="small"
+                                variant="outlined"
+                                startIcon={<FileDownloadIcon fontSize="small" />}
                                 component="a"
                                 href={`${API_URL}/api/v1/trails/${trail.slug}/gpx`}
                                 download
                                 onClick={() => trackTrailGpxDownload(trail.slug)}
+                                sx={{ minWidth: 44, minHeight: 44 }}
                             >
-                                <FileDownloadIcon fontSize="small" />
-                            </IconButton>
+                                {t('trail.gpxLabel')}
+                            </Button>
                         </Tooltip>
                         )}
                         {isEnabled('trail_comparison') && (
@@ -620,6 +623,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                             <IconButton
                                 size="small"
                                 onClick={() => { trackTrailCompareClick(trail.slug); navigate(`/compare?a=${trail.slug}`); }}
+                                sx={{ minWidth: 44, minHeight: 44 }}
                             >
                                 <CompareArrowsIcon fontSize="small" />
                             </IconButton>
@@ -630,6 +634,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                             <IconButton
                                 size="small"
                                 onClick={() => { trackTrailPredictorClick(trail.slug); navigate(`/tools/trail-predictor?trail=${encodeURIComponent(trail.slug)}`); }}
+                                sx={{ minWidth: 44, minHeight: 44 }}
                             >
                                 <QueryStatsIcon fontSize="small" />
                             </IconButton>
@@ -645,6 +650,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                     target="_blank"
                                     rel="noopener"
                                     onClick={() => trackTrailDirectionsClick(trail.slug)}
+                                    sx={{ minWidth: 44, minHeight: 44 }}
                                 >
                                     <DirectionsCarIcon fontSize="small" />
                                 </IconButton>

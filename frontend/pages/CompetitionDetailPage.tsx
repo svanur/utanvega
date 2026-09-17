@@ -68,7 +68,7 @@ import LostRunner from '../components/LostRunner';
 import WeatherCard from '../components/WeatherCard';
 import GalleryLinks from '../components/GalleryLinks';
 import GalleryCompact from '../components/GalleryCompact';
-import { useEvents, useEventBySlug } from '../hooks/useEvents';
+import { useEventBySlug, useEventSuggestions } from '../hooks/useEvents';
 import type { EventEditionDto, RaceDto, ScheduleRule } from '../hooks/useEvents';
 import { useFavoriteEvents } from '../hooks/useFavoriteEvents';
 import StarIcon from '@mui/icons-material/Star';
@@ -113,7 +113,7 @@ type PreparedEdition = EventEditionDto & {
 import { ACTIVITY_EMOJI } from '../constants/activityEmoji';
 import { googleCalendarUrl, outlookCalendarUrl, downloadIcs } from '../utils/calendarLinks';
 import EventDateBadge from '../components/EventDateBadge';
-import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, editionKeyFor, getMultiDayEditionProgress, toDateOnlyString } from '../utils/eventUtils';
+import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, shortestUniqueEditionKey, getMultiDayEditionProgress, toDateOnlyString, getEditionTimingStatus } from '../utils/eventUtils';
 import { getTicketStatusColor } from '../utils/ticketStatus';
 import { trackEventQRClick } from '../utils/analytics';
 
@@ -300,7 +300,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     const loc = useLocalize();
     const { event, loading, error } = useEventBySlug(slug);
     usePageTitle(event ? (loc(event.name, event.nameEn) ?? event.name) : undefined);
-    const { events, loading: eventsLoading } = useEvents();
+    const { suggestions } = useEventSuggestions(slug, !!error || (!loading && !event));
     const navigate = useNavigate();
     const theme = useTheme();
     const { isEnabled } = useFeatureFlags();
@@ -474,6 +474,20 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
         && recentPhotoEdition.id !== primaryEdition?.id
         && !(primaryEdition?.galleries?.length);
 
+    // Mirrors recentPhotoEdition above: organizers frequently pre-fill resultsUrl for a future
+    // edition before the actual results page exists, so the hero button is gated on the edition's
+    // race having actually happened (#898) — this is the fallback to a past edition's own results
+    // when that gate hides the primary one.
+    const recentResultsEdition = useMemo(
+        () => pastEditions.find(edition => !!edition.resultsUrl) ?? null,
+        [pastEditions],
+    );
+    const showPrimaryResultsButton = !!primaryEdition?.resultsUrl
+        && getEditionTimingStatus(primaryEdition.date, primaryEdition.endDate) !== 'upcoming';
+    const showRecentResultsSection = !!recentResultsEdition
+        && recentResultsEdition.id !== primaryEdition?.id
+        && !showPrimaryResultsButton;
+
     // Prefer the richer primaryEdition object (already in scope) over the flattened EventSummary
     // fields — it reflects exactly the edition this page is displaying.
     const heroCancelled = !!event && isEffectivelyCancelled({ status: event.status, effectiveCancelled: primaryEdition?.effectiveCancelled });
@@ -555,13 +569,6 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     }
 
     if (error || !event) {
-        const normalize = (s: string) =>
-            s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-        const slugWords = (slug ?? '').split('-').filter(w => w.length > 2);
-        const suggestions = eventsLoading ? [] : events
-            .filter(candidate => !['Hidden', 'Unlisted'].includes(candidate.status) && slugWords.some(word => normalize(candidate.name).includes(word)))
-            .slice(0, 6);
-
         return (
             <Layout mode={mode} onToggleMode={onToggleMode}>
                 <LostRunner
@@ -577,7 +584,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                         <Stack spacing={1}>
                             {suggestions.map(candidate => (
                                 <Paper
-                                    key={candidate.id}
+                                    key={candidate.slug}
                                     elevation={1}
                                     sx={{
                                         p: 2,
@@ -863,7 +870,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                     {t('races.organizerSite')}
                                 </Button>
                             )}
-                            {!showEditionSections && primaryEdition?.resultsUrl && (
+                            {!showEditionSections && showPrimaryResultsButton && (
                                 <Button
                                     variant={isPostRace ? 'contained' : 'outlined'}
                                     color={isPostRace ? 'success' : 'primary'}
@@ -892,6 +899,28 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 <AddToCalendarButton event={event} endDate={primaryEdition?.endDate ?? event.endDisplayDate} t={t} />
                             )}
                         </Stack>
+
+                        {showRecentResultsSection && recentResultsEdition && (
+                            <Box sx={{ mt: 1.5 }}>
+                                <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 0.5 }}>
+                                    {t('races.recentResults.title', {
+                                        defaultValue: 'Results from {{edition}}',
+                                        edition: loc(recentResultsEdition.title?.trim() || null, recentResultsEdition.titleEn) ?? String(recentResultsEdition.year),
+                                    })}
+                                </Typography>
+                                <Stack direction="row" flexWrap="wrap" gap={1} alignItems="center">
+                                    <Button
+                                        variant="outlined"
+                                        size="small"
+                                        endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
+                                        onClick={() => window.open(recentResultsEdition.resultsUrl!, '_blank', 'noopener')}
+                                        sx={{ textTransform: 'none' }}
+                                    >
+                                        {t('races.results', { defaultValue: 'Results' })}
+                                    </Button>
+                                </Stack>
+                            </Box>
+                        )}
 
                         {showRecentPhotosSection && recentPhotoEdition && (
                             <Box sx={{ mt: 1.5 }}>
@@ -1155,7 +1184,10 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             {pastEditions.map(edition => {
                                 const heading = edition.title?.trim() || String(edition.year);
                                 const raceCount = edition.visibleRaces.length;
-                                const editionKey = editionKeyFor(edition);
+                                // Sibling list must be the full edition set, not pastEditions — a past
+                                // edition sharing a year with a future one is still a collision, and
+                                // pastEditions (filtered to past/current, see lines ~403-428) can't see it.
+                                const editionKey = shortestUniqueEditionKey(edition, preparedEditions);
                                 return (
                                     <Paper
                                         key={edition.id}
