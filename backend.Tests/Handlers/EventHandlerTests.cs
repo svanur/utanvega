@@ -2137,6 +2137,77 @@ public class EventHandlerTests : IDisposable
         Assert.False(dto.HasFutureEdition);
     }
 
+    // ─── GetEventsQuery — AnyEditionNeedsReview aggregate ───
+
+    [Fact]
+    public async Task GetEvents_AnyEditionNeedsReview_TrueWhenAnEditionIsFlagged()
+    {
+        var ev = CreateTestEvent("Needs Review Event");
+        var edition = CreateTestEdition(ev.Id);
+        edition.NeedsReview = true;
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.True(dto.AnyEditionNeedsReview);
+    }
+
+    [Fact]
+    public async Task GetEvents_AnyEditionNeedsReview_FalseWhenNoEditionIsFlagged()
+    {
+        var ev = CreateTestEvent("No Review Needed Event");
+        var edition = CreateTestEdition(ev.Id);
+        edition.NeedsReview = false;
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.False(dto.AnyEditionNeedsReview);
+    }
+
+    [Fact]
+    public async Task GetEvents_AnyEditionNeedsReview_TrueWhenOnlyOneOfSeveralEditionsIsFlagged()
+    {
+        // The aggregate is an OR across all of the event's editions, not just the "relevant" one
+        // used elsewhere for distances/registration — a flag on an older, non-relevant edition
+        // must still surface here so the admin doesn't lose track of it.
+        var ev = CreateTestEvent("Mixed Editions Event");
+        var flaggedEdition = CreateTestEdition(ev.Id, year: 2024);
+        var unflaggedEdition = CreateTestEdition(ev.Id, year: 2026);
+        flaggedEdition.NeedsReview = true;
+        unflaggedEdition.NeedsReview = false;
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(flaggedEdition);
+            ctx.EventEditions.Add(unflaggedEdition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.True(dto.AnyEditionNeedsReview);
+    }
+
     [Fact]
     public async Task CreateEdition_StoresEndDate()
     {
