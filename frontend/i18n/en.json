@@ -1566,9 +1566,9 @@
             "distanceToStart": "Distance to the start location"
         },
         "registrationStatus": {
-            "Open": "Registration: Open",
-            "Closed": "Registration: Closed",
-            "NotStarted": "Registration: Coming Soon",
+            "Open": "Registration is open",
+            "Closed": "Registration closed",
+            "NotStarted": "Registration not started",
             "NotRequired": "Free entry"
         },
         "ticketStatus": {
