@@ -328,7 +328,7 @@ function HistoryRaceCard({
                             {race.status === 'Cancelled' && (
                                 <Chip label={t('races.statusCancelled')} size="small" color="error" sx={{ ml: 0.5, fontWeight: 600 }} />
                             )}
-                            {(race.status === 'Completed' && editionTiming !== 'past') && (
+                            {(race.status === 'Completed' && (editionTiming === 'upcoming' || editionTiming === 'ongoing')) && (
                                 <Chip label={t('races.history.completed', { defaultValue: 'Completed' })} size="small" color="success" sx={{ ml: 0.5 }} />
                             )}
                         </Typography>
@@ -381,7 +381,7 @@ function HistoryRaceCard({
                             <Chip icon={<TimerIcon />} label={formatCutoff(race.cutoffMinutes, t)} size="small" variant="outlined" color="warning" />
                         </Tooltip>
                     )}
-                    {race.ticketStatus && editionTiming !== 'past' && (
+                    {race.ticketStatus && (editionTiming === 'upcoming' || editionTiming === 'ongoing') && (
                         <Tooltip title={t('races.ticketStatus', { defaultValue: 'Registration status' })}>
                             <Chip
                                 label={t(`races.ticketStatus.${race.ticketStatus}`, { defaultValue: race.ticketStatus })}
