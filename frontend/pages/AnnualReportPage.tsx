@@ -52,7 +52,10 @@ function AnnualReportPdfViewer() {
         setLoadError(false);
     }, []);
 
-    const handleLoadError = useCallback(() => setLoadError(true), []);
+    const handleLoadError = useCallback((error: Error) => {
+        console.error('Annual report PDF failed to load', error);
+        setLoadError(true);
+    }, []);
 
     const pageWidth = Math.min(containerWidth, PDF_MAX_WIDTH) || undefined;
 
