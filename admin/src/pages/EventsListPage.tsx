@@ -955,22 +955,30 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
 
                 {/* Next edition */}
                 <TableCell>
-                  {event.nextEditionDate ? (
-                    <Box>
-                      <Typography variant="body2">{fmtDate(event.nextEditionDate)}</Typography>
-                      {formatDaysUntil(event.daysUntil) && (event.daysUntil == null || event.daysUntil >= 0) && (
-                        <Chip label={formatDaysUntil(event.daysUntil)} size="small" variant="outlined"
-                          color={event.daysUntil != null && event.daysUntil <= 7 ? 'warning' : 'default'} sx={{ mt: 0.5 }} />
-                      )}
-                      {event.status !== 'Cancelled' && !event.hasFutureEdition && (
-                        <Chip label="Edition missing" size="small" color="warning" variant="outlined" sx={{ mt: 0.5 }} />
-                      )}
-                    </Box>
-                  ) : event.status !== 'Cancelled' && !event.hasFutureEdition ? (
-                    <Chip label={event.editionCount === 0 ? 'No editions' : 'Edition missing'} size="small" color="warning" variant="outlined" />
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">—</Typography>
-                  )}
+                  <Stack spacing={0.5} alignItems="flex-start">
+                    {event.nextEditionDate ? (
+                      <Box>
+                        <Typography variant="body2">{fmtDate(event.nextEditionDate)}</Typography>
+                        {formatDaysUntil(event.daysUntil) && (event.daysUntil == null || event.daysUntil >= 0) && (
+                          <Chip label={formatDaysUntil(event.daysUntil)} size="small" variant="outlined"
+                            color={event.daysUntil != null && event.daysUntil <= 7 ? 'warning' : 'default'} sx={{ mt: 0.5 }} />
+                        )}
+                        {event.status !== 'Cancelled' && !event.hasFutureEdition && (
+                          <Chip label="Edition missing" size="small" color="warning" variant="outlined" sx={{ mt: 0.5 }} />
+                        )}
+                      </Box>
+                    ) : event.status !== 'Cancelled' && !event.hasFutureEdition ? (
+                      <Chip label={event.editionCount === 0 ? 'No editions' : 'Edition missing'} size="small" color="warning" variant="outlined" />
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">—</Typography>
+                    )}
+                    {/* Aggregate across the event's editions (EventSummaryDto.anyEditionNeedsReview) —
+                        surfaces a bookmarked edition even when it's buried in the detail page's
+                        collapsed "older editions" bucket, without opening the event. */}
+                    {event.anyEditionNeedsReview && (
+                      <Chip label="Needs review" size="small" color="warning" variant="outlined" />
+                    )}
+                  </Stack>
                 </TableCell>
 
                 {/* Status — cycles on click */}

@@ -791,6 +791,10 @@
             }
         },
         "changelog": {
+            "v1_10_0": {
+                "title": "Fixed a live event-page bug, plus more editions and races complete themselves automatically",
+                "description": "Fixed a bug where an event page could show a confusing \"list of editions\" layout for a few days after a race, instead of its normal single-edition view, whenever next year's edition already existed. Series events now complete their individual races as each leg's date passes, not just when the whole series wraps up. The edition history page now correctly hides the Results link, \"Completed\" badge, and registration-status chip depending on whether an edition is upcoming, ongoing, or past. On admin, the \"Needs review\" flag introduced last release is now visible directly in the events list, and cloning an edition no longer suggests a fabricated date for events with an approximate schedule. Alongside that, a couple of smaller admin cache and logging fixes."
+            },
             "v1_9_0": {
                 "title": "The 2025 Annual Report is back, now readable right on the site",
                 "description": "The Annual Report 2025 page is back in the site's navigation (under About) and now embeds the full report as a page-by-page PDF viewer, with a download link for anyone who wants the file itself. The existing stats and highlights on the page are unchanged — the report is just easier to find and read now."
@@ -1562,9 +1566,9 @@
             "distanceToStart": "Distance to the start location"
         },
         "registrationStatus": {
-            "Open": "Registration: Open",
-            "Closed": "Registration: Closed",
-            "NotStarted": "Registration: Coming Soon",
+            "Open": "Registration is open",
+            "Closed": "Registration closed",
+            "NotStarted": "Registration not started",
             "NotRequired": "Free entry"
         },
         "ticketStatus": {

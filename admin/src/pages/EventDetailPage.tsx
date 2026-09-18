@@ -37,6 +37,8 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import BookmarkIcon from '@mui/icons-material/Bookmark';
+import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -258,6 +260,12 @@ interface EditionDialogProps {
   // (see handleCloneEdition), so the Year nudge below must not re-derive and overwrite them the
   // way it does for a plain Add.
   isClone?: boolean;
+  // #912: true when this dialog was opened via "Clone edition to next year" for an event whose
+  // ScheduleRule is Approximate (month-only, no derivable exact date) — handleCloneEdition seeds
+  // date/endDate blank in that case rather than a fabricated guess, and this flag drives the
+  // helper text near Start date explaining why. Captured once at dialog-open time (isApproximateScheduleCloneRef
+  // below), same reasoning as isClone/isCloneRef.
+  isApproximateScheduleClone?: boolean;
   // #892: the other editions of this same event, used only for the advisory duplicate-Title
   // warning below — never for validation, since Title has no uniqueness constraint by design
   // (same-year reruns/reschedules are legitimate).
@@ -278,7 +286,7 @@ function LangToggleButton() {
   );
 }
 
-function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGalleryMutated, onNotify, initialValues, isClone = false, siblingEditions }: EditionDialogProps) {
+function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGalleryMutated, onNotify, initialValues, isClone = false, isApproximateScheduleClone = false, siblingEditions }: EditionDialogProps) {
   const isNew = edition === null;
   const [form, setForm] = useState<EditionFormState>(initialValues ?? (edition ? buildEditionForm(edition) : emptyEditionForm()));
   const [saving, setSaving] = useState(false);
@@ -292,7 +300,11 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
   // dialog-open-scoped lifetime as statusManuallySetRef — so it can't leak into the next
   // "Add edition" open even if this instance is reused across opens.
   const isCloneRef = useRef(false);
+  // #912: same capture-at-open reasoning as isCloneRef, for the Approximate-schedule clone
+  // helper text near Start date below.
+  const isApproximateScheduleCloneRef = useRef(false);
   const editionStatusHelperId = useId();
+  const startDateHelperId = useId();
   const registrationStatusHelperId = useId();
   // Which of IS/EN is currently shown in the Title BilingualTextField below — the #892
   // duplicate-Title match must follow this so it always compares what's actually on screen.
@@ -401,6 +413,7 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
         setForm(initialValues ?? (edition ? buildEditionForm(edition) : emptyEditionForm()));
         statusManuallySetRef.current = false;
         isCloneRef.current = isClone;
+        isApproximateScheduleCloneRef.current = isApproximateScheduleClone;
       } }}>
       <DialogTitle>
         <Stack direction="row" justifyContent="space-between" alignItems="center">
@@ -460,13 +473,21 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
               value={form.date ? dayjs(form.date) : null}
               onChange={v => set('date', v ? v.format('YYYY-MM-DD') : '')}
               referenceDate={referenceDate}
-              slotProps={{ textField: { size: 'small', fullWidth: true } }} />
+              slotProps={{ textField: {
+                size: 'small', fullWidth: true,
+                'aria-describedby': isApproximateScheduleCloneRef.current && !form.date ? startDateHelperId : undefined,
+              } }} />
             <DatePicker label="End date (multi-day)"
               value={form.endDate ? dayjs(form.endDate) : null}
               onChange={v => set('endDate', v ? v.format('YYYY-MM-DD') : '')}
               referenceDate={referenceDate}
               slotProps={{ textField: { size: 'small', fullWidth: true } }} />
           </Stack>
+          {isApproximateScheduleCloneRef.current && !form.date && (
+            <FormHelperText id={startDateHelperId} sx={{ mt: -1.5 }}>
+              This event&apos;s schedule is approximate — set next year&apos;s date manually.
+            </FormHelperText>
+          )}
           <BilingualTextField
             size="small" fullWidth label="Title"
             valueIs={form.title} valueEn={form.titleEn}
@@ -788,7 +809,7 @@ type FocusRow =
 export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: EventDetailPageProps) {
   const { slug = '' } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const { detail, loading, error, refresh, setDetail } = useEventDetail(slug);
+  const { detail, loading, error, refresh, setDetail, invalidateEventsList } = useEventDetail(slug);
   const { trails } = useTrails();
 
   const [expandedEditionIds, setExpandedEditionIds] = useState<Set<string>>(new Set());
@@ -871,7 +892,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
   const currentYear = new Date().getFullYear();
 
   const editionsByYear = useMemo(() => {
-    if (!detail) return { visible: [], hidden: 0 };
+    if (!detail) return { visible: [], hidden: 0, hiddenNeedsReview: 0 };
     const sorted = [...detail.editions].sort(sortEditions);
     const today = new Date().toISOString().slice(0, 10);
     const older = sorted.filter(ed => {
@@ -881,7 +902,10 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
       return true;
     });
     const visible = showOlderEditions ? sorted : sorted.filter(ed => !older.includes(ed));
-    return { visible, hidden: older.length };
+    // How many of the hidden "older" editions are bookmarked for review — surfaced on the
+    // "Show N older" button below so a flagged edition doesn't silently disappear into the bucket.
+    const hiddenNeedsReview = older.filter(ed => ed.needsReview).length;
+    return { visible, hidden: older.length, hiddenNeedsReview };
   }, [detail, showOlderEditions, currentYear]);
 
   const toggleEdition = (id: string) =>
@@ -961,8 +985,13 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
 
   const handleCloneEdition = (edition: EventEditionDto) => {
     const nextYear = (edition.year ?? new Date().getFullYear()) + 1;
-    const suggestedDate = suggestEditionDateForYear(edition.date, nextYear);
-    const suggestedEndDate = suggestEditionEndDateForYear(edition.date, edition.endDate, suggestedDate);
+    // #912: an Approximate ScheduleRule is a month-only pattern (see ScheduleRule.cs) with no
+    // derivable exact date — mechanically shifting the previous edition's exact date onto next
+    // year would produce a confidently wrong, fabricated date. Leave both dates blank instead
+    // and let the dialog explain why (see isApproximateScheduleClone below).
+    const isApproximate = detail?.scheduleRule?.type === 'Approximate';
+    const suggestedDate = isApproximate ? '' : suggestEditionDateForYear(edition.date, nextYear);
+    const suggestedEndDate = isApproximate ? '' : suggestEditionEndDateForYear(edition.date, edition.endDate, suggestedDate);
     setCloneFromEditionId(edition.id);
     setEditionInitialValues({
       year: String(nextYear),
@@ -1307,6 +1336,51 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
     }
   };
 
+  const handleToggleEditionNeedsReview = async (edition: EventEditionDto) => {
+    const next = !edition.needsReview;
+    // Optimistic, mirrors TrailDetailPage's handleToggleNeedsReview — the toggle should feel
+    // instant, and a failure just flips it back.
+    setDetail(prev => prev ? {
+      ...prev,
+      editions: prev.editions.map(ed => ed.id === edition.id ? { ...ed, needsReview: next } : ed),
+    } : prev);
+    try {
+      // UpdateEditionCommand resends the full snapshot for most fields (only Status,
+      // TranslationHashes and NeedsReview are patch-if-provided — see its doc comment), so unlike
+      // Trail's lighter PATCH this has to carry the edition's current values along, not just id+flag.
+      await apiFetch(`/api/v1/admin/editions/${edition.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          id: edition.id,
+          year: edition.year,
+          date: edition.date,
+          endDate: edition.endDate,
+          title: edition.title,
+          titleEn: edition.titleEn,
+          registrationUrl: edition.registrationUrl,
+          resultsUrl: edition.resultsUrl,
+          notes: edition.notes,
+          notesEn: edition.notesEn,
+          registrationStatus: edition.registrationStatus,
+          registrationOpens: edition.registrationOpens,
+          registrationCloses: edition.registrationCloses,
+          trailId: edition.trailId,
+          needsReview: next,
+        }),
+      });
+      onNotify(next ? 'Marked for review' : 'Review mark cleared');
+      // The events list caches its own copy of anyEditionNeedsReview (EVENTS_QUERY_KEY) — without
+      // this it can show a stale "Needs review" chip for up to its 30s staleTime.
+      await invalidateEventsList();
+    } catch (err) {
+      setDetail(prev => prev ? {
+        ...prev,
+        editions: prev.editions.map(ed => ed.id === edition.id ? { ...ed, needsReview: !next } : ed),
+      } : prev);
+      onNotify(err instanceof Error ? err.message : 'Failed to update review mark', 'error');
+    }
+  };
+
   const handleCycleEditionStatus = (edition: EventEditionDto) => {
     // Cancelled and Completed are terminal states reachable/escapable only via the edit dialog —
     // clicking the chip must not silently reactivate either.
@@ -1612,6 +1686,10 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                       sx={{ height: 18, fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }} />
                   </Tooltip>
                 )}
+                {edition.needsReview && (
+                  <Chip label="Needs review" size="small" color="warning"
+                    sx={{ height: 18, fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }} />
+                )}
                 <Tooltip title={edition.status === 'Cancelled'
                   ? 'Cancelled — reactivate via Edit edition'
                   : edition.status === 'Completed'
@@ -1649,6 +1727,15 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                     </IconButton>
                   </Tooltip>
                 )}
+                <Tooltip title={edition.needsReview
+                  ? 'Marked for review — click to clear. Does not affect the public site.'
+                  : 'Mark for review — an admin-only bookmark, does not affect the public site.'}>
+                  <IconButton size="small" onClick={() => void handleToggleEditionNeedsReview(edition)}>
+                    {edition.needsReview
+                      ? <BookmarkIcon fontSize="small" color="warning" />
+                      : <BookmarkBorderIcon fontSize="small" />}
+                  </IconButton>
+                </Tooltip>
                 <Tooltip title="Edit edition">
                   <IconButton size="small" onClick={() => { setEditingEdition(edition); setEditionDialogOpen(true); }}>
                     <EditIcon fontSize="small" />
@@ -1877,8 +1964,17 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
 
       {editionsByYear.hidden > 0 && (
         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, mb: 3 }}>
-          <Button size="small" variant="text" onClick={() => setShowOlderEditions(v => !v)}>
-            {showOlderEditions ? 'Hide older' : `Show ${editionsByYear.hidden} older`}
+          <Button
+            size="small"
+            variant="text"
+            color={!showOlderEditions && editionsByYear.hiddenNeedsReview > 0 ? 'warning' : 'primary'}
+            onClick={() => setShowOlderEditions(v => !v)}
+          >
+            {showOlderEditions
+              ? 'Hide older'
+              : editionsByYear.hiddenNeedsReview > 0
+                ? `Show ${editionsByYear.hidden} older (${editionsByYear.hiddenNeedsReview} need${editionsByYear.hiddenNeedsReview === 1 ? 's' : ''} review)`
+                : `Show ${editionsByYear.hidden} older`}
           </Button>
         </Box>
       )}
@@ -1890,6 +1986,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
         eventId={detail.id}
         initialValues={editionInitialValues}
         isClone={cloneFromEditionId !== null}
+        isApproximateScheduleClone={cloneFromEditionId !== null && detail.scheduleRule?.type === 'Approximate'}
         siblingEditions={detail.editions}
         onClose={() => { setEditionDialogOpen(false); setCloneFromEditionId(null); setEditionInitialValues(undefined); }}
         onGalleryMutated={refresh}
