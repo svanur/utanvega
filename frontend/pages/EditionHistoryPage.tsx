@@ -35,7 +35,7 @@ import GalleryLinks from '../components/GalleryLinks';
 import type { EventEditionDto, RaceDto } from '../hooks/useEvents';
 import { useLocalize } from '../utils/localize';
 import { splitMinutes } from '../utils/cutoffTime';
-import { formatDateRange, formatRaceDateTime, shortestUniqueEditionKey, getEditionTimingStatus, msUntilNextMidnight } from '../utils/eventUtils';
+import { formatDateRange, formatRaceDateTime, shortestUniqueEditionKey, getEditionTimingStatus, msUntilNextMidnight, type EditionTimingStatus } from '../utils/eventUtils';
 import { getTicketStatusColor } from '../utils/ticketStatus';
 
 type EditionHistoryPageProps = {
@@ -261,7 +261,7 @@ export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistor
                     )}
 
                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mt: 2 }} alignItems={{ sm: 'center' }}>
-                        {edition.resultsUrl && (
+                        {edition.resultsUrl && editionTiming !== 'upcoming' && (
                             <Button
                                 variant="contained"
                                 color="primary"
@@ -288,7 +288,7 @@ export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistor
                         )}
                         <Stack spacing={2}>
                             {visibleRaces.map(race => (
-                                <HistoryRaceCard key={race.id} race={race} t={t} />
+                                <HistoryRaceCard key={race.id} race={race} t={t} editionTiming={editionTiming} />
                             ))}
                         </Stack>
                     </>
@@ -301,9 +301,11 @@ export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistor
 function HistoryRaceCard({
     race,
     t,
+    editionTiming,
 }: {
     race: RaceDto;
     t: (key: string, opts?: Record<string, unknown>) => string;
+    editionTiming: EditionTimingStatus | null;
 }) {
     const theme = useTheme();
     const loc = useLocalize();
@@ -326,7 +328,7 @@ function HistoryRaceCard({
                             {race.status === 'Cancelled' && (
                                 <Chip label={t('races.statusCancelled')} size="small" color="error" sx={{ ml: 0.5, fontWeight: 600 }} />
                             )}
-                            {(race.status === 'Completed') && (
+                            {(race.status === 'Completed' && editionTiming !== 'past') && (
                                 <Chip label={t('races.history.completed', { defaultValue: 'Completed' })} size="small" color="success" sx={{ ml: 0.5 }} />
                             )}
                         </Typography>
@@ -379,7 +381,7 @@ function HistoryRaceCard({
                             <Chip icon={<TimerIcon />} label={formatCutoff(race.cutoffMinutes, t)} size="small" variant="outlined" color="warning" />
                         </Tooltip>
                     )}
-                    {race.ticketStatus && (
+                    {race.ticketStatus && editionTiming !== 'past' && (
                         <Tooltip title={t('races.ticketStatus', { defaultValue: 'Registration status' })}>
                             <Chip
                                 label={t(`races.ticketStatus.${race.ticketStatus}`, { defaultValue: race.ticketStatus })}
