@@ -93,6 +93,51 @@ public class TrailQueryHandlerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetTrails_PublishedOnly_NeedsReviewFalseEvenWhenFlagged()
+    {
+        // Public path (PublishedOnly: true) must never leak the internal admin bookmark flag,
+        // regardless of the underlying trail value.
+        var trail = CreateTrail("Flagged Trail", TrailStatus.Published);
+        trail.NeedsReview = true;
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Trails.Add(trail);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new GetTrailsQueryHandler(ctx);
+            var result = await handler.Handle(new GetTrailsQuery(PublishedOnly: true), CancellationToken.None);
+            var dto = Assert.Single(result);
+            Assert.False(dto.NeedsReview);
+        }
+    }
+
+    [Fact]
+    public async Task GetTrails_AdminPath_NeedsReviewTrueWhenFlagged()
+    {
+        // Admin path (PublishedOnly: false) must still return the real value.
+        var trail = CreateTrail("Flagged Trail", TrailStatus.Published);
+        trail.NeedsReview = true;
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Trails.Add(trail);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new GetTrailsQueryHandler(ctx);
+            var result = await handler.Handle(new GetTrailsQuery(PublishedOnly: false), CancellationToken.None);
+            var dto = Assert.Single(result);
+            Assert.True(dto.NeedsReview);
+        }
+    }
+
+    [Fact]
     public async Task GetTrails_ReturnsCorrectDtoFields()
     {
         var trail = CreateTrail("Mountain Loop", TrailStatus.Published, ActivityType.TrailRunning);
@@ -248,6 +293,31 @@ public class TrailQueryHandlerTests : IDisposable
 
             Assert.NotNull(dto);
             Assert.Null(dto!.UpdatedAt);
+        }
+    }
+
+    [Fact]
+    public async Task GetTrailBySlug_NeedsReviewAlwaysFalse_EvenWhenFlagged()
+    {
+        // GetTrailBySlugQuery is the public trail-detail path and never sets NeedsReview when
+        // constructing TrailDto, so it defaults to false regardless of the underlying value —
+        // this test locks in that already-public-safe behaviour.
+        var trail = CreateTrail("Flagged Detail Trail", TrailStatus.Published);
+        trail.NeedsReview = true;
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Trails.Add(trail);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new GetTrailBySlugQueryHandler(ctx, _scheduleEngine);
+            var dto = await handler.Handle(new GetTrailBySlugQuery("flagged-detail-trail"), CancellationToken.None);
+
+            Assert.NotNull(dto);
+            Assert.False(dto!.NeedsReview);
         }
     }
 }
