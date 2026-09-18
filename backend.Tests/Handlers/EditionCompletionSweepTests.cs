@@ -229,6 +229,61 @@ public class EditionCompletionSweepTests : IDisposable
     }
 
     [Fact]
+    public async Task InvalidatesCacheOncePerEventNotOncePerEdition()
+    {
+        // A Series event can have several overdue Active editions in a single sweep run.
+        // InvalidateEvent also bumps the shared EventVersion token, so calling it once per
+        // edition here would bump that token redundantly for the same event — see issue #909.
+        var ev = CreateEvent(type: EventType.Series);
+        var edition1 = CreateEdition(ev.Id, EditionStatus.Active, Today.AddDays(-10));
+        var edition2 = CreateEdition(ev.Id, EditionStatus.Active, Today.AddDays(-5));
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.AddRange(edition1, edition2);
+            await ctx.SaveChangesAsync();
+        }
+
+        int completed;
+        using (var ctx = _factory.CreateContext())
+        {
+            completed = await EditionCompletionSweep.RunAsync(ctx, _cacheInvalidator.Object, Today);
+        }
+        Assert.Equal(2, completed);
+
+        _cacheInvalidator.Verify(c => c.InvalidateEvent(ev.Slug), Times.Once);
+    }
+
+    [Fact]
+    public async Task InvalidatesCacheOncePerDistinctEventAcrossMultipleEvents()
+    {
+        // Regression guard: deduping by slug must not collapse invalidations across different
+        // events — each distinct event still gets its own call.
+        var ev1 = CreateEvent(name: "Event One");
+        var ev2 = CreateEvent(name: "Event Two");
+        var edition1 = CreateEdition(ev1.Id, EditionStatus.Active, Today.AddDays(-10));
+        var edition2 = CreateEdition(ev2.Id, EditionStatus.Active, Today.AddDays(-5));
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.AddRange(ev1, ev2);
+            ctx.EventEditions.AddRange(edition1, edition2);
+            await ctx.SaveChangesAsync();
+        }
+
+        int completed;
+        using (var ctx = _factory.CreateContext())
+        {
+            completed = await EditionCompletionSweep.RunAsync(ctx, _cacheInvalidator.Object, Today);
+        }
+        Assert.Equal(2, completed);
+
+        _cacheInvalidator.Verify(c => c.InvalidateEvent(ev1.Slug), Times.Once);
+        _cacheInvalidator.Verify(c => c.InvalidateEvent(ev2.Slug), Times.Once);
+    }
+
+    [Fact]
     public async Task IsIdempotent()
     {
         // The sweep runs on a timer with no coordination, so a second run must be a no-op
