@@ -785,6 +785,10 @@
             }
         },
         "changelog": {
+            "v1_8_0": {
+                "title": "Sjálfvirk lokun og klónun útgáfa, auk öryggisuppfærslu",
+                "description": "Útgáfur sem eru liðnar ljúka sér núna sjálfkrafa og loka skráningu í stað þess að stjórnandi þurfi að ýta á takka. Þegar Race/Series útgáfu lýkur er næsta ár sjálfkrafa klónað — dagsetningar færðar áfram og hlaup afrituð, tilbúið til yfirferðar. Útgáfur sem þarfnast mannlegrar skoðunar eru sérstaklega merktar. Öryggisuppfærsla þar sem lokað var fyrir leka á duldum viðburðum og öðrum stjórnborðsmerkjum um opinbera vefþjónustu. Auk þess minniháttar skilvirknilagfæring."
+            },
             "v1_7_0": {
                 "title": "Uppfærð 404 síða fyrir viðburði - fleiri síur og hæðarlína sem bakgrunnur fyrri viðburða",
                 "description": "Uppfærð 404 síða fyrir viðburði með uppástungum um svipaða viðburði. Nýtt í 'ítarlegum síum': 'Þessi vika' og 'næsta vika'. Listayfirlit fyrri viðburða fá 'andlitslyftingu' með hæðarlínu sem bakgrunn. Öryggisuppfærlur og fleira."
