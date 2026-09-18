@@ -165,7 +165,9 @@ public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailD
             NameEn: t.NameEn,
             DescriptionEn: t.DescriptionEn,
             TranslationHashes: t.TranslationHashes == null ? null : JsonSerializer.Deserialize<Dictionary<string, string>>(t.TranslationHashes),
-            NeedsReview: t.NeedsReview
+            // NeedsReview is an internal admin bookmark flag. The public path (PublishedOnly=true)
+            // must never leak it; only the admin trail list (PublishedOnly=false) sees the real value.
+            NeedsReview: !request.PublishedOnly && t.NeedsReview
         )).ToList();
 
         return result;
