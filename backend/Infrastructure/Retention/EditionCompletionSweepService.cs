@@ -70,18 +70,52 @@ public class EditionCompletionSweepService : BackgroundService
 
     private async Task SweepAsync(CancellationToken cancellationToken)
     {
-        using var scope = _services.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<UtanvegaDbContext>();
-        var cacheInvalidator = scope.ServiceProvider.GetRequiredService<ICacheInvalidator>();
-        var today = DateOnly.FromDateTime(_timeProvider.GetUtcNow().UtcDateTime);
-
         try
         {
-            var completed = await EditionCompletionSweep.RunAsync(context, cacheInvalidator, today, cancellationToken);
+            using var scope = _services.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<UtanvegaDbContext>();
+            var cacheInvalidator = scope.ServiceProvider.GetRequiredService<ICacheInvalidator>();
+            var today = DateOnly.FromDateTime(_timeProvider.GetUtcNow().UtcDateTime);
 
-            if (completed > 0)
+            try
             {
-                _logger.LogInformation("Edition completion sweep: completed {Count} editions", completed);
+                var completed = await EditionCompletionSweep.RunAsync(context, cacheInvalidator, today, cancellationToken);
+
+                if (completed > 0)
+                {
+                    _logger.LogInformation("Edition completion sweep: completed {Count} editions", completed);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Shutting down — nothing to report.
+            }
+            catch (Exception ex)
+            {
+                // Never let a failed sweep take the host down; the next one retries.
+                _logger.LogError(ex, "Edition completion sweep failed");
+            }
+
+            // Own try/catch: a clone failure must never block, or be blocked by, the completion
+            // sweep above. They deliberately run back-to-back in the same pass — so an edition
+            // completed in the block above is picked up for cloning the same cycle it completes
+            // in — but they're independent failure domains. See #904.
+            try
+            {
+                var cloned = await EditionAutoCloneSweep.RunAsync(context, cacheInvalidator, today, cancellationToken);
+
+                if (cloned > 0)
+                {
+                    _logger.LogInformation("Edition auto-clone sweep: cloned {Count} editions for next year", cloned);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Shutting down — nothing to report.
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Edition auto-clone sweep failed");
             }
         }
         catch (OperationCanceledException)
@@ -90,30 +124,13 @@ public class EditionCompletionSweepService : BackgroundService
         }
         catch (Exception ex)
         {
-            // Never let a failed sweep take the host down; the next one retries.
-            _logger.LogError(ex, "Edition completion sweep failed");
-        }
-
-        // Own try/catch: a clone failure must never block, or be blocked by, the completion
-        // sweep above. They deliberately run back-to-back in the same pass — so an edition
-        // completed in the block above is picked up for cloning the same cycle it completes in —
-        // but they're independent failure domains. See #904.
-        try
-        {
-            var cloned = await EditionAutoCloneSweep.RunAsync(context, cacheInvalidator, today, cancellationToken);
-
-            if (cloned > 0)
-            {
-                _logger.LogInformation("Edition auto-clone sweep: cloned {Count} editions for next year", cloned);
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            // Shutting down — nothing to report.
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Edition auto-clone sweep failed");
+            // Scope creation / service resolution failing here is a very-low-probability DI
+            // misconfiguration, but ExecuteAsync's loop has no surrounding try/catch of its own —
+            // letting this escape would stop the whole BackgroundService host (the default
+            // BackgroundServiceExceptionBehavior.StopHost, unchanged in this repo), not just this
+            // sweep. This outer catch is the safety net for that; the two inner try/catches above
+            // remain so a failure in one sweep doesn't skip the other.
+            _logger.LogError(ex, "Edition sweep failed to start");
         }
     }
 

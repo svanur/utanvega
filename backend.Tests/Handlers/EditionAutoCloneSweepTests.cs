@@ -199,8 +199,11 @@ public class EditionAutoCloneSweepTests : IDisposable
             SortOrder = 0,
             ResultType = ResultType.Time,
             PrizeMoney = 0,
-            // One day after the edition's own Date — offset must be preserved on the clone.
-            DateOfRace = new DateOnly(2026, 8, 16),
+            // 5 days after the edition's own Date — deliberately not the ±1 that a sign-flipped
+            // offset (newDate - offset instead of newDate + offset) could still coincidentally
+            // land near; +5 makes the two directions land 10 days apart, so an absolute-date
+            // assertion below actually distinguishes them.
+            DateOfRace = new DateOnly(2026, 8, 20),
         };
 
         using (var ctx = _factory.CreateContext())
@@ -225,11 +228,16 @@ public class EditionAutoCloneSweepTests : IDisposable
         Assert.Equal(EditionStatus.Unconfirmed, newEdition.Status);
         Assert.Equal(RegistrationStatus.NotStarted, newEdition.RegistrationStatus);
         Assert.False(newEdition.NeedsReview);
-        Assert.NotNull(newEdition.Date);
-        Assert.Equal(2027, newEdition.Date!.Value.Year);
-        Assert.NotNull(newEdition.EndDate);
-        // Duration (Date -> EndDate) must be preserved: 1 day.
-        Assert.Equal(1, newEdition.EndDate!.Value.DayNumber - newEdition.Date!.Value.DayNumber);
+        // Pinned to an exact calendar date (not just "some date in 2027" or a relative offset)
+        // so a sign inversion in SuggestEditionDateForYear's ±3/±7-day wraparound rule fails
+        // loudly here: source Date 2026-08-15 is a Saturday, 2027-08-15 is a Sunday (diff = 6,
+        // which takes the wraparound branch), and the two possible wrap directions land on
+        // 2027-08-14 (correct) vs. 2027-08-28 — 14 days apart, not adjacent, so there is no
+        // shared-result blind spot between them.
+        Assert.Equal(new DateOnly(2027, 8, 14), newEdition.Date);
+        Assert.Equal(DayOfWeek.Saturday, newEdition.Date!.Value.DayOfWeek);
+        // Duration (Date -> EndDate) of 1 day must be preserved on the new start date.
+        Assert.Equal(new DateOnly(2027, 8, 15), newEdition.EndDate);
         Assert.Equal("https://example.com/register-2027", newEdition.RegistrationUrl);
         Assert.Equal("https://example.com/results-2027", newEdition.ResultsUrl);
         Assert.Null(newEdition.Notes);
@@ -240,9 +248,11 @@ public class EditionAutoCloneSweepTests : IDisposable
         Assert.Equal("10K", newRace.Name);
         Assert.Equal(RaceStatus.Active, newRace.Status);
         Assert.Equal(TicketStatus.Available, newRace.TicketStatus);
-        Assert.NotNull(newRace.DateOfRace);
-        // Offset from the edition's own Date (1 day) must be preserved on the clone.
-        Assert.Equal(1, newRace.DateOfRace!.Value.DayNumber - newEdition.Date!.Value.DayNumber);
+        // The race's +5-day offset from the source edition's own Date must be preserved on top
+        // of the new (2027-08-14) Date — an absolute date, not just an offset, so a sign flip in
+        // ComputeClonedRaceDate (e.g. subtracting the offset instead of adding it) would land on
+        // 2027-08-09 instead and fail this assertion rather than pass unnoticed.
+        Assert.Equal(new DateOnly(2027, 8, 19), newRace.DateOfRace);
 
         _cacheInvalidator.Verify(c => c.InvalidateEvent(ev.Slug), Times.Once);
     }

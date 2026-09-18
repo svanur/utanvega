@@ -42,7 +42,12 @@ public static class EditionAutoCloneSweep
         // non-race types by name — see #904's CONTEXT note on EventType not having a
         // FunRun/Training member. Anything else (Social, Advertisement, Festival, Other) is
         // excluded by construction regardless of what it's called.
+        //
+        // AsNoTracking: this query only reads source editions/events/races to decide what to
+        // clone — nothing in the result set itself is ever mutated, only new EventEdition/Race
+        // entities are added below.
         var eligibleEditions = await context.EventEditions
+            .AsNoTracking()
             .Include(ed => ed.Event)
             .Include(ed => ed.Races)
             .Where(ed => ed.Status == EditionStatus.Completed &&
@@ -86,10 +91,13 @@ public static class EditionAutoCloneSweep
                 Date = suggestedDate,
                 EndDate = suggestedEndDate,
                 // Title carries the bare next year the same way handleCloneEdition's
-                // `title: edition.title ? String(nextYear) : ''` does; a specific-year window
-                // (TitleEn, Notes, RegistrationOpens/Closes) isn't meaningfully copyable to next
-                // year, so those start blank rather than carrying over stale content.
-                Title = source.Title != null ? nextYear.ToString() : null,
+                // `title: edition.title ? String(nextYear) : ''` does — IsNullOrEmpty rather than
+                // a plain null check, so a persisted "" (falsy in JS) doesn't fabricate a title
+                // the source's own truthy check would have left blank. TitleEn, Notes, and
+                // RegistrationOpens/Closes are a specific-year window that isn't meaningfully
+                // copyable to next year, so those start blank rather than carrying over stale
+                // content.
+                Title = !string.IsNullOrEmpty(source.Title) ? nextYear.ToString() : null,
                 TitleEn = null,
                 RegistrationUrl = BumpYearInUrl(source.RegistrationUrl, source.Year, nextYear),
                 ResultsUrl = BumpYearInUrl(source.ResultsUrl, source.Year, nextYear),
@@ -196,10 +204,12 @@ public static class EditionAutoCloneSweep
     }
 
     /// <summary>Ports admin's <c>bumpYearInUrl</c>: replaces every occurrence of the source year
-    /// substring with the new year, unchanged if there's no URL or no source year to look for.</summary>
+    /// substring with the new year, unchanged if there's no URL or no source year to look for.
+    /// `fromYear == 0` is treated the same as null — TS's `!fromYear` is falsy for 0 too — even
+    /// though a persisted Year of 0 looks unreachable in practice.</summary>
     private static string? BumpYearInUrl(string? url, int? fromYear, int toYear)
     {
-        if (string.IsNullOrEmpty(url) || fromYear is not { } from) return url;
+        if (string.IsNullOrEmpty(url) || fromYear is not { } from || from == 0) return url;
         return url.Replace(from.ToString(), toYear.ToString());
     }
 }
