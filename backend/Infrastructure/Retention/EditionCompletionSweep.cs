@@ -46,7 +46,7 @@ public static class EditionCompletionSweep
             .ToListAsync(cancellationToken);
 
         var due = activeEditions
-            .Where(ed => EditionStatusHelpers.IsPast(EditionStatusHelpers.EffectiveDate(ed.Date, ed.EndDate), today))
+            .Where(ed => EditionStatusHelpers.IsPast(LatestEffectiveDate(ed), today))
             .ToList();
 
         if (due.Count == 0) return 0;
@@ -65,5 +65,36 @@ public static class EditionCompletionSweep
         }
 
         return due.Count;
+    }
+
+    /// <summary>
+    /// The date the sweep treats as "when this edition's run is over".
+    ///
+    /// <para>
+    /// Normally that's <see cref="EditionStatusHelpers.EffectiveDate"/> (EndDate, or Date if unset).
+    /// But for a Series edition, Date is typically the first race's date and EndDate is commonly
+    /// left unset (see GenerateEditionsForSeasonCommand), so EffectiveDate alone would fall back to
+    /// the first leg — and the moment that leg passes, the whole edition (and every later, still
+    /// unrun leg) would get swept into Completed. Taking the later of EffectiveDate and the latest
+    /// race's DateOfRace fixes that while being a no-op for editions whose races have no
+    /// DateOfRace, so it's safe to apply unconditionally rather than special-casing Series.
+    /// </para>
+    /// </summary>
+    private static DateOnly? LatestEffectiveDate(EventEdition edition)
+    {
+        var effectiveDate = EditionStatusHelpers.EffectiveDate(edition.Date, edition.EndDate);
+        var raceDates = edition.Races
+            .Where(r => r.DateOfRace.HasValue)
+            .Select(r => r.DateOfRace!.Value)
+            .ToList();
+
+        if (raceDates.Count == 0)
+            return effectiveDate;
+
+        var latestRaceDate = raceDates.Max();
+
+        return effectiveDate.HasValue && effectiveDate.Value > latestRaceDate
+            ? effectiveDate
+            : latestRaceDate;
     }
 }

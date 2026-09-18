@@ -20,14 +20,14 @@ public class EditionCompletionSweepTests : IDisposable
 
     public void Dispose() => _factory.Dispose();
 
-    private Event CreateEvent(string name = "Test Event")
+    private Event CreateEvent(string name = "Test Event", EventType type = EventType.Race)
     {
         return new Event
         {
             Id = Guid.NewGuid(),
             Name = name,
             Slug = name.ToLower().Replace(" ", "-"),
-            Type = EventType.Race,
+            Type = type,
             Status = EventStatus.Confirmed,
         };
     }
@@ -182,6 +182,50 @@ public class EditionCompletionSweepTests : IDisposable
         var updated = verifyCtx.EventEditions.Find(edition.Id)!;
         Assert.Equal(EditionStatus.Completed, updated.Status);
         Assert.Equal(RegistrationStatus.NotRequired, updated.RegistrationStatus);
+    }
+
+    [Fact]
+    public async Task LeavesASeriesEditionAloneWhileALaterLegIsStillInTheFuture()
+    {
+        // Series editions typically have Date = first leg's date and no EndDate (see
+        // GenerateEditionsForSeasonCommand), so EffectiveDate alone would resolve to the first
+        // leg and mark the whole edition — and every still-unrun later leg — Completed the moment
+        // that first leg passes. The sweep must instead look at the latest race's DateOfRace.
+        var ev = CreateEvent(type: EventType.Series);
+        var edition = CreateEdition(ev.Id, EditionStatus.Active, Today.AddDays(-10));
+        var pastLeg = new Race
+        {
+            Id = Guid.NewGuid(), EventEditionId = edition.Id, Name = "Leg 1",
+            Status = RaceStatus.Completed, TicketStatus = TicketStatus.Closed,
+            DateOfRace = Today.AddDays(-10),
+        };
+        var futureLeg = new Race
+        {
+            Id = Guid.NewGuid(), EventEditionId = edition.Id, Name = "Leg 2",
+            Status = RaceStatus.Active, TicketStatus = TicketStatus.Available,
+            DateOfRace = Today.AddDays(10),
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.AddRange(pastLeg, futureLeg);
+            await ctx.SaveChangesAsync();
+        }
+
+        int completed;
+        using (var ctx = _factory.CreateContext())
+        {
+            completed = await EditionCompletionSweep.RunAsync(ctx, _cacheInvalidator.Object, Today);
+        }
+        Assert.Equal(0, completed);
+
+        using var verifyCtx = _factory.CreateContext();
+        Assert.Equal(EditionStatus.Active, verifyCtx.EventEditions.Find(edition.Id)!.Status);
+        Assert.Equal(RaceStatus.Completed, verifyCtx.Races.Find(pastLeg.Id)!.Status);
+        Assert.Equal(RaceStatus.Active, verifyCtx.Races.Find(futureLeg.Id)!.Status);
+        _cacheInvalidator.Verify(c => c.InvalidateEvent(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
