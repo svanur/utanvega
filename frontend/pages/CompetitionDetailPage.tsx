@@ -408,14 +408,28 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
         const displayDate = event.displayDate;
         const current: PreparedEdition[] = [];
         const past: PreparedEdition[] = [];
+        // While inside the post-race grace window, the edition matching displayDate takes sole
+        // precedence in currentEditions — mirroring primaryEdition's existing precedence (#930).
+        // Any other edition that would otherwise also qualify as current (next/future/no-date) is
+        // deferred: excluded from both currentEditions and pastEditions until the window elapses.
+        const graceEdition = isPostRace && displayDate
+            ? preparedEditions.find(edition => edition.date === displayDate)
+            : undefined;
         for (const edition of preparedEditions) {
+            if (graceEdition && edition === graceEdition) {
+                current.push(edition);
+                continue;
+            }
             const edDate = edition.date;
             const isNextEdition = nextDate && edDate === nextDate;
             const effectiveEnd = edition.endDate ?? edDate;
             const isFuture = effectiveEnd && effectiveEnd >= today;
             const hasNoDate = !edDate;
-            const isDisplayDate = isPostRace && displayDate && edDate === displayDate;
-            if (isNextEdition || isFuture || hasNoDate || isDisplayDate) {
+            const isOtherwiseCurrent = isNextEdition || isFuture || hasNoDate;
+            if (isOtherwiseCurrent && graceEdition) {
+                continue; // deferred — neither current nor past during the grace window
+            }
+            if (isOtherwiseCurrent) {
                 current.push(edition);
             } else {
                 past.push(edition);
