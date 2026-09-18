@@ -147,6 +147,7 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
                 { label: t('nav.aboutUs'), path: '/about' },
                 { label: t('nav.media'), path: '/media' },
                 { label: t('nav.runs360'), href: 'https://www.youtube.com/@360RunsIceland' },
+                { label: t('nav.annualReport'), path: '/annual-report/2025' },
             ],
         },
     ];

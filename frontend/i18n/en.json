@@ -732,7 +732,13 @@
         "male": "Male",
         "female": "Female",
         "genderNote": "Women dominate shorter distances (6–16 km); men predominantly participate in ultra distances (27 km+).",
-        "source": "Data sources"
+        "source": "Data sources",
+        "fullReportTitle": "Full report",
+        "downloadPdf": "Download PDF",
+        "pdfLoadError": "Could not load the PDF. Try the download link instead.",
+        "pageOf": "Page {{current}} of {{total}}",
+        "previousPage": "Previous page",
+        "nextPage": "Next page"
     },
     "disclaimer": {
         "title": "Disclaimer",

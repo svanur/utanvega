@@ -732,7 +732,13 @@
         "male": "Karlar",
         "female": "Konur",
         "genderNote": "Konur ríkja á skemmri vegalengdum (6–16 km); karlar ríkja á ultra-vegalengdum (27 km+).",
-        "source": "Gagnaveita"
+        "source": "Gagnaveita",
+        "fullReportTitle": "Öll skýrslan",
+        "downloadPdf": "Sækja PDF",
+        "pdfLoadError": "Ekki tókst að hlaða PDF skjalinu. Prófaðu niðurhalstengilinn í staðinn.",
+        "pageOf": "Síða {{current}} af {{total}}",
+        "previousPage": "Fyrri síða",
+        "nextPage": "Næsta síða"
     },
     "disclaimer": {
         "title": "Fyrirvari",
