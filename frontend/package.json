@@ -1,7 +1,7 @@
 {
   "name": "utanvega-frontend",
   "private": true,
-  "version": "1.8.0",
+  "version": "1.9.0",
   "type": "module",
   "engines": {
     "node": ">=20.0.0"
@@ -34,6 +34,7 @@
     "react-dom": "^18.3.1",
     "react-i18next": "^17.0.2",
     "react-leaflet": "^4.2.1",
+    "react-pdf": "^9.2.1",
     "react-router-dom": "^7.18.2",
     "recharts": "^3.8.1"
   },

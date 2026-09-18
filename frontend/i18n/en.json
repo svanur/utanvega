@@ -732,7 +732,13 @@
         "male": "Male",
         "female": "Female",
         "genderNote": "Women dominate shorter distances (6–16 km); men predominantly participate in ultra distances (27 km+).",
-        "source": "Data sources"
+        "source": "Data sources",
+        "fullReportTitle": "Full report",
+        "downloadPdf": "Download PDF",
+        "pdfLoadError": "Could not load the PDF. Try the download link instead.",
+        "pageOf": "Page {{current}} of {{total}}",
+        "previousPage": "Previous page",
+        "nextPage": "Next page"
     },
     "disclaimer": {
         "title": "Disclaimer",
@@ -785,6 +791,10 @@
             }
         },
         "changelog": {
+            "v1_9_0": {
+                "title": "The 2025 Annual Report is back, now readable right on the site",
+                "description": "The Annual Report 2025 page is back in the site's navigation (under About) and now embeds the full report as a page-by-page PDF viewer, with a download link for anyone who wants the file itself. The existing stats and highlights on the page are unchanged — the report is just easier to find and read now."
+            },
             "v1_8_0": {
                 "title": "Editions complete themselves and clone next year automatically, plus a security fix",
                 "description": "Past-dated editions now complete themselves and close registration automatically instead of waiting for an admin to click a button, and completed Race/Series editions get next year's edition auto-cloned — dates rolled forward, races copied, ready for review. Editions needing a human look (for example when next year's date couldn't be derived cleanly) are flagged with a new admin-only \"Needs review\" marker. We also closed a security gap where hidden events and other admin-only flags could be read via public API endpoints by an unauthenticated caller. Alongside that, a small efficiency fix to cache invalidation during the completion sweep."
