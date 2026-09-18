@@ -37,6 +37,8 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import BookmarkIcon from '@mui/icons-material/Bookmark';
+import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -871,7 +873,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
   const currentYear = new Date().getFullYear();
 
   const editionsByYear = useMemo(() => {
-    if (!detail) return { visible: [], hidden: 0 };
+    if (!detail) return { visible: [], hidden: 0, hiddenNeedsReview: 0 };
     const sorted = [...detail.editions].sort(sortEditions);
     const today = new Date().toISOString().slice(0, 10);
     const older = sorted.filter(ed => {
@@ -881,7 +883,10 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
       return true;
     });
     const visible = showOlderEditions ? sorted : sorted.filter(ed => !older.includes(ed));
-    return { visible, hidden: older.length };
+    // How many of the hidden "older" editions are bookmarked for review — surfaced on the
+    // "Show N older" button below so a flagged edition doesn't silently disappear into the bucket.
+    const hiddenNeedsReview = older.filter(ed => ed.needsReview).length;
+    return { visible, hidden: older.length, hiddenNeedsReview };
   }, [detail, showOlderEditions, currentYear]);
 
   const toggleEdition = (id: string) =>
@@ -1307,6 +1312,48 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
     }
   };
 
+  const handleToggleEditionNeedsReview = async (edition: EventEditionDto) => {
+    const next = !edition.needsReview;
+    // Optimistic, mirrors TrailDetailPage's handleToggleNeedsReview — the toggle should feel
+    // instant, and a failure just flips it back.
+    setDetail(prev => prev ? {
+      ...prev,
+      editions: prev.editions.map(ed => ed.id === edition.id ? { ...ed, needsReview: next } : ed),
+    } : prev);
+    try {
+      // UpdateEditionCommand resends the full snapshot for most fields (only Status,
+      // TranslationHashes and NeedsReview are patch-if-provided — see its doc comment), so unlike
+      // Trail's lighter PATCH this has to carry the edition's current values along, not just id+flag.
+      await apiFetch(`/api/v1/admin/editions/${edition.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          id: edition.id,
+          year: edition.year,
+          date: edition.date,
+          endDate: edition.endDate,
+          title: edition.title,
+          titleEn: edition.titleEn,
+          registrationUrl: edition.registrationUrl,
+          resultsUrl: edition.resultsUrl,
+          notes: edition.notes,
+          notesEn: edition.notesEn,
+          registrationStatus: edition.registrationStatus,
+          registrationOpens: edition.registrationOpens,
+          registrationCloses: edition.registrationCloses,
+          trailId: edition.trailId,
+          needsReview: next,
+        }),
+      });
+      onNotify(next ? 'Marked for review' : 'Review mark cleared');
+    } catch (err) {
+      setDetail(prev => prev ? {
+        ...prev,
+        editions: prev.editions.map(ed => ed.id === edition.id ? { ...ed, needsReview: !next } : ed),
+      } : prev);
+      onNotify(err instanceof Error ? err.message : 'Failed to update review mark', 'error');
+    }
+  };
+
   const handleCycleEditionStatus = (edition: EventEditionDto) => {
     // Cancelled and Completed are terminal states reachable/escapable only via the edit dialog —
     // clicking the chip must not silently reactivate either.
@@ -1612,6 +1659,10 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                       sx={{ height: 18, fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }} />
                   </Tooltip>
                 )}
+                {edition.needsReview && (
+                  <Chip label="Needs review" size="small" color="warning"
+                    sx={{ height: 18, fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }} />
+                )}
                 <Tooltip title={edition.status === 'Cancelled'
                   ? 'Cancelled — reactivate via Edit edition'
                   : edition.status === 'Completed'
@@ -1649,6 +1700,15 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                     </IconButton>
                   </Tooltip>
                 )}
+                <Tooltip title={edition.needsReview
+                  ? 'Marked for review — click to clear. Does not affect the public site.'
+                  : 'Mark for review — an admin-only bookmark, does not affect the public site.'}>
+                  <IconButton size="small" onClick={() => void handleToggleEditionNeedsReview(edition)}>
+                    {edition.needsReview
+                      ? <BookmarkIcon fontSize="small" color="warning" />
+                      : <BookmarkBorderIcon fontSize="small" />}
+                  </IconButton>
+                </Tooltip>
                 <Tooltip title="Edit edition">
                   <IconButton size="small" onClick={() => { setEditingEdition(edition); setEditionDialogOpen(true); }}>
                     <EditIcon fontSize="small" />
@@ -1877,8 +1937,17 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
 
       {editionsByYear.hidden > 0 && (
         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, mb: 3 }}>
-          <Button size="small" variant="text" onClick={() => setShowOlderEditions(v => !v)}>
-            {showOlderEditions ? 'Hide older' : `Show ${editionsByYear.hidden} older`}
+          <Button
+            size="small"
+            variant="text"
+            color={!showOlderEditions && editionsByYear.hiddenNeedsReview > 0 ? 'warning' : 'primary'}
+            onClick={() => setShowOlderEditions(v => !v)}
+          >
+            {showOlderEditions
+              ? 'Hide older'
+              : editionsByYear.hiddenNeedsReview > 0
+                ? `Show ${editionsByYear.hidden} older (${editionsByYear.hiddenNeedsReview} need${editionsByYear.hiddenNeedsReview === 1 ? 's' : ''} review)`
+                : `Show ${editionsByYear.hidden} older`}
           </Button>
         </Box>
       )}
