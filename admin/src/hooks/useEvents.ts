@@ -489,7 +489,12 @@ export function useEventDetail(slug: string) {
 
     const refresh = useCallback(() => { void refetch(); }, [refetch]);
 
-    return { detail, loading, error, refresh, setDetail };
+    const invalidateEventsList = useCallback(
+        () => queryClient.invalidateQueries({ queryKey: EVENTS_QUERY_KEY }),
+        [queryClient]
+    );
+
+    return { detail, loading, error, refresh, setDetail, invalidateEventsList };
 }
 
 export function useEventMutations() {
