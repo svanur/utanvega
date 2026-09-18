@@ -59,9 +59,12 @@ public static class EditionCompletionSweep
 
         await context.SaveChangesAsync(cancellationToken);
 
-        foreach (var edition in due)
+        // Distinct: a Series event can have several overdue Active editions in one sweep, and
+        // InvalidateEvent also bumps the shared EventVersion token — invalidating once per edition
+        // here would bump it redundantly for the same event. See issue #909.
+        foreach (var slug in due.Select(ed => ed.Event.Slug).Distinct())
         {
-            cacheInvalidator.InvalidateEvent(edition.Event.Slug);
+            cacheInvalidator.InvalidateEvent(slug);
         }
 
         return due.Count;
