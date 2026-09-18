@@ -1560,12 +1560,14 @@ app.MapDelete("/api/v1/admin/features/{id:guid}", [Authorize(Policy = "AdminOnly
 
 // ============ Event Endpoints ============
 
-// Public
-app.MapGet("/api/v1/events", async (IMediator mediator, HttpContext ctx, bool includeHidden = false) =>
+// Public — IncludeHidden is intentionally not client-controllable here. Admins get the full
+// picture (including Hidden events and the real NeedsReview aggregate) via the separate,
+// authorized GET /api/v1/admin/events route below; accepting a query-string override on this
+// public route would let any anonymous caller bypass both of those protections.
+app.MapGet("/api/v1/events", async (IMediator mediator, HttpContext ctx) =>
 {
-    var events = await mediator.Send(new GetEventsQuery(includeHidden));
-    if (!includeHidden)
-        ctx.Response.Headers.CacheControl = "public, max-age=300, stale-while-revalidate=60";
+    var events = await mediator.Send(new GetEventsQuery());
+    ctx.Response.Headers.CacheControl = "public, max-age=300, stale-while-revalidate=60";
     return Results.Ok(events);
 })
 .WithName("GetPublicEvents");
