@@ -785,6 +785,10 @@
             }
         },
         "changelog": {
+            "v1_8_0": {
+                "title": "Editions complete themselves and clone next year automatically, plus a security fix",
+                "description": "Past-dated editions now complete themselves and close registration automatically instead of waiting for an admin to click a button, and completed Race/Series editions get next year's edition auto-cloned — dates rolled forward, races copied, ready for review. Editions needing a human look (for example when next year's date couldn't be derived cleanly) are flagged with a new admin-only \"Needs review\" marker. We also closed a security gap where hidden events and other admin-only flags could be read via public API endpoints by an unauthenticated caller. Alongside that, a small efficiency fix to cache invalidation during the completion sweep."
+            },
             "v1_7_0": {
                 "title": "Did-you-mean suggestions for mistyped event links, quick week filters, and a security fix",
                 "description": "Mistype an event link and you'll now get real \"did you mean\" suggestions, the same smart matching the trails 404 page already had. The public events page gained \"This week\"/\"Next week\" quick filters, cancelled races are now visually flagged in the calendar and series cards, and social links can auto-detect their platform from the URL. On admin, search boxes no longer drop keystrokes while typing, and a full lint cleanup came with a new CI job to keep it that way. We also closed a security issue that let hidden events be read directly by URL. Alongside that, a broad round of bug fixes across editions history, ITRA points input, and duplicate-name handling."

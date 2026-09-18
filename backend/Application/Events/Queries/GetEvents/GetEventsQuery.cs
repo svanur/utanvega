@@ -295,7 +295,10 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 EditionEffectiveCancelled: relevantEdition != null
                     && EditionStatusHelpers.ComputeEffectiveCancelled(relevantEdition.Status, relevantEdition.Races.Select(r => r.Status).ToList()),
                 OrganizerSlug: e.Organizer != null ? e.Organizer.Slug : null,
-                Galleries: relevantEdition?.PhotoGalleries.ToPublicDtos() ?? []
+                Galleries: relevantEdition?.PhotoGalleries.ToPublicDtos() ?? [],
+                // NeedsReview is an internal admin bookmark flag. The public path (IncludeHidden=false)
+                // must never leak it; only the admin events list (IncludeHidden=true) sees the real aggregate.
+                AnyEditionNeedsReview: request.IncludeHidden && editionsForCalc.Any(ed => ed.NeedsReview)
             );
         }).ToList();
     }

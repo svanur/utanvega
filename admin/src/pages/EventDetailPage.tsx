@@ -8,6 +8,7 @@ import {
   Autocomplete,
   Box,
   Button,
+  Checkbox,
   Chip,
   CircularProgress,
   Collapse,
@@ -17,6 +18,7 @@ import {
   DialogTitle,
   Divider,
   FormControl,
+  FormControlLabel,
   FormHelperText,
   IconButton,
   InputLabel,
@@ -209,6 +211,7 @@ interface EditionFormState {
   registrationCloses: string;
   trailId: string;
   status: EditionStatus;
+  needsReview: boolean;
 }
 
 function emptyEditionForm(): EditionFormState {
@@ -218,6 +221,7 @@ function emptyEditionForm(): EditionFormState {
     registrationUrl: '', resultsUrl: '', notes: '', notesEn: '',
     registrationStatus: 'NotStarted', registrationOpens: '', registrationCloses: '', trailId: '',
     status: 'Hidden',
+    needsReview: false,
   };
 }
 
@@ -232,6 +236,7 @@ function buildEditionForm(ed: EventEditionDto): EditionFormState {
     registrationOpens: ed.registrationOpens ?? '', registrationCloses: ed.registrationCloses ?? '',
     trailId: ed.trailId ?? '',
     status: ed.status,
+    needsReview: ed.needsReview,
   };
 }
 
@@ -352,8 +357,12 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
         onNotify('Edition created', 'success');
         onSaved(result.id);
       } else {
+        // needsReview is patch-if-provided on the backend (UpdateEditionCommand) — the field only
+        // exists on an already-created edition (mirrors Trail.NeedsReview, which likewise has no
+        // create-time UI), so it's added here rather than in `input`, which is also reused for the
+        // CreateEdition POST above where CreateEditionCommand has no such field to bind it to.
         await apiFetch(`/api/v1/admin/editions/${edition!.id}`, {
-          method: 'PUT', body: JSON.stringify({ id: edition!.id, ...input }),
+          method: 'PUT', body: JSON.stringify({ id: edition!.id, ...input, needsReview: form.needsReview }),
         });
         const galleriesOk = await galleryManagerRef.current?.flushPending(edition!.id) ?? true;
         if (!galleriesOk) {
@@ -494,6 +503,21 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
               <FormHelperText id={editionStatusHelperId}>Use the ✓/✕ icons on the edition row to complete or cancel this edition.</FormHelperText>
             )}
           </FormControl>
+          {/* Admin-only bookmark, independent of Status — same as Trail's NeedsReview. Only
+              meaningful once the edition exists: CreateEditionCommand has no field to bind this
+              to, so it's not offered while adding a brand-new edition (mirrors Trail, which also
+              has no create-time toggle for its own NeedsReview). */}
+          {!isNew && (
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={form.needsReview}
+                  onChange={e => set('needsReview', e.target.checked)}
+                />
+              }
+              label="Needs review"
+            />
+          )}
           <Typography
             variant="caption" fontWeight={600} letterSpacing={0.6}
             textTransform="uppercase" color="text.secondary"
@@ -960,6 +984,10 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
       // A clone is a brand-new edition, so it starts Unconfirmed regardless of the source edition's
       // status (e.g. cloning a Cancelled edition into next year shouldn't carry the cancellation over).
       status: 'Unconfirmed',
+      // Same reasoning: a clone is a brand-new edition, not yet looked at, so it doesn't inherit
+      // the source edition's review bookmark either. Also unreachable in the UI regardless — the
+      // checkbox itself is hidden while isNew (see the Needs review FormControlLabel below).
+      needsReview: false,
     });
     setEditingEdition(null); // null = create mode
     setEditionDialogOpen(true);

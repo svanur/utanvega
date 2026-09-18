@@ -1704,6 +1704,59 @@ public class EventHandlerTests : IDisposable
         Assert.Null(result);
     }
 
+    [Fact]
+    public async Task GetEvent_BySlug_PublicPath_NeedsReviewFalseEvenWhenEditionFlagged()
+    {
+        // Public path (IncludeHidden: false, the anonymous caller default) must never leak the
+        // internal admin bookmark flag, regardless of the underlying edition value.
+        var ev = CreateTestEvent("Flagged Edition Event");
+        ev.Slug = "flagged-edition-event";
+        var edition = CreateTestEdition(ev.Id);
+        edition.NeedsReview = true;
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(
+            new GetEventQuery("flagged-edition-event"), CancellationToken.None);
+
+        Assert.NotNull(result);
+        var editionDto = Assert.Single(result!.Editions);
+        Assert.False(editionDto.NeedsReview);
+    }
+
+    [Fact]
+    public async Task GetEvent_BySlug_AdminPath_NeedsReviewTrueWhenEditionFlagged()
+    {
+        // Admin path (IncludeHidden: true) — the real per-edition value must come through.
+        var ev = CreateTestEvent("Admin Flagged Edition Event");
+        ev.Slug = "admin-flagged-edition-event";
+        var edition = CreateTestEdition(ev.Id);
+        edition.NeedsReview = true;
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(
+            new GetEventQuery("admin-flagged-edition-event", IncludeHidden: true), CancellationToken.None);
+
+        Assert.NotNull(result);
+        var editionDto = Assert.Single(result!.Editions);
+        Assert.True(editionDto.NeedsReview);
+    }
+
     // ─── GetEventCalendarQuery ───
 
     [Fact]
@@ -2135,6 +2188,103 @@ public class EventHandlerTests : IDisposable
 
         var dto = Assert.Single(result);
         Assert.False(dto.HasFutureEdition);
+    }
+
+    // ─── GetEventsQuery — AnyEditionNeedsReview aggregate ───
+
+    [Fact]
+    public async Task GetEvents_AnyEditionNeedsReview_TrueWhenAnEditionIsFlagged()
+    {
+        // Admin path (IncludeHidden: true) — the real aggregate must come through.
+        var ev = CreateTestEvent("Needs Review Event");
+        var edition = CreateTestEdition(ev.Id);
+        edition.NeedsReview = true;
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(IncludeHidden: true), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.True(dto.AnyEditionNeedsReview);
+    }
+
+    [Fact]
+    public async Task GetEvents_AnyEditionNeedsReview_FalseWhenNoEditionIsFlagged()
+    {
+        // Admin path (IncludeHidden: true) — the real aggregate must come through.
+        var ev = CreateTestEvent("No Review Needed Event");
+        var edition = CreateTestEdition(ev.Id);
+        edition.NeedsReview = false;
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(IncludeHidden: true), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.False(dto.AnyEditionNeedsReview);
+    }
+
+    [Fact]
+    public async Task GetEvents_AnyEditionNeedsReview_TrueWhenOnlyOneOfSeveralEditionsIsFlagged()
+    {
+        // Admin path (IncludeHidden: true). The aggregate is an OR across all of the event's
+        // editions, not just the "relevant" one used elsewhere for distances/registration — a
+        // flag on an older, non-relevant edition must still surface here so the admin doesn't
+        // lose track of it.
+        var ev = CreateTestEvent("Mixed Editions Event");
+        var flaggedEdition = CreateTestEdition(ev.Id, year: 2024);
+        var unflaggedEdition = CreateTestEdition(ev.Id, year: 2026);
+        flaggedEdition.NeedsReview = true;
+        unflaggedEdition.NeedsReview = false;
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(flaggedEdition);
+            ctx.EventEditions.Add(unflaggedEdition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(IncludeHidden: true), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.True(dto.AnyEditionNeedsReview);
+    }
+
+    [Fact]
+    public async Task GetEvents_AnyEditionNeedsReview_FalseOnPublicPathEvenWhenFlagged()
+    {
+        // Public path (IncludeHidden: false, the anonymous caller default) must never leak the
+        // internal admin bookmark flag, regardless of the underlying edition value.
+        var ev = CreateTestEvent("Publicly Flagged Event");
+        var edition = CreateTestEdition(ev.Id);
+        edition.NeedsReview = true;
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.False(dto.AnyEditionNeedsReview);
     }
 
     [Fact]
@@ -3136,6 +3286,93 @@ public class EventHandlerTests : IDisposable
         using var verifyCtx = _factory.CreateContext();
         Assert.Equal(EditionStatus.Active, verifyCtx.EventEditions.Find(edition.Id)!.Status);
         Assert.Equal(RaceStatus.Cancelled, verifyCtx.Races.Find(race.Id)!.Status);
+    }
+
+    // ─── UpdateEditionCommand — NeedsReview field ───
+
+    private UpdateEditionCommand BuildUpdateEditionCommand(EventEdition edition, bool? needsReview) => new(
+        Id: edition.Id,
+        Year: edition.Year,
+        Date: edition.Date,
+        EndDate: edition.EndDate,
+        Title: edition.Title,
+        RegistrationUrl: edition.RegistrationUrl,
+        ResultsUrl: edition.ResultsUrl,
+        Notes: edition.Notes,
+        RegistrationStatus: edition.RegistrationStatus.ToString(),
+        TrailId: edition.TrailId,
+        NeedsReview: needsReview
+    );
+
+    [Fact]
+    public async Task UpdateEdition_OmittingNeedsReview_LeavesNeedsReviewUnchanged()
+    {
+        // Mirrors TranslationHealth.tsx's bulk translation-sync PUT: a partial payload that
+        // doesn't own this flag must not silently clear a bookmark set from the edit dialog.
+        var ev = CreateTestEvent();
+        var edition = CreateTestEdition(ev.Id);
+        edition.NeedsReview = true;
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new UpdateEditionCommandHandler(ctx, _cacheInvalidator);
+            await handler.Handle(BuildUpdateEditionCommand(edition, needsReview: null), CancellationToken.None);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        Assert.True(verifyCtx.EventEditions.Find(edition.Id)!.NeedsReview);
+    }
+
+    [Fact]
+    public async Task UpdateEdition_SettingNeedsReviewTrue_Persists()
+    {
+        var ev = CreateTestEvent();
+        var edition = CreateTestEdition(ev.Id);
+        edition.NeedsReview = false;
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new UpdateEditionCommandHandler(ctx, _cacheInvalidator);
+            await handler.Handle(BuildUpdateEditionCommand(edition, needsReview: true), CancellationToken.None);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        Assert.True(verifyCtx.EventEditions.Find(edition.Id)!.NeedsReview);
+    }
+
+    [Fact]
+    public async Task UpdateEdition_SettingNeedsReviewFalse_Persists()
+    {
+        var ev = CreateTestEvent();
+        var edition = CreateTestEdition(ev.Id);
+        edition.NeedsReview = true;
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new UpdateEditionCommandHandler(ctx, _cacheInvalidator);
+            await handler.Handle(BuildUpdateEditionCommand(edition, needsReview: false), CancellationToken.None);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        Assert.False(verifyCtx.EventEditions.Find(edition.Id)!.NeedsReview);
     }
 
     // ─── UpdateRaceCommand — TicketStatus forced on Cancelled ───

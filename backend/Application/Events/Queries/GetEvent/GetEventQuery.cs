@@ -248,7 +248,10 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
                 Status: ed.Status.ToString(),
                 EffectiveCancelled: EditionStatusHelpers.ComputeEffectiveCancelled(ed.Status, ed.Races.Select(r => r.Status).ToList()),
                 RegistrationOpens: ed.RegistrationOpens,
-                RegistrationCloses: ed.RegistrationCloses
+                RegistrationCloses: ed.RegistrationCloses,
+                // NeedsReview is an internal admin bookmark flag. The public path (IncludeHidden=false)
+                // must never leak it; only the admin event-detail path (IncludeHidden=true) sees the real value.
+                NeedsReview: request.IncludeHidden && ed.NeedsReview
             ))
             .ToList();
 
