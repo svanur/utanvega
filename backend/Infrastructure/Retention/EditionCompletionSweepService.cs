@@ -117,6 +117,29 @@ public class EditionCompletionSweepService : BackgroundService
             {
                 _logger.LogError(ex, "Edition auto-clone sweep failed");
             }
+
+            // Own try/catch, same reasoning as the clone sweep's block above: this sweep is
+            // independent of, not before/after, the edition-level completion sweep — a Series
+            // edition stays Active for months while its early legs pass one at a time, so this
+            // must run every cycle regardless of whether the edition sweep found anything to do.
+            // See #911.
+            try
+            {
+                var completedRaces = await RaceCompletionSweep.RunAsync(context, cacheInvalidator, today, cancellationToken);
+
+                if (completedRaces > 0)
+                {
+                    _logger.LogInformation("Race completion sweep: completed {Count} races", completedRaces);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Shutting down — nothing to report.
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Race completion sweep failed");
+            }
         }
         catch (OperationCanceledException)
         {
