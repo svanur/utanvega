@@ -809,7 +809,7 @@ type FocusRow =
 export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: EventDetailPageProps) {
   const { slug = '' } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const { detail, loading, error, refresh, setDetail } = useEventDetail(slug);
+  const { detail, loading, error, refresh, setDetail, invalidateEventsList } = useEventDetail(slug);
   const { trails } = useTrails();
 
   const [expandedEditionIds, setExpandedEditionIds] = useState<Set<string>>(new Set());
@@ -1369,6 +1369,9 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
         }),
       });
       onNotify(next ? 'Marked for review' : 'Review mark cleared');
+      // The events list caches its own copy of anyEditionNeedsReview (EVENTS_QUERY_KEY) — without
+      // this it can show a stale "Needs review" chip for up to its 30s staleTime.
+      await invalidateEventsList();
     } catch (err) {
       setDetail(prev => prev ? {
         ...prev,
