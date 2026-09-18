@@ -260,6 +260,12 @@ interface EditionDialogProps {
   // (see handleCloneEdition), so the Year nudge below must not re-derive and overwrite them the
   // way it does for a plain Add.
   isClone?: boolean;
+  // #912: true when this dialog was opened via "Clone edition to next year" for an event whose
+  // ScheduleRule is Approximate (month-only, no derivable exact date) — handleCloneEdition seeds
+  // date/endDate blank in that case rather than a fabricated guess, and this flag drives the
+  // helper text near Start date explaining why. Captured once at dialog-open time (isApproximateScheduleCloneRef
+  // below), same reasoning as isClone/isCloneRef.
+  isApproximateScheduleClone?: boolean;
   // #892: the other editions of this same event, used only for the advisory duplicate-Title
   // warning below — never for validation, since Title has no uniqueness constraint by design
   // (same-year reruns/reschedules are legitimate).
@@ -280,7 +286,7 @@ function LangToggleButton() {
   );
 }
 
-function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGalleryMutated, onNotify, initialValues, isClone = false, siblingEditions }: EditionDialogProps) {
+function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGalleryMutated, onNotify, initialValues, isClone = false, isApproximateScheduleClone = false, siblingEditions }: EditionDialogProps) {
   const isNew = edition === null;
   const [form, setForm] = useState<EditionFormState>(initialValues ?? (edition ? buildEditionForm(edition) : emptyEditionForm()));
   const [saving, setSaving] = useState(false);
@@ -294,7 +300,11 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
   // dialog-open-scoped lifetime as statusManuallySetRef — so it can't leak into the next
   // "Add edition" open even if this instance is reused across opens.
   const isCloneRef = useRef(false);
+  // #912: same capture-at-open reasoning as isCloneRef, for the Approximate-schedule clone
+  // helper text near Start date below.
+  const isApproximateScheduleCloneRef = useRef(false);
   const editionStatusHelperId = useId();
+  const startDateHelperId = useId();
   const registrationStatusHelperId = useId();
   // Which of IS/EN is currently shown in the Title BilingualTextField below — the #892
   // duplicate-Title match must follow this so it always compares what's actually on screen.
@@ -403,6 +413,7 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
         setForm(initialValues ?? (edition ? buildEditionForm(edition) : emptyEditionForm()));
         statusManuallySetRef.current = false;
         isCloneRef.current = isClone;
+        isApproximateScheduleCloneRef.current = isApproximateScheduleClone;
       } }}>
       <DialogTitle>
         <Stack direction="row" justifyContent="space-between" alignItems="center">
@@ -462,13 +473,21 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
               value={form.date ? dayjs(form.date) : null}
               onChange={v => set('date', v ? v.format('YYYY-MM-DD') : '')}
               referenceDate={referenceDate}
-              slotProps={{ textField: { size: 'small', fullWidth: true } }} />
+              slotProps={{ textField: {
+                size: 'small', fullWidth: true,
+                'aria-describedby': isApproximateScheduleCloneRef.current && !form.date ? startDateHelperId : undefined,
+              } }} />
             <DatePicker label="End date (multi-day)"
               value={form.endDate ? dayjs(form.endDate) : null}
               onChange={v => set('endDate', v ? v.format('YYYY-MM-DD') : '')}
               referenceDate={referenceDate}
               slotProps={{ textField: { size: 'small', fullWidth: true } }} />
           </Stack>
+          {isApproximateScheduleCloneRef.current && !form.date && (
+            <FormHelperText id={startDateHelperId} sx={{ mt: -1.5 }}>
+              This event&apos;s schedule is approximate — set next year&apos;s date manually.
+            </FormHelperText>
+          )}
           <BilingualTextField
             size="small" fullWidth label="Title"
             valueIs={form.title} valueEn={form.titleEn}
@@ -966,8 +985,13 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
 
   const handleCloneEdition = (edition: EventEditionDto) => {
     const nextYear = (edition.year ?? new Date().getFullYear()) + 1;
-    const suggestedDate = suggestEditionDateForYear(edition.date, nextYear);
-    const suggestedEndDate = suggestEditionEndDateForYear(edition.date, edition.endDate, suggestedDate);
+    // #912: an Approximate ScheduleRule is a month-only pattern (see ScheduleRule.cs) with no
+    // derivable exact date — mechanically shifting the previous edition's exact date onto next
+    // year would produce a confidently wrong, fabricated date. Leave both dates blank instead
+    // and let the dialog explain why (see isApproximateScheduleClone below).
+    const isApproximate = detail?.scheduleRule?.type === 'Approximate';
+    const suggestedDate = isApproximate ? '' : suggestEditionDateForYear(edition.date, nextYear);
+    const suggestedEndDate = isApproximate ? '' : suggestEditionEndDateForYear(edition.date, edition.endDate, suggestedDate);
     setCloneFromEditionId(edition.id);
     setEditionInitialValues({
       year: String(nextYear),
@@ -1959,6 +1983,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
         eventId={detail.id}
         initialValues={editionInitialValues}
         isClone={cloneFromEditionId !== null}
+        isApproximateScheduleClone={cloneFromEditionId !== null && detail.scheduleRule?.type === 'Approximate'}
         siblingEditions={detail.editions}
         onClose={() => { setEditionDialogOpen(false); setCloneFromEditionId(null); setEditionInitialValues(undefined); }}
         onGalleryMutated={refresh}
