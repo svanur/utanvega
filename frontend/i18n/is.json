@@ -791,6 +791,10 @@
             }
         },
         "changelog": {
+            "v1_10_0": {
+                "title": "Villa löguð á viðburðasíðum, og fleiri útgáfur/hlaup ljúka sér sjálfkrafa",
+                "description": "Lagfærð villa þar sem viðburðasíða gat sýnt ruglingslegan 'lista yfir útgáfur' í nokkra daga eftir hlaup, í stað venjulegs útlits, ef næsta útgáfa var þegar til. Raðviðburðir (Series) ljúka núna hverju hlaupi fyrir sig þegar dagsetning þess er liðin, ekki bara þegar öll röðin er búin. Saga útgáfu sýnir núna Úrslitahnapp, 'Lokið'-merki og skráningarstöðu eftir því hvort útgáfan er framundan, í gangi eða liðin. Í stjórnborði er 'Needs review' merkið, sem kom í síðustu útgáfu, núna sýnilegt beint í viðburðalistanum, og klónun útgáfu stingur ekki lengur upp á tilbúinni dagsetningu fyrir viðburði með ódagsetta áætlun. Auk þess smávægilegar lagfæringar á skyndiminni og villuskráningu í stjórnborði."
+            },
             "v1_9_0": {
                 "title": "Ársskýrsla 2025 komin aftur, nú lesanleg beint á síðunni",
                 "description": "Ársskýrsla 2025 er komin aftur í valmyndina (undir 'Um') og er núna birt í heild sem PDF-skjal, síðu fyrir síðu. Það er hægt að vista skjalið sjálft fyrir þá sem vilja skrána sjálfa. Tölfræðin og hápunktarnir á síðunni eru óbreytt — skýrslan er bara auðveldari að finna og lesa núna."
