@@ -50,6 +50,18 @@ export function isAllSoldOut(distances: DistanceEntry[] | null | undefined): boo
     return distances.every(d => d.ticketStatus === 'SoldOut' || d.ticketStatus === 'Closed');
 }
 
+// RegistrationCloses is a date-only value under the hood (the admin's DatePicker only captures a
+// calendar day, stored as midnight UTC) — treat the closes-date itself as still open through its
+// full 24 hours, i.e. compare against the start of the *next* day, not the raw instant. Mirrors
+// the backend's EditionStatusHelpers.ComputeEffectiveRegistrationStatus so UI gated on this value
+// (e.g. the resale link) flips at the same moment RegistrationStatus itself would read Closed.
+export function hasRegistrationClosed(registrationCloses: string | null | undefined, now: Date = new Date()): boolean {
+    if (!registrationCloses) return false;
+    const closes = new Date(registrationCloses);
+    const cutoff = Date.UTC(closes.getUTCFullYear(), closes.getUTCMonth(), closes.getUTCDate() + 1);
+    return now.getTime() >= cutoff;
+}
+
 export function getTicketStatusColor(status: string | null): 'success' | 'error' | 'warning' | 'info' | 'default' {
     switch (status) {
         case 'Free': return 'success';

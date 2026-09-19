@@ -73,7 +73,7 @@ import { API_URL } from '../hooks/useTrails';
 import { downloadIcs } from '../utils/calendarLinks';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
-import { getTicketStatusColor, groupDistances, isAllSoldOut } from '../utils/ticketStatus';
+import { getTicketStatusColor, groupDistances, isAllSoldOut, hasRegistrationClosed } from '../utils/ticketStatus';
 import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor, getWeekRange, isEffectivelyCancelled, isEffectivelyUnconfirmed, isOngoingPastDayTwo } from '../utils/eventUtils';
 import { trackViewModeChange, trackSiteQROpen } from '../utils/analytics';
 import { useLocalize } from '../utils/localize';
@@ -1617,7 +1617,8 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                             {/* Resale link */}
                                             {isEnabled('resale_tickets', false)
                                                 && (comp.activityType === 'Running' || comp.activityType === 'TrailRunning')
-                                                && comp.distances?.some(d => d.ticketStatus === 'SoldOut') && (
+                                                && comp.distances?.some(d => d.ticketStatus === 'SoldOut')
+                                                && !hasRegistrationClosed(comp.registrationCloses) && (
                                                 <Box sx={{ mt: 0.75 }}>
                                                     <Link
                                                         href={t('races.table.resaleHref')}

@@ -70,6 +70,7 @@ export interface EventSummary {
     distances: { label: string; ticketStatus: string | null }[] | null;
     registrationUrl: string | null;
     registrationStatus: string | null;
+    registrationCloses: string | null;
     resultsUrl: string | null;
     galleries: PublicPhotoGallery[];
     certifications: string[] | null;

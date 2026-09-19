@@ -6,7 +6,7 @@ import {
     TableSortLabel, Paper, Typography, Chip, IconButton, Tooltip, Stack,
     Collapse, Box, Skeleton, Button, alpha, useTheme, Link,
 } from '@mui/material';
-import { getTicketStatusColor, groupDistances, isAllSoldOut } from '../utils/ticketStatus';
+import { getTicketStatusColor, groupDistances, isAllSoldOut, hasRegistrationClosed } from '../utils/ticketStatus';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
@@ -610,7 +610,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation, o
                                                         </Typography>
                                                         <Stack direction="row" flexWrap="wrap" gap={1}>
                                                             {races.map(race => (
-                                                                <RaceChipCard key={race.id} race={race} editionDate={nextEdition?.date ?? null} eventActivityType={event.activityType} />
+                                                                <RaceChipCard key={race.id} race={race} editionDate={nextEdition?.date ?? null} eventActivityType={event.activityType} registrationCloses={event.registrationCloses} />
                                                             ))}
                                                         </Stack>
                                                     </Stack>
@@ -641,7 +641,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation, o
 };
 
 // Compact race card shown inside the expanded row
-function RaceChipCard({ race, editionDate, eventActivityType }: { race: RaceDto; editionDate?: string | null; eventActivityType?: string }) {
+function RaceChipCard({ race, editionDate, eventActivityType, registrationCloses }: { race: RaceDto; editionDate?: string | null; eventActivityType?: string; registrationCloses?: string | null }) {
     const { t, i18n } = useTranslation();
     const loc = useLocalize();
     const navigate = useNavigate();
@@ -755,7 +755,8 @@ function RaceChipCard({ race, editionDate, eventActivityType }: { race: RaceDto;
                     )}
                     {race.ticketStatus === 'SoldOut'
                         && isEnabled('resale_tickets', false)
-                        && isResaleActivityType && (
+                        && isResaleActivityType
+                        && !hasRegistrationClosed(registrationCloses) && (
                         <Link
                             href={t('races.table.resaleHref')}
                             target="_blank"
