@@ -1,4 +1,4 @@
-import { useId, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
+import { useId, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
@@ -39,8 +39,18 @@ import {
 import { useTrails, type Trail } from '../hooks/useTrails';
 import { useTranslate } from '../hooks/useTranslate';
 import { useBackToList } from '../hooks/useBackToList';
+import { usePageShortcuts } from '../hooks/usePageShortcuts';
 import { trimToUndefined } from '../utils/strings';
-import { buildRaceSavePayload, createEmptyRaceForm, EDITION_STATUSES, EDITION_STATUS_LABELS, referenceDateForYear } from '../utils/eventForms';
+import {
+  buildRaceSavePayload,
+  createEmptyRaceForm,
+  editionStatusForYear,
+  EDITION_STATUSES,
+  EDITION_STATUS_LABELS,
+  referenceDateForYear,
+  shouldNudgeStatusForYear,
+  titleSyncForYear,
+} from '../utils/eventForms';
 import BilingualTextField from '../components/BilingualTextField';
 import BilingualLangToggle from '../components/BilingualLangToggle';
 import { BilingualLangProvider } from '../contexts/BilingualLangContext';
@@ -183,6 +193,10 @@ function EventDetailsStep({ onNotify, form, setForm, onCreated }: EventDetailsSt
     if (nameEn) set('nameEn', nameEn);
   };
 
+  usePageShortcuts([
+    { key: 'Enter', ctrl: true, allowInInput: true, handler: () => { if (form.name.trim() && !saving) void handleSave(); } },
+  ]);
+
   return (
     <Box sx={{ maxWidth: 640 }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
@@ -272,10 +286,11 @@ interface EditionFormState {
   notesEn: string;
 }
 
-// New editions default to Hidden, same as EventDetailPage's emptyEditionForm(). Deliberately not
-// ported: the Year-field nudge that dialog applies afterwards (shouldNudgeStatusForYear/
-// editionStatusForYear) — here Status/RegistrationStatus are submitted as-picked (or left at these
-// defaults) and CreateEditionCommand's own past-date-defaults-to-Completed logic governs instead.
+// New editions default to Hidden, same as EventDetailPage's emptyEditionForm(). #945: the
+// Year-field nudge (shouldNudgeStatusForYear/editionStatusForYear) that dialog also applies is now
+// ported to this step's own Year onChange below, rather than relying solely on
+// CreateEditionCommand's own past-date-defaults-to-Completed logic, which only fires when an exact
+// Date/EndDate is set — a year-only edition was previously never corrected either way.
 function emptyEditionForm(): EditionFormState {
   return {
     year: String(new Date().getFullYear()),
@@ -322,6 +337,11 @@ function EditionDetailsStep({ onNotify, eventId, eventSlug, form, setForm, onBac
   const registrationStatusHelperId = useId();
   const editionStatusHelperId = useId();
   const isEdit = editionId !== undefined;
+  // Mirrors EditionDialogInner's own ref (EventDetailPage.tsx) — flips true the moment the admin
+  // manually touches Status or Registration status, so a later Year edit in the same session
+  // doesn't silently clobber that choice. The wizard has no clone concept, so unlike
+  // EditionDialogInner there's no isCloneRef counterpart here.
+  const statusManuallySetRef = useRef(false);
 
   const set = <K extends keyof EditionFormState>(k: K, v: EditionFormState[K]) =>
     setForm(prev => ({ ...prev, [k]: v }));
@@ -378,6 +398,10 @@ function EditionDetailsStep({ onNotify, eventId, eventSlug, form, setForm, onBac
   // admin can see the event exists with no editions yet) rather than the generic events list.
   const handleCancel = () => navigate(`/events/${eventSlug}`);
 
+  usePageShortcuts([
+    { key: 'Enter', ctrl: true, allowInInput: true, handler: () => { if (!saving) void handleSave(); } },
+  ]);
+
   const registrationDatesSet = !!form.registrationOpens && !!form.registrationCloses;
 
   return (
@@ -392,7 +416,34 @@ function EditionDetailsStep({ onNotify, eventId, eventSlug, form, setForm, onBac
           <TextField
             size="small" fullWidth label="Year" type="number" value={form.year}
             inputProps={{ min: 1900, max: 2100 }}
-            onChange={e => set('year', e.target.value)}
+            onChange={e => {
+              const newYear = e.target.value;
+              setForm(prev => {
+                const updates: Partial<EditionFormState> = { year: newYear };
+                const ny = parseInt(newYear, 10);
+                // Title/titleEn sync mirrors EditionDialogInner's own Year onChange
+                // (EventDetailPage.tsx) — see titleSyncForYear for the "still looks auto-synced"
+                // gating that keeps this from clobbering a title the admin has actually typed.
+                const titleSync = titleSyncForYear(newYear, prev.title);
+                if (titleSync) {
+                  updates.title = titleSync.title;
+                  updates.titleEn = titleSync.titleEn;
+                }
+                // #945: isEdit is true only on a Step-3-Back-triggered revisit to an edition that
+                // already exists (see editionId's own doc comment above) — the nudge must not
+                // re-fire and clobber a since-saved Status on that revisit, exactly as
+                // EditionDialogInner doesn't nudge for an existing (!isNew) edition. The wizard has
+                // no clone concept, so isClone is always false here.
+                if (shouldNudgeStatusForYear(!isEdit, false, statusManuallySetRef.current) && newYear.length === 4 && !isNaN(ny)) {
+                  const nudged = editionStatusForYear(ny);
+                  if (nudged) {
+                    updates.status = nudged.status;
+                    updates.registrationStatus = nudged.registrationStatus;
+                  }
+                }
+                return { ...prev, ...updates };
+              });
+            }}
             sx={{ '& .MuiOutlinedInput-root': TOUCH_TARGET_SX }}
           />
           <DatePicker label="Start date"
@@ -415,7 +466,11 @@ function EditionDetailsStep({ onNotify, eventId, eventSlug, form, setForm, onBac
 
         <FormControl size="small" fullWidth sx={{ '& .MuiOutlinedInput-root': TOUCH_TARGET_SX }}>
           <InputLabel>Status</InputLabel>
-          <Select value={form.status} label="Status" onChange={e => set('status', e.target.value as EditionStatus)}
+          <Select value={form.status} label="Status"
+            onChange={e => {
+              statusManuallySetRef.current = true;
+              set('status', e.target.value as EditionStatus);
+            }}
             aria-describedby={isEdit && form.status !== 'Cancelled' && form.status !== 'Completed' ? editionStatusHelperId : undefined}>
             {EDITION_STATUSES.map(s => (
               // #942 (AGENTS.md "an action with consequences beyond the field it names is not a
@@ -460,7 +515,10 @@ function EditionDetailsStep({ onNotify, eventId, eventSlug, form, setForm, onBac
         <FormControl size="small" fullWidth disabled={registrationDatesSet} sx={{ '& .MuiOutlinedInput-root': TOUCH_TARGET_SX }}>
           <InputLabel>Registration status</InputLabel>
           <Select value={form.registrationStatus} label="Registration status"
-            onChange={e => set('registrationStatus', e.target.value as RegistrationStatus)}
+            onChange={e => {
+              statusManuallySetRef.current = true;
+              set('registrationStatus', e.target.value as RegistrationStatus);
+            }}
             aria-describedby={registrationDatesSet ? registrationStatusHelperId : undefined}>
             {REGISTRATION_STATUSES.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
           </Select>
@@ -594,6 +652,10 @@ function RacesStep({ onNotify, eventSlug, editionId, editionStatus, editionYear,
     }
     navigate(`/events/${eventSlug}`);
   };
+
+  usePageShortcuts([
+    { key: 'Enter', ctrl: true, allowInInput: true, handler: () => { if (selectedTrails.length > 0 && !adding) void handleAddRaces(); } },
+  ]);
 
   return (
     <Box sx={{ maxWidth: 640 }}>
