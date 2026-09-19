@@ -229,7 +229,7 @@ function RaceFormCardInner({
             size="small" fullWidth label="Distance label" sx={{ mb: 1.5 }}
             valueIs={form.distanceLabel} valueEn={form.distanceLabelEn}
             onChangeIs={v => set('distanceLabel', v)} onChangeEn={v => set('distanceLabelEn', v)}
-            placeholder="e.g. 50 km"
+            placeholder="Leave blank to use the trail's distance"
           />
 
           <Divider sx={{ my: 2 }} />
