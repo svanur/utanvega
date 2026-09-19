@@ -71,7 +71,11 @@ public record EventSummaryDto(
     // (a single edition's own flag) — true when at least one edition is bookmarked for review, so
     // the admin events list can filter to "events with something to look at" without fetching the
     // full edition list per row.
-    bool AnyEditionNeedsReview = false
+    bool AnyEditionNeedsReview = false,
+    // Raw registration close instant for the relevant edition, alongside the already-derived
+    // RegistrationStatus string — lets the frontend gate UI (e.g. the resale link) on "has
+    // registration actually closed" without re-deriving it from RegistrationStatus alone.
+    DateTime? RegistrationCloses = null
 );
 
 public record RaceDto(

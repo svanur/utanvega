@@ -1617,7 +1617,8 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                             {/* Resale link */}
                                             {isEnabled('resale_tickets', false)
                                                 && (comp.activityType === 'Running' || comp.activityType === 'TrailRunning')
-                                                && comp.distances?.some(d => d.ticketStatus === 'SoldOut') && (
+                                                && comp.distances?.some(d => d.ticketStatus === 'SoldOut')
+                                                && !(comp.registrationCloses && new Date(comp.registrationCloses) < new Date()) && (
                                                 <Box sx={{ mt: 0.75 }}>
                                                     <Link
                                                         href={t('races.table.resaleHref')}
