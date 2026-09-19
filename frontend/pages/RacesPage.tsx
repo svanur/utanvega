@@ -1095,7 +1095,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                         ))}
                                                                     </Stack>
                                                                 )}
-                                                                {comp.resultsUrl && (
+                                                                {comp.resultsUrl && (comp.daysUntil == null || comp.daysUntil < 0) && (
                                                                     <Button
                                                                         size="small"
                                                                         variant="outlined"
@@ -1293,7 +1293,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                             {t('races.organizerSite')}
                                                                         </Button>
                                                                     )}
-                                                                    {comp.resultsUrl && (
+                                                                    {comp.resultsUrl && (comp.daysUntil == null || comp.daysUntil < 0) && (
                                                                         <Button size="small" variant="outlined" href={comp.resultsUrl} target="_blank" rel="noopener noreferrer" endIcon={<OpenInNewIcon sx={{ fontSize: 12 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem' }}>
                                                                             {t('races.results', 'Results')}
                                                                         </Button>
@@ -1548,7 +1548,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                 {t('races.organizerSite')}
                                                             </Button>
                                                         )}
-                                                        {comp.resultsUrl && (
+                                                        {comp.resultsUrl && (comp.daysUntil == null || comp.daysUntil < 0) && (
                                                             <Button size="small" variant="outlined" href={comp.resultsUrl} target="_blank" rel="noopener noreferrer" endIcon={<OpenInNewIcon sx={{ fontSize: 12 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem' }}>
                                                                 {t('races.results', 'Results')}
                                                             </Button>
