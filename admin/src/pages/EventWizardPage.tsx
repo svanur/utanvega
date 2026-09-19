@@ -307,13 +307,20 @@ interface EditionDetailsStepProps extends EventWizardPageProps {
   setForm: Dispatch<SetStateAction<EditionFormState>>;
   onBack: () => void;
   onCreated: (edition: CreatedEdition) => void;
+  // #942: set when this step is being revisited from Step 3's own new Back button to fix a field
+  // on the edition already created earlier in this session — drives the create-vs-update branch
+  // below, mirroring EditionDialogInner's isNew (EventDetailPage.tsx). Undefined on the first visit
+  // (edition doesn't exist yet), the created edition's id on every subsequent visit — the parent
+  // never clears createdEdition once set, so returning here after Step 3 always carries it.
+  editionId?: string;
 }
 
-function EditionDetailsStep({ onNotify, eventId, eventSlug, form, setForm, onBack, onCreated }: EditionDetailsStepProps) {
+function EditionDetailsStep({ onNotify, eventId, eventSlug, form, setForm, onBack, onCreated, editionId }: EditionDetailsStepProps) {
   const navigate = useNavigate();
-  const { createEdition } = useEvents();
+  const { createEdition, updateEdition } = useEvents();
   const [saving, setSaving] = useState(false);
   const registrationStatusHelperId = useId();
+  const isEdit = editionId !== undefined;
 
   const set = <K extends keyof EditionFormState>(k: K, v: EditionFormState[K]) =>
     setForm(prev => ({ ...prev, [k]: v }));
@@ -325,11 +332,10 @@ function EditionDetailsStep({ onNotify, eventId, eventSlug, form, setForm, onBac
   const handleSave = async () => {
     setSaving(true);
     try {
-      // Same POST shape as EditionDialogInner's handleSave (EventDetailPage.tsx) for a new
-      // edition, minus trailId (not offered here, see scope note above) — CreateEditionCommand's
-      // TrailId is optional and simply stays null when omitted.
-      const id = await createEdition({
-        eventId,
+      // Same shape as EditionDialogInner's handleSave (EventDetailPage.tsx) for both branches
+      // below, minus trailId (not offered here, see scope note above) — CreateEditionCommand's/
+      // UpdateEditionCommand's TrailId is optional and simply stays null/unchanged when omitted.
+      const payload = {
         year: form.year.trim() ? Number(form.year) : null,
         date: form.date || null,
         endDate: form.endDate || null,
@@ -343,15 +349,24 @@ function EditionDetailsStep({ onNotify, eventId, eventSlug, form, setForm, onBac
         registrationOpens: form.registrationOpens || null,
         registrationCloses: form.registrationCloses || null,
         status: form.status,
-      });
-      // useEvents().createEdition already invalidates the events list (editionCount/
-      // nextEditionDate), which would otherwise stay stale until its own 30s staleTime lapses.
-      onNotify('Edition created', 'success');
-      // #666: the edition now exists — advance to Step 3 (Races) rather than navigating away
-      // directly, mirroring EventDetailsStep's own onCreated(event) advance into this step.
-      onCreated({ id, status: form.status, year: form.year });
+      };
+      if (isEdit) {
+        // #942: the edition already exists (created on an earlier visit to this step) — PUT the
+        // edit rather than POSTing a second, duplicate edition under the same event/year.
+        await updateEdition(editionId, payload);
+        onNotify('Edition saved', 'success');
+        onCreated({ id: editionId, status: form.status, year: form.year });
+      } else {
+        const id = await createEdition({ eventId, ...payload });
+        // useEvents().createEdition already invalidates the events list (editionCount/
+        // nextEditionDate), which would otherwise stay stale until its own 30s staleTime lapses.
+        onNotify('Edition created', 'success');
+        // #666: the edition now exists — advance to Step 3 (Races) rather than navigating away
+        // directly, mirroring EventDetailsStep's own onCreated(event) advance into this step.
+        onCreated({ id, status: form.status, year: form.year });
+      }
     } catch (err) {
-      onNotify(err instanceof Error ? err.message : 'Failed to create edition', 'error');
+      onNotify(err instanceof Error ? err.message : `Failed to ${isEdit ? 'save' : 'create'} edition`, 'error');
     } finally {
       setSaving(false);
     }
@@ -454,7 +469,7 @@ function EditionDetailsStep({ onNotify, eventId, eventSlug, form, setForm, onBac
         <Stack direction="row" spacing={1}>
           <Button onClick={handleCancel} disabled={saving} sx={TOUCH_TARGET_SX}>Cancel</Button>
           <Button variant="contained" disabled={saving} onClick={() => void handleSave()} sx={TOUCH_TARGET_SX}>
-            {saving ? <CircularProgress size={18} /> : 'Create Edition'}
+            {saving ? <CircularProgress size={18} /> : (isEdit ? 'Save Edition' : 'Create Edition')}
           </Button>
         </Stack>
       </Stack>
@@ -476,9 +491,12 @@ interface RacesStepProps extends EventWizardPageProps {
   editionId: string;
   editionStatus: EditionStatus;
   editionYear: string;
+  // #942: returns to Step 2 (Edition details) pre-filled with this edition's own values, rather
+  // than there being no way back to fix a field once Step 3 has been reached.
+  onBack: () => void;
 }
 
-function RacesStep({ onNotify, eventSlug, editionId, editionStatus, editionYear }: RacesStepProps) {
+function RacesStep({ onNotify, eventSlug, editionId, editionStatus, editionYear, onBack }: RacesStepProps) {
   const navigate = useNavigate();
   const { trails } = useTrails();
   const { createRace, deleteRace, refresh } = useEvents();
@@ -633,7 +651,8 @@ function RacesStep({ onNotify, eventSlug, editionId, editionStatus, editionYear 
         </>
       )}
 
-      <Stack direction="row" justifyContent="flex-end" sx={{ mt: 3 }}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 3 }}>
+        <Button onClick={onBack} sx={TOUCH_TARGET_SX}>Back</Button>
         <Button variant="contained" onClick={handleFinish} sx={TOUCH_TARGET_SX}>Finish</Button>
       </Stack>
     </Box>
@@ -685,6 +704,10 @@ export default function EventWizardPage({ onNotify }: EventWizardPageProps) {
             eventSlug={createdEvent.slug}
             form={editionForm}
             setForm={setEditionForm}
+            // #942: createdEdition is never cleared once set, so a Step-3-Back-triggered revisit
+            // of this step always carries the same id forward — Undefined only on the very first
+            // visit, before an edition exists to edit.
+            editionId={createdEdition?.id}
             onBack={() => setActiveStep(0)}
             onCreated={edition => { setCreatedEdition(edition); setActiveStep(2); }}
           />
@@ -696,6 +719,7 @@ export default function EventWizardPage({ onNotify }: EventWizardPageProps) {
             editionId={createdEdition.id}
             editionStatus={createdEdition.status}
             editionYear={createdEdition.year}
+            onBack={() => setActiveStep(1)}
           />
         )}
       </Box>
