@@ -4,7 +4,6 @@ import {
   Autocomplete,
   Box,
   Button,
-  Chip,
   CircularProgress,
   Divider,
   FormControl,
@@ -36,8 +35,8 @@ import {
   type RaceFormState,
 } from '../../utils/eventForms';
 import BilingualTextField from '../BilingualTextField';
+import BilingualLangToggle from '../BilingualLangToggle';
 import { BilingualLangProvider } from '../../contexts/BilingualLangContext';
-import { useBilingualLang } from '../../hooks/useBilingualLang';
 import { clampItraPoints, correctEmptyToOneFromSpinner } from '../../utils/itraPoints';
 
 interface RaceFormCardProps {
@@ -63,20 +62,6 @@ function SectionLabel({ children }: { children: ReactNode }) {
     >
       {children}
     </Typography>
-  );
-}
-
-function LangToggleButton() {
-  const { lang, toggle } = useBilingualLang();
-  return (
-    <Chip
-      label={lang === 'is' ? 'IS' : 'EN'}
-      size="small"
-      onClick={toggle}
-      color={lang === 'en' ? 'primary' : 'default'}
-      variant={lang === 'en' ? 'filled' : 'outlined'}
-      sx={{ fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', minWidth: 36 }}
-    />
   );
 }
 
@@ -192,7 +177,7 @@ function RaceFormCardInner({
           {isNew ? 'Add race' : `Edit: ${form.name || race?.name}`}
         </Typography>
         <Stack direction="row" spacing={1} alignItems="center">
-          <LangToggleButton />
+          <BilingualLangToggle />
           <Typography variant="caption" color="text.secondary">
             {edition.title ?? edition.date ?? `Edition ${edition.year}`}
           </Typography>

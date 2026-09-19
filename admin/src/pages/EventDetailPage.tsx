@@ -76,6 +76,7 @@ import RaceFormCard from '../components/events/RaceFormCard';
 import EventFormCard from '../components/events/EventFormCard';
 import PhotoGalleryManager, { type PhotoGalleryManagerHandle } from '../components/events/PhotoGalleryManager';
 import BilingualTextField from '../components/BilingualTextField';
+import BilingualLangToggle from '../components/BilingualLangToggle';
 import { BilingualLangProvider } from '../contexts/BilingualLangContext';
 import { useBilingualLang } from '../hooks/useBilingualLang';
 import {
@@ -272,20 +273,6 @@ interface EditionDialogProps {
   siblingEditions: EventEditionDto[];
 }
 
-function LangToggleButton() {
-  const { lang, toggle } = useBilingualLang();
-  return (
-    <Chip
-      label={lang === 'is' ? 'IS' : 'EN'}
-      size="small"
-      onClick={toggle}
-      color={lang === 'en' ? 'primary' : 'default'}
-      variant={lang === 'en' ? 'filled' : 'outlined'}
-      sx={{ fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', minWidth: 36 }}
-    />
-  );
-}
-
 function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGalleryMutated, onNotify, initialValues, isClone = false, isApproximateScheduleClone = false, siblingEditions }: EditionDialogProps) {
   const isNew = edition === null;
   const [form, setForm] = useState<EditionFormState>(initialValues ?? (edition ? buildEditionForm(edition) : emptyEditionForm()));
@@ -418,7 +405,7 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
       <DialogTitle>
         <Stack direction="row" justifyContent="space-between" alignItems="center">
           {isNew ? 'Add edition' : 'Edit edition'}
-          <LangToggleButton />
+          <BilingualLangToggle />
         </Stack>
       </DialogTitle>
       <DialogContent>

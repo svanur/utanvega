@@ -45,6 +45,7 @@ import { useBackToList } from '../hooks/useBackToList';
 import { trimToUndefined } from '../utils/strings';
 import { buildRaceSavePayload, createEmptyRaceForm, EDITION_STATUSES, EDITION_STATUS_LABELS, referenceDateForYear } from '../utils/eventForms';
 import BilingualTextField from '../components/BilingualTextField';
+import BilingualLangToggle from '../components/BilingualLangToggle';
 import { BilingualLangProvider } from '../contexts/BilingualLangContext';
 import { useBilingualLang } from '../hooks/useBilingualLang';
 
@@ -83,20 +84,6 @@ function scoreMatch(query: string, name: string, slug: string): number {
   if (words.some(w => w.startsWith(q))) return 60;
   if (n.includes(q) || s.includes(q)) return 40;
   return 0;
-}
-
-function LangToggleButton() {
-  const { lang, toggle } = useBilingualLang();
-  return (
-    <Chip
-      label={lang === 'is' ? 'IS' : 'EN'}
-      size="small"
-      onClick={toggle}
-      color={lang === 'en' ? 'primary' : 'default'}
-      variant={lang === 'en' ? 'filled' : 'outlined'}
-      sx={{ fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', minWidth: 36 }}
-    />
-  );
 }
 
 const EVENT_TYPES: EventType[] = ['Race', 'Series', 'Social', 'Advertisement', 'Festival', 'Other'];
@@ -203,7 +190,7 @@ function EventDetailsStep({ onNotify, form, setForm, onCreated }: EventDetailsSt
     <Box sx={{ maxWidth: 640 }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
         <Typography variant="h6">Event details</Typography>
-        <LangToggleButton />
+        <BilingualLangToggle />
       </Stack>
 
       <Stack spacing={2.5}>
@@ -384,7 +371,7 @@ function EditionDetailsStep({ onNotify, eventId, eventSlug, onBack, onCreated }:
     <Box sx={{ maxWidth: 640 }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
         <Typography variant="h6">Edition details</Typography>
-        <LangToggleButton />
+        <BilingualLangToggle />
       </Stack>
 
       <Stack spacing={2.5}>
