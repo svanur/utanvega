@@ -389,10 +389,11 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
   // ── Status / activity / type cycling ─────────────────────────────────────
   const handleCycleStatus = async (event: EventSummaryDto) => {
     if (cyclingStatusIds.has(event.id)) return;
-    if (event.status !== 'Unconfirmed' && event.status !== 'Confirmed') return;
-    // Cancelled is deliberately excluded from the cycle — cancelling cascades to editions and races
-    // (see backend Event.CancelWithEditions), so it's only reachable via the dedicated Cancel Event
+    // Only statuses actually present in EVENT_STATUS_CYCLE are cycle-eligible — Cancelled is
+    // deliberately excluded, since cancelling cascades to editions and races (see backend
+    // Event.CancelWithEditions), so it's only reachable via the dedicated Cancel Event
     // confirmation dialog, not a click-through step.
+    if (!EVENT_STATUS_CYCLE.includes(event.status as EventStatus)) return;
     const i = EVENT_STATUS_CYCLE.indexOf(event.status as EventStatus);
     const next = EVENT_STATUS_CYCLE[(i + 1) % EVENT_STATUS_CYCLE.length]!;
     patchEventLocally(event.id, { status: next });
