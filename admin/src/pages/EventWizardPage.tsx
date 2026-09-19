@@ -579,7 +579,21 @@ function RacesStep({ onNotify, eventSlug, editionId, editionStatus, editionYear,
     }
   };
 
-  const handleFinish = () => navigate(`/events/${eventSlug}`);
+  // #943: Autocomplete selections aren't persisted until "Add races" is clicked — Finish used to
+  // navigate away regardless, silently dropping a staged selection. Mirrors the confirm() guard
+  // TrailFormCard/EditionDialogInner already use for their own "pending selection would be
+  // silently dropped" cases rather than introducing a new confirm-dialog component.
+  const handleFinish = () => {
+    if (selectedTrails.length > 0) {
+      const proceed = confirm(
+        `You have ${selectedTrails.length} trail${selectedTrails.length === 1 ? '' : 's'} selected above but haven't clicked "Add races" — `
+        + `that selection will NOT be saved.\n\n`
+        + `Cancel to go back and click "Add races", or OK to finish without it.`
+      );
+      if (!proceed) return;
+    }
+    navigate(`/events/${eventSlug}`);
+  };
 
   return (
     <Box sx={{ maxWidth: 640 }}>
