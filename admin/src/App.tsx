@@ -60,6 +60,7 @@ const TranslationHealth = lazy(() => import('./pages/TranslationHealth'));
 const RaceDayPage = lazy(() => import('./pages/RaceDayPage'));
 const FeedbackPage = lazy(() => import('./pages/FeedbackPage'));
 const EventDetailPage = lazy(() => import('./pages/EventDetailPage'));
+const EventWizardPage = lazy(() => import('./pages/EventWizardPage'));
 
 const theme = createTheme({
   palette: {
@@ -132,7 +133,6 @@ function AdminContent() {
   const [, setRefreshTrigger] = useState(0);
   const [raceDayInitialDate, setRaceDayInitialDate] = useState<string | undefined>(undefined);
   const [eventHealthInitialFilter, setEventHealthInitialFilter] = useState<QuickFilter | undefined>(undefined);
-  const [createEventIntent, setCreateEventIntent] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [pendingNav, setPendingNav] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean, message: React.ReactNode, severity: 'success' | 'error' }>({
@@ -356,7 +356,7 @@ function AdminContent() {
           }>
           {currentPage === 'dashboard' ? (
             <DashboardPage
-              onNewEvent={() => { setCreateEventIntent(true); setCurrentPage('events'); }}
+              onNewEvent={() => navigate('/events/new')}
               onUploadTrail={() => setIsUploadOpen(true)}
               onNavigate={(page, filter) => {
                 setEventHealthInitialFilter(page === 'event-health' && filter === 'no-date' ? 'no-date' : undefined);
@@ -389,19 +389,14 @@ function AdminContent() {
             <FeatureFlagsPage onNotify={notify} />
           ) : currentPage === 'events' ? (
             <Routes>
+              <Route path="/events/new" element={<EventWizardPage onNotify={notify} />} />
               <Route path="/events/:slug" element={
                 <EventDetailPage
                   onNotify={notify}
                   onNavigateToRaceManager={date => { setRaceDayInitialDate(date); setCurrentPage('race-day'); }}
                 />
               } />
-              <Route path="/events" element={
-                <EventsListPage
-                  onNotify={notify}
-                  initialCreate={createEventIntent}
-                  onInitialCreateConsumed={() => setCreateEventIntent(false)}
-                />
-              } />
+              <Route path="/events" element={<EventsListPage onNotify={notify} />} />
             </Routes>
           ) : currentPage === 'hero-themes' ? (
             <HeroThemesPage />

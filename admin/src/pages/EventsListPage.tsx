@@ -61,7 +61,6 @@ import { useRowFocus } from '../hooks/useRowFocus';
 import { useUrlFilterState } from '../hooks/useUrlFilterState';
 import { useDebouncedUrlSearch } from '../hooks/useDebouncedUrlSearch';
 import { usePageShortcuts, isDialogOpen } from '../hooks/usePageShortcuts';
-import CreateEventDialog from '../components/events/CreateEventDialog';
 import { EVENT_STATUS_CYCLE } from '../utils/eventForms';
 import {
   MONTHS,
@@ -224,15 +223,12 @@ const EVENTS_FILTER_SCHEMA = {
 
 interface EventsListPageProps {
   onNotify: (message: ReactNode, severity?: 'success' | 'error') => void;
-  initialCreate?: boolean;
-  onInitialCreateConsumed?: () => void;
 }
 
-export default function EventsListPage({ onNotify, initialCreate, onInitialCreateConsumed }: EventsListPageProps) {
+export default function EventsListPage({ onNotify }: EventsListPageProps) {
   const navigate = useNavigate();
   const {
     events, loading, error, refresh,
-    createEvent,
     updateEventSilently, patchEventLocally,
     getEvent, createEdition, createRace, generateEditionsForSeason,
   } = useEvents();
@@ -260,7 +256,6 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
   const [cyclingStatusIds, setCyclingStatusIds] = useState<Set<string>>(new Set());
   const [cyclingActivityIds, setCyclingActivityIds] = useState<Set<string>>(new Set());
   const [cyclingTypeIds, setCyclingTypeIds] = useState<Set<string>>(new Set());
-  const [createDialogOpen, setCreateDialogOpen] = useState(initialCreate ?? false);
   const [showBulkMissingDialog, setShowBulkMissingDialog] = useState(false);
   const [bulkMissingLoading, setBulkMissingLoading] = useState(false);
   const [bulkMissingProgress, setBulkMissingProgress] = useState<{ done: number; total: number } | null>(null);
@@ -383,7 +378,7 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
   }, [focusedEventIndex]);
 
   usePageShortcuts([
-    { key: 'n', alt: true, skip: isDialogOpen, handler: () => setCreateDialogOpen(true) },
+    { key: 'n', alt: true, skip: isDialogOpen, handler: () => navigate('/events/new') },
   ]);
 
   // ── Status / activity / type cycling ─────────────────────────────────────
@@ -707,7 +702,7 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
               Generate Editions
             </Button>
           )}
-          <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setCreateDialogOpen(true); onInitialCreateConsumed?.(); }}>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate('/events/new')}>
             New Event
           </Button>
         </Stack>
@@ -1047,15 +1042,6 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
           </TableBody>
         </Table>
       </TableContainer>
-
-      <CreateEventDialog
-        open={createDialogOpen}
-        onClose={() => setCreateDialogOpen(false)}
-        onCreated={(slug) => { setCreateDialogOpen(false); navigate(`/events/${slug}`); }}
-        onNotify={onNotify}
-        createEvent={createEvent}
-        events={events}
-      />
 
       {/* Bulk create missing editions dialog */}
       <Dialog open={showBulkMissingDialog} onClose={() => !bulkMissingLoading && !bulkMissingProgress && setShowBulkMissingDialog(false)} maxWidth="md" fullWidth>
