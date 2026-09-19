@@ -224,6 +224,10 @@ export interface CreateEditionInput {
     registrationOpens?: string | null;
     registrationCloses?: string | null;
     trailId?: string | null;
+    // Optional, same as UpdateEditionInput's status below — most callers let CreateEditionCommand's
+    // own past-date-defaults-to-Completed logic pick it, but EventWizardPage's EditionDetailsStep
+    // submits the admin's explicit Step-2 choice.
+    status?: EditionStatus;
 }
 
 export interface UpdateEditionInput {
