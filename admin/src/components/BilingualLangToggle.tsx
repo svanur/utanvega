@@ -8,8 +8,12 @@ import { useBilingualLang } from '../hooks/useBilingualLang';
 // The Chip itself stays visually small (MUI `size="small"`, 24px tall) so it doesn't balloon next
 // to this page's other compact controls, but its actual hit area is widened to the 44px
 // touch-target minimum by centering it inside an invisibly larger Box. The Box (not the Chip)
-// owns the onClick so the whole 44x44 area is tappable; `clickable` is passed to the Chip
-// explicitly so its hover/press affordance still renders even without its own onClick.
+// owns the onClick so the whole 44x44 area is tappable. The Chip must NOT be given `onClick` or
+// `clickable` — either one makes MUI render it as a `ButtonBase`, i.e. a second
+// `<div role="button" tabIndex={0}>` nested inside this Box's own role="button", which is an
+// invalid nested-interactive-element ARIA pattern (a dead extra tab stop, since the inner Chip
+// would have no onClick of its own to respond to Enter/Space). The Chip stays a plain,
+// non-interactive visual element; the Box is the only focusable/interactive control.
 export default function BilingualLangToggle() {
   const { lang, toggle } = useBilingualLang();
   return (
@@ -36,7 +40,6 @@ export default function BilingualLangToggle() {
       <Chip
         label={lang === 'is' ? 'IS' : 'EN'}
         size="small"
-        clickable
         color={lang === 'en' ? 'primary' : 'default'}
         variant={lang === 'en' ? 'filled' : 'outlined'}
         sx={{ fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', minWidth: 36 }}
