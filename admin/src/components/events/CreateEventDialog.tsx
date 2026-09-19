@@ -41,7 +41,7 @@ function LangToggleButton() {
 
 const EVENT_TYPES: EventType[] = ['Race', 'Series', 'Social', 'Advertisement', 'Festival', 'Other'];
 const ACTIVITY_TYPES: ActivityType[] = ['TrailRunning', 'Running', 'Cycling', 'Hiking', 'FunRun', 'ObstacleCourse', 'CrossCountryRun', 'Swim', 'Canicross', 'IronMan', 'Other'];
-const EVENT_STATUSES: EventStatus[] = ['Unconfirmed', 'Confirmed', 'Cancelled', 'Hidden', 'Unlisted'];
+const EVENT_STATUSES: EventStatus[] = ['Hidden', 'Unconfirmed', 'Confirmed', 'Cancelled', 'Unlisted'];
 const EVENT_STATUS_LABELS: Record<EventStatus, string> = {
   Unconfirmed: 'Unconfirmed',
   Confirmed: 'Confirmed',
@@ -64,7 +64,7 @@ interface FormState {
 }
 
 function empty(): FormState {
-  return { name: '', nameEn: '', slug: '', type: 'Race', activityType: 'TrailRunning', status: 'Unconfirmed' };
+  return { name: '', nameEn: '', slug: '', type: 'Race', activityType: 'TrailRunning', status: 'Hidden' };
 }
 
 interface CreateEventDialogProps {

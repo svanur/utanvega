@@ -36,7 +36,7 @@ public class Event
 
     public EventType Type { get; set; } = EventType.Race;
     public ActivityType ActivityType { get; set; } = ActivityType.TrailRunning;
-    public EventStatus Status { get; set; } = EventStatus.Unconfirmed;
+    public EventStatus Status { get; set; } = EventStatus.Hidden;
 
     public string? OrganizerName { get; set; }
     public string? OrganizerNameEn { get; set; }
