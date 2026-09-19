@@ -1,5 +1,8 @@
-import { useState, type ReactNode } from 'react';
+import { useId, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import dayjs from 'dayjs';
 import {
   Alert,
   Box,
@@ -7,6 +10,7 @@ import {
   Chip,
   CircularProgress,
   FormControl,
+  FormHelperText,
   IconButton,
   InputLabel,
   MenuItem,
@@ -20,17 +24,29 @@ import {
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import TranslateIcon from '@mui/icons-material/Translate';
-import { useEvents, type ActivityType, type EventStatus, type EventType } from '../hooks/useEvents';
+import {
+  EVENTS_QUERY_KEY,
+  useEvents,
+  type ActivityType,
+  type EditionStatus,
+  type EventStatus,
+  type EventType,
+  type RegistrationStatus,
+} from '../hooks/useEvents';
+import { apiFetch } from '../hooks/api';
 import { useTranslate } from '../hooks/useTranslate';
 import { useBackToList } from '../hooks/useBackToList';
 import { trimToUndefined } from '../utils/strings';
+import { EDITION_STATUSES, EDITION_STATUS_LABELS, referenceDateForYear } from '../utils/eventForms';
 import BilingualTextField from '../components/BilingualTextField';
 import { BilingualLangProvider } from '../contexts/BilingualLangContext';
 import { useBilingualLang } from '../hooks/useBilingualLang';
 
-// #664: first step of the events-wizard milestone — replaces CreateEventDialog. Only the "Event
-// details" step exists here; Edition (#665) and Races (#666) steps are separate, already-blocked
-// issues, so the Stepper below deliberately renders a single step rather than placeholders.
+// #664: first step of the events-wizard milestone — replaces CreateEventDialog.
+// #665: added the second ("Edition details") step below, which creates the new event's first
+// edition inline via CreateEditionCommand — the admin no longer has to leave the wizard and open
+// EventDetailPage's EditionDialogInner just to add it. Races (#666) is a separate, already-blocked
+// issue, so the Stepper still stops at two steps rather than a placeholder third.
 
 // Mobile-first requirement (AGENTS.md Definition of Done): unlike CreateEventDialog's compact
 // size="small" controls, this is new work checked at 375px, so the Type/Activity/Status Selects
@@ -84,11 +100,25 @@ interface EventWizardPageProps {
   onNotify: (msg: ReactNode, sev?: 'success' | 'error') => void;
 }
 
-function EventDetailsStep({ onNotify }: EventWizardPageProps) {
-  const navigate = useNavigate();
+// #665: the event created by Step 1 — carried into Step 2 so it can POST the edition against the
+// right eventId and, on success, navigate to /events/{slug} the same way Step 1 used to do
+// directly before this issue.
+interface CreatedEvent {
+  id: string;
+  slug: string;
+}
+
+interface EventDetailsStepProps extends EventWizardPageProps {
+  // Lifted up to EventWizardPage (rather than owned locally) so clicking "Back" on Step 2 returns
+  // here with these values still populated instead of remounting from empty().
+  form: FormState;
+  setForm: Dispatch<SetStateAction<FormState>>;
+  onCreated: (event: CreatedEvent) => void;
+}
+
+function EventDetailsStep({ onNotify, form, setForm, onCreated }: EventDetailsStepProps) {
   const handleBackToList = useBackToList('/events');
   const { events, createEvent } = useEvents();
-  const [form, setForm] = useState<FormState>(empty());
   const [saving, setSaving] = useState(false);
   const { translate, translating } = useTranslate(msg => onNotify(msg, 'error'));
   // Which of IS/EN is currently shown in the Name BilingualTextField below — the #899
@@ -112,7 +142,7 @@ function EventDetailsStep({ onNotify }: EventWizardPageProps) {
     if (!form.name.trim()) return;
     setSaving(true);
     try {
-      const { slug } = await createEvent({
+      const { id, slug } = await createEvent({
         name: form.name.trim(),
         nameEn: trimToUndefined(form.nameEn),
         slug: trimToUndefined(form.slug),
@@ -121,7 +151,9 @@ function EventDetailsStep({ onNotify }: EventWizardPageProps) {
         status: form.status,
       });
       onNotify(`"${form.name.trim()}" created`, 'success');
-      navigate(`/events/${slug}`);
+      // #665: the event now exists — advance to Step 2 in the same page rather than navigating
+      // away, so the admin can add its first edition without leaving the wizard.
+      onCreated({ id, slug });
     } catch (err) {
       onNotify(err instanceof Error ? err.message : 'Failed to create event', 'error');
     } finally {
@@ -204,8 +236,209 @@ function EventDetailsStep({ onNotify }: EventWizardPageProps) {
   );
 }
 
+// #665: mirrors EventDetailPage's EditionFormState/emptyEditionForm(), minus TrailId and
+// needsReview — neither applies to a not-yet-created edition (EditionDialogInner already hides
+// needsReview the same way when isNew, and TrailId/PhotoGalleryManager stay dialog-only per this
+// issue's scope, reachable later from EventDetailPage once the edition exists).
+interface EditionFormState {
+  year: string;
+  date: string;
+  endDate: string;
+  title: string;
+  titleEn: string;
+  status: EditionStatus;
+  registrationStatus: RegistrationStatus;
+  registrationOpens: string;
+  registrationCloses: string;
+  registrationUrl: string;
+  resultsUrl: string;
+  notes: string;
+  notesEn: string;
+}
+
+// New editions default to Hidden, same as EventDetailPage's emptyEditionForm(). Deliberately not
+// ported: the Year-field nudge that dialog applies afterwards (shouldNudgeStatusForYear/
+// editionStatusForYear) — here Status/RegistrationStatus are submitted as-picked (or left at these
+// defaults) and CreateEditionCommand's own past-date-defaults-to-Completed logic governs instead.
+function emptyEditionForm(): EditionFormState {
+  return {
+    year: String(new Date().getFullYear()),
+    date: '', endDate: '', title: '', titleEn: '',
+    status: 'Hidden',
+    registrationStatus: 'NotStarted', registrationOpens: '', registrationCloses: '',
+    registrationUrl: '', resultsUrl: '', notes: '', notesEn: '',
+  };
+}
+
+const REGISTRATION_STATUSES: RegistrationStatus[] = ['NotStarted', 'Open', 'Closed', 'NotRequired'];
+
+interface EditionDetailsStepProps extends EventWizardPageProps {
+  eventId: string;
+  eventSlug: string;
+  onBack: () => void;
+}
+
+function EditionDetailsStep({ onNotify, eventId, eventSlug, onBack }: EditionDetailsStepProps) {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [form, setForm] = useState<EditionFormState>(emptyEditionForm());
+  const [saving, setSaving] = useState(false);
+  const registrationStatusHelperId = useId();
+
+  const set = <K extends keyof EditionFormState>(k: K, v: EditionFormState[K]) =>
+    setForm(prev => ({ ...prev, [k]: v }));
+
+  // Drives which month/year the date pickers below open on when they have no value of their own
+  // yet — same helper EditionDialogInner uses for its own four date pickers.
+  const referenceDate = referenceDateForYear(form.year);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      // Same POST shape as EditionDialogInner's handleSave (EventDetailPage.tsx) for a new
+      // edition, minus trailId (not offered here, see scope note above) — CreateEditionCommand's
+      // TrailId is optional and simply stays null when omitted.
+      const input = {
+        eventId,
+        year: form.year.trim() ? Number(form.year) : null,
+        date: form.date || null,
+        endDate: form.endDate || null,
+        title: form.title.trim() || undefined,
+        titleEn: form.titleEn.trim() || undefined,
+        registrationUrl: form.registrationUrl.trim() || undefined,
+        resultsUrl: form.resultsUrl.trim() || undefined,
+        notes: form.notes.trim() || undefined,
+        notesEn: form.notesEn.trim() || undefined,
+        registrationStatus: form.registrationStatus,
+        registrationOpens: form.registrationOpens || null,
+        registrationCloses: form.registrationCloses || null,
+        status: form.status,
+      };
+      await apiFetch(`/api/v1/admin/events/${eventId}/editions`, {
+        method: 'POST', body: JSON.stringify(input),
+      });
+      // The events list's editionCount/nextEditionDate would otherwise stay stale until its own
+      // 30s staleTime lapses — invalidate it now, same as useEvents().createEdition does.
+      await queryClient.invalidateQueries({ queryKey: EVENTS_QUERY_KEY });
+      onNotify('Edition created', 'success');
+      navigate(`/events/${eventSlug}`);
+    } catch (err) {
+      onNotify(err instanceof Error ? err.message : 'Failed to create edition', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // #665: the Event created in Step 1 is a real, already-persisted record — Cancel here only
+  // abandons the not-yet-created edition, so it lands on the event's own detail page (where the
+  // admin can see the event exists with no editions yet) rather than the generic events list.
+  const handleCancel = () => navigate(`/events/${eventSlug}`);
+
+  const registrationDatesSet = !!form.registrationOpens && !!form.registrationCloses;
+
+  return (
+    <Box sx={{ maxWidth: 640 }}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+        <Typography variant="h6">Edition details</Typography>
+        <LangToggleButton />
+      </Stack>
+
+      <Stack spacing={2.5}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' }, gap: 1.5 }}>
+          <TextField
+            size="small" fullWidth label="Year" type="number" value={form.year}
+            inputProps={{ min: 1900, max: 2100 }}
+            onChange={e => set('year', e.target.value)}
+            sx={{ '& .MuiOutlinedInput-root': TOUCH_TARGET_SX }}
+          />
+          <DatePicker label="Start date"
+            value={form.date ? dayjs(form.date) : null}
+            onChange={v => set('date', v ? v.format('YYYY-MM-DD') : '')}
+            referenceDate={referenceDate}
+            slotProps={{ textField: { size: 'small', fullWidth: true, sx: { '& .MuiOutlinedInput-root': TOUCH_TARGET_SX } } }} />
+          <DatePicker label="End date (multi-day)"
+            value={form.endDate ? dayjs(form.endDate) : null}
+            onChange={v => set('endDate', v ? v.format('YYYY-MM-DD') : '')}
+            referenceDate={referenceDate}
+            slotProps={{ textField: { size: 'small', fullWidth: true, sx: { '& .MuiOutlinedInput-root': TOUCH_TARGET_SX } } }} />
+        </Box>
+
+        <BilingualTextField
+          size="small" fullWidth label="Title"
+          valueIs={form.title} valueEn={form.titleEn}
+          onChangeIs={v => set('title', v)} onChangeEn={v => set('titleEn', v)}
+        />
+
+        <FormControl size="small" fullWidth sx={{ '& .MuiOutlinedInput-root': TOUCH_TARGET_SX }}>
+          <InputLabel>Status</InputLabel>
+          <Select value={form.status} label="Status" onChange={e => set('status', e.target.value as EditionStatus)}>
+            {EDITION_STATUSES.map(s => <MenuItem key={s} value={s}>{EDITION_STATUS_LABELS[s]}</MenuItem>)}
+          </Select>
+        </FormControl>
+
+        <Typography
+          variant="caption" fontWeight={600} letterSpacing={0.6}
+          textTransform="uppercase" color="text.secondary"
+          sx={{ display: 'block' }}
+        >
+          Registration
+        </Typography>
+
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
+          <DatePicker label="Registration opens"
+            value={form.registrationOpens ? dayjs(form.registrationOpens) : null}
+            onChange={v => set('registrationOpens', v ? v.format('YYYY-MM-DD') : '')}
+            referenceDate={referenceDate}
+            slotProps={{ textField: { size: 'small', fullWidth: true, sx: { '& .MuiOutlinedInput-root': TOUCH_TARGET_SX } } }} />
+          <DatePicker label="Registration closes"
+            value={form.registrationCloses ? dayjs(form.registrationCloses) : null}
+            onChange={v => set('registrationCloses', v ? v.format('YYYY-MM-DD') : '')}
+            referenceDate={referenceDate}
+            slotProps={{ textField: { size: 'small', fullWidth: true, sx: { '& .MuiOutlinedInput-root': TOUCH_TARGET_SX } } }} />
+        </Box>
+
+        <FormControl size="small" fullWidth disabled={registrationDatesSet} sx={{ '& .MuiOutlinedInput-root': TOUCH_TARGET_SX }}>
+          <InputLabel>Registration status</InputLabel>
+          <Select value={form.registrationStatus} label="Registration status"
+            onChange={e => set('registrationStatus', e.target.value as RegistrationStatus)}
+            aria-describedby={registrationDatesSet ? registrationStatusHelperId : undefined}>
+            {REGISTRATION_STATUSES.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+          </Select>
+          {registrationDatesSet && (
+            <FormHelperText id={registrationStatusHelperId}>Computed automatically from Registration opens/closes</FormHelperText>
+          )}
+        </FormControl>
+
+        <TextField size="small" fullWidth label="Registration URL" value={form.registrationUrl}
+          onChange={e => set('registrationUrl', e.target.value)} />
+        <TextField size="small" fullWidth label="Results URL" value={form.resultsUrl}
+          onChange={e => set('resultsUrl', e.target.value)} />
+
+        <BilingualTextField
+          size="small" fullWidth label="Edition description" multiline rows={2}
+          valueIs={form.notes} valueEn={form.notesEn}
+          onChangeIs={v => set('notes', v)} onChangeEn={v => set('notesEn', v)}
+        />
+      </Stack>
+
+      <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1} sx={{ mt: 3 }}>
+        <Button onClick={onBack} disabled={saving} sx={TOUCH_TARGET_SX}>Back</Button>
+        <Stack direction="row" spacing={1}>
+          <Button onClick={handleCancel} disabled={saving} sx={TOUCH_TARGET_SX}>Cancel</Button>
+          <Button variant="contained" disabled={saving} onClick={() => void handleSave()} sx={TOUCH_TARGET_SX}>
+            {saving ? <CircularProgress size={18} /> : 'Create Edition'}
+          </Button>
+        </Stack>
+      </Stack>
+    </Box>
+  );
+}
+
 export default function EventWizardPage({ onNotify }: EventWizardPageProps) {
   const handleBackToList = useBackToList('/events');
+  const [activeStep, setActiveStep] = useState(0);
+  const [eventForm, setEventForm] = useState<FormState>(empty());
+  const [createdEvent, setCreatedEvent] = useState<CreatedEvent | null>(null);
 
   return (
     <BilingualLangProvider>
@@ -217,13 +450,31 @@ export default function EventWizardPage({ onNotify }: EventWizardPageProps) {
           <Typography variant="h5">New Event</Typography>
         </Stack>
 
-        <Stepper activeStep={0} sx={{ mb: 3, maxWidth: 640 }}>
+        <Stepper activeStep={activeStep} sx={{ mb: 3, maxWidth: 640 }}>
           <Step>
             <StepLabel>Event details</StepLabel>
           </Step>
+          <Step>
+            <StepLabel>Edition details</StepLabel>
+          </Step>
         </Stepper>
 
-        <EventDetailsStep onNotify={onNotify} />
+        {activeStep === 0 && (
+          <EventDetailsStep
+            onNotify={onNotify}
+            form={eventForm}
+            setForm={setEventForm}
+            onCreated={event => { setCreatedEvent(event); setActiveStep(1); }}
+          />
+        )}
+        {activeStep === 1 && createdEvent && (
+          <EditionDetailsStep
+            onNotify={onNotify}
+            eventId={createdEvent.id}
+            eventSlug={createdEvent.slug}
+            onBack={() => setActiveStep(0)}
+          />
+        )}
       </Box>
     </BilingualLangProvider>
   );
