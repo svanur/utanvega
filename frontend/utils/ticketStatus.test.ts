@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { groupDistances, type DistanceEntry } from './ticketStatus';
+import { groupDistances, hasRegistrationClosed, type DistanceEntry } from './ticketStatus';
 
 describe('groupDistances', () => {
     it('keeps elevationGain/terrainType when two entries sharing a label agree', () => {
@@ -100,5 +100,38 @@ describe('groupDistances', () => {
             { label: '10 km', ticketStatus: null },
         ]);
         expect(nullStaysNullWithoutEscalation[0].ticketStatus).toBeNull();
+    });
+});
+
+describe('hasRegistrationClosed', () => {
+    it('returns false when registrationCloses is null', () => {
+        expect(hasRegistrationClosed(null, new Date('2026-01-01T00:00:00Z'))).toBe(false);
+    });
+
+    it('returns false when registrationCloses is undefined', () => {
+        expect(hasRegistrationClosed(undefined, new Date('2026-01-01T00:00:00Z'))).toBe(false);
+    });
+
+    it('returns false when now is still on the same UTC calendar day as registrationCloses', () => {
+        // The closes-date stays open through its full 24 hours — checking late in the day must not
+        // read as closed yet.
+        const now = new Date('2026-03-10T23:59:59.999Z');
+        expect(hasRegistrationClosed('2026-03-10T00:00:00Z', now)).toBe(false);
+    });
+
+    it('returns true when now is exactly at UTC midnight of the day after registrationCloses', () => {
+        // The cutoff is the start of the *next* day, not the raw registrationCloses instant.
+        const now = new Date('2026-03-11T00:00:00.000Z');
+        expect(hasRegistrationClosed('2026-03-10T00:00:00Z', now)).toBe(true);
+    });
+
+    it('returns false one millisecond before the cutoff', () => {
+        const now = new Date('2026-03-10T23:59:59.999Z');
+        expect(hasRegistrationClosed('2026-03-10T00:00:00Z', now)).toBe(false);
+    });
+
+    it('returns true when now is well after the cutoff', () => {
+        const now = new Date('2026-03-15T12:00:00Z');
+        expect(hasRegistrationClosed('2026-03-10T00:00:00Z', now)).toBe(true);
     });
 });
