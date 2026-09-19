@@ -320,6 +320,7 @@ function EditionDetailsStep({ onNotify, eventId, eventSlug, form, setForm, onBac
   const { createEdition, updateEdition } = useEvents();
   const [saving, setSaving] = useState(false);
   const registrationStatusHelperId = useId();
+  const editionStatusHelperId = useId();
   const isEdit = editionId !== undefined;
 
   const set = <K extends keyof EditionFormState>(k: K, v: EditionFormState[K]) =>
@@ -414,9 +415,25 @@ function EditionDetailsStep({ onNotify, eventId, eventSlug, form, setForm, onBac
 
         <FormControl size="small" fullWidth sx={{ '& .MuiOutlinedInput-root': TOUCH_TARGET_SX }}>
           <InputLabel>Status</InputLabel>
-          <Select value={form.status} label="Status" onChange={e => set('status', e.target.value as EditionStatus)}>
-            {EDITION_STATUSES.map(s => <MenuItem key={s} value={s}>{EDITION_STATUS_LABELS[s]}</MenuItem>)}
+          <Select value={form.status} label="Status" onChange={e => set('status', e.target.value as EditionStatus)}
+            aria-describedby={isEdit && form.status !== 'Cancelled' && form.status !== 'Completed' ? editionStatusHelperId : undefined}>
+            {EDITION_STATUSES.map(s => (
+              // #942 (AGENTS.md "an action with consequences beyond the field it names is not a
+              // field edit"): mirrors EditionDialogInner's guard on EventDetailPage.tsx — Cancelled/
+              // Completed cascade to this edition's races via the backend's CancelWithRaces()/
+              // CompleteWithRaces(), so once the edition is real (isEdit, reached by coming Back
+              // from Step 3) they must not be landable on via a bare Save here. A brand-new,
+              // not-yet-created edition has no races yet to cascade to, so both stay open on the
+              // first (create) visit. Keep the option disabled (when isEdit) unless it's already the
+              // current value, so the Select still renders it instead of showing blank.
+              <MenuItem key={s} value={s} disabled={isEdit && (s === 'Cancelled' || s === 'Completed') && s !== form.status}>
+                {EDITION_STATUS_LABELS[s]}
+              </MenuItem>
+            ))}
           </Select>
+          {isEdit && form.status !== 'Cancelled' && form.status !== 'Completed' && (
+            <FormHelperText id={editionStatusHelperId}>Use the ✓/✕ icons on this edition&apos;s row on the event&apos;s detail page to complete or cancel it.</FormHelperText>
+          )}
         </FormControl>
 
         <Typography
