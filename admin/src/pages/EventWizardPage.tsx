@@ -5,8 +5,10 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
+  Checkbox,
   Chip,
   CircularProgress,
   FormControl,
@@ -23,6 +25,9 @@ import {
   Typography,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import CheckBoxIcon from '@mui/icons-material/CheckBox';
+import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
+import DeleteIcon from '@mui/icons-material/Delete';
 import TranslateIcon from '@mui/icons-material/Translate';
 import {
   EVENTS_QUERY_KEY,
@@ -34,10 +39,11 @@ import {
   type RegistrationStatus,
 } from '../hooks/useEvents';
 import { apiFetch } from '../hooks/api';
+import { useTrails, type Trail } from '../hooks/useTrails';
 import { useTranslate } from '../hooks/useTranslate';
 import { useBackToList } from '../hooks/useBackToList';
 import { trimToUndefined } from '../utils/strings';
-import { EDITION_STATUSES, EDITION_STATUS_LABELS, referenceDateForYear } from '../utils/eventForms';
+import { buildRaceSavePayload, createEmptyRaceForm, EDITION_STATUSES, EDITION_STATUS_LABELS, referenceDateForYear } from '../utils/eventForms';
 import BilingualTextField from '../components/BilingualTextField';
 import { BilingualLangProvider } from '../contexts/BilingualLangContext';
 import { useBilingualLang } from '../hooks/useBilingualLang';
@@ -45,13 +51,39 @@ import { useBilingualLang } from '../hooks/useBilingualLang';
 // #664: first step of the events-wizard milestone — replaces CreateEventDialog.
 // #665: added the second ("Edition details") step below, which creates the new event's first
 // edition inline via CreateEditionCommand — the admin no longer has to leave the wizard and open
-// EventDetailPage's EditionDialogInner just to add it. Races (#666) is a separate, already-blocked
-// issue, so the Stepper still stops at two steps rather than a placeholder third.
+// EventDetailPage's EditionDialogInner just to add it.
+// #666: added the third ("Races") step below, so races can be batch-created against the trail
+// list inline too, rather than requiring a trip to the per-race RaceFormCard on EventDetailPage
+// once per race.
 
 // Mobile-first requirement (AGENTS.md Definition of Done): unlike CreateEventDialog's compact
 // size="small" controls, this is new work checked at 375px, so the Type/Activity/Status Selects
 // and the action buttons are bumped to the 44px touch-target minimum below.
 const TOUCH_TARGET_SX = { minHeight: 44 };
+
+// #666: RacesStep's trail multi-select needs the same Icelandic-aware fuzzy match
+// AdminSpotlightSearch.tsx already has — copied rather than extracted into a shared util per this
+// issue's explicit scope (dedupe is a separate, deliberate follow-up, not incidental cleanup here).
+function normalizeIcelandic(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/á/g, 'a').replace(/é/g, 'e').replace(/í/g, 'i')
+    .replace(/ó/g, 'o').replace(/ú/g, 'u').replace(/ý/g, 'y')
+    .replace(/ð/g, 'd').replace(/þ/g, 'th').replace(/æ/g, 'ae')
+    .replace(/ö/g, 'o');
+}
+
+function scoreMatch(query: string, name: string, slug: string): number {
+  const q = normalizeIcelandic(query);
+  const n = normalizeIcelandic(name);
+  const s = slug.toLowerCase();
+  if (n === q || s === q) return 100;
+  if (n.startsWith(q) || s.startsWith(q)) return 80;
+  const words = n.split(/\s+/);
+  if (words.some(w => w.startsWith(q))) return 60;
+  if (n.includes(q) || s.includes(q)) return 40;
+  return 0;
+}
 
 function LangToggleButton() {
   const { lang, toggle } = useBilingualLang();
@@ -272,13 +304,23 @@ function emptyEditionForm(): EditionFormState {
 
 const REGISTRATION_STATUSES: RegistrationStatus[] = ['NotStarted', 'Open', 'Closed', 'NotRequired'];
 
+// #666: the edition created here — carried into Step 3 (Races) so it can create races against the
+// right editionId and so createEmptyRaceForm can mirror CreateRaceCommand's Completed-edition ->
+// Completed/Closed override without re-fetching the edition it was just created from.
+interface CreatedEdition {
+  id: string;
+  status: EditionStatus;
+  year: string;
+}
+
 interface EditionDetailsStepProps extends EventWizardPageProps {
   eventId: string;
   eventSlug: string;
   onBack: () => void;
+  onCreated: (edition: CreatedEdition) => void;
 }
 
-function EditionDetailsStep({ onNotify, eventId, eventSlug, onBack }: EditionDetailsStepProps) {
+function EditionDetailsStep({ onNotify, eventId, eventSlug, onBack, onCreated }: EditionDetailsStepProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [form, setForm] = useState<EditionFormState>(emptyEditionForm());
@@ -314,14 +356,16 @@ function EditionDetailsStep({ onNotify, eventId, eventSlug, onBack }: EditionDet
         registrationCloses: form.registrationCloses || null,
         status: form.status,
       };
-      await apiFetch(`/api/v1/admin/events/${eventId}/editions`, {
+      const { id } = await apiFetch<{ id: string }>(`/api/v1/admin/events/${eventId}/editions`, {
         method: 'POST', body: JSON.stringify(input),
       });
       // The events list's editionCount/nextEditionDate would otherwise stay stale until its own
       // 30s staleTime lapses — invalidate it now, same as useEvents().createEdition does.
       await queryClient.invalidateQueries({ queryKey: EVENTS_QUERY_KEY });
       onNotify('Edition created', 'success');
-      navigate(`/events/${eventSlug}`);
+      // #666: the edition now exists — advance to Step 3 (Races) rather than navigating away
+      // directly, mirroring EventDetailsStep's own onCreated(event) advance into this step.
+      onCreated({ id, status: form.status, year: form.year });
     } catch (err) {
       onNotify(err instanceof Error ? err.message : 'Failed to create edition', 'error');
     } finally {
@@ -434,11 +478,190 @@ function EditionDetailsStep({ onNotify, eventId, eventSlug, onBack }: EditionDet
   );
 }
 
+// #666: third and final wizard step — races are batch-created against existing trails, rather
+// than the admin having to open the standalone RaceFormCard once per race on EventDetailPage.
+// Only trailId/name/sortOrder are seeded here (see createEmptyRaceForm for the rest of the
+// Completed-edition-aware defaults) — fine-tuning any of that stays on RaceFormCard afterwards.
+interface AddedRace {
+  id: string;
+  name: string;
+}
+
+interface RacesStepProps extends EventWizardPageProps {
+  eventSlug: string;
+  editionId: string;
+  editionStatus: EditionStatus;
+  editionYear: string;
+}
+
+function RacesStep({ onNotify, eventSlug, editionId, editionStatus, editionYear }: RacesStepProps) {
+  const navigate = useNavigate();
+  const { trails } = useTrails();
+  const { createRace, deleteRace, refresh } = useEvents();
+  const [selectedTrails, setSelectedTrails] = useState<Trail[]>([]);
+  const [addedRaces, setAddedRaces] = useState<AddedRace[]>([]);
+  const [adding, setAdding] = useState(false);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+
+  // Same status filter RaceFormCard's own Trail Autocomplete applies — Draft/Flagged/Archived
+  // trails aren't meant to be attached to a race yet.
+  const selectableTrails = trails.filter(t => t.status === 'Published' || t.status === 'EventOnly');
+
+  const handleAddRaces = async () => {
+    if (selectedTrails.length === 0) return;
+    setAdding(true);
+    try {
+      // #666: sortOrder increments from however many races already exist under this edition —
+      // always 0 at wizard start, but addedRaces.length keeps a second "Add races" click in the
+      // same session from restarting at 0 too.
+      const results = await Promise.allSettled(
+        selectedTrails.map((trail, i) => {
+          const form = { ...createEmptyRaceForm(editionId, addedRaces.length + i, editionStatus), trailId: trail.id, name: trail.name };
+          return createRace(buildRaceSavePayload(form)).then(id => ({ id, trail }));
+        }),
+      );
+      const succeeded = results
+        .filter((r): r is PromiseFulfilledResult<{ id: string; trail: Trail }> => r.status === 'fulfilled')
+        .map(r => r.value);
+      const failed = results.length - succeeded.length;
+
+      if (succeeded.length > 0) {
+        setAddedRaces(prev => [...prev, ...succeeded.map(s => ({ id: s.id, name: s.trail.name }))]);
+        const succeededIds = new Set(succeeded.map(s => s.trail.id));
+        setSelectedTrails(prev => prev.filter(t => !succeededIds.has(t.id)));
+      }
+
+      // #666: partial-failure notify pattern mirrors EventDetailPage.tsx's clone-edition
+      // Promise.allSettled handling — the successful creates are never rolled back.
+      if (failed > 0) {
+        onNotify(`${failed}/${results.length} race${results.length === 1 ? '' : 's'} failed to add`, 'error');
+      } else {
+        onNotify(`${succeeded.length} race${succeeded.length === 1 ? '' : 's'} added`, 'success');
+      }
+      // createRace doesn't invalidate the cache itself — refresh so the events list (and
+      // EventDetailPage, once Finish navigates there) don't show a stale race count.
+      await refresh();
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const handleRemove = async (race: AddedRace) => {
+    setRemovingId(race.id);
+    try {
+      await deleteRace(race.id);
+      setAddedRaces(prev => prev.filter(r => r.id !== race.id));
+      await refresh();
+      onNotify('Race removed', 'success');
+    } catch (err) {
+      onNotify(err instanceof Error ? err.message : 'Failed to remove race', 'error');
+    } finally {
+      setRemovingId(null);
+    }
+  };
+
+  const handleFinish = () => navigate(`/events/${eventSlug}`);
+
+  return (
+    <Box sx={{ maxWidth: 640 }}>
+      <Typography variant="h6" sx={{ mb: 2 }}>
+        Races{editionYear.trim() ? ` — ${editionYear.trim()} edition` : ''}
+      </Typography>
+
+      <Autocomplete
+        multiple
+        disableCloseOnSelect
+        options={selectableTrails}
+        value={selectedTrails}
+        onChange={(_e, value) => setSelectedTrails(value)}
+        getOptionLabel={t => t.name}
+        isOptionEqualToValue={(o, v) => o.id === v.id}
+        filterOptions={(options, state) => {
+          const query = state.inputValue.trim();
+          if (!query) return options;
+          return options
+            .map(o => ({ o, score: scoreMatch(query, o.name, o.slug) }))
+            .filter(x => x.score > 0)
+            .sort((a, b) => b.score - a.score)
+            .map(x => x.o);
+        }}
+        renderOption={(props, option, { selected }) => {
+          const { key, ...rest } = props;
+          return (
+            <Box component="li" key={key} {...rest} sx={{ ...TOUCH_TARGET_SX, display: 'flex', alignItems: 'center' }}>
+              <Checkbox
+                icon={<CheckBoxOutlineBlankIcon fontSize="small" />}
+                checkedIcon={<CheckBoxIcon fontSize="small" />}
+                checked={selected}
+                sx={{ mr: 1 }}
+              />
+              {option.name} ({(option.length / 1000).toFixed(1)} km)
+            </Box>
+          );
+        }}
+        renderTags={(value, getTagProps) => value.map((trail, index) => {
+          const { key, ...rest } = getTagProps({ index });
+          return <Chip key={key} label={trail.name} {...rest} sx={{ minHeight: 32 }} />;
+        })}
+        renderInput={params => (
+          <TextField {...params} label="Search trails to add" placeholder="Type a trail name…"
+            sx={{ '& .MuiOutlinedInput-root': TOUCH_TARGET_SX }} />
+        )}
+        sx={{ mb: 2 }}
+      />
+
+      <Stack direction="row" justifyContent="flex-end" sx={{ mb: 3 }}>
+        <Button
+          variant="contained"
+          disabled={selectedTrails.length === 0 || adding}
+          onClick={() => void handleAddRaces()}
+          sx={TOUCH_TARGET_SX}
+        >
+          {adding
+            ? <CircularProgress size={18} />
+            : `Add ${selectedTrails.length} race${selectedTrails.length === 1 ? '' : 's'}`}
+        </Button>
+      </Stack>
+
+      {addedRaces.length > 0 && (
+        <>
+          <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+            Added this session
+          </Typography>
+          <Stack spacing={1} sx={{ mb: 3 }}>
+            {addedRaces.map(race => (
+              <Stack
+                key={race.id} direction="row" justifyContent="space-between" alignItems="center"
+                sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, px: 1.5, py: 0.5 }}
+              >
+                <Typography variant="body2">{race.name}</Typography>
+                <IconButton
+                  aria-label={`Remove ${race.name}`}
+                  onClick={() => void handleRemove(race)}
+                  disabled={removingId === race.id}
+                  sx={{ minWidth: 44, minHeight: 44 }}
+                >
+                  {removingId === race.id ? <CircularProgress size={16} /> : <DeleteIcon fontSize="small" />}
+                </IconButton>
+              </Stack>
+            ))}
+          </Stack>
+        </>
+      )}
+
+      <Stack direction="row" justifyContent="flex-end" sx={{ mt: 3 }}>
+        <Button variant="contained" onClick={handleFinish} sx={TOUCH_TARGET_SX}>Finish</Button>
+      </Stack>
+    </Box>
+  );
+}
+
 export default function EventWizardPage({ onNotify }: EventWizardPageProps) {
   const handleBackToList = useBackToList('/events');
   const [activeStep, setActiveStep] = useState(0);
   const [eventForm, setEventForm] = useState<FormState>(empty());
   const [createdEvent, setCreatedEvent] = useState<CreatedEvent | null>(null);
+  const [createdEdition, setCreatedEdition] = useState<CreatedEdition | null>(null);
 
   return (
     <BilingualLangProvider>
@@ -457,6 +680,9 @@ export default function EventWizardPage({ onNotify }: EventWizardPageProps) {
           <Step>
             <StepLabel>Edition details</StepLabel>
           </Step>
+          <Step>
+            <StepLabel>Races</StepLabel>
+          </Step>
         </Stepper>
 
         {activeStep === 0 && (
@@ -473,6 +699,16 @@ export default function EventWizardPage({ onNotify }: EventWizardPageProps) {
             eventId={createdEvent.id}
             eventSlug={createdEvent.slug}
             onBack={() => setActiveStep(0)}
+            onCreated={edition => { setCreatedEdition(edition); setActiveStep(2); }}
+          />
+        )}
+        {activeStep === 2 && createdEvent && createdEdition && (
+          <RacesStep
+            onNotify={onNotify}
+            eventSlug={createdEvent.slug}
+            editionId={createdEdition.id}
+            editionStatus={createdEdition.status}
+            editionYear={createdEdition.year}
           />
         )}
       </Box>
