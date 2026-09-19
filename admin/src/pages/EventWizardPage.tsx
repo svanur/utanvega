@@ -300,14 +300,18 @@ interface CreatedEdition {
 interface EditionDetailsStepProps extends EventWizardPageProps {
   eventId: string;
   eventSlug: string;
+  // Lifted up to EventWizardPage (rather than owned locally) so clicking "Back" here to Step 1
+  // and then forward again shows these values still populated instead of remounting from
+  // emptyEditionForm() — mirrors EventDetailsStepProps' form/setForm above (#940).
+  form: EditionFormState;
+  setForm: Dispatch<SetStateAction<EditionFormState>>;
   onBack: () => void;
   onCreated: (edition: CreatedEdition) => void;
 }
 
-function EditionDetailsStep({ onNotify, eventId, eventSlug, onBack, onCreated }: EditionDetailsStepProps) {
+function EditionDetailsStep({ onNotify, eventId, eventSlug, form, setForm, onBack, onCreated }: EditionDetailsStepProps) {
   const navigate = useNavigate();
   const { createEdition } = useEvents();
-  const [form, setForm] = useState<EditionFormState>(emptyEditionForm());
   const [saving, setSaving] = useState(false);
   const registrationStatusHelperId = useId();
 
@@ -640,6 +644,7 @@ export default function EventWizardPage({ onNotify }: EventWizardPageProps) {
   const handleBackToList = useBackToList('/events');
   const [activeStep, setActiveStep] = useState(0);
   const [eventForm, setEventForm] = useState<FormState>(empty());
+  const [editionForm, setEditionForm] = useState<EditionFormState>(emptyEditionForm());
   const [createdEvent, setCreatedEvent] = useState<CreatedEvent | null>(null);
   const [createdEdition, setCreatedEdition] = useState<CreatedEdition | null>(null);
 
@@ -678,6 +683,8 @@ export default function EventWizardPage({ onNotify }: EventWizardPageProps) {
             onNotify={onNotify}
             eventId={createdEvent.id}
             eventSlug={createdEvent.slug}
+            form={editionForm}
+            setForm={setEditionForm}
             onBack={() => setActiveStep(0)}
             onCreated={edition => { setCreatedEdition(edition); setActiveStep(2); }}
           />
