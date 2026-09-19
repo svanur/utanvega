@@ -1,6 +1,5 @@
 import { useId, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 import {
@@ -30,7 +29,6 @@ import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
 import DeleteIcon from '@mui/icons-material/Delete';
 import TranslateIcon from '@mui/icons-material/Translate';
 import {
-  EVENTS_QUERY_KEY,
   useEvents,
   type ActivityType,
   type EditionStatus,
@@ -38,7 +36,6 @@ import {
   type EventType,
   type RegistrationStatus,
 } from '../hooks/useEvents';
-import { apiFetch } from '../hooks/api';
 import { useTrails, type Trail } from '../hooks/useTrails';
 import { useTranslate } from '../hooks/useTranslate';
 import { useBackToList } from '../hooks/useBackToList';
@@ -309,7 +306,7 @@ interface EditionDetailsStepProps extends EventWizardPageProps {
 
 function EditionDetailsStep({ onNotify, eventId, eventSlug, onBack, onCreated }: EditionDetailsStepProps) {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const { createEdition } = useEvents();
   const [form, setForm] = useState<EditionFormState>(emptyEditionForm());
   const [saving, setSaving] = useState(false);
   const registrationStatusHelperId = useId();
@@ -327,7 +324,7 @@ function EditionDetailsStep({ onNotify, eventId, eventSlug, onBack, onCreated }:
       // Same POST shape as EditionDialogInner's handleSave (EventDetailPage.tsx) for a new
       // edition, minus trailId (not offered here, see scope note above) — CreateEditionCommand's
       // TrailId is optional and simply stays null when omitted.
-      const input = {
+      const id = await createEdition({
         eventId,
         year: form.year.trim() ? Number(form.year) : null,
         date: form.date || null,
@@ -342,13 +339,9 @@ function EditionDetailsStep({ onNotify, eventId, eventSlug, onBack, onCreated }:
         registrationOpens: form.registrationOpens || null,
         registrationCloses: form.registrationCloses || null,
         status: form.status,
-      };
-      const { id } = await apiFetch<{ id: string }>(`/api/v1/admin/events/${eventId}/editions`, {
-        method: 'POST', body: JSON.stringify(input),
       });
-      // The events list's editionCount/nextEditionDate would otherwise stay stale until its own
-      // 30s staleTime lapses — invalidate it now, same as useEvents().createEdition does.
-      await queryClient.invalidateQueries({ queryKey: EVENTS_QUERY_KEY });
+      // useEvents().createEdition already invalidates the events list (editionCount/
+      // nextEditionDate), which would otherwise stay stale until its own 30s staleTime lapses.
       onNotify('Edition created', 'success');
       // #666: the edition now exists — advance to Step 3 (Races) rather than navigating away
       // directly, mirroring EventDetailsStep's own onCreated(event) advance into this step.
