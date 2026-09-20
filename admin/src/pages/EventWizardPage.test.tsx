@@ -1,10 +1,15 @@
 // @vitest-environment jsdom
+import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
-import { RacesStep } from './EventWizardPage';
-import type { EventDetailDto, RaceDto } from '../hooks/useEvents';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { EditionDetailsStep, RacesStep } from './EventWizardPage';
+import { BilingualLangProvider } from '../contexts/BilingualLangContext';
+import { EDITION_STATUS_LABELS } from '../utils/eventForms';
+import type { EditionStatus, EventDetailDto, RaceDto, RegistrationStatus } from '../hooks/useEvents';
 
 // #953 round 2: round 1's fix (PR #961) seeded RacesStep's "Added this session" list by reading
 // useEventDetail's reactive `detail` value directly. That query has a 30s staleTime
@@ -187,5 +192,141 @@ describe('RacesStep — added-races seed survives a fast Step 3 -> 2 -> 3 round 
 
     await waitFor(() => expect(screen.getByText('Added this session')).toBeTruthy());
     expect(screen.getByText(RACE_NAME)).toBeTruthy();
+  });
+});
+
+// #956: eventForms.test.ts unit-tests titleSyncForYear/editionStatusForYear/shouldNudgeStatusForYear
+// in isolation, but its own header comment flags that the "don't re-fire once manually overridden"
+// gating "lives alongside [the] form state (a ref) and isn't unit-testable at this layer." These
+// tests mount EditionDetailsStep itself and drive its real Year TextField/Status/Registration
+// status Selects, to prove the onChange handler actually wires those three pure helpers together
+// with statusManuallySetRef correctly — not just that the helpers are individually correct.
+interface HarnessEditionForm {
+  year: string;
+  date: string;
+  endDate: string;
+  title: string;
+  titleEn: string;
+  status: EditionStatus;
+  registrationStatus: RegistrationStatus;
+  registrationOpens: string;
+  registrationCloses: string;
+  registrationUrl: string;
+  resultsUrl: string;
+  notes: string;
+  notesEn: string;
+}
+
+function emptyHarnessForm(): HarnessEditionForm {
+  return {
+    year: '', date: '', endDate: '', title: '', titleEn: '',
+    status: 'Hidden', registrationStatus: 'NotStarted',
+    registrationOpens: '', registrationCloses: '',
+    registrationUrl: '', resultsUrl: '', notes: '', notesEn: '',
+  };
+}
+
+// Owns form/setForm itself (rather than lifting it, the way EventWizardPage's own default export
+// does for its real Step 1/2/3) — EditionDetailsStep's props only require a controlled form plus a
+// setter, so a small harness reproducing that contract is enough to exercise the real onChange
+// without having to drive Step 1 first just to reach Step 2.
+function EditionDetailsStepHarness({ editionId }: { editionId?: string }) {
+  const [form, setForm] = useState<HarnessEditionForm>(emptyHarnessForm());
+  return (
+    <EditionDetailsStep
+      onNotify={() => {}}
+      eventId="event-1"
+      eventSlug={EVENT_SLUG}
+      form={form}
+      setForm={setForm}
+      onBack={() => {}}
+      onCreated={() => {}}
+      editionId={editionId}
+    />
+  );
+}
+
+function renderEditionDetailsStep(editionId?: string) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <LocalizationProvider dateAdapter={AdapterDayjs}>
+          <BilingualLangProvider>
+            <EditionDetailsStepHarness editionId={editionId} />
+          </BilingualLangProvider>
+        </LocalizationProvider>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
+// EditionDetailsStep renders exactly two MUI Selects (Status, then Registration status) — neither
+// is wired to its InputLabel via an explicit `labelId` prop (EventWizardPage.tsx), so they aren't
+// reachable via getByLabelText the way a plain TextField is; DOM order is the stable handle instead.
+function getStatusCombobox() {
+  return screen.getAllByRole('combobox')[0];
+}
+function getRegistrationStatusCombobox() {
+  return screen.getAllByRole('combobox')[1];
+}
+
+function chooseMenuOption(combobox: HTMLElement, optionText: string) {
+  fireEvent.mouseDown(combobox);
+  const listbox = screen.getByRole('listbox');
+  fireEvent.click(within(listbox).getByText(optionText));
+}
+
+describe('EditionDetailsStep — Year field wiring', () => {
+  afterEach(cleanup);
+
+  it('auto-fills Title/TitleEn from the Year field while Title is still empty', () => {
+    renderEditionDetailsStep();
+    const futureYear = String(new Date().getFullYear() + 5);
+
+    fireEvent.change(screen.getByLabelText('Year'), { target: { value: futureYear } });
+
+    expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe(futureYear);
+
+    // Title/TitleEn are the same BilingualTextField toggled by the shared IS/EN chip — switch to
+    // EN to prove titleEn was synced too, not just the currently-visible IS field.
+    fireEvent.click(screen.getAllByText('EN')[0]);
+    expect((screen.getByLabelText('Title (EN)') as HTMLInputElement).value).toBe(futureYear);
+  });
+
+  it('nudges Status/Registration status into the completed bucket for a past year on a first (non-edit) visit', () => {
+    renderEditionDetailsStep(); // no editionId -> isEdit === false
+    const pastYear = String(new Date().getFullYear() - 5);
+
+    fireEvent.change(screen.getByLabelText('Year'), { target: { value: pastYear } });
+
+    expect(getStatusCombobox().textContent).toBe(EDITION_STATUS_LABELS.Completed);
+    expect(getRegistrationStatusCombobox().textContent).toBe('Closed');
+  });
+
+  it('does not clobber a manually-set Status when Year is edited again afterwards', () => {
+    renderEditionDetailsStep();
+    chooseMenuOption(getStatusCombobox(), EDITION_STATUS_LABELS.Active);
+    expect(getStatusCombobox().textContent).toBe(EDITION_STATUS_LABELS.Active);
+
+    const pastYear = String(new Date().getFullYear() - 5);
+    fireEvent.change(screen.getByLabelText('Year'), { target: { value: pastYear } });
+
+    // Both nudged fields are gated by the same statusManuallySetRef, so a manual Status change
+    // must also keep Registration status at its untouched initial value, not just Status itself.
+    expect(getStatusCombobox().textContent).toBe(EDITION_STATUS_LABELS.Active);
+    expect(getRegistrationStatusCombobox().textContent).toBe('NotStarted');
+  });
+
+  it('does not clobber a manually-set Registration status when Year is edited again afterwards', () => {
+    renderEditionDetailsStep();
+    chooseMenuOption(getRegistrationStatusCombobox(), 'Open');
+    expect(getRegistrationStatusCombobox().textContent).toBe('Open');
+
+    const pastYear = String(new Date().getFullYear() - 5);
+    fireEvent.change(screen.getByLabelText('Year'), { target: { value: pastYear } });
+
+    expect(getRegistrationStatusCombobox().textContent).toBe('Open');
+    expect(getStatusCombobox().textContent).toBe(EDITION_STATUS_LABELS.Hidden);
   });
 });
