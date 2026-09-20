@@ -1,4 +1,4 @@
-import { useId, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
+import { useEffect, useId, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
@@ -29,6 +29,7 @@ import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
 import DeleteIcon from '@mui/icons-material/Delete';
 import TranslateIcon from '@mui/icons-material/Translate';
 import {
+  useEventDetail,
   useEvents,
   type ActivityType,
   type EditionStatus,
@@ -575,10 +576,32 @@ function RacesStep({ onNotify, eventSlug, editionId, editionStatus, editionYear,
   const navigate = useNavigate();
   const { trails } = useTrails();
   const { createRace, deleteRace, refresh } = useEvents();
+  // #953: RacesStep unmounts on Back (Step 3 -> Step 2) and remounts fresh on return, which used to
+  // reset addedRaces to [] below even though the races themselves were already persisted by
+  // createRace. useEventDetail(eventSlug) is the same react-query-wrapped fetch EventDetailPage.tsx
+  // already uses to read an edition's races — seeding addedRaces from it on mount/editionId change
+  // fixes the reset without a new ad hoc fetch path or backend endpoint.
+  const { detail: eventDetail } = useEventDetail(eventSlug);
   const [selectedTrails, setSelectedTrails] = useState<Trail[]>([]);
   const [addedRaces, setAddedRaces] = useState<AddedRace[]>([]);
   const [adding, setAdding] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  // Guards the seed effect below: flips true once addedRaces has been seeded from the fetched
+  // edition, or as soon as the admin adds/removes a race locally (whichever comes first). Without
+  // this, a slow useEventDetail fetch that resolves *after* a local add/remove — the query isn't
+  // invalidated by createRace/deleteRace, only by the events list — could overwrite the optimistic
+  // local state with the stale pre-mutation snapshot it started fetching with.
+  const seedingDoneRef = useRef(false);
+
+  useEffect(() => {
+    if (seedingDoneRef.current) return;
+    const edition = eventDetail?.editions.find(e => e.id === editionId);
+    if (!edition) return; // not loaded yet — effect re-runs once eventDetail arrives
+    setAddedRaces(
+      edition.races.slice().sort((a, b) => a.sortOrder - b.sortOrder).map(r => ({ id: r.id, name: r.name })),
+    );
+    seedingDoneRef.current = true;
+  }, [eventDetail, editionId]);
 
   // Same status filter RaceFormCard's own Trail Autocomplete applies — Draft/Flagged/Archived
   // trails aren't meant to be attached to a race yet.
@@ -586,11 +609,15 @@ function RacesStep({ onNotify, eventSlug, editionId, editionStatus, editionYear,
 
   const handleAddRaces = async () => {
     if (selectedTrails.length === 0) return;
+    seedingDoneRef.current = true; // local state is authoritative from here on for this mount
     setAdding(true);
     try {
       // #666: sortOrder increments from however many races already exist under this edition —
       // always 0 at wizard start, but addedRaces.length keeps a second "Add races" click in the
-      // same session from restarting at 0 too.
+      // same session from restarting at 0 too. #953: this still holds now that addedRaces can
+      // start non-empty (seeded from the edition's already-persisted races on mount) — the seed
+      // is sorted by sortOrder above, so its length continues the existing 0..n-1 sequence rather
+      // than colliding with it.
       const results = await Promise.allSettled(
         selectedTrails.map((trail, i) => {
           const form = { ...createEmptyRaceForm(editionId, addedRaces.length + i, editionStatus), trailId: trail.id, name: trail.name };
@@ -624,6 +651,7 @@ function RacesStep({ onNotify, eventSlug, editionId, editionStatus, editionYear,
   };
 
   const handleRemove = async (race: AddedRace) => {
+    seedingDoneRef.current = true;
     setRemovingId(race.id);
     try {
       await deleteRace(race.id);
