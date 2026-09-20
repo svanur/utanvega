@@ -351,6 +351,11 @@ export function EditionDetailsStep({ onNotify, eventId, eventSlug, form, setForm
   const [saving, setSaving] = useState(false);
   const registrationStatusHelperId = useId();
   const editionStatusHelperId = useId();
+  // #964: explicit id/labelId pairing so these two Selects have an accessible name reachable via
+  // getByLabelText — the plain <InputLabel> + Select `label` prop pairing everywhere else in this
+  // step only paints the outline notch text, it doesn't associate the label with the control.
+  const statusLabelId = useId();
+  const registrationStatusLabelId = useId();
   const isEdit = editionId !== undefined;
 
   const set = <K extends keyof EditionFormState>(k: K, v: EditionFormState[K]) =>
@@ -475,8 +480,8 @@ export function EditionDetailsStep({ onNotify, eventId, eventSlug, form, setForm
         />
 
         <FormControl size="small" fullWidth sx={{ '& .MuiOutlinedInput-root': TOUCH_TARGET_SX }}>
-          <InputLabel>Status</InputLabel>
-          <Select value={form.status} label="Status"
+          <InputLabel id={statusLabelId}>Status</InputLabel>
+          <Select labelId={statusLabelId} value={form.status} label="Status"
             onChange={e => {
               statusManuallySetRef.current = true;
               set('status', e.target.value as EditionStatus);
@@ -523,8 +528,8 @@ export function EditionDetailsStep({ onNotify, eventId, eventSlug, form, setForm
         </Box>
 
         <FormControl size="small" fullWidth disabled={registrationDatesSet} sx={{ '& .MuiOutlinedInput-root': TOUCH_TARGET_SX }}>
-          <InputLabel>Registration status</InputLabel>
-          <Select value={form.registrationStatus} label="Registration status"
+          <InputLabel id={registrationStatusLabelId}>Registration status</InputLabel>
+          <Select labelId={registrationStatusLabelId} value={form.registrationStatus} label="Registration status"
             onChange={e => {
               statusManuallySetRef.current = true;
               set('registrationStatus', e.target.value as RegistrationStatus);
