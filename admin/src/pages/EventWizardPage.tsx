@@ -572,36 +572,55 @@ interface RacesStepProps extends EventWizardPageProps {
   onBack: () => void;
 }
 
-function RacesStep({ onNotify, eventSlug, editionId, editionStatus, editionYear, onBack }: RacesStepProps) {
+// Exported (unlike EventDetailsStep/EditionDetailsStep above) so EventWizardPage.test.tsx can
+// mount it directly against a shared QueryClient — the Step 3 -> 2 -> 3 unmount/remount this fixes
+// isn't reachable by rendering just the default-exported wizard without driving all three steps'
+// forms end to end.
+export function RacesStep({ onNotify, eventSlug, editionId, editionStatus, editionYear, onBack }: RacesStepProps) {
   const navigate = useNavigate();
   const { trails } = useTrails();
   const { createRace, deleteRace, refresh } = useEvents();
   // #953: RacesStep unmounts on Back (Step 3 -> Step 2) and remounts fresh on return, which used to
   // reset addedRaces to [] below even though the races themselves were already persisted by
   // createRace. useEventDetail(eventSlug) is the same react-query-wrapped fetch EventDetailPage.tsx
-  // already uses to read an edition's races — seeding addedRaces from it on mount/editionId change
-  // fixes the reset without a new ad hoc fetch path or backend endpoint.
-  const { detail: eventDetail } = useEventDetail(eventSlug);
+  // already uses to read an edition's races — seeding addedRaces from it fixes the reset without a
+  // new ad hoc fetch path or backend endpoint. Round 1 review (PR #961) caught that reading the
+  // hook's reactive `detail` alone isn't enough: `useEventDetail`'s query has a 30s staleTime, and
+  // neither createRace nor deleteRace invalidates it, so a Step 3 -> 2 -> 3 round trip completed
+  // within 30s of the page load would silently reseed from the still-cached pre-mutation snapshot.
+  // `refetch` (unlike the hook's own fire-and-forget `refresh`) always hits the network when called
+  // imperatively regardless of staleTime — awaiting it below and seeding from *its* resolved data
+  // (rather than the reactive `detail` value) guarantees the seed reflects whatever was actually
+  // persisted by the time this step (re)mounts, no matter how quickly the round trip happens.
+  const { refetch: refetchEventDetail } = useEventDetail(eventSlug);
   const [selectedTrails, setSelectedTrails] = useState<Trail[]>([]);
   const [addedRaces, setAddedRaces] = useState<AddedRace[]>([]);
   const [adding, setAdding] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
-  // Guards the seed effect below: flips true once addedRaces has been seeded from the fetched
-  // edition, or as soon as the admin adds/removes a race locally (whichever comes first). Without
-  // this, a slow useEventDetail fetch that resolves *after* a local add/remove — the query isn't
-  // invalidated by createRace/deleteRace, only by the events list — could overwrite the optimistic
-  // local state with the stale pre-mutation snapshot it started fetching with.
+  // Guards the seed effect below: flips true once addedRaces has been seeded from the refetched
+  // edition, or as soon as the admin adds/removes a race locally (whichever comes first) — so a
+  // refetch that resolves *after* a local add/remove can't overwrite the (already-correct, already
+  // including that add/remove) optimistic local state with the pre-mutation response it started
+  // fetching with.
   const seedingDoneRef = useRef(false);
 
   useEffect(() => {
-    if (seedingDoneRef.current) return;
-    const edition = eventDetail?.editions.find(e => e.id === editionId);
-    if (!edition) return; // not loaded yet — effect re-runs once eventDetail arrives
-    setAddedRaces(
-      edition.races.slice().sort((a, b) => a.sortOrder - b.sortOrder).map(r => ({ id: r.id, name: r.name })),
-    );
-    seedingDoneRef.current = true;
-  }, [eventDetail, editionId]);
+    let cancelled = false;
+    void (async () => {
+      if (seedingDoneRef.current) return;
+      const { data } = await refetchEventDetail();
+      // Re-check after the await: a local add/remove (or an unmount) may have happened while this
+      // fetch was in flight, in which case the response below is already stale and must be dropped.
+      if (cancelled || seedingDoneRef.current) return;
+      const edition = data?.editions.find(e => e.id === editionId);
+      if (!edition) return;
+      setAddedRaces(
+        edition.races.slice().sort((a, b) => a.sortOrder - b.sortOrder).map(r => ({ id: r.id, name: r.name })),
+      );
+      seedingDoneRef.current = true;
+    })();
+    return () => { cancelled = true; };
+  }, [refetchEventDetail, editionId]);
 
   // Same status filter RaceFormCard's own Trail Autocomplete applies — Draft/Flagged/Archived
   // trails aren't meant to be attached to a race yet.
