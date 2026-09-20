@@ -626,10 +626,22 @@ export function RacesStep({ onNotify, eventSlug, editionId, editionStatus, editi
   // persisted races (already sorted by sortOrder), and bumped again after every successful
   // handleAddRaces call — so a later add can never land on a sortOrder a removal made room for.
   const nextSortOrderRef = useRef(0);
+  // #968: the seed effect below awaits refetchEventDetail() before it can apply its result, and
+  // both handleAddRaces and handleRemove set seedingDoneRef.current = true *synchronously*, before
+  // any network call of their own starts. If either fires quickly enough after a Step 3 -> 2 -> 3
+  // remount — before this effect's own await resolves — the effect's post-await
+  // `seedingDoneRef.current` check sees true and bails out, leaving addedRaces/nextSortOrderRef
+  // unseeded for the rest of the mount (a narrower reappearance of #953/#962, still open per PR
+  // #967's round-1 review). This ref holds the seed effect's own in-flight promise so a fast
+  // handleAddRaces/handleRemove call can await it first — letting the effect finish seeding, exactly
+  // as it would with no race in flight — before treating local state as authoritative. Cleared back
+  // to null once the effect settles (whether it actually seeded, bailed out early, or was
+  // cancelled), so a call arriving after seeding is already done skips the await entirely.
+  const seedInFlightRef = useRef<Promise<void> | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    void (async () => {
+    const seedPromise = (async () => {
       if (seedingDoneRef.current) return;
       const { data } = await refetchEventDetail();
       // Re-check after the await: a local add/remove (or an unmount) may have happened while this
@@ -647,6 +659,13 @@ export function RacesStep({ onNotify, eventSlug, editionId, editionStatus, editi
         : 0;
       seedingDoneRef.current = true;
     })();
+    seedInFlightRef.current = seedPromise;
+    void seedPromise.finally(() => {
+      // Only clear the ref if it's still pointing at *this* effect run's promise — a fast unmount
+      // during the await could otherwise let a stale `.finally` from a superseded run clobber a
+      // newer run's own in-flight promise.
+      if (seedInFlightRef.current === seedPromise) seedInFlightRef.current = null;
+    });
     return () => { cancelled = true; };
   }, [refetchEventDetail, editionId]);
 
@@ -656,6 +675,11 @@ export function RacesStep({ onNotify, eventSlug, editionId, editionStatus, editi
 
   const handleAddRaces = async () => {
     if (selectedTrails.length === 0) return;
+    // #968: if the seed effect is still mid-flight (e.g. this click landed right after a Step 3 ->
+    // 2 -> 3 remount, before its refetch resolved), wait for it to finish applying its result first
+    // — otherwise the seedingDoneRef flip below would land before the effect's own post-await check
+    // runs, causing it to silently drop its seed and leave addedRaces/nextSortOrderRef unseeded.
+    if (seedInFlightRef.current) await seedInFlightRef.current;
     seedingDoneRef.current = true; // local state is authoritative from here on for this mount
     setAdding(true);
     // #666/#953: sortOrder increments from however many races already exist under this edition.
@@ -700,6 +724,9 @@ export function RacesStep({ onNotify, eventSlug, editionId, editionStatus, editi
   };
 
   const handleRemove = async (race: AddedRace) => {
+    // #968: same window as handleAddRaces above — a fast remove right after a remount could
+    // otherwise flip seedingDoneRef before the in-flight seed effect gets to apply its result.
+    if (seedInFlightRef.current) await seedInFlightRef.current;
     seedingDoneRef.current = true;
     setRemovingId(race.id);
     try {

@@ -158,6 +158,12 @@ let eventDetailFetches = 0;
 let mockTrails: Trail[] = [];
 let capturedSortOrders: number[] = [];
 let nextRaceId = 0;
+// #968: when true, the *next* eventDetail apiFetch call returns a promise this test holds open
+// (via pendingEventDetailResolve) instead of resolving immediately — lets a test fire
+// handleAddRaces/handleRemove while the seed effect's own refetchEventDetail() is still in flight,
+// reproducing the exact ordering the fix closes.
+let deferEventDetailFetch = false;
+let pendingEventDetailResolve: ((value: EventDetailDto) => void) | null = null;
 
 vi.mock('../hooks/api', () => ({
   apiFetch: vi.fn((endpoint: string, options?: { method?: string; body?: string }) => {
@@ -165,6 +171,10 @@ vi.mock('../hooks/api', () => ({
     if (endpoint.startsWith('/api/v1/admin/trails')) return Promise.resolve(mockTrails);
     if (endpoint === `/api/v1/admin/events/${EVENT_SLUG}`) {
       eventDetailFetches += 1;
+      if (deferEventDetailFetch) {
+        deferEventDetailFetch = false;
+        return new Promise<EventDetailDto>(resolve => { pendingEventDetailResolve = resolve; });
+      }
       return Promise.resolve(makeDetail(currentRaces));
     }
     if (options?.method === 'POST' && endpoint === `/api/v1/admin/editions/${EDITION_ID}/races`) {
@@ -228,6 +238,77 @@ describe('RacesStep — added-races seed survives a fast Step 3 -> 2 -> 3 round 
 
     await waitFor(() => expect(screen.getByText('Added this session')).toBeTruthy());
     expect(screen.getByText(RACE_NAME)).toBeTruthy();
+  });
+});
+
+// #968: a narrower reappearance of #953/#962 (PR #967's round-1 review flagged it as still open).
+// handleAddRaces sets seedingDoneRef.current = true *synchronously*, before any network call of its
+// own starts — so clicking "Add races" quickly enough after a Step 3 -> 2 -> 3 remount, before the
+// seed effect's own `await refetchEventDetail()` resolves, makes the effect's post-await
+// `seedingDoneRef.current` check see true and bail out, silently dropping its seed. Both
+// addedRaces (stays []) and nextSortOrderRef (stays at its initial 0) are then left unseeded for
+// the rest of the mount. Against the fix (handleAddRaces awaiting the seed effect's own in-flight
+// promise first), this test passes; reverting that await makes it fail exactly as described above —
+// Trail A disappears from "Added this session" and Trail B's sortOrder collides with Trail A's.
+describe('RacesStep — fast Add races cannot race ahead of an in-flight seed fetch (#968)', () => {
+  afterEach(() => {
+    cleanup();
+    currentRaces = [];
+    eventDetailFetches = 0;
+    mockTrails = [];
+    capturedSortOrders = [];
+    nextRaceId = 0;
+    deferEventDetailFetch = false;
+    pendingEventDetailResolve = null;
+  });
+
+  // Same Autocomplete-driving helpers as the #962 describe block below — duplicated locally rather
+  // than hoisted, since they're small and each describe block already owns its own repro sequence.
+  function selectTrail(name: string) {
+    const input = screen.getByRole('combobox', { name: 'Search trails to add' });
+    fireEvent.change(input, { target: { value: name } });
+    const option = screen.getAllByRole('option').find(o => o.textContent?.includes(name));
+    if (!option) throw new Error(`Trail option not found in Autocomplete: ${name}`);
+    fireEvent.click(option);
+    fireEvent.change(input, { target: { value: '' } });
+  }
+
+  function clickAddRaces() {
+    fireEvent.click(screen.getByRole('button', { name: /^Add \d+ race/ }));
+  }
+
+  it('still shows an earlier mount\'s race and avoids a sortOrder collision when Add races fires before the remount\'s seed fetch resolves', async () => {
+    mockTrails = [makeTrail('trail-a', 'Trail A'), makeTrail('trail-b', 'Trail B')];
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { unmount } = renderRacesStep(queryClient);
+    await waitFor(() => expect(eventDetailFetches).toBeGreaterThan(0));
+
+    // Trail A was added and persisted in an earlier mount of this step, at sortOrder 0.
+    currentRaces = [makeRace('race-a', 'Trail A', 0)];
+
+    // Step 3 -> 2 -> 3: unmount, then remount — deferring the remount's own seed refetch so it
+    // doesn't resolve until this test explicitly lets it below.
+    unmount();
+    deferEventDetailFetch = true;
+    renderRacesStep(queryClient);
+
+    // Fire "Add races" for a second trail *before* the deferred refetch above has resolved — the
+    // exact #968 repro. Without the fix, seedingDoneRef flips true here, synchronously, before the
+    // seed effect's own post-await check ever runs.
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Search trails to add' })).toBeTruthy());
+    selectTrail('Trail B');
+    clickAddRaces();
+
+    // Only now let the deferred seed fetch resolve, with handleAddRaces already in flight above.
+    await waitFor(() => expect(pendingEventDetailResolve).not.toBeNull());
+    pendingEventDetailResolve?.(makeDetail(currentRaces));
+
+    await waitFor(() => expect(screen.getByLabelText('Remove Trail B')).toBeTruthy());
+
+    // (a) Trail A, added in the earlier mount, must still be shown in "Added this session".
+    expect(screen.getByText('Trail A')).toBeTruthy();
+    // (b) Trail B's sortOrder must not collide with Trail A's already-persisted sortOrder 0.
+    expect(capturedSortOrders).toEqual([1]);
   });
 });
 
