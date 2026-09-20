@@ -374,14 +374,17 @@ function renderEditionDetailsStep(editionId?: string) {
   );
 }
 
-// EditionDetailsStep renders exactly two MUI Selects (Status, then Registration status) — neither
-// is wired to its InputLabel via an explicit `labelId` prop (EventWizardPage.tsx), so they aren't
-// reachable via getByLabelText the way a plain TextField is; DOM order is the stable handle instead.
+// #964: Status and Registration status are each wired to their InputLabel via an explicit
+// `labelId` prop (EventWizardPage.tsx), so getByLabelText finds them directly — no more relying on
+// DOM order via getAllByRole('combobox')[n], which broke if the fields were ever reordered. The
+// `[role="combobox"]` selector disambiguates from a still-open (mid-exit-transition) MUI Menu
+// listbox that shares the same aria-labelledby as its Select — jsdom never fires the transitionend
+// that would otherwise unmount it, so one lingers in the DOM after chooseMenuOption below.
 function getStatusCombobox() {
-  return screen.getAllByRole('combobox')[0];
+  return screen.getByLabelText('Status', { selector: '[role="combobox"]' });
 }
 function getRegistrationStatusCombobox() {
-  return screen.getAllByRole('combobox')[1];
+  return screen.getByLabelText('Registration status', { selector: '[role="combobox"]' });
 }
 
 function chooseMenuOption(combobox: HTMLElement, optionText: string) {
