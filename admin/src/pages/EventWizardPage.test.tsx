@@ -374,6 +374,58 @@ function renderEditionDetailsStep(editionId?: string) {
   );
 }
 
+// #966: a sibling harness for the "does not clobber ... across an unmount/remount" test below —
+// EditionDetailsStepHarness above deliberately owns form/statusManuallySetRef *inside* itself, so a
+// fresh render() of it can never reuse the same ref (or form) object across an unmount, by
+// construction. The real production parent (EventWizardPage) is different: it owns editionForm and
+// statusManuallySetRef itself (EventWizardPage.tsx:831,836) and never unmounts across the
+// Step2 -> Back -> Step1 -> Step2 round trip — only the child EditionDetailsStep does, gated by
+// `activeStep === 1 && createdEvent && <EditionDetailsStep .../>`. This harness reproduces that
+// shape: a wrapper that owns form/ref itself and never unmounts, toggling only whether the child
+// beneath it is mounted — exactly the persistent-parent / remounting-child split #957 relies on.
+function EditionDetailsRoundTripHarness({ mounted }: { mounted: boolean }) {
+  const [form, setForm] = useState<HarnessEditionForm>(emptyHarnessForm());
+  const statusManuallySetRef = useRef(false);
+  return mounted ? (
+    <EditionDetailsStep
+      onNotify={() => {}}
+      eventId="event-1"
+      eventSlug={EVENT_SLUG}
+      form={form}
+      setForm={setForm}
+      onBack={() => {}}
+      onCreated={() => {}}
+      statusManuallySetRef={statusManuallySetRef}
+    />
+  ) : null;
+}
+
+function roundTripHarnessTree(queryClient: QueryClient, mounted: boolean) {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <LocalizationProvider dateAdapter={AdapterDayjs}>
+          <BilingualLangProvider>
+            <EditionDetailsRoundTripHarness mounted={mounted} />
+          </BilingualLangProvider>
+        </LocalizationProvider>
+      </MemoryRouter>
+    </QueryClientProvider>
+  );
+}
+
+// Toggles the child's mounted state via RTL's rerender() rather than unmount()+render() — rerender()
+// keeps EditionDetailsRoundTripHarness itself as the same live component instance across the toggle
+// (same position in the tree, same type, so React reconciles rather than tearing it down), exactly
+// like EventWizardPage never unmounting across a real Step2 -> Back -> Step1 -> Step2 round trip.
+// unmount()+render() would instead destroy and recreate the wrapper too, defeating the point — its
+// own form/statusManuallySetRef would reset right along with the child's, and the test would no
+// longer be distinguishing "ref survives because it's parent-owned" from "ref survives because
+// nothing actually unmounted at all".
+function renderRoundTripHarness(queryClient: QueryClient) {
+  return render(roundTripHarnessTree(queryClient, true));
+}
+
 // EditionDetailsStep renders exactly two MUI Selects (Status, then Registration status) — neither
 // is wired to its InputLabel via an explicit `labelId` prop (EventWizardPage.tsx), so they aren't
 // reachable via getByLabelText the way a plain TextField is; DOM order is the stable handle instead.
@@ -441,5 +493,43 @@ describe('EditionDetailsStep — Year field wiring', () => {
 
     expect(getRegistrationStatusCombobox().textContent).toBe('Open');
     expect(getStatusCombobox().textContent).toBe(EDITION_STATUS_LABELS.Hidden);
+  });
+
+  // #966: the two "does not clobber" tests above only ever exercise statusManuallySetRef within a
+  // single mount, so they'd keep passing even if #957's fix were reverted to a component-local
+  // useRef(false) inside EditionDetailsStep — that local ref still survives *within* one mount, it
+  // just forgets everything the instant the component actually unmounts. This test reproduces the
+  // real Step2 -> Back -> Step1 -> Step2 round trip via EditionDetailsRoundTripHarness above:
+  // EditionDetailsStep genuinely unmounts (mirroring the real page's
+  // `activeStep === 1 && createdEvent && <EditionDetailsStep .../>` gate) and then remounts, with
+  // the wrapper's own statusManuallySetRef object — never recreated, since the wrapper itself never
+  // unmounts — handed back in unchanged. Against a reverted, component-local ref this fails because
+  // the fresh child instance's own useRef(false) can't possibly remember the earlier manual choice;
+  // against the checked-in #957 fix it passes because the same ref object threads across the
+  // remount exactly as EventWizardPage's real parent does.
+  it('does not clobber a manually-set Status across an unmount/remount that reuses the same statusManuallySetRef', () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { rerender } = renderRoundTripHarness(queryClient);
+
+    chooseMenuOption(getStatusCombobox(), EDITION_STATUS_LABELS.Active);
+    expect(getStatusCombobox().textContent).toBe(EDITION_STATUS_LABELS.Active);
+
+    // Step2 -> Back -> Step1: only the child EditionDetailsStep unmounts here (mounted={false}) —
+    // EditionDetailsRoundTripHarness stays mounted throughout, so its statusManuallySetRef (and
+    // form) survive exactly as EventWizardPage's own would across the real round trip.
+    rerender(roundTripHarnessTree(queryClient, false));
+    expect(screen.queryByLabelText('Year')).toBeNull();
+
+    // Step1 -> Step2: a brand-new EditionDetailsStep instance, but the wrapper hands it back the
+    // same statusManuallySetRef object it already held (and the same form state) — never a fresh one.
+    rerender(roundTripHarnessTree(queryClient, true));
+
+    const pastYear = String(new Date().getFullYear() - 5);
+    fireEvent.change(screen.getByLabelText('Year'), { target: { value: pastYear } });
+
+    // The manual choice from before the unmount must still be honored — the nudge logic on this
+    // remounted instance must not overwrite it back to the year-derived default.
+    expect(getStatusCombobox().textContent).toBe(EDITION_STATUS_LABELS.Active);
+    expect(getRegistrationStatusCombobox().textContent).toBe('NotStarted');
   });
 });
