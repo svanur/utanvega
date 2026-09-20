@@ -312,6 +312,78 @@ describe('RacesStep — fast Add races cannot race ahead of an in-flight seed fe
   });
 });
 
+// #968 round 2 (PR #974 review): the round-1 fix above had handleAddRaces await
+// seedInFlightRef.current *before* calling setAdding(true), so "Add races" stayed enabled for the
+// whole await. Two clicks in quick succession while a seed fetch is in flight — exactly this
+// issue's own scenario, right after a Step 3 -> 2 -> 3 remount — would both close over the same
+// selectedTrails, both await the same seedInFlightRef.current promise, and both go on to createRace
+// the same trail once it resolved: a real double-submit producing a duplicate persisted race (no
+// (editionId, trailId) uniqueness constraint on Race catches this at the database level). Against
+// the fix (setAdding(true) — and the `|| adding` guard — running before the seed await), the second
+// click is a no-op and only one race is created; reverting that ordering makes this test fail with
+// two captured sortOrders for the same trail.
+describe('RacesStep — double-clicking Add races while a seed fetch is in flight does not double-submit (#968 round 2)', () => {
+  afterEach(() => {
+    cleanup();
+    currentRaces = [];
+    eventDetailFetches = 0;
+    mockTrails = [];
+    capturedSortOrders = [];
+    nextRaceId = 0;
+    deferEventDetailFetch = false;
+    pendingEventDetailResolve = null;
+  });
+
+  function selectTrail(name: string) {
+    const input = screen.getByRole('combobox', { name: 'Search trails to add' });
+    fireEvent.change(input, { target: { value: name } });
+    const option = screen.getAllByRole('option').find(o => o.textContent?.includes(name));
+    if (!option) throw new Error(`Trail option not found in Autocomplete: ${name}`);
+    fireEvent.click(option);
+    fireEvent.change(input, { target: { value: '' } });
+  }
+
+  it('creates only one race when Add races is clicked twice before the remount\'s seed fetch resolves', async () => {
+    mockTrails = [makeTrail('trail-a', 'Trail A')];
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { unmount } = renderRacesStep(queryClient);
+    await waitFor(() => expect(eventDetailFetches).toBeGreaterThan(0));
+
+    // Step 3 -> 2 -> 3: unmount, then remount — deferring the remount's own seed refetch exactly
+    // as the round-1 test above does, so it doesn't resolve until this test explicitly lets it.
+    unmount();
+    deferEventDetailFetch = true;
+    renderRacesStep(queryClient);
+
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Search trails to add' })).toBeTruthy());
+    selectTrail('Trail A');
+
+    // Grab the button once by its pre-click accessible name ("Add 1 race") rather than re-querying
+    // by role/name for the second click — the fix makes the button swap to a bare CircularProgress
+    // (no accessible name) the instant the first click's setAdding(true) is flushed, so a second
+    // getByRole(..., { name: /^Add/ }) would no longer find it at all. Clicking the same element
+    // reference twice instead reproduces a real user's fast double-click on one physical button.
+    const addButton = screen.getByRole('button', { name: /^Add \d+ race/ });
+
+    // Two rapid clicks while the seed fetch above is still pending. Each fireEvent.click is
+    // act()-flushed before the next one fires, so this reproduces a real user's fast double-click:
+    // the first click's setAdding(true) — running before the seed await, per the fix — disables the
+    // button before the second click lands, and the `|| adding` guard covers the case where the
+    // click still reaches the handler regardless.
+    fireEvent.click(addButton);
+    fireEvent.click(addButton);
+
+    // Only now let the deferred seed fetch resolve, with both clicks already dispatched above.
+    await waitFor(() => expect(pendingEventDetailResolve).not.toBeNull());
+    pendingEventDetailResolve?.(makeDetail(currentRaces));
+
+    await waitFor(() => expect(screen.getByLabelText('Remove Trail A')).toBeTruthy());
+
+    // Exactly one race created for Trail A — not two.
+    expect(capturedSortOrders).toEqual([0]);
+  });
+});
+
 // #962: PR #961's body flagged this as a known, unfixed edge case while #953 was being fixed —
 // handleAddRaces derived each new race's sortOrder from addedRaces.length, but handleRemove
 // shortens addedRaces by filtering it locally without renumbering anything server-side, so a

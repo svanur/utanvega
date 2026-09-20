@@ -674,23 +674,33 @@ export function RacesStep({ onNotify, eventSlug, editionId, editionStatus, editi
   const selectableTrails = trails.filter(t => t.status === 'Published' || t.status === 'EventOnly');
 
   const handleAddRaces = async () => {
-    if (selectedTrails.length === 0) return;
-    // #968: if the seed effect is still mid-flight (e.g. this click landed right after a Step 3 ->
-    // 2 -> 3 remount, before its refetch resolved), wait for it to finish applying its result first
-    // — otherwise the seedingDoneRef flip below would land before the effect's own post-await check
-    // runs, causing it to silently drop its seed and leave addedRaces/nextSortOrderRef unseeded.
-    if (seedInFlightRef.current) await seedInFlightRef.current;
-    seedingDoneRef.current = true; // local state is authoritative from here on for this mount
+    if (selectedTrails.length === 0 || adding) return;
+    // #968 round 2 (PR #974 review): setAdding(true) must run synchronously here, before the seed
+    // await just below — not after it, as the round-1 fix had it. Awaiting first left "Add races"
+    // enabled for the whole await, so two clicks in quick succession (exactly this issue's own
+    // scenario: right after a Step 3 -> 2 -> 3 remount, while the seed fetch is still in flight)
+    // would both close over the same selectedTrails, both await the same seedInFlightRef.current
+    // promise, and both go on to createRace the same trails once it resolved — a real double-submit
+    // producing duplicate persisted races, confirmed reachable since Race has no (editionId,
+    // trailId) uniqueness constraint at the database level to catch it. Setting adding first (plus
+    // the `|| adding` guard above) disables the button, and no-ops a second call, immediately.
     setAdding(true);
-    // #666/#953: sortOrder increments from however many races already exist under this edition.
-    // #962: reserve the *whole* attempted range up front, from nextSortOrderRef rather than
-    // addedRaces.length — see that ref's own doc comment above for why addedRaces.length is unsafe
-    // once a remove has happened this session. Reserving the full batch (not just the eventually-
-    // successful subset) also means a partial failure can't leave the next call's base colliding
-    // with a race that did succeed within this same batch.
-    const baseSortOrder = nextSortOrderRef.current;
-    nextSortOrderRef.current = baseSortOrder + selectedTrails.length;
     try {
+      // #968: if the seed effect is still mid-flight (e.g. this click landed right after a Step 3
+      // -> 2 -> 3 remount, before its refetch resolved), wait for it to finish applying its result
+      // first — otherwise the seedingDoneRef flip below would land before the effect's own
+      // post-await check runs, causing it to silently drop its seed and leave
+      // addedRaces/nextSortOrderRef unseeded.
+      if (seedInFlightRef.current) await seedInFlightRef.current;
+      seedingDoneRef.current = true; // local state is authoritative from here on for this mount
+      // #666/#953: sortOrder increments from however many races already exist under this edition.
+      // #962: reserve the *whole* attempted range up front, from nextSortOrderRef rather than
+      // addedRaces.length — see that ref's own doc comment above for why addedRaces.length is
+      // unsafe once a remove has happened this session. Reserving the full batch (not just the
+      // eventually-successful subset) also means a partial failure can't leave the next call's
+      // base colliding with a race that did succeed within this same batch.
+      const baseSortOrder = nextSortOrderRef.current;
+      nextSortOrderRef.current = baseSortOrder + selectedTrails.length;
       const results = await Promise.allSettled(
         selectedTrails.map((trail, i) => {
           const form = { ...createEmptyRaceForm(editionId, baseSortOrder + i, editionStatus), trailId: trail.id, name: trail.name };
@@ -724,12 +734,17 @@ export function RacesStep({ onNotify, eventSlug, editionId, editionStatus, editi
   };
 
   const handleRemove = async (race: AddedRace) => {
-    // #968: same window as handleAddRaces above — a fast remove right after a remount could
-    // otherwise flip seedingDoneRef before the in-flight seed effect gets to apply its result.
-    if (seedInFlightRef.current) await seedInFlightRef.current;
-    seedingDoneRef.current = true;
+    // #968 round 2: same double-submit shape as handleAddRaces above — setRemovingId(race.id) must
+    // run synchronously before the seed await below (not after), and the guard against a second
+    // call for the *same* race must be checked up front, so a second click on the same race's
+    // Remove button during the await is a no-op rather than a second, redundant deleteRace call.
+    if (removingId === race.id) return;
     setRemovingId(race.id);
     try {
+      // #968: same window as handleAddRaces above — a fast remove right after a remount could
+      // otherwise flip seedingDoneRef before the in-flight seed effect gets to apply its result.
+      if (seedInFlightRef.current) await seedInFlightRef.current;
+      seedingDoneRef.current = true;
       await deleteRace(race.id);
       setAddedRaces(prev => prev.filter(r => r.id !== race.id));
       await refresh();
