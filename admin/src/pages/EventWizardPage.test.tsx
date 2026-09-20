@@ -10,6 +10,7 @@ import { EditionDetailsStep, RacesStep } from './EventWizardPage';
 import { BilingualLangProvider } from '../contexts/BilingualLangContext';
 import { EDITION_STATUS_LABELS } from '../utils/eventForms';
 import type { EditionStatus, EventDetailDto, RaceDto, RegistrationStatus } from '../hooks/useEvents';
+import type { Trail } from '../hooks/useTrails';
 
 // #953 round 2: round 1's fix (PR #961) seeded RacesStep's "Added this session" list by reading
 // useEventDetail's reactive `detail` value directly. That query has a 30s staleTime
@@ -55,6 +56,24 @@ function makeRace(id: string, name: string, sortOrder: number): RaceDto {
     trailDistanceMeters: null,
     trailElevationGain: null,
     activityType: null,
+  };
+}
+
+// #962: a minimal Trail fixture for RacesStep's Autocomplete — only the fields the trail-selection
+// UI and its filter (selectableTrails, RacesStep.tsx) actually read are populated meaningfully.
+function makeTrail(id: string, name: string): Trail {
+  return {
+    id,
+    name,
+    slug: name.toLowerCase().replace(/\s+/g, '-'),
+    length: 5000,
+    elevationGain: 100,
+    elevationLoss: 100,
+    status: 'Published',
+    activityType: 'TrailRunning',
+    trailType: 'Loop',
+    locations: [],
+    createdAt: '2026-01-01T00:00:00Z',
   };
 }
 
@@ -134,14 +153,28 @@ function makeDetail(races: RaceDto[]): EventDetailDto {
 // #1's own automatic fetch and RacesStep's explicit refetch() may or may not coalesce into one).
 let currentRaces: RaceDto[] = [];
 let eventDetailFetches = 0;
+// #962: trails offered by the Autocomplete, and the sortOrder handleAddRaces actually POSTed for
+// each created race — read fresh per test rather than snapshotted, same reasoning as currentRaces.
+let mockTrails: Trail[] = [];
+let capturedSortOrders: number[] = [];
+let nextRaceId = 0;
 
 vi.mock('../hooks/api', () => ({
-  apiFetch: vi.fn((endpoint: string) => {
+  apiFetch: vi.fn((endpoint: string, options?: { method?: string; body?: string }) => {
     if (endpoint === '/api/v1/admin/events') return Promise.resolve([]);
-    if (endpoint.startsWith('/api/v1/admin/trails')) return Promise.resolve([]);
+    if (endpoint.startsWith('/api/v1/admin/trails')) return Promise.resolve(mockTrails);
     if (endpoint === `/api/v1/admin/events/${EVENT_SLUG}`) {
       eventDetailFetches += 1;
       return Promise.resolve(makeDetail(currentRaces));
+    }
+    if (options?.method === 'POST' && endpoint === `/api/v1/admin/editions/${EDITION_ID}/races`) {
+      const body = JSON.parse(options.body ?? '{}') as { sortOrder: number };
+      capturedSortOrders.push(body.sortOrder);
+      nextRaceId += 1;
+      return Promise.resolve({ id: `race-${nextRaceId}` });
+    }
+    if (options?.method === 'DELETE' && endpoint.startsWith('/api/v1/admin/races/')) {
+      return Promise.resolve({});
     }
     return Promise.resolve([]);
   }),
@@ -169,6 +202,9 @@ describe('RacesStep — added-races seed survives a fast Step 3 -> 2 -> 3 round 
     cleanup();
     currentRaces = [];
     eventDetailFetches = 0;
+    mockTrails = [];
+    capturedSortOrders = [];
+    nextRaceId = 0;
   });
 
   it('seeds from a forced refetch on remount, not from the (still within staleTime) cached detail', async () => {
@@ -193,6 +229,81 @@ describe('RacesStep — added-races seed survives a fast Step 3 -> 2 -> 3 round 
     await waitFor(() => expect(screen.getByText('Added this session')).toBeTruthy());
     expect(screen.getByText(RACE_NAME)).toBeTruthy();
   });
+});
+
+// #962: PR #961's body flagged this as a known, unfixed edge case while #953 was being fixed —
+// handleAddRaces derived each new race's sortOrder from addedRaces.length, but handleRemove
+// shortens addedRaces by filtering it locally without renumbering anything server-side, so a
+// remove-then-re-add in the same uninterrupted session (no Step 3 -> 2 -> 3 remount, so the seed
+// effect above never re-fires) reused a smaller length as the next base offset and collided with a
+// race added earlier in the same session. Repro: add A, B (sortOrder 0, 1) -> remove A
+// (addedRaces.length now 1, but B is still persisted at sortOrder 1) -> add C -> C got
+// sortOrder = 1 + 0 = 1, colliding with B.
+describe('RacesStep — sortOrder after a remove-then-re-add in the same session (#962)', () => {
+  afterEach(() => {
+    cleanup();
+    currentRaces = [];
+    eventDetailFetches = 0;
+    mockTrails = [];
+    capturedSortOrders = [];
+    nextRaceId = 0;
+  });
+
+  // Opens the trail Autocomplete's dropdown and clicks the option matching `name` — options keep
+  // the role="option" MUI's useAutocomplete assigns even though RacesStep customizes renderOption
+  // (the props spread onto the custom Box below still carries it), so this is a stable handle
+  // regardless of the extra checkbox/km-label markup inside each option.
+  function selectTrail(name: string) {
+    const input = screen.getByRole('combobox', { name: 'Search trails to add' });
+    // Typing (rather than mouseDown) reliably reopens the popup on every call — after the first
+    // selection MUI resets the Autocomplete's inputValue back to '' for a multiple-select, and a
+    // bare mouseDown on the now-blurred input doesn't reopen it the way an actual value change does.
+    fireEvent.change(input, { target: { value: name } });
+    const option = screen.getAllByRole('option').find(o => o.textContent?.includes(name));
+    if (!option) throw new Error(`Trail option not found in Autocomplete: ${name}`);
+    fireEvent.click(option);
+    fireEvent.change(input, { target: { value: '' } });
+  }
+
+  function clickAddRaces() {
+    fireEvent.click(screen.getByRole('button', { name: /^Add \d+ race/ }));
+  }
+
+  it('does not reuse a still-persisted sortOrder after removing an earlier race this session', async () => {
+    // Explicit timeout: this drives three full add/remove round trips through the real Autocomplete
+    // and IconButton, each awaiting its own network mock + refresh() — comfortably under the
+    // default 5s in isolation, but tight once the whole suite's import/transform overhead is
+    // added in (as seen when this file runs alongside the others).
+    mockTrails = [makeTrail('trail-a', 'Trail A'), makeTrail('trail-b', 'Trail B'), makeTrail('trail-c', 'Trail C')];
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    renderRacesStep(queryClient);
+    await waitFor(() => expect(eventDetailFetches).toBeGreaterThan(0));
+
+    // Add A, then B, each in its own "Add races" click — mirrors the #962 repro exactly.
+    selectTrail('Trail A');
+    clickAddRaces();
+    await waitFor(() => expect(screen.getByLabelText('Remove Trail A')).toBeTruthy());
+
+    selectTrail('Trail B');
+    clickAddRaces();
+    await waitFor(() => expect(screen.getByLabelText('Remove Trail B')).toBeTruthy());
+
+    // Acceptance criterion #2: a fresh batch with no removal yet is still gap-free and collision-free.
+    expect(capturedSortOrders).toEqual([0, 1]);
+
+    // Remove A — addedRaces.length drops from 2 to 1, but B is still persisted server-side at
+    // sortOrder 1. Before the #962 fix, the next add below would rebase off that shrunk length.
+    fireEvent.click(screen.getByLabelText('Remove Trail A'));
+    await waitFor(() => expect(screen.queryByLabelText('Remove Trail A')).toBeNull());
+
+    selectTrail('Trail C');
+    clickAddRaces();
+    await waitFor(() => expect(screen.getByLabelText('Remove Trail C')).toBeTruthy());
+
+    // The regression: C must land on sortOrder 2, not collide with B's still-persisted 1.
+    expect(capturedSortOrders).toEqual([0, 1, 2]);
+    expect(new Set(capturedSortOrders).size).toBe(capturedSortOrders.length);
+  }, 15000);
 });
 
 // #956: eventForms.test.ts unit-tests titleSyncForYear/editionStatusForYear/shouldNudgeStatusForYear

@@ -612,6 +612,15 @@ export function RacesStep({ onNotify, eventSlug, editionId, editionStatus, editi
   // including that add/remove) optimistic local state with the pre-mutation response it started
   // fetching with.
   const seedingDoneRef = useRef(false);
+  // #962: the next sortOrder handleAddRaces will hand out — a ref rather than deriving it from
+  // addedRaces.length, because handleRemove shortens addedRaces by filtering it locally but never
+  // renumbers anything server-side. Before this fix, a same-session add-add-remove-add sequence
+  // (A, B added at sortOrder 0/1; A removed, so addedRaces.length drops back to 1; C added) reused
+  // addedRaces.length as the next call's base offset and collided with B's still-persisted
+  // sortOrder 1. This ref only ever increases — seeded once below from the edition's actual
+  // persisted races (already sorted by sortOrder), and bumped again after every successful
+  // handleAddRaces call — so a later add can never land on a sortOrder a removal made room for.
+  const nextSortOrderRef = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -623,9 +632,14 @@ export function RacesStep({ onNotify, eventSlug, editionId, editionStatus, editi
       if (cancelled || seedingDoneRef.current) return;
       const edition = data?.editions.find(e => e.id === editionId);
       if (!edition) return;
-      setAddedRaces(
-        edition.races.slice().sort((a, b) => a.sortOrder - b.sortOrder).map(r => ({ id: r.id, name: r.name })),
-      );
+      const sortedRaces = edition.races.slice().sort((a, b) => a.sortOrder - b.sortOrder);
+      setAddedRaces(sortedRaces.map(r => ({ id: r.id, name: r.name })));
+      // #962: seed the monotonic counter from whatever is actually persisted, rather than leaving
+      // it at its initial 0 — a Step 3 -> 2 -> 3 remount must continue the existing sortOrder
+      // sequence, not restart it and collide with the races seeded above.
+      nextSortOrderRef.current = sortedRaces.length > 0
+        ? sortedRaces[sortedRaces.length - 1].sortOrder + 1
+        : 0;
       seedingDoneRef.current = true;
     })();
     return () => { cancelled = true; };
@@ -639,16 +653,18 @@ export function RacesStep({ onNotify, eventSlug, editionId, editionStatus, editi
     if (selectedTrails.length === 0) return;
     seedingDoneRef.current = true; // local state is authoritative from here on for this mount
     setAdding(true);
+    // #666/#953: sortOrder increments from however many races already exist under this edition.
+    // #962: reserve the *whole* attempted range up front, from nextSortOrderRef rather than
+    // addedRaces.length — see that ref's own doc comment above for why addedRaces.length is unsafe
+    // once a remove has happened this session. Reserving the full batch (not just the eventually-
+    // successful subset) also means a partial failure can't leave the next call's base colliding
+    // with a race that did succeed within this same batch.
+    const baseSortOrder = nextSortOrderRef.current;
+    nextSortOrderRef.current = baseSortOrder + selectedTrails.length;
     try {
-      // #666: sortOrder increments from however many races already exist under this edition —
-      // always 0 at wizard start, but addedRaces.length keeps a second "Add races" click in the
-      // same session from restarting at 0 too. #953: this still holds now that addedRaces can
-      // start non-empty (seeded from the edition's already-persisted races on mount) — the seed
-      // is sorted by sortOrder above, so its length continues the existing 0..n-1 sequence rather
-      // than colliding with it.
       const results = await Promise.allSettled(
         selectedTrails.map((trail, i) => {
-          const form = { ...createEmptyRaceForm(editionId, addedRaces.length + i, editionStatus), trailId: trail.id, name: trail.name };
+          const form = { ...createEmptyRaceForm(editionId, baseSortOrder + i, editionStatus), trailId: trail.id, name: trail.name };
           return createRace(buildRaceSavePayload(form)).then(id => ({ id, trail }));
         }),
       );
