@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
+import { useEffect, useId, useRef, useState, type Dispatch, type MutableRefObject, type ReactNode, type SetStateAction } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
@@ -329,6 +329,14 @@ interface EditionDetailsStepProps extends EventWizardPageProps {
   // (edition doesn't exist yet), the created edition's id on every subsequent visit — the parent
   // never clears createdEdition once set, so returning here after Step 3 always carries it.
   editionId?: string;
+  // #957: lifted up to EventWizardPage (rather than owned locally as a ref declared inside this
+  // component) for the same reason form/setForm above already are — a plain local ref is reset to
+  // its initial value on every unmount, but a Back-to-Step-1-then-forward-again round trip must not
+  // forget that the admin already made a manual Status/Registration-status choice, or the very next
+  // Year edit would silently nudge right over it. Passed down as the ref object itself (rather than
+  // a boolean + setter pair) since this step only ever mutates `.current` imperatively from event
+  // handlers, never reads it during render — an ordinary prop drilling of the ref, not React state.
+  statusManuallySetRef: MutableRefObject<boolean>;
 }
 
 // #956: exported (unlike EventDetailsStep above) so EventWizardPage.test.tsx can mount this step
@@ -337,18 +345,13 @@ interface EditionDetailsStepProps extends EventWizardPageProps {
 // statusManuallySetRef guard) isn't reachable at the pure-function layer alone; eventForms.test.ts
 // itself says as much in its own header comment. Mirrors how RacesStep was exported in PR #961 for
 // the same reason.
-export function EditionDetailsStep({ onNotify, eventId, eventSlug, form, setForm, onBack, onCreated, editionId }: EditionDetailsStepProps) {
+export function EditionDetailsStep({ onNotify, eventId, eventSlug, form, setForm, onBack, onCreated, editionId, statusManuallySetRef }: EditionDetailsStepProps) {
   const navigate = useNavigate();
   const { createEdition, updateEdition } = useEvents();
   const [saving, setSaving] = useState(false);
   const registrationStatusHelperId = useId();
   const editionStatusHelperId = useId();
   const isEdit = editionId !== undefined;
-  // Mirrors EditionDialogInner's own ref (EventDetailPage.tsx) — flips true the moment the admin
-  // manually touches Status or Registration status, so a later Year edit in the same session
-  // doesn't silently clobber that choice. The wizard has no clone concept, so unlike
-  // EditionDialogInner there's no isCloneRef counterpart here.
-  const statusManuallySetRef = useRef(false);
 
   const set = <K extends keyof EditionFormState>(k: K, v: EditionFormState[K]) =>
     setForm(prev => ({ ...prev, [k]: v }));
@@ -812,6 +815,9 @@ export default function EventWizardPage({ onNotify }: EventWizardPageProps) {
   const [editionForm, setEditionForm] = useState<EditionFormState>(emptyEditionForm());
   const [createdEvent, setCreatedEvent] = useState<CreatedEvent | null>(null);
   const [createdEdition, setCreatedEdition] = useState<CreatedEdition | null>(null);
+  // #957: lifted out of EditionDetailsStep so a Step 2 -> Back -> Step 1 -> Step 2 round trip
+  // doesn't reset it — see EditionDetailsStepProps' own doc comment on statusManuallySetRef above.
+  const statusManuallySetRef = useRef(false);
 
   return (
     <BilingualLangProvider>
@@ -854,6 +860,7 @@ export default function EventWizardPage({ onNotify }: EventWizardPageProps) {
             // of this step always carries the same id forward — Undefined only on the very first
             // visit, before an edition exists to edit.
             editionId={createdEdition?.id}
+            statusManuallySetRef={statusManuallySetRef}
             onBack={() => setActiveStep(0)}
             onCreated={edition => { setCreatedEdition(edition); setActiveStep(2); }}
           />

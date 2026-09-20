@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -226,12 +226,13 @@ function emptyHarnessForm(): HarnessEditionForm {
   };
 }
 
-// Owns form/setForm itself (rather than lifting it, the way EventWizardPage's own default export
-// does for its real Step 1/2/3) — EditionDetailsStep's props only require a controlled form plus a
-// setter, so a small harness reproducing that contract is enough to exercise the real onChange
-// without having to drive Step 1 first just to reach Step 2.
+// Owns form/setForm (and, per #957, statusManuallySetRef) itself rather than lifting them the way
+// EventWizardPage's own default export does for its real Step 1/2/3 — EditionDetailsStep's props
+// only require a controlled form/setter plus that ref, so a small harness reproducing that contract
+// is enough to exercise the real onChange without having to drive Step 1 first just to reach Step 2.
 function EditionDetailsStepHarness({ editionId }: { editionId?: string }) {
   const [form, setForm] = useState<HarnessEditionForm>(emptyHarnessForm());
+  const statusManuallySetRef = useRef(false);
   return (
     <EditionDetailsStep
       onNotify={() => {}}
@@ -242,6 +243,7 @@ function EditionDetailsStepHarness({ editionId }: { editionId?: string }) {
       onBack={() => {}}
       onCreated={() => {}}
       editionId={editionId}
+      statusManuallySetRef={statusManuallySetRef}
     />
   );
 }
