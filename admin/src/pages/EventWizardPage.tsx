@@ -331,7 +331,13 @@ interface EditionDetailsStepProps extends EventWizardPageProps {
   editionId?: string;
 }
 
-function EditionDetailsStep({ onNotify, eventId, eventSlug, form, setForm, onBack, onCreated, editionId }: EditionDetailsStepProps) {
+// #956: exported (unlike EventDetailsStep above) so EventWizardPage.test.tsx can mount this step
+// directly against its own controlled form/setForm state — the Year field's onChange wiring below
+// (titleSyncForYear + editionStatusForYear + shouldNudgeStatusForYear, gated by the
+// statusManuallySetRef guard) isn't reachable at the pure-function layer alone; eventForms.test.ts
+// itself says as much in its own header comment. Mirrors how RacesStep was exported in PR #961 for
+// the same reason.
+export function EditionDetailsStep({ onNotify, eventId, eventSlug, form, setForm, onBack, onCreated, editionId }: EditionDetailsStepProps) {
   const navigate = useNavigate();
   const { createEdition, updateEdition } = useEvents();
   const [saving, setSaving] = useState(false);
