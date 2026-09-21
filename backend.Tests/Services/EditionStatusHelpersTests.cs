@@ -241,6 +241,85 @@ public class EditionStatusHelpersTests
     }
 
     [Fact]
+    public void ComputeEffectiveTicketStatus_EditionNotStarted_RaceAvailable_ReturnsNotStarted()
+    {
+        var result = EditionStatusHelpers.ComputeEffectiveTicketStatus(
+            RaceStatus.Active, TicketStatus.Available, RegistrationStatus.NotStarted);
+
+        Assert.Equal(TicketStatus.NotStarted, result);
+    }
+
+    [Fact]
+    public void ComputeEffectiveTicketStatus_EditionOpen_ReturnsAvailable()
+    {
+        // Same edition as the NotStarted case above but registration has since opened — the
+        // race's effective ticket status must flip on the next read with no write/sweep needed.
+        var result = EditionStatusHelpers.ComputeEffectiveTicketStatus(
+            RaceStatus.Active, TicketStatus.Available, RegistrationStatus.Open);
+
+        Assert.Equal(TicketStatus.Available, result);
+    }
+
+    [Fact]
+    public void ComputeEffectiveTicketStatus_EditionClosed_ReturnsClosed()
+    {
+        var result = EditionStatusHelpers.ComputeEffectiveTicketStatus(
+            RaceStatus.Active, TicketStatus.Available, RegistrationStatus.Closed);
+
+        Assert.Equal(TicketStatus.Closed, result);
+    }
+
+    [Fact]
+    public void ComputeEffectiveTicketStatus_EditionNotRequired_ReturnsFree()
+    {
+        var result = EditionStatusHelpers.ComputeEffectiveTicketStatus(
+            RaceStatus.Active, TicketStatus.Available, RegistrationStatus.NotRequired);
+
+        Assert.Equal(TicketStatus.Free, result);
+    }
+
+    [Theory]
+    [InlineData(TicketStatus.SoldOut)]
+    [InlineData(TicketStatus.AlmostSoldOut)]
+    public void ComputeEffectiveTicketStatus_StoredSoldOutOrAlmostSoldOut_ReturnsUnchangedRegardlessOfEditionState(TicketStatus stored)
+    {
+        // A manual sold-out override has nothing to do with the registration window timing and
+        // must not be clobbered by a live computation, even if the edition reads as freshly Open.
+        var result = EditionStatusHelpers.ComputeEffectiveTicketStatus(
+            RaceStatus.Active, stored, RegistrationStatus.Open);
+
+        Assert.Equal(stored, result);
+    }
+
+    [Theory]
+    [InlineData(RaceStatus.Cancelled)]
+    [InlineData(RaceStatus.Completed)]
+    public void ComputeEffectiveTicketStatus_RaceCancelledOrCompleted_ReturnsStoredStatusEvenWithinOpenWindow(RaceStatus raceStatus)
+    {
+        // CancelWithRaces()/CompleteWithRaces() already forced TicketStatus to Closed as part of
+        // the cascade — that stored value must win over the edition's registration window.
+        var result = EditionStatusHelpers.ComputeEffectiveTicketStatus(
+            raceStatus, TicketStatus.Closed, RegistrationStatus.Open);
+
+        Assert.Equal(TicketStatus.Closed, result);
+    }
+
+    [Fact]
+    public void ComputeEffectiveTicketStatus_EditionWithManuallySetRegistrationStatus_StillMapsCorrectly()
+    {
+        // Simulates an edition with RegistrationOpens/Closes both empty, whose already-resolved
+        // effective RegistrationStatus (from ComputeEffectiveRegistrationStatus) is handed in here
+        // unchanged — this helper never re-derives from raw dates itself.
+        var effectiveRegStatus = EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
+            EditionStatus.Active, RegistrationStatus.NotRequired, null, null, DateTime.UtcNow);
+
+        var result = EditionStatusHelpers.ComputeEffectiveTicketStatus(
+            RaceStatus.Active, TicketStatus.Available, effectiveRegStatus);
+
+        Assert.Equal(TicketStatus.Free, result);
+    }
+
+    [Fact]
     public void AsUtc_NullValue_ReturnsNull()
     {
         var result = EditionStatusHelpers.AsUtc(null);

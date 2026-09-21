@@ -60,6 +60,37 @@ public static class EditionStatusHelpers
         return storedStatus;
     }
 
+    // TicketStatus is stored per-race (set by hand via the admin dropdown, or forced by
+    // CancelWithRaces()/CompleteWithRaces()/CreateRaceCommand) but the same "derive live, don't
+    // store and let it go stale" problem as ComputeEffectiveRegistrationStatus applies here too:
+    // a race created while its edition's registration hasn't opened yet defaults to Available
+    // and stays that way until someone remembers to edit it by hand.
+    public static TicketStatus ComputeEffectiveTicketStatus(
+        RaceStatus raceStatus,
+        TicketStatus storedTicketStatus,
+        RegistrationStatus effectiveEditionRegistrationStatus)
+    {
+        // Cancelled/Completed are terminal for the race itself — CancelWithRaces()/
+        // CompleteWithRaces() already forced TicketStatus to Closed as part of that cascade, and
+        // that must remain the source of truth regardless of the edition's registration window.
+        if (raceStatus == RaceStatus.Cancelled || raceStatus == RaceStatus.Completed)
+            return storedTicketStatus;
+
+        // SoldOut/AlmostSoldOut are deliberate manual overrides that have nothing to do with the
+        // registration window timing and must not be clobbered by a live computation.
+        if (storedTicketStatus == TicketStatus.SoldOut || storedTicketStatus == TicketStatus.AlmostSoldOut)
+            return storedTicketStatus;
+
+        return effectiveEditionRegistrationStatus switch
+        {
+            RegistrationStatus.NotStarted => TicketStatus.NotStarted,
+            RegistrationStatus.Open => TicketStatus.Available,
+            RegistrationStatus.Closed => TicketStatus.Closed,
+            RegistrationStatus.NotRequired => TicketStatus.Free,
+            _ => storedTicketStatus,
+        };
+    }
+
     // Npgsql requires Kind=Utc for a "timestamp with time zone" column. Admin-submitted
     // RegistrationOpens/Closes values arrive via System.Text.Json with Kind=Unspecified (no
     // offset in the payload) — relabel rather than convert, since the admin's date picker has
