@@ -293,6 +293,12 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
   const editionStatusHelperId = useId();
   const startDateHelperId = useId();
   const registrationStatusHelperId = useId();
+  // #970: explicit id/labelId pairing so these two Selects have an accessible name reachable via
+  // getByLabelText — mirrors #964's fix for EditionDetailsStep's own Status/Registration status
+  // Selects (EventWizardPage.tsx). Separate useId() calls from the *HelperId ones above, which
+  // label a FormHelperText via aria-describedby, not the Select itself.
+  const statusLabelId = useId();
+  const registrationStatusLabelId = useId();
   // Which of IS/EN is currently shown in the Title BilingualTextField below — the #892
   // duplicate-Title match must follow this so it always compares what's actually on screen.
   const { lang } = useBilingualLang();
@@ -487,8 +493,8 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
             </Alert>
           )}
           <FormControl size="small" fullWidth>
-            <InputLabel>Status</InputLabel>
-            <Select value={form.status} label="Status"
+            <InputLabel id={statusLabelId}>Status</InputLabel>
+            <Select labelId={statusLabelId} value={form.status} label="Status"
               onChange={e => {
                 statusManuallySetRef.current = true;
                 set('status', e.target.value as EditionStatus);
@@ -546,8 +552,8 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
               slotProps={{ textField: { size: 'small', fullWidth: true } }} />
           </Stack>
           <FormControl size="small" fullWidth disabled={!!form.registrationOpens && !!form.registrationCloses}>
-            <InputLabel>Registration status</InputLabel>
-            <Select value={form.registrationStatus} label="Registration status"
+            <InputLabel id={registrationStatusLabelId}>Registration status</InputLabel>
+            <Select labelId={registrationStatusLabelId} value={form.registrationStatus} label="Registration status"
               onChange={e => {
                 statusManuallySetRef.current = true;
                 set('registrationStatus', e.target.value as RegistrationStatus);

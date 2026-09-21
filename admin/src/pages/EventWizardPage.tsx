@@ -148,6 +148,12 @@ function EventDetailsStep({ onNotify, form, setForm, onCreated }: EventDetailsSt
   const { events, createEvent } = useEvents();
   const [saving, setSaving] = useState(false);
   const { translate, translating } = useTranslate(msg => onNotify(msg, 'error'));
+  // #970: explicit id/labelId pairing so these three Selects have an accessible name reachable via
+  // getByLabelText — mirrors #964's fix for EditionDetailsStep's own Status/Registration status
+  // Selects further down this file (statusLabelId/registrationStatusLabelId).
+  const typeLabelId = useId();
+  const activityLabelId = useId();
+  const statusLabelId = useId();
   // Which of IS/EN is currently shown in the Name BilingualTextField below — the #899
   // duplicate-Name match must follow this so it always compares what's actually on screen.
   const { lang } = useBilingualLang();
@@ -227,20 +233,20 @@ function EventDetailsStep({ onNotify, form, setForm, onCreated }: EventDetailsSt
 
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' }, gap: 1.5 }}>
           <FormControl size="small" fullWidth sx={{ '& .MuiOutlinedInput-root': TOUCH_TARGET_SX }}>
-            <InputLabel>Type</InputLabel>
-            <Select value={form.type} label="Type" onChange={e => set('type', e.target.value as EventType)}>
+            <InputLabel id={typeLabelId}>Type</InputLabel>
+            <Select labelId={typeLabelId} value={form.type} label="Type" onChange={e => set('type', e.target.value as EventType)}>
               {EVENT_TYPES.map(t => <MenuItem key={t} value={t}>{t}</MenuItem>)}
             </Select>
           </FormControl>
           <FormControl size="small" fullWidth sx={{ '& .MuiOutlinedInput-root': TOUCH_TARGET_SX }}>
-            <InputLabel>Activity</InputLabel>
-            <Select value={form.activityType} label="Activity" onChange={e => set('activityType', e.target.value as ActivityType)}>
+            <InputLabel id={activityLabelId}>Activity</InputLabel>
+            <Select labelId={activityLabelId} value={form.activityType} label="Activity" onChange={e => set('activityType', e.target.value as ActivityType)}>
               {ACTIVITY_TYPES.map(at => <MenuItem key={at} value={at}>{ACTIVITY_ICONS[at] ?? '🏅'} {at}</MenuItem>)}
             </Select>
           </FormControl>
           <FormControl size="small" fullWidth sx={{ '& .MuiOutlinedInput-root': TOUCH_TARGET_SX }}>
-            <InputLabel>Status</InputLabel>
-            <Select value={form.status} label="Status" onChange={e => set('status', e.target.value as EventStatus)}>
+            <InputLabel id={statusLabelId}>Status</InputLabel>
+            <Select labelId={statusLabelId} value={form.status} label="Status" onChange={e => set('status', e.target.value as EventStatus)}>
               {EVENT_STATUSES.map(s => <MenuItem key={s} value={s}>{EVENT_STATUS_LABELS[s]}</MenuItem>)}
             </Select>
           </FormControl>
