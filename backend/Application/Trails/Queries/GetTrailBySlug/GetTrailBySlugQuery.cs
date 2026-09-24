@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
 using Utanvega.Backend.Application.Caching;
+using Utanvega.Backend.Application.Events;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Core.Services;
 using Utanvega.Backend.Infrastructure.Persistence;
@@ -41,7 +42,8 @@ public class GetTrailBySlugQueryHandler : IRequestHandler<GetTrailBySlugQuery, T
         if (trail == null)
             return null;
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var now = DateTime.UtcNow;
+        var today = DateOnly.FromDateTime(now);
         var linkedRaces = await _context.Races
             .Include(r => r.EventEdition)
                 .ThenInclude(ed => ed.Event)
@@ -54,6 +56,14 @@ public class GetTrailBySlugQueryHandler : IRequestHandler<GetTrailBySlugQuery, T
                 && r.EventEdition.Event.Status != EventStatus.Hidden)
             .ToListAsync(cancellationToken);
 
+        // Computed once per edition and reused for every race drawn from it below —
+        // do not re-derive from raw dates a second time.
+        var effectiveRegStatusByEdition = linkedRaces
+            .Select(r => r.EventEdition)
+            .DistinctBy(ed => ed.Id)
+            .ToDictionary(ed => ed.Id, ed => EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
+                ed.Status, ed.RegistrationStatus, ed.RegistrationOpens, ed.RegistrationCloses, now));
+
         var linkedRaceDtos = linkedRaces
             .Select(r =>
             {
@@ -63,6 +73,9 @@ public class GetTrailBySlugQueryHandler : IRequestHandler<GetTrailBySlugQuery, T
                 else if (r.EventEdition.Event.ScheduleRule != null)
                     daysUntil = _scheduleEngine.GetDaysUntilNext(r.EventEdition.Event.ScheduleRule);
 
+                var effectiveTicketStatus = EditionStatusHelpers.ComputeEffectiveTicketStatus(
+                    r.Status, r.TicketStatus, effectiveRegStatusByEdition[r.EventEdition.Id]);
+
                 return new LinkedRaceDto(
                     r.EventEdition.Event.Name,
                     r.EventEdition.Event.Slug,
@@ -70,7 +83,7 @@ public class GetTrailBySlugQueryHandler : IRequestHandler<GetTrailBySlugQuery, T
                     r.DistanceLabel,
                     daysUntil,
                     r.StartTime.HasValue ? r.StartTime.Value.ToString("HH:mm") : null,
-                    r.TicketStatus.ToString(),
+                    effectiveTicketStatus.ToString(),
                     r.ItraPoints);
             })
             .ToList();
