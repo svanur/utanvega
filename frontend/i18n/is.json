@@ -792,6 +792,10 @@
             }
         },
         "changelog": {
+            "v1_12_0": {
+                "title": "Leit og skoðun á viðburðasíðunni beinist núna að því sem er framundan",
+                "description": "Leitin á viðburðasíðunni og flýtileitin (Ctrl+K) sýna núna sjálfgefið aðeins hlaup og viðburði sem eru framundan — gamall staka viðburður með samsvarandi nafni ruglar ekki lengur niðurstöðurnar innan um það sem raunverulega er á döfinni. Ef ekkert framundan passar við leitina þína birtist skýr valkostur til að sjá allar niðurstöður, svo ekkert er í raun falið, bara ekki fyrir sjónum sjálfgefið. Viðburðalistinn sjálfur (án leitar) sleppir núna líka viðburðum án staðfestrar dagsetningar framundan, sem áður sátu endalaust neðst á listanum."
+            },
             "v1_11_0": {
                 "title": "Ferlið að búa til nýjan viðburð í stjórnborði endurhannað. Villur villur í hlaupa- og miðastöðu á vefnum lagfærðar",
                 "description": "Að stofna viðburði í stjórnborði fer nú í gegnum 3 skref: viðburður, útgáfur og keppnishlaup. Á vefnum sjálfum sýnir miðastaða hlaupa núna réttilega hvort skráning fyrir viðkomandi útgáfu er í raun opin, í stað þess að sýna stundum úrelta stöðu. Úrslitahnappurinn birtist ekki lengur fyrr en viðburður hefur í raun farið fram, og hnappurinn fyrir endursölu miða hverfur um leið og skráning er í raun lokuð."
