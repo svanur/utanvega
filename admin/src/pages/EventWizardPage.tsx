@@ -648,22 +648,34 @@ export function RacesStep({ onNotify, eventSlug, editionId, editionStatus, editi
   useEffect(() => {
     let cancelled = false;
     const seedPromise = (async () => {
-      if (seedingDoneRef.current) return;
-      const { data } = await refetchEventDetail();
-      // Re-check after the await: a local add/remove (or an unmount) may have happened while this
-      // fetch was in flight, in which case the response below is already stale and must be dropped.
-      if (cancelled || seedingDoneRef.current) return;
-      const edition = data?.editions.find(e => e.id === editionId);
-      if (!edition) return;
-      const sortedRaces = edition.races.slice().sort((a, b) => a.sortOrder - b.sortOrder);
-      setAddedRaces(sortedRaces.map(r => ({ id: r.id, name: r.name })));
-      // #962: seed the monotonic counter from whatever is actually persisted, rather than leaving
-      // it at its initial 0 — a Step 3 -> 2 -> 3 remount must continue the existing sortOrder
-      // sequence, not restart it and collide with the races seeded above.
-      nextSortOrderRef.current = sortedRaces.length > 0
-        ? sortedRaces[sortedRaces.length - 1].sortOrder + 1
-        : 0;
-      seedingDoneRef.current = true;
+      try {
+        if (seedingDoneRef.current) return;
+        const { data } = await refetchEventDetail();
+        // Re-check after the await: a local add/remove (or an unmount) may have happened while this
+        // fetch was in flight, in which case the response below is already stale and must be dropped.
+        if (cancelled || seedingDoneRef.current) return;
+        const edition = data?.editions.find(e => e.id === editionId);
+        if (!edition) return;
+        const sortedRaces = edition.races.slice().sort((a, b) => a.sortOrder - b.sortOrder);
+        setAddedRaces(sortedRaces.map(r => ({ id: r.id, name: r.name })));
+        // #962: seed the monotonic counter from whatever is actually persisted, rather than leaving
+        // it at its initial 0 — a Step 3 -> 2 -> 3 remount must continue the existing sortOrder
+        // sequence, not restart it and collide with the races seeded above.
+        nextSortOrderRef.current = sortedRaces.length > 0
+          ? sortedRaces[sortedRaces.length - 1].sortOrder + 1
+          : 0;
+        seedingDoneRef.current = true;
+      } catch (err) {
+        // #975: refetchEventDetail() is a plain react-query refetch with no throwOnError, so this
+        // catch guards against a hypothetical rejection rather than one exercised today. Swallowing
+        // it here (rather than letting it propagate) leaves addedRaces/nextSortOrderRef exactly at
+        // their pre-seed defaults — the same outcome as the `if (!edition) return` case above — and
+        // keeps this IIFE's promise from rejecting at all, which matters because the bare
+        // `.finally()` below re-throws on rejection rather than swallowing it, and
+        // handleAddRaces/handleRemove `await seedInFlightRef.current` directly with no catch of
+        // their own.
+        console.error('RacesStep: failed to seed races from refetch', err);
+      }
     })();
     seedInFlightRef.current = seedPromise;
     void seedPromise.finally(() => {

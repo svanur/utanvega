@@ -164,6 +164,28 @@ let nextRaceId = 0;
 // reproducing the exact ordering the fix closes.
 let deferEventDetailFetch = false;
 let pendingEventDetailResolve: ((value: EventDetailDto) => void) | null = null;
+// #975: lets a single test force the seed effect's `await refetchEventDetail()` to reject, so it
+// can be proven the effect swallows a hypothetical rejection rather than letting it become an
+// unhandled promise rejection. The real refetch() (useEvents.ts's useEventDetail, plain
+// react-query with no throwOnError) never actually rejects — this flag is the only way to exercise
+// that path at all. Left false, every other describe block below gets the real hook back
+// unchanged.
+let rejectNextEventDetailRefetch = false;
+
+vi.mock('../hooks/useEvents', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../hooks/useEvents')>();
+  return {
+    ...actual,
+    useEventDetail: (slug: string) => {
+      const result = actual.useEventDetail(slug);
+      if (rejectNextEventDetailRefetch) {
+        rejectNextEventDetailRefetch = false;
+        return { ...result, refetch: () => Promise.reject(new Error('simulated refetch rejection (#975)')) };
+      }
+      return result;
+    },
+  };
+});
 
 vi.mock('../hooks/api', () => ({
   apiFetch: vi.fn((endpoint: string, options?: { method?: string; body?: string }) => {
@@ -381,6 +403,84 @@ describe('RacesStep — double-clicking Add races while a seed fetch is in fligh
 
     // Exactly one race created for Trail A — not two.
     expect(capturedSortOrders).toEqual([0]);
+  });
+});
+
+// #975: PR #974's review flagged that the seed effect's `void seedPromise.finally(...)` doesn't
+// catch a hypothetical rejection — .finally() re-throws after running rather than swallowing, so a
+// rejected refetchEventDetail() would surface as an unhandled promise rejection, and would also
+// leave seedInFlightRef pointing at a rejected promise for any handleAddRaces/handleRemove call
+// still to come this mount. refetchEventDetail() never actually rejects today (useEventDetail is a
+// plain react-query useQuery with no throwOnError) — this is a hardening test against that latent
+// gap, not a currently-reachable bug, forcing the rejection via the '../hooks/useEvents' mock above
+// since nothing in real usage can trigger it.
+describe('RacesStep — a rejected seed refetch does not become an unhandled rejection (#975)', () => {
+  afterEach(() => {
+    cleanup();
+    currentRaces = [];
+    eventDetailFetches = 0;
+    mockTrails = [];
+    capturedSortOrders = [];
+    nextRaceId = 0;
+    rejectNextEventDetailRefetch = false;
+  });
+
+  // Same Autocomplete-driving helpers as the describe blocks above.
+  function selectTrail(name: string) {
+    const input = screen.getByRole('combobox', { name: 'Search trails to add' });
+    fireEvent.change(input, { target: { value: name } });
+    const option = screen.getAllByRole('option').find(o => o.textContent?.includes(name));
+    if (!option) throw new Error(`Trail option not found in Autocomplete: ${name}`);
+    fireEvent.click(option);
+    fireEvent.change(input, { target: { value: '' } });
+  }
+
+  function clickAddRaces() {
+    fireEvent.click(screen.getByRole('button', { name: /^Add \d+ race/ }));
+  }
+
+  it('swallows the rejection (no unhandled promise rejection) and still lets a subsequent Add races proceed normally', async () => {
+    // Verified against a reverted fix: jsdom (this file runs under `@vitest-environment jsdom`)
+    // does not actually re-dispatch Node's unhandled-rejection tracking as a window event in this
+    // Vitest setup — `process.on('unhandledRejection', ...)` is what genuinely fires (it's also
+    // what makes Vitest itself report an "Unhandled Rejection" and fail the run when this fix is
+    // reverted), so that's what this test listens on instead.
+    const unhandledRejections: unknown[] = [];
+    const onUnhandledRejection = (reason: unknown) => { unhandledRejections.push(reason); };
+    process.on('unhandledRejection', onUnhandledRejection);
+
+    try {
+      mockTrails = [makeTrail('trail-a', 'Trail A')];
+      const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      rejectNextEventDetailRefetch = true;
+      renderRacesStep(queryClient);
+
+      await waitFor(() => expect(eventDetailFetches).toBeGreaterThan(0));
+      await waitFor(() => expect(screen.getByRole('combobox', { name: 'Search trails to add' })).toBeTruthy());
+
+      // If seedInFlightRef were left pointing at the rejected promise instead of being cleared back
+      // to null (the #975 concern), this `await seedInFlightRef.current` inside handleAddRaces would
+      // itself throw — uncaught, since handleAddRaces has no catch around that await — surfacing as
+      // a second unhandled rejection and leaving Trail A never created below.
+      selectTrail('Trail A');
+      clickAddRaces();
+
+      await waitFor(() => expect(screen.getByLabelText('Remove Trail A')).toBeTruthy());
+      expect(capturedSortOrders).toEqual([0]);
+
+      // addedRaces/nextSortOrderRef stayed at their pre-seed defaults (nothing to seed from a
+      // rejected refetch) — Trail A above got sortOrder 0, not some value inherited from a seed
+      // that couldn't have happened.
+      //
+      // A plain assertion here would trivially pass even against a reverted fix, since
+      // 'unhandledrejection' fires asynchronously (after the microtask queue drains) — this needs
+      // an explicit tick for that event to actually have a chance to arrive before asserting none
+      // did.
+      await new Promise(resolve => setTimeout(resolve, 50));
+      expect(unhandledRejections).toEqual([]);
+    } finally {
+      process.off('unhandledRejection', onUnhandledRejection);
+    }
   });
 });
 
