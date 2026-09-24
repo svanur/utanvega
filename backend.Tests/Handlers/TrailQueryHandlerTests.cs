@@ -440,7 +440,7 @@ public class TrailQueryHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetTrailBySlug_LinkedRace_CompletedRaceStatus_ExcludedFromLinkedRaces()
+    public async Task GetTrailBySlug_LinkedRace_CompletedRaceStatus_StillIncludedWithUnchangedTicketStatus()
     {
         // GetTrailBySlugQuery's linked-races filter only excludes Cancelled/Hidden race statuses,
         // so a Completed race is still expected to appear with its stored TicketStatus unchanged
