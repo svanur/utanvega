@@ -652,9 +652,10 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                     <Box sx={{ mb: 1.5 }}>
                         <Button
                             size="small"
-                            variant="text"
+                            variant="outlined"
+                            startIcon={<HistoryIcon fontSize="small" />}
                             onClick={() => setIncludeAllEvents(true)}
-                            sx={{ textTransform: 'none', fontSize: '0.8rem', color: 'text.secondary', px: 0.5 }}
+                            sx={{ textTransform: 'none', fontSize: '0.8rem', borderRadius: '16px' }}
                         >
                             {t('races.showAllEventsFor', { query: search })}
                         </Button>

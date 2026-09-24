@@ -1319,7 +1319,7 @@
         "title": "All events in one place",
         "subtitle": "Upcoming events and races in Iceland. Be sure to confirm final dates on the race organizer's website.",
         "searchPlaceholder": "Search events...",
-        "showAllEventsFor": "Show all events for \"{{query}}\" (incl. past)",
+        "showAllEventsFor": "Also show past events for \"{{query}}\"",
         "noResults": "No events match your search",
         "empty": "No events yet",
         "noDate": "Date TBD",
