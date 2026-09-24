@@ -792,8 +792,8 @@
         },
         "changelog": {
             "v1_11_0": {
-                "title": "Nýr leiðarvísir fyrir stofnun viðburða í stjórnborði, og lagfærðar villur í hlaupa- og miðastöðu á vefnum",
-                "description": "Í stjórnborði er núna hægt að stofna viðburði í gegnum nýjan þriggja skrefa leiðarvísi (viðburðaupplýsingar, útgáfuupplýsingar og hlaup) sem kemur í stað gamla einfalda gluggans, með öruggri hreyfingu fram og til baka milli skrefa, viðvörun áður en óvistuð hlaupaval tapast, og litlum þægindum eins og Ctrl+Enter til að vista og sjálfvirkri útfyllingu ártals í titil. Á vefnum sjálfum sýnir miðastaða hlaupa (Laus sæti, Uppselt, Skráning ekki hafin o.s.frv.) núna réttilega hvort skráning fyrir viðkomandi útgáfu er í raun opin, í stað þess að sýna stundum úrelta stöðu — þetta lagfærði líka villu í sjálfvirkri klónun útgáfa milli ára sem gat búið til ógilt skráningartímabil. Úrslitahnappurinn birtist ekki lengur fyrr en viðburður hefur í raun farið fram, og hnappurinn fyrir endursölu miða hverfur um leið og skráning er í raun lokuð."
+                "title": "Ferlið að búa til nýjan viðburð í stjórnborði endurhannað. Villur villur í hlaupa- og miðastöðu á vefnum lagfærðar",
+                "description": "Að stofna viðburði í stjórnborði fer nú í gegnum 3 skref: viðburður, útgáfur og keppnishlaup. Á vefnum sjálfum sýnir miðastaða hlaupa núna réttilega hvort skráning fyrir viðkomandi útgáfu er í raun opin, í stað þess að sýna stundum úrelta stöðu. Úrslitahnappurinn birtist ekki lengur fyrr en viðburður hefur í raun farið fram, og hnappurinn fyrir endursölu miða hverfur um leið og skráning er í raun lokuð."
             },
             "v1_10_0": {
                 "title": "Villa löguð á viðburðasíðum, og fleiri útgáfur/hlaup ljúka sér sjálfkrafa",
