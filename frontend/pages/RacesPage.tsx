@@ -73,7 +73,7 @@ import { API_URL } from '../hooks/useTrails';
 import { downloadIcs } from '../utils/calendarLinks';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
-import { getTicketStatusColor, groupDistances, isAllSoldOut } from '../utils/ticketStatus';
+import { getTicketStatusColor, groupDistances, isAllSoldOut, hasRegistrationClosed } from '../utils/ticketStatus';
 import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor, getWeekRange, isEffectivelyCancelled, isEffectivelyUnconfirmed, isOngoingPastDayTwo } from '../utils/eventUtils';
 import { trackViewModeChange, trackSiteQROpen } from '../utils/analytics';
 import { useLocalize } from '../utils/localize';
@@ -1095,7 +1095,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                         ))}
                                                                     </Stack>
                                                                 )}
-                                                                {comp.resultsUrl && (
+                                                                {comp.resultsUrl && (comp.daysUntil == null || comp.daysUntil < 0) && (
                                                                     <Button
                                                                         size="small"
                                                                         variant="outlined"
@@ -1293,7 +1293,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                             {t('races.organizerSite')}
                                                                         </Button>
                                                                     )}
-                                                                    {comp.resultsUrl && (
+                                                                    {comp.resultsUrl && (comp.daysUntil == null || comp.daysUntil < 0) && (
                                                                         <Button size="small" variant="outlined" href={comp.resultsUrl} target="_blank" rel="noopener noreferrer" endIcon={<OpenInNewIcon sx={{ fontSize: 12 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem' }}>
                                                                             {t('races.results', 'Results')}
                                                                         </Button>
@@ -1548,7 +1548,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                 {t('races.organizerSite')}
                                                             </Button>
                                                         )}
-                                                        {comp.resultsUrl && (
+                                                        {comp.resultsUrl && (comp.daysUntil == null || comp.daysUntil < 0) && (
                                                             <Button size="small" variant="outlined" href={comp.resultsUrl} target="_blank" rel="noopener noreferrer" endIcon={<OpenInNewIcon sx={{ fontSize: 12 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem' }}>
                                                                 {t('races.results', 'Results')}
                                                             </Button>
@@ -1617,7 +1617,8 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                             {/* Resale link */}
                                             {isEnabled('resale_tickets', false)
                                                 && (comp.activityType === 'Running' || comp.activityType === 'TrailRunning')
-                                                && comp.distances?.some(d => d.ticketStatus === 'SoldOut') && (
+                                                && comp.distances?.some(d => d.ticketStatus === 'SoldOut')
+                                                && !hasRegistrationClosed(comp.registrationCloses) && (
                                                 <Box sx={{ mt: 0.75 }}>
                                                     <Link
                                                         href={t('races.table.resaleHref')}

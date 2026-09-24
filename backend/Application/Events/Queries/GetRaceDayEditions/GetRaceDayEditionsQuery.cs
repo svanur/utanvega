@@ -86,7 +86,13 @@ public class GetRaceDayEditionsQueryHandler : IRequestHandler<GetRaceDayEditions
 
         var now = DateTime.UtcNow;
 
-        return editions.Select(ed => new RaceDayEditionDto(
+        return editions.Select(ed => {
+            // Computed once per edition and reused for every race drawn from it below —
+            // do not re-derive from raw dates a second time.
+            var edEffectiveRegStatus = EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
+                ed.Status, ed.RegistrationStatus, ed.RegistrationOpens, ed.RegistrationCloses, now);
+
+            return new RaceDayEditionDto(
             ed.Id,
             ed.EventId,
             ed.Event.Name,
@@ -99,8 +105,7 @@ public class GetRaceDayEditionsQueryHandler : IRequestHandler<GetRaceDayEditions
             ed.Title,
             ed.ResultsUrl,
             ed.RegistrationUrl,
-            EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
-                ed.Status, ed.RegistrationStatus, ed.RegistrationOpens, ed.RegistrationCloses, now).ToString(),
+            edEffectiveRegStatus.ToString(),
             ed.Races
                 .OrderBy(r => r.SortOrder)
                 .Select(r => new RaceDayRaceDto(
@@ -110,7 +115,7 @@ public class GetRaceDayEditionsQueryHandler : IRequestHandler<GetRaceDayEditions
                     r.DistanceLabel,
                     r.DistanceLabelEn,
                     r.Status.ToString(),
-                    r.TicketStatus.ToString(),
+                    EditionStatusHelpers.ComputeEffectiveTicketStatus(r.Status, r.TicketStatus, edEffectiveRegStatus).ToString(),
                     r.SortOrder,
                     r.ActivityType?.ToString(),
                     r.CutoffMinutes,
@@ -125,6 +130,7 @@ public class GetRaceDayEditionsQueryHandler : IRequestHandler<GetRaceDayEditions
                     r.TrailId.HasValue && trailNames.TryGetValue(r.TrailId.Value, out var tn) ? tn : null
                 ))
                 .ToList()
-        )).ToList();
+            );
+        }).ToList();
     }
 }

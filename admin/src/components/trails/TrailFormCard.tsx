@@ -34,8 +34,8 @@ import { useLocations } from '../../hooks/useLocations';
 import { useTags } from '../../hooks/useTags';
 import { useTranslate } from '../../hooks/useTranslate';
 import BilingualTextField from '../BilingualTextField';
+import BilingualLangToggle from '../BilingualLangToggle';
 import { BilingualLangProvider } from '../../contexts/BilingualLangContext';
-import { useBilingualLang } from '../../hooks/useBilingualLang';
 import type { EventDetailDto, EventEditionDto, EventSummaryDto, RaceDto } from '../../hooks/useEvents';
 import { hashText } from '../../utils/translationHash';
 import {
@@ -92,20 +92,6 @@ function SectionLabel({ children }: { children: ReactNode }) {
     >
       {children}
     </Typography>
-  );
-}
-
-function LangToggleButton() {
-  const { lang, toggle } = useBilingualLang();
-  return (
-    <Chip
-      label={lang === 'is' ? 'IS' : 'EN'}
-      size="small"
-      onClick={toggle}
-      color={lang === 'en' ? 'primary' : 'default'}
-      variant={lang === 'en' ? 'filled' : 'outlined'}
-      sx={{ fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', minWidth: 36 }}
-    />
   );
 }
 
@@ -342,7 +328,7 @@ function TrailFormCardInner({ trail: initialTrail, onClose, onSaved, onNotify }:
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
         <Typography variant="subtitle1" fontWeight={600}>Edit trail</Typography>
         <Stack direction="row" spacing={1} alignItems="center">
-          <LangToggleButton />
+          <BilingualLangToggle />
           <Typography variant="caption" color="text.secondary">{trail.slug}</Typography>
         </Stack>
       </Stack>

@@ -43,7 +43,9 @@ public class EditionAutoCloneSweepTests : IDisposable
         string? registrationUrl = null,
         string? resultsUrl = null,
         string? title = null,
-        Guid? trailId = null)
+        Guid? trailId = null,
+        DateTime? registrationOpens = null,
+        DateTime? registrationCloses = null)
     {
         return new EventEdition
         {
@@ -60,6 +62,8 @@ public class EditionAutoCloneSweepTests : IDisposable
             Notes = "some old notes",
             NotesEn = "some old notes en",
             TrailId = trailId,
+            RegistrationOpens = registrationOpens,
+            RegistrationCloses = registrationCloses,
         };
     }
 
@@ -351,5 +355,153 @@ public class EditionAutoCloneSweepTests : IDisposable
 
         using var verifyCtx = _factory.CreateContext();
         Assert.Equal(1, verifyCtx.EventEditions.Count(e => e.Year == 2027));
+    }
+
+    [Fact]
+    public async Task ProjectsTheRegistrationWindowForwardAndFlagsNeedsReviewWhenBothBoundsAreSet()
+    {
+        var ev = CreateEvent();
+        // 2026-08-15 is a Saturday (same reference date as the other tests). RegistrationOpens
+        // (2026-07-01, a Wednesday) and RegistrationCloses (2026-08-01, a Saturday) are both set,
+        // so both must shift forward with the same weekday-preserving heuristic as Date/EndDate.
+        var registrationOpens = new DateTime(2026, 7, 1, 10, 30, 0, DateTimeKind.Utc);
+        var registrationCloses = new DateTime(2026, 8, 1, 23, 59, 0, DateTimeKind.Utc);
+        var edition = CreateCompletedEdition(
+            ev.Id, 2026, new DateOnly(2026, 8, 15),
+            registrationOpens: registrationOpens,
+            registrationCloses: registrationCloses);
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            await EditionAutoCloneSweep.RunAsync(ctx, _cacheInvalidator.Object, Today);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        var newEdition = verifyCtx.EventEditions.Single(e => e.Year == 2027);
+
+        // The Date projection itself succeeds here (source has a Date), so isSuccess is true —
+        // NeedsReview must still be forced true by the projected registration window, independent
+        // of that success. Pinned to exact dates/times, not just "shifted somewhere", so a sign
+        // flip or a dropped time-of-day fails loudly rather than passing unnoticed.
+        // Kind (Utc vs Unspecified) isn't asserted here — this DbContext has no Kind-preserving
+        // value converter configured for plain DateTime? columns under the SQLite test provider
+        // (see TestDbContextFactory), same as every other DateTime? field in this suite; the
+        // production Npgsql "timestamptz" mapping round-trips Kind correctly, which is all
+        // ProjectRegistrationDateForYear's DateTime.SpecifyKind(..., value.Kind) call depends on.
+        Assert.True(newEdition.NeedsReview);
+        Assert.Equal(new DateTime(2027, 6, 30, 10, 30, 0), newEdition.RegistrationOpens);
+        Assert.Equal(DayOfWeek.Wednesday, newEdition.RegistrationOpens!.Value.DayOfWeek);
+        Assert.Equal(new DateTime(2027, 7, 31, 23, 59, 0), newEdition.RegistrationCloses);
+        Assert.Equal(DayOfWeek.Saturday, newEdition.RegistrationCloses!.Value.DayOfWeek);
+    }
+
+    [Fact]
+    public async Task LeavesTheRegistrationWindowNullAndDoesNotForceNeedsReviewWhenNeitherBoundIsSet()
+    {
+        var ev = CreateEvent();
+        // No RegistrationOpens/Closes on the source at all — today's behaviour (both stay null)
+        // must be unaffected by #973, and NeedsReview must not be forced true by this specific
+        // change (a succeeding Date projection alone leaves NeedsReview false, same as before).
+        var edition = CreateCompletedEdition(ev.Id, 2026, new DateOnly(2026, 8, 15));
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            await EditionAutoCloneSweep.RunAsync(ctx, _cacheInvalidator.Object, Today);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        var newEdition = verifyCtx.EventEditions.Single(e => e.Year == 2027);
+
+        Assert.Null(newEdition.RegistrationOpens);
+        Assert.Null(newEdition.RegistrationCloses);
+        Assert.False(newEdition.NeedsReview);
+    }
+
+    [Fact]
+    public async Task LeavesTheRegistrationWindowNullWhenOnlyOneBoundIsSetOnTheSource()
+    {
+        var ev = CreateEvent();
+        // Only RegistrationOpens is set on the source — a one-sided window isn't a real window to
+        // project (see #973's own guard), so both bounds must stay null on the clone exactly as
+        // when neither is set, and NeedsReview must not be forced true by the registration-window
+        // logic (only a succeeding/failing Date projection can affect it in this mixed case).
+        var edition = CreateCompletedEdition(
+            ev.Id, 2026, new DateOnly(2026, 8, 15),
+            registrationOpens: new DateTime(2026, 7, 1, 10, 30, 0, DateTimeKind.Utc),
+            registrationCloses: null);
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            await EditionAutoCloneSweep.RunAsync(ctx, _cacheInvalidator.Object, Today);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        var newEdition = verifyCtx.EventEditions.Single(e => e.Year == 2027);
+
+        Assert.Null(newEdition.RegistrationOpens);
+        Assert.Null(newEdition.RegistrationCloses);
+        Assert.False(newEdition.NeedsReview);
+    }
+
+    [Fact]
+    public async Task NeverProducesAnInvertedRegistrationWindowWhenTheSourceWindowIsNarrow()
+    {
+        var ev = CreateEvent();
+        // A 2-day source window: RegistrationOpens (2026-07-01, Wed) and RegistrationCloses
+        // (2026-07-03, Fri). Independent ±3-day weekday nudging per bound (the pre-fix behaviour)
+        // can nudge Opens later and Closes earlier far enough to invert a window this narrow —
+        // asserting Closes >= Opens (and the exact preserved gap) on the clone proves the fix
+        // derives Closes from the newly projected Opens plus the source's original gap instead.
+        var registrationOpens = new DateTime(2026, 7, 1, 10, 0, 0, DateTimeKind.Utc);
+        var registrationCloses = new DateTime(2026, 7, 3, 18, 0, 0, DateTimeKind.Utc);
+        var edition = CreateCompletedEdition(
+            ev.Id, 2026, new DateOnly(2026, 8, 15),
+            registrationOpens: registrationOpens,
+            registrationCloses: registrationCloses);
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            await EditionAutoCloneSweep.RunAsync(ctx, _cacheInvalidator.Object, Today);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        var newEdition = verifyCtx.EventEditions.Single(e => e.Year == 2027);
+
+        Assert.NotNull(newEdition.RegistrationOpens);
+        Assert.NotNull(newEdition.RegistrationCloses);
+        Assert.True(newEdition.RegistrationCloses >= newEdition.RegistrationOpens);
+        // The source's original 2-day-8-hour gap must be preserved exactly, not just "not
+        // inverted" — proving Closes is derived from the newly projected Opens rather than
+        // independently re-nudged from the source Closes.
+        var originalGap = registrationCloses - registrationOpens;
+        Assert.Equal(originalGap, newEdition.RegistrationCloses!.Value - newEdition.RegistrationOpens!.Value);
     }
 }

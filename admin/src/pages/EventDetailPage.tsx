@@ -76,6 +76,7 @@ import RaceFormCard from '../components/events/RaceFormCard';
 import EventFormCard from '../components/events/EventFormCard';
 import PhotoGalleryManager, { type PhotoGalleryManagerHandle } from '../components/events/PhotoGalleryManager';
 import BilingualTextField from '../components/BilingualTextField';
+import BilingualLangToggle from '../components/BilingualLangToggle';
 import { BilingualLangProvider } from '../contexts/BilingualLangContext';
 import { useBilingualLang } from '../hooks/useBilingualLang';
 import {
@@ -272,21 +273,10 @@ interface EditionDialogProps {
   siblingEditions: EventEditionDto[];
 }
 
-function LangToggleButton() {
-  const { lang, toggle } = useBilingualLang();
-  return (
-    <Chip
-      label={lang === 'is' ? 'IS' : 'EN'}
-      size="small"
-      onClick={toggle}
-      color={lang === 'en' ? 'primary' : 'default'}
-      variant={lang === 'en' ? 'filled' : 'outlined'}
-      sx={{ fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', minWidth: 36 }}
-    />
-  );
-}
-
-function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGalleryMutated, onNotify, initialValues, isClone = false, isApproximateScheduleClone = false, siblingEditions }: EditionDialogProps) {
+// #977: exported (unlike previously) so EventDetailPage.test.tsx can mount this dialog directly
+// and cover its Status/Registration status Selects via getByLabelText, mirroring EventWizardPage's
+// own EditionDetailsStep/RacesStep exports, which exist for the same reason.
+export function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGalleryMutated, onNotify, initialValues, isClone = false, isApproximateScheduleClone = false, siblingEditions }: EditionDialogProps) {
   const isNew = edition === null;
   const [form, setForm] = useState<EditionFormState>(initialValues ?? (edition ? buildEditionForm(edition) : emptyEditionForm()));
   const [saving, setSaving] = useState(false);
@@ -306,6 +296,12 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
   const editionStatusHelperId = useId();
   const startDateHelperId = useId();
   const registrationStatusHelperId = useId();
+  // #970: explicit id/labelId pairing so these two Selects have an accessible name reachable via
+  // getByLabelText — mirrors #964's fix for EditionDetailsStep's own Status/Registration status
+  // Selects (EventWizardPage.tsx). Separate useId() calls from the *HelperId ones above, which
+  // label a FormHelperText via aria-describedby, not the Select itself.
+  const statusLabelId = useId();
+  const registrationStatusLabelId = useId();
   // Which of IS/EN is currently shown in the Title BilingualTextField below — the #892
   // duplicate-Title match must follow this so it always compares what's actually on screen.
   const { lang } = useBilingualLang();
@@ -418,7 +414,7 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
       <DialogTitle>
         <Stack direction="row" justifyContent="space-between" alignItems="center">
           {isNew ? 'Add edition' : 'Edit edition'}
-          <LangToggleButton />
+          <BilingualLangToggle />
         </Stack>
       </DialogTitle>
       <DialogContent>
@@ -500,8 +496,8 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
             </Alert>
           )}
           <FormControl size="small" fullWidth>
-            <InputLabel>Status</InputLabel>
-            <Select value={form.status} label="Status"
+            <InputLabel id={statusLabelId}>Status</InputLabel>
+            <Select labelId={statusLabelId} value={form.status} label="Status"
               onChange={e => {
                 statusManuallySetRef.current = true;
                 set('status', e.target.value as EditionStatus);
@@ -559,8 +555,8 @@ function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGaller
               slotProps={{ textField: { size: 'small', fullWidth: true } }} />
           </Stack>
           <FormControl size="small" fullWidth disabled={!!form.registrationOpens && !!form.registrationCloses}>
-            <InputLabel>Registration status</InputLabel>
-            <Select value={form.registrationStatus} label="Registration status"
+            <InputLabel id={registrationStatusLabelId}>Registration status</InputLabel>
+            <Select labelId={registrationStatusLabelId} value={form.registrationStatus} label="Registration status"
               onChange={e => {
                 statusManuallySetRef.current = true;
                 set('registrationStatus', e.target.value as RegistrationStatus);

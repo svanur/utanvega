@@ -4,7 +4,6 @@ import {
   Autocomplete,
   Box,
   Button,
-  Chip,
   CircularProgress,
   Divider,
   FormControl,
@@ -51,8 +50,8 @@ import { useTranslate } from '../../hooks/useTranslate';
 import { usePageShortcuts } from '../../hooks/usePageShortcuts';
 import { trimToUndefined, parseCoordPaste } from '../../utils/strings';
 import BilingualTextField from '../BilingualTextField';
+import BilingualLangToggle from '../BilingualLangToggle';
 import { BilingualLangProvider } from '../../contexts/BilingualLangContext';
-import { useBilingualLang } from '../../hooks/useBilingualLang';
 
 const EVENT_TYPES: EventType[] = ['Race', 'Series', 'Social', 'Advertisement', 'Festival', 'Other'];
 const ACTIVITY_TYPES: ActivityType[] = ['TrailRunning', 'Running', 'Cycling', 'Hiking', 'FunRun', 'ObstacleCourse', 'CrossCountryRun', 'Swim', 'Canicross', 'IronMan', 'Other'];
@@ -189,20 +188,6 @@ function SectionLabel({ children }: { children: ReactNode }) {
   );
 }
 
-function LangToggleButton() {
-  const { lang, toggle } = useBilingualLang();
-  return (
-    <Chip
-      label={lang === 'is' ? 'IS' : 'EN'}
-      size="small"
-      onClick={toggle}
-      color={lang === 'en' ? 'primary' : 'default'}
-      variant={lang === 'en' ? 'filled' : 'outlined'}
-      sx={{ fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', minWidth: 36 }}
-    />
-  );
-}
-
 interface EventFormCardProps {
   event: EventDetailDto;
   linkedTrails?: Trail[];
@@ -324,7 +309,7 @@ function EventFormCardInner({ event, linkedTrails = [], onClose, onSaved, onNoti
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
         <Typography variant="subtitle1" fontWeight={600}>Edit event</Typography>
         <Stack direction="row" spacing={1} alignItems="center">
-          <LangToggleButton />
+          <BilingualLangToggle />
           <Typography variant="caption" color="text.secondary">{event.slug}</Typography>
         </Stack>
       </Stack>

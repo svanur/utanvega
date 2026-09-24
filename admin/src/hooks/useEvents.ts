@@ -224,6 +224,10 @@ export interface CreateEditionInput {
     registrationOpens?: string | null;
     registrationCloses?: string | null;
     trailId?: string | null;
+    // Optional, same as UpdateEditionInput's status below — most callers let CreateEditionCommand's
+    // own past-date-defaults-to-Completed logic pick it, but EventWizardPage's EditionDetailsStep
+    // submits the admin's explicit Step-2 choice.
+    status?: EditionStatus;
 }
 
 export interface UpdateEditionInput {
@@ -494,7 +498,12 @@ export function useEventDetail(slug: string) {
         [queryClient]
     );
 
-    return { detail, loading, error, refresh, setDetail, invalidateEventsList };
+    // #953: unlike refresh() above (fire-and-forget, for callers that just want the cache eventually
+    // brought current), EventWizardPage's RacesStep needs to *await* a genuinely fresh fetch — a
+    // manual refetch() call always hits the network regardless of staleTime, which a reactive read of
+    // `detail` alone can't guarantee (staleTime 30_000 means a remount within that window would
+    // otherwise silently reuse a pre-mutation cached snapshot).
+    return { detail, loading, error, refresh, refetch, setDetail, invalidateEventsList };
 }
 
 export function useEventMutations() {

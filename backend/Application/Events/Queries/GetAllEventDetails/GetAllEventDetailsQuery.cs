@@ -85,7 +85,13 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
             [],
             ev.Editions
                 .OrderByDescending(ed => ed.Date ?? DateOnly.MinValue)
-                .Select(ed => new EventEditionDto(
+                .Select(ed => {
+                    // Computed once per edition and reused for every race drawn from it below —
+                    // do not re-derive from raw dates a second time.
+                    var edEffectiveRegStatus = EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
+                        ed.Status, ed.RegistrationStatus, ed.RegistrationOpens, ed.RegistrationCloses, now);
+
+                    return new EventEditionDto(
                     ed.Id,
                     ed.EventId,
                     ed.Year,
@@ -97,8 +103,7 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
                     ed.ResultsUrl,
                     ed.Notes,
                     ed.NotesEn,
-                    EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
-                        ed.Status, ed.RegistrationStatus, ed.RegistrationOpens, ed.RegistrationCloses, now).ToString(),
+                    edEffectiveRegStatus.ToString(),
                     ed.TrailId,
                     GetTrail(ed.TrailId)?.Name,
                     GetTrail(ed.TrailId)?.Slug,
@@ -119,7 +124,7 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
                             r.DescriptionEn,
                             r.Status.ToString(),
                             r.SortOrder,
-                            r.TicketStatus.ToString(),
+                            EditionStatusHelpers.ComputeEffectiveTicketStatus(r.Status, r.TicketStatus, edEffectiveRegStatus).ToString(),
                             r.MaxParticipants,
                             r.ItraPoints,
                             r.CertifiedBy,
@@ -148,7 +153,8 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
                     RegistrationOpens: ed.RegistrationOpens,
                     RegistrationCloses: ed.RegistrationCloses,
                     NeedsReview: ed.NeedsReview
-                ))
+                    );
+                })
                 .ToList(),
             ev.CreatedAt,
             ev.UpdatedAt,

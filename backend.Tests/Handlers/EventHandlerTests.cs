@@ -1652,6 +1652,37 @@ public class EventHandlerTests : IDisposable
         Assert.NotNull(result[0].DaysUntil);
     }
 
+    [Fact]
+    public async Task GetEvents_RegistrationCloses_RoundTripsFromEditionToDto()
+    {
+        var ev = CreateTestEvent();
+        var futureDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30));
+        var registrationCloses = new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc);
+        var edition = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Year = futureDate.Year,
+            Date = futureDate,
+            RegistrationStatus = RegistrationStatus.Open,
+            RegistrationCloses = registrationCloses,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.Equal(registrationCloses, dto.RegistrationCloses);
+    }
+
     // ─── GetEventQuery (by slug) ───
 
     [Fact]

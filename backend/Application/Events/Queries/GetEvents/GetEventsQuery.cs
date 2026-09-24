@@ -154,6 +154,13 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 .OrderBy(r => r.SortOrder)
                 .ToList();
 
+            // Computed once per relevantEdition and reused for every race drawn from it below —
+            // do not re-derive from raw dates a second time.
+            var relevantEditionEffectiveRegStatus = relevantEdition != null
+                ? EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
+                    relevantEdition.Status, relevantEdition.RegistrationStatus, relevantEdition.RegistrationOpens, relevantEdition.RegistrationCloses, now)
+                : (RegistrationStatus?)null;
+
             var distances = relevantRaces?
                 .Select(r => {
                     var trail = GetTrail(r.TrailId);
@@ -162,8 +169,10 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                         : trail != null && trail.Length > 0
                             ? $"{trail.Length / 1000.0:0.#} km"
                             : null;
+                    var ticketStatus = EditionStatusHelpers.ComputeEffectiveTicketStatus(
+                        r.Status, r.TicketStatus, relevantEditionEffectiveRegStatus!.Value);
                     return label != null
-                        ? new RaceDistanceSummaryDto(label, r.TicketStatus.ToString())
+                        ? new RaceDistanceSummaryDto(label, ticketStatus.ToString())
                         : null;
                 })
                 .Where(d => d != null)
@@ -199,24 +208,31 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
             if (e.Type == EventType.Series)
             {
                 seriesRaces = editionsForCalc
-                    .SelectMany(ed => ed.Races
-                        .Where(r => r.Status != RaceStatus.Cancelled
-                            && r.DateOfRace.HasValue
-                            && r.DateOfRace.Value >= today
-                            && r.DateOfRace.Value <= oneYearAhead)
-                        .Select(r => new SeriesRaceDto(
-                            r.Id,
-                            r.Name,
-                            r.NameEn,
-                            r.DateOfRace,
-                            r.StartTime,
-                            !string.IsNullOrWhiteSpace(r.DistanceLabel) ? r.DistanceLabel
-                                : GetTrail(r.TrailId) is { Length: > 0 } st ? $"{st.Length / 1000.0:0.#} km"
-                                : null,
-                            r.DistanceLabelEn,
-                            r.TicketStatus.ToString(),
-                            ed.RegistrationUrl
-                        )))
+                    .SelectMany(ed => {
+                        // Each edition in the series has its own registration window — compute
+                        // once per edition and reuse for all its races below.
+                        var edEffectiveRegStatus = EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
+                            ed.Status, ed.RegistrationStatus, ed.RegistrationOpens, ed.RegistrationCloses, now);
+
+                        return ed.Races
+                            .Where(r => r.Status != RaceStatus.Cancelled
+                                && r.DateOfRace.HasValue
+                                && r.DateOfRace.Value >= today
+                                && r.DateOfRace.Value <= oneYearAhead)
+                            .Select(r => new SeriesRaceDto(
+                                r.Id,
+                                r.Name,
+                                r.NameEn,
+                                r.DateOfRace,
+                                r.StartTime,
+                                !string.IsNullOrWhiteSpace(r.DistanceLabel) ? r.DistanceLabel
+                                    : GetTrail(r.TrailId) is { Length: > 0 } st ? $"{st.Length / 1000.0:0.#} km"
+                                    : null,
+                                r.DistanceLabelEn,
+                                EditionStatusHelpers.ComputeEffectiveTicketStatus(r.Status, r.TicketStatus, edEffectiveRegStatus).ToString(),
+                                ed.RegistrationUrl
+                            ));
+                    })
                     .OrderBy(r => r.DateOfRace)
                     .ToList();
             }
@@ -274,10 +290,7 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 displayDate,
                 distances?.Count > 0 ? distances : null,
                 relevantEdition?.RegistrationUrl,
-                relevantEdition != null
-                    ? EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
-                        relevantEdition.Status, relevantEdition.RegistrationStatus, relevantEdition.RegistrationOpens, relevantEdition.RegistrationCloses, now).ToString()
-                    : null,
+                relevantEditionEffectiveRegStatus?.ToString(),
                 relevantEdition?.ResultsUrl,
                 certifications?.Count > 0 ? certifications : null,
                 youtubeUrl,
@@ -298,7 +311,8 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 Galleries: relevantEdition?.PhotoGalleries.ToPublicDtos() ?? [],
                 // NeedsReview is an internal admin bookmark flag. The public path (IncludeHidden=false)
                 // must never leak it; only the admin events list (IncludeHidden=true) sees the real aggregate.
-                AnyEditionNeedsReview: request.IncludeHidden && editionsForCalc.Any(ed => ed.NeedsReview)
+                AnyEditionNeedsReview: request.IncludeHidden && editionsForCalc.Any(ed => ed.NeedsReview),
+                RegistrationCloses: relevantEdition?.RegistrationCloses
             );
         }).ToList();
     }

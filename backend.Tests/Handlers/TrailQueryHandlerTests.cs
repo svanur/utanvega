@@ -296,6 +296,183 @@ public class TrailQueryHandlerTests : IDisposable
         }
     }
 
+    // --- GetTrailBySlug LinkedRaces effective ticket status (#979) ---
+
+    private (Event Event, EventEdition Edition, Race Race) CreateLinkedRace(
+        Guid trailId,
+        RaceStatus raceStatus = RaceStatus.Active,
+        TicketStatus storedTicketStatus = TicketStatus.Available,
+        EditionStatus editionStatus = EditionStatus.Active,
+        RegistrationStatus storedRegistrationStatus = RegistrationStatus.Open,
+        DateTime? registrationOpens = null,
+        DateTime? registrationCloses = null)
+    {
+        var ev = new Event
+        {
+            Id = Guid.NewGuid(),
+            Name = "Test Event",
+            Slug = $"test-event-{Guid.NewGuid():N}",
+            Status = EventStatus.Confirmed,
+        };
+        var edition = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Status = editionStatus,
+            RegistrationStatus = storedRegistrationStatus,
+            RegistrationOpens = registrationOpens,
+            RegistrationCloses = registrationCloses,
+        };
+        var race = new Race
+        {
+            Id = Guid.NewGuid(),
+            EventEditionId = edition.Id,
+            TrailId = trailId,
+            Name = "10K",
+            SortOrder = 0,
+            Status = raceStatus,
+            TicketStatus = storedTicketStatus,
+        };
+        return (ev, edition, race);
+    }
+
+    [Fact]
+    public async Task GetTrailBySlug_LinkedRace_RegistrationNotStarted_TicketStatusReadsNotStarted()
+    {
+        // A race created while its edition's registration window hasn't opened yet still has
+        // TicketStatus stored as Available (CreateRaceCommand's default) — this must derive live
+        // from the edition's effective RegistrationStatus, not surface the stale stored value.
+        var trail = CreateTrail("Highland Race Trail", TrailStatus.Published);
+        var (ev, edition, race) = CreateLinkedRace(
+            trail.Id,
+            storedTicketStatus: TicketStatus.Available,
+            registrationOpens: DateTime.UtcNow.AddDays(10),
+            registrationCloses: DateTime.UtcNow.AddDays(20));
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Trails.Add(trail);
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new GetTrailBySlugQueryHandler(ctx, _scheduleEngine);
+            var dto = await handler.Handle(new GetTrailBySlugQuery(trail.Slug), CancellationToken.None);
+
+            Assert.NotNull(dto);
+            var linkedRace = Assert.Single(dto!.LinkedRaces!);
+            Assert.Equal("NotStarted", linkedRace.TicketStatus);
+        }
+    }
+
+    [Theory]
+    [InlineData(RegistrationStatus.Open, "Available")]
+    [InlineData(RegistrationStatus.Closed, "Closed")]
+    [InlineData(RegistrationStatus.NotRequired, "Free")]
+    public async Task GetTrailBySlug_LinkedRace_RegistrationStatus_MapsToExpectedTicketStatus(
+        RegistrationStatus storedRegistrationStatus, string expectedTicketStatus)
+    {
+        // No RegistrationOpens/Closes window set, so the stored RegistrationStatus is used as-is
+        // (ComputeEffectiveRegistrationStatus falls back to it when there's no window to compute from).
+        var trail = CreateTrail($"Trail For {storedRegistrationStatus}", TrailStatus.Published);
+        var (ev, edition, race) = CreateLinkedRace(
+            trail.Id,
+            storedTicketStatus: TicketStatus.Available,
+            storedRegistrationStatus: storedRegistrationStatus);
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Trails.Add(trail);
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new GetTrailBySlugQueryHandler(ctx, _scheduleEngine);
+            var dto = await handler.Handle(new GetTrailBySlugQuery(trail.Slug), CancellationToken.None);
+
+            Assert.NotNull(dto);
+            var linkedRace = Assert.Single(dto!.LinkedRaces!);
+            Assert.Equal(expectedTicketStatus, linkedRace.TicketStatus);
+        }
+    }
+
+    [Theory]
+    [InlineData(TicketStatus.SoldOut)]
+    [InlineData(TicketStatus.AlmostSoldOut)]
+    public async Task GetTrailBySlug_LinkedRace_ManualOverride_ReturnedUnchanged_RegardlessOfRegistrationWindow(
+        TicketStatus storedTicketStatus)
+    {
+        // SoldOut/AlmostSoldOut are deliberate manual overrides and must not be clobbered by the
+        // edition's registration window, even though registration hasn't opened yet.
+        var trail = CreateTrail($"Trail For {storedTicketStatus}", TrailStatus.Published);
+        var (ev, edition, race) = CreateLinkedRace(
+            trail.Id,
+            storedTicketStatus: storedTicketStatus,
+            registrationOpens: DateTime.UtcNow.AddDays(10),
+            registrationCloses: DateTime.UtcNow.AddDays(20));
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Trails.Add(trail);
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new GetTrailBySlugQueryHandler(ctx, _scheduleEngine);
+            var dto = await handler.Handle(new GetTrailBySlugQuery(trail.Slug), CancellationToken.None);
+
+            Assert.NotNull(dto);
+            var linkedRace = Assert.Single(dto!.LinkedRaces!);
+            Assert.Equal(storedTicketStatus.ToString(), linkedRace.TicketStatus);
+        }
+    }
+
+    [Fact]
+    public async Task GetTrailBySlug_LinkedRace_CompletedRaceStatus_StillIncludedWithUnchangedTicketStatus()
+    {
+        // GetTrailBySlugQuery's linked-races filter only excludes Cancelled/Hidden race statuses,
+        // so a Completed race is still expected to appear with its stored TicketStatus unchanged
+        // (Completed is terminal per ComputeEffectiveTicketStatus).
+        var trail = CreateTrail("Trail For Completed Race", TrailStatus.Published);
+        var (ev, edition, race) = CreateLinkedRace(
+            trail.Id,
+            raceStatus: RaceStatus.Completed,
+            storedTicketStatus: TicketStatus.Closed,
+            registrationOpens: DateTime.UtcNow.AddDays(10),
+            registrationCloses: DateTime.UtcNow.AddDays(20));
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Trails.Add(trail);
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new GetTrailBySlugQueryHandler(ctx, _scheduleEngine);
+            var dto = await handler.Handle(new GetTrailBySlugQuery(trail.Slug), CancellationToken.None);
+
+            Assert.NotNull(dto);
+            var linkedRace = Assert.Single(dto!.LinkedRaces!);
+            Assert.Equal("Closed", linkedRace.TicketStatus);
+        }
+    }
+
     [Fact]
     public async Task GetTrailBySlug_NeedsReviewAlwaysFalse_EvenWhenFlagged()
     {

@@ -188,7 +188,13 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
 
         var editions = publicEditions
             .OrderByDescending(ed => ed.Date ?? DateOnly.MinValue)
-            .Select(ed => new EventEditionDto(
+            .Select(ed => {
+                // Computed once per edition and reused for every race drawn from it below —
+                // do not re-derive from raw dates a second time.
+                var edEffectiveRegStatus = EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
+                    ed.Status, ed.RegistrationStatus, ed.RegistrationOpens, ed.RegistrationCloses, now);
+
+                return new EventEditionDto(
                 ed.Id,
                 ed.EventId,
                 ed.Year ?? ed.Date?.Year,
@@ -200,8 +206,7 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
                 ed.ResultsUrl,
                 ed.Notes,
                 ed.NotesEn,
-                EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
-                    ed.Status, ed.RegistrationStatus, ed.RegistrationOpens, ed.RegistrationCloses, now).ToString(),
+                edEffectiveRegStatus.ToString(),
                 ed.TrailId,
                 GetTrail(ed.TrailId)?.Name,
                 GetTrail(ed.TrailId)?.Slug,
@@ -222,7 +227,7 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
                         r.DescriptionEn,
                         r.Status.ToString(),
                         r.SortOrder,
-                        r.TicketStatus.ToString(),
+                        EditionStatusHelpers.ComputeEffectiveTicketStatus(r.Status, r.TicketStatus, edEffectiveRegStatus).ToString(),
                         r.MaxParticipants,
                         r.ItraPoints,
                         r.CertifiedBy,
@@ -252,7 +257,8 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
                 // NeedsReview is an internal admin bookmark flag. The public path (IncludeHidden=false)
                 // must never leak it; only the admin event-detail path (IncludeHidden=true) sees the real value.
                 NeedsReview: request.IncludeHidden && ed.NeedsReview
-            ))
+                );
+            })
             .ToList();
 
         var relevantEdition = ongoingEdition

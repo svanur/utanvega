@@ -61,7 +61,6 @@ import { useRowFocus } from '../hooks/useRowFocus';
 import { useUrlFilterState } from '../hooks/useUrlFilterState';
 import { useDebouncedUrlSearch } from '../hooks/useDebouncedUrlSearch';
 import { usePageShortcuts, isDialogOpen } from '../hooks/usePageShortcuts';
-import CreateEventDialog from '../components/events/CreateEventDialog';
 import { EVENT_STATUS_CYCLE } from '../utils/eventForms';
 import {
   MONTHS,
@@ -224,15 +223,12 @@ const EVENTS_FILTER_SCHEMA = {
 
 interface EventsListPageProps {
   onNotify: (message: ReactNode, severity?: 'success' | 'error') => void;
-  initialCreate?: boolean;
-  onInitialCreateConsumed?: () => void;
 }
 
-export default function EventsListPage({ onNotify, initialCreate, onInitialCreateConsumed }: EventsListPageProps) {
+export default function EventsListPage({ onNotify }: EventsListPageProps) {
   const navigate = useNavigate();
   const {
     events, loading, error, refresh,
-    createEvent,
     updateEventSilently, patchEventLocally,
     getEvent, createEdition, createRace, generateEditionsForSeason,
   } = useEvents();
@@ -260,7 +256,6 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
   const [cyclingStatusIds, setCyclingStatusIds] = useState<Set<string>>(new Set());
   const [cyclingActivityIds, setCyclingActivityIds] = useState<Set<string>>(new Set());
   const [cyclingTypeIds, setCyclingTypeIds] = useState<Set<string>>(new Set());
-  const [createDialogOpen, setCreateDialogOpen] = useState(initialCreate ?? false);
   const [showBulkMissingDialog, setShowBulkMissingDialog] = useState(false);
   const [bulkMissingLoading, setBulkMissingLoading] = useState(false);
   const [bulkMissingProgress, setBulkMissingProgress] = useState<{ done: number; total: number } | null>(null);
@@ -383,16 +378,17 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
   }, [focusedEventIndex]);
 
   usePageShortcuts([
-    { key: 'n', alt: true, skip: isDialogOpen, handler: () => setCreateDialogOpen(true) },
+    { key: 'n', alt: true, skip: isDialogOpen, handler: () => navigate('/events/new') },
   ]);
 
   // ── Status / activity / type cycling ─────────────────────────────────────
   const handleCycleStatus = async (event: EventSummaryDto) => {
     if (cyclingStatusIds.has(event.id)) return;
-    if (event.status !== 'Unconfirmed' && event.status !== 'Confirmed') return;
-    // Cancelled is deliberately excluded from the cycle — cancelling cascades to editions and races
-    // (see backend Event.CancelWithEditions), so it's only reachable via the dedicated Cancel Event
+    // Only statuses actually present in EVENT_STATUS_CYCLE are cycle-eligible — Cancelled is
+    // deliberately excluded, since cancelling cascades to editions and races (see backend
+    // Event.CancelWithEditions), so it's only reachable via the dedicated Cancel Event
     // confirmation dialog, not a click-through step.
+    if (!EVENT_STATUS_CYCLE.includes(event.status as EventStatus)) return;
     const i = EVENT_STATUS_CYCLE.indexOf(event.status as EventStatus);
     const next = EVENT_STATUS_CYCLE[(i + 1) % EVENT_STATUS_CYCLE.length]!;
     patchEventLocally(event.id, { status: next });
@@ -706,7 +702,7 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
               Generate Editions
             </Button>
           )}
-          <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setCreateDialogOpen(true); onInitialCreateConsumed?.(); }}>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate('/events/new')}>
             New Event
           </Button>
         </Stack>
@@ -1046,15 +1042,6 @@ export default function EventsListPage({ onNotify, initialCreate, onInitialCreat
           </TableBody>
         </Table>
       </TableContainer>
-
-      <CreateEventDialog
-        open={createDialogOpen}
-        onClose={() => setCreateDialogOpen(false)}
-        onCreated={(slug) => { setCreateDialogOpen(false); navigate(`/events/${slug}`); }}
-        onNotify={onNotify}
-        createEvent={createEvent}
-        events={events}
-      />
 
       {/* Bulk create missing editions dialog */}
       <Dialog open={showBulkMissingDialog} onClose={() => !bulkMissingLoading && !bulkMissingProgress && setShowBulkMissingDialog(false)} maxWidth="md" fullWidth>
