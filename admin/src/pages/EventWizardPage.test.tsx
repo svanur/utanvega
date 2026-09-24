@@ -1,4 +1,8 @@
 // @vitest-environment jsdom
+/// <reference types="node" />
+// #983: the reference above is scoped to this file only (not admin/tsconfig.json's `types`) so
+// that `process.on('unhandledRejection', ...)` below type-checks without exposing Node globals
+// (process, Buffer, __dirname, ...) across the rest of admin/src.
 import { useRef, useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
