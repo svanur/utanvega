@@ -83,6 +83,21 @@ public static class EditionAutoCloneSweep
             // guess. See #904's acceptance criteria for both paths.
             var isSuccess = suggestedDate.HasValue;
 
+            // Unlike the manual "Clone edition to next year" flow (EventDetailPage
+            // handleCloneEdition), which always leaves RegistrationOpens/Closes blank because a
+            // human reviews the pre-filled form before saving, this sweep runs unattended — so
+            // when the source has a full registration window it's worth projecting forward rather
+            // than losing outright, but a *guessed* window must never go live unreviewed. Only
+            // shift when both bounds are set (a one-sided window isn't a real window to project);
+            // otherwise leave both null exactly as before. See #973.
+            var projectRegistrationWindow = source.RegistrationOpens.HasValue && source.RegistrationCloses.HasValue;
+            var newRegistrationOpens = projectRegistrationWindow
+                ? ProjectRegistrationDateForYear(source.RegistrationOpens, nextYear)
+                : null;
+            var newRegistrationCloses = projectRegistrationWindow
+                ? ProjectRegistrationDateForYear(source.RegistrationCloses, nextYear)
+                : null;
+
             var newEdition = new EventEdition
             {
                 Id = Guid.NewGuid(),
@@ -93,10 +108,9 @@ public static class EditionAutoCloneSweep
                 // Title carries the bare next year the same way handleCloneEdition's
                 // `title: edition.title ? String(nextYear) : ''` does — IsNullOrEmpty rather than
                 // a plain null check, so a persisted "" (falsy in JS) doesn't fabricate a title
-                // the source's own truthy check would have left blank. TitleEn, Notes, and
-                // RegistrationOpens/Closes are a specific-year window that isn't meaningfully
-                // copyable to next year, so those start blank rather than carrying over stale
-                // content.
+                // the source's own truthy check would have left blank. TitleEn and Notes are a
+                // specific-year window that isn't meaningfully copyable to next year, so those
+                // start blank rather than carrying over stale content.
                 Title = !string.IsNullOrEmpty(source.Title) ? nextYear.ToString() : null,
                 TitleEn = null,
                 RegistrationUrl = BumpYearInUrl(source.RegistrationUrl, source.Year, nextYear),
@@ -104,15 +118,18 @@ public static class EditionAutoCloneSweep
                 Notes = null,
                 NotesEn = null,
                 TrailId = source.TrailId,
-                RegistrationOpens = null,
-                RegistrationCloses = null,
+                RegistrationOpens = newRegistrationOpens,
+                RegistrationCloses = newRegistrationCloses,
                 // The projected date is always in the future (it's next year's version of an
                 // edition that just completed), so this always resolves to NotStarted on the
                 // success path — mirrors `suggestedDate && isPastDate(suggestedDate) ? 'Closed' :
                 // 'NotStarted'`, where the Closed branch is unreachable here.
                 RegistrationStatus = RegistrationStatus.NotStarted,
                 Status = isSuccess ? EditionStatus.Unconfirmed : EditionStatus.Hidden,
-                NeedsReview = !isSuccess,
+                // A projected registration window is a guess just like a failed date projection —
+                // flag it for review unconditionally, even when the Date projection itself
+                // succeeded (isSuccess), since the two are independent risks.
+                NeedsReview = !isSuccess || projectRegistrationWindow,
                 CreatedAt = DateTime.UtcNow,
             };
 
@@ -180,6 +197,23 @@ public static class EditionAutoCloneSweep
         var adjustment = Math.Abs(diff) <= 3 ? diff : diff > 0 ? diff - 7 : diff + 7;
 
         return candidate.AddDays(adjustment);
+    }
+
+    /// <summary>
+    /// Projects a <see cref="DateTime"/> registration bound (RegistrationOpens/Closes) forward to
+    /// <paramref name="toYear"/> using the same weekday-preserving heuristic as
+    /// <see cref="SuggestEditionDateForYear"/> — reused rather than duplicated so both dates always
+    /// move together the same way. Only the date part is projected; the source's time-of-day and
+    /// <see cref="DateTime.Kind"/> are carried over unchanged.
+    /// </summary>
+    private static DateTime? ProjectRegistrationDateForYear(DateTime? prev, int toYear)
+    {
+        if (prev is not { } value) return null;
+
+        var projected = SuggestEditionDateForYear(DateOnly.FromDateTime(value), toYear);
+        if (projected is not { } projectedDate) return null;
+
+        return DateTime.SpecifyKind(projectedDate.ToDateTime(TimeOnly.FromDateTime(value)), value.Kind);
     }
 
     /// <summary>Ports admin's <c>suggestEditionEndDateForYear</c>: preserves the source edition's
