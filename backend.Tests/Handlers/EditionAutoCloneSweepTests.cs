@@ -430,4 +430,78 @@ public class EditionAutoCloneSweepTests : IDisposable
         Assert.Null(newEdition.RegistrationCloses);
         Assert.False(newEdition.NeedsReview);
     }
+
+    [Fact]
+    public async Task LeavesTheRegistrationWindowNullWhenOnlyOneBoundIsSetOnTheSource()
+    {
+        var ev = CreateEvent();
+        // Only RegistrationOpens is set on the source — a one-sided window isn't a real window to
+        // project (see #973's own guard), so both bounds must stay null on the clone exactly as
+        // when neither is set, and NeedsReview must not be forced true by the registration-window
+        // logic (only a succeeding/failing Date projection can affect it in this mixed case).
+        var edition = CreateCompletedEdition(
+            ev.Id, 2026, new DateOnly(2026, 8, 15),
+            registrationOpens: new DateTime(2026, 7, 1, 10, 30, 0, DateTimeKind.Utc),
+            registrationCloses: null);
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            await EditionAutoCloneSweep.RunAsync(ctx, _cacheInvalidator.Object, Today);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        var newEdition = verifyCtx.EventEditions.Single(e => e.Year == 2027);
+
+        Assert.Null(newEdition.RegistrationOpens);
+        Assert.Null(newEdition.RegistrationCloses);
+        Assert.False(newEdition.NeedsReview);
+    }
+
+    [Fact]
+    public async Task NeverProducesAnInvertedRegistrationWindowWhenTheSourceWindowIsNarrow()
+    {
+        var ev = CreateEvent();
+        // A 2-day source window: RegistrationOpens (2026-07-01, Wed) and RegistrationCloses
+        // (2026-07-03, Fri). Independent ±3-day weekday nudging per bound (the pre-fix behaviour)
+        // can nudge Opens later and Closes earlier far enough to invert a window this narrow —
+        // asserting Closes >= Opens (and the exact preserved gap) on the clone proves the fix
+        // derives Closes from the newly projected Opens plus the source's original gap instead.
+        var registrationOpens = new DateTime(2026, 7, 1, 10, 0, 0, DateTimeKind.Utc);
+        var registrationCloses = new DateTime(2026, 7, 3, 18, 0, 0, DateTimeKind.Utc);
+        var edition = CreateCompletedEdition(
+            ev.Id, 2026, new DateOnly(2026, 8, 15),
+            registrationOpens: registrationOpens,
+            registrationCloses: registrationCloses);
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            await EditionAutoCloneSweep.RunAsync(ctx, _cacheInvalidator.Object, Today);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        var newEdition = verifyCtx.EventEditions.Single(e => e.Year == 2027);
+
+        Assert.NotNull(newEdition.RegistrationOpens);
+        Assert.NotNull(newEdition.RegistrationCloses);
+        Assert.True(newEdition.RegistrationCloses >= newEdition.RegistrationOpens);
+        // The source's original 2-day-8-hour gap must be preserved exactly, not just "not
+        // inverted" — proving Closes is derived from the newly projected Opens rather than
+        // independently re-nudged from the source Closes.
+        var originalGap = registrationCloses - registrationOpens;
+        Assert.Equal(originalGap, newEdition.RegistrationCloses!.Value - newEdition.RegistrationOpens!.Value);
+    }
 }

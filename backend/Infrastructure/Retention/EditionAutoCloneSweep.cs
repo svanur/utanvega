@@ -91,12 +91,9 @@ public static class EditionAutoCloneSweep
             // shift when both bounds are set (a one-sided window isn't a real window to project);
             // otherwise leave both null exactly as before. See #973.
             var projectRegistrationWindow = source.RegistrationOpens.HasValue && source.RegistrationCloses.HasValue;
-            var newRegistrationOpens = projectRegistrationWindow
-                ? ProjectRegistrationDateForYear(source.RegistrationOpens, nextYear)
-                : null;
-            var newRegistrationCloses = projectRegistrationWindow
-                ? ProjectRegistrationDateForYear(source.RegistrationCloses, nextYear)
-                : null;
+            var (newRegistrationOpens, newRegistrationCloses) = projectRegistrationWindow
+                ? ProjectRegistrationWindowForYear(source.RegistrationOpens!.Value, source.RegistrationCloses!.Value, nextYear)
+                : (null, null);
 
             var newEdition = new EventEdition
             {
@@ -214,6 +211,33 @@ public static class EditionAutoCloneSweep
         if (projected is not { } projectedDate) return null;
 
         return DateTime.SpecifyKind(projectedDate.ToDateTime(TimeOnly.FromDateTime(value)), value.Kind);
+    }
+
+    /// <summary>
+    /// Projects a source RegistrationOpens/RegistrationCloses pair forward to
+    /// <paramref name="toYear"/> without ever producing an inverted clone (Closes &lt; Opens).
+    /// <see cref="ProjectRegistrationDateForYear"/>'s ±3/±7-day weekday nudge is applied
+    /// independently per bound by <see cref="SuggestEditionDateForYear"/>'s underlying heuristic,
+    /// so a source window narrow enough (roughly under a week) can nudge Opens later and Closes
+    /// earlier — or vice versa — far enough to cross. Mirrors
+    /// <see cref="SuggestEditionEndDateForYear"/>'s pattern instead: only Opens is independently
+    /// projected, and Closes is derived from the newly projected Opens plus the source's original
+    /// Opens→Closes gap, so the two bounds always move together and the gap can never flip sign.
+    /// A non-positive source gap (Closes at or before Opens already — a corrupt source window)
+    /// mirrors SuggestEditionEndDateForYear's own guard and yields both bounds null rather than
+    /// projecting a nonsensical window forward.
+    /// </summary>
+    private static (DateTime? Opens, DateTime? Closes) ProjectRegistrationWindowForYear(
+        DateTime opens, DateTime closes, int toYear)
+    {
+        var gap = closes - opens;
+        if (gap <= TimeSpan.Zero) return (null, null);
+
+        var newOpens = ProjectRegistrationDateForYear(opens, toYear);
+        if (newOpens is not { } newOpensValue) return (null, null);
+
+        var newCloses = DateTime.SpecifyKind(newOpensValue.Add(gap), closes.Kind);
+        return (newOpensValue, newCloses);
     }
 
     /// <summary>Ports admin's <c>suggestEditionEndDateForYear</c>: preserves the source edition's
