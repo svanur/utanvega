@@ -417,6 +417,11 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         // #985: default to upcoming events only while a search is active — `includeAllEvents`
         // (or the explicit `includeAll` override used to probe "would broadening help?") lifts it.
         if (q && !includeAll) result = result.filter(c => c.daysUntil !== null && c.daysUntil >= 0);
+        // #988: hide dateless events (no displayDate/nextEditionDate, so no confirmed future
+        // edition) from the default browse view — they'd otherwise sit permanently at the bottom
+        // of a page meant to be forward-looking. Only applies with no search text; #985 already
+        // owns search-time dateless/past behavior via includeAll above, so leave that untouched.
+        if (!q) result = result.filter(c => c.daysUntil !== null);
         if (f.locations.length > 0) result = result.filter(c => c.locationName && f.locations.includes(c.locationName));
         if (!skipMonth && f.months.length > 0) result = result.filter(c => { const d = c.displayDate ?? c.nextEditionDate; return !!d && f.months.includes(new Date(d + 'T00:00:00').getMonth()); });
         if (f.activityTypes.length > 0) result = result.filter(c => f.activityTypes.includes(c.activityType));
