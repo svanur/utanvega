@@ -115,7 +115,8 @@
         "noResults": "Ekkert fannst",
         "hint": "Byrjaðu að skrifa til að að fá leitarniðurstöður…",
         "shortcutHint": "Leita (Ctrl+K)",
-        "loading": "Augnablik á meðan leiðir hlaðast inn…"
+        "loading": "Augnablik á meðan leiðir hlaðast inn…",
+        "allResultsFor": "Allar niðurstöður fyrir „{{query}}“"
     },
     "home": {
         "nearbyTrails": "Leiðir í nágrenninu",
@@ -791,6 +792,10 @@
             }
         },
         "changelog": {
+            "v1_12_0": {
+                "title": "Leit og skoðun á viðburðasíðunni beinist núna að því sem er framundan",
+                "description": "Leitin á viðburðasíðunni og flýtileitin (Ctrl+K) sýna núna sjálfgefið aðeins hlaup og viðburði sem eru framundan — liðnir viðburðir birtast ekki sjálfkrafa í leit, aðeins það sem raunverulega er framundan. Ef ekkert passar við leitina birtist valkostur til að sjá allar niðurstöður. Viðburðalistinn sjálfur birtir nú aðeins viðburði sem eru með dagsetningar í framtíðinni, sem áður birtust neðst í listanum."
+            },
             "v1_11_0": {
                 "title": "Ferlið að búa til nýjan viðburð í stjórnborði endurhannað. Villur villur í hlaupa- og miðastöðu á vefnum lagfærðar",
                 "description": "Að stofna viðburði í stjórnborði fer nú í gegnum 3 skref: viðburður, útgáfur og keppnishlaup. Á vefnum sjálfum sýnir miðastaða hlaupa núna réttilega hvort skráning fyrir viðkomandi útgáfu er í raun opin, í stað þess að sýna stundum úrelta stöðu. Úrslitahnappurinn birtist ekki lengur fyrr en viðburður hefur í raun farið fram, og hnappurinn fyrir endursölu miða hverfur um leið og skráning er í raun lokuð."
@@ -1318,6 +1323,7 @@
         "title": "Öll hlaup á einum stað",
         "subtitle": "Allar upplýsingar eru birtar með fyrirvara um villur og breytingar. Leitið alltaf eftir nýjustu upplýsingum hjá hlaupahaldara.",
         "searchPlaceholder": "Leita að viðburði...",
+        "showAllEventsFor": "Sýna einnig liðna viðburði fyrir „{{query}}“",
         "noResults": "Enginn viðburður fannst",
         "empty": "Enginn viðburður er skráður",
         "noDate": "Dagsetning óákveðin",

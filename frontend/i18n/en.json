@@ -115,7 +115,8 @@
         "noResults": "No results found",
         "hint": "Start typing to search events, trails & locations",
         "shortcutHint": "Search (Ctrl+K)",
-        "loading": "Loading search data…"
+        "loading": "Loading search data…",
+        "allResultsFor": "All results for \"{{query}}\""
     },
     "home": {
         "nearbyTrails": "Nearby Trails",
@@ -791,6 +792,10 @@
             }
         },
         "changelog": {
+            "v1_12_0": {
+                "title": "Search and browse on the events page now focus on what's coming up",
+                "description": "The events page's search box and quick search (Ctrl+K) now default to showing only upcoming races and events — an old one-off event with a matching name no longer clutters results next to what's actually coming up. If nothing upcoming matches your search, an explicit \"show all results\" option appears, so nothing is truly hidden, just out of the way by default. The events list itself (with no search) now also leaves out events with no confirmed future date, tidying up what used to sit forever at the bottom of the list."
+            },
             "v1_11_0": {
                 "title": "A new event creation wizard for admins, plus fixed race and ticket-status bugs on the public site",
                 "description": "Admin now creates events through a new 3-step wizard (event details, edition details, and races) that replaces the old single dialog, with safe back-and-forth navigation between steps, a warning before losing unsaved race selections, and small conveniences like Ctrl+Enter to save and auto-filling the year into the title. On the public site, a race's ticket status (Available, Sold out, Not started yet, and so on) now correctly reflects whether registration for that race's edition is actually open, instead of sometimes showing a stale status — this also fixed a bug in the automated year-to-year edition cloning that could produce an invalid registration window. The Results link is now hidden until an event has actually happened, and the ticket resale link disappears once registration has genuinely closed."
@@ -1318,6 +1323,7 @@
         "title": "All events in one place",
         "subtitle": "Upcoming events and races in Iceland. Be sure to confirm final dates on the race organizer's website.",
         "searchPlaceholder": "Search events...",
+        "showAllEventsFor": "Also show past events for \"{{query}}\"",
         "noResults": "No events match your search",
         "empty": "No events yet",
         "noDate": "Date TBD",

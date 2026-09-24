@@ -31,7 +31,7 @@ import { useLocalize } from '../utils/localize';
 import { getActivityIcon } from '../utils/getActivityIcon';
 
 interface SearchResult {
-    type: 'trail' | 'location' | 'competition';
+    type: 'trail' | 'location' | 'competition' | 'all-results';
     name: string;
     slug: string;
     subtitle?: string;
@@ -173,7 +173,7 @@ export default function SpotlightSearch() {
             .filter(r => r.score > 0)
             .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name, 'is', { numeric: true }));
 
-        const competitionResults: (SearchResult & { score: number })[] = racesEnabled
+        const allCompetitionMatches: (SearchResult & { score: number; daysUntil: number | null })[] = racesEnabled
             ? competitions
                 .map(comp => ({
                     type: 'competition' as const,
@@ -184,12 +184,22 @@ export default function SpotlightSearch() {
                         : (comp.organizerName ?? comp.locationName ?? undefined),
                     activityType: comp.activityTypes?.[0] ?? comp.activityType,
                     score: Math.max(scoreMatch(q, comp.name), scoreMatch(q, comp.nameEn ?? '')),
+                    daysUntil: comp.daysUntil,
                 }))
                 .filter(r => r.score > 0)
                 .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name, 'is', { numeric: true }))
             : [];
 
-        return [...competitionResults.slice(0, 3), ...trailResults.slice(0, 5), ...locationResults.slice(0, 3)];
+        // Only surface upcoming events by default (#985) — past-dated or dateless matches are
+        // reachable via the trailing "all results" row instead of cluttering the categorized list.
+        const competitionResults = allCompetitionMatches.filter(r => r.daysUntil !== null && r.daysUntil >= 0);
+        const hasMoreCompetitionMatches = competitionResults.length < allCompetitionMatches.length;
+
+        const finalResults: SearchResult[] = [...competitionResults.slice(0, 3), ...trailResults.slice(0, 5), ...locationResults.slice(0, 3)];
+        if (hasMoreCompetitionMatches) {
+            finalResults.push({ type: 'all-results', name: q, slug: '', activityType: '' });
+        }
+        return finalResults;
     }, [query, trails, locations, competitions, racesEnabled, i18n.language, t, loc]);
 
     useEffect(() => {
@@ -198,6 +208,11 @@ export default function SpotlightSearch() {
 
     const handleSelect = useCallback((result: SearchResult) => {
         setOpen(false);
+        if (result.type === 'all-results') {
+            navigate(`/events?q=${encodeURIComponent(result.name)}&all=true`);
+            setQuery('');
+            return;
+        }
         setQuery('');
         if (result.type === 'trail') {
             navigate(`/trails/${result.slug}`);
@@ -237,6 +252,8 @@ export default function SpotlightSearch() {
     const trailResults = results.filter(r => r.type === 'trail');
     const locationResults = results.filter(r => r.type === 'location');
     const competitionResults = results.filter(r => r.type === 'competition');
+    const allResultsRow = results.find(r => r.type === 'all-results');
+    const allResultsIndex = competitionResults.length + trailResults.length + locationResults.length;
 
     return (
         <Dialog
@@ -402,6 +419,29 @@ export default function SpotlightSearch() {
                                     </ListItemButton>
                                 );
                             })}
+                        </>
+                    )}
+
+                    {allResultsRow && (
+                        <>
+                            {(competitionResults.length > 0 || trailResults.length > 0 || locationResults.length > 0) && <Divider />}
+                            <ListItemButton
+                                data-index={allResultsIndex}
+                                selected={activeIndex === allResultsIndex}
+                                onClick={() => handleSelect(allResultsRow)}
+                                sx={{ py: 0.75 }}
+                            >
+                                <ListItemIcon sx={{ minWidth: 36 }}>
+                                    <SearchIcon fontSize="small" sx={{ color: 'primary.main' }} />
+                                </ListItemIcon>
+                                <ListItemText
+                                    primary={t('spotlight.allResultsFor', { query: allResultsRow.name })}
+                                    primaryTypographyProps={{ noWrap: true, color: 'primary.main', fontWeight: 600 }}
+                                />
+                                {activeIndex === allResultsIndex && (
+                                    <KeyboardReturnIcon fontSize="small" sx={{ color: 'text.secondary', ml: 1 }} />
+                                )}
+                            </ListItemButton>
                         </>
                     )}
                 </List>
