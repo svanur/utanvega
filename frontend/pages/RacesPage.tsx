@@ -195,6 +195,11 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
     const urlInitialized = useRef(false);
 
     const [search, setSearch] = useState('');
+    // #985: default event search to upcoming-only; explicit escape hatch to broaden to
+    // past-dated/dateless matches too. Reset whenever the search text itself changes (see the
+    // onChange/clear handlers below) — a stale "include past" choice shouldn't carry over to a
+    // brand new query.
+    const [includeAllEvents, setIncludeAllEvents] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
     const [linkCopied, setLinkCopied] = useState(false);
     const linkCopiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -296,6 +301,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         const champs = searchParams.get('champs');
         const distance = searchParams.get('distance');
         const q = searchParams.get('q');
+        const all = searchParams.get('all');
 
         if (activity) updates.activityTypes = activity.split(',');
         if (months) updates.months = months.split(',').map(Number);
@@ -313,6 +319,9 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         if (searchParams.get('favorites') === 'true') updates.favoritesOnly = true;
 
         if (q) setSearch(q);
+        // #985: Spotlight's "all results for ..." row links here with q + all=true — arrive with
+        // the future-only restriction already lifted, matching search box pre-filled.
+        if (q && all === 'true') setIncludeAllEvents(true);
         if (Object.keys(updates).length > 0) setFilters(prev => ({ ...prev, ...updates }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
@@ -328,6 +337,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         };
 
         set('q', search || null);
+        set('all', search && includeAllEvents ? 'true' : null);
         set('activity', filters.activityTypes.length ? filters.activityTypes.join(',') : null);
         set('months', filters.months.length ? filters.months.join(',') : null);
         set('locations', filters.locations.length ? filters.locations.join(',') : null);
@@ -344,7 +354,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
 
         setSearchParams(params, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [search, filters]);
+    }, [search, filters, includeAllEvents]);
 
     // Set urlInitialized after the sync effect so the sync effect skips the first render
     useEffect(() => { urlInitialized.current = true; }, []);
@@ -401,9 +411,12 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
 
     // Shared filter steps used by both `filtered` and `monthsWithEvents`.
     // Add new filter types here — both consumers pick them up automatically.
-    const applyFilters = useCallback((base: EventSummary[], f: EventFilters, q: string, skipMonth = false): EventSummary[] => {
+    const applyFilters = useCallback((base: EventSummary[], f: EventFilters, q: string, skipMonth = false, includeAll: boolean = includeAllEvents): EventSummary[] => {
         let result = base;
         if (q) result = result.filter(c => c.name.toLowerCase().includes(q) || c.locationName?.toLowerCase().includes(q) || c.organizerName?.toLowerCase().includes(q));
+        // #985: default to upcoming events only while a search is active — `includeAllEvents`
+        // (or the explicit `includeAll` override used to probe "would broadening help?") lifts it.
+        if (q && !includeAll) result = result.filter(c => c.daysUntil !== null && c.daysUntil >= 0);
         if (f.locations.length > 0) result = result.filter(c => c.locationName && f.locations.includes(c.locationName));
         if (!skipMonth && f.months.length > 0) result = result.filter(c => { const d = c.displayDate ?? c.nextEditionDate; return !!d && f.months.includes(new Date(d + 'T00:00:00').getMonth()); });
         if (f.activityTypes.length > 0) result = result.filter(c => f.activityTypes.includes(c.activityType));
@@ -425,7 +438,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
             });
         });
         return result;
-    }, [favoriteEvents]);
+    }, [favoriteEvents, includeAllEvents]);
 
     const filtered = useMemo(() => {
         const q = search.toLowerCase().trim();
@@ -449,6 +462,18 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
             return (loc(a.name, a.nameEn) ?? a.name).localeCompare(loc(b.name, b.nameEn) ?? b.name, 'is');
         });
     }, [events, search, filters, loc, applyFilters]);
+
+    // #985: whether lifting the future-only restriction (with every other current filter held
+    // fixed) would actually surface more matches — drives the "Show all events for ..." link's
+    // visibility. Only relevant while a search is active; empty search is never restricted.
+    const hasMoreEventsIncludingPast = useMemo(() => {
+        const q = search.toLowerCase().trim();
+        if (!q) return false;
+        const visible = events.filter(e => e.status !== 'Hidden' && e.status !== 'Unlisted');
+        const futureOnly = applyFilters(visible, filters, q, false, false);
+        const includingPast = applyFilters(visible, filters, q, false, true);
+        return includingPast.length > futureOnly.length;
+    }, [events, search, filters, applyFilters]);
 
     // Month pills reflect all active filters except month — so selecting "Trail Run"
     // collapses months with no trail runs, but active month pills don't fight each other.
@@ -564,7 +589,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                 <TextField
                     placeholder={t('races.searchPlaceholder')}
                     value={search}
-                    onChange={e => setSearch(e.target.value)}
+                    onChange={e => { setSearch(e.target.value); setIncludeAllEvents(false); }}
                     fullWidth
                     size="small"
                     sx={{ mb: 1 }}
@@ -577,7 +602,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                         endAdornment: (
                             <InputAdornment position="end">
                                 {search && (
-                                    <IconButton size="small" onClick={() => setSearch('')} sx={{ mr: 0.5 }}>
+                                    <IconButton size="small" onClick={() => { setSearch(''); setIncludeAllEvents(false); }} sx={{ mr: 0.5 }}>
                                         <CloseIcon fontSize="small" />
                                     </IconButton>
                                 )}
@@ -620,6 +645,21 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                         ),
                     }}
                 />
+
+                {/* #985: escape hatch for the future-only search default — only shown while a
+                    search is active and broadening would actually surface something. */}
+                {search && !includeAllEvents && hasMoreEventsIncludingPast && (
+                    <Box sx={{ mb: 1.5 }}>
+                        <Button
+                            size="small"
+                            variant="text"
+                            onClick={() => setIncludeAllEvents(true)}
+                            sx={{ textTransform: 'none', fontSize: '0.8rem', color: 'text.secondary', px: 0.5 }}
+                        >
+                            {t('races.showAllEventsFor', { query: search })}
+                        </Button>
+                    </Box>
+                )}
 
                 {/* Filter panel */}
                 <Collapse in={showFilters}>

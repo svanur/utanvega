@@ -115,7 +115,8 @@
         "noResults": "Ekkert fannst",
         "hint": "Byrjaðu að skrifa til að að fá leitarniðurstöður…",
         "shortcutHint": "Leita (Ctrl+K)",
-        "loading": "Augnablik á meðan leiðir hlaðast inn…"
+        "loading": "Augnablik á meðan leiðir hlaðast inn…",
+        "allResultsFor": "Allar niðurstöður fyrir „{{query}}“"
     },
     "home": {
         "nearbyTrails": "Leiðir í nágrenninu",
@@ -1318,6 +1319,7 @@
         "title": "Öll hlaup á einum stað",
         "subtitle": "Allar upplýsingar eru birtar með fyrirvara um villur og breytingar. Leitið alltaf eftir nýjustu upplýsingum hjá hlaupahaldara.",
         "searchPlaceholder": "Leita að viðburði...",
+        "showAllEventsFor": "Sýna alla viðburði fyrir „{{query}}“ (þ.m.t. liðna)",
         "noResults": "Enginn viðburður fannst",
         "empty": "Enginn viðburður er skráður",
         "noDate": "Dagsetning óákveðin",
