@@ -143,7 +143,10 @@ interface EventDetailsStepProps extends EventWizardPageProps {
   onCreated: (event: CreatedEvent) => void;
 }
 
-function EventDetailsStep({ onNotify, form, setForm, onCreated }: EventDetailsStepProps) {
+// #977: exported (unlike previously) so EventWizardPage.test.tsx can mount Step 1 directly and
+// cover its Type/Activity/Status Selects via getByLabelText, mirroring EditionDetailsStep/RacesStep
+// below, which were already exported for the same reason.
+export function EventDetailsStep({ onNotify, form, setForm, onCreated }: EventDetailsStepProps) {
   const handleBackToList = useBackToList('/events');
   const { events, createEvent } = useEvents();
   const [saving, setSaving] = useState(false);
