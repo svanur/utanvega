@@ -187,8 +187,12 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
             : new List<DateOnly>();
 
         // #927: primary race per edition, mirroring GetEditionsHistoryQueryHandler.BuildRow (#806/#815) —
-        // among the edition's races with a linked trail present in trailDetails, the one with the
-        // greatest trail Length, ties broken by Race.Id. PrimaryElevationProfile is filled in below,
+        // among the edition's *visible* races with a linked trail present in trailDetails, the one
+        // with the greatest trail Length, ties broken by Race.Id. Hidden races are excluded here for
+        // the same reason GetEditionsHistoryQueryHandler, GetEventCalendarQuery and
+        // GetTrailBySlugQuery all exclude them before deriving public-facing terrain/elevation data —
+        // a Hidden race isn't shown anywhere else on this page, so it must not leak its trail's
+        // terrain color into the public header either. PrimaryElevationProfile is filled in below,
         // after a batched fetch scoped to only the primary trail ids actually selected here.
         var editionResults = publicEditions
             .OrderByDescending(ed => ed.Date ?? DateOnly.MinValue)
@@ -199,7 +203,7 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
                     ed.Status, ed.RegistrationStatus, ed.RegistrationOpens, ed.RegistrationCloses, now);
 
                 var primaryTrailId = ed.Races
-                    .Where(r => r.TrailId.HasValue && trailDetails.ContainsKey(r.TrailId.Value))
+                    .Where(r => r.Status != RaceStatus.Hidden && r.TrailId.HasValue && trailDetails.ContainsKey(r.TrailId.Value))
                     .OrderByDescending(r => trailDetails[r.TrailId!.Value].Length)
                     .ThenBy(r => r.Id)
                     .Select(r => r.TrailId)

@@ -1889,6 +1889,41 @@ public class EventHandlerTests : IDisposable
         Assert.NotEqual(otherTrail.ElevationProfile, editionDto.PrimaryElevationProfile);
     }
 
+    [Fact]
+    public async Task GetEvent_HiddenRaceWithLongerTrail_ExcludedFromPrimaryRaceSelection()
+    {
+        // Regression mirroring EditionsHistoryHandlerTests.History_ExcludesHiddenRace_FromDistanceAggregation:
+        // a Hidden race isn't shown anywhere else on this page, so its trail must never win primary-race
+        // selection just because it happens to be the longest — even though its trail is longer (and
+        // more visually distinct: Mountainous vs Flat) than the one visible race actually links to.
+        var ev = CreateTestEvent("Hidden Race Longer Trail Event");
+        ev.Slug = "hidden-race-longer-trail-event";
+        var edition = CreateTestEdition(ev.Id);
+        var visibleTrail = CreateTestTrail("Visible Trail", length: 10000, terrainType: TerrainType.Flat, elevationProfile: [5, 6, 7]);
+        var hiddenTrail = CreateTestTrail("Hidden Trail", length: 30000, terrainType: TerrainType.Mountainous, elevationProfile: [500, 600, 700]);
+        var visibleRace = new Race { Id = Guid.NewGuid(), EventEditionId = edition.Id, TrailId = visibleTrail.Id, Name = "10K", DistanceLabel = "10K", SortOrder = 0, Status = RaceStatus.Active };
+        var hiddenRace = new Race { Id = Guid.NewGuid(), EventEditionId = edition.Id, TrailId = hiddenTrail.Id, Name = "Hidden 30K", DistanceLabel = "30K", SortOrder = 1, Status = RaceStatus.Hidden };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Trails.AddRange(visibleTrail, hiddenTrail);
+            ctx.Races.AddRange(visibleRace, hiddenRace);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventQuery("hidden-race-longer-trail-event"), CancellationToken.None);
+
+        Assert.NotNull(result);
+        var editionDto = Assert.Single(result!.Editions);
+        Assert.Equal("Flat", editionDto.PrimaryTerrainType);
+        Assert.Equal(visibleTrail.ElevationProfile, editionDto.PrimaryElevationProfile);
+        Assert.NotEqual(hiddenTrail.ElevationProfile, editionDto.PrimaryElevationProfile);
+    }
+
     // ─── GetEventCalendarQuery ───
 
     [Fact]
