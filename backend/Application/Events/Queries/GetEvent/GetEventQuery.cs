@@ -186,7 +186,11 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
             ? _scheduleEngine.GetOccurrencesInRange(ev.ScheduleRule, today, today.AddMonths(12))
             : new List<DateOnly>();
 
-        var editions = publicEditions
+        // #927: primary race per edition, mirroring GetEditionsHistoryQueryHandler.BuildRow (#806/#815) —
+        // among the edition's races with a linked trail present in trailDetails, the one with the
+        // greatest trail Length, ties broken by Race.Id. PrimaryElevationProfile is filled in below,
+        // after a batched fetch scoped to only the primary trail ids actually selected here.
+        var editionResults = publicEditions
             .OrderByDescending(ed => ed.Date ?? DateOnly.MinValue)
             .Select(ed => {
                 // Computed once per edition and reused for every race drawn from it below —
@@ -194,7 +198,15 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
                 var edEffectiveRegStatus = EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
                     ed.Status, ed.RegistrationStatus, ed.RegistrationOpens, ed.RegistrationCloses, now);
 
-                return new EventEditionDto(
+                var primaryTrailId = ed.Races
+                    .Where(r => r.TrailId.HasValue && trailDetails.ContainsKey(r.TrailId.Value))
+                    .OrderByDescending(r => trailDetails[r.TrailId!.Value].Length)
+                    .ThenBy(r => r.Id)
+                    .Select(r => r.TrailId)
+                    .FirstOrDefault();
+                var primaryTerrainType = GetTrail(primaryTrailId)?.TerrainType?.ToString();
+
+                var dto = new EventEditionDto(
                 ed.Id,
                 ed.EventId,
                 ed.Year ?? ed.Date?.Year,
@@ -256,9 +268,39 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
                 RegistrationCloses: ed.RegistrationCloses,
                 // NeedsReview is an internal admin bookmark flag. The public path (IncludeHidden=false)
                 // must never leak it; only the admin event-detail path (IncludeHidden=true) sees the real value.
-                NeedsReview: request.IncludeHidden && ed.NeedsReview
+                NeedsReview: request.IncludeHidden && ed.NeedsReview,
+                // Filled in after the post-loop elevation-profile fetch, keyed by PrimaryTrailId below.
+                PrimaryElevationProfile: null,
+                PrimaryTerrainType: primaryTerrainType
                 );
+
+                return (Dto: dto, PrimaryTrailId: primaryTrailId);
             })
+            .ToList();
+
+        // #927: elevation profile is fetched only for the distinct primary trail ids actually
+        // selected across this event's editions — mirrors GetEditionsHistoryQueryHandler's post-loop
+        // batched fetch, not a per-edition query.
+        var primaryTrailIds = editionResults
+            .Select(r => r.PrimaryTrailId)
+            .Where(id => id.HasValue)
+            .Select(id => id!.Value)
+            .Distinct()
+            .ToHashSet();
+
+        var elevationProfiles = primaryTrailIds.Count > 0
+            ? (await _context.Trails
+                .AsNoTracking()
+                .Where(t => primaryTrailIds.Contains(t.Id))
+                .Select(t => new { t.Id, t.ElevationProfile })
+                .ToListAsync(cancellationToken))
+                .ToDictionary(t => t.Id, t => t.ElevationProfile)
+            : new Dictionary<Guid, double[]?>();
+
+        var editions = editionResults
+            .Select(r => r.PrimaryTrailId.HasValue && elevationProfiles.TryGetValue(r.PrimaryTrailId.Value, out var profile)
+                ? r.Dto with { PrimaryElevationProfile = profile }
+                : r.Dto)
             .ToList();
 
         var relevantEdition = ongoingEdition

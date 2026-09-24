@@ -81,14 +81,14 @@ public class EventHandlerTests : IDisposable
         };
     }
 
-    private Trail CreateTestTrail(string name = "Test Trail")
+    private Trail CreateTestTrail(string name = "Test Trail", double length = 55000, TerrainType? terrainType = null, double[]? elevationProfile = null)
     {
         return new Trail
         {
             Id = Guid.NewGuid(),
             Name = name,
             Slug = name.ToLower().Replace(" ", "-"),
-            Length = 55000,
+            Length = length,
             ElevationGain = 2500,
             ElevationLoss = 2300,
             ActivityTypeId = ActivityType.TrailRunning,
@@ -96,6 +96,8 @@ public class EventHandlerTests : IDisposable
             Type = TrailType.PointToPoint,
             Difficulty = Difficulty.Expert,
             Visibility = Visibility.Public,
+            TerrainType = terrainType,
+            ElevationProfile = elevationProfile,
         };
     }
 
@@ -1786,6 +1788,105 @@ public class EventHandlerTests : IDisposable
         Assert.NotNull(result);
         var editionDto = Assert.Single(result!.Editions);
         Assert.True(editionDto.NeedsReview);
+    }
+
+    // ─── GetEventQuery — Primary race / elevation profile card treatment (#927) ───
+    // Reimplements the same "primary race" selection as GetEditionsHistoryQueryHandler.BuildRow
+    // (#806/#815, see EditionsHistoryHandlerTests) against EventEditionDto instead of
+    // EditionHistoryRowDto — the two queries' edition shapes differ, so this is exercised
+    // separately rather than shared.
+
+    [Fact]
+    public async Task GetEvent_MultipleRaces_PrimaryFieldsComeFromTheLongestLinkedTrail()
+    {
+        var ev = CreateTestEvent("Mixed Trail Lengths Event");
+        ev.Slug = "mixed-trail-lengths-event";
+        var edition = CreateTestEdition(ev.Id);
+        var shortTrail = CreateTestTrail("Short Loop", length: 5000, terrainType: TerrainType.Flat, elevationProfile: [10, 12, 11]);
+        var longTrail = CreateTestTrail("Long Ridge", length: 42000, terrainType: TerrainType.Mountainous, elevationProfile: [100, 250, 400, 180]);
+        var shortRace = new Race { Id = Guid.NewGuid(), EventEditionId = edition.Id, TrailId = shortTrail.Id, Name = "5K", DistanceLabel = "5K", SortOrder = 0 };
+        var longRace = new Race { Id = Guid.NewGuid(), EventEditionId = edition.Id, TrailId = longTrail.Id, Name = "42K", DistanceLabel = "42K", SortOrder = 1 };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Trails.AddRange(shortTrail, longTrail);
+            ctx.Races.AddRange(shortRace, longRace);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventQuery("mixed-trail-lengths-event"), CancellationToken.None);
+
+        Assert.NotNull(result);
+        var editionDto = Assert.Single(result!.Editions);
+        Assert.Equal("Mountainous", editionDto.PrimaryTerrainType);
+        Assert.Equal(longTrail.ElevationProfile, editionDto.PrimaryElevationProfile);
+    }
+
+    [Fact]
+    public async Task GetEvent_NoRaceLinkedToAnyTrail_PrimaryFieldsAreBothNull()
+    {
+        var ev = CreateTestEvent("No Trail Linked Event");
+        ev.Slug = "no-trail-linked-event";
+        var edition = CreateTestEdition(ev.Id);
+        var race = new Race { Id = Guid.NewGuid(), EventEditionId = edition.Id, TrailId = null, Name = "10K", DistanceLabel = "10K", SortOrder = 0 };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventQuery("no-trail-linked-event"), CancellationToken.None);
+
+        Assert.NotNull(result);
+        var editionDto = Assert.Single(result!.Editions);
+        Assert.Null(editionDto.PrimaryTerrainType);
+        Assert.Null(editionDto.PrimaryElevationProfile);
+    }
+
+    [Fact]
+    public async Task GetEvent_TwoRacesWithEqualTrailLength_PrimaryRaceTiebreakIsDeterministicByRaceId()
+    {
+        // #815-style tiebreak: when linked trails tie on Length, the primary race must be chosen
+        // by a deterministic secondary key (Race.Id), not by ed.Races' unordered load order.
+        var ev = CreateTestEvent("Equal Length Tiebreak Event");
+        ev.Slug = "equal-length-tiebreak-event";
+        var edition = CreateTestEdition(ev.Id);
+        var trailA = CreateTestTrail("Trail A", length: 21000, terrainType: TerrainType.Flat, elevationProfile: [1, 2, 3]);
+        var trailB = CreateTestTrail("Trail B", length: 21000, terrainType: TerrainType.Mountainous, elevationProfile: [4, 5, 6]);
+        var raceA = new Race { Id = Guid.NewGuid(), EventEditionId = edition.Id, TrailId = trailA.Id, Name = "21K A", DistanceLabel = "21K", SortOrder = 0 };
+        var raceB = new Race { Id = Guid.NewGuid(), EventEditionId = edition.Id, TrailId = trailB.Id, Name = "21K B", DistanceLabel = "21K", SortOrder = 1 };
+
+        var (expectedTrail, otherTrail) = raceA.Id.CompareTo(raceB.Id) < 0
+            ? (trailA, trailB)
+            : (trailB, trailA);
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Trails.AddRange(trailA, trailB);
+            ctx.Races.AddRange(raceA, raceB);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventQuery("equal-length-tiebreak-event"), CancellationToken.None);
+
+        Assert.NotNull(result);
+        var editionDto = Assert.Single(result!.Editions);
+        Assert.Equal(expectedTrail.TerrainType.ToString(), editionDto.PrimaryTerrainType);
+        Assert.Equal(expectedTrail.ElevationProfile, editionDto.PrimaryElevationProfile);
+        Assert.NotEqual(otherTrail.ElevationProfile, editionDto.PrimaryElevationProfile);
     }
 
     // ─── GetEventCalendarQuery ───

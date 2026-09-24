@@ -138,5 +138,11 @@ public record EventEditionDto(
     bool EffectiveCancelled = false,
     DateTime? RegistrationOpens = null,
     DateTime? RegistrationCloses = null,
-    bool NeedsReview = false
+    bool NeedsReview = false,
+    // #927: same "primary race" concept as EditionHistoryRowDto (backend/Application/Events/Queries/
+    // GetEditionsHistory/GetEditionsHistoryQuery.cs) — among this edition's races, the one whose
+    // linked trail has the greatest Length. Both null when no race is linked to a trail; reimplemented
+    // in GetEventQueryHandler rather than shared, since the two queries' edition shapes differ.
+    double[]? PrimaryElevationProfile = null,
+    string? PrimaryTerrainType = null
 );
