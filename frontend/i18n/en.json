@@ -791,6 +791,10 @@
             }
         },
         "changelog": {
+            "v1_11_0": {
+                "title": "A new event creation wizard for admins, plus fixed race and ticket-status bugs on the public site",
+                "description": "Admin now creates events through a new 3-step wizard (event details, edition details, and races) that replaces the old single dialog, with safe back-and-forth navigation between steps, a warning before losing unsaved race selections, and small conveniences like Ctrl+Enter to save and auto-filling the year into the title. On the public site, a race's ticket status (Available, Sold out, Not started yet, and so on) now correctly reflects whether registration for that race's edition is actually open, instead of sometimes showing a stale status — this also fixed a bug in the automated year-to-year edition cloning that could produce an invalid registration window. The Results link is now hidden until an event has actually happened, and the ticket resale link disappears once registration has genuinely closed."
+            },
             "v1_10_0": {
                 "title": "Fixed a live event-page bug, plus more editions and races complete themselves automatically",
                 "description": "Fixed a bug where an event page could show a confusing \"list of editions\" layout for a few days after a race, instead of its normal single-edition view, whenever next year's edition already existed. Series events now complete their individual races as each leg's date passes, not just when the whole series wraps up. The edition history page now correctly hides the Results link, \"Completed\" badge, and registration-status chip depending on whether an edition is upcoming, ongoing, or past. On admin, the \"Needs review\" flag introduced last release is now visible directly in the events list, and cloning an edition no longer suggests a fabricated date for events with an approximate schedule. Alongside that, a couple of smaller admin cache and logging fixes."

@@ -791,6 +791,10 @@
             }
         },
         "changelog": {
+            "v1_11_0": {
+                "title": "Nýr leiðarvísir fyrir stofnun viðburða í stjórnborði, og lagfærðar villur í hlaupa- og miðastöðu á vefnum",
+                "description": "Í stjórnborði er núna hægt að stofna viðburði í gegnum nýjan þriggja skrefa leiðarvísi (viðburðaupplýsingar, útgáfuupplýsingar og hlaup) sem kemur í stað gamla einfalda gluggans, með öruggri hreyfingu fram og til baka milli skrefa, viðvörun áður en óvistuð hlaupaval tapast, og litlum þægindum eins og Ctrl+Enter til að vista og sjálfvirkri útfyllingu ártals í titil. Á vefnum sjálfum sýnir miðastaða hlaupa (Laus sæti, Uppselt, Skráning ekki hafin o.s.frv.) núna réttilega hvort skráning fyrir viðkomandi útgáfu er í raun opin, í stað þess að sýna stundum úrelta stöðu — þetta lagfærði líka villu í sjálfvirkri klónun útgáfa milli ára sem gat búið til ógilt skráningartímabil. Úrslitahnappurinn birtist ekki lengur fyrr en viðburður hefur í raun farið fram, og hnappurinn fyrir endursölu miða hverfur um leið og skráning er í raun lokuð."
+            },
             "v1_10_0": {
                 "title": "Villa löguð á viðburðasíðum, og fleiri útgáfur/hlaup ljúka sér sjálfkrafa",
                 "description": "Lagfærð villa þar sem viðburðasíða gat sýnt ruglingslegan 'lista yfir útgáfur' í nokkra daga eftir hlaup, í stað venjulegs útlits, ef næsta útgáfa var þegar til. Keppnisraðir (Series) ljúka núna hverju hlaupi fyrir sig þegar dagsetning þess er liðin, ekki bara þegar öll röðin er búin. Saga útgáfu sýnir núna Úrslitahnapp, 'Lokið'-merki og skráningarstöðu eftir því hvort útgáfan er framundan, í gangi eða liðin. Í stjórnborði er 'Needs review' merkið, sem kom í síðustu útgáfu, núna sýnilegt beint í viðburðalistanum, og klónun útgáfu stingur ekki lengur upp á tilbúinni dagsetningu fyrir viðburði með ódagsetta áætlun. Auk þess smávægilegar lagfæringar á skyndiminni og villuskráningu í stjórnborði."
