@@ -6,10 +6,18 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import { EditionDetailsStep, RacesStep } from './EventWizardPage';
+import { EditionDetailsStep, EventDetailsStep, RacesStep } from './EventWizardPage';
 import { BilingualLangProvider } from '../contexts/BilingualLangContext';
 import { EDITION_STATUS_LABELS } from '../utils/eventForms';
-import type { EditionStatus, EventDetailDto, RaceDto, RegistrationStatus } from '../hooks/useEvents';
+import type {
+  ActivityType,
+  EditionStatus,
+  EventDetailDto,
+  EventStatus,
+  EventType,
+  RaceDto,
+  RegistrationStatus,
+} from '../hooks/useEvents';
 import type { Trail } from '../hooks/useTrails';
 
 // #953 round 2: round 1's fix (PR #961) seeded RacesStep's "Added this session" list by reading
@@ -787,5 +795,91 @@ describe('EditionDetailsStep — Year field wiring', () => {
     // remounted instance must not overwrite it back to the year-derived default.
     expect(getStatusCombobox().textContent).toBe(EDITION_STATUS_LABELS.Active);
     expect(getRegistrationStatusCombobox().textContent).toBe('NotStarted');
+  });
+});
+
+// #977: PR #976 (closing #970) gave Step 1's Type/Activity/Status Selects the same explicit
+// labelId wiring #964 gave EditionDetailsStep's Status/Registration status further up this file —
+// but only the latter ever got a regression test. These mount EventDetailsStep (Step 1) directly
+// and drive its three Selects via getByLabelText, the same pattern as getStatusCombobox/
+// getRegistrationStatusCombobox above, so a future accidental removal of labelId/id here is
+// caught the same way it already would be for Step 2.
+interface HarnessEventForm {
+  name: string;
+  nameEn: string;
+  slug: string;
+  type: EventType;
+  activityType: ActivityType;
+  status: EventStatus;
+}
+
+function emptyHarnessEventForm(): HarnessEventForm {
+  return { name: '', nameEn: '', slug: '', type: 'Race', activityType: 'TrailRunning', status: 'Hidden' };
+}
+
+// Owns form/setForm itself, same reasoning as EditionDetailsStepHarness above — EventDetailsStep's
+// props only require a controlled form/setter, so a small harness is enough to exercise the real
+// onChange without going through EventWizardPage's default export.
+function EventDetailsStepHarness() {
+  const [form, setForm] = useState<HarnessEventForm>(emptyHarnessEventForm());
+  return (
+    <EventDetailsStep
+      onNotify={() => {}}
+      form={form}
+      setForm={setForm}
+      onCreated={() => {}}
+    />
+  );
+}
+
+function renderEventDetailsStep() {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <BilingualLangProvider>
+          <EventDetailsStepHarness />
+        </BilingualLangProvider>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
+// Type/Status render plain-text MenuItems, but Activity prefixes each with an emoji icon
+// (ACTIVITY_ICONS in EventWizardPage.tsx) — the option's accessible text is the icon and the type
+// name together, so chooseMenuOption below is called with that full text, not just the type name.
+function getTypeCombobox() {
+  return screen.getByLabelText('Type', { selector: '[role="combobox"]' });
+}
+function getActivityCombobox() {
+  return screen.getByLabelText('Activity', { selector: '[role="combobox"]' });
+}
+
+describe('EventDetailsStep — Type/Activity/Status Selects are reachable via getByLabelText (#977)', () => {
+  afterEach(cleanup);
+
+  it('locates Type, Activity, and Status by label and changes Type', () => {
+    renderEventDetailsStep();
+
+    expect(getTypeCombobox().textContent).toBe('Race');
+    expect(getActivityCombobox().textContent).toBe('🏃‍♂️ TrailRunning');
+    expect(getStatusCombobox().textContent).toBe('Draft — hidden from all');
+
+    chooseMenuOption(getTypeCombobox(), 'Series');
+    expect(getTypeCombobox().textContent).toBe('Series');
+  });
+
+  it('changes Activity via the Select reachable by its label', () => {
+    renderEventDetailsStep();
+
+    chooseMenuOption(getActivityCombobox(), '🚴 Cycling');
+    expect(getActivityCombobox().textContent).toBe('🚴 Cycling');
+  });
+
+  it('changes Status via the Select reachable by its label', () => {
+    renderEventDetailsStep();
+
+    chooseMenuOption(getStatusCombobox(), 'Confirmed');
+    expect(getStatusCombobox().textContent).toBe('Confirmed');
   });
 });

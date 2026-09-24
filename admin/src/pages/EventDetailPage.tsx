@@ -273,7 +273,10 @@ interface EditionDialogProps {
   siblingEditions: EventEditionDto[];
 }
 
-function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGalleryMutated, onNotify, initialValues, isClone = false, isApproximateScheduleClone = false, siblingEditions }: EditionDialogProps) {
+// #977: exported (unlike previously) so EventDetailPage.test.tsx can mount this dialog directly
+// and cover its Status/Registration status Selects via getByLabelText, mirroring EventWizardPage's
+// own EditionDetailsStep/RacesStep exports, which exist for the same reason.
+export function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGalleryMutated, onNotify, initialValues, isClone = false, isApproximateScheduleClone = false, siblingEditions }: EditionDialogProps) {
   const isNew = edition === null;
   const [form, setForm] = useState<EditionFormState>(initialValues ?? (edition ? buildEditionForm(edition) : emptyEditionForm()));
   const [saving, setSaving] = useState(false);
