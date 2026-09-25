@@ -34,7 +34,8 @@ import { ActivityIcons } from '../utils/activityIcon';
 import { groupDistances } from '../utils/ticketStatus';
 import { formatNextDate, formatDateRange, formatYearRanges } from '../utils/eventUtils';
 import { useLocalize } from '../utils/localize';
-import { getTerrainAccentColor, ElevationCurveBackground } from '../utils/terrainVisuals';
+import { getTerrainAccentColor } from '../utils/terrainVisuals';
+import { ElevationCurveBackground } from '../utils/ElevationCurveBackground';
 
 type SortField = 'date' | 'name' | 'distances';
 type SortDir = 'asc' | 'desc';
