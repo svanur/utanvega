@@ -57,18 +57,31 @@ function getTerrainAccentColor(terrainType: string | null, theme: Theme): string
     }
 }
 
+// #994: same steepest-first terrain reading as getTerrainAccentColor above, but scales how tall
+// the decorative curve is allowed to peak — a flat trail's tiny elevation variance shouldn't look
+// as visually "tall" as a mountainous one's just because both are stretched to fill the card.
+function terrainHeightFactor(terrainType: string | null): number {
+    switch (terrainType) {
+        case 'Mountainous': return 0.75;
+        case 'Hilly': return 0.5;
+        case 'Flat': return 0.25;
+        default: return 1;
+    }
+}
+
 // Faint, absolutely-positioned, non-interactive elevation curve rendered behind a history card's
 // content. Deliberately not a chart library dependency — this is a decorative background, not a
 // readable data visualization (that's what the per-race elevation-gain chip already is).
-function ElevationCurveBackground({ profile, color }: { profile: number[]; color: string }) {
+function ElevationCurveBackground({ profile, color, terrainType }: { profile: number[]; color: string; terrainType: string | null }) {
     if (profile.length < 2) return null;
     const min = Math.min(...profile);
     const max = Math.max(...profile);
     const range = max - min || 1;
     const width = 100;
     const height = 100;
+    const factor = terrainHeightFactor(terrainType);
     const points = profile
-        .map((v, i) => `${(i / (profile.length - 1)) * width},${height - ((v - min) / range) * height}`)
+        .map((v, i) => `${(i / (profile.length - 1)) * width},${height - ((v - min) / range) * height * factor}`)
         .join(' ');
     const areaPoints = `0,${height} ${points} ${width},${height}`;
 
@@ -329,6 +342,7 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                                         <ElevationCurveBackground
                                             profile={row.primaryElevationProfile}
                                             color={terrainAccentColor ?? theme.palette.text.primary}
+                                            terrainType={row.primaryTerrainType}
                                         />
                                     )}
                                     <CardActionArea onClick={() => navigate(`/events/${row.eventSlug}/history/${row.editionYear ?? row.editionId}`)}>
