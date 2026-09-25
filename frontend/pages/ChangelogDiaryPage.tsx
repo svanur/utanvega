@@ -40,7 +40,7 @@ interface ChangelogDiaryPageProps {
  * rather than matched to a tag; only 1.0.0 and later have a release to link to.
  */
 const VERSIONS = [
-    'v1_13_0', 'v1_12_0', 'v1_11_0', 'v1_10_0', 'v1_9_0', 'v1_8_0', 'v1_7_0', 'v1_6_0', 'v1_5_0', 'v1_4_0', 'v1_3_0', 'v1_2_0', 'v1_1_1', 'v1_1_0', 'v1_0_0',
+    'v1_14_0', 'v1_13_0', 'v1_12_0', 'v1_11_0', 'v1_10_0', 'v1_9_0', 'v1_8_0', 'v1_7_0', 'v1_6_0', 'v1_5_0', 'v1_4_0', 'v1_3_0', 'v1_2_0', 'v1_1_1', 'v1_1_0', 'v1_0_0',
     'v0_15_0', 'v0_14_0', 'v0_13_0', 'v0_12_0', 'v0_11_0', 'v0_10_0', 'v0_9_0',
     'v0_8_0', 'v0_7_0', 'v0_6_0', 'v0_5_0', 'v0_4_0', 'v0_3_0', 'v0_2_0', 'v0_1_0',
     'v0_0_0',
@@ -52,6 +52,7 @@ const VERSIONS = [
  * Add entries here as they are established.
  */
 const RELEASE_DATES: Record<string, string> = {
+    v1_14_0: '2026-09-25',
     v1_13_0: '2026-09-25',
     v1_12_0: '2026-09-24',
     v1_11_0: '2026-09-24',
@@ -74,7 +75,7 @@ const RELEASE_DATES: Record<string, string> = {
  * The pre-1.0.0 numbers are retrospective and have no release behind them, so
  * linking them would 404.
  */
-const GITHUB_RELEASES = new Set(['v1_13_0', 'v1_12_0', 'v1_11_0', 'v1_10_0', 'v1_9_0', 'v1_8_0', 'v1_7_0', 'v1_6_0', 'v1_5_0', 'v1_4_0', 'v1_3_0', 'v1_2_0', 'v1_1_1', 'v1_1_0', 'v1_0_0']);
+const GITHUB_RELEASES = new Set(['v1_14_0', 'v1_13_0', 'v1_12_0', 'v1_11_0', 'v1_10_0', 'v1_9_0', 'v1_8_0', 'v1_7_0', 'v1_6_0', 'v1_5_0', 'v1_4_0', 'v1_3_0', 'v1_2_0', 'v1_1_1', 'v1_1_0', 'v1_0_0']);
 
 /**
  * Tags per version, for filtering. Values are keys into
@@ -84,6 +85,7 @@ const GITHUB_RELEASES = new Set(['v1_13_0', 'v1_12_0', 'v1_11_0', 'v1_10_0', 'v1
  * none, and that's fine: the tag row is simply omitted for them.
  */
 const TAGS: Partial<Record<string, string[]>> = {
+    v1_14_0: ['admin', 'frontend', 'events', 'editions'],
     v1_13_0: ['admin', 'frontend', 'events', 'editions'],
     v1_12_0: ['frontend', 'events'],
     v1_11_0: ['admin', 'frontend', 'events', 'editions', 'races'],
