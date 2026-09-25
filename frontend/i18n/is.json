@@ -793,8 +793,8 @@
         },
         "changelog": {
             "v1_14_0": {
-                "title": "Stjórnborð: hægt að sía viðburði eftir óstaðfestum útgáfum, og lagfærð landslagsstærðun á útgáfusíðu",
-                "description": "Í stjórnborði er núna hægt að sía og merkja viðburði sem eiga útgáfu í stöðunni „Óstaðfest\" (Unconfirmed), með sama merki og hnappi og „Needs review\"-flaggið notar nú þegar — fljótleg leið til að finna viðburði sem þurfa athygli. Á vefsvæðinu sjálfu stækkar/minnkar hæðarferilsbakgrunnurinn á stakri útgáfusíðu núna eftir landslagi, rétt eins og listasíðan gerir nú þegar, í stað þess að vera alltaf í fullri hæð."
+                "title": "Stjórnborð: hægt að sía viðburði eftir óstaðfestum útgáfum, lagfæra 'hæðarbakgrunn' á liðnum atburði",
+                "description": "Í stjórnborði er núna hægt að sía eftir útgáfum með stöðuna „Óstaðfest\" (Unconfirmed) — fljótleg leið til að finna viðburði sem þurfa athygli. Á vefnum: laga hæðarbakgrunn þegar liðinn viðburður er skoðaður."
             },
             "v1_13_0": {
                 "title": "Bakgrunnur á síðunni 'Fyrri viðburðir' uppfærður. Skráningarhnappur lagfærður og neðri mörk fyrir útgæfur lækkað",
