@@ -1406,6 +1406,10 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
         trailId: edition.trailId,
         status: next,
       }),
+    }).then(() => {
+      // The events list caches its own copy of anyEditionUnconfirmed/hasFutureEdition
+      // (EVENTS_QUERY_KEY) — without this it can show stale chips for up to its 30s staleTime.
+      void invalidateEventsList();
     }).catch(() => {
       // Roll back on failure
       setDetail(prev => prev ? {

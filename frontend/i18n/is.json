@@ -792,6 +792,10 @@
             }
         },
         "changelog": {
+            "v1_14_1": {
+                "title": "Stjórnborð: laga bögg á viðburðalistann og þegar leitað var eftir fyrri viðburðum",
+                "description": "Viðburðalistinn uppfærist núna samstundist við leit eftir fyrri viðburðum"
+            },
             "v1_14_0": {
                 "title": "Stjórnborð: hægt að sía viðburði eftir óstaðfestum útgáfum, lagfæra 'hæðarbakgrunn' á liðnum atburði",
                 "description": "Í stjórnborði er núna hægt að sía eftir útgáfum með stöðuna „Óstaðfest\" (Unconfirmed) — fljótleg leið til að finna viðburði sem þurfa athygli. Á vefnum: laga hæðarbakgrunn þegar liðinn viðburður er skoðaður."
