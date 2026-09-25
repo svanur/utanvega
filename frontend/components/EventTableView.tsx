@@ -6,7 +6,7 @@ import {
     TableSortLabel, Paper, Typography, Chip, IconButton, Tooltip, Stack,
     Collapse, Box, Skeleton, Button, alpha, useTheme, Link,
 } from '@mui/material';
-import { getTicketStatusColor, groupDistances, isAllSoldOut, hasRegistrationClosed, isRegistrationRequired } from '../utils/ticketStatus';
+import { getTicketStatusColor, groupDistances, isAllSoldOut, hasRegistrationClosed, isRegistrationRequired, isRegistrationRequiredForRace } from '../utils/ticketStatus';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
@@ -357,7 +357,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation, o
                                         );
                                     })()}
                                     <TableCell align="center">
-                                        {race.registrationUrl && raceDaysUntil !== null && raceDaysUntil >= 0 && isRegistrationRequired(event.registrationStatus) ? (
+                                        {race.registrationUrl && raceDaysUntil !== null && raceDaysUntil >= 0 && isRegistrationRequiredForRace(race.ticketStatus) ? (
                                             <Button size="small" variant="contained" href={race.registrationUrl} target="_blank" rel="noopener noreferrer" endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
                                                 {t('races.register', 'Register')}
                                             </Button>
