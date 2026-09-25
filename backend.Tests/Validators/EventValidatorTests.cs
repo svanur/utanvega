@@ -343,6 +343,14 @@ public class EventValidatorTests : IDisposable
     }
 
     [Fact]
+    public void CreateEdition_YearAboveUpperBound_Fails()
+    {
+        var cmd = ValidCreateEditionCommand with { Year = 2101 };
+        var result = _createEditionValidator.TestValidate(cmd);
+        result.ShouldHaveValidationErrorFor(x => x.Year);
+    }
+
+    [Fact]
     public void CreateEdition_EndDateAfterDate_Passes()
     {
         var cmd = ValidCreateEditionCommand with { Date = new DateOnly(2025, 8, 1), EndDate = new DateOnly(2025, 8, 3) };
@@ -556,6 +564,14 @@ public class EventValidatorTests : IDisposable
     public void UpdateEdition_YearOutOfRange_Fails()
     {
         var cmd = ValidUpdateEditionCommand with { Year = 1899 };
+        var result = _updateEditionValidator.TestValidate(cmd);
+        result.ShouldHaveValidationErrorFor(x => x.Year);
+    }
+
+    [Fact]
+    public void UpdateEdition_YearAboveUpperBound_Fails()
+    {
+        var cmd = ValidUpdateEditionCommand with { Year = 2101 };
         var result = _updateEditionValidator.TestValidate(cmd);
         result.ShouldHaveValidationErrorFor(x => x.Year);
     }
