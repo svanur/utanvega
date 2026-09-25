@@ -127,6 +127,7 @@ function makeDetail(races: RaceDto[]): EventDetailDto {
     editionStatus: 'Hidden',
     editionEffectiveCancelled: false,
     anyEditionNeedsReview: false,
+    anyEditionUnconfirmed: false,
     upcomingDates: [],
     editions: [
       {
