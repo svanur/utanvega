@@ -72,6 +72,11 @@ public record EventSummaryDto(
     // the admin events list can filter to "events with something to look at" without fetching the
     // full edition list per row.
     bool AnyEditionNeedsReview = false,
+    // Same pattern as AnyEditionNeedsReview above, but for EditionStatus.Unconfirmed — true when at
+    // least one edition (not necessarily the relevant/current one) is Unconfirmed, so the admin events
+    // list can filter/flag events that still need edition confirmation, independent of EditionStatus
+    // (which only reflects the single relevant edition).
+    bool AnyEditionUnconfirmed = false,
     // Raw registration close instant for the relevant edition, alongside the already-derived
     // RegistrationStatus string — lets the frontend gate UI (e.g. the resale link) on "has
     // registration actually closed" without re-deriving it from RegistrationStatus alone.

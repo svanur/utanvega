@@ -153,6 +153,9 @@ export interface EventSummaryDto {
     // Aggregate across this event's editions, not the same thing as EventEditionDto.needsReview
     // (a single edition's own flag) — true when at least one edition is bookmarked for review.
     anyEditionNeedsReview: boolean;
+    // Same pattern as anyEditionNeedsReview, but for EditionStatus.Unconfirmed — true when at
+    // least one edition (not necessarily editionStatus, the relevant/current one) is Unconfirmed.
+    anyEditionUnconfirmed: boolean;
 }
 
 export interface EventDetailDto extends EventSummaryDto {
