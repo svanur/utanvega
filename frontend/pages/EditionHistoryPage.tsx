@@ -228,6 +228,7 @@ export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistor
                         <ElevationCurveBackground
                             profile={edition.primaryElevationProfile}
                             color={terrainAccentColor ?? theme.palette.text.primary}
+                            terrainType={edition.primaryTerrainType}
                         />
                     )}
                     <Box sx={{ position: 'relative', zIndex: 1 }}>
