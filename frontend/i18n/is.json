@@ -793,8 +793,8 @@
         },
         "changelog": {
             "v1_13_0": {
-                "title": "Hæðarferilsbakgrunnur á útgáfusíðum, lagfærður skráningarhnappur, og hægt að vista gamlar útgáfur á ný",
-                "description": "Á útgáfusögusíðum — bæði í lista og á stökum síðum — sést núna daufur hæðarferilsbakgrunnur sem er stilltur eftir landslagi leiðarinnar (brattari fyrir fjallahlaup, flatari fyrir auðveld hlaup), sama meðferð og var áður aðeins í listaútgáfunni. Skráningarhnappurinn birtist ekki lengur fyrir hlaup sem þurfa í raun ekki skráningu, og íslenski textinn fyrir það tilvik var lagfærður. Í stjórnborði er núna aftur hægt að vista gamlar útgáfur frá því fyrir árið 2000 (allt aftur til 1900) — bakendinn hafnaði þöglega ártölum sem stjórnborðsformið leyfði nú þegar. Auk þess talsvert af innri prófunar- og CI-vinnu: bæði stjórnborðs- og vefsvæðisprófanir keyra núna í CI, og nokkrar eldri eyður í prófunum voru lokaðar."
+                "title": "Bakgrunnur á síðunni 'Fyrri viðburðir' uppfærður. Skráningarhnappur lagfærður og neðri mörk fyrir útgæfur lækkað",
+                "description": "Á útgáfusögusíðum , bæði í lista og á stökum síðum sést núna daufur hæðarferilsbakgrunnur sem er stilltur eftir landslagi leiðarinnar (brattari fyrir fjallahlaup, flatari fyrir auðveld hlaup), sama meðferð og var áður aðeins í listaútgáfunni. Skráningarhnappurinn birtist ekki lengur fyrir hlaup sem þurfa í raun ekki skráningu, og íslenski textinn fyrir það tilvik var lagfærður. Í stjórnborði er núna aftur hægt að vista gamlar útgáfur frá því fyrir árið 2000 (allt aftur til 1900). Auk þess talsvert af lagfæringum: bæði stjórnborðs- og vefsvæðisprófanir keyra núna í CI."
             },
             "v1_12_0": {
                 "title": "Leit og skoðun á viðburðasíðunni beinist núna að því sem er framundan",
