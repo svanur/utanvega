@@ -17,9 +17,9 @@ export function getTerrainAccentColor(terrainType: string | null, theme: Theme):
 // #994: same steepest-first terrain reading as getTerrainAccentColor above, but scales how tall
 // the decorative curve is allowed to peak — a flat trail's tiny elevation variance shouldn't look
 // as visually "tall" as a mountainous one's just because both are stretched to fill the card.
-// EditionHistoryPage.tsx's call site does not pass a terrainType, so it always falls through to
-// this default branch and keeps its pre-#994, unscaled curve height — that divergence is
-// intentional, not a bug to unify (see #1000).
+// EditionHistoryPage.tsx (#927) and EditionsHistoryPage.tsx (#806) both pass terrainType through
+// to this function, so they scale identically; the default branch below now only applies when an
+// edition has an elevation profile but no primaryTerrainType (see #1020).
 export function terrainHeightFactor(terrainType?: string | null): number {
     switch (terrainType) {
         case 'Mountainous': return 0.75;

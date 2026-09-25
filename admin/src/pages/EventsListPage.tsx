@@ -40,6 +40,7 @@ import BookmarkIcon from '@mui/icons-material/Bookmark';
 import ClearIcon from '@mui/icons-material/Clear';
 import CopyIcon from '@mui/icons-material/ContentCopy';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
 import SearchIcon from '@mui/icons-material/Search';
@@ -219,6 +220,7 @@ const EVENTS_FILTER_SCHEMA = {
   attentionFilter: { default: '', allowed: ['noEdition', 'seriesMissingReg', 'pastActive'] },
   weekFilter: { default: 'all', allowed: ['all', 'this-week', 'next-week'] },
   needsReviewOnly: { default: 'false', allowed: ['true', 'false'] },
+  unconfirmedEditionsOnly: { default: 'false', allowed: ['true', 'false'] },
 } as const;
 
 interface EventsListPageProps {
@@ -252,6 +254,8 @@ export default function EventsListPage({ onNotify }: EventsListPageProps) {
   const setWeekFilter = useCallback((v: 'all' | 'this-week' | 'next-week') => setValue('weekFilter', v), [setValue]);
   const needsReviewOnly = values.needsReviewOnly === 'true';
   const setNeedsReviewOnly = useCallback((v: boolean) => setValue('needsReviewOnly', v ? 'true' : 'false'), [setValue]);
+  const unconfirmedEditionsOnly = values.unconfirmedEditionsOnly === 'true';
+  const setUnconfirmedEditionsOnly = useCallback((v: boolean) => setValue('unconfirmedEditionsOnly', v ? 'true' : 'false'), [setValue]);
   const [showAttentionPanel, setShowAttentionPanel] = useState(true);
   const [cyclingStatusIds, setCyclingStatusIds] = useState<Set<string>>(new Set());
   const [cyclingActivityIds, setCyclingActivityIds] = useState<Set<string>>(new Set());
@@ -284,7 +288,8 @@ export default function EventsListPage({ onNotify }: EventsListPageProps) {
   }, [events]);
 
   const hasActiveFilters = weekFilter !== 'all' || attentionFilter !== null || activityFilter !== 'all' || typeFilter !== 'all'
-    || statusFilter !== 'all' || locationFilter !== 'all' || yearFilter !== 'all' || monthFilter !== 'all' || needsReviewOnly;
+    || statusFilter !== 'all' || locationFilter !== 'all' || yearFilter !== 'all' || monthFilter !== 'all' || needsReviewOnly
+    || unconfirmedEditionsOnly;
 
   const resetFilters = () => {
     // Deliberately leaves searchQuery, sortBy and sortDir untouched — this is the "clear
@@ -292,7 +297,7 @@ export default function EventsListPage({ onNotify }: EventsListPageProps) {
     setValues({
       activityFilter: 'all', typeFilter: 'all', statusFilter: 'all', locationFilter: 'all',
       yearFilter: 'all', monthFilter: 'all', attentionFilter: '', weekFilter: 'all',
-      needsReviewOnly: 'false',
+      needsReviewOnly: 'false', unconfirmedEditionsOnly: 'false',
     });
   };
 
@@ -343,6 +348,7 @@ export default function EventsListPage({ onNotify }: EventsListPageProps) {
         if (attentionFilter === 'seriesMissingReg' && !(e.type === 'Series' && e.nextEditionDate && e.nextEditionDate <= in30daysStr && e.seriesRaces?.some(r => !r.registrationUrl))) return false;
         if (attentionFilter === 'pastActive' && !(e.status === 'Confirmed' && e.nextEditionDate && e.nextEditionDate < todayStr)) return false;
         if (needsReviewOnly && !e.anyEditionNeedsReview) return false;
+        if (unconfirmedEditionsOnly && !e.anyEditionUnconfirmed) return false;
         return true;
       })
       .sort((a, b) => {
@@ -368,7 +374,7 @@ export default function EventsListPage({ onNotify }: EventsListPageProps) {
         }
         return cmp !== 0 ? dir * cmp : a.name.localeCompare(b.name);
       });
-  }, [events, searchQuery, activityFilter, typeFilter, statusFilter, locationFilter, yearFilter, monthFilter, sortBy, sortDir, attentionFilter, weekFilter, needsReviewOnly, thisWeekStart, thisWeekEnd, nextWeekStart, nextWeekEnd, todayStr, in30daysStr]);
+  }, [events, searchQuery, activityFilter, typeFilter, statusFilter, locationFilter, yearFilter, monthFilter, sortBy, sortDir, attentionFilter, weekFilter, needsReviewOnly, unconfirmedEditionsOnly, thisWeekStart, thisWeekEnd, nextWeekStart, nextWeekEnd, todayStr, in30daysStr]);
 
   // j/k row focus + Enter/o to open — scrolled into view whenever it changes.
   const { focusedIndex: focusedEventIndex } = useRowFocus(filteredEvents, (e) => navigate(`/events/${e.slug}`));
@@ -805,6 +811,17 @@ export default function EventsListPage({ onNotify }: EventsListPageProps) {
             onClick={() => setNeedsReviewOnly(!needsReviewOnly)}
           />
         </Tooltip>
+        <Tooltip title="Show only events with an edition still Unconfirmed">
+          <Chip
+            icon={<HelpOutlineIcon />}
+            label="Unconfirmed editions"
+            size="small"
+            color={unconfirmedEditionsOnly ? 'warning' : 'default'}
+            variant={unconfirmedEditionsOnly ? 'filled' : 'outlined'}
+            clickable
+            onClick={() => setUnconfirmedEditionsOnly(!unconfirmedEditionsOnly)}
+          />
+        </Tooltip>
         {(weekFilter !== 'all' || yearFilter !== 'all') && (
           <Tooltip title="Copy agenda to clipboard">
             <IconButton size="small" aria-label="Copy agenda" onClick={handleCopyAgenda}>
@@ -973,6 +990,12 @@ export default function EventsListPage({ onNotify }: EventsListPageProps) {
                         collapsed "older editions" bucket, without opening the event. */}
                     {event.anyEditionNeedsReview && (
                       <Chip label="Needs review" size="small" color="warning" variant="outlined" />
+                    )}
+                    {/* Same pattern as anyEditionNeedsReview above, but for EditionStatus.Unconfirmed —
+                        surfaces an unconfirmed edition even when it isn't the "relevant" one shown
+                        elsewhere on the row (e.g. editionStatus), without opening the event. */}
+                    {event.anyEditionUnconfirmed && (
+                      <Chip label="Unconfirmed edition" size="small" color="warning" variant="outlined" />
                     )}
                   </Stack>
                 </TableCell>

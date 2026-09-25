@@ -792,6 +792,10 @@
             }
         },
         "changelog": {
+            "v1_14_0": {
+                "title": "Admin: filter events by unconfirmed editions, plus a terrain-scaling fix on the edition detail page",
+                "description": "Admin's events list can now filter and flag events that have an edition sitting in Unconfirmed status, using the same \"Needs review\" style chip and row badge already in place — a quick way to spot events that still need attention. On the public site, the single-edition detail page's decorative elevation-curve background now scales by terrain type the same way the editions-history list page already does, instead of always rendering at full height."
+            },
             "v1_13_0": {
                 "title": "Elevation-profile backgrounds on edition pages, a hidden Register button fix, and historical editions can be saved again",
                 "description": "Edition history pages — both the list and the detail view — now show a faint elevation-curve background sized to match the trail's terrain (steeper for mountainous races, flatter for easy ones), matching a treatment that was previously list-view only. The Register button no longer appears for races that don't actually require registration, and the Icelandic label for that case was corrected. In admin, historical editions dated before 2000 (as far back as 1900) can be saved again — the backend was silently rejecting years the admin form already allowed. Alongside that, a batch of internal test-coverage and CI hardening work: the admin and frontend test suites now both run in CI, and several older test-coverage gaps were closed."

@@ -2454,6 +2454,103 @@ public class EventHandlerTests : IDisposable
         Assert.False(dto.AnyEditionNeedsReview);
     }
 
+    // ─── GetEventsQuery — AnyEditionUnconfirmed aggregate ───
+
+    [Fact]
+    public async Task GetEvents_AnyEditionUnconfirmed_TrueWhenAnEditionIsUnconfirmed()
+    {
+        // Admin path (IncludeHidden: true) — the real aggregate must come through.
+        var ev = CreateTestEvent("Unconfirmed Edition Event");
+        var edition = CreateTestEdition(ev.Id);
+        edition.Status = EditionStatus.Unconfirmed;
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(IncludeHidden: true), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.True(dto.AnyEditionUnconfirmed);
+    }
+
+    [Fact]
+    public async Task GetEvents_AnyEditionUnconfirmed_FalseWhenNoEditionIsUnconfirmed()
+    {
+        // Admin path (IncludeHidden: true) — the real aggregate must come through.
+        var ev = CreateTestEvent("No Unconfirmed Edition Event");
+        var edition = CreateTestEdition(ev.Id);
+        edition.Status = EditionStatus.Active;
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(IncludeHidden: true), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.False(dto.AnyEditionUnconfirmed);
+    }
+
+    [Fact]
+    public async Task GetEvents_AnyEditionUnconfirmed_TrueWhenOnlyANonRelevantPastEditionIsUnconfirmed()
+    {
+        // Admin path (IncludeHidden: true). The aggregate is an OR across all of the event's
+        // editions, not just the "relevant" one used elsewhere for distances/registration — an
+        // Unconfirmed status on an older, non-relevant edition must still surface here, e.g. an
+        // event whose current/future edition is Active but whose past edition was never confirmed.
+        var ev = CreateTestEvent("Mixed Status Editions Event");
+        var pastUnconfirmedEdition = CreateTestEdition(ev.Id, year: 2024);
+        var futureActiveEdition = CreateTestEdition(ev.Id, year: 2026);
+        pastUnconfirmedEdition.Status = EditionStatus.Unconfirmed;
+        futureActiveEdition.Status = EditionStatus.Active;
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(pastUnconfirmedEdition);
+            ctx.EventEditions.Add(futureActiveEdition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(IncludeHidden: true), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.True(dto.AnyEditionUnconfirmed);
+    }
+
+    [Fact]
+    public async Task GetEvents_AnyEditionUnconfirmed_FalseOnPublicPathEvenWhenUnconfirmed()
+    {
+        // Public path (IncludeHidden: false, the anonymous caller default) must never leak the
+        // internal admin aggregate, regardless of the underlying edition value.
+        var ev = CreateTestEvent("Publicly Unconfirmed Event");
+        var edition = CreateTestEdition(ev.Id);
+        edition.Status = EditionStatus.Unconfirmed;
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.False(dto.AnyEditionUnconfirmed);
+    }
+
     [Fact]
     public async Task CreateEdition_StoresEndDate()
     {

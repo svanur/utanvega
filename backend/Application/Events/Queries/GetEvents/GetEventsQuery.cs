@@ -312,6 +312,7 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 // NeedsReview is an internal admin bookmark flag. The public path (IncludeHidden=false)
                 // must never leak it; only the admin events list (IncludeHidden=true) sees the real aggregate.
                 AnyEditionNeedsReview: request.IncludeHidden && editionsForCalc.Any(ed => ed.NeedsReview),
+                AnyEditionUnconfirmed: request.IncludeHidden && editionsForCalc.Any(ed => ed.Status == EditionStatus.Unconfirmed),
                 RegistrationCloses: relevantEdition?.RegistrationCloses
             );
         }).ToList();

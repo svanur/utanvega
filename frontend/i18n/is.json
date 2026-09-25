@@ -792,6 +792,10 @@
             }
         },
         "changelog": {
+            "v1_14_0": {
+                "title": "Stjórnborð: hægt að sía viðburði eftir óstaðfestum útgáfum, lagfæra 'hæðarbakgrunn' á liðnum atburði",
+                "description": "Í stjórnborði er núna hægt að sía eftir útgáfum með stöðuna „Óstaðfest\" (Unconfirmed) — fljótleg leið til að finna viðburði sem þurfa athygli. Á vefnum: laga hæðarbakgrunn þegar liðinn viðburður er skoðaður."
+            },
             "v1_13_0": {
                 "title": "Bakgrunnur á síðunni 'Fyrri viðburðir' uppfærður. Skráningarhnappur lagfærður og neðri mörk fyrir útgæfur lækkað",
                 "description": "Á útgáfusögusíðum , bæði í lista og á stökum síðum sést núna daufur hæðarferilsbakgrunnur sem er stilltur eftir landslagi leiðarinnar (brattari fyrir fjallahlaup, flatari fyrir auðveld hlaup), sama meðferð og var áður aðeins í listaútgáfunni. Skráningarhnappurinn birtist ekki lengur fyrir hlaup sem þurfa í raun ekki skráningu, og íslenski textinn fyrir það tilvik var lagfærður. Í stjórnborði er núna aftur hægt að vista gamlar útgáfur frá því fyrir árið 2000 (allt aftur til 1900). Auk þess talsvert af lagfæringum: bæði stjórnborðs- og vefsvæðisprófanir keyra núna í CI."
