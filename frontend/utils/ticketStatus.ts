@@ -50,6 +50,12 @@ export function isAllSoldOut(distances: DistanceEntry[] | null | undefined): boo
     return distances.every(d => d.ticketStatus === 'SoldOut' || d.ticketStatus === 'Closed');
 }
 
+// Returns false only when registration isn't needed at all (free entry, no sign-up) — used to
+// suppress registration UI (button, swipe action) alongside isAllSoldOut above.
+export function isRegistrationRequired(registrationStatus: string | null | undefined): boolean {
+    return registrationStatus !== 'NotRequired';
+}
+
 // RegistrationCloses is a date-only value under the hood (the admin's DatePicker only captures a
 // calendar day, stored as midnight UTC) — treat the closes-date itself as still open through its
 // full 24 hours, i.e. compare against the start of the *next* day, not the raw instant. Mirrors
