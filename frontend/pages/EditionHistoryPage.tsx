@@ -37,7 +37,8 @@ import { useLocalize } from '../utils/localize';
 import { splitMinutes } from '../utils/cutoffTime';
 import { formatDateRange, formatRaceDateTime, shortestUniqueEditionKey, getEditionTimingStatus, msUntilNextMidnight, type EditionTimingStatus } from '../utils/eventUtils';
 import { getTicketStatusColor } from '../utils/ticketStatus';
-import { getTerrainAccentColor, ElevationCurveBackground } from '../utils/terrainVisuals';
+import { getTerrainAccentColor } from '../utils/terrainVisuals';
+import { ElevationCurveBackground } from '../utils/ElevationCurveBackground';
 
 type EditionHistoryPageProps = {
     mode: PaletteMode;
