@@ -792,6 +792,10 @@
             }
         },
         "changelog": {
+            "v1_14_1": {
+                "title": "Admin: edition status changes now refresh the events list immediately",
+                "description": "Changing an edition's status from its detail page now immediately updates the events list's \"Unconfirmed editions\" filter and badges, instead of leaving them stale for up to 30 seconds — the same fix already applied to the \"Needs review\" toggle."
+            },
             "v1_14_0": {
                 "title": "Admin: filter events by unconfirmed editions, plus a terrain-scaling fix on the edition detail page",
                 "description": "Admin's events list can now filter and flag events that have an edition sitting in Unconfirmed status, using the same \"Needs review\" style chip and row badge already in place — a quick way to spot events that still need attention. On the public site, the single-edition detail page's decorative elevation-curve background now scales by terrain type the same way the editions-history list page already does, instead of always rendering at full height."

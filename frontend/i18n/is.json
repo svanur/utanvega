@@ -792,6 +792,10 @@
             }
         },
         "changelog": {
+            "v1_14_1": {
+                "title": "Stjórnborð: breytingar á stöðu útgáfu uppfæra núna viðburðalistann samstundis",
+                "description": "Þegar staða útgáfu er breytt á útgáfusíðunni uppfærist núna viðburðalistinn — sían „Óstaðfestar útgáfur\" og merkin — samstundis, í stað þess að vera úrelt í allt að 30 sekúndur — sama lagfæring og var þegar gerð fyrir „Needs review\"-hnappinn."
+            },
             "v1_14_0": {
                 "title": "Stjórnborð: hægt að sía viðburði eftir óstaðfestum útgáfum, lagfæra 'hæðarbakgrunn' á liðnum atburði",
                 "description": "Í stjórnborði er núna hægt að sía eftir útgáfum með stöðuna „Óstaðfest\" (Unconfirmed) — fljótleg leið til að finna viðburði sem þurfa athygli. Á vefnum: laga hæðarbakgrunn þegar liðinn viðburður er skoðaður."
