@@ -23,6 +23,8 @@ jobs:
   frontend:
     name: Frontend
     uses: ./.github/workflows/frontend-build.yml
+    with:
+      test-command: npm run test
     secrets: inherit
 
   admin:
@@ -31,6 +33,7 @@ jobs:
     with:
       working-directory: admin
       artifact-name: admin-build
+      test-command: npm run test
     secrets: inherit
 
   sync-check:

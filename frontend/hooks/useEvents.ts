@@ -142,6 +142,11 @@ export interface EventEditionDto {
     updatedAt: string | null;
     status: string;
     effectiveCancelled: boolean;
+    // #927: same "primary race" concept as EditionHistoryRow.primaryElevationProfile/primaryTerrainType
+    // above — derived from this edition's race whose linked trail has the greatest Length. Both null
+    // when no race links to a trail; primaryTerrainType can still be set alongside a null profile.
+    primaryElevationProfile: number[] | null;
+    primaryTerrainType: string | null;
 }
 
 export interface EventDetail extends EventSummary {

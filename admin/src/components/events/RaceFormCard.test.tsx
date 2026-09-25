@@ -1,10 +1,20 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import RaceFormCard from './RaceFormCard';
 import type { EventEditionDto } from '../../hooks/useEvents';
+
+// #960: RaceFormCard -> useTranslate -> api.ts -> supabase.ts, and supabase.ts calls
+// requireEnv('VITE_SUPABASE_URL') at module-evaluation time — in a clean checkout with no
+// .env.local this throws before a single test runs, even though neither test below exercises
+// translation (translate() is only reached from handleTranslate, which nothing here triggers).
+// Same fix as useEvents.test.ts / EventHealth.test.tsx: mock the module one level up so the
+// chain never reaches supabase.ts.
+vi.mock('../../hooks/api', () => ({
+  apiFetch: vi.fn(),
+}));
 
 // #809: unit tests in utils/itraPoints.test.ts cover correctEmptyToOneFromSpinner as a pure
 // function, but that only proves the decision logic is correct given a boolean — not that

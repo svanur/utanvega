@@ -9,8 +9,7 @@ import {
     useTheme, type SelectChangeEvent,
     ToggleButtonGroup, ToggleButton, Card, CardActionArea, CardContent, Button,
 } from '@mui/material';
-import { alpha } from '@mui/material/styles';
-import type { PaletteMode, Theme } from '@mui/material';
+import type { PaletteMode } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
 import HistoryIcon from '@mui/icons-material/History';
@@ -35,6 +34,8 @@ import { ActivityIcons } from '../utils/activityIcon';
 import { groupDistances } from '../utils/ticketStatus';
 import { formatNextDate, formatDateRange, formatYearRanges } from '../utils/eventUtils';
 import { useLocalize } from '../utils/localize';
+import { getTerrainAccentColor } from '../utils/terrainVisuals';
+import { ElevationCurveBackground } from '../utils/ElevationCurveBackground';
 
 type SortField = 'date' | 'name' | 'distances';
 type SortDir = 'asc' | 'desc';
@@ -44,54 +45,6 @@ type EditionsHistoryPageProps = {
     mode: PaletteMode;
     onToggleMode: () => void;
 };
-
-// #806: list-view card only — keyed to the same three TerrainType enum values the backend
-// exposes (Trail.cs TerrainType), roughly ordered by how demanding the terrain reads: steepest
-// first. Table view intentionally gets none of this (see EventTableView).
-function getTerrainAccentColor(terrainType: string | null, theme: Theme): string | undefined {
-    switch (terrainType) {
-        case 'Mountainous': return theme.palette.error.main;
-        case 'Hilly': return theme.palette.warning.main;
-        case 'Flat': return theme.palette.success.main;
-        default: return undefined;
-    }
-}
-
-// Faint, absolutely-positioned, non-interactive elevation curve rendered behind a history card's
-// content. Deliberately not a chart library dependency — this is a decorative background, not a
-// readable data visualization (that's what the per-race elevation-gain chip already is).
-function ElevationCurveBackground({ profile, color }: { profile: number[]; color: string }) {
-    if (profile.length < 2) return null;
-    const min = Math.min(...profile);
-    const max = Math.max(...profile);
-    const range = max - min || 1;
-    const width = 100;
-    const height = 100;
-    const points = profile
-        .map((v, i) => `${(i / (profile.length - 1)) * width},${height - ((v - min) / range) * height}`)
-        .join(' ');
-    const areaPoints = `0,${height} ${points} ${width},${height}`;
-
-    return (
-        <Box
-            component="svg"
-            viewBox={`0 0 ${width} ${height}`}
-            preserveAspectRatio="none"
-            aria-hidden="true"
-            sx={{
-                position: 'absolute',
-                inset: 0,
-                width: '100%',
-                height: '100%',
-                zIndex: 0,
-                pointerEvents: 'none',
-            }}
-        >
-            <polygon points={areaPoints} fill={alpha(color, 0.06)} stroke="none" />
-            <polyline points={points} fill="none" stroke={alpha(color, 0.25)} strokeWidth={2} vectorEffect="non-scaling-stroke" />
-        </Box>
-    );
-}
 
 export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHistoryPageProps) {
     const { t } = useTranslation();
@@ -329,6 +282,7 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                                         <ElevationCurveBackground
                                             profile={row.primaryElevationProfile}
                                             color={terrainAccentColor ?? theme.palette.text.primary}
+                                            terrainType={row.primaryTerrainType}
                                         />
                                     )}
                                     <CardActionArea onClick={() => navigate(`/events/${row.eventSlug}/history/${row.editionYear ?? row.editionId}`)}>

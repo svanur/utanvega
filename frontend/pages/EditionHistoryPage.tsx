@@ -37,6 +37,8 @@ import { useLocalize } from '../utils/localize';
 import { splitMinutes } from '../utils/cutoffTime';
 import { formatDateRange, formatRaceDateTime, shortestUniqueEditionKey, getEditionTimingStatus, msUntilNextMidnight, type EditionTimingStatus } from '../utils/eventUtils';
 import { getTicketStatusColor } from '../utils/ticketStatus';
+import { getTerrainAccentColor } from '../utils/terrainVisuals';
+import { ElevationCurveBackground } from '../utils/ElevationCurveBackground';
 
 type EditionHistoryPageProps = {
     mode: PaletteMode;
@@ -48,7 +50,6 @@ function formatCutoff(minutes: number, t: (key: string, opts?: Record<string, un
     if (m === 0) return t('races.cutoffHours', { count: h });
     return `${h}h ${m}m`;
 }
-
 
 export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistoryPageProps) {
     const { slug, editionKey } = useParams<{ slug: string; editionKey: string }>();
@@ -173,6 +174,10 @@ export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistor
 
     const heading = loc(edition.title, edition.titleEn)?.trim() || String(edition.year);
 
+    // #927: same primary-race terrain treatment as EditionsHistoryPage's list view (#806), applied
+    // to this page's single-edition header card instead of a row.
+    const terrainAccentColor = getTerrainAccentColor(edition.primaryTerrainType, theme);
+
     return (
         <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('nav.events'), to: '/events' }, { label: loc(event.name, event.nameEn) ?? event.name, to: `/events/${slug}` }, { label: editionKey ?? '' }]}>
             <Container
@@ -208,73 +213,88 @@ export default function EditionHistoryPage({ mode, onToggleMode }: EditionHistor
                         p: { xs: 2.5, sm: 4 },
                         mb: 3,
                         borderRadius: 3,
+                        position: 'relative',
+                        overflow: 'hidden',
                         background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, ${alpha(theme.palette.grey[500], 0.05)} 100%)`,
                         border: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
+                        // #927: same reserved-border-width treatment as EditionsHistoryPage's list
+                        // cards (#816) — only the color toggles, so accented and non-accented
+                        // headers align identically.
+                        borderLeftWidth: 4,
+                        borderLeftColor: terrainAccentColor ?? theme.palette.divider,
                     }}
                 >
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2, flexWrap: 'wrap' }}>
-                        <Box>
-                            <Typography variant="h6" fontWeight={700} sx={{ mb: 0.5 }}>
-                                {loc(event.name, event.nameEn) ?? event.name}
-                            </Typography>
-                            <Typography variant="h4" fontWeight={800} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <EmojiEventsIcon sx={{ color: theme.palette.grey[500], flexShrink: 0 }} />
-                                {heading}
-                            </Typography>
-                        </Box>
-                        <Chip
-                            label={
-                                editionTiming === 'upcoming'
-                                    ? t('races.history.upcomingEdition', { defaultValue: 'Upcoming edition' })
-                                    : editionTiming === 'ongoing'
-                                        ? t('races.history.ongoingEdition', { defaultValue: 'Ongoing edition' })
-                                        : t('races.history.pastEdition', { defaultValue: 'Past edition' })
-                            }
-                            size="small"
-                            variant="outlined"
-                            color="default"
+                    {edition.primaryElevationProfile && (
+                        <ElevationCurveBackground
+                            profile={edition.primaryElevationProfile}
+                            color={terrainAccentColor ?? theme.palette.text.primary}
                         />
-                    </Box>
-
-                    <Stack direction="row" spacing={1} sx={{ mt: 1.5, flexWrap: 'wrap', gap: 0.5 }}>
-                        {edition.year && (
-                            <Tooltip title={t('races.history.year', { defaultValue: 'Year' })}>
-                                <Chip label={String(edition.year)} size="small" variant="outlined" color="primary" />
-                            </Tooltip>
-                        )}
-                        {edition.date && (
-                            <Tooltip title={t('races.history.eventDate', { defaultValue: 'Event date' })}>
-                                <Chip
-                                    icon={<CalendarTodayIcon />}
-                                    label={formatDateRange(edition.date, edition.endDate, t)}
-                                    size="small"
-                                    variant="outlined"
-                                />
-                            </Tooltip>
-                        )}
-                    </Stack>
-
-                    {edition.notes && (
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5, whiteSpace: 'pre-line' }}>
-                            {edition.notes}
-                        </Typography>
                     )}
-
-                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mt: 2 }} alignItems={{ sm: 'center' }}>
-                        {edition.resultsUrl && editionTiming !== 'upcoming' && (
-                            <Button
-                                variant="contained"
-                                color="primary"
+                    <Box sx={{ position: 'relative', zIndex: 1 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2, flexWrap: 'wrap' }}>
+                            <Box>
+                                <Typography variant="h6" fontWeight={700} sx={{ mb: 0.5 }}>
+                                    {loc(event.name, event.nameEn) ?? event.name}
+                                </Typography>
+                                <Typography variant="h4" fontWeight={800} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <EmojiEventsIcon sx={{ color: theme.palette.grey[500], flexShrink: 0 }} />
+                                    {heading}
+                                </Typography>
+                            </Box>
+                            <Chip
+                                label={
+                                    editionTiming === 'upcoming'
+                                        ? t('races.history.upcomingEdition', { defaultValue: 'Upcoming edition' })
+                                        : editionTiming === 'ongoing'
+                                            ? t('races.history.ongoingEdition', { defaultValue: 'Ongoing edition' })
+                                            : t('races.history.pastEdition', { defaultValue: 'Past edition' })
+                                }
                                 size="small"
-                                endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
-                                onClick={() => window.open(edition.resultsUrl!, '_blank', 'noopener')}
-                                sx={{ textTransform: 'none' }}
-                            >
-                                {t('races.results', { defaultValue: 'Results' })}
-                            </Button>
+                                variant="outlined"
+                                color="default"
+                            />
+                        </Box>
+
+                        <Stack direction="row" spacing={1} sx={{ mt: 1.5, flexWrap: 'wrap', gap: 0.5 }}>
+                            {edition.year && (
+                                <Tooltip title={t('races.history.year', { defaultValue: 'Year' })}>
+                                    <Chip label={String(edition.year)} size="small" variant="outlined" color="primary" />
+                                </Tooltip>
+                            )}
+                            {edition.date && (
+                                <Tooltip title={t('races.history.eventDate', { defaultValue: 'Event date' })}>
+                                    <Chip
+                                        icon={<CalendarTodayIcon />}
+                                        label={formatDateRange(edition.date, edition.endDate, t)}
+                                        size="small"
+                                        variant="outlined"
+                                    />
+                                </Tooltip>
+                            )}
+                        </Stack>
+
+                        {edition.notes && (
+                            <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5, whiteSpace: 'pre-line' }}>
+                                {edition.notes}
+                            </Typography>
                         )}
-                        <GalleryLinks galleries={edition.galleries} />
-                    </Stack>
+
+                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mt: 2 }} alignItems={{ sm: 'center' }}>
+                            {edition.resultsUrl && editionTiming !== 'upcoming' && (
+                                <Button
+                                    variant="contained"
+                                    color="primary"
+                                    size="small"
+                                    endIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
+                                    onClick={() => window.open(edition.resultsUrl!, '_blank', 'noopener')}
+                                    sx={{ textTransform: 'none' }}
+                                >
+                                    {t('races.results', { defaultValue: 'Results' })}
+                                </Button>
+                            )}
+                            <GalleryLinks galleries={edition.galleries} />
+                        </Stack>
+                    </Box>
                 </Paper>
 
                 {visibleRaces.length === 0 ? (

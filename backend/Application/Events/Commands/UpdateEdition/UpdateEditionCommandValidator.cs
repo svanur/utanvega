@@ -37,7 +37,7 @@ public class UpdateEditionCommandValidator : AbstractValidator<UpdateEditionComm
             .When(x => !string.IsNullOrEmpty(x.Status));
 
         RuleFor(x => x.Year)
-            .InclusiveBetween(2000, 2100)
+            .InclusiveBetween(1900, 2100)
             .When(x => x.Year.HasValue);
 
         RuleFor(x => x.EndDate)

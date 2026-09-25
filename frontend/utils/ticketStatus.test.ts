@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { groupDistances, hasRegistrationClosed, type DistanceEntry } from './ticketStatus';
+import { groupDistances, hasRegistrationClosed, isRegistrationRequired, isRegistrationRequiredForRace, type DistanceEntry } from './ticketStatus';
 
 describe('groupDistances', () => {
     it('keeps elevationGain/terrainType when two entries sharing a label agree', () => {
@@ -133,5 +133,35 @@ describe('hasRegistrationClosed', () => {
     it('returns true when now is well after the cutoff', () => {
         const now = new Date('2026-03-15T12:00:00Z');
         expect(hasRegistrationClosed('2026-03-10T00:00:00Z', now)).toBe(true);
+    });
+});
+
+describe('isRegistrationRequired', () => {
+    it('returns false for NotRequired', () => {
+        expect(isRegistrationRequired('NotRequired')).toBe(false);
+    });
+
+    it('returns true for every other registrationStatus value, including null/undefined', () => {
+        expect(isRegistrationRequired('Open')).toBe(true);
+        expect(isRegistrationRequired('Closed')).toBe(true);
+        expect(isRegistrationRequired('NotStarted')).toBe(true);
+        expect(isRegistrationRequired(null)).toBe(true);
+        expect(isRegistrationRequired(undefined)).toBe(true);
+    });
+});
+
+describe('isRegistrationRequiredForRace', () => {
+    it('returns false for Free (the ticketStatus a NotRequired-registration race resolves to)', () => {
+        expect(isRegistrationRequiredForRace('Free')).toBe(false);
+    });
+
+    it('returns true for every other ticketStatus value, including null/undefined', () => {
+        expect(isRegistrationRequiredForRace('Available')).toBe(true);
+        expect(isRegistrationRequiredForRace('AlmostSoldOut')).toBe(true);
+        expect(isRegistrationRequiredForRace('SoldOut')).toBe(true);
+        expect(isRegistrationRequiredForRace('Closed')).toBe(true);
+        expect(isRegistrationRequiredForRace('NotStarted')).toBe(true);
+        expect(isRegistrationRequiredForRace(null)).toBe(true);
+        expect(isRegistrationRequiredForRace(undefined)).toBe(true);
     });
 });

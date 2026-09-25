@@ -792,6 +792,10 @@
             }
         },
         "changelog": {
+            "v1_13_0": {
+                "title": "Bakgrunnur á síðunni 'Fyrri viðburðir' uppfærður. Skráningarhnappur lagfærður og neðri mörk fyrir útgæfur lækkað",
+                "description": "Á útgáfusögusíðum , bæði í lista og á stökum síðum sést núna daufur hæðarferilsbakgrunnur sem er stilltur eftir landslagi leiðarinnar (brattari fyrir fjallahlaup, flatari fyrir auðveld hlaup), sama meðferð og var áður aðeins í listaútgáfunni. Skráningarhnappurinn birtist ekki lengur fyrir hlaup sem þurfa í raun ekki skráningu, og íslenski textinn fyrir það tilvik var lagfærður. Í stjórnborði er núna aftur hægt að vista gamlar útgáfur frá því fyrir árið 2000 (allt aftur til 1900). Auk þess talsvert af lagfæringum: bæði stjórnborðs- og vefsvæðisprófanir keyra núna í CI."
+            },
             "v1_12_0": {
                 "title": "Leit og skoðun á viðburðasíðunni beinist núna að því sem er framundan",
                 "description": "Leitin á viðburðasíðunni og flýtileitin (Ctrl+K) sýna núna sjálfgefið aðeins hlaup og viðburði sem eru framundan — liðnir viðburðir birtast ekki sjálfkrafa í leit, aðeins það sem raunverulega er framundan. Ef ekkert passar við leitina birtist valkostur til að sjá allar niðurstöður. Viðburðalistinn sjálfur birtir nú aðeins viðburði sem eru með dagsetningar í framtíðinni, sem áður birtust neðst í listanum."
@@ -1579,7 +1583,7 @@
             "Open": "Skráning er hafin",
             "Closed": "Skráning er lokuð",
             "NotStarted": "Skráning er ekki hafin",
-            "NotRequired": "Skráning er ókeypis"
+            "NotRequired": "Ekki þarf að skrá sig"
         },
         "ticketStatus": {
             "Free": "Skráning: Frítt",
