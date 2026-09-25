@@ -1579,7 +1579,7 @@
             "Open": "Skráning er hafin",
             "Closed": "Skráning er lokuð",
             "NotStarted": "Skráning er ekki hafin",
-            "NotRequired": "Skráning er ókeypis"
+            "NotRequired": "Ekki þarf að skrá sig"
         },
         "ticketStatus": {
             "Free": "Skráning: Frítt",

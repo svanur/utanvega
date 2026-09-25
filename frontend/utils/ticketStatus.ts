@@ -50,6 +50,26 @@ export function isAllSoldOut(distances: DistanceEntry[] | null | undefined): boo
     return distances.every(d => d.ticketStatus === 'SoldOut' || d.ticketStatus === 'Closed');
 }
 
+// Returns false only when registration isn't needed at all (free entry, no sign-up) — used to
+// suppress registration UI (button, swipe action) alongside isAllSoldOut above.
+//
+// Event/edition scope only (e.g. EventEditionDto.registrationStatus, or an event's single
+// "relevant edition" registrationStatus) — never use this for an individual race inside a Series
+// event's seriesRaces, since those can span multiple editions each with their own registration
+// window. Use isRegistrationRequiredForRace below for that case.
+export function isRegistrationRequired(registrationStatus: string | null | undefined): boolean {
+    return registrationStatus !== 'NotRequired';
+}
+
+// Per-race equivalent of isRegistrationRequired, for Series events where seriesRaces/races can
+// belong to different editions than the one registrationStatus reflects. SeriesRaceDto.ticketStatus
+// is derived per-race by the backend (EditionStatusHelpers.ComputeEffectiveTicketStatus), which maps
+// RegistrationStatus.NotRequired -> TicketStatus.Free and only NotRequired maps to Free — so 'Free'
+// here reliably means "this specific race's edition needs no registration."
+export function isRegistrationRequiredForRace(ticketStatus: string | null | undefined): boolean {
+    return ticketStatus !== 'Free';
+}
+
 // RegistrationCloses is a date-only value under the hood (the admin's DatePicker only captures a
 // calendar day, stored as midnight UTC) — treat the closes-date itself as still open through its
 // full 24 hours, i.e. compare against the start of the *next* day, not the raw instant. Mirrors
