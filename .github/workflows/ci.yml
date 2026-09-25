@@ -23,6 +23,8 @@ jobs:
   frontend:
     name: Frontend
     uses: ./.github/workflows/frontend-build.yml
+    with:
+      test-command: npm run test
     secrets: inherit
 
   admin:
