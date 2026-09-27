@@ -1125,8 +1125,11 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                     ? row.race.dateOfRace
                                     : (row.comp.displayDate ?? row.comp.nextEditionDate);
                                 const rowYear = rowDate ? rowDate.slice(0, 4) : null;
-                                const yearDivider = rowYear && rowYear !== lastYear ? (() => {
-                                    lastYear = rowYear;
+                                // #1053: lastYear starts null, so it must be checked explicitly —
+                                // otherwise the very first row (whatever year it happens to fall in)
+                                // reads as a "transition" and wrongly shows the Year-begins divider.
+                                const isYearTransition = rowYear !== null && lastYear !== null && rowYear !== lastYear;
+                                const yearDivider = isYearTransition ? (() => {
                                     const newYearDate = `${rowYear}-01-01`;
                                     const newYearHolidays = getHolidays(newYearDate);
                                     const months = t('races.months', { returnObjects: true }) as string[];
@@ -1144,6 +1147,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                         />
                                     );
                                 })() : null;
+                                if (rowYear) lastYear = rowYear;
                                 const holidays = rowDate ? getHolidays(rowDate) : [];
                                 const holidayBanner = holidays.length > 0 && rowDate !== lastHolidayDate ? (() => {
                                     lastHolidayDate = rowDate!;
