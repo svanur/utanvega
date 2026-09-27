@@ -1,7 +1,8 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
+import { localeForHostname, type Locale } from '../api/_site';
 
-type SupportedLang = 'is' | 'en';
+type SupportedLang = Locale;
 
 const loaders: Record<SupportedLang, () => Promise<{ default: Record<string, unknown> }>> = {
     is: () => import('./is.json'),
@@ -12,8 +13,12 @@ function isSupportedLang(lang: string): lang is SupportedLang {
     return lang === 'is' || lang === 'en';
 }
 
-const savedLang = localStorage.getItem('utanvega-lang') || 'is';
-const initialLang: SupportedLang = isSupportedLang(savedLang) ? savedLang : 'is';
+// An existing stored preference always wins on return visits; only a
+// first-time visitor with no `utanvega-lang` key falls through to the
+// host-based default (360runs.com → en, hlaupadagskra.is → is).
+const savedLang = localStorage.getItem('utanvega-lang');
+const initialLang: SupportedLang =
+    savedLang && isSupportedLang(savedLang) ? savedLang : localeForHostname(window.location.hostname);
 
 async function loadLanguage(lang: SupportedLang) {
     if (i18n.hasResourceBundle(lang, 'translation')) return;
