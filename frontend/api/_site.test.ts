@@ -22,6 +22,12 @@ describe('isIndexableHost', () => {
     ['www.360runs.com', true],
     ['some-preview.vercel.app', false],
     ['localhost', false],
+    // Lookalike hosts: contain a real suffix but are not a true (sub)domain
+    // of it, so matchesHostSuffix's anchoring must reject them.
+    ['evilhlaupadagskra.is', false],
+    ['hlaupadagskra.is.evil.com', false],
+    ['evil360runs.com', false],
+    ['360runs.com.evil.net', false],
   ])('%s -> %s', (host, expected) => {
     expect(isIndexableHost(makeRequest(`https://${host}/robots.txt`))).toBe(expected);
   });
@@ -42,6 +48,14 @@ describe('localeForHostname', () => {
     ['www.360runs.com', 'en'],
     ['localhost', 'is'],
     ['some-preview.vercel.app', 'is'],
+    // Lookalike hosts: superficially contain a real suffix (and, for the
+    // 360runs.com ones, would resolve to 'en' if matching ever regressed to
+    // .includes()), but must fall back to DEFAULT_LOCALE since they are not
+    // true (sub)domains of any HOST_LOCALES entry.
+    ['evilhlaupadagskra.is', 'is'],
+    ['hlaupadagskra.is.evil.com', 'is'],
+    ['evil360runs.com', 'is'],
+    ['360runs.com.evil.net', 'is'],
   ])('%s -> %s', (hostname, expected) => {
     expect(localeForHostname(hostname)).toBe(expected);
   });
