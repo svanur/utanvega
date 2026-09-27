@@ -1,17 +1,6 @@
 export const config = { runtime: 'edge' };
 
-import { requestHost, localeForHostname, type Locale } from './_site';
-
-/**
- * Locale for this request, resolved from the host it actually arrived on —
- * mirrors resolveLocale() in api/og.ts, duplicated rather than imported since
- * og.ts's copy is a private (non-exported) helper local to that file.
- */
-function resolveLocale(request: Request): Locale {
-  const host = requestHost(request);
-  if (!host) return 'is';
-  return localeForHostname(host.split(':')[0]);
-}
+import { resolveLocale, type Locale } from './_site';
 
 /** name/short_name/description copy, per locale. */
 const IDENTITY: Record<Locale, { name: string; short_name: string; description: string }> = {

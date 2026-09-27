@@ -91,6 +91,18 @@ export function localeForHostname(hostname: string): Locale {
   return match ? match[1] : DEFAULT_LOCALE;
 }
 
+/**
+ * Locale for this request, resolved from the host it actually arrived on —
+ * server-side counterpart to the client's localStorage-based preference in
+ * frontend/i18n/i18n.ts, since a crawler carries no such preference to read.
+ * Shared by og.ts and manifest.ts (#1042).
+ */
+export function resolveLocale(request: Request): Locale {
+  const host = requestHost(request);
+  if (!host) return 'is';
+  return localeForHostname(host.split(':')[0]);
+}
+
 export function esc(str: string): string {
   return str
     .replace(/&/g, '&amp;')
