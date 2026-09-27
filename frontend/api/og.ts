@@ -198,12 +198,17 @@ function hreflangAlternates(
  */
 const ENTITY_ROUTES: Record<
   string,
-  { endpoint: string; suffix: string; unwrap?: string }
+  { endpoint: string; suffix: string; suffixEn: string; unwrap?: string }
 > = {
-  events: { endpoint: 'events', suffix: '' },
+  events: { endpoint: 'events', suffix: '', suffixEn: '' },
   // This endpoint answers { location, childLocations, trails } rather than the
   // entity itself, so the entity has to be lifted out of the envelope.
-  locations: { endpoint: 'locations', suffix: ' — hlaupaleiðir', unwrap: 'location' },
+  locations: {
+    endpoint: 'locations',
+    suffix: ' — hlaupaleiðir',
+    suffixEn: ' — trails',
+    unwrap: 'location',
+  },
 };
 
 export default async function handler(request: Request) {
@@ -328,12 +333,13 @@ async function entityPage(origin: string, kind: string, slug: string, locale: Lo
   const description =
     pickLocalized(locale, (entity.description || '').trim(), entity.descriptionEn) ||
     (locale === 'en' ? `${name} — on ${siteName}.` : `${name} — á ${siteName}.`);
+  const suffix = locale === 'en' ? route.suffixEn : route.suffix;
 
   return htmlPage({
     origin,
     canonicalPath,
     title: `${name} | ${siteName}`,
-    ogTitle: `${name}${route.suffix}`,
+    ogTitle: `${name}${suffix}`,
     heading: name,
     description: description.slice(0, 200),
     ogImagePath: '/api/og-image',
