@@ -1602,7 +1602,7 @@ app.MapGet("/api/v1/events/history/years", async (IMediator mediator) =>
 })
 .WithName("GetEditionsHistoryYears");
 
-app.MapGet("/api/v1/events/calendar.ics", async (IMediator mediator, IConfiguration configuration, UtanvegaDbContext context, IMemoryCache cache) =>
+app.MapGet("/api/v1/events/calendar.ics", async (string? lang, IMediator mediator, IConfiguration configuration, UtanvegaDbContext context, IMemoryCache cache) =>
 {
     var flags = await cache.GetOrCreateAsync("feature_flags", async entry =>
     {
@@ -1614,7 +1614,9 @@ app.MapGet("/api/v1/events/calendar.ics", async (IMediator mediator, IConfigurat
     if (flags == null || !flags.TryGetValue("calendar_integration", out var enabled) || !enabled)
         return Results.NotFound();
 
-    var icsContent = await cache.GetOrCreateAsync("calendar_ics_content", async entry =>
+    var isEnglish = lang == "en";
+
+    var icsContent = await cache.GetOrCreateAsync($"calendar_ics_content:{(isEnglish ? "en" : "is")}", async entry =>
     {
         entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10);
 
@@ -1635,7 +1637,6 @@ app.MapGet("/api/v1/events/calendar.ics", async (IMediator mediator, IConfigurat
         var days = await mediator.Send(new GetEventCalendarQuery(rangeFrom, rangeTo));
 
         var ical = new Ical.Net.Calendar();
-        ical.ProductId = $"-//{productIdHost}//Events//IS";
 
         // Collapse multi-day events: track full key → (firstDay, lastDay, event)
         // keyMap maps slug|title → current active full key; gap detection prevents collapsing separate editions
@@ -1664,24 +1665,49 @@ app.MapGet("/api/v1/events/calendar.ics", async (IMediator mediator, IConfigurat
         foreach (var (key, (first, last, ev)) in seen)
         {
             var dtEnd = last.AddDays(1); // iCal all-day end is exclusive
+            var name = isEnglish ? (ev.NameEn ?? ev.Name) : ev.Name;
+            var editionTitle = isEnglish ? (ev.EditionTitleEn ?? ev.EditionTitle) : ev.EditionTitle;
+            var locationName = isEnglish ? (ev.LocationNameEn ?? ev.LocationName) : ev.LocationName;
             var vEvent = new Ical.Net.CalendarComponents.CalendarEvent
             {
                 Uid = $"{ev.Slug}-{first:yyyy-MM-dd}@{bareSiteHost}",
                 DtStart = new Ical.Net.DataTypes.CalDateTime(first.Year, first.Month, first.Day),
                 DtEnd = new Ical.Net.DataTypes.CalDateTime(dtEnd.Year, dtEnd.Month, dtEnd.Day),
                 IsAllDay = true,
-                Summary = ev.EditionTitle != null ? $"{ev.Name} – {ev.EditionTitle}" : ev.Name,
-                Location = ev.LocationName ?? "",
+                Summary = editionTitle != null ? $"{name} – {editionTitle}" : name,
+                Location = locationName ?? "",
                 Url = new Uri($"{siteUrl}/events/{ev.Slug}"),
             };
-            vEvent.Description = ev.RaceCount > 0
-                ? $"{ev.RaceCount} race(s). More info: {siteUrl}/events/{ev.Slug}\n\n{siteUrl} – Öll hlaup á einum stað"
-                : $"More info: {siteUrl}/events/{ev.Slug}\n\n{siteUrl} – Öll hlaup á einum stað";
+            vEvent.Description = isEnglish
+                ? (ev.RaceCount > 0
+                    ? $"{ev.RaceCount} race(s). More info: {siteUrl}/events/{ev.Slug}\n\n{siteUrl} – All trail races in one place"
+                    : $"More info: {siteUrl}/events/{ev.Slug}\n\n{siteUrl} – All trail races in one place")
+                : (ev.RaceCount > 0
+                    ? $"{ev.RaceCount} race(s). More info: {siteUrl}/events/{ev.Slug}\n\n{siteUrl} – Öll hlaup á einum stað"
+                    : $"More info: {siteUrl}/events/{ev.Slug}\n\n{siteUrl} – Öll hlaup á einum stað");
             ical.Events.Add(vEvent);
         }
 
         var serializer = new Ical.Net.Serialization.CalendarSerializer();
-        return serializer.SerializeToString(ical);
+        var serialized = serializer.SerializeToString(ical);
+
+        // Ical.Net's CalendarSerializer (4.x) unconditionally rewrites the VCALENDAR's PRODID line to
+        // its own library default at serialize time — setting Calendar.ProductId before serializing
+        // (as this handler used to) has no effect on the actual output; that assignment has silently
+        // been dead code since #1034 introduced it. The only way to get a custom PRODID into the
+        // served feed is to patch the serialized string afterward. Scoped to the English feed only:
+        // the Icelandic/default path is deliberately left exactly as the library renders it today,
+        // matching #1035's regression guard that the no-`lang` response stay byte-for-byte unchanged.
+        if (isEnglish)
+        {
+            serialized = System.Text.RegularExpressions.Regex.Replace(
+                serialized,
+                "^PRODID:[^\r\n]*",
+                $"PRODID:-//{productIdHost}//Events//EN",
+                System.Text.RegularExpressions.RegexOptions.Multiline);
+        }
+
+        return serialized;
     });
 
     return Results.Text(icsContent!, "text/calendar; charset=utf-8");
