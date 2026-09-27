@@ -209,5 +209,64 @@ describe('og.ts locale-aware crawler surface', () => {
       expect(body).toContain('<h1>Reykjavíkurmaraþon</h1>');
       expect(body).toContain('Stærsta hlaup Íslands.');
     });
+
+    it('events: og:title/twitter:title carry no suffix on the English host, unchanged (regression guard)', async () => {
+      const body = await html(
+        await handler(makeRequest('path=events/reykjavikurmarathon', '360runs.com'))
+      );
+      expect(body).toContain('<meta property="og:title" content="Reykjavik Marathon" />');
+      expect(body).toContain('<meta name="twitter:title" content="Reykjavik Marathon" />');
+    });
+
+    it('events: og:title/twitter:title carry no suffix on the Icelandic host, unchanged (regression guard)', async () => {
+      const body = await html(
+        await handler(makeRequest('path=events/reykjavikurmarathon', 'www.hlaupadagskra.is'))
+      );
+      expect(body).toContain('<meta property="og:title" content="Reykjavíkurmaraþon" />');
+      expect(body).toContain('<meta name="twitter:title" content="Reykjavíkurmaraþon" />');
+    });
+  });
+
+  describe('entity pages — /locations/:slug locale-aware suffix (#1040)', () => {
+    // /api/v1/locations/:slug answers { location, childLocations, trails }, so
+    // the entity has to be lifted out of the envelope — unlike /events/:slug.
+    const location = {
+      name: 'Þingvellir',
+      nameEn: 'Thingvellir',
+      description: 'Þjóðgarður á Íslandi.',
+      descriptionEn: 'A national park in Iceland.',
+    };
+
+    beforeEach(() => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => new Response(JSON.stringify({ location }), { status: 200 }))
+      );
+    });
+
+    it('renders an all-English og:title/twitter:title on the English host (no Icelandic suffix)', async () => {
+      const body = await html(
+        await handler(makeRequest('path=locations/thingvellir', '360runs.com'))
+      );
+      expect(body).toContain('<meta property="og:title" content="Thingvellir — trails" />');
+      expect(body).toContain('<meta name="twitter:title" content="Thingvellir — trails" />');
+      expect(body).not.toContain('hlaupaleiðir');
+      // Belt-and-braces: no Icelandic-only letters anywhere in the og:title value.
+      const ogTitle = /<meta property="og:title" content="([^"]*)"/.exec(body)?.[1];
+      expect(ogTitle).toBeDefined();
+      expect(ogTitle).not.toMatch(/[þðæöáíúý]/i);
+    });
+
+    it('keeps the " — hlaupaleiðir" suffix on the Icelandic host, unchanged (regression guard)', async () => {
+      const body = await html(
+        await handler(makeRequest('path=locations/thingvellir', 'www.hlaupadagskra.is'))
+      );
+      expect(body).toContain(
+        '<meta property="og:title" content="Þingvellir — hlaupaleiðir" />'
+      );
+      expect(body).toContain(
+        '<meta name="twitter:title" content="Þingvellir — hlaupaleiðir" />'
+      );
+    });
   });
 });
