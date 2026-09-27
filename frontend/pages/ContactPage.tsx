@@ -10,6 +10,13 @@ import { usePageTitle } from '../hooks/usePageTitle';
 const USER = 'oskar';
 const DOMAIN = 'hlaupadagskra';
 const TLD = 'is';
+const EN_DOMAIN = '360runs';
+const EN_TLD = 'com';
+
+/** Whether `hostname` is `suffix` itself or a subdomain of it (e.g. "www."). */
+function matchesHostSuffix(hostname: string, suffix: string): boolean {
+    return hostname === suffix || hostname.endsWith(`.${suffix}`);
+}
 
 interface ContactPageProps {
     mode: PaletteMode;
@@ -20,7 +27,9 @@ export default function ContactPage({ mode, onToggleMode }: ContactPageProps) {
     const { t } = useTranslation();
     usePageTitle(t('nav.contact'));
     const [revealed, setRevealed] = useState(false);
-    const email = `${USER}@${DOMAIN}.${TLD}`;
+    const email = matchesHostSuffix(window.location.hostname, `${EN_DOMAIN}.${EN_TLD}`)
+        ? `${USER}@${EN_DOMAIN}.${EN_TLD}`
+        : `${USER}@${DOMAIN}.${TLD}`;
 
     return (
         <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('nav.contact') }]}>
