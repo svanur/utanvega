@@ -1619,13 +1619,23 @@ app.MapGet("/api/v1/events/calendar.ics", async (IMediator mediator, IConfigurat
         entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10);
 
         var siteUrl = configuration["SiteUrl"] ?? "https://www.hlaupadagskra.is";
+        // Single source of truth for the domain literals below: strip the "www." a
+        // production SiteUrl typically carries so ProductId/Uid read as the bare
+        // domain, matching what these were hardcoded to before SiteUrl existed.
+        var siteHost = new Uri(siteUrl).Host;
+        var bareSiteHost = siteHost.StartsWith("www.", StringComparison.OrdinalIgnoreCase)
+            ? siteHost["www.".Length..]
+            : siteHost;
+        var productIdHost = bareSiteHost.Length > 0
+            ? char.ToUpperInvariant(bareSiteHost[0]) + bareSiteHost[1..]
+            : bareSiteHost;
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var rangeFrom = today.AddMonths(-3);
         var rangeTo = today.AddMonths(12);
         var days = await mediator.Send(new GetEventCalendarQuery(rangeFrom, rangeTo));
 
         var ical = new Ical.Net.Calendar();
-        ical.ProductId = "-//Hlaupadagskra.is//Events//IS";
+        ical.ProductId = $"-//{productIdHost}//Events//IS";
 
         // Collapse multi-day events: track full key → (firstDay, lastDay, event)
         // keyMap maps slug|title → current active full key; gap detection prevents collapsing separate editions
@@ -1656,7 +1666,7 @@ app.MapGet("/api/v1/events/calendar.ics", async (IMediator mediator, IConfigurat
             var dtEnd = last.AddDays(1); // iCal all-day end is exclusive
             var vEvent = new Ical.Net.CalendarComponents.CalendarEvent
             {
-                Uid = $"{ev.Slug}-{first:yyyy-MM-dd}@hlaupadagskra.is",
+                Uid = $"{ev.Slug}-{first:yyyy-MM-dd}@{bareSiteHost}",
                 DtStart = new Ical.Net.DataTypes.CalDateTime(first.Year, first.Month, first.Day),
                 DtEnd = new Ical.Net.DataTypes.CalDateTime(dtEnd.Year, dtEnd.Month, dtEnd.Day),
                 IsAllDay = true,
@@ -1665,8 +1675,8 @@ app.MapGet("/api/v1/events/calendar.ics", async (IMediator mediator, IConfigurat
                 Url = new Uri($"{siteUrl}/events/{ev.Slug}"),
             };
             vEvent.Description = ev.RaceCount > 0
-                ? $"{ev.RaceCount} race(s). More info: {siteUrl}/events/{ev.Slug}\n\nhttps://www.hlaupadagskra.is – Öll hlaup á einum stað"
-                : $"More info: {siteUrl}/events/{ev.Slug}\n\nhttps://www.hlaupadagskra.is – Öll hlaup á einum stað";
+                ? $"{ev.RaceCount} race(s). More info: {siteUrl}/events/{ev.Slug}\n\n{siteUrl} – Öll hlaup á einum stað"
+                : $"More info: {siteUrl}/events/{ev.Slug}\n\n{siteUrl} – Öll hlaup á einum stað";
             ical.Events.Add(vEvent);
         }
 
