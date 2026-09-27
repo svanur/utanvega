@@ -1,6 +1,6 @@
 export const config = { runtime: 'edge' };
 
-import { siteOrigin, esc, requestHost, localeForHostname, HOST_LOCALES, type Locale } from './_site';
+import { siteOrigin, esc, resolveLocale, HOST_LOCALES, type Locale } from './_site';
 
 // Edge Functions run in a Node-like environment that provides process.env
 declare const process: { env: Record<string, string | undefined> };
@@ -125,17 +125,6 @@ interface NamedEntity {
   nameEn?: string | null;
   description?: string | null;
   descriptionEn?: string | null;
-}
-
-/**
- * Locale for this request, resolved from the host it actually arrived on —
- * server-side counterpart to the client's localStorage-based preference in
- * frontend/i18n/i18n.ts, since a crawler carries no such preference to read.
- */
-function resolveLocale(request: Request): Locale {
-  const host = requestHost(request);
-  if (!host) return 'is';
-  return localeForHostname(host.split(':')[0]);
 }
 
 /**
