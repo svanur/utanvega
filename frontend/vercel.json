@@ -9,6 +9,10 @@
       "destination": "/api/sitemap"
     },
     {
+      "source": "/manifest.webmanifest",
+      "destination": "/api/manifest"
+    },
+    {
       "source": "/trails/:slug",
       "has": [
         {
