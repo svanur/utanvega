@@ -1,6 +1,7 @@
 export const config = { runtime: 'edge' };
 
 import { resolveLocale, type Locale } from './_site';
+import { PWA_MANIFEST_STATIC_FIELDS } from '../pwaManifestFields';
 
 /** name/short_name/description copy, per locale. */
 const IDENTITY: Record<Locale, { name: string; short_name: string; description: string }> = {
@@ -23,9 +24,10 @@ const IDENTITY: Record<Locale, { name: string; short_name: string; description: 
  * emits at build time, because the installable-app identity differs per host
  * (#1033): 360runs.com installs as "360Runs", every other host — including
  * previews with no HOST_LOCALES entry — keeps the existing "Hlaupadagskra.is"
- * identity. The icons/colors/shortcuts below are copied verbatim from the
- * manifest object in vite.config.ts, which remains the source of truth for
- * those static fields; only the locale-dependent identity fields are templated.
+ * identity. The icons/colors/shortcuts come from ../pwaManifestFields.ts, the
+ * single shared source of truth also used by vite.config.ts's VitePWA
+ * `manifest` option (#1043); only the locale-dependent identity fields below
+ * are templated.
  */
 export default function handler(request: Request) {
   const locale = resolveLocale(request);
@@ -36,49 +38,7 @@ export default function handler(request: Request) {
     short_name,
     description,
     lang: locale,
-    theme_color: '#1976d2',
-    background_color: '#f6f8fb',
-    display: 'standalone',
-    start_url: '/',
-    scope: '/',
-    icons: [
-      {
-        src: 'icons/icon-192.svg',
-        sizes: '192x192',
-        type: 'image/svg+xml',
-      },
-      {
-        src: 'icons/icon-512.svg',
-        sizes: '512x512',
-        type: 'image/svg+xml',
-      },
-      {
-        src: 'icons/icon-512.svg',
-        sizes: '512x512',
-        type: 'image/svg+xml',
-        purpose: 'any maskable',
-      },
-    ],
-    shortcuts: [
-      {
-        name: 'Search Trails',
-        short_name: 'Search',
-        url: '/?search=true',
-        icons: [{ src: 'icons/icon-192.svg', sizes: '192x192' }],
-      },
-      {
-        name: 'Favorites',
-        short_name: 'Favorites',
-        url: '/?favorites=true',
-        icons: [{ src: 'icons/icon-192.svg', sizes: '192x192' }],
-      },
-      {
-        name: 'Random Trail',
-        short_name: 'Random',
-        url: '/?random=true',
-        icons: [{ src: 'icons/icon-192.svg', sizes: '192x192' }],
-      },
-    ],
+    ...PWA_MANIFEST_STATIC_FIELDS,
   };
 
   return new Response(JSON.stringify(manifest), {
