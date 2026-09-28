@@ -5,6 +5,7 @@ import DownloadIcon from '@mui/icons-material/Download';
 import CloseIcon from '@mui/icons-material/Close';
 import IconButton from '@mui/material/IconButton';
 import { useTranslation } from 'react-i18next';
+import { siteForHostname } from '../hooks/usePageTitle';
 
 interface PredictionShareCardProps {
     trailAName: string;
@@ -214,7 +215,7 @@ function renderCard(
     y += 48;
     ctx.font = '26px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
     ctx.fillStyle = isDark ? '#607d8b' : '#90a4ae';
-    ctx.fillText('hlaupadagskra.is', CARD_WIDTH / 2, y);
+    ctx.fillText(siteForHostname(window.location.hostname), CARD_WIDTH / 2, y);
 
     ctx.fillStyle = accentColor;
     ctx.globalAlpha = 0.6;
