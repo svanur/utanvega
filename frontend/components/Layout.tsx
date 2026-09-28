@@ -32,6 +32,7 @@ import { useInstallPrompt } from '../hooks/useInstallPrompt';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { useLoginEnabled } from '../hooks/useLoginEnabled';
 import { trackStoreIconClick } from '../utils/analytics';
+import { isStagingHost } from '../utils/hostEnv';
 
 interface NavChild {
     label: string;
@@ -93,14 +94,13 @@ function ScrollToTopButton() {
     );
 }
 
-const PROD_HOSTNAMES = ['hlaupadagskra.is', 'www.hlaupadagskra.is'];
 const STAGING_BANNER_HEIGHT = 28;
 
 export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', bottomContent, breadcrumb }: LayoutProps) {
     const navigate = useNavigate();
     const { t } = useTranslation();
     const theme = useTheme();
-    const isStaging = !PROD_HOSTNAMES.includes(window.location.hostname);
+    const isStaging = isStagingHost(window.location.hostname);
     // No English storefront exists yet, so the store icon is Icelandic-brand-only.
     const hasOnlineStore = !matchesHostSuffix(window.location.hostname, '360runs.com');
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
