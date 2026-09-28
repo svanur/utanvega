@@ -32,6 +32,7 @@ import { useInstallPrompt } from '../hooks/useInstallPrompt';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { useLoginEnabled } from '../hooks/useLoginEnabled';
 import { trackStoreIconClick } from '../utils/analytics';
+import { HOST_LOCALES } from '../api/_site';
 
 interface NavChild {
     label: string;
@@ -93,14 +94,16 @@ function ScrollToTopButton() {
     );
 }
 
-const PROD_HOSTNAMES = ['hlaupadagskra.is', 'www.hlaupadagskra.is'];
 const STAGING_BANNER_HEIGHT = 28;
 
 export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', bottomContent, breadcrumb }: LayoutProps) {
     const navigate = useNavigate();
     const { t } = useTranslation();
     const theme = useTheme();
-    const isStaging = !PROD_HOSTNAMES.includes(window.location.hostname);
+    // Any host this site legitimately answers on (per-domain locale list in
+    // _site.ts, shared with the edge functions' production allow-list) is
+    // production; everything else — *.vercel.app previews, localhost — is staging.
+    const isStaging = !Object.keys(HOST_LOCALES).some((suffix) => matchesHostSuffix(window.location.hostname, suffix));
     // No English storefront exists yet, so the store icon is Icelandic-brand-only.
     const hasOnlineStore = !matchesHostSuffix(window.location.hostname, '360runs.com');
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
