@@ -32,7 +32,7 @@ import { useInstallPrompt } from '../hooks/useInstallPrompt';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { useLoginEnabled } from '../hooks/useLoginEnabled';
 import { trackStoreIconClick } from '../utils/analytics';
-import { HOST_LOCALES } from '../api/_site';
+import { isStagingHost } from '../utils/hostEnv';
 
 interface NavChild {
     label: string;
@@ -100,10 +100,7 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
     const navigate = useNavigate();
     const { t } = useTranslation();
     const theme = useTheme();
-    // Any host this site legitimately answers on (per-domain locale list in
-    // _site.ts, shared with the edge functions' production allow-list) is
-    // production; everything else — *.vercel.app previews, localhost — is staging.
-    const isStaging = !Object.keys(HOST_LOCALES).some((suffix) => matchesHostSuffix(window.location.hostname, suffix));
+    const isStaging = isStagingHost(window.location.hostname);
     // No English storefront exists yet, so the store icon is Icelandic-brand-only.
     const hasOnlineStore = !matchesHostSuffix(window.location.hostname, '360runs.com');
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
