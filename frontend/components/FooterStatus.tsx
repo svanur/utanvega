@@ -8,10 +8,18 @@ import { Link } from 'react-router-dom';
 import { useHealth } from '../hooks/useHealth';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 
+/** Whether `hostname` is `suffix` itself or a subdomain of it (e.g. "www."). */
+function matchesHostSuffix(hostname: string, suffix: string): boolean {
+    return hostname === suffix || hostname.endsWith(`.${suffix}`);
+}
+
 export default function FooterStatus() {
     const { data, loading, error } = useHealth();
     const { t } = useTranslation();
     const { isEnabled } = useFeatureFlags();
+    const instagramHref = matchesHostSuffix(window.location.hostname, '360runs.com')
+        ? 'https://www.instagram.com/360runsiceland'
+        : 'https://www.instagram.com/hlaupadagskra';
 
     return (
         <Box
@@ -68,7 +76,7 @@ export default function FooterStatus() {
                         <Stack spacing={0.5} sx={{ mt: 1 }}>
                             {[
                                 { label: 'Facebook',         href: 'https://www.facebook.com/hlaupadagskra' },
-                                { label: 'Instagram',        href: 'https://www.instagram.com/hlaupadagskra' },
+                                { label: 'Instagram',        href: instagramHref },
                                 { label: 'YouTube · 360° Runs', href: 'https://www.youtube.com/@360RunsIceland' },
                             ].map(({ label, href }) => (
                                 <MuiLink key={label} href={href} target="_blank" rel="noopener noreferrer" variant="body2" color="text.secondary" underline="hover"
