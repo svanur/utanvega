@@ -30,6 +30,17 @@ export const HOST_LOCALES: Record<string, Locale> = {
   '360runs.com': 'en',
 };
 
+/**
+ * Base brand name per locale, with no casing/emoji/suffix decoration applied.
+ * Single source of truth: og.ts's SITE_NAME/SITE_NAME_EN/siteNameFor() and
+ * og-image.ts's BRAND_LABEL/BRAND_HEADING each wrap this in their own
+ * formatting rather than re-literalling the name (#1096).
+ */
+export const BRAND_NAME: Record<Locale, string> = {
+  is: 'Hlaupadagskra.is',
+  en: '360Runs',
+};
+
 /** Locale for a fresh visitor on a host with no entry in HOST_LOCALES (localhost, preview deploys). */
 const DEFAULT_LOCALE: Locale = 'is';
 
