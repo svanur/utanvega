@@ -2,6 +2,10 @@ namespace Utanvega.Backend.Application.Events;
 
 public static class CalendarHostHelpers
 {
+    // Default SiteUrl when configuration["SiteUrl"] is unset. Single source of truth shared by the
+    // GetEventCalendarIcs endpoint and its tests so the two copies can't silently drift apart (#1077).
+    public const string DefaultSiteUrl = "https://www.hlaupadagskra.is";
+
     // Single source of truth for the domain literals the calendar.ics feed's PRODID/UID are built
     // from. SiteUrl is operator-configured, not user input, but a malformed value here must not
     // take down the whole feed — before #1045 moved this Uri parse ahead of the event loop, a bad

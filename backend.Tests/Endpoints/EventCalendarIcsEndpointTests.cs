@@ -127,7 +127,7 @@ public class EventCalendarIcsEndpointTests : IDisposable
         // untouched (see #1049/#1035) — it now gets the same post-serialization regex patch the
         // English feed already received, just with an "//IS" suffix instead of "//EN". Asserting
         // the exact expected line (not just "doesn't contain //Events//EN/IS") per #1051.
-        var (_, productIdHost) = CalendarHostHelpers.ComputeCalendarHosts("https://www.hlaupadagskra.is");
+        var (_, productIdHost) = CalendarHostHelpers.ComputeCalendarHosts(CalendarHostHelpers.DefaultSiteUrl);
         Assert.Contains($"PRODID:-//{productIdHost}//Events//IS", ics);
         Assert.DoesNotContain("//Events//EN", ics);
         Assert.Contains("Íslandshlaupið", ics);

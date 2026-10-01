@@ -1621,7 +1621,7 @@ app.MapGet("/api/v1/events/calendar.ics", async (string? lang, IMediator mediato
     {
         entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10);
 
-        var siteUrl = configuration["SiteUrl"] ?? "https://www.hlaupadagskra.is";
+        var siteUrl = configuration["SiteUrl"] ?? CalendarHostHelpers.DefaultSiteUrl;
         var (bareSiteHost, productIdHost) = CalendarHostHelpers.ComputeCalendarHosts(siteUrl);
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var rangeFrom = today.AddMonths(-3);
