@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Text;
 using System.Xml.Linq;
 using Utanvega.Backend.Application.Caching;
+using Utanvega.Backend.Application.Events;
 using Utanvega.Backend.Infrastructure.Persistence;
 
 namespace Utanvega.Backend.Application.Trails.Queries.GetTrailGpx;
@@ -23,7 +24,7 @@ public class GetTrailGpxQueryHandler : IRequestHandler<GetTrailGpxQuery, GpxResp
     public GetTrailGpxQueryHandler(UtanvegaDbContext context, IConfiguration configuration)
     {
         _context = context;
-        _siteUrl = configuration["SiteUrl"] ?? "https://www.hlaupadagskra.is";
+        _siteUrl = configuration["SiteUrl"] ?? CalendarHostHelpers.DefaultSiteUrl;
     }
 
     public async Task<GpxResponse?> Handle(GetTrailGpxQuery request, CancellationToken cancellationToken)
