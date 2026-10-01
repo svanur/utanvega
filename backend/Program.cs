@@ -40,6 +40,7 @@ using Utanvega.Backend.Application.Trails.Queries.GetTrendingTrails;
 using Utanvega.Backend.Application.Trails.Commands.RecordTrailView;
 using Utanvega.Backend.Application.Weather.Queries;
 using Utanvega.Backend.Core.Services;
+using Utanvega.Backend.Application.Events;
 using Utanvega.Backend.Application.Events.Queries.GetEvents;
 using Utanvega.Backend.Application.Events.Queries.GetEvent;
 using Utanvega.Backend.Application.Events.Queries.GetEventSuggestions;
@@ -1621,16 +1622,7 @@ app.MapGet("/api/v1/events/calendar.ics", async (string? lang, IMediator mediato
         entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10);
 
         var siteUrl = configuration["SiteUrl"] ?? "https://www.hlaupadagskra.is";
-        // Single source of truth for the domain literals below: strip the "www." a
-        // production SiteUrl typically carries so ProductId/Uid read as the bare
-        // domain, matching what these were hardcoded to before SiteUrl existed.
-        var siteHost = new Uri(siteUrl).Host;
-        var bareSiteHost = siteHost.StartsWith("www.", StringComparison.OrdinalIgnoreCase)
-            ? siteHost["www.".Length..]
-            : siteHost;
-        var productIdHost = bareSiteHost.Length > 0
-            ? char.ToUpperInvariant(bareSiteHost[0]) + bareSiteHost[1..]
-            : bareSiteHost;
+        var (bareSiteHost, productIdHost) = CalendarHostHelpers.ComputeCalendarHosts(siteUrl);
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var rangeFrom = today.AddMonths(-3);
         var rangeTo = today.AddMonths(12);
