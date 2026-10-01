@@ -3,7 +3,6 @@
  */
 
 import { localeForHostname } from '../api/_site';
-import { siteForHostname } from '../hooks/usePageTitle';
 
 export interface CalendarEventInfo {
     title: string;
@@ -20,18 +19,23 @@ const SITE_TAGLINE_EN = 'https://www.360runs.com – All trail races in one plac
 const UID_DOMAIN_IS = 'hlaupadagskra.is';
 const UID_DOMAIN_EN = '360runs.com';
 
+// Same brand strings siteForHostname (usePageTitle.ts) maps "en" to — kept as a
+// local literal rather than calling siteForHostname so localeForHostname is
+// resolved exactly once per brandForHostname invocation, not once here and
+// again inside siteForHostname (#1082).
+const PRODID_BRAND_IS = 'Hlaupadagskra.is';
+const PRODID_BRAND_EN = '360Runs';
+
 /**
- * Host-aware tagline / UID domain / PRODID brand for `hostname` — reuses the
- * host→brand resolver already proven in production (siteForHostname in
- * usePageTitle.ts, built on localeForHostname in api/_site.ts) rather than
- * inventing a new one here (#1065).
+ * Host-aware tagline / UID domain / PRODID brand for `hostname`, all derived
+ * from a single localeForHostname(hostname) check (api/_site.ts) (#1082).
  */
 function brandForHostname(hostname: string): { tagline: string; uidDomain: string; prodIdBrand: string } {
     const isEnglish = localeForHostname(hostname) === 'en';
     return {
         tagline: isEnglish ? SITE_TAGLINE_EN : SITE_TAGLINE_IS,
         uidDomain: isEnglish ? UID_DOMAIN_EN : UID_DOMAIN_IS,
-        prodIdBrand: siteForHostname(hostname),
+        prodIdBrand: isEnglish ? PRODID_BRAND_EN : PRODID_BRAND_IS,
     };
 }
 
