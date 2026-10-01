@@ -247,7 +247,7 @@ export default async function handler(request: Request) {
 
     const locations = trail.locations?.map((l) => l.name).join(', ') || '';
     const subtitle = locations ? ` · ${locations}` : '';
-    const siteName = locale === 'en' ? '360Runs' : 'Hlaupadagskra.is';
+    const siteName = siteNameFor(locale);
 
     return htmlPage({
       origin,
@@ -281,6 +281,14 @@ const SITE_DESCRIPTION =
 const SITE_TITLE_EN = '360Runs – All Races in One Place';
 const SITE_DESCRIPTION_EN =
   'A site for finding and sharing great running routes in Iceland, on trail or on road.';
+
+const SITE_NAME = 'Hlaupadagskra.is';
+const SITE_NAME_EN = '360Runs';
+
+/** The brand name for the current locale — the single source other call sites defer to. */
+function siteNameFor(locale: Locale): string {
+  return locale === 'en' ? SITE_NAME_EN : SITE_NAME;
+}
 
 /**
  * Renders /events/:slug and /locations/:slug from backend data.
@@ -317,7 +325,7 @@ async function entityPage(origin: string, kind: string, slug: string, locale: Lo
     return defaultPage(origin, canonicalPath, locale);
   }
 
-  const siteName = locale === 'en' ? '360Runs' : 'Hlaupadagskra.is';
+  const siteName = siteNameFor(locale);
   const name = pickLocalized(locale, entity.name, entity.nameEn);
   const description =
     pickLocalized(locale, (entity.description || '').trim(), entity.descriptionEn) ||
@@ -361,7 +369,7 @@ function htmlPage(opts: {
     : '';
 
   const locale = opts.locale;
-  const siteName = locale === 'en' ? '360Runs' : 'Hlaupadagskra.is';
+  const siteName = siteNameFor(locale);
   const ogLocale = locale === 'en' ? 'en_US' : 'is_IS';
   const ogLocaleAlternate = locale === 'en' ? 'is_IS' : 'en_US';
 
@@ -437,7 +445,7 @@ function defaultPage(
   // consolidates onto /compare rather than becoming its own indexable URL.
   const cleanPath = path.split('?')[0].replace(/\/+$/, '');
   const meta = ROUTE_META[cleanPath];
-  const siteName = locale === 'en' ? '360Runs' : 'Hlaupadagskra.is';
+  const siteName = siteNameFor(locale);
   const title = meta ? (locale === 'en' ? meta.titleEn : meta.title) : undefined;
   const description = meta
     ? locale === 'en'
