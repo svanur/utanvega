@@ -169,7 +169,7 @@ const _callbacks: Array<(img: HTMLImageElement) => void> = [];
  * (#1087) — add its entry here once one lands in public/images/, no other
  * change needed.
  */
-const BRAND_IMAGE_SRC: Record<string, string> = {
+const BRAND_IMAGE_SRC: Partial<Record<string, string>> = {
     'Hlaupadagskra.is': '/images/hlaupadagskra.avif',
 };
 
