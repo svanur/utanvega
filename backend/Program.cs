@@ -1615,7 +1615,7 @@ app.MapGet("/api/v1/events/calendar.ics", async (string? lang, IMediator mediato
     if (flags == null || !flags.TryGetValue("calendar_integration", out var enabled) || !enabled)
         return Results.NotFound();
 
-    var isEnglish = lang == "en";
+    var isEnglish = string.Equals(lang, "en", StringComparison.OrdinalIgnoreCase);
 
     var icsContent = await cache.GetOrCreateAsync($"calendar_ics_content:{(isEnglish ? "en" : "is")}", async entry =>
     {
