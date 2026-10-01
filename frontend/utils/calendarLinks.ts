@@ -2,6 +2,9 @@
  * Utilities for generating "Add to Calendar" links and ICS downloads.
  */
 
+import { localeForHostname } from '../api/_site';
+import { siteForHostname } from '../hooks/usePageTitle';
+
 export interface CalendarEventInfo {
     title: string;
     date: string;      // YYYY-MM-DD (start)
@@ -11,10 +14,34 @@ export interface CalendarEventInfo {
     url?: string;
 }
 
-const SITE_TAGLINE = 'https://www.hlaupadagskra.is – Öll hlaup á einum stað';
+const SITE_TAGLINE_IS = 'https://www.hlaupadagskra.is – Öll hlaup á einum stað';
+const SITE_TAGLINE_EN = 'https://www.360runs.com – All trail races in one place';
+
+const UID_DOMAIN_IS = 'hlaupadagskra.is';
+const UID_DOMAIN_EN = '360runs.com';
+
+/**
+ * Host-aware tagline / UID domain / PRODID brand for `hostname` — reuses the
+ * host→brand resolver already proven in production (siteForHostname in
+ * usePageTitle.ts, built on localeForHostname in api/_site.ts) rather than
+ * inventing a new one here (#1065).
+ */
+function brandForHostname(hostname: string): { tagline: string; uidDomain: string; prodIdBrand: string } {
+    const isEnglish = localeForHostname(hostname) === 'en';
+    return {
+        tagline: isEnglish ? SITE_TAGLINE_EN : SITE_TAGLINE_IS,
+        uidDomain: isEnglish ? UID_DOMAIN_EN : UID_DOMAIN_IS,
+        prodIdBrand: siteForHostname(hostname),
+    };
+}
 
 function appendTagline(description?: string): string {
-    return description ? `${description}\n\n${SITE_TAGLINE}` : SITE_TAGLINE;
+    // Read lazily, inside the function, rather than as a module-scope constant:
+    // keeps this module importable (for brandForHostname's own unit test) in
+    // vitest's Node environment, which has no `window` global — same reason
+    // documented in usePageTitle.ts:16-19.
+    const { tagline } = brandForHostname(window.location.hostname);
+    return description ? `${description}\n\n${tagline}` : tagline;
 }
 
 /** Compute the next day from a YYYY-MM-DD string using pure UTC math. */
@@ -73,12 +100,13 @@ export function generateIcs(event: CalendarEventInfo): string {
     const start = event.date.replace(/-/g, '');
     const end = nextDayCompact(event.endDate ?? event.date);
 
-    const uid = `${event.title.replace(/\s/g, '-').toLowerCase()}-${event.date}@hlaupadagskra.is`;
+    const { uidDomain, prodIdBrand } = brandForHostname(window.location.hostname);
+    const uid = `${event.title.replace(/\s/g, '-').toLowerCase()}-${event.date}@${uidDomain}`;
 
     const lines = [
         'BEGIN:VCALENDAR',
         'VERSION:2.0',
-        'PRODID:-//Hlaupadagskra.is//Events//IS',
+        `PRODID:-//${prodIdBrand}//Events//IS`,
         'BEGIN:VEVENT',
         `UID:${uid}`,
         `DTSTART;VALUE=DATE:${start}`,
