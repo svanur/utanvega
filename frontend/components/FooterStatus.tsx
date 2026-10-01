@@ -7,17 +7,13 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { useHealth } from '../hooks/useHealth';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
-
-/** Whether `hostname` is `suffix` itself or a subdomain of it (e.g. "www."). */
-function matchesHostSuffix(hostname: string, suffix: string): boolean {
-    return hostname === suffix || hostname.endsWith(`.${suffix}`);
-}
+import { localeForHostname } from '../api/_site';
 
 export default function FooterStatus() {
     const { data, loading, error } = useHealth();
     const { t } = useTranslation();
     const { isEnabled } = useFeatureFlags();
-    const instagramHref = matchesHostSuffix(window.location.hostname, '360runs.com')
+    const instagramHref = localeForHostname(window.location.hostname) === 'en'
         ? 'https://www.instagram.com/360runsiceland'
         : 'https://www.instagram.com/hlaupadagskra';
 

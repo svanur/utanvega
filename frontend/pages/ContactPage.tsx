@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import Layout from '../components/Layout';
 import type { PaletteMode } from '@mui/material';
 import { usePageTitle } from '../hooks/usePageTitle';
+import { localeForHostname } from '../api/_site';
 
 // Split to avoid plain-text harvesting
 const USER = 'oskar';
@@ -12,11 +13,6 @@ const DOMAIN = 'hlaupadagskra';
 const TLD = 'is';
 const EN_DOMAIN = '360runs';
 const EN_TLD = 'com';
-
-/** Whether `hostname` is `suffix` itself or a subdomain of it (e.g. "www."). */
-function matchesHostSuffix(hostname: string, suffix: string): boolean {
-    return hostname === suffix || hostname.endsWith(`.${suffix}`);
-}
 
 interface ContactPageProps {
     mode: PaletteMode;
@@ -27,7 +23,7 @@ export default function ContactPage({ mode, onToggleMode }: ContactPageProps) {
     const { t } = useTranslation();
     usePageTitle(t('nav.contact'));
     const [revealed, setRevealed] = useState(false);
-    const email = matchesHostSuffix(window.location.hostname, `${EN_DOMAIN}.${EN_TLD}`)
+    const email = localeForHostname(window.location.hostname) === 'en'
         ? `${USER}@${EN_DOMAIN}.${EN_TLD}`
         : `${USER}@${DOMAIN}.${TLD}`;
 
