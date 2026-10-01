@@ -1,3 +1,4 @@
+using Utanvega.Backend.Application.Events;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Tests.WebHost;
 
@@ -112,7 +113,7 @@ public class EventCalendarIcsEndpointTests : IDisposable
     }
 
     [Fact]
-    public async Task NoLangParam_DefaultsToIcelandic_ContentAndUnpatchedProductId()
+    public async Task NoLangParam_DefaultsToIcelandic_ContentAndPatchedProductId()
     {
         SeedCalendarIntegrationFlag();
         var (_, _) = SeedFullyTranslatedEvent();
@@ -122,15 +123,13 @@ public class EventCalendarIcsEndpointTests : IDisposable
         response.EnsureSuccessStatusCode();
         var ics = await response.Content.ReadAsStringAsync();
 
-        // Ical.Net's serializer always writes its own library-default PRODID regardless of what's
-        // assigned on the Calendar object (see the comment above the isEnglish patch in Program.cs)
-        // — the Icelandic/default path deliberately leaves that untouched rather than patching it,
-        // so "byte-for-byte unchanged from today" means the library's own PRODID line survives here,
-        // not a "-//host//Events//IS" of our own (which has never once reached a served feed). Not
-        // asserting the exact upstream string, since a future Ical.Net upgrade could change it —
-        // only that neither of *our* language-tagged variants appears.
+        // #1051: the Icelandic/default path used to leave Ical.Net's library-default PRODID
+        // untouched (see #1049/#1035) — it now gets the same post-serialization regex patch the
+        // English feed already received, just with an "//IS" suffix instead of "//EN". Asserting
+        // the exact expected line (not just "doesn't contain //Events//EN/IS") per #1051.
+        var (_, productIdHost) = CalendarHostHelpers.ComputeCalendarHosts("https://www.hlaupadagskra.is");
+        Assert.Contains($"PRODID:-//{productIdHost}//Events//IS", ics);
         Assert.DoesNotContain("//Events//EN", ics);
-        Assert.DoesNotContain("//Events//IS", ics);
         Assert.Contains("Íslandshlaupið", ics);
         Assert.Contains("Útgáfa 2026", ics);
         Assert.Contains("Reykjavík", ics);
