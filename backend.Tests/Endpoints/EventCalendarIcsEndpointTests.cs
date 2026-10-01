@@ -189,6 +189,51 @@ public class EventCalendarIcsEndpointTests : IDisposable
     }
 
     [Fact]
+    public async Task LangEN_UppercaseVariant_MatchesLangEnExactly()
+    {
+        SeedCalendarIntegrationFlag();
+        SeedFullyTranslatedEvent();
+
+        var client = _factory.CreateClient();
+        var lowerResponse = await client.GetAsync("/api/v1/events/calendar.ics?lang=en");
+        var upperResponse = await client.GetAsync("/api/v1/events/calendar.ics?lang=EN");
+        lowerResponse.EnsureSuccessStatusCode();
+        upperResponse.EnsureSuccessStatusCode();
+
+        var lowerIcs = await lowerResponse.Content.ReadAsStringAsync();
+        var upperIcs = await upperResponse.Content.ReadAsStringAsync();
+
+        // #1050: lang matching used to be an exact-case comparison, so ?lang=EN silently fell through
+        // to the Icelandic feed. Case-insensitive matching means both requests land in the same
+        // "en" cache bucket and produce byte-for-byte identical output.
+        Assert.Equal(lowerIcs, upperIcs);
+        Assert.Contains("//Events//EN", upperIcs);
+        Assert.Contains("The Iceland Run", upperIcs);
+    }
+
+    [Fact]
+    public async Task LangXyz_UnrecognizedValue_FallsBackToIcelandic()
+    {
+        SeedCalendarIntegrationFlag();
+        SeedFullyTranslatedEvent();
+
+        var client = _factory.CreateClient();
+        var defaultResponse = await client.GetAsync("/api/v1/events/calendar.ics");
+        var xyzResponse = await client.GetAsync("/api/v1/events/calendar.ics?lang=xyz");
+        defaultResponse.EnsureSuccessStatusCode();
+        xyzResponse.EnsureSuccessStatusCode();
+
+        var defaultIcs = await defaultResponse.Content.ReadAsStringAsync();
+        var xyzIcs = await xyzResponse.Content.ReadAsStringAsync();
+
+        // Only "en" (case-insensitively) should ever select the English feed — any other value,
+        // recognized or not, continues to resolve to the Icelandic/default feed unchanged.
+        Assert.Equal(defaultIcs, xyzIcs);
+        Assert.DoesNotContain("//Events//EN", xyzIcs);
+        Assert.Contains("Íslandshlaupið", xyzIcs);
+    }
+
+    [Fact]
     public async Task BothLangs_CacheIndependently_NeitherStalesTheOther()
     {
         SeedCalendarIntegrationFlag();
