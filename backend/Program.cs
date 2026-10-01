@@ -1687,17 +1687,15 @@ app.MapGet("/api/v1/events/calendar.ics", async (string? lang, IMediator mediato
         // its own library default at serialize time — setting Calendar.ProductId before serializing
         // (as this handler used to) has no effect on the actual output; that assignment has silently
         // been dead code since #1034 introduced it. The only way to get a custom PRODID into the
-        // served feed is to patch the serialized string afterward. Scoped to the English feed only:
-        // the Icelandic/default path is deliberately left exactly as the library renders it today,
-        // matching #1035's regression guard that the no-`lang` response stay byte-for-byte unchanged.
-        if (isEnglish)
-        {
-            serialized = System.Text.RegularExpressions.Regex.Replace(
-                serialized,
-                "^PRODID:[^\r\n]*",
-                $"PRODID:-//{productIdHost}//Events//EN",
-                System.Text.RegularExpressions.RegexOptions.Multiline);
-        }
+        // served feed is to patch the serialized string afterward. #1049 originally scoped this to the
+        // English feed only, deliberately leaving the Icelandic/default path unpatched to satisfy
+        // #1035's regression guard that the no-`lang` response stay byte-for-byte unchanged; #1051
+        // extends the same patch to the Icelandic/default path now that that guard has been updated.
+        serialized = System.Text.RegularExpressions.Regex.Replace(
+            serialized,
+            "^PRODID:[^\r\n]*",
+            $"PRODID:-//{productIdHost}//Events//{(isEnglish ? "EN" : "IS")}",
+            System.Text.RegularExpressions.RegexOptions.Multiline);
 
         return serialized;
     });
