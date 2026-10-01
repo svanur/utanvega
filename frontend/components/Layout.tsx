@@ -33,6 +33,7 @@ import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { useLoginEnabled } from '../hooks/useLoginEnabled';
 import { trackStoreIconClick } from '../utils/analytics';
 import { isStagingHost } from '../utils/hostEnv';
+import { localeForHostname } from '../api/_site';
 
 interface NavChild {
     label: string;
@@ -63,11 +64,6 @@ type LayoutProps = PropsWithChildren<{
 
 function openExternal(href: string) {
     window.open(href, '_blank', 'noopener,noreferrer');
-}
-
-/** Whether `hostname` is `suffix` itself or a subdomain of it (e.g. "www."). */
-function matchesHostSuffix(hostname: string, suffix: string): boolean {
-    return hostname === suffix || hostname.endsWith(`.${suffix}`);
 }
 
 function ScrollToTopButton() {
@@ -102,7 +98,7 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
     const theme = useTheme();
     const isStaging = isStagingHost(window.location.hostname);
     // No English storefront exists yet, so the store icon is Icelandic-brand-only.
-    const hasOnlineStore = !matchesHostSuffix(window.location.hostname, '360runs.com');
+    const hasOnlineStore = localeForHostname(window.location.hostname) !== 'en';
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const weather = useHeaderWeather();
     const heroTheme = useHeroTheme();
