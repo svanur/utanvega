@@ -98,6 +98,18 @@ function formatHours(hours: number) {
     return rem > 0 ? `${days}d ${rem}h` : `${days}d`;
 }
 
+// Submitted pageUrl comes from an unauthenticated public endpoint — render it as a clickable
+// link only when it's a well-formed http(s) URL, to avoid turning stored javascript:/data: etc.
+// schemes into a one-click href for admin staff.
+function isHttpUrl(url: string): boolean {
+    try {
+        const protocol = new URL(url).protocol;
+        return protocol === 'http:' || protocol === 'https:';
+    } catch {
+        return false;
+    }
+}
+
 // Parsing (which can throw on malformed JSON) is kept separate from JSX construction below —
 // building JSX inside a try/catch doesn't actually catch rendering errors, since React defers
 // rendering the returned elements until later (see react-hooks/error-boundaries).
@@ -398,10 +410,17 @@ export default function FeedbackPage({ onNotify }: { onNotify: (msg: string, sev
                                         </TableCell>
                                         <TableCell sx={{ maxWidth: 140 }}>
                                             <Tooltip title={item.pageUrl}>
-                                                <Link href={item.pageUrl} target="_blank" rel="noopener" variant="caption"
-                                                    sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', maxWidth: 140 }}>
-                                                    {item.pageUrl.replace(/^https?:\/\/[^/]+/, '')}
-                                                </Link>
+                                                {isHttpUrl(item.pageUrl) ? (
+                                                    <Link href={item.pageUrl} target="_blank" rel="noopener" variant="caption"
+                                                        sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', maxWidth: 140 }}>
+                                                        {item.pageUrl.replace(/^https?:\/\/[^/]+/, '')}
+                                                    </Link>
+                                                ) : (
+                                                    <Typography variant="caption" color="text.secondary"
+                                                        sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', maxWidth: 140 }}>
+                                                        {item.pageUrl.replace(/^https?:\/\/[^/]+/, '')}
+                                                    </Typography>
+                                                )}
                                             </Tooltip>
                                         </TableCell>
                                         <TableCell>
@@ -543,11 +562,18 @@ export default function FeedbackPage({ onNotify }: { onNotify: (msg: string, sev
                                     </Box>
                                     <Box>
                                         <Typography variant="overline" color="text.secondary">Page</Typography>
-                                        <Link href={selected.pageUrl} target="_blank" rel="noopener" variant="body2"
-                                            sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                            {selected.pageUrl.replace(/^https?:\/\/[^/]+/, '')}
-                                            <OpenInNewIcon sx={{ fontSize: 14 }} />
-                                        </Link>
+                                        {isHttpUrl(selected.pageUrl) ? (
+                                            <Link href={selected.pageUrl} target="_blank" rel="noopener" variant="body2"
+                                                sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                {selected.pageUrl.replace(/^https?:\/\/[^/]+/, '')}
+                                                <OpenInNewIcon sx={{ fontSize: 14 }} />
+                                            </Link>
+                                        ) : (
+                                            <Typography variant="body2" color="text.secondary"
+                                                sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                {selected.pageUrl.replace(/^https?:\/\/[^/]+/, '')}
+                                            </Typography>
+                                        )}
                                     </Box>
                                 </Box>
 
