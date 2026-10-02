@@ -1,6 +1,6 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import { localeForHostname, type Locale } from '../api/_site';
+import { BRAND_NAME, localeForHostname, type Locale } from '../api/_site';
 
 type SupportedLang = Locale;
 
@@ -35,7 +35,19 @@ export const i18nReady = (async () => {
         fallbackLng: 'en',
         interpolation: {
             escapeValue: false,
+            // `{{brandName}}` resolves per active language rather than per host —
+            // BRAND_NAME is keyed by Locale, same source og.ts/og-image.ts already
+            // use, so a manual language switch (not just the host default) also
+            // flips the brand shown in interpolated strings (#1124).
+            defaultVariables: { brandName: BRAND_NAME[initialLang] },
         },
+    });
+
+    // Keep `{{brandName}}` in sync with every language change, whether it came
+    // through the `changeLanguage` wrapper below or any other call into i18next.
+    i18n.on('languageChanged', (lng) => {
+        if (!isSupportedLang(lng)) return;
+        i18n.options.interpolation!.defaultVariables = { brandName: BRAND_NAME[lng] };
     });
 
     // Load the fallback language in the background so missing-key fallback
