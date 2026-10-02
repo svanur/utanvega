@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { localeForHostname } from '../api/_site';
+import { BRAND_NAME, localeForHostname } from '../api/_site';
 
 /**
  * Brand name for the tab title on `hostname`: "360Runs" on the English
@@ -8,7 +8,7 @@ import { localeForHostname } from '../api/_site';
  * Exported so it's unit-testable independently of the effect below.
  */
 export function siteForHostname(hostname: string): string {
-    return localeForHostname(hostname) === 'en' ? '360Runs' : 'Hlaupadagskra.is';
+    return BRAND_NAME[localeForHostname(hostname)];
 }
 
 export function usePageTitle(title?: string) {
