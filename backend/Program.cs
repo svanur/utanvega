@@ -2427,6 +2427,10 @@ app.MapPost("/api/v1/tips", async (SendTipRequest request, IMediator mediator, I
         await mediator.Send(new SendTipCommand(request.PageUrl, request.Message));
         return Results.Ok();
     }
+    catch (ValidationException ex)
+    {
+        return ex.ToProblem();
+    }
     catch (Exception ex)
     {
         logger.LogError(ex, "Failed to send tip for page {PageUrl}", request.PageUrl);
@@ -2458,6 +2462,10 @@ app.MapPost("/api/v1/feedback", async (SubmitFeedbackRequest req, IMediator medi
             req.PageUrl, req.Message, req.Category, req.Name, req.Email,
             req.StepsToReproduce, req.BrowserInfo, req.ScreenshotUrl));
         return Results.Ok(new { id });
+    }
+    catch (ValidationException ex)
+    {
+        return ex.ToProblem();
     }
     catch (Exception ex)
     {
