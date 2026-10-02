@@ -33,7 +33,7 @@ import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { useLoginEnabled } from '../hooks/useLoginEnabled';
 import { trackStoreIconClick } from '../utils/analytics';
 import { isStagingHost } from '../utils/hostEnv';
-import { localeForHostname } from '../api/_site';
+import { BRAND_NAME, localeForHostname } from '../api/_site';
 
 interface NavChild {
     label: string;
@@ -97,8 +97,9 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
     const { t } = useTranslation();
     const theme = useTheme();
     const isStaging = isStagingHost(window.location.hostname);
+    const locale = localeForHostname(window.location.hostname);
     // No English storefront exists yet, so the store icon is Icelandic-brand-only.
-    const hasOnlineStore = localeForHostname(window.location.hostname) !== 'en';
+    const hasOnlineStore = locale !== 'en';
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const weather = useHeaderWeather();
     const heroTheme = useHeroTheme();
@@ -202,7 +203,7 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
                             <img src="/images/hlaupadagskra.avif" alt="" style={{ height: 32, width: 'auto' }} />
                             {!isMobile && (
                                 <Typography variant="h6" component="div" noWrap>
-                                    Hlaupadagskra.is
+                                    {BRAND_NAME[locale]}
                                 </Typography>
                             )}
                         </ButtonBase>

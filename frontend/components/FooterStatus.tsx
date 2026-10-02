@@ -7,13 +7,14 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { useHealth } from '../hooks/useHealth';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
-import { localeForHostname } from '../api/_site';
+import { BRAND_NAME, localeForHostname } from '../api/_site';
 
 export default function FooterStatus() {
     const { data, loading, error } = useHealth();
     const { t } = useTranslation();
     const { isEnabled } = useFeatureFlags();
-    const instagramHref = localeForHostname(window.location.hostname) === 'en'
+    const locale = localeForHostname(window.location.hostname);
+    const instagramHref = locale === 'en'
         ? 'https://www.instagram.com/360runsiceland'
         : 'https://www.instagram.com/hlaupadagskra';
 
@@ -103,7 +104,7 @@ export default function FooterStatus() {
             <Box sx={{ px: 2, py: 1 }}>
                 <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="space-between" flexWrap="wrap">
                     <Typography variant="caption" color="text.secondary">
-                        © {new Date().getFullYear()} Hlaupadagskra.is
+                        © {new Date().getFullYear()} {BRAND_NAME[locale]}
                     </Typography>
 
                     {loading ? (
