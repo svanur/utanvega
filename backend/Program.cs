@@ -1097,6 +1097,10 @@ app.MapPost("/api/v1/admin/trails/upload-gpx", [Authorize(Policy = "AdminOnly")]
         
         return Results.Created($"/api/v1/admin/trails/{result.Id}", response);
     }
+    catch (ValidationException ex)
+    {
+        return ex.ToProblem();
+    }
     catch (Exception ex)
     {
         logger.LogError(ex, "GPX upload failed for trail {TrailName}", name);
@@ -1153,6 +1157,10 @@ app.MapPost("/api/v1/admin/trails/check-similarity", [Authorize(Policy = "AdminO
 
         return Results.Ok(response);
     }
+    catch (ValidationException ex)
+    {
+        return ex.ToProblem();
+    }
     catch (Exception ex)
     {
         logger.LogError(ex, "Similarity check failed for {TrailName}", name);
@@ -1201,6 +1209,10 @@ app.MapPost("/api/v1/admin/trails/bulk-check-similarity", [Authorize(Policy = "A
         
         return Results.Ok(response);
     }
+    catch (ValidationException ex)
+    {
+        return ex.ToProblem();
+    }
     catch (Exception ex)
     {
         logger.LogError(ex, "Bulk similarity check failed for {FileCount} files", gpxFiles.Count);
@@ -1242,6 +1254,10 @@ app.MapPost("/api/v1/admin/trails/bulk-upload-gpx", [Authorize(Policy = "AdminOn
         var command = new BulkCreateTrailsFromGpxCommand(gpxFiles, GetAuthenticatedUserId(context));
         var trailIds = await mediator.Send(command);
         return Results.Ok(new { count = trailIds.Count, ids = trailIds });
+    }
+    catch (ValidationException ex)
+    {
+        return ex.ToProblem();
     }
     catch (Exception ex)
     {
