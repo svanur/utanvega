@@ -528,12 +528,7 @@ app.Use(async (HttpContext context, RequestDelegate next) =>
     }
     catch (ValidationException ex)
     {
-        context.Response.StatusCode = 400;
-        context.Response.ContentType = "application/json";
-        var errors = ex.Errors
-            .GroupBy(e => e.PropertyName)
-            .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
-        await context.Response.WriteAsJsonAsync(new { title = "Validation failed", errors });
+        await ex.ToProblem().ExecuteAsync(context);
     }
     catch (Exception ex)
     {
