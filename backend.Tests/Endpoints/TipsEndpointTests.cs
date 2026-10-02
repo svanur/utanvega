@@ -58,6 +58,4 @@ public class TipsEndpointTests : IDisposable
         Assert.True(body.Errors.ContainsKey("PageUrl"));
         Assert.Contains("PageUrl must be a valid HTTP or HTTPS URL.", body.Errors["PageUrl"]);
     }
-
-    private record ValidationErrorBody(string Title, Dictionary<string, string[]> Errors);
 }
