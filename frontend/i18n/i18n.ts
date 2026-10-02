@@ -20,6 +20,16 @@ const savedLang = localStorage.getItem('utanvega-lang');
 const initialLang: SupportedLang =
     savedLang && isSupportedLang(savedLang) ? savedLang : localeForHostname(window.location.hostname);
 
+// `{{brandName}}` is host-based, not language-based — same signal every other
+// BRAND_NAME consumer uses (Layout.tsx's header, FooterStatus.tsx's copyright,
+// usePageTitle.ts's tab title, and the server-side og.ts/og-image.ts/
+// manifest.ts), so a visitor who manually toggles the UI language still sees
+// one consistent brand, not a mix of the two. The host doesn't change during
+// a page's lifetime, so this is computed once, not re-derived on language
+// change.
+const hostLocale = localeForHostname(window.location.hostname);
+const brandName = BRAND_NAME[hostLocale];
+
 async function loadLanguage(lang: SupportedLang) {
     if (i18n.hasResourceBundle(lang, 'translation')) return;
     const { default: resources } = await loaders[lang]();
@@ -35,19 +45,8 @@ export const i18nReady = (async () => {
         fallbackLng: 'en',
         interpolation: {
             escapeValue: false,
-            // `{{brandName}}` resolves per active language rather than per host —
-            // BRAND_NAME is keyed by Locale, same source og.ts/og-image.ts already
-            // use, so a manual language switch (not just the host default) also
-            // flips the brand shown in interpolated strings (#1124).
-            defaultVariables: { brandName: BRAND_NAME[initialLang] },
+            defaultVariables: { brandName },
         },
-    });
-
-    // Keep `{{brandName}}` in sync with every language change, whether it came
-    // through the `changeLanguage` wrapper below or any other call into i18next.
-    i18n.on('languageChanged', (lng) => {
-        if (!isSupportedLang(lng)) return;
-        i18n.options.interpolation!.defaultVariables = { brandName: BRAND_NAME[lng] };
     });
 
     // Load the fallback language in the background so missing-key fallback
