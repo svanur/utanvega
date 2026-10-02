@@ -83,7 +83,8 @@ public class SubmitFeedbackCommandHandler(
     {
         try
         {
-            return new Uri(pageUrl).Host;
+            var host = new Uri(pageUrl).Host;
+            return string.IsNullOrWhiteSpace(host) ? "hlaupadagskra.is" : host;
         }
         catch (UriFormatException)
         {
