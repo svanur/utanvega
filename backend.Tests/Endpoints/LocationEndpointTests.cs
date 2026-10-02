@@ -281,5 +281,38 @@ public class LocationEndpointTests : IDisposable
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
+    /// <summary>
+    /// Endpoint-level test for <c>DELETE /api/v1/admin/locations/{id:guid}</c>
+    /// (Program.cs:1306-1319) — see #1130, auditing the same bug class #1113/#1114/#1115/#1122
+    /// covered elsewhere in the Trails/Locations family.
+    ///
+    /// Before #1129 (closing #1122), the endpoint's only <c>catch</c> blocks were
+    /// <c>catch (InvalidOperationException ex)</c> and a generic <c>catch (Exception ex)</c>, with
+    /// no preceding <c>catch (ValidationException ex)</c>, so a
+    /// <see cref="Utanvega.Backend.Application.Locations.Commands.DeleteLocation.DeleteLocationCommandValidator"/>
+    /// rejection (thrown by
+    /// <see cref="Utanvega.Backend.Application.Validation.ValidationBehavior{TRequest,TResponse}"/>)
+    /// would have fallen through to the generic handler and come back as an unstructured 500-shaped
+    /// <c>Results.Problem()</c>, instead of the structured 400 the global middleware would have
+    /// produced for the same exception. The route constraint <c>{id:guid}</c> accepts
+    /// <see cref="Guid.Empty"/> as a syntactically valid GUID, so the request reaches the validator's
+    /// <c>NotEmpty()</c> rule on <c>Id</c> rather than being rejected by routing.
+    /// </summary>
+    [Fact]
+    public async Task DeleteLocation_EmptyGuidId_Returns400WithStructuredValidationBody()
+    {
+        var client = _factory.CreateAuthenticatedClient("admin-user");
+
+        var response = await client.DeleteAsync(
+            $"/api/v1/admin/locations/{Guid.Empty}");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var body = await response.Content.ReadFromJsonAsync<ValidationErrorBody>();
+        Assert.NotNull(body);
+        Assert.Equal("Validation failed", body!.Title);
+        Assert.True(body.Errors.ContainsKey("Id"));
+    }
+
     private record CreatedLocationResponse(Guid Id);
 }
