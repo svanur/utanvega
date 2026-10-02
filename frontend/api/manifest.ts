@@ -1,17 +1,22 @@
 export const config = { runtime: 'edge' };
 
-import { resolveLocale, type Locale } from './_site';
+import { resolveLocale, BRAND_NAME, type Locale } from './_site';
 import { PWA_MANIFEST_STATIC_FIELDS } from '../pwaManifestFields';
 
-/** name/short_name/description copy, per locale. */
+/**
+ * name/short_name/description copy, per locale. `name` derives from
+ * BRAND_NAME rather than holding its own literal, since it is the same
+ * string (#1105) — short_name and description differ from it and stay
+ * hand-written here.
+ */
 const IDENTITY: Record<Locale, { name: string; short_name: string; description: string }> = {
   is: {
-    name: 'Hlaupadagskra.is',
+    name: BRAND_NAME.is,
     short_name: 'Hlaupadagskrá',
     description: 'Öll hlaup á einum stað',
   },
   en: {
-    name: '360Runs',
+    name: BRAND_NAME.en,
     short_name: '360Runs',
     description: 'All trail races in one place',
   },
