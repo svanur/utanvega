@@ -1,6 +1,6 @@
 import { ImageResponse } from '@vercel/og';
 import type React from 'react';
-import { resolveLocale, type Locale } from './_site';
+import { resolveLocale, BRAND_NAME, type Locale } from './_site';
 
 export const config = { runtime: 'edge' };
 
@@ -48,16 +48,20 @@ const DIFFICULTY_COLORS: Record<string, string> = {
   Expert: '#9C27B0',
 };
 
-/** Top-bar brand label per locale — mirrors og.ts's SITE_NAME/SITE_NAME_EN pattern. */
+/**
+ * Top-bar brand label per locale — derived from _site.ts's BRAND_NAME (#1096),
+ * uppercased and suffixed to read as the domain (360Runs has no ".com" of its
+ * own the way Hlaupadagskra.is already carries its ".is").
+ */
 const BRAND_LABEL: Record<Locale, string> = {
-  is: '🏃 HLAUPADAGSKRA.IS',
-  en: '🏃 360RUNS.COM',
+  is: `🏃 ${BRAND_NAME.is.toUpperCase()}`,
+  en: `🏃 ${BRAND_NAME.en.toUpperCase()}.COM`,
 };
 
-/** defaultImage() heading per locale. */
+/** defaultImage() heading per locale — same shared BRAND_NAME, no decoration beyond the emoji. */
 const BRAND_HEADING: Record<Locale, string> = {
-  is: '🏃 Hlaupadagskra.is',
-  en: '🏃 360Runs',
+  is: `🏃 ${BRAND_NAME.is}`,
+  en: `🏃 ${BRAND_NAME.en}`,
 };
 
 /** defaultImage() tagline per locale — English wording matches manifest.ts's IDENTITY.en.description. */

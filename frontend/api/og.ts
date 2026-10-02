@@ -1,6 +1,6 @@
 export const config = { runtime: 'edge' };
 
-import { siteOrigin, esc, resolveLocale, HOST_LOCALES, type Locale } from './_site';
+import { siteOrigin, esc, resolveLocale, HOST_LOCALES, BRAND_NAME, type Locale } from './_site';
 
 // Edge Functions run in a Node-like environment that provides process.env
 declare const process: { env: Record<string, string | undefined> };
@@ -282,12 +282,9 @@ const SITE_TITLE_EN = '360Runs – All Races in One Place';
 const SITE_DESCRIPTION_EN =
   'A site for finding and sharing great running routes in Iceland, on trail or on road.';
 
-const SITE_NAME = 'Hlaupadagskra.is';
-const SITE_NAME_EN = '360Runs';
-
 /** The brand name for the current locale — the single source other call sites defer to. */
 function siteNameFor(locale: Locale): string {
-  return locale === 'en' ? SITE_NAME_EN : SITE_NAME;
+  return BRAND_NAME[locale];
 }
 
 /**
