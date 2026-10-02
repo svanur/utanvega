@@ -59,7 +59,13 @@ public class GlobalValidationMiddlewareEndpointTests : IDisposable
             });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
+        // #1128: assert the full header, not just .MediaType — .MediaType strips the charset
+        // parameter, so it would pass regardless of whether the charset is present. ToProblem()
+        // (ValidationProblemResult.cs:18) calls Results.Json() with no explicit Content-Type,
+        // which ASP.NET Core defaults to "application/json; charset=utf-8" — accepted as correct
+        // going forward (arguably more correct than the pre-#1120 inline middleware's bare
+        // "application/json" with no charset).
+        Assert.Equal("application/json; charset=utf-8", response.Content.Headers.ContentType?.ToString());
 
         var body = await response.Content.ReadFromJsonAsync<ValidationErrorBody>();
         Assert.NotNull(body);
