@@ -101,6 +101,4 @@ public class TrailEndpointTests : IDisposable
         Assert.Equal("Validation failed", body!.Title);
         Assert.True(body.Errors.ContainsKey("GpxXml"));
     }
-
-    private record ValidationErrorBody(string Title, Dictionary<string, string[]> Errors);
 }

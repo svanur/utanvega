@@ -67,6 +67,4 @@ public class GlobalValidationMiddlewareEndpointTests : IDisposable
         Assert.True(body.Errors.ContainsKey("Slug"));
         Assert.Contains("Slug must be lowercase alphanumeric with hyphens only.", body.Errors["Slug"]);
     }
-
-    private record ValidationErrorBody(string Title, Dictionary<string, string[]> Errors);
 }
