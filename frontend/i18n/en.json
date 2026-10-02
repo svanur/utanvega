@@ -787,7 +787,7 @@
                 "description": "The 360° video project launches — experience Icelandic running trails in 360 degrees."
             },
             "launch": {
-                "title": "hlaupadagskra.is launches",
+                "title": "{{brandName}} launches",
                 "description": "{{brandName}} goes live with a comprehensive list of running events in Iceland."
             }
         },
