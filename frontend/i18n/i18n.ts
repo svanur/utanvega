@@ -1,6 +1,6 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import { localeForHostname, type Locale } from '../api/_site';
+import { BRAND_NAME, localeForHostname, type Locale } from '../api/_site';
 
 type SupportedLang = Locale;
 
@@ -20,6 +20,16 @@ const savedLang = localStorage.getItem('utanvega-lang');
 const initialLang: SupportedLang =
     savedLang && isSupportedLang(savedLang) ? savedLang : localeForHostname(window.location.hostname);
 
+// `{{brandName}}` is host-based, not language-based — same signal every other
+// BRAND_NAME consumer uses (Layout.tsx's header, FooterStatus.tsx's copyright,
+// usePageTitle.ts's tab title, and the server-side og.ts/og-image.ts/
+// manifest.ts), so a visitor who manually toggles the UI language still sees
+// one consistent brand, not a mix of the two. The host doesn't change during
+// a page's lifetime, so this is computed once, not re-derived on language
+// change.
+const hostLocale = localeForHostname(window.location.hostname);
+const brandName = BRAND_NAME[hostLocale];
+
 async function loadLanguage(lang: SupportedLang) {
     if (i18n.hasResourceBundle(lang, 'translation')) return;
     const { default: resources } = await loaders[lang]();
@@ -35,6 +45,7 @@ export const i18nReady = (async () => {
         fallbackLng: 'en',
         interpolation: {
             escapeValue: false,
+            defaultVariables: { brandName },
         },
     });
 

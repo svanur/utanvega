@@ -399,7 +399,7 @@
     },
     "faq": {
         "title": "Frequently Asked Questions",
-        "subtitle": "Answers to common questions about trails, times, and events on Hlaupadagskra.is",
+        "subtitle": "Answers to common questions about trails, times, and events on {{brandName}}",
         "estimatedTime": {
             "q": "How is Estimated Time for trails calculated?",
             "a": "See the model below. Times are estimates only — actual time depends on fitness, terrain conditions, and weather."
@@ -504,7 +504,7 @@
         "popular": "Most popular"
     },
     "header": {
-        "tagline": "Hlaupadagskra.is - A site to find races, fun trails and share with friends.",
+        "tagline": "{{brandName}} - A site to find races, fun trails and share with friends.",
         "close": "Close",
         "dontShowAgain": "Don't show again"
     },
@@ -569,10 +569,10 @@
     },
     "privacy": {
         "title": "Privacy Policy",
-        "intro": "Hlaupadagskra.is is committed to respecting your privacy. This policy explains what data we collect, how we use it, and your rights. The short version: we collect very little and share nothing.",
+        "intro": "{{brandName}} is committed to respecting your privacy. This policy explains what data we collect, how we use it, and your rights. The short version: we collect very little and share nothing.",
         "noAccounts": {
             "title": "No User Accounts Required",
-            "body": "The public Hlaupadagskra.is website does not require you to create an account or log in. We do not collect your name, email address, or any personal information to use the site."
+            "body": "The public {{brandName}} website does not require you to create an account or log in. We do not collect your name, email address, or any personal information to use the site."
         },
         "viewTracking": {
             "title": "Trail View Tracking",
@@ -702,9 +702,9 @@
         }
     },
     "aboutUs": {
-        "title": "About Hlaupadagskra.is",
+        "title": "About {{brandName}}",
         "tagline": "All events in one place, all year round",
-        "p1": "Hlaupadagskra.is is Iceland's comprehensive running event calendar — a neutral platform consolidating confirmed and upcoming running events from across the country, including official road races, ITRA trail runs, and organised charity runs.",
+        "p1": "{{brandName}} is Iceland's comprehensive running event calendar — a neutral platform consolidating confirmed and upcoming running events from across the country, including official road races, ITRA trail runs, and organised charity runs.",
         "p2": "Events are categorised, linked to registration pages, and connected to relevant social media. Status labels indicate whether events are confirmed, have registration open, or remain unconfirmed.",
         "teamTitle": "The team",
         "coFounder": "Co-founder",
@@ -745,7 +745,7 @@
         "title": "Disclaimer",
         "useAtOwnRisk": {
             "title": "Use at Your Own Risk",
-            "body": "All trail information on Hlaupadagskra.is is provided for informational purposes only. You are solely responsible for your own safety when using any trail. Always assess conditions, your fitness level, and equipment before heading out. Hlaupadagskra.is is not liable for any injuries, accidents, damages, or losses arising from the use of the information on this site."
+            "body": "All trail information on {{brandName}} is provided for informational purposes only. You are solely responsible for your own safety when using any trail. Always assess conditions, your fitness level, and equipment before heading out. {{brandName}} is not liable for any injuries, accidents, damages, or losses arising from the use of the information on this site."
         },
         "weather": {
             "title": "Weather & Conditions",
@@ -763,8 +763,8 @@
         "lastUpdated": "Last updated: {{date}}"
     },
     "about": {
-        "title": "About Hlaupadagskra.is",
-        "description": "Hlaupadagskra.is is a trail discovery platform built for runners, hikers, and cyclists exploring Iceland's wild landscapes. Find trails near you, check elevation profiles, and share your favorites with friends.",
+        "title": "About {{brandName}}",
+        "description": "{{brandName}} is a trail discovery platform built for runners, hikers, and cyclists exploring Iceland's wild landscapes. Find trails near you, check elevation profiles, and share your favorites with friends.",
         "authorTitle": "About us",
         "authorDescription": "The website is maintained by three runners out of a passion for running without any affiliation with any specific company or event, so the support of the running community is important.",
         "authorSignature": "Óskar Þór, Svanur Þór og Tómas G.",
@@ -788,7 +788,7 @@
             },
             "launch": {
                 "title": "hlaupadagskra.is launches",
-                "description": "Hlaupadagskra.is goes live with a comprehensive list of running events in Iceland."
+                "description": "{{brandName}} goes live with a comprehensive list of running events in Iceland."
             }
         },
         "changelog": {
@@ -966,7 +966,7 @@
         "nearby": "Nearby"
     },
     "install": {
-        "title": "Install Hlaupadagskra.is",
+        "title": "Install {{brandName}}",
         "description": "Add to your home screen for quick access and offline use.",
         "button": "Install",
         "iosHint": "Tap Share, then \"Add to Home Screen\"",
@@ -1195,7 +1195,7 @@
             "copyUrl": "Copy URL",
             "shareImage": "Share my prediction",
             "shareText": "I'm predicted to finish {{trail}} in {{time}}, based on my time on {{fromTrail}} — hlaupadagskra.is",
-            "shareCardLabel": "Hlaupadagskra.is predicted my finish time",
+            "shareCardLabel": "{{brandName}} predicted my finish time",
             "shareCardBasedOn": "Based on my time in {{trail}} · {{time}}",
             "loadError": "Failed to load trails. Please try again.",
             "summaryText": "If you ran {{knownTrail}} in {{yourTime}}, our prediction is that you will run {{targetTrail}} in {{predictedTime}}.",
