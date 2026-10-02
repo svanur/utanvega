@@ -1118,6 +1118,10 @@ app.MapPut("/api/v1/admin/trails/{id:guid}/gpx", [Authorize(Policy = "AdminOnly"
         if (result == null) return Results.NotFound();
         return Results.Ok(result);
     }
+    catch (ValidationException ex)
+    {
+        return ex.ToProblem();
+    }
     catch (Exception ex)
     {
         logger.LogError(ex, "GPX update failed for trail {TrailId}", id);
@@ -1305,6 +1309,10 @@ app.MapDelete("/api/v1/admin/locations/{id:guid}", [Authorize(Policy = "AdminOnl
     {
         await mediator.Send(new DeleteLocationCommand(id, GetAuthenticatedUserId(httpContext)));
         return Results.NoContent();
+    }
+    catch (ValidationException ex)
+    {
+        return ex.ToProblem();
     }
     catch (InvalidOperationException ex)
     {

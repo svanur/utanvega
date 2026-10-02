@@ -60,5 +60,47 @@ public class TrailEndpointTests : IDisposable
         Assert.True(body.Errors.ContainsKey("Name"));
     }
 
+    /// <summary>
+    /// Endpoint-level test for <c>PUT /api/v1/admin/trails/{id}/gpx</c> (Program.cs:1108-1128) —
+    /// see #1122, auditing the same bug class #1113/#1114/#1115 covered elsewhere in the
+    /// Trails/Locations family but missed for this endpoint and for <c>DeleteLocation</c>.
+    ///
+    /// Before this fix, the endpoint's only <c>catch</c> block was a generic
+    /// <c>catch (Exception ex) { return Results.Problem(...); }</c> with no preceding
+    /// <c>catch (ValidationException ex)</c>, so a new
+    /// <see cref="Utanvega.Backend.Application.Trails.Commands.UpdateTrailGpx.UpdateTrailGpxCommandValidator"/>
+    /// rejection (thrown by
+    /// <see cref="Utanvega.Backend.Application.Validation.ValidationBehavior{TRequest,TResponse}"/>)
+    /// would have fallen through to that generic handler and come back as an unstructured 500-shaped
+    /// <c>Results.Problem()</c>, instead of the structured 400 the global middleware would have
+    /// produced for the same exception. The trail id in the route does not need to resolve to a real
+    /// row: <see cref="Utanvega.Backend.Application.Validation.ValidationBehavior{TRequest,TResponse}"/>
+    /// runs ahead of the handler in the MediatR pipeline and throws before the (non-existent) trail
+    /// is ever looked up.
+    /// </summary>
+    [Fact]
+    public async Task UpdateTrailGpx_WhitespaceOnlyGpxContent_Returns400WithStructuredValidationBody()
+    {
+        var client = _factory.CreateAuthenticatedClient("admin-user");
+
+        // The endpoint's own manual guard (Program.cs:1110) only rejects a missing/zero-length file.
+        // Whitespace-only content has bytes, so it passes that guard and reaches
+        // UpdateTrailGpxCommandValidator's NotEmpty() rule on GpxXml, which trims before comparing.
+        using var content = new MultipartFormDataContent();
+        using var fileContent = new StringContent("   ");
+        content.Add(fileContent, "file", "trail.gpx");
+
+        var response = await client.PutAsync(
+            $"/api/v1/admin/trails/{Guid.NewGuid()}/gpx",
+            content);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var body = await response.Content.ReadFromJsonAsync<ValidationErrorBody>();
+        Assert.NotNull(body);
+        Assert.Equal("Validation failed", body!.Title);
+        Assert.True(body.Errors.ContainsKey("GpxXml"));
+    }
+
     private record ValidationErrorBody(string Title, Dictionary<string, string[]> Errors);
 }
