@@ -8,6 +8,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Hlaupadagskra.is (repo name `utanvega`) — a bilingual (Icelandic default, English) mobile-first PWA for discovering trail running/hiking/cycling trails in Iceland. Three apps in one repo: a public `frontend`, an `admin` dashboard, and a shared `.NET` `backend`.
 
+The site is multi-brand, not single-brand: it answers on two production hosts, `hlaupadagskra.is` and `360runs.com`, each with its own default locale (Icelandic vs. English) and brand name — so "bilingual, Icelandic default" above is per-host, not fixed site-wide. `frontend/api/_site.ts`'s `HOST_LOCALES`/`BRAND_NAME` maps are the single source of truth for this host→locale/brand resolution; `frontend/i18n/i18n.ts`, `og.ts`, `og-image.ts`, `manifest.ts`, and `frontend/utils/hostEnv.ts` all import from there rather than re-declaring the host list. `backend/Application/Events/CalendarHostHelpers.cs` is not an equivalent per-request mirror of this: it derives the calendar.ics feed's PRODID/UID brand strings from a single static `configuration["SiteUrl"]` value (defaulting to `https://www.hlaupadagskra.is`, see `backend/appsettings.json`), not from the incoming request's Host header — so the calendar feed is host-agnostic by design, and a 360runs.com visitor still gets Hlaupadagskra.is-branded calendar.ics output.
+
 ## Commands
 
 Run from repo root unless noted.
