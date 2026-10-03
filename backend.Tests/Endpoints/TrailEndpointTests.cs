@@ -101,4 +101,102 @@ public class TrailEndpointTests : IDisposable
         Assert.Equal("Validation failed", body!.Title);
         Assert.True(body.Errors.ContainsKey("GpxXml"));
     }
+
+    /// <summary>
+    /// Endpoint-level test for <c>POST /api/v1/admin/trails/upload-gpx</c> (Program.cs:1051-1106) —
+    /// see #1137, auditing the same bug class #1113/#1114/#1115/#1122 covered elsewhere in the
+    /// Trails family. <c>check-similarity</c> (above) was already covered by #1113, but the sibling
+    /// <c>upload-gpx</c> endpoint — which shares the exact same
+    /// <c>catch (ValidationException ex) { return ex.ToProblem(); }</c> block — was missed.
+    ///
+    /// <c>name</c>/<c>activityType</c> are query-string parameters, not form fields (see
+    /// admin/src/components/GpxUploadDialog.tsx:138), so they ride on the URL the same way
+    /// <c>CheckTrailSimilarity</c>'s test above does.
+    /// </summary>
+    [Fact]
+    public async Task CreateTrailFromGpx_WhitespaceOnlyGpxContent_Returns400WithStructuredValidationBody()
+    {
+        var client = _factory.CreateAuthenticatedClient("admin-user");
+
+        // The endpoint's own manual guard (Program.cs:1053) only rejects a missing/zero-length
+        // file, and activityType is validated manually too (Program.cs:1058-1065) — both pass here
+        // so the whitespace-only GPX content reaches CreateTrailFromGpxCommandValidator's
+        // NotEmpty() rule on GpxXml, which trims before comparing.
+        using var content = new MultipartFormDataContent();
+        using var fileContent = new StringContent("   ");
+        content.Add(fileContent, "file", "trail.gpx");
+
+        var response = await client.PostAsync(
+            "/api/v1/admin/trails/upload-gpx?name=Test+Trail&activityType=Hiking",
+            content);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var body = await response.Content.ReadFromJsonAsync<ValidationErrorBody>();
+        Assert.NotNull(body);
+        Assert.Equal("Validation failed", body!.Title);
+        Assert.True(body.Errors.ContainsKey("GpxXml"));
+    }
+
+    /// <summary>
+    /// Endpoint-level test for <c>POST /api/v1/admin/trails/bulk-check-similarity</c>
+    /// (Program.cs:1172-1222) — see #1137. Same gap as <c>CreateTrailFromGpx</c> above: the
+    /// endpoint's own manual guard (Program.cs:1178) only rejects an empty <c>files</c> list, so a
+    /// single whitespace-only file reaches <c>BulkCheckTrailSimilarityCommandValidator</c>'s
+    /// <c>RuleForEach(x => x.Files).ChildRules(...)</c> NotEmpty() rule on <c>GpxXml</c>. FluentValidation
+    /// names a per-element child-rule failure with the collection index baked in, so the key is
+    /// <c>"Files[0].GpxXml"</c>, not a plain <c>"GpxXml"</c> — confirmed by inspecting the actual
+    /// response body rather than assumed.
+    /// </summary>
+    [Fact]
+    public async Task BulkCheckTrailSimilarity_WhitespaceOnlyGpxContent_Returns400WithStructuredValidationBody()
+    {
+        var client = _factory.CreateAuthenticatedClient("admin-user");
+
+        using var content = new MultipartFormDataContent();
+        using var fileContent = new StringContent("   ");
+        content.Add(fileContent, "files", "trail.gpx");
+
+        var response = await client.PostAsync(
+            "/api/v1/admin/trails/bulk-check-similarity",
+            content);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var body = await response.Content.ReadFromJsonAsync<ValidationErrorBody>();
+        Assert.NotNull(body);
+        Assert.Equal("Validation failed", body!.Title);
+        Assert.True(body.Errors.ContainsKey("Files[0].GpxXml"));
+    }
+
+    /// <summary>
+    /// Endpoint-level test for <c>POST /api/v1/admin/trails/bulk-upload-gpx</c> (Program.cs:1224-1268)
+    /// — see #1137. Same gap and same nested-rule key shape as <c>BulkCheckTrailSimilarity</c> above:
+    /// the endpoint's own manual guards (Program.cs:1231, 1240) only reject an empty <c>files</c>
+    /// list and a missing/invalid <c>activityTypes</c> entry — both pass here — so the whitespace-only
+    /// file reaches <c>BulkCreateTrailsFromGpxCommandValidator</c>'s
+    /// <c>RuleForEach(x => x.Files).ChildRules(...)</c> NotEmpty() rule on <c>GpxXml</c>, keyed as
+    /// <c>"Files[0].GpxXml"</c>.
+    /// </summary>
+    [Fact]
+    public async Task BulkCreateTrailsFromGpx_WhitespaceOnlyGpxContent_Returns400WithStructuredValidationBody()
+    {
+        var client = _factory.CreateAuthenticatedClient("admin-user");
+
+        using var content = new MultipartFormDataContent();
+        using var fileContent = new StringContent("   ");
+        content.Add(fileContent, "files", "trail.gpx");
+        content.Add(new StringContent("Hiking"), "activityTypes");
+
+        var response = await client.PostAsync(
+            "/api/v1/admin/trails/bulk-upload-gpx",
+            content);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var body = await response.Content.ReadFromJsonAsync<ValidationErrorBody>();
+        Assert.NotNull(body);
+        Assert.Equal("Validation failed", body!.Title);
+        Assert.True(body.Errors.ContainsKey("Files[0].GpxXml"));
+    }
 }
