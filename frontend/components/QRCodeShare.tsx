@@ -29,7 +29,7 @@ interface QRCodeShareProps {
 }
 
 export default function QRCodeShare({ slug, trailName, open: openProp, onClose }: QRCodeShareProps) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [internalOpen, setInternalOpen] = useState(false);
     const [tab, setTab] = useState(0);
     const [copied, setCopied] = useState(false);
@@ -40,7 +40,7 @@ export default function QRCodeShare({ slug, trailName, open: openProp, onClose }
     const baseUrl = window.location.origin;
     const trailUrl = `${baseUrl}/trails/${slug}`;
     const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
-    const gpxUrl = `${apiBaseUrl}/api/v1/trails/${slug}/gpx`;
+    const gpxUrl = `${apiBaseUrl}/api/v1/trails/${slug}/gpx${i18n.language === 'en' ? '?lang=en' : ''}`;
 
     return (
         <>
