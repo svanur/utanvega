@@ -46,7 +46,7 @@ CI (`.github/workflows/ci.yml`) runs backend build+test and frontend build on ev
 - `Application/<Feature>/Commands|Queries` — MediatR handlers, one feature folder per domain concept (Trails, Locations, Events, Activities, TrailCheckIns, Analytics, History, Weather, Validation, Caching).
 - `Core/Entities`, `Core/Services` — domain entities and services, framework-agnostic.
 - `Infrastructure/Persistence` — EF Core `DbContext`, repositories, migrations live in `backend/Migrations`.
-- Endpoints call `IMediator.Send(...)`; auth is `[Authorize]` per-endpoint with JWT bearer (Supabase-issued tokens validated via `SUPABASE_JWT_SECRET`); error handling is per-endpoint try/catch → `Results.Problem()/NotFound()/BadRequest()` (no global exception middleware).
+- Endpoints call `IMediator.Send(...)`; auth is `[Authorize]` per-endpoint with JWT bearer (Supabase-issued tokens validated via `SUPABASE_JWT_SECRET`); error handling is two-layered: a global `app.Use(...)` middleware (`Program.cs:522-543`) catches `ValidationException` → `ex.ToProblem()` (structured 400) and any other unhandled `Exception` → sanitized 500 (logged); per-endpoint try/catch remains the convention for anything needing a different status code (404/409/403/etc.) or domain-specific handling, e.g. `Results.Problem()/NotFound()/BadRequest()`, or a `DbUpdateException` → 409 Conflict on a unique-slug collision.
 - PostGIS is used for spatial data: `GpxData` is `LineStringZ` (3D, elevation-preserving), location centers are `Point` + radius in km, SRID 4326.
 - Icelandic slug generation normalizes special characters (þ→th, ð→d, æ→ae, ö, á, é, í, ó, ú, ý).
 
