@@ -775,7 +775,7 @@
         "historyTitle": "History",
         "milestones": {
             "v2_launch": {
-                "title": "hlaupadagskra.is 2.0",
+                "title": "{{brandName}} 2.0",
                 "description": "Version 2 launches with a full events system, race calendar, trail-to-race links, and much more."
             },
             "scratchcard": {
