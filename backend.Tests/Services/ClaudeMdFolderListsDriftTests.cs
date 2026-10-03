@@ -56,6 +56,9 @@ public class ClaudeMdFolderListsDriftTests
 
     // Matches CLAUDE.md:55's bullet: "**backend.Tests/** — ... organized to mirror source:
     // `Caching/`, `Endpoints/`, ..., `WebHost/`." and pulls the backtick-quoted folder names.
+    // Anchored on the sentence-ending period that closes the folder-list clause, mirroring
+    // ExtractApplicationFeatureFolders's `\)\.?\s*$` anchor — anything after that period (e.g. a
+    // future file reference appended to the same bullet line) is excluded rather than swept in.
     private static IReadOnlyList<string> ExtractBackendTestsFolders(string claudeMdContent)
     {
         var line = claudeMdContent
@@ -69,10 +72,17 @@ public class ClaudeMdFolderListsDriftTests
                 $"Could not find 'organized to mirror source:' on the backend.Tests bullet line: {line}");
 
         var afterMarker = line[markerIndex..];
-        var matches = Regex.Matches(afterMarker, "`([^`]+)`");
+
+        var clauseEnd = afterMarker.IndexOf('.');
+        if (clauseEnd < 0)
+            throw new InvalidOperationException(
+                $"Could not find the sentence-ending period closing the folder-list clause after 'organized to mirror source:': {afterMarker}");
+
+        var clause = afterMarker[..clauseEnd];
+        var matches = Regex.Matches(clause, "`([^`]+)`");
         if (matches.Count == 0)
             throw new InvalidOperationException(
-                $"Could not find any backtick-quoted folder names after 'organized to mirror source:': {afterMarker}");
+                $"Could not find any backtick-quoted folder names after 'organized to mirror source:': {clause}");
 
         return matches
             .Select(m => m.Groups[1].Value.TrimEnd('/'))
@@ -131,6 +141,24 @@ public class ClaudeMdFolderListsDriftTests
             BuildDriftMessage(
                 "backend.Tests", "CLAUDE.md:55's backend.Tests/ bullet",
                 missingFromDocs, missingFromDisk));
+    }
+
+    // Guards against #1165: a future prose edit appending a backtick-quoted token after the
+    // folder-list clause (e.g. a stray file reference) must not be swept into the extracted set.
+    [Fact]
+    public void ExtractBackendTestsFolders_ExcludesBacktickTokenAppearingAfterFolderListClauseEnds()
+    {
+        const string syntheticLine =
+            "**backend.Tests/** — xUnit + Moq + SQLite in-memory (`TestDbContextFactory.cs`), " +
+            "organized to mirror source: `Caching/`, `Endpoints/`, `Entities/`, `Handlers/`, " +
+            "`Services/`, `Validators/`, `WebHost/`. See `SomeOtherFile.cs` for details.";
+
+        var documented = ExtractBackendTestsFolders(syntheticLine);
+
+        Assert.Equal(
+            new[] { "Caching", "Endpoints", "Entities", "Handlers", "Services", "Validators", "WebHost" },
+            documented);
+        Assert.DoesNotContain("SomeOtherFile.cs", documented);
     }
 
     // Demonstrates the failure mode this issue guards against end-to-end — using a disposable
