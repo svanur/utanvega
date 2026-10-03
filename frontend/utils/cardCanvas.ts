@@ -1,5 +1,7 @@
 // Shared canvas utilities for race share/finish cards
 
+import { siteForHostname } from '../hooks/usePageTitle';
+
 export type ActivityTheme = {
     bgFrom: string;
     bgTo: string;
@@ -162,8 +164,29 @@ let _cachedBrand: HTMLImageElement | null = null;
 let _loading = false;
 const _callbacks: Array<(img: HTMLImageElement) => void> = [];
 
+/**
+ * Logo asset per brand (see siteForHostname). 360Runs has no logo asset yet
+ * (#1087) — add its entry here once one lands in public/images/, no other
+ * change needed.
+ */
+const BRAND_IMAGE_SRC: Partial<Record<string, string>> = {
+    'Hlaupadagskra.is': '/images/hlaupadagskra.avif',
+};
+
+/**
+ * Logo image path for `hostname`, or undefined if that brand has no logo
+ * asset yet — split out from loadBrandImage so the hostname → src mapping is
+ * unit-testable in Node without a DOM (loadBrandImage itself needs `window`
+ * and `Image`, which only exist in a browser).
+ */
+export function brandImageSrcForHostname(hostname: string): string | undefined {
+    return BRAND_IMAGE_SRC[siteForHostname(hostname)];
+}
+
 export function loadBrandImage(onLoad: (img: HTMLImageElement) => void) {
     if (_cachedBrand) { onLoad(_cachedBrand); return; }
+    const src = brandImageSrcForHostname(window.location.hostname);
+    if (!src) return; // No logo for this brand — cards render fine without one.
     _callbacks.push(onLoad);
     if (_loading) return;
     _loading = true;
@@ -180,5 +203,5 @@ export function loadBrandImage(onLoad: (img: HTMLImageElement) => void) {
         _loading = false;
         _callbacks.length = 0;
     };
-    img.src = '/images/hlaupadagskra.avif';
+    img.src = src;
 }

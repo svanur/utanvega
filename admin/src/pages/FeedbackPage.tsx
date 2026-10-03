@@ -20,6 +20,7 @@ import ReplyIcon from '@mui/icons-material/Reply';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 import { apiFetch } from '../hooks/api';
+import { replySubject } from '../utils/feedbackHelpers';
 
 const GITHUB_ISSUES_URL = 'https://github.com/svanur/utanvega/issues/';
 const PAGE_SIZE = 25;
@@ -96,6 +97,18 @@ function formatHours(hours: number) {
     const days = Math.floor(hours / 24);
     const rem = Math.round(hours % 24);
     return rem > 0 ? `${days}d ${rem}h` : `${days}d`;
+}
+
+// Submitted pageUrl comes from an unauthenticated public endpoint — render it as a clickable
+// link only when it's a well-formed http(s) URL, to avoid turning stored javascript:/data: etc.
+// schemes into a one-click href for admin staff.
+function isHttpUrl(url: string): boolean {
+    try {
+        const protocol = new URL(url).protocol;
+        return protocol === 'http:' || protocol === 'https:';
+    } catch {
+        return false;
+    }
 }
 
 // Parsing (which can throw on malformed JSON) is kept separate from JSX construction below —
@@ -398,10 +411,17 @@ export default function FeedbackPage({ onNotify }: { onNotify: (msg: string, sev
                                         </TableCell>
                                         <TableCell sx={{ maxWidth: 140 }}>
                                             <Tooltip title={item.pageUrl}>
-                                                <Link href={item.pageUrl} target="_blank" rel="noopener" variant="caption"
-                                                    sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', maxWidth: 140 }}>
-                                                    {item.pageUrl.replace(/^https?:\/\/[^/]+/, '')}
-                                                </Link>
+                                                {isHttpUrl(item.pageUrl) ? (
+                                                    <Link href={item.pageUrl} target="_blank" rel="noopener" variant="caption"
+                                                        sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', maxWidth: 140 }}>
+                                                        {item.pageUrl.replace(/^https?:\/\/[^/]+/, '')}
+                                                    </Link>
+                                                ) : (
+                                                    <Typography variant="caption" color="text.secondary"
+                                                        sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', maxWidth: 140 }}>
+                                                        {item.pageUrl.replace(/^https?:\/\/[^/]+/, '')}
+                                                    </Typography>
+                                                )}
                                             </Tooltip>
                                         </TableCell>
                                         <TableCell>
@@ -440,7 +460,7 @@ export default function FeedbackPage({ onNotify }: { onNotify: (msg: string, sev
                                                 <Tooltip title={`Reply to ${item.email}`}>
                                                     <IconButton size="small"
                                                         component="a"
-                                                        href={`mailto:${item.email}?subject=Re: your feedback on hlaupadagskra.is&body=%23${item.feedbackNumber}`}
+                                                        href={`mailto:${item.email}?subject=${replySubject(item.pageUrl)}&body=%23${item.feedbackNumber}`}
                                                     >
                                                         <ReplyIcon fontSize="small" />
                                                     </IconButton>
@@ -535,7 +555,7 @@ export default function FeedbackPage({ onNotify }: { onNotify: (msg: string, sev
                                         <Typography variant="overline" color="text.secondary">Reporter</Typography>
                                         <Typography variant="body2">{selected.name ?? 'Anonymous'}</Typography>
                                         {selected.email && (
-                                            <Link href={`mailto:${selected.email}?subject=Re: your feedback on hlaupadagskra.is&body=%23${selected.feedbackNumber}`}
+                                            <Link href={`mailto:${selected.email}?subject=${replySubject(selected.pageUrl)}&body=%23${selected.feedbackNumber}`}
                                                 variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                                 <ReplyIcon sx={{ fontSize: 14 }} />{selected.email}
                                             </Link>
@@ -543,11 +563,18 @@ export default function FeedbackPage({ onNotify }: { onNotify: (msg: string, sev
                                     </Box>
                                     <Box>
                                         <Typography variant="overline" color="text.secondary">Page</Typography>
-                                        <Link href={selected.pageUrl} target="_blank" rel="noopener" variant="body2"
-                                            sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                            {selected.pageUrl.replace(/^https?:\/\/[^/]+/, '')}
-                                            <OpenInNewIcon sx={{ fontSize: 14 }} />
-                                        </Link>
+                                        {isHttpUrl(selected.pageUrl) ? (
+                                            <Link href={selected.pageUrl} target="_blank" rel="noopener" variant="body2"
+                                                sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                {selected.pageUrl.replace(/^https?:\/\/[^/]+/, '')}
+                                                <OpenInNewIcon sx={{ fontSize: 14 }} />
+                                            </Link>
+                                        ) : (
+                                            <Typography variant="body2" color="text.secondary"
+                                                sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                {selected.pageUrl.replace(/^https?:\/\/[^/]+/, '')}
+                                            </Typography>
+                                        )}
                                     </Box>
                                 </Box>
 

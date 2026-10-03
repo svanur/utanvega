@@ -2,6 +2,7 @@
 
 ## Project Overview
 - **Goal**: A site to find fun and exciting trails for trail running, hiking & cycling to share with friends. Mobile-first PWA targeting Icelandic trail runners with bilingual support (Icelandic default, English available).
+- **Multi-brand**: the site is host-based, not single-brand — see CLAUDE.md's `## Project` section for the two production hosts (`hlaupadagskra.is`, `360runs.com`) and their per-host locale/brand defaults, sourced from `frontend/api/_site.ts`'s `HOST_LOCALES`/`BRAND_NAME` maps.
 - **Tech Stack**:
 
   | Layer        | Technology                                                              |
@@ -40,7 +41,7 @@ Or run individually:
 - **Style**: Use file-scoped namespaces and C# 12+ features.
 - **Patterns**: Use Dependency Injection; use CQRS architecture via MediatR.
 - **Async**: Always use `Task` and `await`. Avoid `.Result` or `.Wait()`.
-- **Error Handling**: Per-endpoint try-catch blocks returning `Results.Problem()`, `Results.NotFound()`, or `Results.BadRequest()`. No global exception middleware currently.
+- **Error Handling**: Two-layered. A global `app.Use(...)` middleware (`Program.cs:522-543`) catches `ValidationException` → `ex.ToProblem()` (structured 400) and any other unhandled `Exception` → sanitized 500 (logged). Per-endpoint try-catch blocks remain the convention for anything needing a different status code or domain-specific handling, returning `Results.Problem()`, `Results.NotFound()`, or `Results.BadRequest()` (e.g. a `DbUpdateException` → 409 Conflict on a unique-slug collision).
 
 ## Database & Data (EF Core)
 - **Naming**: Use PascalCase for entity properties.

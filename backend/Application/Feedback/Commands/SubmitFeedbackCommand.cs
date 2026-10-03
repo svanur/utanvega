@@ -48,7 +48,8 @@ public class SubmitFeedbackCommandHandler(
             {
                 var from = string.IsNullOrEmpty(request.Name) ? "Anonymous" : request.Name;
                 var category = string.IsNullOrEmpty(request.Category) ? "" : $"[{request.Category}] ";
-                var subject = $"New feedback {category}on hlaupadagskra.is";
+                var host = GetHostOrFallback(request.PageUrl);
+                var subject = $"New feedback {category}on {host}";
                 var body = $"""
                     New feedback received (#{entry.FeedbackNumber})
 
@@ -72,5 +73,26 @@ public class SubmitFeedbackCommandHandler(
         }
 
         return entry.Id;
+    }
+
+    // Derives the notification subject's host from the submitting page's URL so multi-brand
+    // feedback (hlaupadagskra.is / 360runs.com) reads correctly, falling back to the original
+    // hardcoded literal when PageUrl is empty or fails to parse. Mirrors the try/catch pattern
+    // CalendarHostHelpers.ComputeCalendarHosts uses for SiteUrl.
+    private static string GetHostOrFallback(string pageUrl)
+    {
+        try
+        {
+            var host = new Uri(pageUrl).Host;
+            return string.IsNullOrWhiteSpace(host) ? "hlaupadagskra.is" : host;
+        }
+        catch (UriFormatException)
+        {
+            return "hlaupadagskra.is";
+        }
+        catch (ArgumentNullException)
+        {
+            return "hlaupadagskra.is";
+        }
     }
 }

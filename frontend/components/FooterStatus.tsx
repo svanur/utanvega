@@ -7,11 +7,16 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { useHealth } from '../hooks/useHealth';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
+import { BRAND_NAME, localeForHostname } from '../api/_site';
 
 export default function FooterStatus() {
     const { data, loading, error } = useHealth();
     const { t } = useTranslation();
     const { isEnabled } = useFeatureFlags();
+    const locale = localeForHostname(window.location.hostname);
+    const instagramHref = locale === 'en'
+        ? 'https://www.instagram.com/360runsiceland'
+        : 'https://www.instagram.com/hlaupadagskra';
 
     return (
         <Box
@@ -68,7 +73,7 @@ export default function FooterStatus() {
                         <Stack spacing={0.5} sx={{ mt: 1 }}>
                             {[
                                 { label: 'Facebook',         href: 'https://www.facebook.com/hlaupadagskra' },
-                                { label: 'Instagram',        href: 'https://www.instagram.com/hlaupadagskra' },
+                                { label: 'Instagram',        href: instagramHref },
                                 { label: 'YouTube · 360° Runs', href: 'https://www.youtube.com/@360RunsIceland' },
                             ].map(({ label, href }) => (
                                 <MuiLink key={label} href={href} target="_blank" rel="noopener noreferrer" variant="body2" color="text.secondary" underline="hover"
@@ -99,7 +104,7 @@ export default function FooterStatus() {
             <Box sx={{ px: 2, py: 1 }}>
                 <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="space-between" flexWrap="wrap">
                     <Typography variant="caption" color="text.secondary">
-                        © {new Date().getFullYear()} Hlaupadagskra.is
+                        © {new Date().getFullYear()} {BRAND_NAME[locale]}
                     </Typography>
 
                     {loading ? (

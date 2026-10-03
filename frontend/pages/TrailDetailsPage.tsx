@@ -145,7 +145,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     const { slug } = useParams<{ slug: string }>();
     const navigate = useNavigate();
     const location = useLocation();
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const localize = useLocalize();
     const { trail, loading, error } = useTrailBySlug(slug);
     usePageTitle(trail?.name);
@@ -609,7 +609,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                 variant="outlined"
                                 startIcon={<FileDownloadIcon fontSize="small" />}
                                 component="a"
-                                href={`${API_URL}/api/v1/trails/${trail.slug}/gpx`}
+                                href={`${API_URL}/api/v1/trails/${trail.slug}/gpx${i18n.language === 'en' ? '?lang=en' : ''}`}
                                 download
                                 onClick={() => trackTrailGpxDownload(trail.slug)}
                                 sx={{ minWidth: 44, minHeight: 44 }}

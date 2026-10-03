@@ -72,6 +72,75 @@ public class FeedbackHandlerTests : IDisposable
     }
 
     [Fact]
+    public async Task SubmitFeedback_SubjectReferencesSubmittingHost_WhenPageUrlIsOtherBrand()
+    {
+        var handler = CreateSubmitHandler(tipRecipient: "admin@example.com");
+        var cmd = new SubmitFeedbackCommand(
+            "https://360runs.com/trails/esjan", "Test message", "bug",
+            "Tester", "tester@example.com", null, null, null);
+
+        await handler.Handle(cmd, CancellationToken.None);
+
+        _emailMock.Verify(e => e.SendAsync(
+            "admin@example.com",
+            It.Is<string>(s => s.Contains("360runs.com")),
+            It.IsAny<string>(),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task SubmitFeedback_SubjectFallsBackToHlaupadagskra_WhenPageUrlIsUnparseable()
+    {
+        var handler = CreateSubmitHandler(tipRecipient: "admin@example.com");
+        var cmd = new SubmitFeedbackCommand(
+            "not a url", "Test message", "bug",
+            "Tester", "tester@example.com", null, null, null);
+
+        await handler.Handle(cmd, CancellationToken.None);
+
+        _emailMock.Verify(e => e.SendAsync(
+            "admin@example.com",
+            It.Is<string>(s => s.Contains("hlaupadagskra.is")),
+            It.IsAny<string>(),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task SubmitFeedback_SubjectFallsBackToHlaupadagskra_WhenPageUrlIsEmpty()
+    {
+        var handler = CreateSubmitHandler(tipRecipient: "admin@example.com");
+        var cmd = new SubmitFeedbackCommand(
+            "", "Test message", "bug",
+            "Tester", "tester@example.com", null, null, null);
+
+        await handler.Handle(cmd, CancellationToken.None);
+
+        _emailMock.Verify(e => e.SendAsync(
+            "admin@example.com",
+            It.Is<string>(s => s.Contains("hlaupadagskra.is")),
+            It.IsAny<string>(),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task SubmitFeedback_SubjectFallsBackToHlaupadagskra_WhenPageUrlParsesToEmptyHost()
+    {
+        // "javascript:alert(1)" parses successfully (no UriFormatException) but Uri.Host is "".
+        var handler = CreateSubmitHandler(tipRecipient: "admin@example.com");
+        var cmd = new SubmitFeedbackCommand(
+            "javascript:alert(1)", "Test message", "bug",
+            "Tester", "tester@example.com", null, null, null);
+
+        await handler.Handle(cmd, CancellationToken.None);
+
+        _emailMock.Verify(e => e.SendAsync(
+            "admin@example.com",
+            It.Is<string>(s => s.Contains("hlaupadagskra.is")),
+            It.IsAny<string>(),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public async Task SubmitFeedback_DoesNotThrow_WhenEmailFails()
     {
         _emailMock.Setup(e => e.SendAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))

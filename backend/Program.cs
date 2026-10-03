@@ -40,6 +40,7 @@ using Utanvega.Backend.Application.Trails.Queries.GetTrendingTrails;
 using Utanvega.Backend.Application.Trails.Commands.RecordTrailView;
 using Utanvega.Backend.Application.Weather.Queries;
 using Utanvega.Backend.Core.Services;
+using Utanvega.Backend.Application.Events;
 using Utanvega.Backend.Application.Events.Queries.GetEvents;
 using Utanvega.Backend.Application.Events.Queries.GetEvent;
 using Utanvega.Backend.Application.Events.Queries.GetEventSuggestions;
@@ -527,12 +528,7 @@ app.Use(async (HttpContext context, RequestDelegate next) =>
     }
     catch (ValidationException ex)
     {
-        context.Response.StatusCode = 400;
-        context.Response.ContentType = "application/json";
-        var errors = ex.Errors
-            .GroupBy(e => e.PropertyName)
-            .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
-        await context.Response.WriteAsJsonAsync(new { title = "Validation failed", errors });
+        await ex.ToProblem().ExecuteAsync(context);
     }
     catch (Exception ex)
     {
@@ -602,9 +598,9 @@ app.MapGet("/api/v1/trails/{slug}/geometry", async (string slug, IMediator media
 })
 .WithName("GetPublicTrailGeometry");
 
-app.MapGet("/api/v1/trails/{slug}/gpx", async (string slug, IMediator mediator) =>
+app.MapGet("/api/v1/trails/{slug}/gpx", async (string slug, string? lang, IMediator mediator) =>
 {
-    var response = await mediator.Send(new GetTrailGpxQuery(slug));
+    var response = await mediator.Send(new GetTrailGpxQuery(slug, lang));
     if (response == null) return Results.NotFound();
     
     return Results.File(
@@ -1096,6 +1092,10 @@ app.MapPost("/api/v1/admin/trails/upload-gpx", [Authorize(Policy = "AdminOnly")]
         
         return Results.Created($"/api/v1/admin/trails/{result.Id}", response);
     }
+    catch (ValidationException ex)
+    {
+        return ex.ToProblem();
+    }
     catch (Exception ex)
     {
         logger.LogError(ex, "GPX upload failed for trail {TrailName}", name);
@@ -1117,6 +1117,10 @@ app.MapPut("/api/v1/admin/trails/{id:guid}/gpx", [Authorize(Policy = "AdminOnly"
         var result = await mediator.Send(new UpdateTrailGpxCommand(id, gpxXml, GetAuthenticatedUserId(httpContext)));
         if (result == null) return Results.NotFound();
         return Results.Ok(result);
+    }
+    catch (ValidationException ex)
+    {
+        return ex.ToProblem();
     }
     catch (Exception ex)
     {
@@ -1151,6 +1155,10 @@ app.MapPost("/api/v1/admin/trails/check-similarity", [Authorize(Policy = "AdminO
         };
 
         return Results.Ok(response);
+    }
+    catch (ValidationException ex)
+    {
+        return ex.ToProblem();
     }
     catch (Exception ex)
     {
@@ -1200,6 +1208,10 @@ app.MapPost("/api/v1/admin/trails/bulk-check-similarity", [Authorize(Policy = "A
         
         return Results.Ok(response);
     }
+    catch (ValidationException ex)
+    {
+        return ex.ToProblem();
+    }
     catch (Exception ex)
     {
         logger.LogError(ex, "Bulk similarity check failed for {FileCount} files", gpxFiles.Count);
@@ -1241,6 +1253,10 @@ app.MapPost("/api/v1/admin/trails/bulk-upload-gpx", [Authorize(Policy = "AdminOn
         var command = new BulkCreateTrailsFromGpxCommand(gpxFiles, GetAuthenticatedUserId(context));
         var trailIds = await mediator.Send(command);
         return Results.Ok(new { count = trailIds.Count, ids = trailIds });
+    }
+    catch (ValidationException ex)
+    {
+        return ex.ToProblem();
     }
     catch (Exception ex)
     {
@@ -1293,6 +1309,10 @@ app.MapDelete("/api/v1/admin/locations/{id:guid}", [Authorize(Policy = "AdminOnl
     {
         await mediator.Send(new DeleteLocationCommand(id, GetAuthenticatedUserId(httpContext)));
         return Results.NoContent();
+    }
+    catch (ValidationException ex)
+    {
+        return ex.ToProblem();
     }
     catch (InvalidOperationException ex)
     {
@@ -1602,7 +1622,7 @@ app.MapGet("/api/v1/events/history/years", async (IMediator mediator) =>
 })
 .WithName("GetEditionsHistoryYears");
 
-app.MapGet("/api/v1/events/calendar.ics", async (IMediator mediator, IConfiguration configuration, UtanvegaDbContext context, IMemoryCache cache) =>
+app.MapGet("/api/v1/events/calendar.ics", async (string? lang, IMediator mediator, IConfiguration configuration, UtanvegaDbContext context, IMemoryCache cache) =>
 {
     var flags = await cache.GetOrCreateAsync("feature_flags", async entry =>
     {
@@ -1614,18 +1634,28 @@ app.MapGet("/api/v1/events/calendar.ics", async (IMediator mediator, IConfigurat
     if (flags == null || !flags.TryGetValue("calendar_integration", out var enabled) || !enabled)
         return Results.NotFound();
 
-    var icsContent = await cache.GetOrCreateAsync("calendar_ics_content", async entry =>
+    var isEnglish = string.Equals(lang, "en", StringComparison.OrdinalIgnoreCase);
+
+    var icsContent = await cache.GetOrCreateAsync($"calendar_ics_content:{(isEnglish ? "en" : "is")}", async entry =>
     {
         entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10);
 
-        var siteUrl = configuration["SiteUrl"] ?? "https://www.hlaupadagskra.is";
+        // #1161: the English feed points Uid/Url/PRODID at the 360runs.com brand (already used
+        // elsewhere — frontend/api/_site.ts's BRAND_NAME.en, appsettings.json's AllowedOrigins)
+        // instead of the Icelandic/default hlaupadagskra.is SiteUrl. siteUrl feeds every one of
+        // Uid, Url, and (deliberately, for consistency with Url) the "More info" links in
+        // Description below — a single branch here keeps all of them in lockstep rather than
+        // threading the isEnglish check through each usage separately.
+        var siteUrl = isEnglish
+            ? (configuration["SiteUrlEn"] ?? CalendarHostHelpers.DefaultSiteUrlEn)
+            : (configuration["SiteUrl"] ?? CalendarHostHelpers.DefaultSiteUrl);
+        var (bareSiteHost, productIdHost) = CalendarHostHelpers.ComputeCalendarHosts(siteUrl);
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var rangeFrom = today.AddMonths(-3);
         var rangeTo = today.AddMonths(12);
         var days = await mediator.Send(new GetEventCalendarQuery(rangeFrom, rangeTo));
 
         var ical = new Ical.Net.Calendar();
-        ical.ProductId = "-//Hlaupadagskra.is//Events//IS";
 
         // Collapse multi-day events: track full key → (firstDay, lastDay, event)
         // keyMap maps slug|title → current active full key; gap detection prevents collapsing separate editions
@@ -1654,24 +1684,47 @@ app.MapGet("/api/v1/events/calendar.ics", async (IMediator mediator, IConfigurat
         foreach (var (key, (first, last, ev)) in seen)
         {
             var dtEnd = last.AddDays(1); // iCal all-day end is exclusive
+            var name = isEnglish ? (ev.NameEn ?? ev.Name) : ev.Name;
+            var editionTitle = isEnglish ? (ev.EditionTitleEn ?? ev.EditionTitle) : ev.EditionTitle;
+            var locationName = isEnglish ? (ev.LocationNameEn ?? ev.LocationName) : ev.LocationName;
             var vEvent = new Ical.Net.CalendarComponents.CalendarEvent
             {
-                Uid = $"{ev.Slug}-{first:yyyy-MM-dd}@hlaupadagskra.is",
+                Uid = $"{ev.Slug}-{first:yyyy-MM-dd}@{bareSiteHost}",
                 DtStart = new Ical.Net.DataTypes.CalDateTime(first.Year, first.Month, first.Day),
                 DtEnd = new Ical.Net.DataTypes.CalDateTime(dtEnd.Year, dtEnd.Month, dtEnd.Day),
                 IsAllDay = true,
-                Summary = ev.EditionTitle != null ? $"{ev.Name} – {ev.EditionTitle}" : ev.Name,
-                Location = ev.LocationName ?? "",
+                Summary = editionTitle != null ? $"{name} – {editionTitle}" : name,
+                Location = locationName ?? "",
                 Url = new Uri($"{siteUrl}/events/{ev.Slug}"),
             };
-            vEvent.Description = ev.RaceCount > 0
-                ? $"{ev.RaceCount} race(s). More info: {siteUrl}/events/{ev.Slug}\n\nhttps://www.hlaupadagskra.is – Öll hlaup á einum stað"
-                : $"More info: {siteUrl}/events/{ev.Slug}\n\nhttps://www.hlaupadagskra.is – Öll hlaup á einum stað";
+            vEvent.Description = isEnglish
+                ? (ev.RaceCount > 0
+                    ? $"{ev.RaceCount} race(s). More info: {siteUrl}/events/{ev.Slug}\n\n{siteUrl} – All trail races in one place"
+                    : $"More info: {siteUrl}/events/{ev.Slug}\n\n{siteUrl} – All trail races in one place")
+                : (ev.RaceCount > 0
+                    ? $"{ev.RaceCount} race(s). More info: {siteUrl}/events/{ev.Slug}\n\n{siteUrl} – Öll hlaup á einum stað"
+                    : $"More info: {siteUrl}/events/{ev.Slug}\n\n{siteUrl} – Öll hlaup á einum stað");
             ical.Events.Add(vEvent);
         }
 
         var serializer = new Ical.Net.Serialization.CalendarSerializer();
-        return serializer.SerializeToString(ical);
+        var serialized = serializer.SerializeToString(ical);
+
+        // Ical.Net's CalendarSerializer (4.x) unconditionally rewrites the VCALENDAR's PRODID line to
+        // its own library default at serialize time — setting Calendar.ProductId before serializing
+        // (as this handler used to) has no effect on the actual output; that assignment has silently
+        // been dead code since #1034 introduced it. The only way to get a custom PRODID into the
+        // served feed is to patch the serialized string afterward. #1049 originally scoped this to the
+        // English feed only, deliberately leaving the Icelandic/default path unpatched to satisfy
+        // #1035's regression guard that the no-`lang` response stay byte-for-byte unchanged; #1051
+        // extends the same patch to the Icelandic/default path now that that guard has been updated.
+        serialized = System.Text.RegularExpressions.Regex.Replace(
+            serialized,
+            "^PRODID:[^\r\n]*",
+            $"PRODID:-//{productIdHost}//Events//{(isEnglish ? "EN" : "IS")}",
+            System.Text.RegularExpressions.RegexOptions.Multiline);
+
+        return serialized;
     });
 
     return Results.Text(icsContent!, "text/calendar; charset=utf-8");
@@ -2401,6 +2454,10 @@ app.MapPost("/api/v1/tips", async (SendTipRequest request, IMediator mediator, I
         await mediator.Send(new SendTipCommand(request.PageUrl, request.Message));
         return Results.Ok();
     }
+    catch (ValidationException ex)
+    {
+        return ex.ToProblem();
+    }
     catch (Exception ex)
     {
         logger.LogError(ex, "Failed to send tip for page {PageUrl}", request.PageUrl);
@@ -2432,6 +2489,10 @@ app.MapPost("/api/v1/feedback", async (SubmitFeedbackRequest req, IMediator medi
             req.PageUrl, req.Message, req.Category, req.Name, req.Email,
             req.StepsToReproduce, req.BrowserInfo, req.ScreenshotUrl));
         return Results.Ok(new { id });
+    }
+    catch (ValidationException ex)
+    {
+        return ex.ToProblem();
     }
     catch (Exception ex)
     {

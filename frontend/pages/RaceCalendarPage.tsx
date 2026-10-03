@@ -267,7 +267,7 @@ function ScheduleView({ days, loading, today, onEventClick, loc, t }: ScheduleVi
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPageProps) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     usePageTitle(t('calendar.title'));
     const loc = useLocalize();
     const theme = useTheme();
@@ -360,6 +360,10 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
         setSelectedDay(dayData);
         setAnchorEl(event.currentTarget);
     };
+
+    // Same feed, localized by the active UI language — the backend defaults to Icelandic
+    // when `lang` is absent, so only the English case needs the query param appended.
+    const calendarIcsUrl = `${API_URL}/api/v1/events/calendar.ics${i18n.language === 'en' ? '?lang=en' : ''}`;
 
     return (
         <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('nav.events'), to: '/events' }, { label: t('nav.eventsCalendar') }]}>
@@ -668,7 +672,7 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
                         <TextField
                             fullWidth
                             size="small"
-                            value={`${API_URL}/api/v1/events/calendar.ics`}
+                            value={calendarIcsUrl}
                             InputProps={{
                                 readOnly: true,
                                 endAdornment: (
@@ -677,7 +681,7 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
                                                 <IconButton
                                                     size="small"
                                                     onClick={() => {
-                                                        navigator.clipboard.writeText(`${API_URL}/api/v1/events/calendar.ics`).then(() => {
+                                                        navigator.clipboard.writeText(calendarIcsUrl).then(() => {
                                                             setUrlCopied(true);
                                                             setTimeout(() => setUrlCopied(false), 3000);
                                                         });
@@ -713,7 +717,7 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
                         <Button
                             variant="outlined"
                             startIcon={<OpenInNewIcon />}
-                            href={`${API_URL}/api/v1/events/calendar.ics`.replace(/^https?:/, 'webcal:')}
+                            href={calendarIcsUrl.replace(/^https?:/, 'webcal:')}
                             onClick={() => setSubscribeDialogOpen(false)}
                         >
                             {t('calendar.subscribeDialog.openInApp', 'Open in calendar app')}

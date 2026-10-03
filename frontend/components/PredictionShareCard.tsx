@@ -5,6 +5,8 @@ import DownloadIcon from '@mui/icons-material/Download';
 import CloseIcon from '@mui/icons-material/Close';
 import IconButton from '@mui/material/IconButton';
 import { useTranslation } from 'react-i18next';
+import { siteForHostname } from '../hooks/usePageTitle';
+import { loadBrandImage } from '../utils/cardCanvas';
 
 interface PredictionShareCardProps {
     trailAName: string;
@@ -21,24 +23,6 @@ interface PredictionShareCardProps {
 
 const CARD_WIDTH = 1080;
 const CARD_HEIGHT = 1080;
-
-let cachedBrandImage: HTMLImageElement | null = null;
-let brandImageLoading = false;
-const brandImageCallbacks: Array<(img: HTMLImageElement) => void> = [];
-
-function loadBrandImage(onLoad: (img: HTMLImageElement) => void) {
-    if (cachedBrandImage) { onLoad(cachedBrandImage); return; }
-    brandImageCallbacks.push(onLoad);
-    if (brandImageLoading) return;
-    brandImageLoading = true;
-    const img = new Image();
-    img.src = '/images/hlaupadagskra.avif';
-    img.onload = () => {
-        cachedBrandImage = img;
-        for (const cb of brandImageCallbacks) cb(img);
-        brandImageCallbacks.length = 0;
-    };
-}
 
 function drawRoundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
     ctx.beginPath();
@@ -214,7 +198,7 @@ function renderCard(
     y += 48;
     ctx.font = '26px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
     ctx.fillStyle = isDark ? '#607d8b' : '#90a4ae';
-    ctx.fillText('hlaupadagskra.is', CARD_WIDTH / 2, y);
+    ctx.fillText(siteForHostname(window.location.hostname), CARD_WIDTH / 2, y);
 
     ctx.fillStyle = accentColor;
     ctx.globalAlpha = 0.6;

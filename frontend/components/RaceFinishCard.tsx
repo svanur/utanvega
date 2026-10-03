@@ -19,6 +19,7 @@ import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import IconButton from '@mui/material/IconButton';
 import { useTranslation } from 'react-i18next';
 import { ACTIVITY_EMOJI } from '../constants/activityEmoji';
+import { siteForHostname } from '../hooks/usePageTitle';
 import TimePickerInput from './TimePickerInput';
 import {
     getActivityTheme,
@@ -196,7 +197,7 @@ function renderFinishCard(
     ctx.font = '30px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
     ctx.fillStyle = isDark ? '#4a5568' : '#9ca3af';
     ctx.textAlign = 'center';
-    ctx.fillText('hlaupadagskra.is', W / 2, H - 90);
+    ctx.fillText(siteForHostname(window.location.hostname), W / 2, H - 90);
 
     // Thin accent line under branding
     ctx.fillStyle = theme.accent;

@@ -32,6 +32,9 @@ import { useInstallPrompt } from '../hooks/useInstallPrompt';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { useLoginEnabled } from '../hooks/useLoginEnabled';
 import { trackStoreIconClick } from '../utils/analytics';
+import { isStagingHost } from '../utils/hostEnv';
+import { BRAND_NAME, localeForHostname } from '../api/_site';
+import { brandImageSrcForHostname } from '../utils/cardCanvas';
 
 interface NavChild {
     label: string;
@@ -88,14 +91,17 @@ function ScrollToTopButton() {
     );
 }
 
-const PROD_HOSTNAMES = ['hlaupadagskra.is', 'www.hlaupadagskra.is'];
 const STAGING_BANNER_HEIGHT = 28;
 
 export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', bottomContent, breadcrumb }: LayoutProps) {
     const navigate = useNavigate();
     const { t } = useTranslation();
     const theme = useTheme();
-    const isStaging = !PROD_HOSTNAMES.includes(window.location.hostname);
+    const isStaging = isStagingHost(window.location.hostname);
+    const locale = localeForHostname(window.location.hostname);
+    const brandImageSrc = brandImageSrcForHostname(window.location.hostname);
+    // No English storefront exists yet, so the store icon is Icelandic-brand-only.
+    const hasOnlineStore = locale !== 'en';
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const weather = useHeaderWeather();
     const heroTheme = useHeroTheme();
@@ -194,12 +200,14 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
                         <ButtonBase
                             onClick={() => navigate('/')}
                             sx={{ flexGrow: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'flex-start', borderRadius: 1 }}
-                            aria-label="Go to hlaupadagskra.is"
+                            aria-label={t('nav.goHome')}
                         >
-                            <img src="/images/hlaupadagskra.avif" alt="" style={{ height: 32, width: 'auto' }} />
+                            {brandImageSrc && (
+                                <img src={brandImageSrc} alt="" style={{ height: 32, width: 'auto' }} />
+                            )}
                             {!isMobile && (
                                 <Typography variant="h6" component="div" noWrap>
-                                    Hlaupadagskra.is
+                                    {BRAND_NAME[locale]}
                                 </Typography>
                             )}
                         </ButtonBase>
@@ -326,16 +334,18 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
                         </Tooltip>
                     )}
 
-                    <Tooltip title={t('nav.onlineStore')}>
-                        <IconButton
-                            color="inherit"
-                            size="small"
-                            aria-label={t('nav.onlineStore')}
-                            onClick={() => { trackStoreIconClick(); window.open('https://verslun.hlaupadagskra.is', '_blank', 'noopener,noreferrer'); }}
-                        >
-                            <ShoppingBagIcon fontSize="small" />
-                        </IconButton>
-                    </Tooltip>
+                    {hasOnlineStore && (
+                        <Tooltip title={t('nav.onlineStore')}>
+                            <IconButton
+                                color="inherit"
+                                size="small"
+                                aria-label={t('nav.onlineStore')}
+                                onClick={() => { trackStoreIconClick(); window.open('https://verslun.hlaupadagskra.is', '_blank', 'noopener,noreferrer'); }}
+                            >
+                                <ShoppingBagIcon fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                    )}
 
                     <Tooltip title={mode === 'light' ? t('nav.darkMode') : t('nav.lightMode')}>
                         <IconButton color="inherit" onClick={onToggleMode} size="small" aria-label="toggle dark mode">

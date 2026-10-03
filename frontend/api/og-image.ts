@@ -1,5 +1,6 @@
 import { ImageResponse } from '@vercel/og';
 import type React from 'react';
+import { resolveLocale, BRAND_NAME, type Locale } from './_site';
 
 export const config = { runtime: 'edge' };
 
@@ -47,6 +48,28 @@ const DIFFICULTY_COLORS: Record<string, string> = {
   Expert: '#9C27B0',
 };
 
+/**
+ * Top-bar brand label per locale — derived from _site.ts's BRAND_NAME (#1096),
+ * uppercased and suffixed to read as the domain (360Runs has no ".com" of its
+ * own the way Hlaupadagskra.is already carries its ".is").
+ */
+const BRAND_LABEL: Record<Locale, string> = {
+  is: `🏃 ${BRAND_NAME.is.toUpperCase()}`,
+  en: `🏃 ${BRAND_NAME.en.toUpperCase()}.COM`,
+};
+
+/** defaultImage() heading per locale — same shared BRAND_NAME, no decoration beyond the emoji. */
+const BRAND_HEADING: Record<Locale, string> = {
+  is: `🏃 ${BRAND_NAME.is}`,
+  en: `🏃 ${BRAND_NAME.en}`,
+};
+
+/** defaultImage() tagline per locale — English wording matches manifest.ts's IDENTITY.en.description. */
+const TAGLINE: Record<Locale, string> = {
+  is: 'Öll hlaup á einum stað',
+  en: 'All trail races in one place',
+};
+
 interface TrailResponse {
   name: string;
   slug: string;
@@ -62,9 +85,10 @@ interface TrailResponse {
 export default async function handler(request: Request) {
   const url = new URL(request.url);
   const slug = url.searchParams.get('slug');
+  const locale = resolveLocale(request);
 
   if (!slug) {
-    return defaultImage();
+    return defaultImage(locale);
   }
 
   try {
@@ -74,7 +98,7 @@ export default async function handler(request: Request) {
     );
 
     if (!res.ok) {
-      return defaultImage();
+      return defaultImage(locale);
     }
 
     const trail = await res.json() as TrailResponse;
@@ -115,7 +139,7 @@ export default async function handler(request: Request) {
             fontWeight: 700,
             color: '#90CAF9',
             letterSpacing: '-0.5px',
-          }, '🏃 HLAUPADAGSKRA.IS'),
+          }, BRAND_LABEL[locale]),
         ),
         h('div', {
           display: 'flex',
@@ -192,11 +216,11 @@ export default async function handler(request: Request) {
       },
     });
   } catch {
-    return defaultImage();
+    return defaultImage(locale);
   }
 }
 
-function defaultImage() {
+function defaultImage(locale: Locale) {
   const image = h(
     'div',
     {
@@ -210,8 +234,8 @@ function defaultImage() {
       fontFamily: 'sans-serif',
       color: 'white',
     },
-    h('div', { display: 'flex', fontSize: '72px', fontWeight: 800, marginBottom: '16px' }, '🏃 Hlaupadagskra.is'),
-    h('div', { display: 'flex', fontSize: '28px', color: '#94a3b8' }, 'Öll hlaup á einum stað'),
+    h('div', { display: 'flex', fontSize: '72px', fontWeight: 800, marginBottom: '16px' }, BRAND_HEADING[locale]),
+    h('div', { display: 'flex', fontSize: '28px', color: '#94a3b8' }, TAGLINE[locale]),
   );
 
   return new ImageResponse(image as unknown as React.ReactElement, {

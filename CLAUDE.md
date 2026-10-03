@@ -8,6 +8,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Hlaupadagskra.is (repo name `utanvega`) — a bilingual (Icelandic default, English) mobile-first PWA for discovering trail running/hiking/cycling trails in Iceland. Three apps in one repo: a public `frontend`, an `admin` dashboard, and a shared `.NET` `backend`.
 
+The site is multi-brand, not single-brand: it answers on two production hosts, `hlaupadagskra.is` and `360runs.com`, each with its own default locale (Icelandic vs. English) and brand name — so "bilingual, Icelandic default" above is per-host, not fixed site-wide. `frontend/api/_site.ts`'s `HOST_LOCALES`/`BRAND_NAME` maps are the single source of truth for this host→locale/brand resolution; `frontend/i18n/i18n.ts`, `og.ts`, `og-image.ts`, `manifest.ts`, and `frontend/utils/hostEnv.ts` all import from there rather than re-declaring the host list. `backend/Application/Events/CalendarHostHelpers.cs` is not an equivalent per-request mirror of this: it derives the calendar.ics feed's PRODID/UID brand strings from a single static `configuration["SiteUrl"]` value (defaulting to `https://www.hlaupadagskra.is`, see `backend/appsettings.json`), not from the incoming request's Host header — so the calendar feed is host-agnostic by design, and a 360runs.com visitor still gets Hlaupadagskra.is-branded calendar.ics output.
+
 ## Commands
 
 Run from repo root unless noted.
@@ -38,19 +40,19 @@ Backend uses `dotnet user-secrets` for local config (connection strings, Supabas
 
 **Windows gotcha**: stop the running backend process before `dotnet build`/`dotnet test` — the running EXE locks the output and build fails with MSB3027. (`Stop-Process -Id <PID> -Force`)
 
-CI (`.github/workflows/ci.yml`) runs backend build+test and frontend build on every push/PR to `main`; there's no separate admin CI job.
+CI (`.github/workflows/ci.yml:17-37`) runs three jobs on every push/PR to `main`: `backend` (build+test), `frontend` (lint+build+test), and `admin` (lint+build+test). `frontend` and `admin` both reuse the shared `.github/workflows/frontend-build.yml` workflow with `test-command: npm run test`, differentiated only by the `working-directory`/`artifact-name` inputs (`admin` sets these; `frontend` uses the workflow's defaults).
 
 ## Architecture
 
 **Backend** (`backend/`) — .NET 9 minimal APIs (no controllers), all endpoints registered directly in `Program.cs` (~1700 lines) via `app.MapGet/MapPost/...`. CQRS via MediatR:
-- `Application/<Feature>/Commands|Queries` — MediatR handlers, one feature folder per domain concept (Trails, Locations, Events, Activities, TrailCheckIns, Analytics, History, Weather, Validation, Caching).
+- `Application/<Feature>/Commands|Queries` — MediatR handlers, one feature folder per domain concept (Activities, Analytics, Caching, Events, Feedback, History, Locations, Organizers, PhotoGalleries, Photographers, Tags, Tips, TrailCheckIns, Trails, Validation, Weather).
 - `Core/Entities`, `Core/Services` — domain entities and services, framework-agnostic.
 - `Infrastructure/Persistence` — EF Core `DbContext`, repositories, migrations live in `backend/Migrations`.
-- Endpoints call `IMediator.Send(...)`; auth is `[Authorize]` per-endpoint with JWT bearer (Supabase-issued tokens validated via `SUPABASE_JWT_SECRET`); error handling is per-endpoint try/catch → `Results.Problem()/NotFound()/BadRequest()` (no global exception middleware).
+- Endpoints call `IMediator.Send(...)`; auth is `[Authorize]` per-endpoint with JWT bearer (Supabase-issued tokens validated via `SUPABASE_JWT_SECRET`); error handling is two-layered: a global `app.Use(...)` middleware (`Program.cs:522-543`) catches `ValidationException` → `ex.ToProblem()` (structured 400) and any other unhandled `Exception` → sanitized 500 (logged); per-endpoint try/catch remains the convention for anything needing a different status code (404/409/403/etc.) or domain-specific handling, e.g. `Results.Problem()/NotFound()/BadRequest()`, or a `DbUpdateException` → 409 Conflict on a unique-slug collision.
 - PostGIS is used for spatial data: `GpxData` is `LineStringZ` (3D, elevation-preserving), location centers are `Point` + radius in km, SRID 4326.
 - Icelandic slug generation normalizes special characters (þ→th, ð→d, æ→ae, ö, á, é, í, ó, ú, ý).
 
-**backend.Tests/** — xUnit + Moq + SQLite in-memory (`TestDbContextFactory.cs`), organized to mirror source: `Handlers/`, `Services/`, `Validators/`.
+**backend.Tests/** — xUnit + Moq + SQLite in-memory (`TestDbContextFactory.cs`), organized to mirror source: `Caching/`, `Endpoints/`, `Entities/`, `Handlers/`, `Services/`, `Validators/`, `WebHost/`.
 
 **Frontend** (`frontend/`) and **Admin** (`admin/`) — separate Vite apps, same conventions:
 - MUI 5 with `sx` prop / theme (`theme.ts`) for styling — no styled-components, no CSS modules, no hardcoded colors (breaks dark mode).

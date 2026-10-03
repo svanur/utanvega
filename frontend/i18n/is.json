@@ -84,6 +84,7 @@
         "events": "Viðburðir",
         "fun": "Gaman",
         "tagline": "Öll hlaup á einum stað",
+        "goHome": "Fara á {{brandName}}",
         "onlineStore": "Verslun",
         "tools": "Hlaupatól",
         "explore": "Skoða",
@@ -775,7 +776,7 @@
         "historyTitle": "Sagan",
         "milestones": {
             "v2_launch": {
-                "title": "hlaupadagskra.is 2.0",
+                "title": "Hlaupadagskra.is 2.0",
                 "description": "Önnur útgáfa vefsins fer í loftið með viðburðakerfi, dagatali, hlaupaleiðum, tengdum keppnum og mörgum fleiri nýungum."
             },
             "scratchcard": {
@@ -792,6 +793,10 @@
             }
         },
         "changelog": {
+            "v1_15_0": {
+                "title": "Vefurinn uppfæraður m.t.t. enska lénsins, 360Runs.com",
+                "description": "Nýtt lén, 360runs.com, þjónar núna ensku útgáfunni undir eigin léni — titlar, GPX-leiðarskrár, tilkynningar í stjórnborði og textar aðlagast sjálfkrafa eftir léninu sem notandinn er á. Samhliða útgáfunni var villumeðhöndlun í bakenda gerð samræmdari."
+            },
             "v1_14_1": {
                 "title": "Stjórnborð: laga bögg á viðburðalistann og þegar leitað var eftir fyrri viðburðum",
                 "description": "Viðburðalistinn uppfærist núna samstundist við leit eftir fyrri viðburðum"

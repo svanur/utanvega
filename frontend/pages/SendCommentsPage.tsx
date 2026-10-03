@@ -23,7 +23,7 @@ export default function SendCommentsPage({ mode, onToggleMode }: SendCommentsPag
                             {t('betaComments.title', { defaultValue: 'Beta Feedback' })}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                            {t('betaComments.subtitle', { defaultValue: 'Help us improve the new hlaupadagskra.is' })}
+                            {t('betaComments.subtitle', { defaultValue: 'Help us improve the new {{brandName}}' })}
                         </Typography>
                     </Box>
                 </Box>

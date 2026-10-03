@@ -1218,7 +1218,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                     title: loc(race.raceName, race.raceNameEn) ?? race.raceName,
                                                                     date: race.dateOfRace!,
                                                                     location: comp.locationName ?? undefined,
-                                                                    url: `https://hlaupadagskra.is/events/${comp.slug}`,
+                                                                    url: `${window.location.origin}/events/${comp.slug}`,
                                                                 });
                                                             }}
                                                             sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', bgcolor: 'primary.main', color: 'white', cursor: 'pointer', gap: 0.5, px: 1, fontSize: '0.7rem', fontWeight: 600 }}
@@ -1411,7 +1411,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                             date: (comp.displayDate ?? comp.nextEditionDate)!,
                                                             endDate: comp.endDisplayDate ?? undefined,
                                                             location: comp.locationName ?? undefined,
-                                                            url: `https://hlaupadagskra.is/events/${comp.slug}`,
+                                                            url: `${window.location.origin}/events/${comp.slug}`,
                                                         });
                                                     }}
                                                     sx={{

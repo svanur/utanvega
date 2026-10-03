@@ -84,6 +84,7 @@
         "events": "Events",
         "fun": "Fun",
         "tagline": "All running events in one place",
+        "goHome": "Go to {{brandName}}",
         "onlineStore": "Store",
         "tools": "Tools",
         "explore": "Explore",
@@ -399,7 +400,7 @@
     },
     "faq": {
         "title": "Frequently Asked Questions",
-        "subtitle": "Answers to common questions about trails, times, and events on Hlaupadagskra.is",
+        "subtitle": "Answers to common questions about trails, times, and events on {{brandName}}",
         "estimatedTime": {
             "q": "How is Estimated Time for trails calculated?",
             "a": "See the model below. Times are estimates only — actual time depends on fitness, terrain conditions, and weather."
@@ -473,7 +474,7 @@
     },
     "betaComments": {
         "title": "Our web is in development",
-        "subtitle": "Help us improve the new hlaupadagskra.is",
+        "subtitle": "Help us improve the new {{brandName}}",
         "intro": "We are actively developing the new website and your feedback makes a real difference. Tell us what works, what is broken, or what you would like to see.",
         "tipHint": "For the best feedback, use the \"Send a tip\" button found on trails and event pages — it automatically captures a screenshot of exactly what you are seeing."
     },
@@ -485,12 +486,12 @@
     },
     "newsletter": {
         "title": "Subscribe to the mailing list",
-        "description": "Want to receive news and updates? Subscribe to the hlaupadagskra.is mailing list.",
+        "description": "Want to receive news and updates? Subscribe to the {{brandName}} mailing list.",
         "comingSoon": "Sign-up opening soon.",
         "subscribe": "Subscribe to mailing list"
     },
     "announcement": {
-        "text": "The new hlaupadagskra.is site is still in development. Join us and",
+        "text": "The new {{brandName}} site is still in development. Join us and",
         "href": "/pages/send-comments",
         "linkText": "send us your feedback"
     },
@@ -504,7 +505,7 @@
         "popular": "Most popular"
     },
     "header": {
-        "tagline": "Hlaupadagskra.is - A site to find races, fun trails and share with friends.",
+        "tagline": "{{brandName}} - A site to find races, fun trails and share with friends.",
         "close": "Close",
         "dontShowAgain": "Don't show again"
     },
@@ -569,10 +570,10 @@
     },
     "privacy": {
         "title": "Privacy Policy",
-        "intro": "Hlaupadagskra.is is committed to respecting your privacy. This policy explains what data we collect, how we use it, and your rights. The short version: we collect very little and share nothing.",
+        "intro": "{{brandName}} is committed to respecting your privacy. This policy explains what data we collect, how we use it, and your rights. The short version: we collect very little and share nothing.",
         "noAccounts": {
             "title": "No User Accounts Required",
-            "body": "The public Hlaupadagskra.is website does not require you to create an account or log in. We do not collect your name, email address, or any personal information to use the site."
+            "body": "The public {{brandName}} website does not require you to create an account or log in. We do not collect your name, email address, or any personal information to use the site."
         },
         "viewTracking": {
             "title": "Trail View Tracking",
@@ -605,7 +606,7 @@
     },
     "runningTrips": {
         "title": "Running Trips",
-        "intro": "We organise small-group guided trail running trips abroad. Each trip is led by Óskar Þór, Tómas G. or Svanur from hlaupadagskra.is.",
+        "intro": "We organise small-group guided trail running trips abroad. Each trip is led by Óskar Þór, Tómas G. or Svanur from {{brandName}}.",
         "statusOpen": "Registration open",
         "statusUpcoming": "Upcoming",
         "statusCompleted": "Completed",
@@ -617,7 +618,7 @@
     "runningTrip": {
         "title": "Running Trip to Switzerland 2026",
         "subtitle": "A guided running adventure in Kandersteg, Swiss Alps — September 3–9, 2026",
-        "description": "Join us for six nights in the Swiss Alps — a guided running trip to Kandersteg, welcoming both runners and non-runners. Organized by Óskar Þór and Tómas G. from hlaupadagskra.is.",
+        "description": "Join us for six nights in the Swiss Alps — a guided running trip to Kandersteg, welcoming both runners and non-runners. Organized by Óskar Þór and Tómas G. from {{brandName}}.",
         "itinerary": "Running itinerary",
         "day1": "Day 1 (Sept 4)",
         "day2": "Day 2 (Sept 5)",
@@ -655,7 +656,7 @@
         },
         "visibility": {
             "title": "Visibility & Events",
-            "description": "Platform visibility on hlaupadagskra.is, international promotion, and EXPO booth content for tourism."
+            "description": "Platform visibility on {{brandName}}, international promotion, and EXPO booth content for tourism."
         },
         "benefitsTitle": "Benefits for event organisers",
         "benefit1": "Enhanced visibility of event conditions for participants",
@@ -702,9 +703,9 @@
         }
     },
     "aboutUs": {
-        "title": "About Hlaupadagskra.is",
+        "title": "About {{brandName}}",
         "tagline": "All events in one place, all year round",
-        "p1": "Hlaupadagskra.is is Iceland's comprehensive running event calendar — a neutral platform consolidating confirmed and upcoming running events from across the country, including official road races, ITRA trail runs, and organised charity runs.",
+        "p1": "{{brandName}} is Iceland's comprehensive running event calendar — a neutral platform consolidating confirmed and upcoming running events from across the country, including official road races, ITRA trail runs, and organised charity runs.",
         "p2": "Events are categorised, linked to registration pages, and connected to relevant social media. Status labels indicate whether events are confirmed, have registration open, or remain unconfirmed.",
         "teamTitle": "The team",
         "coFounder": "Co-founder",
@@ -745,7 +746,7 @@
         "title": "Disclaimer",
         "useAtOwnRisk": {
             "title": "Use at Your Own Risk",
-            "body": "All trail information on Hlaupadagskra.is is provided for informational purposes only. You are solely responsible for your own safety when using any trail. Always assess conditions, your fitness level, and equipment before heading out. Hlaupadagskra.is is not liable for any injuries, accidents, damages, or losses arising from the use of the information on this site."
+            "body": "All trail information on {{brandName}} is provided for informational purposes only. You are solely responsible for your own safety when using any trail. Always assess conditions, your fitness level, and equipment before heading out. {{brandName}} is not liable for any injuries, accidents, damages, or losses arising from the use of the information on this site."
         },
         "weather": {
             "title": "Weather & Conditions",
@@ -763,19 +764,19 @@
         "lastUpdated": "Last updated: {{date}}"
     },
     "about": {
-        "title": "About Hlaupadagskra.is",
-        "description": "Hlaupadagskra.is is a trail discovery platform built for runners, hikers, and cyclists exploring Iceland's wild landscapes. Find trails near you, check elevation profiles, and share your favorites with friends.",
+        "title": "About {{brandName}}",
+        "description": "{{brandName}} is a trail discovery platform built for runners, hikers, and cyclists exploring Iceland's wild landscapes. Find trails near you, check elevation profiles, and share your favorites with friends.",
         "authorTitle": "About us",
         "authorDescription": "The website is maintained by three runners out of a passion for running without any affiliation with any specific company or event, so the support of the running community is important.",
         "authorSignature": "Óskar Þór, Svanur Þór og Tómas G.",
         "missionTitle": "Our mission",
         "missionTagline": "All runs in one place, all year round",
-        "missionDescription": "Our goal with hlaupadagskra.is is to fulfill the desire of runners to see all races throughout the year in one place and be able to search and filter in an accessible way. Races are marked “confirmed, registration open” and such if the event organizers have announced such but “Unconfirmed” or “until there is a correct timing or the race will not be held.",
+        "missionDescription": "Our goal with {{brandName}} is to fulfill the desire of runners to see all races throughout the year in one place and be able to search and filter in an accessible way. Races are marked “confirmed, registration open” and such if the event organizers have announced such but “Unconfirmed” or “until there is a correct timing or the race will not be held.",
         "missionTags": ["Events", "Road races", "Trail races", "Trail discovery"],
         "historyTitle": "History",
         "milestones": {
             "v2_launch": {
-                "title": "hlaupadagskra.is 2.0",
+                "title": "{{brandName}} 2.0",
                 "description": "Version 2 launches with a full events system, race calendar, trail-to-race links, and much more."
             },
             "scratchcard": {
@@ -787,11 +788,15 @@
                 "description": "The 360° video project launches — experience Icelandic running trails in 360 degrees."
             },
             "launch": {
-                "title": "hlaupadagskra.is launches",
-                "description": "Hlaupadagskra.is goes live with a comprehensive list of running events in Iceland."
+                "title": "{{brandName}} launches",
+                "description": "{{brandName}} goes live with a comprehensive list of running events in Iceland."
             }
         },
         "changelog": {
+            "v1_15_0": {
+                "title": "A host-aware branding added/updated across the whole site for 360Runs.com, the english version of the website",
+                "description": "The domain, 360runs.com, now serves the English experience under its own brand name and logo — page titles, calendar subscriptions, GPX trail-file exports, share-card images, admin notifications, and the PWA install prompt all automatically match whichever domain a visitor is on, down to the sitemap, manifest, and social-media link previews. Alongside the launch, backend error handling was made more consistent (validation failures across more endpoints now return a proper structured error instead of a generic server error), and a long tail of internal test-coverage and documentation-accuracy gaps were closed."
+            },
             "v1_14_1": {
                 "title": "Admin: edition status changes now refresh the events list immediately",
                 "description": "Changing an edition's status from its detail page now immediately updates the events list's \"Unconfirmed editions\" filter and badges, instead of leaving them stale for up to 30 seconds — the same fix already applied to the \"Needs review\" toggle."
@@ -857,8 +862,8 @@
                 "description": "Search engines could only see trail pages — every other route was indexed under one generic title with no content. Fixed with per-route titles and descriptions, canonical URLs, robots.txt and a sitemap covering 305 URLs. Compare trails added to the footer with suggested matchups and similar-trail shortcuts. Sticky breadcrumbs that remember whether you arrived from an event or a location. Race share and finish cards redesigned with activity colour themes, bib numbers and personal messages. Consistent favourites across cards and tables, and harmonised filters on Events and Trails."
             },
             "v1_0_0": {
-                "title": "A new hlaupadagskra.is -- VERSION 2.0 WAS LAUNCHED --",
-                "description": "A brand new hlaupadagskra.is version is launched on the Reykjavik Marathon EXPO."
+                "title": "A new Hlaupadagskra.is -- VERSION 2.0 WAS LAUNCHED --",
+                "description": "A brand new Hlaupadagskra.is version is launched on the Reykjavik Marathon EXPO."
             },
             "v0_15_0": {
                 "title": "Smart presets & sharing",
@@ -922,7 +927,7 @@
             },
             "v0_0_0": {
                 "title": "February, 2025",
-                "description": "The original hlaupadagskra.is site is released, listing all runs in Iceland in one place."
+                "description": "The original Hlaupadagskra.is site is released, listing all runs in Iceland in one place."
             }
         },
         "changelogDiary": {
@@ -966,7 +971,7 @@
         "nearby": "Nearby"
     },
     "install": {
-        "title": "Install Hlaupadagskra.is",
+        "title": "Install {{brandName}}",
         "description": "Add to your home screen for quick access and offline use.",
         "button": "Install",
         "iosHint": "Tap Share, then \"Add to Home Screen\"",
@@ -1194,8 +1199,8 @@
             "method": "Grade-adjusted prediction using Riegel's formula + Naismith's rule",
             "copyUrl": "Copy URL",
             "shareImage": "Share my prediction",
-            "shareText": "I'm predicted to finish {{trail}} in {{time}}, based on my time on {{fromTrail}} — hlaupadagskra.is",
-            "shareCardLabel": "Hlaupadagskra.is predicted my finish time",
+            "shareText": "I'm predicted to finish {{trail}} in {{time}}, based on my time on {{fromTrail}} — {{brandName}}",
+            "shareCardLabel": "{{brandName}} predicted my finish time",
             "shareCardBasedOn": "Based on my time in {{trail}} · {{time}}",
             "loadError": "Failed to load trails. Please try again.",
             "summaryText": "If you ran {{knownTrail}} in {{yourTime}}, our prediction is that you will run {{targetTrail}} in {{predictedTime}}.",
@@ -1330,7 +1335,7 @@
         "fourwd": "4WD"
     },
     "races": {
-        "shareQR": "Share hlaupadagskra.is",
+        "shareQR": "Share {{brandName}}",
         "shareQRHint": "Share the web via the QR code or copy the link and send to your friends. All running events in one place - and now, a whole lost of routes to explore.",
         "title": "All events in one place",
         "subtitle": "Upcoming events and races in Iceland. Be sure to confirm final dates on the race organizer's website.",
