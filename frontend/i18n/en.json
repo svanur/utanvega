@@ -84,6 +84,7 @@
         "events": "Events",
         "fun": "Fun",
         "tagline": "All running events in one place",
+        "goHome": "Go to {{brandName}}",
         "onlineStore": "Store",
         "tools": "Tools",
         "explore": "Explore",

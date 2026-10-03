@@ -84,6 +84,7 @@
         "events": "Viðburðir",
         "fun": "Gaman",
         "tagline": "Öll hlaup á einum stað",
+        "goHome": "Fara á {{brandName}}",
         "onlineStore": "Verslun",
         "tools": "Hlaupatól",
         "explore": "Skoða",
