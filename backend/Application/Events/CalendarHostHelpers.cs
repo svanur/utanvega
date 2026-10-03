@@ -6,6 +6,12 @@ public static class CalendarHostHelpers
     // GetEventCalendarIcs endpoint and its tests so the two copies can't silently drift apart (#1077).
     public const string DefaultSiteUrl = "https://www.hlaupadagskra.is";
 
+    // Default SiteUrlEn when configuration["SiteUrlEn"] is unset — the English-path counterpart to
+    // DefaultSiteUrl above, used by the ?lang=en branch of GetEventCalendarIcs (#1161) so the
+    // 360runs.com brand (already present in frontend/api/_site.ts's BRAND_NAME.en and in
+    // appsettings.json's AllowedOrigins) is reflected in PRODID/Uid/Url for English subscribers too.
+    public const string DefaultSiteUrlEn = "https://360runs.com";
+
     // Single source of truth for the domain literals the calendar.ics feed's PRODID/UID are built
     // from. SiteUrl is operator-configured, not user input, but a malformed value here must not
     // take down the whole feed — before #1045 moved this Uri parse ahead of the event loop, a bad

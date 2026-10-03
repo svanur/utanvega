@@ -171,6 +171,46 @@ public class EventCalendarIcsEndpointTests : IDisposable
     }
 
     [Fact]
+    public async Task LangEn_ProductIdUsesEnglishBrand_NotHlaupadagskra()
+    {
+        // #1161: the English feed's PRODID vendor token must read the 360runs.com brand
+        // (DefaultSiteUrlEn), not the hlaupadagskra.is brand the Icelandic/default feed carries —
+        // CalendarHostHelpers.CapitalizeFirstLetter already title-cases "360runs.com" to
+        // "360Runs.com" (see CalendarHostHelpersTests), so this asserts the endpoint actually
+        // threads SiteUrlEn into the English branch instead of reusing SiteUrl for both.
+        SeedCalendarIntegrationFlag();
+        SeedFullyTranslatedEvent();
+
+        var client = _factory.CreateClient();
+        var response = await client.GetAsync("/api/v1/events/calendar.ics?lang=en");
+        response.EnsureSuccessStatusCode();
+        var ics = await response.Content.ReadAsStringAsync();
+
+        var (_, productIdHost) = CalendarHostHelpers.ComputeCalendarHosts(CalendarHostHelpers.DefaultSiteUrlEn);
+        Assert.Contains($"PRODID:-//{productIdHost}//Events//EN", ics);
+        Assert.DoesNotContain("Hlaupadagskra.is", ics);
+    }
+
+    [Fact]
+    public async Task LangEn_UidAndUrl_UseEnglishBrandDomain()
+    {
+        // #1161: each event's Uid suffix and Url should point at 360runs.com in the English feed,
+        // not hlaupadagskra.is — mirroring the PRODID assertion above but for the per-event fields.
+        SeedCalendarIntegrationFlag();
+        SeedFullyTranslatedEvent();
+
+        var client = _factory.CreateClient();
+        var response = await client.GetAsync("/api/v1/events/calendar.ics?lang=en");
+        response.EnsureSuccessStatusCode();
+        var ics = await response.Content.ReadAsStringAsync();
+
+        var (bareSiteHost, _) = CalendarHostHelpers.ComputeCalendarHosts(CalendarHostHelpers.DefaultSiteUrlEn);
+        Assert.Contains($"@{bareSiteHost}", ics);
+        Assert.Contains($"URL:{CalendarHostHelpers.DefaultSiteUrlEn}/events/islandshlaupid", ics);
+        Assert.DoesNotContain("hlaupadagskra.is", ics);
+    }
+
+    [Fact]
     public async Task LangEn_FallsBackToIcelandicFields_WhenEnglishFieldsAreNull()
     {
         SeedCalendarIntegrationFlag();
