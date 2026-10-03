@@ -40,7 +40,7 @@ Backend uses `dotnet user-secrets` for local config (connection strings, Supabas
 
 **Windows gotcha**: stop the running backend process before `dotnet build`/`dotnet test` — the running EXE locks the output and build fails with MSB3027. (`Stop-Process -Id <PID> -Force`)
 
-CI (`.github/workflows/ci.yml:17-37`) runs three jobs on every push/PR to `main`: `backend` (build+test), `frontend` (build+test), and `admin` (build+test). `frontend` and `admin` both reuse the shared `.github/workflows/frontend-build.yml` workflow with `test-command: npm run test`, differentiated only by the `working-directory`/`artifact-name` inputs (`admin` sets these; `frontend` uses the workflow's defaults).
+CI (`.github/workflows/ci.yml:17-37`) runs three jobs on every push/PR to `main`: `backend` (build+test), `frontend` (lint+build+test), and `admin` (lint+build+test). `frontend` and `admin` both reuse the shared `.github/workflows/frontend-build.yml` workflow with `test-command: npm run test`, differentiated only by the `working-directory`/`artifact-name` inputs (`admin` sets these; `frontend` uses the workflow's defaults).
 
 ## Architecture
 
