@@ -14,11 +14,12 @@ import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 // code doesn't throw under vitest's Node environment (no `window` global) — same vi.stubGlobal
 // pattern as api/og.test.ts.
 let brandNameForHostname: (hostname: string) => string;
+let initialLangForHostname: (hostname: string, savedLang: string | null) => string;
 
 beforeAll(async () => {
     vi.stubGlobal('window', { location: { hostname: 'hlaupadagskra.is' } });
     vi.stubGlobal('localStorage', { getItem: () => null });
-    ({ brandNameForHostname } = await import('./i18n'));
+    ({ brandNameForHostname, initialLangForHostname } = await import('./i18n'));
 });
 
 afterAll(() => {
@@ -42,5 +43,27 @@ describe('brandNameForHostname', () => {
 
     it('is case-insensitive, matching localeForHostname', () => {
         expect(brandNameForHostname('WWW.360RUNS.COM')).toBe('360Runs');
+    });
+});
+
+describe('initialLangForHostname', () => {
+    it.each([
+        ['hlaupadagskra.is', 'en'],
+        ['360runs.com', 'is'],
+    ])('a valid saved preference wins on %s even against a conflicting host default', (hostname, savedLang) => {
+        expect(initialLangForHostname(hostname, savedLang)).toBe(savedLang);
+    });
+
+    it.each([
+        ['hlaupadagskra.is', 'is'],
+        ['360runs.com', 'en'],
+        ['localhost', 'is'],
+    ])('with no saved preference, falls through to localeForHostname for %s', (hostname, expected) => {
+        expect(initialLangForHostname(hostname, null)).toBe(expected);
+    });
+
+    it('an invalid/unsupported saved value falls through to the host default', () => {
+        expect(initialLangForHostname('hlaupadagskra.is', 'fr')).toBe('is');
+        expect(initialLangForHostname('360runs.com', 'fr')).toBe('en');
     });
 });
