@@ -1640,7 +1640,15 @@ app.MapGet("/api/v1/events/calendar.ics", async (string? lang, IMediator mediato
     {
         entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10);
 
-        var siteUrl = configuration["SiteUrl"] ?? CalendarHostHelpers.DefaultSiteUrl;
+        // #1161: the English feed points Uid/Url/PRODID at the 360runs.com brand (already used
+        // elsewhere — frontend/api/_site.ts's BRAND_NAME.en, appsettings.json's AllowedOrigins)
+        // instead of the Icelandic/default hlaupadagskra.is SiteUrl. siteUrl feeds every one of
+        // Uid, Url, and (deliberately, for consistency with Url) the "More info" links in
+        // Description below — a single branch here keeps all of them in lockstep rather than
+        // threading the isEnglish check through each usage separately.
+        var siteUrl = isEnglish
+            ? (configuration["SiteUrlEn"] ?? CalendarHostHelpers.DefaultSiteUrlEn)
+            : (configuration["SiteUrl"] ?? CalendarHostHelpers.DefaultSiteUrl);
         var (bareSiteHost, productIdHost) = CalendarHostHelpers.ComputeCalendarHosts(siteUrl);
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var rangeFrom = today.AddMonths(-3);
