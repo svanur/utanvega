@@ -34,6 +34,7 @@ import { useLoginEnabled } from '../hooks/useLoginEnabled';
 import { trackStoreIconClick } from '../utils/analytics';
 import { isStagingHost } from '../utils/hostEnv';
 import { BRAND_NAME, localeForHostname } from '../api/_site';
+import { brandImageSrcForHostname } from '../utils/cardCanvas';
 
 interface NavChild {
     label: string;
@@ -98,6 +99,7 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
     const theme = useTheme();
     const isStaging = isStagingHost(window.location.hostname);
     const locale = localeForHostname(window.location.hostname);
+    const brandImageSrc = brandImageSrcForHostname(window.location.hostname);
     // No English storefront exists yet, so the store icon is Icelandic-brand-only.
     const hasOnlineStore = locale !== 'en';
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -200,7 +202,9 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
                             sx={{ flexGrow: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'flex-start', borderRadius: 1 }}
                             aria-label="Go to hlaupadagskra.is"
                         >
-                            <img src="/images/hlaupadagskra.avif" alt="" style={{ height: 32, width: 'auto' }} />
+                            {brandImageSrc && (
+                                <img src={brandImageSrc} alt="" style={{ height: 32, width: 'auto' }} />
+                            )}
                             {!isMobile && (
                                 <Typography variant="h6" component="div" noWrap>
                                     {BRAND_NAME[locale]}
