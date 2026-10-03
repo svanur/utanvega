@@ -12,7 +12,10 @@ public static class CacheKeys
     public static string Trail(string slug) => $"trail:{slug}";
     public static string Geometry(string slug) => $"geometry:{slug}";
     public static string GeometriesAll => "geometries:all";
-    public static string Gpx(string slug) => $"gpx:{slug}";
+    // #1173: the GPX feed's creator/text brand now varies by lang, so the lang dimension
+    // must be part of the key — otherwise whichever lang request hits first poisons the
+    // 24h cache entry for the other lang.
+    public static string Gpx(string slug, bool isEnglish) => $"gpx:{slug}:{(isEnglish ? "en" : "is")}";
     public static string Trending(int count, int days) => $"trending:{count}:{days}";
 
     // Activities

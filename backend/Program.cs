@@ -598,9 +598,9 @@ app.MapGet("/api/v1/trails/{slug}/geometry", async (string slug, IMediator media
 })
 .WithName("GetPublicTrailGeometry");
 
-app.MapGet("/api/v1/trails/{slug}/gpx", async (string slug, IMediator mediator) =>
+app.MapGet("/api/v1/trails/{slug}/gpx", async (string slug, string? lang, IMediator mediator) =>
 {
-    var response = await mediator.Send(new GetTrailGpxQuery(slug));
+    var response = await mediator.Send(new GetTrailGpxQuery(slug, lang));
     if (response == null) return Results.NotFound();
     
     return Results.File(

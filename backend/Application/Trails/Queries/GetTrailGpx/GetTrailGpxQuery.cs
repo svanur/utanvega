@@ -8,9 +8,13 @@ using Utanvega.Backend.Infrastructure.Persistence;
 
 namespace Utanvega.Backend.Application.Trails.Queries.GetTrailGpx;
 
-public record GetTrailGpxQuery(string Slug) : IRequest<GpxResponse?>, ICacheable
+public record GetTrailGpxQuery(string Slug, string? Lang = null) : IRequest<GpxResponse?>, ICacheable
 {
-    public string CacheKey => CacheKeys.Gpx(Slug);
+    // #1173: the lang query param selects the brand (Hlaupadagskra.is vs 360Runs.com) baked into
+    // the GPX's creator/text literals, so the cache key must vary by lang too — mirrors the
+    // isEnglish check GetEventCalendarIcs's cache key already does for the same reason.
+    private bool IsEnglish => string.Equals(Lang, "en", StringComparison.OrdinalIgnoreCase);
+    public string CacheKey => CacheKeys.Gpx(Slug, IsEnglish);
     public TimeSpan CacheDuration => TimeSpan.FromHours(24);
 }
 
@@ -19,12 +23,12 @@ public record GpxResponse(string FileName, string Content);
 public class GetTrailGpxQueryHandler : IRequestHandler<GetTrailGpxQuery, GpxResponse?>
 {
     private readonly UtanvegaDbContext _context;
-    private readonly string _siteUrl;
+    private readonly IConfiguration _configuration;
 
     public GetTrailGpxQueryHandler(UtanvegaDbContext context, IConfiguration configuration)
     {
         _context = context;
-        _siteUrl = configuration["SiteUrl"] ?? CalendarHostHelpers.DefaultSiteUrl;
+        _configuration = configuration;
     }
 
     public async Task<GpxResponse?> Handle(GetTrailGpxQuery request, CancellationToken cancellationToken)
@@ -35,16 +39,25 @@ public class GetTrailGpxQueryHandler : IRequestHandler<GetTrailGpxQuery, GpxResp
 
         if (trail?.GpxData == null) return null;
 
+        // #1173: same isEnglish branch GetEventCalendarIcs uses (Program.cs) — resolves SiteUrl
+        // vs SiteUrlEn and derives the brand token (e.g. "Hlaupadagskra.is" / "360Runs.com") from
+        // the host, instead of hardcoding the Icelandic brand regardless of lang.
+        var isEnglish = string.Equals(request.Lang, "en", StringComparison.OrdinalIgnoreCase);
+        var siteUrl = isEnglish
+            ? (_configuration["SiteUrlEn"] ?? CalendarHostHelpers.DefaultSiteUrlEn)
+            : (_configuration["SiteUrl"] ?? CalendarHostHelpers.DefaultSiteUrl);
+        var (_, productIdHost) = CalendarHostHelpers.ComputeCalendarHosts(siteUrl);
+
         XNamespace ns = "http://www.topografix.com/GPX/1/1";
         var doc = new XDocument(
             new XDeclaration("1.0", "utf-8", null),
             new XElement(ns + "gpx",
                 new XAttribute("version", "1.1"),
-                new XAttribute("creator", "Hlaupadagskra.is"),
+                new XAttribute("creator", productIdHost),
                 new XElement(ns + "metadata",
                     new XElement(ns + "name", trail.Name),
-                    new XElement(ns + "link", new XAttribute("href", $"{_siteUrl}/trails/{trail.Slug}"),
-                        new XElement(ns + "text", "Hlaupadagskra.is"))
+                    new XElement(ns + "link", new XAttribute("href", $"{siteUrl}/trails/{trail.Slug}"),
+                        new XElement(ns + "text", productIdHost))
                 ),
                 new XElement(ns + "trk",
                     new XElement(ns + "name", trail.Name),

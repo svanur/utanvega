@@ -24,7 +24,10 @@ public class CacheInvalidator : ICacheInvalidator
         {
             _cache.Remove(CacheKeys.Trail(slug));
             _cache.Remove(CacheKeys.Geometry(slug));
-            _cache.Remove(CacheKeys.Gpx(slug));
+            // #1173: Gpx is keyed per-lang now — evict both variants so a trail edit doesn't
+            // leave the other lang's GPX cached under a stale key.
+            _cache.Remove(CacheKeys.Gpx(slug, false));
+            _cache.Remove(CacheKeys.Gpx(slug, true));
         }
     }
 
