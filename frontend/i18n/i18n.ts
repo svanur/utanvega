@@ -20,6 +20,17 @@ const savedLang = localStorage.getItem('utanvega-lang');
 const initialLang: SupportedLang =
     savedLang && isSupportedLang(savedLang) ? savedLang : localeForHostname(window.location.hostname);
 
+/**
+ * Brand name for `hostname` — "360Runs" on the English production host
+ * (360runs.com/www., see HOST_LOCALES in _site.ts), the Icelandic brand
+ * everywhere else — hlaupadagskra.is, previews, localhost. Exported so it's
+ * unit-testable independently of the module-load call below, mirroring
+ * usePageTitle.ts's siteForHostname.
+ */
+export function brandNameForHostname(hostname: string): string {
+    return BRAND_NAME[localeForHostname(hostname)];
+}
+
 // `{{brandName}}` is host-based, not language-based — same signal every other
 // BRAND_NAME consumer uses (Layout.tsx's header, FooterStatus.tsx's copyright,
 // usePageTitle.ts's tab title, and the server-side og.ts/og-image.ts/
@@ -27,8 +38,7 @@ const initialLang: SupportedLang =
 // one consistent brand, not a mix of the two. The host doesn't change during
 // a page's lifetime, so this is computed once, not re-derived on language
 // change.
-const hostLocale = localeForHostname(window.location.hostname);
-const brandName = BRAND_NAME[hostLocale];
+const brandName = brandNameForHostname(window.location.hostname);
 
 async function loadLanguage(lang: SupportedLang) {
     if (i18n.hasResourceBundle(lang, 'translation')) return;
