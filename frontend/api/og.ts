@@ -422,14 +422,23 @@ function htmlPage(opts: {
 }
 
 /**
- * A 404 is a statement about "right now" — the event may be published a minute
- * later. Caching it publicly for an hour would keep serving the 404 from the
- * edge long after the page exists, so misses get a short window only.
+ * Vercel's edge cache keys a response by the client's original request path,
+ * not by which rewrite branch produced it (see #1188) — a bot-UA request and
+ * a plain-browser request to the identical path share one cache slot. This
+ * function's output (a bare, non-interactive stub with no SPA <script> tag)
+ * is only ever reached via the bot-UA branch, but a *cacheable* response here
+ * would populate that shared slot and could then be served straight back to
+ * a real visitor hitting the same path shortly after (e.g. clicking their
+ * own freshly-shared link) — the exact #1188 bug, just in the other
+ * direction. `Vary: User-Agent` and Edge Middleware were both considered and
+ * rejected for #1188 (the former fragments the cache per exact UA string and
+ * tanks hit rate; the latter's execution order relative to the CDN cache
+ * lookup is unconfirmed), so the only remaining way to keep this response
+ * from leaking across UAs is to never let the shared edge cache store it at
+ * all, for either a hit (200) or a miss (404/etc).
  */
-function cacheControlFor(status: number): string {
-  return status === 200
-    ? 'public, s-maxage=3600, stale-while-revalidate=86400'
-    : 'public, s-maxage=60';
+function cacheControlFor(_status: number): string {
+  return 'no-store';
 }
 
 function defaultPage(
