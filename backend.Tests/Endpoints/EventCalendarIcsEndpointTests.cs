@@ -1,3 +1,4 @@
+using System.Linq;
 using Utanvega.Backend.Application.Events;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Tests.WebHost;
@@ -61,6 +62,30 @@ public class EventCalendarIcsEndpointTests : IDisposable
         db.Locations.Add(location);
         db.Events.Add(ev);
         db.EventEditions.Add(edition);
+        db.SaveChanges();
+
+        return (ev, edition);
+    }
+
+    /// <summary>
+    /// Same shape as <see cref="SeedFullyTranslatedEvent"/> but attaches a single active
+    /// <see cref="Race"/> to the edition so <c>CalendarEventDto.RaceCount</c> (computed from
+    /// <c>activeRaces.Count</c> in <c>GetEventCalendarQueryHandler</c>) is non-zero — exercising the
+    /// "{RaceCount} race(s). More info: ..." branch of the Description text in
+    /// <c>GetEventCalendarIcs</c> rather than the "RaceCount == 0" branch the other seed helpers hit.
+    /// </summary>
+    private (Event Event, EventEdition Edition) SeedFullyTranslatedEventWithRace()
+    {
+        var (ev, edition) = SeedFullyTranslatedEvent();
+
+        using var db = _factory.CreateDbContext();
+        db.Races.Add(new Race
+        {
+            Id = Guid.NewGuid(),
+            EventEditionId = edition.Id,
+            Name = "10K",
+            Status = RaceStatus.Active,
+        });
         db.SaveChanges();
 
         return (ev, edition);
@@ -208,6 +233,39 @@ public class EventCalendarIcsEndpointTests : IDisposable
         Assert.Contains($"@{bareSiteHost}", ics);
         Assert.Contains($"URL:{CalendarHostHelpers.DefaultSiteUrlEn}/events/islandshlaupid", ics);
         Assert.DoesNotContain("hlaupadagskra.is", ics);
+    }
+
+    [Fact]
+    public async Task LangEn_Description_UsesEnglishBrandDomain_NotHlaupadagskra()
+    {
+        // #1167: the "More info" links embedded in DESCRIPTION are deliberately fed from the same
+        // siteUrl local as Uid/Url (Program.cs comment at GetEventCalendarIcs), so they should carry
+        // the 360runs.com brand in the English feed too. Seeding a Race so RaceCount > 0 exercises
+        // the "{RaceCount} race(s). More info: ..." branch specifically, not just the RaceCount == 0
+        // fallback the other seed helpers hit.
+        SeedCalendarIntegrationFlag();
+        SeedFullyTranslatedEventWithRace();
+
+        var client = _factory.CreateClient();
+        var response = await client.GetAsync("/api/v1/events/calendar.ics?lang=en");
+        response.EnsureSuccessStatusCode();
+        var ics = await response.Content.ReadAsStringAsync();
+
+        var (bareSiteHost, _) = CalendarHostHelpers.ComputeCalendarHosts(CalendarHostHelpers.DefaultSiteUrlEn);
+
+        // RFC 5545 line-folds any content line over 75 octets, continuing it on the next physical
+        // line prefixed with a single space — DESCRIPTION (with two "More info" links embedded) is
+        // long enough to fold, so unfold before locating the property's full value.
+        var unfolded = ics.Replace("\r\n ", string.Empty).Replace("\r\n\t", string.Empty);
+        var descriptionLine = unfolded
+            .Split("\r\n", StringSplitOptions.None)
+            .FirstOrDefault(l => l.StartsWith("DESCRIPTION:", StringComparison.Ordinal));
+
+        Assert.NotNull(descriptionLine);
+        Assert.Contains("1 race(s)", descriptionLine);
+        Assert.Contains(bareSiteHost, descriptionLine);
+        Assert.Contains(CalendarHostHelpers.DefaultSiteUrlEn, descriptionLine);
+        Assert.DoesNotContain("hlaupadagskra.is", descriptionLine);
     }
 
     [Fact]
