@@ -15,8 +15,9 @@ import { useTranslation } from 'react-i18next';
 import GoogleIcon from '@mui/icons-material/Google';
 import { supabase, isSupabaseConfigured } from '../hooks/supabase';
 import { AUTH_PENDING_KEY } from '../hooks/authConstants';
+import { authRedirectToFor } from '../hooks/authRedirectTo';
 
-const authRedirectTo = (import.meta.env.VITE_AUTH_REDIRECT_URL?.trim() || window.location.origin) as string;
+const authRedirectTo = authRedirectToFor(import.meta.env.VITE_AUTH_REDIRECT_URL, window.location.origin);
 
 interface LoginModalProps {
   open: boolean;
