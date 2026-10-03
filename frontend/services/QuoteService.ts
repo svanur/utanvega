@@ -104,7 +104,7 @@ export class QuoteService {
         { text: "We fall, we fail, we get back up, we keep trying", author: "Andy Glaze" },
         { text: "Never quit on a bad day" },
         { text: "Fall forward, learn from the crash" },
-        { text: "Better to try and fail, then than not try at all" },
+        { text: "Better to try and fail, rather than not try at all" },
         { text: "Don't make permanent decisions on temporary feelings." },
         { text: "This, too, shall pass." },
         { text: "You are not your thoughts; you are the observer of your thoughts." },
