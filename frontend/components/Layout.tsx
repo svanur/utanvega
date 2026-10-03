@@ -200,7 +200,7 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
                         <ButtonBase
                             onClick={() => navigate('/')}
                             sx={{ flexGrow: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'flex-start', borderRadius: 1 }}
-                            aria-label="Go to hlaupadagskra.is"
+                            aria-label={t('nav.goHome')}
                         >
                             {brandImageSrc && (
                                 <img src={brandImageSrc} alt="" style={{ height: 32, width: 'auto' }} />
