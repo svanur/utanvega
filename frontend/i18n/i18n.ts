@@ -13,12 +13,19 @@ function isSupportedLang(lang: string): lang is SupportedLang {
     return lang === 'is' || lang === 'en';
 }
 
-// An existing stored preference always wins on return visits; only a
-// first-time visitor with no `utanvega-lang` key falls through to the
-// host-based default (360runs.com → en, hlaupadagskra.is → is).
-const savedLang = localStorage.getItem('utanvega-lang');
-const initialLang: SupportedLang =
-    savedLang && isSupportedLang(savedLang) ? savedLang : localeForHostname(window.location.hostname);
+/**
+ * Initial UI language for `hostname` — `savedLang` (the stored
+ * `utanvega-lang` preference, if any) always wins on return visits; only a
+ * first-time visitor with no saved preference, or an invalid/unsupported one,
+ * falls through to the host-based default (360runs.com → en, hlaupadagskra.is
+ * → is). Exported so it's unit-testable independently of the module-load call
+ * below, mirroring brandNameForHostname's extraction.
+ */
+export function initialLangForHostname(hostname: string, savedLang: string | null): SupportedLang {
+    return savedLang && isSupportedLang(savedLang) ? savedLang : localeForHostname(hostname);
+}
+
+const initialLang = initialLangForHostname(window.location.hostname, localStorage.getItem('utanvega-lang'));
 
 /**
  * Brand name for `hostname` — "360Runs" on the English production host
