@@ -20,6 +20,7 @@ import ReplyIcon from '@mui/icons-material/Reply';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 import { apiFetch } from '../hooks/api';
+import { replySubject } from '../utils/feedbackHelpers';
 
 const GITHUB_ISSUES_URL = 'https://github.com/svanur/utanvega/issues/';
 const PAGE_SIZE = 25;
@@ -108,23 +109,6 @@ function isHttpUrl(url: string): boolean {
     } catch {
         return false;
     }
-}
-
-// Derives the reply mailto subject's host from the submitting page's URL so multi-brand
-// feedback (hlaupadagskra.is / 360runs.com) reads correctly, falling back to the original
-// hardcoded literal when pageUrl is empty or fails to parse. Mirrors the backend's
-// SubmitFeedbackCommand.GetHostOrFallback.
-function getHostOrFallback(pageUrl: string): string {
-    try {
-        const host = new URL(pageUrl).host;
-        return host === '' ? 'hlaupadagskra.is' : host;
-    } catch {
-        return 'hlaupadagskra.is';
-    }
-}
-
-function replySubject(pageUrl: string): string {
-    return encodeURIComponent(`Re: your feedback on ${getHostOrFallback(pageUrl)}`);
 }
 
 // Parsing (which can throw on malformed JSON) is kept separate from JSX construction below —
