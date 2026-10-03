@@ -793,6 +793,10 @@
             }
         },
         "changelog": {
+            "v1_15_0": {
+                "title": "360Runs.com launches as the English-language home for Hlaupadagskra.is, with host-aware branding across the whole site",
+                "description": "A new domain, 360runs.com, now serves the English experience under its own brand name and logo — page titles, calendar subscriptions, GPX trail-file exports, share-card images, admin notifications, and the PWA install prompt all automatically match whichever domain a visitor is on, down to the sitemap, manifest, and social-media link previews. Alongside the launch, backend error handling was made more consistent (validation failures across more endpoints now return a proper structured error instead of a generic server error), and a long tail of internal test-coverage and documentation-accuracy gaps were closed."
+            },
             "v1_14_1": {
                 "title": "Admin: edition status changes now refresh the events list immediately",
                 "description": "Changing an edition's status from its detail page now immediately updates the events list's \"Unconfirmed editions\" filter and badges, instead of leaving them stale for up to 30 seconds — the same fix already applied to the \"Needs review\" toggle."

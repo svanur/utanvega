@@ -793,6 +793,10 @@
             }
         },
         "changelog": {
+            "v1_15_0": {
+                "title": "360Runs.com fer í loftið sem enska útgáfan af Hlaupadagskra.is, með sjálfvirkri vörumerkjaaðlögun eftir léni",
+                "description": "Nýtt lén, 360runs.com, þjónar núna ensku útgáfunni undir eigin nafni og merki — síðutitlar, dagatalsáskriftir, GPX-leiðarskrár, deilimyndir, tilkynningar í stjórnborði og uppsetningarboð appsins aðlagast sjálfkrafa eftir léninu sem notandinn er á, niður í sitemap, manifest og forskoðanir á samfélagsmiðlum. Samhliða útgáfunni var villumeðhöndlun í bakenda gerð samræmdari (ógild gögn skila núna réttri villu á fleiri leiðum í stað almennrar netþjónsvillu), og fjöldi innri prófana- og skjalaleiðréttinga var lagfærður."
+            },
             "v1_14_1": {
                 "title": "Stjórnborð: laga bögg á viðburðalistann og þegar leitað var eftir fyrri viðburðum",
                 "description": "Viðburðalistinn uppfærist núna samstundist við leit eftir fyrri viðburðum"
