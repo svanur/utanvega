@@ -110,6 +110,23 @@ function isHttpUrl(url: string): boolean {
     }
 }
 
+// Derives the reply mailto subject's host from the submitting page's URL so multi-brand
+// feedback (hlaupadagskra.is / 360runs.com) reads correctly, falling back to the original
+// hardcoded literal when pageUrl is empty or fails to parse. Mirrors the backend's
+// SubmitFeedbackCommand.GetHostOrFallback.
+function getHostOrFallback(pageUrl: string): string {
+    try {
+        const host = new URL(pageUrl).host;
+        return host === '' ? 'hlaupadagskra.is' : host;
+    } catch {
+        return 'hlaupadagskra.is';
+    }
+}
+
+function replySubject(pageUrl: string): string {
+    return encodeURIComponent(`Re: your feedback on ${getHostOrFallback(pageUrl)}`);
+}
+
 // Parsing (which can throw on malformed JSON) is kept separate from JSX construction below —
 // building JSX inside a try/catch doesn't actually catch rendering errors, since React defers
 // rendering the returned elements until later (see react-hooks/error-boundaries).
@@ -459,7 +476,7 @@ export default function FeedbackPage({ onNotify }: { onNotify: (msg: string, sev
                                                 <Tooltip title={`Reply to ${item.email}`}>
                                                     <IconButton size="small"
                                                         component="a"
-                                                        href={`mailto:${item.email}?subject=Re: your feedback on hlaupadagskra.is&body=%23${item.feedbackNumber}`}
+                                                        href={`mailto:${item.email}?subject=${replySubject(item.pageUrl)}&body=%23${item.feedbackNumber}`}
                                                     >
                                                         <ReplyIcon fontSize="small" />
                                                     </IconButton>
@@ -554,7 +571,7 @@ export default function FeedbackPage({ onNotify }: { onNotify: (msg: string, sev
                                         <Typography variant="overline" color="text.secondary">Reporter</Typography>
                                         <Typography variant="body2">{selected.name ?? 'Anonymous'}</Typography>
                                         {selected.email && (
-                                            <Link href={`mailto:${selected.email}?subject=Re: your feedback on hlaupadagskra.is&body=%23${selected.feedbackNumber}`}
+                                            <Link href={`mailto:${selected.email}?subject=${replySubject(selected.pageUrl)}&body=%23${selected.feedbackNumber}`}
                                                 variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                                 <ReplyIcon sx={{ fontSize: 14 }} />{selected.email}
                                             </Link>
