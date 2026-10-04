@@ -1,6 +1,6 @@
 import { ImageResponse } from '@vercel/og';
 import type React from 'react';
-import { resolveLocale, BRAND_NAME, type Locale } from './_site';
+import { resolveLocale, BRAND_NAME, TAGLINE, type Locale } from './_site';
 
 export const config = { runtime: 'edge' };
 
@@ -62,12 +62,6 @@ const BRAND_LABEL: Record<Locale, string> = {
 const BRAND_HEADING: Record<Locale, string> = {
   is: `🏃 ${BRAND_NAME.is}`,
   en: `🏃 ${BRAND_NAME.en}`,
-};
-
-/** defaultImage() tagline per locale — English wording matches manifest.ts's IDENTITY.en.description. */
-const TAGLINE: Record<Locale, string> = {
-  is: 'Öll hlaup á einum stað',
-  en: 'All trail races in one place',
 };
 
 interface TrailResponse {

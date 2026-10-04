@@ -1,13 +1,14 @@
 export const config = { runtime: 'edge' };
 
-import { resolveLocale, BRAND_NAME, type Locale } from './_site';
+import { resolveLocale, BRAND_NAME, TAGLINE, type Locale } from './_site';
 import { PWA_MANIFEST_STATIC_FIELDS } from '../pwaManifestFields';
 
 /**
  * name/short_name/description copy, per locale. `name` derives from
  * BRAND_NAME rather than holding its own literal, since it is the same
- * string (#1105) — short_name and description differ from it and stay
- * hand-written here.
+ * string (#1105) — short_name stays hand-written here. `description` derives
+ * from TAGLINE for `en` the same way (#1198); the `is` side keeps its literal
+ * for now since it was already correct and untouched by that fix.
  */
 const IDENTITY: Record<Locale, { name: string; short_name: string; description: string }> = {
   is: {
@@ -18,7 +19,7 @@ const IDENTITY: Record<Locale, { name: string; short_name: string; description: 
   en: {
     name: BRAND_NAME.en,
     short_name: '360Runs',
-    description: 'All trail races in one place',
+    description: TAGLINE.en,
   },
 };
 

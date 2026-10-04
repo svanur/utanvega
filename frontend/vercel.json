@@ -24,6 +24,17 @@
       "destination": "/api/og?slug=:slug"
     },
     {
+      "source": "/",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(facebookexternalhit|Twitterbot|WhatsApp|LinkedInBot|Slackbot|TelegramBot|Discordbot|Googlebot|bingbot|Baiduspider|yandex|pinterest|vkShare).*"
+        }
+      ],
+      "destination": "/api/og?path="
+    },
+    {
       "source": "/:path*",
       "has": [
         {

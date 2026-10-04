@@ -41,6 +41,19 @@ export const BRAND_NAME: Record<Locale, string> = {
   en: '360Runs',
 };
 
+/**
+ * Base tagline per locale, with no brand/URL decoration applied. Single
+ * source of truth: og-image.ts's defaultImage() tagline, manifest.ts's
+ * IDENTITY.*.description and calendarLinks.ts's SITE_TAGLINE_* each wrap this
+ * in their own formatting rather than re-literalling the tagline (#1198).
+ * Must be kept in sync by hand with frontend/i18n/en.json's and is.json's own
+ * `tagline` key — this edge-runtime copy cannot import the i18n JSON bundle.
+ */
+export const TAGLINE: Record<Locale, string> = {
+  is: 'Öll hlaup á einum stað',
+  en: 'All running events in one place',
+};
+
 /** Locale for a fresh visitor on a host with no entry in HOST_LOCALES (localhost, preview deploys). */
 const DEFAULT_LOCALE: Locale = 'is';
 

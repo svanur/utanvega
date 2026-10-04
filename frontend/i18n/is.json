@@ -793,6 +793,10 @@
             }
         },
         "changelog": {
+            "v1_15_2": {
+                "title": "'Forskoðun' löguð fyrir leitarvélar á 360Runs.com",
+                "description": "Íslenska lénið og texti var enna að birtast á leitarvélum og samfélagsmiðlaforritum sem heimsóttu forsíðu 360runs.com, lagað í þessari útgáfu. Enska einkunnarorðið (\"All running events in one place\") var einnig einnig uppfært."
+            },
             "v1_15_1": {
                 "title": "Villa í skyndiminni lagfært sem gat sýnt gestum 360Runs.com ranga deilimynd.",
                 "description": "Villa í skyndiminni vefþjóns gat í einstaka tilvikum valdið því að rangar upplýsingar birtust í leitarvélum eða samfélagsmiðlaforritum á 360runs.com."
