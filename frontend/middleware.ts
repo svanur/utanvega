@@ -17,7 +17,18 @@
 // just the exact root path, so it never competes with vercel.json's
 // /trails/:slug and /:path* rules (already confirmed working, untouched).
 import { rewrite, next } from '@vercel/functions';
-import { BOT_USER_AGENT_PATTERN } from './api/_site';
+
+// Inlined rather than imported from ./api/_site: Vercel's Node.js runtime for
+// Routing Middleware does not reliably bundle a cross-directory relative
+// import (confirmed in production via Observability Logs —
+// `ERR_MODULE_NOT_FOUND: Cannot find module '/var/task/frontend/api/_site'`,
+// crashing every request to "/" on both domains, bot and human alike, since
+// the import itself fails before any handler code runs). This is now a
+// fourth hand-kept copy alongside vercel.json's two rules and _site.ts's own
+// BOT_USER_AGENT_PATTERN/isBotRequest — all four must be kept in sync by hand
+// if this pattern ever changes.
+const BOT_USER_AGENT_PATTERN =
+  /.*(facebookexternalhit|Twitterbot|WhatsApp|LinkedInBot|Slackbot|TelegramBot|Discordbot|Googlebot|bingbot|Baiduspider|yandex|pinterest|vkShare).*/;
 
 export const config = {
   matcher: '/',
