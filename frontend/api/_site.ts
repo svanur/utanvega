@@ -127,6 +127,27 @@ export function resolveLocale(request: Request): Locale {
   return localeForHostname(host.split(':')[0]);
 }
 
+/**
+ * Known crawler/bot User-Agent substrings, matched against the request's
+ * `user-agent` header to route those requests to og.ts's pre-rendered HTML
+ * instead of the SPA shell (crawlers never execute the client-side JS, so
+ * the real app never renders for them).
+ *
+ * Canonical copy for middleware.ts's root-path (`/`) rewrite (#1212) — static
+ * JSON can't import a TS constant, so vercel.json's own /trails/:slug and
+ * /:path* rewrite rules (still working, untouched by #1212) each carry their
+ * own hand-duplicated copy of this exact pattern and must be kept in sync by
+ * hand if this one ever changes. Same "unavoidable duplication, commented"
+ * pattern as calendarLinks.ts's PRODID_BRAND_IS/_EN.
+ */
+export const BOT_USER_AGENT_PATTERN =
+  /.*(facebookexternalhit|Twitterbot|WhatsApp|LinkedInBot|Slackbot|TelegramBot|Discordbot|Googlebot|bingbot|Baiduspider|yandex|pinterest|vkShare).*/;
+
+/** Whether `request`'s User-Agent header matches a known crawler/bot. */
+export function isBotRequest(request: Request): boolean {
+  return BOT_USER_AGENT_PATTERN.test(request.headers.get('user-agent') || '');
+}
+
 export function esc(str: string): string {
   return str
     .replace(/&/g, '&amp;')
