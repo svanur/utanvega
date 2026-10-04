@@ -12,7 +12,7 @@ function makeRequest(host: string): Request {
   });
 }
 
-async function json(res: Response) {
+async function json(res: Response): Promise<any> {
   return res.json();
 }
 
