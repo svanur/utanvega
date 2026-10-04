@@ -269,4 +269,22 @@ describe('og.ts locale-aware crawler surface', () => {
       );
     });
   });
+
+  describe('Cache-Control (regression guard for #1188)', () => {
+    it('is no-store on a 200 ROUTE_META static page', async () => {
+      const res = await handler(makeRequest('path=trails', 'www.hlaupadagskra.is'));
+      expect(res.status).toBe(200);
+      expect(res.headers.get('Cache-Control')).toBe('no-store');
+    });
+
+    it('is no-store on a 404 from the trail-slug lookup', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => new Response(null, { status: 404 }))
+      );
+      const res = await handler(makeRequest('slug=does-not-exist', 'www.hlaupadagskra.is'));
+      expect(res.status).toBe(404);
+      expect(res.headers.get('Cache-Control')).toBe('no-store');
+    });
+  });
 });
