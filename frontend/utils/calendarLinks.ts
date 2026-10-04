@@ -2,7 +2,7 @@
  * Utilities for generating "Add to Calendar" links and ICS downloads.
  */
 
-import { localeForHostname } from '../api/_site';
+import { localeForHostname, TAGLINE } from '../api/_site';
 
 export interface CalendarEventInfo {
     title: string;
@@ -13,8 +13,11 @@ export interface CalendarEventInfo {
     url?: string;
 }
 
-const SITE_TAGLINE_IS = 'https://www.hlaupadagskra.is – Öll hlaup á einum stað';
-const SITE_TAGLINE_EN = 'https://www.360runs.com – All trail races in one place';
+// Composed from the shared TAGLINE constant (api/_site.ts) rather than each
+// holding its own independent literal, so the English wording can't drift
+// from the tagline used by og-image.ts/manifest.ts again (#1198).
+const SITE_TAGLINE_IS = `https://www.hlaupadagskra.is – ${TAGLINE.is}`;
+const SITE_TAGLINE_EN = `https://www.360runs.com – ${TAGLINE.en}`;
 
 const UID_DOMAIN_IS = 'hlaupadagskra.is';
 const UID_DOMAIN_EN = '360runs.com';
