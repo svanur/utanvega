@@ -43,6 +43,7 @@ describe('calendarLinks host-aware branding (#1065)', () => {
             expect(ics).toContain('PRODID:-//360Runs//Events//IS');
             expect(ics).toContain('@360runs.com');
             expect(ics).toContain('https://www.360runs.com');
+            expect(ics).toContain('All running events in one place');
             expect(ics).not.toContain('hlaupadagskra.is');
             expect(ics).not.toContain('Hlaupadagskra.is');
         }
@@ -61,9 +62,15 @@ describe('calendarLinks host-aware branding (#1065)', () => {
         stubHostname('360runs.com');
         const google = googleCalendarUrl(baseEvent);
         const outlook = outlookCalendarUrl(baseEvent);
-        expect(decodeURIComponent(google)).toContain('https://www.360runs.com');
-        expect(decodeURIComponent(outlook)).toContain('https://www.360runs.com');
-        expect(decodeURIComponent(google)).not.toContain('hlaupadagskra.is');
-        expect(decodeURIComponent(outlook)).not.toContain('hlaupadagskra.is');
+        // URLSearchParams encodes spaces as '+', which decodeURIComponent alone
+        // does not turn back into ' ' — swap '+' for '%20' first so the decoded
+        // string matches the literal tagline wording, not just its %-escaped form.
+        const decodeQuery = (url: string): string => decodeURIComponent(url.replace(/\+/g, '%20'));
+        expect(decodeQuery(google)).toContain('https://www.360runs.com');
+        expect(decodeQuery(outlook)).toContain('https://www.360runs.com');
+        expect(decodeQuery(google)).toContain('All running events in one place');
+        expect(decodeQuery(outlook)).toContain('All running events in one place');
+        expect(decodeQuery(google)).not.toContain('hlaupadagskra.is');
+        expect(decodeQuery(outlook)).not.toContain('hlaupadagskra.is');
     });
 });
