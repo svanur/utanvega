@@ -1,6 +1,6 @@
 export const config = { runtime: 'edge' };
 
-import { siteOrigin, esc, resolveLocale, HOST_LOCALES, BRAND_NAME, type Locale } from './_site';
+import { siteOrigin, esc, resolveLocale, HOST_LOCALES, BRAND_NAME, TAGLINE, type Locale } from './_site';
 
 // Edge Functions run in a Node-like environment that provides process.env
 declare const process: { env: Record<string, string | undefined> };
@@ -275,10 +275,15 @@ export default async function handler(request: Request) {
  */
 const NOINDEX_PATHS = new Set(['/changelog-diary']);
 
-const SITE_TITLE = 'Hlaupadagskra.is – Öll hlaup á einum stað';
+// Built from BRAND_NAME/TAGLINE rather than a separately-worded literal — the
+// English copy previously drifted to "All Races in One Place" (SITE_TITLE_EN
+// was its own hand-written string, never updated when #1198 fixed the
+// tagline everywhere else) and kept serving that stale wording to crawlers
+// until it was noticed live in the Facebook Sharing Debugger.
+const SITE_TITLE = `${BRAND_NAME.is} – ${TAGLINE.is}`;
 const SITE_DESCRIPTION =
   'Vefur til að finna og deila skemmtilegum leiðum, hvort sem þær eru utanvega eða innanbæjar.';
-const SITE_TITLE_EN = '360Runs – All Races in One Place';
+const SITE_TITLE_EN = `${BRAND_NAME.en} – ${TAGLINE.en}`;
 const SITE_DESCRIPTION_EN =
   'A site for finding and sharing great running routes in Iceland, on trail or on road.';
 
