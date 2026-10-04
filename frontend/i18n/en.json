@@ -793,6 +793,10 @@
             }
         },
         "changelog": {
+            "v1_15_1": {
+                "title": "Fixed a cache bug that could show 360Runs.com visitors a wrong-brand share preview, plus stale fallback metadata cleanup",
+                "description": "A caching quirk on the edge network could occasionally let the wrong site's preview content get served to search engines or social-media crawlers on 360runs.com. The underlying fallback page's share-preview tags were also cleaned up — they no longer hardcode last year's date or the other brand's web address."
+            },
             "v1_15_0": {
                 "title": "A host-aware branding added/updated across the whole site for 360Runs.com, the english version of the website",
                 "description": "The domain, 360runs.com, now serves the English experience under its own brand name and logo — page titles, calendar subscriptions, GPX trail-file exports, share-card images, admin notifications, and the PWA install prompt all automatically match whichever domain a visitor is on, down to the sitemap, manifest, and social-media link previews. Alongside the launch, backend error handling was made more consistent (validation failures across more endpoints now return a proper structured error instead of a generic server error), and a long tail of internal test-coverage and documentation-accuracy gaps were closed."

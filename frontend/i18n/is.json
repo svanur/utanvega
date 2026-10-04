@@ -793,6 +793,10 @@
             }
         },
         "changelog": {
+            "v1_15_1": {
+                "title": "Villa í skyndiminni lagfært sem gat sýnt gestum 360Runs.com ranga deilimynd.",
+                "description": "Villa í skyndiminni vefþjóns gat í einstaka tilvikum valdið því að rangar upplýsingar birtust í leitarvélum eða samfélagsmiðlaforritum á 360runs.com."
+            },
             "v1_15_0": {
                 "title": "Vefurinn uppfæraður m.t.t. enska lénsins, 360Runs.com",
                 "description": "Nýtt lén, 360runs.com, þjónar núna ensku útgáfunni undir eigin léni — titlar, GPX-leiðarskrár, tilkynningar í stjórnborði og textar aðlagast sjálfkrafa eftir léninu sem notandinn er á. Samhliða útgáfunni var villumeðhöndlun í bakenda gerð samræmdari."
