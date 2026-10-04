@@ -266,6 +266,11 @@ public class EventCalendarIcsEndpointTests : IDisposable
         Assert.Contains(bareSiteHost, descriptionLine);
         Assert.Contains(CalendarHostHelpers.DefaultSiteUrlEn, descriptionLine);
         Assert.DoesNotContain("hlaupadagskra.is", descriptionLine);
+
+        // #1204: the English tagline was a stale leftover ("All trail races in one place") fixed
+        // for frontend edge functions in #1198/PR #1203; this asserts the backend's calendar.ics
+        // feed carries the same corrected wording.
+        Assert.Contains("All running events in one place", descriptionLine);
     }
 
     [Fact]

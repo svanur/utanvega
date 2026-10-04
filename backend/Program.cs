@@ -1699,8 +1699,8 @@ app.MapGet("/api/v1/events/calendar.ics", async (string? lang, IMediator mediato
             };
             vEvent.Description = isEnglish
                 ? (ev.RaceCount > 0
-                    ? $"{ev.RaceCount} race(s). More info: {siteUrl}/events/{ev.Slug}\n\n{siteUrl} – All trail races in one place"
-                    : $"More info: {siteUrl}/events/{ev.Slug}\n\n{siteUrl} – All trail races in one place")
+                    ? $"{ev.RaceCount} race(s). More info: {siteUrl}/events/{ev.Slug}\n\n{siteUrl} – All running events in one place"
+                    : $"More info: {siteUrl}/events/{ev.Slug}\n\n{siteUrl} – All running events in one place")
                 : (ev.RaceCount > 0
                     ? $"{ev.RaceCount} race(s). More info: {siteUrl}/events/{ev.Slug}\n\n{siteUrl} – Öll hlaup á einum stað"
                     : $"More info: {siteUrl}/events/{ev.Slug}\n\n{siteUrl} – Öll hlaup á einum stað");
