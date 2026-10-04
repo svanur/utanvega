@@ -793,6 +793,10 @@
             }
         },
         "changelog": {
+            "v1_15_3": {
+                "title": "Homepage crawler previews on 360Runs.com actually fixed this time",
+                "description": "Last release's fix for crawlers seeing the wrong preview on 360runs.com's homepage turned out not to actually work in production, despite looking correct from the outside. This release replaces it with a different, verified approach (Vercel's newer routing middleware instead of a static rewrite rule), confirmed working by checking production request logs directly rather than just the page's response."
+            },
             "v1_15_2": {
                 "title": "Fixed crawlers on 360Runs.com not seeing the right preview on the homepage, plus tagline cleanup",
                 "description": "Search engines and social-media crawlers visiting the 360runs.com homepage directly were still being shown the Icelandic fallback page instead of the correct English preview — a routing gap that's now closed. Also corrected the English tagline wording (\"All running events in one place\") everywhere it had drifted out of sync, including share-card images, the install prompt, and calendar subscription files."

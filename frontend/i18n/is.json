@@ -793,6 +793,10 @@
             }
         },
         "changelog": {
+            "v1_15_3": {
+                "title": "Forsíðuforskoðun á 360Runs.com loksins löguð",
+                "description": "Lagfæringin í síðustu útgáfu fyrir leitarvélar sem sáu ranga forskoðun á forsíðu 360runs.com reyndist ekki virka í raun, þrátt fyrir að líta rétt út að utan. Þessi útgáfa skiptir yfir í aðra, staðfesta aðferð (nýrri \"routing middleware\" frá Vercel í stað kyrrstæðrar endurskrifunarreglu), staðfest með því að skoða beint fyrirspurnaskrár í framleiðsluumhverfi frekar en bara svar síðunnar."
+            },
             "v1_15_2": {
                 "title": "'Forskoðun' löguð fyrir leitarvélar á 360Runs.com",
                 "description": "Íslenska lénið og texti var enna að birtast á leitarvélum og samfélagsmiðlaforritum sem heimsóttu forsíðu 360runs.com, lagað í þessari útgáfu. Enska einkunnarorðið (\"All running events in one place\") var einnig einnig uppfært."
