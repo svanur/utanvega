@@ -288,6 +288,20 @@ public class EventCalendarIcsEndpointTests : IDisposable
         Assert.Contains("Norðurhlaupið", ics);
         Assert.Contains("Vetrarútgáfa", ics);
         Assert.Contains("Akureyri", ics);
+
+        // #1207: SeedEventWithNoEnglishFields() attaches no Race, so CalendarEventDto.RaceCount is
+        // 0 here — exercising the "RaceCount == 0" branch of the Description text in
+        // GetEventCalendarIcs, the counterpart to the RaceCount > 0 branch already asserted in
+        // LangEn_Description_UsesEnglishBrandDomain_NotHlaupadagskra. PR #1206 (#1204) fixed the
+        // English tagline identically in both branches, but only the RaceCount > 0 branch was
+        // asserted — this closes that gap.
+        var unfolded = ics.Replace("\r\n ", string.Empty).Replace("\r\n\t", string.Empty);
+        var descriptionLine = unfolded
+            .Split("\r\n", StringSplitOptions.None)
+            .FirstOrDefault(l => l.StartsWith("DESCRIPTION:", StringComparison.Ordinal));
+
+        Assert.NotNull(descriptionLine);
+        Assert.Contains("All running events in one place", descriptionLine);
     }
 
     [Fact]
