@@ -24,17 +24,6 @@
       "destination": "/api/og?slug=:slug"
     },
     {
-      "source": "/:path*",
-      "has": [
-        {
-          "type": "header",
-          "key": "user-agent",
-          "value": ".*(facebookexternalhit|Twitterbot|WhatsApp|LinkedInBot|Slackbot|TelegramBot|Discordbot|Googlebot|bingbot|Baiduspider|yandex|pinterest|vkShare).*"
-        }
-      ],
-      "destination": "/api/og?path=:path*"
-    },
-    {
       "source": "/",
       "has": [
         {
@@ -44,6 +33,17 @@
         }
       ],
       "destination": "/api/og?path="
+    },
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(facebookexternalhit|Twitterbot|WhatsApp|LinkedInBot|Slackbot|TelegramBot|Discordbot|Googlebot|bingbot|Baiduspider|yandex|pinterest|vkShare).*"
+        }
+      ],
+      "destination": "/api/og?path=:path*"
     },
     {
       "source": "/(.*)",
