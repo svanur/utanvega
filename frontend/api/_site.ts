@@ -133,12 +133,15 @@ export function resolveLocale(request: Request): Locale {
  * instead of the SPA shell (crawlers never execute the client-side JS, so
  * the real app never renders for them).
  *
- * Canonical copy for middleware.ts's root-path (`/`) rewrite (#1212) — static
- * JSON can't import a TS constant, so vercel.json's own /trails/:slug and
- * /:path* rewrite rules (still working, untouched by #1212) each carry their
- * own hand-duplicated copy of this exact pattern and must be kept in sync by
- * hand if this one ever changes. Same "unavoidable duplication, commented"
- * pattern as calendarLinks.ts's PRODID_BRAND_IS/_EN.
+ * Static JSON can't import a TS constant, so vercel.json's own /trails/:slug
+ * and /:path* rewrite rules each carry their own hand-duplicated copy of this
+ * exact pattern. middleware.ts also carries its own copy rather than
+ * importing this one — a cross-directory relative import from middleware.ts
+ * crashed in Vercel's Node.js Routing Middleware runtime in production
+ * (ERR_MODULE_NOT_FOUND, see its own comment) — so there are now four
+ * hand-kept copies total, all of which must be kept in sync by hand if this
+ * pattern ever changes. Same "unavoidable duplication, commented" pattern as
+ * calendarLinks.ts's PRODID_BRAND_IS/_EN.
  */
 export const BOT_USER_AGENT_PATTERN =
   /.*(facebookexternalhit|Twitterbot|WhatsApp|LinkedInBot|Slackbot|TelegramBot|Discordbot|Googlebot|bingbot|Baiduspider|yandex|pinterest|vkShare).*/;
