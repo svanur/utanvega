@@ -170,6 +170,22 @@ Every pitch must include a **Business Justification (Why)**, a **User Impact Ass
   findings are, by default, a static reading of theme tokens/`sx` breakpoints rather than a rendered
   check — the review must say which method was used, not imply a render happened.
 
+**Disclosed limitation — Vercel routing config cannot be verified live (#1201):** PRs that change
+`frontend/vercel.json` or other Vercel rewrite/redirect config cannot be checked against a live
+post-fix preview deployment during a pipeline session. Neither the Programmer nor the Tester holds
+non-interactive Vercel CLI credentials — the CLI's OAuth flow needs a human to approve a browser
+prompt — and preview deployments are protected by Vercel Authentication (SSO): a bot-UA `curl`
+against a preview URL gets a 302 to `vercel.com/sso-api` instead of the real response, for every path
+(confirmed on PR #1199, fixing #1197). So this class of change is verified by **static reasoning plus
+a pre-fix production repro** (trace the rewrite/redirect logic, diff it against known-working rules,
+curl production *before* the fix to reproduce the bug), never by a live test of the actual fix. A
+`GOOD_TO_MERGE` verdict on this class of PR therefore carries a weaker guarantee than for app-code
+changes with real test coverage — the review must say so explicitly, not imply a rendered/live check
+happened. Owner's decision (issue #1201): accept this limitation rather than disabling SSO on preview
+branches or provisioning a stored scoped CLI token for agent sessions — both carry real
+security-posture trade-offs not worth taking on for a PR class that's currently rare; revisit if
+vercel.json-touching PRs become frequent enough that the disclosure workaround is genuinely costly.
+
 ### Creating issues
 
 `/issue <rough description>` puts the Scrum Master into drafting mode: it reads the relevant code,
