@@ -29,7 +29,7 @@ describe('manifest.ts per-host PWA identity', () => {
     const body = await json(await handler(makeRequest('360runs.com')));
     expect(body.name).toBe('360Runs');
     expect(body.short_name).toBe('360Runs');
-    expect(body.description).toBe('All trail races in one place');
+    expect(body.description).toBe('All running events in one place');
     expect(body.lang).toBe('en');
   });
 

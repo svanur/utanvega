@@ -107,7 +107,7 @@ describe('og-image.ts locale-aware branding', () => {
     it('no-slug request: shows English heading/tagline on the 360runs.com host', async () => {
       const text = await renderedText(makeRequest('', '360runs.com'));
       expect(text).toContain('🏃 360Runs');
-      expect(text).toContain('All trail races in one place');
+      expect(text).toContain('All running events in one place');
     });
 
     it('no-slug request: unchanged Icelandic heading/tagline on the hlaupadagskra.is host', async () => {
@@ -120,7 +120,7 @@ describe('og-image.ts locale-aware branding', () => {
       vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status: 500 })));
       const text = await renderedText(makeRequest('slug=missing-trail', '360runs.com'));
       expect(text).toContain('🏃 360Runs');
-      expect(text).toContain('All trail races in one place');
+      expect(text).toContain('All running events in one place');
     });
 
     it('thrown fetch error: varies by host too', async () => {
@@ -132,7 +132,7 @@ describe('og-image.ts locale-aware branding', () => {
       );
       const text = await renderedText(makeRequest('slug=missing-trail', '360runs.com'));
       expect(text).toContain('🏃 360Runs');
-      expect(text).toContain('All trail races in one place');
+      expect(text).toContain('All running events in one place');
     });
   });
 });
