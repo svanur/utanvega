@@ -795,7 +795,7 @@
         "changelog": {
             "v1_15_1": {
                 "title": "Villa í skyndiminni lagfært sem gat sýnt gestum 360Runs.com ranga deilimynd.",
-                "description": "Villa í skyndiminni jaðarþjónsins gat í einstaka tilvikum valdið því að röng forskoðun birtist leitarvélum eða samfélagsmiðlaforritum á 360runs.com. Á sama tíma var deilimyndartexti varasíðunnar hreinsaður — hann vísar ekki lengur í fyrra árið eða veffang hins vörumerkisins."
+                "description": "Villa í skyndiminni vefþjóns gat í einstaka tilvikum valdið því að rangar upplýsingar birtust í leitarvélum eða samfélagsmiðlaforritum á 360runs.com."
             },
             "v1_15_0": {
                 "title": "Vefurinn uppfæraður m.t.t. enska lénsins, 360Runs.com",
