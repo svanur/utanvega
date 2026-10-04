@@ -793,6 +793,10 @@
             }
         },
         "changelog": {
+            "v1_15_2": {
+                "title": "Leitarvélar á 360Runs.com sáu ekki réttu forskoðunina á forsíðunni — nú lagfært, auk hreinsunar á einkunnarorðum",
+                "description": "Leitarvélar og samfélagsmiðlaforrit sem heimsóttu forsíðu 360runs.com beint fengu áfram íslensku varasíðuna í stað réttu ensku forskoðunarinnar — þessi vöntun í beiningu er nú lagfærð. Enska einkunnarorðið (\"All running events in one place\") var einnig samræmt alls staðar þar sem það hafði færst úr lagi, meðal annars í deilimyndum, uppsetningarboði og dagatalsáskriftum."
+            },
             "v1_15_1": {
                 "title": "Villa í skyndiminni lagfært sem gat sýnt gestum 360Runs.com ranga deilimynd.",
                 "description": "Villa í skyndiminni vefþjóns gat í einstaka tilvikum valdið því að rangar upplýsingar birtust í leitarvélum eða samfélagsmiðlaforritum á 360runs.com."
