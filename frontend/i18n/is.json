@@ -793,6 +793,10 @@
             }
         },
         "changelog": {
+            "v1_15_5": {
+                "title": "Sama \"í gær\" villan lagfærð í viðburðalistanum, auk innri hreinsunar",
+                "description": "Síðasta útgáfa lagaði hlaup í hlaupasyrpu sem birtist sem \"í gær\" í stað \"í dag\" í töfluyfirlitinu — í ljós kom að viðburðalistinn var með sína eigin, aðskildu útgáfu af sömu dagsetningarútreikningum, með sömu villu. Það er nú lagfært þar líka, og undirliggjandi rökfræði var sameinuð á einn stað svo lagfæring sem þessi þurfi aðeins að gerast einu sinni í framtíðinni."
+            },
             "v1_15_4": {
                 "title": "Lagfær bögg sem varð til þess að seríu viðburðir voru off-by-one",
                 "description": "Dagsetningarvilla löguð sem birtist aðeins fyrir seríu viðburði. Hafði aðeins áhrif á þessa einu merkingu í viðburðalista. Nú sést \"í dag\" keppnisdaginn sjálfan, en ekki \"Í gær\" eins og var áður."
