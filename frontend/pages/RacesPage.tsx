@@ -68,13 +68,13 @@ import RunningLoader from '../components/RunningLoader';
 import EventDateBadge from '../components/EventDateBadge';
 import SwipeableCard from '../components/SwipeableCard';
 import VideocamIcon from '@mui/icons-material/Videocam';
-import { useEvents, type EventSummary, type SeriesRaceDto } from '../hooks/useEvents';
+import { useEvents, type EventSummary } from '../hooks/useEvents';
 import { API_URL } from '../hooks/useTrails';
 import { downloadIcs } from '../utils/calendarLinks';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
 import { getTicketStatusColor, groupDistances, isAllSoldOut, hasRegistrationClosed, isRegistrationRequired, isRegistrationRequiredForRace } from '../utils/ticketStatus';
-import { daysBetween, formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, isOngoingPastDayTwo } from '../utils/eventUtils';
+import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, isOngoingPastDayTwo, flattenEventRows, getRowDaysUntil, type FlattenedEventRow } from '../utils/eventUtils';
 import { applyFilters, type EventFilters, type RaceDistanceBucket } from '../utils/eventFilters';
 import { trackViewModeChange, trackSiteQROpen } from '../utils/analytics';
 import { useLocalize } from '../utils/localize';
@@ -451,25 +451,12 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         const up = sortedFiltered.filter(c => !isRecentlyCompleted(c));
         return { justRaced: jr, upcoming: up };
     }, [sortedFiltered]);
-    type UpcomingRow =
-        | { kind: 'event'; comp: EventSummary }
-        | { kind: 'series-race'; comp: EventSummary; race: SeriesRaceDto };
-
-    const flattenedUpcoming = useMemo((): UpcomingRow[] => {
-        const rows: UpcomingRow[] = [];
-        for (const comp of upcoming) {
-            if (comp.type === 'Series' && comp.seriesRaces && comp.seriesRaces.length > 0) {
-                for (const race of comp.seriesRaces) {
-                    rows.push({ kind: 'series-race', comp, race });
-                }
-            } else {
-                rows.push({ kind: 'event', comp });
-            }
-        }
+    const flattenedUpcoming = useMemo((): FlattenedEventRow[] => {
+        const rows = flattenEventRows(upcoming);
         if (sortBy === 'date') {
             rows.sort((a, b) => {
-                const dateA = a.kind === 'series-race' ? a.race.dateOfRace : (a.comp.displayDate ?? a.comp.nextEditionDate);
-                const dateB = b.kind === 'series-race' ? b.race.dateOfRace : (b.comp.displayDate ?? b.comp.nextEditionDate);
+                const dateA = a.rowDate;
+                const dateB = b.rowDate;
                 if (!dateA && !dateB) return 0;
                 if (!dateA) return 1;
                 if (!dateB) return -1;
@@ -1121,9 +1108,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                 let lastHolidayDate: string | null = null;
                                 let lastYear: string | null = null;
                                 return flattenedUpcoming.map((row, idx) => {
-                                const rowDate = row.kind === 'series-race'
-                                    ? row.race.dateOfRace
-                                    : (row.comp.displayDate ?? row.comp.nextEditionDate);
+                                const rowDate = row.rowDate;
                                 const rowYear = rowDate ? rowDate.slice(0, 4) : null;
                                 // #1053: lastYear starts null, so it must be checked explicitly —
                                 // otherwise the very first row (whatever year it happens to fall in)
@@ -1176,10 +1161,8 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                     );
                                 })() : null;
                                 if (row.kind === 'series-race') {
-                                    const { comp, race } = row;
-                                    const raceDaysUntil = race.dateOfRace
-                                        ? daysBetween(race.dateOfRace, new Date())
-                                        : null;
+                                    const { event: comp, race } = row;
+                                    const raceDaysUntil = getRowDaysUntil(row);
                                     return (
                                         <Box key={`${comp.id}-${race.raceId}`}>
                                         {yearDivider}
@@ -1339,7 +1322,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                         </Box>
                                     );
                                 }
-                                const comp = row.comp;
+                                const comp = row.event;
                                 return (
                                 <Box key={comp.id}>
                                 {holidayBanner}
